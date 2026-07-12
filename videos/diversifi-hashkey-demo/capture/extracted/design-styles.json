@@ -1,0 +1,117 @@
+{
+  "typography": [
+    {
+      "role": "heading",
+      "fontFamily": "Inter",
+      "fontSize": "24px",
+      "fontWeight": "900",
+      "lineHeight": "32px",
+      "letterSpacing": "normal",
+      "color": "#FFFFFF",
+      "sampleText": "Is your money quietly losing value?"
+    },
+    {
+      "role": "body",
+      "fontFamily": "Inter",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "lineHeight": "24px",
+      "letterSpacing": "normal",
+      "color": "#FFFFFF",
+      "sampleText": ""
+    }
+  ],
+  "spacing": {
+    "observed": [
+      4,
+      6,
+      12,
+      16,
+      20,
+      24,
+      40
+    ],
+    "baseUnit": 4
+  },
+  "radius": [
+    "8px"
+  ],
+  "shadows": [
+    {
+      "value": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      "count": 1
+    }
+  ],
+  "buttons": [
+    {
+      "label": "1You",
+      "background": "transparent",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#FFFFFF",
+      "padding": "0px 4px",
+      "borderRadius": "8px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "none",
+      "fontSize": "16px",
+      "fontWeight": "400",
+      "height": "49.5px"
+    },
+    {
+      "label": "Pick your country →",
+      "background": "#2563EB",
+      "backgroundImage": "",
+      "backdropFilter": "",
+      "color": "#FFFFFF",
+      "padding": "12px 24px",
+      "borderRadius": "12px",
+      "border": "0px solid rgb(229, 231, 235)",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.05) 0px 1px 2px 0px",
+      "fontSize": "14px",
+      "fontWeight": "900",
+      "height": "44px"
+    }
+  ],
+  "cards": [],
+  "nav": null,
+  "chips": [
+    {
+      "label": "🇺🇸US Dollar",
+      "background": "#111827",
+      "color": "#E5E7EB",
+      "padding": "4px 10px",
+      "borderRadius": "9999px",
+      "border": "1px solid rgba(30, 58, 138, 0.4)",
+      "boxShadow": "none",
+      "fontSize": "11px",
+      "fontWeight": "700",
+      "height": "26.5px"
+    }
+  ],
+  "statCells": [],
+  "tabs": [],
+  "backgrounds": [
+    {
+      "value": "linear-gradient(160deg, rgb(10, 17, 40) 0%, rgb(22, 33, 62) 45%, rgb(15, 43, 61) 100%)",
+      "area": 2073600
+    },
+    {
+      "value": "radial-gradient(90% 55% at 50% 0%, rgba(59, 130, 246, 0.14) 0%, rgba(0, 0, 0, 0) 70%), radial-gradient(70% 40% at 50% 100%, rgba(251, 191, 36, 0.1) 0%, rgba(0, 0, 0, 0) 70%)",
+      "area": 369368
+    },
+    {
+      "value": "linear-gradient(to right bottom, rgba(30, 58, 138, 0.2), rgba(49, 46, 129, 0.2))",
+      "area": 66240
+    }
+  ],
+  "glass": [
+    {
+      "backdropFilter": "blur(24px)",
+      "background": "rgba(15, 23, 42, 0.9)",
+      "border": "1px solid rgba(255, 255, 255, 0.1)",
+      "borderRadius": "40px",
+      "boxShadow": "rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0) 0px 0px 0px 0px, rgba(0, 0, 0, 0.3) 0px 32px 64px -16px",
+      "area": 371840
+    }
+  ]
+}

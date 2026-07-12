@@ -1,0 +1,476 @@
+{
+  "summary": {
+    "webAnimations": 21,
+    "cssDeclarations": 327,
+    "scrollTargets": 0,
+    "cdpAnimations": 42,
+    "canvases": 0
+  },
+  "namedAnimations": [
+    "aurora-drift",
+    "coin-drift"
+  ],
+  "scrollTriggeredElements": 0,
+  "representativeAnimations": [
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "aurora-drift",
+      "targetSelector": "div.absolute.-top-1/4.-left-1/4",
+      "targetRect": {
+        "x": -489.95654296875,
+        "y": -320.4046630859375,
+        "width": 1539.5648193359375,
+        "height": 866.0051879882812,
+        "top": -320.4046630859375,
+        "right": 1049.6082763671875,
+        "bottom": 545.6005249023438,
+        "left": -489.95654296875
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateZ(0px) scale(1)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translate3d(4%, -4%, 0px) scale(1.1)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateZ(0px) scale(1)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 18000,
+        "delay": 0,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "aurora-drift",
+      "targetSelector": "div.absolute.-bottom-1/4.-right-1/4",
+      "targetRect": {
+        "x": 955.5565185546875,
+        "y": 517.504638671875,
+        "width": 1484.4351806640625,
+        "height": 834.994873046875,
+        "top": 517.504638671875,
+        "right": 2439.99169921875,
+        "bottom": 1352.49951171875,
+        "left": 955.5565185546875
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateZ(0px) scale(1)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translate3d(4%, -4%, 0px) scale(1.1)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateZ(0px) scale(1)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 18000,
+        "delay": -9000,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 94.18900299072266,
+        "y": 125.42271423339844,
+        "width": 47.621986389160156,
+        "height": 47.62199401855469,
+        "top": 125.42271423339844,
+        "right": 141.8109893798828,
+        "bottom": 173.04470825195312,
+        "left": 94.18900299072266
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 11000,
+        "delay": 0,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 1651.1634521484375,
+        "y": 78.26172637939453,
+        "width": 30.048095703125,
+        "height": 30.048019409179688,
+        "top": 78.26172637939453,
+        "right": 1681.2115478515625,
+        "bottom": 108.30974578857422,
+        "left": 1651.1634521484375
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 9000,
+        "delay": 1200,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 189.06524658203125,
+        "y": 752.0806884765625,
+        "width": 63.8695068359375,
+        "height": 63.8695068359375,
+        "top": 752.0806884765625,
+        "right": 252.93475341796875,
+        "bottom": 815.9501953125,
+        "left": 189.06524658203125
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 13000,
+        "delay": 600,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 1533.8956298828125,
+        "y": 796.8084716796875,
+        "width": 42.208740234375,
+        "height": 42.20867919921875,
+        "top": 796.8084716796875,
+        "right": 1576.1043701171875,
+        "bottom": 839.0171508789062,
+        "left": 1533.8956298828125
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 10000,
+        "delay": 2000,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 881.7094116210938,
+        "y": 932.96630859375,
+        "width": 28.9561767578125,
+        "height": 28.9561767578125,
+        "top": 932.96630859375,
+        "right": 910.6655883789062,
+        "bottom": 961.9224853515625,
+        "left": 881.7094116210938
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 8000,
+        "delay": 300,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 1764.1702880859375,
+        "y": 471.3456115722656,
+        "width": 52.440673828125,
+        "height": 52.440704345703125,
+        "top": 471.3456115722656,
+        "right": 1816.6109619140625,
+        "bottom": 523.7863159179688,
+        "left": 1764.1702880859375
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 12000,
+        "delay": 1800,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 37.82386016845703,
+        "y": 441.55975341796875,
+        "width": 23.133529663085938,
+        "height": 23.133514404296875,
+        "top": 441.55975341796875,
+        "right": 60.95738983154297,
+        "bottom": 464.6932678222656,
+        "left": 37.82386016845703
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 7500,
+        "delay": 2600,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    },
+    {
+      "type": "CSSAnimation",
+      "playState": "running",
+      "animationName": "coin-drift",
+      "targetSelector": "div.absolute.coin-float",
+      "targetRect": {
+        "x": 1227.7947998046875,
+        "y": 30.33060073852539,
+        "width": 22.004150390625,
+        "height": 22.00405502319336,
+        "top": 30.33060073852539,
+        "right": 1249.7989501953125,
+        "bottom": 52.33465576171875,
+        "left": 1227.7947998046875
+      },
+      "keyframes": [
+        {
+          "offset": 0,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 0
+        },
+        {
+          "offset": 0.5,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(-16px) rotate(7deg)",
+          "computedOffset": 0.5
+        },
+        {
+          "offset": 1,
+          "easing": "ease-in-out",
+          "composite": "auto",
+          "transform": "translateY(0px) rotate(-7deg)",
+          "computedOffset": 1
+        }
+      ],
+      "timing": {
+        "duration": 8500,
+        "delay": 3200,
+        "iterations": null,
+        "easing": "linear",
+        "direction": "normal"
+      }
+    }
+  ]
+}

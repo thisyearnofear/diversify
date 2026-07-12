@@ -14,6 +14,21 @@ vi.mock('@diversifi/shared', () => ({
   },
 }));
 
+// Mock MongoDB so the handler doesn't make a real network call to Atlas
+// that flakes the 5s test timeout. Path is relative to the test file:
+// pages/api/__tests__/ → ../../../lib/mongodb
+vi.mock('../../../lib/mongodb', () => ({
+  default: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Mock the dynamic mongoose import inside the handler so it doesn't
+// load the real mongoose package (which triggers native deps).
+vi.mock('mongoose', () => ({
+  default: {
+    connection: { readyState: 1, db: { admin: () => ({ ping: () => ({ ok: 1 }) }) } },
+  },
+}));
+
 type ApiMock = { method?: string };
 type ResMock = {
   statusCode?: number;

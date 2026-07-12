@@ -15,6 +15,7 @@ import { AgentActionService } from "@diversifi/shared/src/services/ai/agent-acti
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
+import { trackFunnelEvent } from "../lib/analytics";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -34,6 +35,10 @@ const defaultChatState: ChatStoreState = {
 
 // macro_analysis(0.004) + portfolio_optimization(0.005) + risk_assessment(0.006)
 const RESEARCH_BUNDLE_PRICE = 0.015;
+
+// Cap the number of messages sent as history to the API (server already
+// slices to last 10, but capping on the client reduces payload size too).
+const MAX_HISTORY_TO_SEND = 20;
 
 export function useAgentChat({
   apiBase,
@@ -212,7 +217,18 @@ export function useAgentChat({
       const intent = IntentDiscoveryService.discover(effectiveContent);
       const wordCount = effectiveContent.trim().split(/\s+/).filter(Boolean).length;
       const allowFastPath = wordCount <= 6;
-      const effectiveIntent: AppIntent = allowFastPath
+      // Only fast-path unambiguous *commands* (navigation, swaps, claims, yield).
+      // Never fast-path ONBOARDING questions or QUERY — those go to the LLM so
+      // the user gets a real answer instead of canned marketing copy.
+      const isUnambiguousCommand =
+        intent.type === 'NAVIGATE' ||
+        intent.type === 'SWAP_SHORTCUT' ||
+        intent.type === 'SEND_TO_PHONE' ||
+        intent.type === 'YIELD_EARN' ||
+        (intent.type === 'GOODDOLLAR' && (intent as any).topic === 'claim') ||
+        (intent.type === 'WDK_ACTION' && (intent as any).topic === 'switch') ||
+        (intent.type === 'ONBOARDING' && (intent as any).topic === 'demo');
+      const effectiveIntent: AppIntent = allowFastPath && isUnambiguousCommand
         ? intent
         : { type: "QUERY", context: "general" };
       // 1. Fast-path routing for immediate UI feedback (Navigation, Demo, etc.)
@@ -229,27 +245,13 @@ export function useAgentChat({
           fastPathResponse = `Resolving ${effectiveIntent.phoneNumber} via SocialConnect... 📱`;
           break;
         case 'GOODDOLLAR':
-          fastPathResponse = effectiveIntent.topic === 'claim' ? "Checking G$ UBI eligibility... 🪙" : "Starting verification... 🛡️";
+          fastPathResponse = "Checking G$ UBI eligibility... 🪙";
           break;
         case 'WDK_ACTION':
-          if (effectiveIntent.topic === 'switch') {
-            fastPathResponse = "Switching your Guardian infrastructure to WDK settlement... 🌌";
-          } else if (effectiveIntent.topic === 'status') {
-            fastPathResponse = "Checking WDK settlement agent status... 🛰️";
-          } else {
-            fastPathResponse = "The WDK (Wallet Development Kit) enables self-custodial agentic wallets with native USD₮ and XAU₮ support for multi-chain settlement. 🌌";
-          }
+          fastPathResponse = "Switching your Guardian infrastructure to WDK settlement... 🌌";
           break;
         case 'ONBOARDING':
-          if (effectiveIntent.topic === 'demo') {
-            fastPathResponse = "Entering Demo Mode... 🎮";
-          } else if (effectiveIntent.topic === 'what-is-this') {
-            fastPathResponse = "DiversiFi is a wealth protection protocol that helps you hedge against inflation by diversifying your stablecoin savings across multiple regions and real-world assets (RWAs).";
-          } else if (effectiveIntent.topic === 'how-to-start') {
-            fastPathResponse = "It's simple: 1. Connect your wallet. 2. Choose a protection strategy in the 'Protect' tab. 3. Swap your funds into diversified assets.";
-          } else if (effectiveIntent.topic === 'is-safe') {
-            fastPathResponse = "DiversiFi is non-custodial. We never store your private keys. All transactions are executed on-chain via secure smart contracts.";
-          }
+          fastPathResponse = "Entering Demo Mode... 🎮";
           break;
         case 'YIELD_EARN':
           fastPathResponse = "Scanning for high-yield opportunities... 📈";
@@ -277,35 +279,33 @@ export function useAgentChat({
           navAction = { type: "navigate", tab: "overview", delay: 1500 };
         }
 
-        // Add the message to chat after a brief thinking delay
-        setTimeout(async () => {
-          const assistantMessage: AIMessage = {
-            role: "assistant",
-            content: fastPathResponse!,
-            timestamp: new Date(),
-            type: "text",
-            ...(navAction && { action: navAction }),
-          };
-          addMessage(assistantMessage);
+        // Add the message to chat immediately — no artificial delay
+        const assistantMessage: AIMessage = {
+          role: "assistant",
+          content: fastPathResponse!,
+          timestamp: new Date(),
+          type: "text",
+          ...(navAction && { action: navAction }),
+        };
+        addMessage(assistantMessage);
 
-          // Handle auto-speech if enabled
-          if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
-            try {
-                const speechBlob = await generateSpeech(fastPathResponse!);
-              if (speechBlob) {
-                const url = URL.createObjectURL(speechBlob);
-                const audio = new Audio(url);
-                audio.play().catch((playError) => {
-                  console.warn("[useAgentChat] Fast-path audio playback failed:", playError);
-                });
-              }
-            } catch (e) {
-              console.warn("[useAgentChat] Fast-path speech failed:", e);
+        // Handle auto-speech if enabled
+        if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
+          try {
+            const speechBlob = await generateSpeech(fastPathResponse!);
+            if (speechBlob) {
+              const url = URL.createObjectURL(speechBlob);
+              const audio = new Audio(url);
+              audio.play().catch((playError) => {
+                console.warn("[useAgentChat] Fast-path audio playback failed:", playError);
+              });
             }
+          } catch (e) {
+            console.warn("[useAgentChat] Fast-path speech failed:", e);
           }
+        }
 
-          updateChatState({ isChatting: false, thinkingStep: "" });
-        }, 600);
+        updateChatState({ isChatting: false, thinkingStep: "" });
         return;
       }
 
@@ -321,21 +321,9 @@ export function useAgentChat({
 
       const responseFormat = IntentDiscoveryService.recommendResponseFormat(effectiveContent, lastAssistantMsgType);
 
-      // Short-circuit ambiguous follow-ups with a clarifying question
-      if (responseFormat === 'clarify') {
-        addMessage({
-          role: 'assistant',
-          content: "Are you asking about the news I just showed, or something else?",
-          timestamp: new Date(),
-          type: 'text',
-        });
-        updateChatState({ isChatting: false, thinkingStep: '' });
-        return;
-      }
-
       updateChatState({
         isChatting: true,
-        thinkingStep: "Consulting Advisor...",
+        thinkingStep: "Thinking...",
       });
 
       // SoSoValue intelligence: show card for data requests, fetch silently for synthesis
@@ -382,19 +370,10 @@ export function useAgentChat({
       const hasCredits = currentCredits >= RESEARCH_BUNDLE_PRICE;
 
       if (!hasCredits || !shouldFetchResearch) {
-        // No credits or synthesis-only query — skip paid research, advisor uses built-in context only
-        x402Receipt = {
-          status: "failed",
-          amount: "0.000",
-          currency: "USDC",
-          sources: [],
-          reason: shouldFetchResearch
-            ? "Advisor answered without research evidence."
-            : "Synthesis question — answered with free context only.",
-          error: !hasCredits
-            ? "Insufficient research credits. Earn more or add funds to unlock evidence-backed responses."
-            : undefined,
-        };
+        // No credits or synthesis-only query — skip paid research, advisor uses
+        // built-in context only. Do NOT attach a "failed" receipt to normal
+        // free answers — that makes every free response look like an error.
+        x402Receipt = null;
       } else {
         try {
           updateChatState({ thinkingStep: "Gathering research evidence..." });
@@ -423,20 +402,10 @@ export function useAgentChat({
         }
       }
 
-      const CHAT_THINKING_MESSAGES = [
-        "Analyzing query...",
-        "Scanning market data...",
-        "Checking inflation rates...",
-        "Reviewing RWA yields...",
-        "Consulting historical data...",
-        "Formulating response...",
-      ];
-
-      let messageIndex = 0;
-      const interval = setInterval(() => {
-        updateChatState({ thinkingStep: CHAT_THINKING_MESSAGES[messageIndex] });
-        messageIndex = (messageIndex + 1) % CHAT_THINKING_MESSAGES.length;
-      }, 3000);
+      // Track chat send for funnel analytics
+      trackFunnelEvent('chat_send', { intent: effectiveIntent.type });
+      const sendStartTime = Date.now();
+      let pendingAssistant: { id: string; timestamp: Date } | null = null;
 
       try {
         const portfolioSnapshot =
@@ -473,8 +442,9 @@ export function useAgentChat({
           },
           body: JSON.stringify({
             mode: "conversation",
+            stream: true,
             message: effectiveContent,
-            history: messages,
+            history: messages.slice(-MAX_HISTORY_TO_SEND),
             chainId,
             address,
             portfolio: portfolioSnapshot,
@@ -483,12 +453,10 @@ export function useAgentChat({
           }),
         });
 
-        if (response.ok) {
-          const result = await response.json();
-          // Patch receipt amount to reflect true cost to user's research allowance
-          const patchedReceipt = x402Receipt && x402Receipt.status !== "failed" && x402Receipt.sources.length > 0
-            ? { ...x402Receipt, amount: (Number.parseFloat(x402Receipt.amount || "0") || RESEARCH_BUNDLE_PRICE).toFixed(3) }
-            : x402Receipt;
+        if (response.ok && response.body) {
+          // ── Streaming path: read SSE events and patch the assistant message ──
+          const messageTimestamp = new Date();
+          const messageId = `assistant-${messageTimestamp.getTime()}-${Math.random().toString(36).slice(2, 8)}`;
 
           // Build compact portfolio context line for grounding proof
           let portfolioContext: string | undefined;
@@ -501,20 +469,96 @@ export function useAgentChat({
             portfolioContext = `Analyzing: ${holdingParts.join(" · ")}${portfolioSnapshot.holdings.length > 5 ? " …" : ""} on ${chainNames}`;
           }
 
-          const messageTimestamp = new Date();
+          // Create placeholder message — content fills in as chunks arrive
           const assistantMessage: AIMessage = {
-            id: `assistant-${messageTimestamp.getTime()}-${Math.random().toString(36).slice(2, 8)}`,
+            id: messageId,
             role: "assistant",
-            content: result.response,
+            content: "",
             timestamp: messageTimestamp,
-            type: result.type || "text",
-            action: result.action,
-            provider: result.provider,
-            x402Receipt: patchedReceipt,
+            type: "text",
             portfolioContext,
-            researchSources: result.researchSources || [],
           };
           addMessage(assistantMessage);
+          pendingAssistant = { id: messageId, timestamp: messageTimestamp };
+
+          let streamedContent = "";
+          let finalResult: any = null;
+
+          // Read the SSE stream
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split("\n");
+            buffer = lines.pop() || ""; // Keep incomplete line in buffer
+
+            for (const line of lines) {
+              if (!line.startsWith("data: ")) continue;
+              const jsonStr = line.slice(6).trim();
+              if (!jsonStr) continue;
+
+              let event: any;
+              try {
+                event = JSON.parse(jsonStr);
+              } catch {
+                // Ignore malformed SSE lines
+                continue;
+              }
+
+              if (event.type === "chunk") {
+                streamedContent += event.text;
+                patchMessage(
+                  { id: messageId, timestamp: messageTimestamp },
+                  { content: streamedContent },
+                );
+              } else if (event.type === "done") {
+                finalResult = event;
+                // Replace streaming content with the cleaned final response
+                // (action markers are stripped from the final text)
+                streamedContent = event.response;
+              } else if (event.type === "error") {
+                throw new Error(event.message || "Stream error");
+              }
+            }
+          }
+
+          // Process the final result (same as before, just from the stream)
+          if (!finalResult) {
+            throw new Error("Stream ended without a done event");
+          }
+
+          const result = finalResult;
+          // Patch receipt amount to reflect true cost to user's research allowance
+          const patchedReceipt = x402Receipt && x402Receipt.status !== "failed" && x402Receipt.sources.length > 0
+            ? { ...x402Receipt, amount: (Number.parseFloat(x402Receipt.amount || "0") || RESEARCH_BUNDLE_PRICE).toFixed(3) }
+            : x402Receipt;
+
+          // Final patch with all metadata
+          patchMessage(
+            { id: messageId, timestamp: messageTimestamp },
+            {
+              content: result.response,
+              type: "text",
+              action: result.action,
+              provider: result.provider,
+              x402Receipt: patchedReceipt,
+              researchSources: result.researchSources || [],
+            },
+          );
+
+          // Track successful completion
+          const latencyMs = Date.now() - sendStartTime;
+          trackFunnelEvent('chat_done', {
+            latency: String(Math.round(latencyMs)),
+            provider: String(result.provider || 'unknown'),
+            ...(result.action ? { action: String(result.action.type) } : {}),
+          });
+          pendingAssistant = null;
 
           // Anchor this advice to the 0G RecommendationLedger so the user
           // sees verifiable on-chain state. Fire-and-patch: we don't block
@@ -641,6 +685,7 @@ export function useAgentChat({
             response.status,
             errorData,
           );
+          trackFunnelEvent('chat_error', { status: String(response.status) });
 
           const errorMessage: AIMessage = {
             role: "assistant",
@@ -652,17 +697,21 @@ export function useAgentChat({
         }
       } catch (error) {
         console.error("[useAgentChat] Chat failed:", error);
+        trackFunnelEvent('chat_error', { reason: String(error instanceof Error ? error.message : 'unknown') });
 
-        const errorMessage: AIMessage = {
-          role: "assistant",
-          content:
-            "⚠️ **Connection Error**\n\nUnable to reach the AI service. Please check your connection and try again.",
-          timestamp: new Date(),
-          type: "text",
-        };
-        addMessage(errorMessage);
+        const errorContent =
+          "⚠️ **Response Interrupted**\n\nThe AI provider could not finish this response. Please try again.";
+        if (pendingAssistant) {
+          patchMessage(pendingAssistant, { content: errorContent, provider: undefined });
+        } else {
+          addMessage({
+            role: "assistant",
+            content: errorContent,
+            timestamp: new Date(),
+            type: "text",
+          });
+        }
       } finally {
-        clearInterval(interval);
         updateChatState({
           isChatting: false,
           thinkingStep: "",

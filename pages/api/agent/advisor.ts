@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { runAdvisorAnalysis, runAdvisorConversation } from './_advisor-core';
+import { runAdvisorAnalysis, runAdvisorConversation, runAdvisorConversationStream } from './_advisor-core';
 
 // In-memory per-IP rate limiter. The advisor calls paid LLM providers, so an
 // unauthenticated, unthrottled endpoint is an open spend faucet. Mirrors the
@@ -28,7 +28,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { mode = 'conversation' } = req.body || {};
+    const { mode = 'conversation', stream } = req.body || {};
 
     if (mode === 'analysis') {
       const result = await runAdvisorAnalysis(req.body || {});
@@ -40,6 +40,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(400).json({ error: 'Message is required for conversation mode' });
     }
 
+    // ── Streaming path (SSE) ──────────────────────────────────────────────
+    if (stream === true) {
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache, no-transform');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no');
+      res.flushHeaders?.();
+
+      try {
+        for await (const event of runAdvisorConversationStream(req.body)) {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Stream failed';
+        res.write(`data: ${JSON.stringify({ type: 'error', message: errorMessage })}\n\n`);
+      } finally {
+        res.end();
+      }
+      return;
+    }
+
+    // ── Non-streaming path (backward compatible) ──────────────────────────
     const result = await runAdvisorConversation(req.body);
     return res.status(200).json(result);
   } catch (error: unknown) {

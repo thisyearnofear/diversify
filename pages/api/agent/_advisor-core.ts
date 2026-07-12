@@ -1,4 +1,4 @@
-import { AIService, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
+import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
 import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS } from '../../../config';
 
 type ConversationRequest = {
@@ -599,6 +599,162 @@ export async function runAdvisorConversation(input: ConversationRequest) {
       sourceCount: evidence.bundle.sourceCount,
     } : undefined,
   };
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Streaming variant — yields text chunks as events for real-time UX
+// ──────────────────────────────────────────────────────────────────────────────
+
+export type AdvisorStreamEvent =
+  | { type: 'chunk'; text: string }
+  | { type: 'done'; response: string; provider: string; model?: string; action: any; researchSources: any[]; memoryEnabled: boolean; billing?: any }
+  | { type: 'error'; message: string };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Shared action-parsing + research-source building (used by both paths)
+// ──────────────────────────────────────────────────────────────────────────────
+
+function parseActionsAndSources(
+  fullText: string,
+  input: ConversationRequest,
+  portfolio: ConversationRequest['portfolio'],
+  chainId: number | undefined,
+  financialStrategy: FinancialStrategy | undefined,
+  brightDataContext: string,
+  memoryContext: string,
+  address: string | undefined,
+  message: string,
+): { responseText: string; action: any; researchSources: any[]; billing?: any } {
+  let responseText = fullText;
+  let action: any = null;
+
+  if (responseText.includes('[ACTION:SWAP:')) {
+    const match = responseText.match(/\[ACTION:SWAP:([^:]+):([^:]+):([^:]+):([^\]]+)\]/);
+    if (match && match[1] && match[2] && match[3] && match[4]) {
+      action = { type: 'execute_rwa', fromToken: match[1].trim(), targetAsset: match[2].trim(), amount: match[3].trim(), network: match[4].trim(), reason: 'AI-recommended portfolio rebalance' };
+      responseText = responseText.replace(match[0], '').trim();
+    }
+  } else if (responseText.includes('[ACTION:HOLD]')) {
+    action = { type: 'hold', message: 'Portfolio is well-balanced. No action needed.' };
+    responseText = responseText.replace('[ACTION:HOLD]', '').trim();
+  } else if (responseText.includes('[ACTION:CLAIM_UBI]')) {
+    action = { type: 'claim_ubi' };
+    responseText = responseText.replace('[ACTION:CLAIM_UBI]', '').trim();
+  } else if (responseText.includes('[ACTION:VERIFY_IDENTITY]')) {
+    action = { type: 'verify_identity' };
+    responseText = responseText.replace('[ACTION:VERIFY_IDENTITY]', '').trim();
+  } else if (responseText.includes('[ACTION:NAVIGATE:')) {
+    const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
+    if (match && match[1]) {
+      action = { type: 'navigate', tab: match[1].toLowerCase() };
+      responseText = responseText.replace(match[0], '').trim();
+    }
+  }
+
+  const SOURCE_REFERENCE_URLS: Record<string, string> = {
+    macro_analysis: 'https://fred.stlouisfed.org/series/DFF',
+    portfolio_optimization: 'https://defillama.com/yields',
+    risk_assessment: 'https://www.coingecko.com/en/global-charts',
+    world_bank_analytics: 'https://data.worldbank.org/indicator/FP.CPI.TOTL.ZG',
+    coingecko_analytics: 'https://www.coingecko.com/en/global-charts',
+    defillama_realtime: 'https://defillama.com/yields',
+    fred_insights: 'https://fred.stlouisfed.org/series/DFF',
+    alpha_vantage_enhanced: 'https://www.alphavantage.co/documentation/',
+    yearn_optimizer: 'https://yearn.fi/v3',
+  };
+  const evidence = buildResearchEvidenceSummary(input.macroData);
+  const gatewaySourcesList = evidence?.sources?.map(s => ({
+    label: s.label, tier: s.tier || 'free',
+    url: (s as any).url || SOURCE_REFERENCE_URLS[s.sourceId] || '', cost: s.cost || 0,
+  })) || [];
+
+  const contextSources: Array<{ label: string; tier: string; url: string; cost: number }> = [];
+  if (portfolio && (portfolio.totalValue || 0) > 0) contextSources.push({ label: 'Portfolio snapshot', tier: 'free', url: '', cost: 0 });
+  if (chainId) contextSources.push({ label: 'Chain context', tier: 'free', url: '', cost: 0 });
+  if (financialStrategy) contextSources.push({ label: 'Strategy profile', tier: 'free', url: '', cost: 0 });
+  if (brightDataContext) contextSources.push({ label: 'Bright Data (live scrape)', tier: 'paid', url: '', cost: 0.002 });
+  if (memoryContext) contextSources.push({ label: 'Agent memory (Cognee)', tier: 'free', url: '', cost: 0 });
+
+  const researchSources = gatewaySourcesList.length > 0 ? gatewaySourcesList : contextSources;
+
+  // Cognee: persist (fire-and-forget)
+  if (address) {
+    cogneeMemoryService.persistInteraction(address, message, responseText,
+      { action: action?.type, sources: researchSources.map(s => s.label), chainId }).catch(() => {});
+  }
+
+  return {
+    responseText, action, researchSources,
+    billing: evidence?.bundle ? {
+      totalCost: evidence.bundle.paidSourceCount ? evidence.sources?.reduce((sum, s) => sum + (s.cost || 0), 0) || 0 : 0,
+      confidence: evidence.bundle.confidence, sourceCount: evidence.bundle.sourceCount,
+    } : undefined,
+  };
+}
+
+export async function* runAdvisorConversationStream(input: ConversationRequest): AsyncGenerator<AdvisorStreamEvent> {
+  const { message, history = [], chainId, address, portfolio, financialStrategy } = input;
+  const userMentionsG$ = /\b(g\$|ubi|gooddollar|good dollar|free money|claim.*g\$|face verif)/i.test(message);
+  const gdContext = userMentionsG$ ? await getGoodDollarContext(address) : '';
+  const strategyContext = financialStrategy
+    ? `\nUSER'S FINANCIAL STRATEGY: ${financialStrategy}\n${StrategyService.getAIPrompt(financialStrategy)}\nAlways reference this strategy explicitly when giving portfolio advice, asset suggestions, or rebalancing recommendations.\n`
+    : '';
+  const portfolioContext = getPortfolioContext(portfolio);
+  const brightDataContext = extractBrightDataContext(input.macroData);
+
+  let memoryContext = '';
+  try {
+    if (address) {
+      memoryContext = await cogneeMemoryService.getAdvisorContext(address, message);
+    }
+  } catch { /* Cognee unavailable */ }
+
+  const contextPrompt =
+    ADVISOR_SYSTEM_PROMPT +
+    getTestDriveContext(chainId) +
+    getMainnetChainContext(chainId) +
+    gdContext +
+    portfolioContext +
+    strategyContext +
+    brightDataContext +
+    memoryContext;
+
+  const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    { role: 'system', content: contextPrompt },
+  ];
+  for (const msg of history.slice(-10)) {
+    if (msg.role === 'user' || msg.role === 'assistant') {
+      messages.push({ role: msg.role, content: msg.content });
+    }
+  }
+  messages.push({ role: 'user', content: message });
+
+  let fullText = '';
+  let provider = 'unknown';
+  let model: string | undefined;
+
+  try {
+    for await (const event of chatStream({
+      messages,
+      temperature: 0.7,
+      maxTokens: getAdaptiveTokenLimit('chat'),
+      user: address,
+    })) {
+      provider = event.provider;
+      model = event.model ?? model;
+      if (event.type === 'chunk') {
+        fullText += event.text;
+        yield { type: 'chunk', text: event.text };
+      }
+    }
+  } catch (error: any) {
+    yield { type: 'error', message: error instanceof Error ? error.message : 'Stream failed' };
+    return;
+  }
+
+  // Parse actions + build research sources (shared with runAdvisorConversation)
+  const parsed = parseActionsAndSources(fullText, input, portfolio, chainId, financialStrategy, brightDataContext, memoryContext, address, message);
+  yield { type: 'done', response: parsed.responseText, provider, model, action: parsed.action, researchSources: parsed.researchSources, memoryEnabled: cogneeMemoryService.isAvailable(), billing: parsed.billing };
 }
 
 export async function runAdvisorAnalysis(input: AnalysisRequest) {

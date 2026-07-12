@@ -44,28 +44,32 @@ export function TokenIcon({ symbol, size = 16, className = '' }: TokenIconProps)
   const [errored, setErrored] = useState(false);
   const src = TOKEN_LOGOS[tokenLogoKey(symbol)];
 
-  if (!src || errored) {
-    return (
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center justify-center ${className}`}
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      {!src || errored ? (
       <Coin
         size={size}
         symbol={symbol.trim().charAt(0).toUpperCase()}
         color={tintFor(tokenLogoKey(symbol))}
-        className={`flex-shrink-0 ${className}`}
+        variant="asset"
+        className="block"
       />
-    );
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element -- tiny remote chip icon; next/image adds no value here
-    <img
-      src={src}
-      width={size}
-      height={size}
-      alt=""
-      aria-hidden="true"
-      loading="lazy"
-      onError={() => setErrored(true)}
-      className={`rounded-full flex-shrink-0 ${className}`}
-    />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element -- tiny remote chip icon; next/image adds no value here
+        <img
+          src={src}
+          width={size}
+          height={size}
+          alt=""
+          loading="lazy"
+          onError={() => setErrored(true)}
+          className="rounded-full"
+        />
+      )}
+    </span>
   );
 }

@@ -17,6 +17,10 @@ export const FUNNEL_EVENTS = [
   'philosophy_chosen',
   'wallet_prompt_viewed',
   'demo_opened',
+  // Chat analytics — coarse, privacy-lean (no message content, just outcome)
+  'chat_send',
+  'chat_error',
+  'chat_done',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

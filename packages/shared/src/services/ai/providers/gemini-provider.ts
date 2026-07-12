@@ -8,6 +8,7 @@ import { BaseAIProvider } from './base-ai-provider';
 import { 
   ChatCompletionOptions, 
   ChatCompletionResult, 
+  ProviderChatStreamEvent,
   TTSOptions,
   AIProviderConfig
 } from '../types';
@@ -97,6 +98,73 @@ export class GeminiProvider extends BaseAIProvider {
   }
 
   // Gemini doesn't currently support TTS or transcription in this implementation
+  /**
+   * Stream a chat completion, yielding text chunks as they arrive.
+   * Uses Gemini's generateContentStream for true token-by-token streaming.
+   */
+  async *generateChatCompletionStream(
+    options: ChatCompletionOptions
+  ): AsyncGenerator<ProviderChatStreamEvent> {
+    if (!this.isAvailable()) {
+      throw new Error('Gemini provider not available');
+    }
+
+    if (!this.client) {
+      await this.initialize();
+    }
+
+    const modelNames = [
+      options.model ?? "gemini-3.1-flash-lite-preview",
+      "gemini-3-flash-preview",
+      "models/gemini-3-flash-preview"
+    ];
+
+    let lastError: any = null;
+
+    for (const modelName of modelNames) {
+      let emittedText = false;
+      try {
+        const model = this.client!.getGenerativeModel({ model: modelName });
+
+        const { contents, systemInstruction } = this.convertMessages(options.messages);
+
+        const result = await model.generateContentStream({
+          contents,
+          ...(systemInstruction ? { systemInstruction } : {}),
+          generationConfig: {
+            temperature: options.temperature ?? 0.7,
+            maxOutputTokens: options.maxTokens,
+          }
+        });
+
+        for await (const chunk of result.stream) {
+          try {
+            const text = chunk.text();
+            if (text) {
+              emittedText = true;
+              yield { type: 'chunk', text };
+            }
+          } catch {
+            // Some chunks may not have text (e.g. safety blocks) — skip
+          }
+        }
+        if (!emittedText) {
+          throw new Error(`Gemini model ${modelName} returned an empty stream`);
+        }
+        yield { type: 'done', modelUsed: modelName };
+        return; // Success — streaming complete
+      } catch (error) {
+        lastError = error;
+        // Once text is visible to the user, switching models would concatenate
+        // two unrelated answers. Model fallback is only safe before first text.
+        if (emittedText) throw error;
+        continue;
+      }
+    }
+
+    throw new Error(`Gemini provider stream failed: ${lastError?.message || 'Unknown error'}`);
+  }
+
   async generateSpeech(options: TTSOptions): Promise<any> {
     throw new Error('Gemini provider does not support TTS');
   }

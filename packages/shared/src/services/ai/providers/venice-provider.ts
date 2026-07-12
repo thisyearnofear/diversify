@@ -8,6 +8,7 @@ import { BaseAIProvider } from './base-ai-provider';
 import { 
   ChatCompletionOptions, 
   ChatCompletionResult, 
+  ProviderChatStreamEvent,
   TTSOptions, 
   TTSResult, 
   TranscriptionResult,
@@ -90,6 +91,48 @@ export class VeniceProvider extends BaseAIProvider {
       modelUsed: options.model ?? "deepseek-v4-flash",
       citations: this.extractCitations(content)
     };
+  }
+
+  /**
+   * Stream a chat completion, yielding text chunks as they arrive.
+   * Uses the OpenAI SDK's native streaming support.
+   */
+  async *generateChatCompletionStream(
+    options: ChatCompletionOptions
+  ): AsyncGenerator<ProviderChatStreamEvent> {
+    if (!this.isAvailable()) {
+      throw new Error('Venice provider not available');
+    }
+
+    if (!this.client) {
+      await this.initialize();
+    }
+
+    const veniceParameters = {
+      web_search: options.webSearch ?? false,
+    };
+
+    const stream = await this.client!.chat.completions.create({
+      model: options.model ?? "deepseek-v4-flash",
+      messages: options.messages,
+      temperature: options.temperature ?? 0.7,
+      max_tokens: options.maxTokens,
+      stream: true,
+      venice_parameters: veniceParameters,
+    } as any) as any; // Cast: stream:true returns AsyncIterable but SDK types don't narrow
+
+    let emittedText = false;
+    for await (const chunk of stream) {
+      const text = chunk?.choices?.[0]?.delta?.content;
+      if (text) {
+        emittedText = true;
+        yield { type: 'chunk', text };
+      }
+    }
+    if (!emittedText) {
+      throw new Error('Venice returned an empty stream');
+    }
+    yield { type: 'done', modelUsed: options.model ?? "deepseek-v4-flash" };
   }
 
   async generateSpeech(

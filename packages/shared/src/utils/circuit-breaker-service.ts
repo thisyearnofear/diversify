@@ -55,6 +55,30 @@ export class CircuitBreaker {
   }
 
   /**
+   * Execute an async stream under the same circuit state as promise calls.
+   * A stream counts as successful only after it completes; failures after
+   * partial output still update the circuit and are rethrown to the caller.
+   */
+  async *callStream<T>(fn: () => AsyncIterable<T>): AsyncGenerator<T> {
+    this.totalCalls++;
+
+    if (this.shouldReject()) {
+      this.totalFailures++;
+      throw new Error(`Circuit breaker is ${this.state} - rejecting call`);
+    }
+
+    try {
+      for await (const value of fn()) {
+        yield value;
+      }
+      this.onSuccess();
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  /**
    * Execute a function with fallback on any error or circuit breaker rejection
    */
   async callWithFallback<T>(

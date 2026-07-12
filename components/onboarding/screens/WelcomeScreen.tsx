@@ -89,6 +89,46 @@ const STRATEGY_ID: Record<ArchetypeId, FinancialStrategy> = {
 };
 
 type Phase = 'detect' | 'risk' | 'philosophy';
+type Horizon = '1yr' | '3yr' | '5yr';
+type ValuesLens = 'local' | 'community' | 'faith' | 'global' | 'custom';
+
+const VALUES_LENSES: Array<{
+  id: ValuesLens;
+  label: string;
+  description: string;
+  archetypes: ArchetypeId[];
+}> = [
+  {
+    id: 'local',
+    label: 'Local prosperity',
+    description: 'Keep wealth connected to the economies and communities you know.',
+    archetypes: ['africapitalism', 'pan_caribbean'],
+  },
+  {
+    id: 'community',
+    label: 'Community & balance',
+    description: 'Balance personal resilience with people and place.',
+    archetypes: ['buen_vivir', 'gotong_royong'],
+  },
+  {
+    id: 'faith',
+    label: 'Faith & ethics',
+    description: 'Put clear ethical principles at the centre of your plan.',
+    archetypes: ['islamic_finance', 'confucian'],
+  },
+  {
+    id: 'global',
+    label: 'Global resilience',
+    description: 'Spread risk across regions and asset types.',
+    archetypes: ['global_diversification'],
+  },
+  {
+    id: 'custom',
+    label: 'Build my own',
+    description: 'Start with your own allocation and priorities.',
+    archetypes: ['custom'],
+  },
+];
 
 const PHILOSOPHY_CTA: Record<ArchetypeId, string> = {
   africapitalism: 'Begin building African wealth',
@@ -152,7 +192,7 @@ function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p: Phase)
               disabled={!isDone}
               aria-current={isActive ? 'step' : undefined}
               aria-label={isDone ? `Go back to step ${i + 1}: ${s.label}` : `Step ${i + 1}: ${s.label}`}
-              className={`flex flex-col items-center gap-1 rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 ${
+              className={`min-w-11 min-h-11 flex flex-col items-center justify-center gap-0.5 rounded-lg px-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70 ${
                 isDone ? 'cursor-pointer hover:-translate-y-0.5 transition-transform' : 'cursor-default'
               }`}
             >
@@ -177,12 +217,13 @@ function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p: Phase)
                   <Coin
                     size={isActive ? 30 : 26}
                     symbol={String(i + 1)}
+                    variant="progress"
                     className={isActive ? '' : 'opacity-40 grayscale'}
                   />
                 )}
               </span>
               <span
-                className={`text-[9px] font-black uppercase tracking-widest ${
+                className={`text-[10px] font-black uppercase tracking-widest ${
                   isActive
                     ? 'text-amber-500'
                     : isDone
@@ -245,7 +286,7 @@ function ArchetypeCard({
           transition={{ type: 'spring', stiffness: 120, damping: 14 }}
           style={{ transformPerspective: 400 }}
         >
-          <Coin size={36} symbol={a.name[0]} color={a.accent} />
+          <Coin size={36} symbol={a.name[0]} color={a.accent} variant="selection" />
         </motion.div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -264,21 +305,20 @@ function ArchetypeCard({
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
             {a.philosophy}
           </p>
-          <div className="flex flex-wrap gap-1 mt-1">
-            {a.allocation.slice(0, 4).map((asset, i) => (
-              <span
-                key={i}
-                className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium"
-                style={isActive ? {
-                  background: `${a.accent}15`,
-                  color: a.accent,
-                } : undefined}
-              >
-                <TokenIcon symbol={asset} size={11} />
-                {asset}
-              </span>
-            ))}
-          </div>
+          {isActive && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {a.allocation.slice(0, 4).map((asset, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center gap-1 text-[9px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium"
+                  style={{ background: `${a.accent}15`, color: a.accent }}
+                >
+                  <TokenIcon symbol={asset} size={12} />
+                  {asset}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         {/* Accent glow line on active */}
         {isActive && (
@@ -301,7 +341,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       riskData,
       isLoading: riskLoading,
       countryCode,
-      currencyCode,
       setCountryOverride,
       getDepreciation,
       calculateCounterfactual,
@@ -315,8 +354,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [switchDone, setSwitchDone] = useState(false);
     const [showTestDetails, setShowTestDetails] = useState(false);
     const [selectedArchetype, setSelectedArchetype] = useState<ArchetypeId | null>(null);
+    const [selectedLens, setSelectedLens] = useState<ValuesLens | null>(null);
+    const [showAllApproaches, setShowAllApproaches] = useState(false);
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
+    const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
+    const [showHistoricalExample, setShowHistoricalExample] = useState(false);
+    const [showBusinessContext, setShowBusinessContext] = useState(false);
 
     // Local step state — user taps to advance (no auto-advance on detect).
     const [step, setStep] = useState<Phase>('detect');
@@ -413,31 +457,33 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
 
             <div className="my-auto w-full flex flex-col items-center">
 
-            {/* Brand and Mascot — full mascot only on detect phase; compact brand mark on content phases */}
+            {/* Brand lockup — the Guardian and promise read as one identity, not
+                as separate decorations above the task. */}
             <motion.div
-                className="mb-4 relative mt-6 md:mt-4"
+                className="mb-5 relative mt-4 md:mt-2"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ type: 'spring', duration: 1 }}
             >
                 {phase === 'detect' ? (
-                  <>
-                    <div className="flex items-center justify-center gap-1.5 mb-2">
-                        <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
-                            <span className="text-white text-xs font-black">D</span>
-                        </div>
-                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
-                    </div>
-                    {/* Identity line — what DiversiFi is, before we ask the
-                        visitor for anything. One line, one job. */}
-                    <p className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mb-3 max-w-[260px] mx-auto leading-snug">
-                      Currency protection that fits your values — never a lock-up.
-                    </p>
+                  <div className="flex items-center justify-center gap-3 text-left">
                     <GuardianMascot
-                      size={100}
+                      size={72}
                       mood={selectedArchetype ? 'happy' : 'neutral'}
+                      className="shrink-0"
                     />
-                  </>
+                    <div className="max-w-[210px]">
+                      <div className="flex items-center gap-1.5 mb-1">
+                          <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
+                              <span className="text-white text-xs font-black">D</span>
+                          </div>
+                          <span className="text-xs font-black text-gray-500 dark:text-gray-300 uppercase tracking-widest">DiversiFi</span>
+                      </div>
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 leading-snug">
+                        Currency protection that fits your values — never a lock-up.
+                      </p>
+                    </div>
+                  </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2 mb-2">
                       <GuardianMascot
@@ -491,9 +537,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         <p className="text-sm text-gray-500 dark:text-gray-400">Currency: {riskData.code}</p>
                         <button
                           onClick={() => setShowCountryPicker(!showCountryPicker)}
-                          className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-medium"
+                          className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-bold"
                         >
-                          Not your country? Pick another
+                          Change country
                         </button>
                       </div>
                     ) : (
@@ -517,42 +563,69 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           onClick={() => setShowCountryPicker(true)}
                           className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl shadow-sm active:scale-[0.97] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
                         >
-                          Pick your country →
+                          Choose your country →
                         </button>
                       </div>
                     )}
                   </motion.div>
 
-                  {/* Country picker */}
+                  {/* Country picker — an in-dialog sheet keeps discovery focused
+                      without turning the first phase into a long directory. */}
                   <AnimatePresence>
                     {showCountryPicker && (
                       <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden mb-4"
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 16 }}
+                        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Choose your country"
+                        className="absolute inset-x-0 top-0 z-20 rounded-3xl border border-white/20 bg-slate-950/95 p-4 text-left shadow-2xl backdrop-blur-xl"
                       >
+                        <div className="flex items-start justify-between gap-3 mb-4">
+                          <div>
+                            <p className="text-sm font-black text-white">Choose your country</p>
+                            <p className="text-xs text-slate-400 mt-0.5">We’ll use it to frame the comparison in your currency.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setShowCountryPicker(false)}
+                            className="size-8 rounded-full bg-white/10 text-white hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                            aria-label="Close country picker"
+                          >
+                            ×
+                          </button>
+                        </div>
                         <input
                           type="text"
-                          placeholder="Search countries..."
+                          placeholder="Search country or currency"
                           value={manualCountrySearch}
                           onChange={(e) => setManualCountrySearch(e.target.value)}
-                          className="w-full px-3 py-2 mb-2 text-sm rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:border-blue-400 outline-none"
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') setShowCountryPicker(false);
+                          }}
+                          className="w-full px-3 py-3 mb-3 text-sm rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none"
                         />
-                        <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto">
+                        <p className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">
+                          {manualCountrySearch ? 'Matches' : 'Suggested countries'}
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
                           {filteredCountries.map((c) => (
                             <button
                               key={c.iso2}
                               onClick={() => {
                                 setCountryOverride(c.iso2);
                                 setShowCountryPicker(false);
+                                setManualCountrySearch('');
                               }}
-                              className="flex items-center gap-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-600 bg-white dark:bg-gray-800 transition-all text-left"
+                              className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-all text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                             >
                               <span className="text-lg">{c.flag}</span>
                               <div>
-                                <div className="text-xs font-bold text-gray-900 dark:text-white">{c.countryName}</div>
-                                <div className="text-[10px] text-gray-500">{c.code}</div>
+                                <div className="text-xs font-bold text-white">{c.countryName}</div>
+                                <div className="text-[10px] text-slate-400">{c.code}</div>
                               </div>
                             </button>
                           ))}
@@ -644,90 +717,102 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-sm"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                    Here&apos;s the reality for <span className="text-blue-500">{riskData.flag} {riskData.code}</span>
+                    Your <span className="text-blue-500">{riskData.flag} {riskData.code}</span> in context
                   </motion.h2>
+                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Compare how it has moved against selected benchmarks. Historical data, not a projection.
+                  </motion.p>
 
-                  {/* Multi-benchmark depreciation card */}
-                  <motion.div variants={staggerChild} className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-2 border-red-200 dark:border-red-800 rounded-2xl p-5 mb-4">
-                    <p className="text-xs text-red-600 dark:text-red-400 font-bold mb-3">
-                      {isBenchmarkCurrency
-                        ? `${riskData.countryName}'s ${riskData.code} may be strong, but it still loses value against hard assets:`
-                        : `${riskData.countryName}'s ${riskData.code} has lost value against:`}
-                    </p>
-
-                    {/* Benchmark rows with animated count-up */}
-                    <div className="space-y-3">
-                      {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench, i) => {
-                        const dep5yr = getDepreciation(bench, '5yr');
-                        const dep3yr = getDepreciation(bench, '3yr');
-                        const dep1yr = getDepreciation(bench, '1yr');
-                        const b = BENCHMARKS[bench];
-                        if (dep5yr === 0 && dep3yr === 0 && dep1yr === 0) return null;
-                        return (
-                          <motion.div
-                            key={bench}
-                            variants={staggerChild}
-                            className="bg-white/60 dark:bg-gray-900/40 rounded-xl p-3 border border-red-100 dark:border-red-900/40"
+                  <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-4 shadow-lg">
+                    <div className="flex items-center justify-between gap-2 mb-4">
+                      <p className="text-xs font-bold text-slate-300">
+                        {isBenchmarkCurrency
+                          ? `${riskData.countryName}'s ${riskData.code} compared with hard assets`
+                          : `${riskData.countryName}'s ${riskData.code} compared with`}
+                      </p>
+                      <div className="flex rounded-lg bg-white/10 p-0.5" role="group" aria-label="Comparison period">
+                        {(['1yr', '3yr', '5yr'] as Horizon[]).map((horizon) => (
+                          <button
+                            key={horizon}
+                            type="button"
+                            onClick={() => setSelectedHorizon(horizon)}
+                            className={`px-2 py-1 rounded-md text-[10px] font-black transition-colors ${
+                              selectedHorizon === horizon ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
+                            }`}
                           >
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-sm font-bold text-gray-900 dark:text-white">
-                                {b.flag} {b.label}
-                              </span>
-                              <AnimatedNumber
-                                value={dep5yr}
-                                decimals={0}
-                                suffix="%"
-                                duration={1.4}
-                                delay={i * 150}
-                                className={`text-lg font-black ${Math.abs(dep5yr) >= 25 ? 'text-red-600 dark:text-red-400' : 'text-orange-500 dark:text-orange-400'}`}
-                              />
-                            </div>
-                            <div className="flex gap-3 text-[10px] text-gray-500 dark:text-gray-400">
-                              <span>1Y: {dep1yr.toFixed(0)}%</span>
-                              <span>3Y: {dep3yr.toFixed(0)}%</span>
-                              <span>5Y: {dep5yr.toFixed(0)}%</span>
-                            </div>
+                            {horizon.replace('yr', 'Y')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench, i) => {
+                        const value = getDepreciation(bench, selectedHorizon);
+                        const b = BENCHMARKS[bench];
+                        if (value === 0) return null;
+                        return (
+                          <motion.div key={bench} variants={staggerChild} className="flex items-center justify-between rounded-xl bg-white/8 px-3 py-3 border border-white/10">
+                            <span className="text-sm font-bold">{b.flag} {b.label}</span>
+                            <AnimatedNumber
+                              value={value}
+                              decimals={0}
+                              suffix="%"
+                              duration={0.7}
+                              delay={i * 100}
+                              className="text-lg font-black text-amber-300"
+                            />
                           </motion.div>
                         );
                       })}
                     </div>
-
-                    {/* Counterfactual with animated count-up */}
-                    <motion.div variants={staggerChild} className="mt-4 pt-3 border-t border-red-200 dark:border-red-800">
-                      <p className="text-xs text-red-500 dark:text-red-300">
-                        If <strong>20%</strong> of {localPrefix}{localExample.toLocaleString()} had been in gold-backed assets 5 years ago,
-                        you would have preserved{' '}
-                        <AnimatedNumber
-                          value={xauPreserved}
-                          decimals={0}
-                          prefix={localPrefix}
-                          duration={1.8}
-                          delay={600}
-                          className="text-base font-black text-red-600 dark:text-red-400"
-                        />{' '}
-                        in real value.
-                      </p>
-                      <p className="text-[10px] text-red-400 dark:text-red-500 mt-1">
-                        That&apos;s ~{localPrefix}{Math.max(1, Math.round(xauPreserved / (365 * 5))).toLocaleString()}/day — gone. Every day you wait.
-                      </p>
-                      <p className="text-[10px] text-red-400 dark:text-red-500 mt-1.5">
-                        Buy stock in dollars and sell in {currencyCode}? That same gap comes out of
-                        your margin between one restock and the next.
-                      </p>
-                    </motion.div>
+                    <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
+                      A negative figure means {riskData.code} bought less of that benchmark over this period.
+                    </p>
                   </motion.div>
 
-                  {/* Risk events */}
+                  <motion.div variants={staggerChild} className="space-y-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowHistoricalExample((shown) => !shown)}
+                      className="w-full flex items-center justify-between rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/15 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    >
+                      <span className="text-xs font-bold text-amber-800 dark:text-amber-200">See a historical example</span>
+                      <span className="text-amber-700 dark:text-amber-300">{showHistoricalExample ? '−' : '+'}</span>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {showHistoricalExample && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-xl bg-amber-50/70 dark:bg-amber-900/10 px-3">
+                          <p className="py-3 text-xs leading-relaxed text-amber-900 dark:text-amber-100">
+                            Historically, if 20% of {localPrefix}{localExample.toLocaleString()} had followed gold&apos;s five-year comparison,
+                            the difference would have been{' '}
+                            <AnimatedNumber value={xauPreserved} decimals={0} prefix={localPrefix} duration={1} className="font-black" />.
+                            This is a past comparison, not a recommendation or forecast.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    <button
+                      type="button"
+                      onClick={() => setShowBusinessContext((shown) => !shown)}
+                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                    >
+                      {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
+                    </button>
+                    {showBusinessContext && (
+                      <p className="px-3 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                        When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
+                      </p>
+                    )}
+                  </motion.div>
+
                   {riskEvents.length > 0 && (
-                    <motion.div variants={staggerChild} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 mb-4">
-                      <p className="text-xs text-amber-600 dark:text-amber-400 font-bold mb-2">Risk Events</p>
-                      {riskEvents.slice(0, 2).map((ev, i) => (
-                        <div key={i} className="text-left mb-2 last:mb-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-amber-500 dark:text-amber-400">{ev.year}</span>
-                            <span className="text-xs font-bold text-gray-900 dark:text-white">{ev.event}</span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-12">{ev.impact}</p>
+                    <motion.div variants={staggerChild} className="border-l-2 border-amber-300 dark:border-amber-600 pl-3 mb-4 text-left">
+                      <p className="text-[10px] uppercase tracking-widest font-black text-amber-700 dark:text-amber-300 mb-2">Context events</p>
+                      {riskEvents.slice(0, 2).map((ev) => (
+                        <div key={`${ev.year}-${ev.event}`} className="mb-3 last:mb-0">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white"><span className="text-amber-600 dark:text-amber-400">{ev.year}</span> · {ev.event}</p>
+                          <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 mt-0.5">{ev.impact}</p>
                         </div>
                       ))}
                     </motion.div>
@@ -769,30 +854,65 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-md"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                    Choose Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">Protection Philosophy</span>
+                    Start with what <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">matters to you</span>
                   </motion.h2>
                   <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    Different communities have different relationships with money. Pick what resonates with you.
+                    Pick a values lens first. You can always explore every approach afterwards.
                   </motion.p>
 
-                  {/* Archetype grid — no nested scroll, flows naturally in modal */}
-                  <motion.div
-                    variants={{
-                      animate: { transition: { staggerChildren: 0.05 } },
-                    }}
-                    className="space-y-2 mb-5"
-                  >
-                    {ARCHETYPE_ORDER.map((id, i) => (
-                      <ArchetypeCard
-                        key={id}
-                        id={id}
-                        isActive={selectedArchetype === id}
-                        isDimmed={selectedArchetype !== null && selectedArchetype !== id}
-                        onSelect={handleArchetypeSelect}
-                        index={i}
-                      />
-                    ))}
-                  </motion.div>
+                  {!selectedLens && !showAllApproaches ? (
+                    <motion.div
+                      variants={{ animate: { transition: { staggerChildren: 0.05 } } }}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4"
+                    >
+                      {VALUES_LENSES.map((lens) => (
+                        <motion.button
+                          key={lens.id}
+                          variants={staggerChild}
+                          type="button"
+                          onClick={() => setSelectedLens(lens.id)}
+                          className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-slate-800/70 p-3 text-left transition-all hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
+                        >
+                          <p className="text-sm font-black text-gray-900 dark:text-white">{lens.label}</p>
+                          <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-1">{lens.description}</p>
+                        </motion.button>
+                      ))}
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      variants={{ animate: { transition: { staggerChildren: 0.05 } } }}
+                      className="space-y-2 mb-4"
+                    >
+                      <div className="flex items-center justify-between px-1">
+                        <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                          {showAllApproaches ? 'All approaches' : VALUES_LENSES.find((lens) => lens.id === selectedLens)?.label}
+                        </p>
+                        <button type="button" onClick={() => { setSelectedLens(null); setShowAllApproaches(false); }} className="text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">
+                          Values lenses
+                        </button>
+                      </div>
+                      {(showAllApproaches
+                        ? ARCHETYPE_ORDER
+                        : VALUES_LENSES.find((lens) => lens.id === selectedLens)?.archetypes ?? []
+                      ).map((id, i) => (
+                        <ArchetypeCard
+                          key={id}
+                          id={id}
+                          isActive={selectedArchetype === id}
+                          isDimmed={selectedArchetype !== null && selectedArchetype !== id}
+                          onSelect={handleArchetypeSelect}
+                          index={i}
+                        />
+                      ))}
+                      {!showAllApproaches && <button
+                        type="button"
+                        onClick={() => setShowAllApproaches(true)}
+                        className="w-full py-2 text-xs font-bold text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                      >
+                        See all approaches
+                      </button>}
+                    </motion.div>
+                  )}
 
                   {planPreview && (
                     <motion.div variants={staggerChild} className="mb-5">

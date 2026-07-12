@@ -70,11 +70,13 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
 
-  // Persist messages to localStorage
+  // Persist messages to localStorage (capped to last 100 to prevent
+  // unbounded growth — the server only uses the last 10 for context anyway)
   useEffect(() => {
     if (typeof window !== 'undefined' && messages.length > 0) {
       try {
-        localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(messages));
+        const capped = messages.slice(-100);
+        localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(capped));
       } catch (e) {
         console.warn('[AIConversation] Failed to save to storage:', e);
       }

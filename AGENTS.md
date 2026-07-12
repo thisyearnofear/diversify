@@ -84,7 +84,7 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - **Wave 6:** `PhilosophyHeroCard` DRY for Home + Shield unconnected heroes; onboarding detect phase waits for user tap
 - **Wave 7:** `getPlanPreview()` + phase-3 `PlanPreviewCard`; `PhilosophyPromptCard` DRY; `STRATEGY_ALLOCATIONS` shared with Guardian wizard
 - **Wave 8:** Honest price feeds — shared `fetchWithTimeout` (`packages/shared/src/utils/promise-utils.ts`); EM price service per-provider timeouts + serves expired cache before fabricating a static price (fallbacks report `change24h: null`, never a fake `+0.0%`); `use-emerging-markets-prices` derives staleness from data timestamps and exposes `hasEstimates` → `DataFreshnessIndicator` "Includes estimates"; EM prices API route on `unifiedCache` (new `realtime` category, coalesces concurrent fan-outs); dead `use-data-freshness` + unused `useEmergingMarketPrice` deleted
-- **576 tests passing**; see `docs/roadmap.md` § UX consolidation waves for full table
+- **650 tests passing**; see `docs/roadmap.md` § UX consolidation waves for full table
 
 **APAC rail — HashKey Chain (2026-07-10, code shipped):**
 Fourth grant track: HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track, submission deadline **July 11 23:59 GMT+8**). The APAC rail from `docs/apac-rail.md` is implemented against HashKey mainnet (chain 177): ledger registry + explorer, `getLedgerChainForAction` routing (`isApacRailProfile` in `types/strategy.ts`), heartbeat APAC leg, multi-chain proof feed (Arbitrum + Celo + HashKey), config-aware `apac-rail` banner, guardian-loop `routingContext`, deploy/seed tooling. **Deployment gated on HSK gas** — runbook in `docs/apac-rail.md`, BUIDL copy in `docs/hackathon-hashkey-buidl.md`. Alignment: HashKey holds APAC savings core; Arbitrum stays yield engine.
@@ -107,7 +107,20 @@ Fourth grant track: HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, 
 - **Cost discipline**: `insight-tier.ts` gates paid insights by engagement (Free / Saver ≥$100 or 7-day streak / Committed ≥$1000 or 30-day) — default-deny, so we never pay for the unengaged; free data open to all.
 - **UI**: `BestYieldCard` in ProtectionTab (via `/api/agent/best-yield` + `use-best-yield`) shows personalized/GMX/free picks with a tier-unlock prompt.
 
-Env keys live in gitignored `.env.local` and on the server; activate a feature by setting its key (ElevenLabs, TinyFish, vaults.fyi done). **639 tests green.**
+Env keys live in gitignored `.env.local` and on the server; activate a feature by setting its key (ElevenLabs, TinyFish, vaults.fyi done). **650 tests green.**
+
+**Chat UX overhaul (2026-07-12):**
+The AI chat drawer is the app's front door (mounted globally, auto-opens on any user message, routes claims/swaps/navigation/research). Five systemic issues that drove mediocre reviews are fixed:
+
+1. **Streaming + fake-thinking removal**: Real SSE streaming end-to-end — `generateChatCompletionStream()` on Gemini (`generateContentStream`) and Venice (OpenAI SDK `stream: true`); `chatStream()` async generator in `AIService` with provider fallback; `runAdvisorConversationStream()` in `_advisor-core.ts` yields `chunk`/`done`/`error` events; `advisor.ts` sends SSE; `use-agent-chat.ts` reads the `ReadableStream` and patches the assistant message content incrementally. Deleted the rotating "Scanning market data..." script (canned messages every 3s on `setInterval`), fake source labels in `ResearchCheck` (World Bank/CoinGecko/IMF/DeFi Llama/FRED on a timer), and the `TrustFlow` fake "Research -> Analyze -> Recommend" step indicator — replaced with a simple 3-dot typing animation.
+2. **Intent fast-path restricted**: Regex fast-path now only fires for unambiguous *commands* (`NAVIGATE`, `SWAP_SHORTCUT`, `SEND_TO_PHONE`, `YIELD_EARN`, `GOODDOLLAR claim`, `WDK switch`, `ONBOARDING demo`). `ONBOARDING` questions ("what is this", "is it safe", "wallet help") and all `QUERY` intents go to the LLM — no more canned marketing copy. Removed the 600ms artificial delay and the "Are you asking about the news...?" pronoun heuristic.
+3. **Pricing de-emphasized**: Removed per-response cost caption ("~$0.015/query"), replaced the empty-state pricing card with a verifiable-AI value card, and stopped attaching `status: "failed"` receipts to normal free answers.
+4. **Mobile sheet**: `dvh` units (not `vh`), `visualViewport` keyboard handling, body scroll lock, safe-area padding, real touch-drag-to-dismiss, smart auto-scroll (only scrolls to bottom if user is already near it).
+5. **Analytics + history cap**: `chat_send`/`chat_done`/`chat_error` events added to `FunnelEvent.ts` allowlist; latency tracked. History payload capped at 20 messages, localStorage capped at 100.
+
+Also fixed: 7 pre-existing `recommendation-ledger.service.test.ts` failures caused by production env vars leaking from `.env.local` into the test runner (tests now properly isolate `CELO_MAINNET_LEDGER_CONTRACT`, `ARBITRUM_MAINNET_LEDGER_CONTRACT`, `ZERO_G_MAINNET_LEDGER_CONTRACT`, `LEDGER_PRIVATE_KEY`, etc.). Dead code `components/ai/AIAssistant.tsx` (1,778 lines) deleted.
+
+Key files: `hooks/use-agent-chat.ts`, `components/agent/AIChat.tsx`, `components/agent/TrustFlow.tsx`, `components/agent/ResearchCheck.tsx`, `pages/api/agent/advisor.ts`, `pages/api/agent/_advisor-core.ts`, `packages/shared/src/services/ai/ai-service.ts`, `packages/shared/src/services/ai/providers/gemini-provider.ts`, `packages/shared/src/services/ai/providers/venice-provider.ts`, `context/AIConversationContext.tsx`, `models/FunnelEvent.ts`.
 
 ## Tool Notes
 - **Figma MCP**: Before any `use_figma` call, invoke the `figma-use` skill (via `Skill` tool with name `figma-use`, or read `skill://figma/figma-use/SKILL.md` via `ReadMcpResourceTool`). Mandatory per the Figma MCP server instructions.

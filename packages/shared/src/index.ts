@@ -106,7 +106,8 @@ export type {
 } from './services/juno-service';
 
 // Export AI Services
-export { AIService, generateChatCompletion, getAIServiceStatus, cacheSystemPrompt, getCachedSystemPrompt, getAdaptiveTokenLimit } from './services/ai/ai-service';
+export { AIService, generateChatCompletion, chatStream, getAIServiceStatus, cacheSystemPrompt, getCachedSystemPrompt, getAdaptiveTokenLimit } from './services/ai/ai-service';
+export type { ChatStreamEvent, ProviderChatStreamEvent } from './services/ai/types';
 export { TokenVaultClient, type TokenVaultConfig } from './services/auth0-token-vault';
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';

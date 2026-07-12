@@ -26,6 +26,17 @@
   --color-bg-subtle:       #F3F4F6;
   --color-bg-muted:        #E5E7EB;
 
+  /* ── DiversiFi night-vault surfaces ───────────────────────────────── */
+  --surface-vault-start:   #081225;
+  --surface-vault-mid:     #102344;
+  --surface-vault-end:     #0b1c2f;
+  --surface-glass-light:   rgba(255,255,255,0.94);
+  --surface-glass-dark:    rgba(15,23,42,0.90);
+  --surface-protection:    rgba(37,99,235,0.14);
+  --surface-value:         rgba(245,158,11,0.11);
+  --color-minted-gold:     #f59e0b;
+  --color-protection-blue: #3b82f6;
+
   /* ── Border Radii ──────────────────────────────────────────────────── */
   --radius-sm:      0.25rem;   /* rounded-sm     */
   --radius-md:      0.375rem;  /* rounded        */
@@ -91,6 +102,8 @@
   --color-bg-offwhite:     #1F2937;
   --color-bg-subtle:       #374151;
   --color-bg-muted:        #4B5563;
+  --surface-glass-light:   rgba(15,23,42,0.90);
+  --surface-glass-dark:    rgba(15,23,42,0.92);
 
   --shadow-glass:          0 8px 32px 0 rgba(0,0,0,0.3);
 }

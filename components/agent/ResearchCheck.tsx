@@ -1,42 +1,27 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { useEffect, useState } from 'react';
 import { useCredits } from '../../hooks/use-credits';
 
-const SOURCES = ['World Bank', 'CoinGecko', 'IMF', 'DeFi Llama', 'FRED'];
-
+/**
+ * ResearchCheck — a compact response status shown above the chat input.
+ * Previously displayed fake source labels ("World Bank", "CoinGecko", etc.)
+ * that were timed to appear sequentially; now just shows a pulse + status
+ * text + real remaining credits.
+ */
 interface ResearchCheckProps {
-  isResearching: boolean;
+  isActive: boolean;
   spent?: number;
 }
 
-export function ResearchCheck({ isResearching }: ResearchCheckProps) {
+export function ResearchCheck({ isActive }: ResearchCheckProps) {
   const { status } = useCredits();
   const remaining = status?.credits.bonus ?? 0;
   const isLow = remaining < 0.05;
   const reducedMotion = useReducedMotion();
-  const [visibleSources, setVisibleSources] = useState<string[]>([]);
-  const [sourceIndex, setSourceIndex] = useState(0);
-
-  useEffect(() => {
-    if (!isResearching) {
-      setVisibleSources([]);
-      setSourceIndex(0);
-      return;
-    }
-
-    if (sourceIndex < SOURCES.length) {
-      const timer = setTimeout(() => {
-        setVisibleSources((prev) => [...prev, SOURCES[sourceIndex]]);
-        setSourceIndex((i) => i + 1);
-      }, 900);
-      return () => clearTimeout(timer);
-    }
-  }, [isResearching, sourceIndex]);
 
   return (
     <div className="flex items-center gap-2.5">
       <div className="relative flex h-2.5 w-2.5">
-        {isResearching && !reducedMotion && (
+        {isActive && !reducedMotion && (
           <motion.span
             className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"
             animate={{ scale: [1, 2, 1], opacity: [0.75, 0, 0.75] }}
@@ -45,35 +30,20 @@ export function ResearchCheck({ isResearching }: ResearchCheckProps) {
         )}
         <span
           className={`relative inline-flex h-2.5 w-2.5 rounded-full ${
-            isResearching ? 'bg-emerald-400' : 'bg-slate-500'
+            isActive ? 'bg-emerald-400' : 'bg-slate-500'
           }`}
         />
       </div>
 
-      <div className="flex flex-col">
-        <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-          {isResearching ? 'Researching...' : 'Research ready'}
-        </span>
-
-        {isResearching && visibleSources.length > 0 && (
-          <div className="flex flex-wrap gap-1 mt-0.5">
-            {visibleSources.map((source, i) => (
-              <motion.span
-                key={source}
-                initial={reducedMotion ? undefined : { opacity: 0, x: -4 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-[10px] font-bold px-1.5 py-0.5 bg-white/10 rounded-full text-emerald-300 border border-emerald-500/20"
-              >
-                {source}
-              </motion.span>
-            ))}
-          </div>
-        )}
-      </div>
-
-      <span className={`text-[10px] font-mono ml-auto ${isLow ? "text-amber-500" : "text-slate-500"}`}>
-        ${remaining.toFixed(3)} left
+      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+        {isActive ? 'Responding...' : 'Ready'}
       </span>
+
+      {remaining > 0 && (
+        <span className={`text-[10px] font-mono ml-auto ${isLow ? "text-amber-500" : "text-slate-500"}`}>
+          ${remaining.toFixed(3)} credits
+        </span>
+      )}
     </div>
   );
 }

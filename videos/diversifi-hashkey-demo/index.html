@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>DiversiFi — HashKey APAC Rail Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #000;
+        font-family: Inter, system-ui, sans-serif;
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #0f172a;
+      }
+      .clip {
+        position: absolute;
+        inset: 0;
+      }
+      .bg-fill {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(ellipse 80% 60% at 50% 20%, #0ea5e9 0%, transparent 55%),
+          radial-gradient(ellipse 60% 50% at 80% 80%, #5b4fff33 0%, transparent 50%),
+          linear-gradient(160deg, #0f172a 0%, #111827 45%, #020617 100%);
+      }
+      .grain {
+        position: absolute;
+        inset: 0;
+        opacity: 0.04;
+        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        pointer-events: none;
+      }
+      .hook-wrap {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 120px 140px;
+        gap: 28px;
+      }
+      .eyebrow {
+        font-size: 22px;
+        font-weight: 600;
+        letter-spacing: 0.28em;
+        text-transform: uppercase;
+        color: #38bdf8;
+      }
+      .hook-title {
+        font-size: 92px;
+        font-weight: 900;
+        line-height: 1.02;
+        color: #f8fafc;
+        max-width: 1200px;
+      }
+      .hook-sub {
+        font-size: 34px;
+        font-weight: 400;
+        color: #94a3b8;
+        max-width: 900px;
+        line-height: 1.35;
+      }
+      .brand-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        margin-bottom: 8px;
+      }
+      .brand-mark {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #0ea5e9, #2563eb);
+        display: grid;
+        place-items: center;
+        font-weight: 900;
+        font-size: 28px;
+        color: white;
+      }
+      .brand-name {
+        font-size: 42px;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        color: #f8fafc;
+      }
+      .phone-stage {
+        position: absolute;
+        right: 160px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 360px;
+        padding: 16px;
+        border-radius: 48px;
+        background: linear-gradient(160deg, #1e293b, #0f172a);
+        border: 3px solid #475569;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.06),
+          inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      }
+      .phone-notch {
+        width: 120px;
+        height: 26px;
+        border-radius: 0 0 18px 18px;
+        background: #0f172a;
+        margin: -4px auto 10px;
+      }
+      .phone-screen {
+        border-radius: 34px;
+        overflow: hidden;
+        background: #111827;
+      }
+      .phone-screen img {
+        width: 100%;
+        display: block;
+      }
+      .phone-stage.centered {
+        left: 50%;
+        right: auto;
+        transform: translate(-50%, -50%);
+      }
+      .shot-glow {
+        position: absolute;
+        inset: -60px;
+        background: radial-gradient(circle at 50% 50%, #0ea5e955 0%, transparent 70%);
+        z-index: -1;
+      }
+      .left-copy {
+        position: absolute;
+        left: 100px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 760px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .scene-label {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: #7dd3fc;
+      }
+      .scene-title {
+        font-size: 58px;
+        font-weight: 900;
+        line-height: 1.05;
+        color: #f8fafc;
+      }
+      .scene-body {
+        font-size: 28px;
+        line-height: 1.45;
+        color: #cbd5e1;
+      }
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 8px;
+      }
+      .pill {
+        padding: 10px 18px;
+        border-radius: 999px;
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(255, 255, 255, 0.06);
+        color: #e2e8f0;
+      }
+      .pill.hashkey {
+        background: linear-gradient(135deg, #0ea5e933, #2563eb33);
+        border-color: #38bdf866;
+        color: #7dd3fc;
+      }
+      .pill.arb {
+        border-color: #60a5fa66;
+        color: #93c5fd;
+      }
+      .pill.celo {
+        border-color: #fbbf2466;
+        color: #fcd34d;
+      }
+      .pill.zg {
+        border-color: #a78bfa66;
+        color: #c4b5fd;
+      }
+      .dual-phone {
+        position: absolute;
+        left: 54%;
+        top: 52%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        gap: 48px;
+        align-items: flex-end;
+      }
+      .caption-bar {
+        position: absolute;
+        left: 50%;
+        bottom: 72px;
+        transform: translateX(-50%);
+        padding: 18px 36px;
+        border-radius: 16px;
+        background: rgba(15, 23, 42, 0.82);
+        border: 1px solid rgba(56, 189, 248, 0.35);
+        backdrop-filter: blur(12px);
+        font-size: 30px;
+        font-weight: 600;
+        color: #f1f5f9;
+        white-space: nowrap;
+      }
+      .cta-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 28px;
+        text-align: center;
+        padding: 0 120px;
+      }
+      .cta-url {
+        font-size: 64px;
+        font-weight: 900;
+        color: #38bdf8;
+        letter-spacing: -0.02em;
+      }
+      .cta-tag {
+        font-size: 30px;
+        color: #94a3b8;
+        max-width: 1100px;
+        line-height: 1.4;
+      }
+      .live-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 20px;
+        border-radius: 999px;
+        background: #05966922;
+        border: 1px solid #34d39966;
+        color: #6ee7b7;
+        font-size: 20px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .live-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #34d399;
+        box-shadow: 0 0 12px #34d399;
+      }
+      .cta-phone {
+        position: absolute;
+        right: 200px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+    </style>
+  </head>
+  <body>
+    <div
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="60"
+      data-width="1920"
+      data-height="1080"
+    >
+      <audio
+        id="bgm"
+        src="assets/bgm.mp3"
+        data-start="0"
+        data-duration="60"
+        data-track-index="0"
+        data-volume="0.16"
+      ></audio>
+      <audio
+        id="vo"
+        src="assets/voiceover.wav"
+        data-start="0"
+        data-duration="37.5"
+        data-track-index="0"
+        data-volume="1"
+      ></audio>
+
+      <!-- Shared background -->
+      <section id="bg" class="clip bg-fill" data-start="0" data-duration="60" data-track-index="1"></section>
+      <section id="grain" class="clip grain" data-start="0" data-duration="60" data-track-index="2"></section>
+
+      <!-- Scene 1: Hook -->
+      <section id="s1-hook" class="clip hook-wrap" data-start="0" data-duration="8" data-track-index="3">
+        <div class="eyebrow">DiversiFi Guardian</div>
+        <h1 class="hook-title">Your savings shouldn't evaporate.</h1>
+        <p class="hook-sub">AI treasury protection — now with an APAC rail on HashKey Chain.</p>
+      </section>
+
+      <!-- Scene 2: Shield / Confucian -->
+      <section id="s2-copy" class="clip left-copy" data-start="8" data-duration="9" data-track-index="3">
+        <div class="brand-row">
+          <div class="brand-mark">D</div>
+          <div class="brand-name">DIVERSIFI</div>
+        </div>
+        <div class="scene-label">Shield · Confucian</div>
+        <h2 class="scene-title">Values-driven protection for Asia</h2>
+        <p class="scene-body">
+          Savings decisions route to HashKey Chain. Yield still executes on Arbitrum.
+        </p>
+        <div class="pill-row">
+          <span class="pill hashkey">HashKey 177</span>
+          <span class="pill arb">Arbitrum</span>
+        </div>
+      </section>
+      <section id="s2-shot" class="clip" data-start="8" data-duration="9" data-track-index="4">
+        <div class="shot-glow"></div>
+        <div class="phone-stage">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <img src="assets/mobile/01-shield-top.png" alt="DiversiFi Shield mobile" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 3: APAC banner -->
+      <section id="s3-copy" class="clip left-copy" data-start="17" data-duration="9" data-track-index="3">
+        <div class="scene-label">APAC Rail · Live</div>
+        <h2 class="scene-title">Mainnet on HashKey Chain</h2>
+        <p class="scene-body">
+          RecommendationLedger deployed, seeded, and verified on explorer.
+        </p>
+        <div class="live-badge"><span class="live-dot"></span> Live on mainnet</div>
+      </section>
+      <section id="s3-shot" class="clip" data-start="17" data-duration="9" data-track-index="4">
+        <div class="shot-glow"></div>
+        <div class="phone-stage">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <img src="assets/mobile/02-shield-apac.png" alt="APAC rail mobile" />
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 4: Multi-chain proof -->
+      <section id="s4-copy" class="clip left-copy" data-start="26" data-duration="9" data-track-index="3">
+        <div class="scene-label">One Guardian · Five chains</div>
+        <h2 class="scene-title">Verifiable receipts</h2>
+        <p class="scene-body">
+          Every heartbeat records savings on HashKey, yield on Arbitrum, evidence on 0G.
+        </p>
+        <div class="pill-row">
+          <span class="pill hashkey">HashKey</span>
+          <span class="pill arb">Arbitrum</span>
+          <span class="pill celo">Celo</span>
+          <span class="pill zg">0G</span>
+        </div>
+      </section>
+      <section id="s4-shot" class="clip" data-start="26" data-duration="9" data-track-index="4">
+        <div class="dual-phone">
+          <div class="phone-stage" style="position: relative; right: auto; top: auto; transform: none; width: 320px">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <img src="assets/mobile/03-live-proof.png" alt="Live proof mobile" />
+            </div>
+          </div>
+          <div class="phone-stage" style="position: relative; right: auto; top: auto; transform: none; width: 320px; margin-bottom: -24px">
+            <div class="phone-notch"></div>
+            <div class="phone-screen">
+              <img src="assets/mobile/04-activity.png" alt="On-chain activity mobile" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Scene 5: Explorer tx -->
+      <section id="s5-shot" class="clip" data-start="35" data-duration="9" data-track-index="3">
+        <div class="phone-stage centered" style="width: 340px">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <img src="assets/mobile/05-hashkey-tx.png" alt="HashKey mainnet transaction mobile" />
+          </div>
+        </div>
+        <div class="caption-bar">HOLD / USDC · chain 177 · mainnet proof</div>
+      </section>
+
+      <!-- Scene 6: CTA -->
+      <section id="s6-cta" class="clip cta-wrap" data-start="44" data-duration="16" data-track-index="3">
+        <div class="live-badge"><span class="live-dot"></span> HashKey Horizon Hackathon</div>
+        <div class="cta-url">diversifi.persidian.com</div>
+        <p class="cta-tag">
+          Open protocol. Autonomous Guardian. APAC savings rail live on mainnet.
+        </p>
+        <div class="pill-row" style="justify-content: center">
+          <span class="pill hashkey">HashKey</span>
+          <span class="pill arb">Arbitrum</span>
+          <span class="pill celo">Celo</span>
+          <span class="pill zg">0G</span>
+          <span class="pill">Arc x402</span>
+        </div>
+      </section>
+      <section id="s6-mobile" class="clip cta-phone" data-start="46" data-duration="14" data-track-index="4">
+        <div class="phone-stage" style="position: relative; right: auto; top: auto; transform: none">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <img src="assets/mobile/01-shield-top.png" alt="DiversiFi mobile app" />
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+
+      // Scene 1
+      tl.from("#s1-hook .eyebrow", { y: 24, opacity: 0, duration: 0.5, ease: "power3.out" }, 0.2);
+      tl.from("#s1-hook .hook-title", { y: 40, opacity: 0, duration: 0.7, ease: "power3.out" }, 0.45);
+      tl.from("#s1-hook .hook-sub", { y: 24, opacity: 0, duration: 0.55, ease: "power3.out" }, 0.95);
+      tl.to("#s1-hook", { opacity: 0, y: -20, duration: 0.45, ease: "power2.in" }, 7.2);
+
+      // Scene 2
+      tl.from("#s2-copy", { x: -60, opacity: 0, duration: 0.65, ease: "power3.out" }, 8);
+      tl.from("#s2-shot .phone-stage", { x: 80, opacity: 0, scale: 0.92, duration: 0.8, ease: "power3.out" }, 8.15);
+      tl.to("#s2-copy, #s2-shot", { opacity: 0, duration: 0.4, ease: "power2.in" }, 16.2);
+
+      // Scene 3
+      tl.from("#s3-copy", { x: -60, opacity: 0, duration: 0.65, ease: "power3.out" }, 17);
+      tl.from("#s3-shot .phone-stage", { x: 80, opacity: 0, scale: 0.92, duration: 0.8, ease: "power3.out" }, 17.15);
+      tl.to("#s3-copy, #s3-shot", { opacity: 0, duration: 0.4, ease: "power2.in" }, 25.2);
+
+      // Scene 4
+      tl.from("#s4-copy", { x: -60, opacity: 0, duration: 0.65, ease: "power3.out" }, 26);
+      tl.from("#s4-shot .phone-stage", { y: 40, opacity: 0, scale: 0.9, duration: 0.85, stagger: 0.12, ease: "power3.out" }, 26.2);
+      tl.to("#s4-copy, #s4-shot", { opacity: 0, duration: 0.4, ease: "power2.in" }, 34.2);
+
+      // Scene 5
+      tl.from("#s5-shot .phone-stage", { y: 50, opacity: 0, scale: 0.9, duration: 0.75, ease: "power3.out" }, 35);
+      tl.from("#s5-shot .caption-bar", { y: 20, opacity: 0, duration: 0.5, ease: "power3.out" }, 35.5);
+      tl.to("#s5-shot", { opacity: 0, duration: 0.45, ease: "power2.in" }, 43.2);
+
+      // Scene 6
+      tl.from("#s6-cta .live-badge", { scale: 0.9, opacity: 0, duration: 0.45, ease: "back.out(1.4)" }, 44);
+      tl.from("#s6-cta .cta-url", { y: 30, opacity: 0, duration: 0.7, ease: "power3.out" }, 44.35);
+      tl.from("#s6-cta .cta-tag", { y: 20, opacity: 0, duration: 0.55, ease: "power3.out" }, 44.8);
+      tl.from("#s6-cta .pill-row .pill", { y: 16, opacity: 0, duration: 0.35, stagger: 0.08, ease: "power3.out" }, 45.2);
+      tl.from("#s6-mobile .phone-stage", { y: 60, opacity: 0, scale: 0.92, duration: 0.7, ease: "power3.out" }, 46.2);
+
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

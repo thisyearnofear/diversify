@@ -114,7 +114,7 @@ export class FallbackOrchestrator {
    * Get provider order for chat completion based on preferences
    * Implements the logic from the original generateChatCompletion function
    */
-  private getProviderOrderForChat(
+  getProviderOrderForChat(
     options: ChatCompletionOptions,
     preferredProvider?: "venice" | "gemini" | "auto"
   ): BaseAIProvider[] {

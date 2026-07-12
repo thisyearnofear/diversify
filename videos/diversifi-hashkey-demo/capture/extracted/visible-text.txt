@@ -1,0 +1,16 @@
+[span] DiversiFi
+[p] Currency protection that fits your values — never a lock-up.
+[span] You
+[span] Risk
+[span] Plan
+[h2] Is your money quietly
+[span] losing value?
+[p] Find out in 30 seconds — then pick a way to protect it that matches how you think about money.
+[p] We'll measure your currency against the world's hardest benchmarks:
+[span] 🇺🇸
+[span] US Dollar
+[span] 🇪🇺
+[span] Euro
+[span] Gold
+[button] Pick your country →
+[button] Just looking around? Explore the app →

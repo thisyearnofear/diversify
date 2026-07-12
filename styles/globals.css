@@ -21,6 +21,38 @@
   padding-top: env(safe-area-inset-top);
 }
 
+/* DiversiFi's shared “night vault” backdrop. Contextual colour is a wash,
+   not a competing page background; content should always own the hierarchy. */
+.surface-vault {
+  background:
+    radial-gradient(80% 55% at 50% -10%, var(--surface-protection) 0%, transparent 70%),
+    radial-gradient(65% 45% at 85% 100%, var(--surface-value) 0%, transparent 72%),
+    linear-gradient(160deg, var(--surface-vault-start) 0%, var(--surface-vault-mid) 48%, var(--surface-vault-end) 100%);
+}
+
+.surface-glass {
+  background: var(--surface-glass-light);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 24px 56px -28px rgba(2, 8, 23, 0.52);
+}
+
+.dark .surface-glass {
+  background: var(--surface-glass-dark);
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.surface-context-wash {
+  background: radial-gradient(ellipse at 50% 20%, var(--surface-protection) 0%, transparent 65%);
+}
+
+/* The onboarding backdrop is intentionally quieter on small screens: the
+   edge coins remain a motif without competing with the decision surface. */
+@media (max-width: 639px) {
+  .floating-coins > :nth-child(n + 4) {
+    display: none;
+  }
+}
+
 /* Confetti animation for GuardianStreakWidget */
 .confetti-container {
   position: absolute;
@@ -139,6 +171,21 @@ body {
 @media (prefers-reduced-motion: no-preference) {
   *, *::before, *::after {
     transition-duration: 150ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .coin-float,
+  .aurora-drift,
+  .onboarding-motion,
+  .onboarding-motion * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 

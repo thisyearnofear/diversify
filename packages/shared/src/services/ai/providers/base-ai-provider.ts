@@ -6,8 +6,9 @@
 import { 
   ChatCompletionOptions, 
   ChatCompletionResult, 
-  TTSOptions, 
-  TTSResult, 
+  ProviderChatStreamEvent,
+  TTSOptions,
+  TTSResult,
   TranscriptionResult,
   AIProviderConfig
 } from '../types';
@@ -35,6 +36,14 @@ export abstract class BaseAIProvider {
   abstract generateChatCompletion(
     options: ChatCompletionOptions
   ): Promise<ChatCompletionResult>;
+
+  /**
+   * Optional streaming implementation. Providers that implement this contract
+   * must emit one terminal `done` event after all text chunks.
+   */
+  generateChatCompletionStream?(
+    options: ChatCompletionOptions
+  ): AsyncGenerator<ProviderChatStreamEvent>;
 
   /**
    * Generate speech from text

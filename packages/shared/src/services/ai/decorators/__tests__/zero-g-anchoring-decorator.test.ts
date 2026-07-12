@@ -58,6 +58,15 @@ describe('ZeroGAnchoringDecorator — shouldAnchorToZeroG (Phase 0 audit A2)', (
     expect(check(userMessage('who are you?'), result(''))).toBe(false);
   });
 
+  it('ignores action language in the system prompt', () => {
+    expect(check({
+      messages: [
+        { role: 'system', content: 'Recommend strategies and portfolio allocations.' },
+        { role: 'user', content: 'hello there' },
+      ],
+    }, result('Hello! How can I help?'))).toBe(false);
+  });
+
   it('matches case-insensitively', () => {
     expect(check(userMessage('REBALANCE PLEASE'), result(''))).toBe(true);
     expect(check(userMessage('Swap to cEUR'), result(''))).toBe(true);

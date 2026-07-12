@@ -1,0 +1,10 @@
+{
+  "name": "diversifi-hashkey-demo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx --yes hyperframes@0.7.49 preview",
+    "check": "npx --yes hyperframes@0.7.49 lint && npx --yes hyperframes@0.7.49 validate && npx --yes hyperframes@0.7.49 inspect",
+    "render": "npx --yes hyperframes@0.7.49 render --quality high --output renders/diversifi-hashkey-demo.mp4"
+  }
+}

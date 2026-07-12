@@ -28,9 +28,24 @@ vi.mock('ethers6', () => {
 describe('RecommendationLedgerService.recordRecommendation — return shape', () => {
     const ORIGINAL_ENV = process.env;
 
+    // Env vars that leak from .env.local into the test runner. Clear them
+    // so the service defaults to 0G Galileo (16602) — the chain these tests
+    // were written against. Individual tests can re-set specific vars.
+    const LEDGER_ENV_KEYS = [
+        'CELO_MAINNET_LEDGER_CONTRACT',
+        'ARBITRUM_MAINNET_LEDGER_CONTRACT',
+        'ARBITRUM_LEDGER_CONTRACT',
+        'ZERO_G_LEDGER_CONTRACT',
+        'ZERO_G_MAINNET_LEDGER_CONTRACT',
+        'HASHKEY_LEDGER_CONTRACT',
+        'LEDGER_PRIVATE_KEY',
+    ];
+
     beforeEach(() => {
         vi.resetModules();
-        process.env = { ...ORIGINAL_ENV, VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32) };
+        const cleanEnv = { ...ORIGINAL_ENV };
+        for (const key of LEDGER_ENV_KEYS) delete cleanEnv[key];
+        process.env = { ...cleanEnv, VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32) };
         mockTx.wait.mockReset();
     });
 
@@ -125,8 +140,11 @@ describe('RecommendationLedgerService.recordRecommendation — return shape', ()
     });
 
     it('returns "failed" with an explainable error when the write contract is unavailable', async () => {
-        const envWithoutSigner = { ...ORIGINAL_ENV };
+        // Must clear BOTH LEDGER_PRIVATE_KEY and VAULT_PRIVATE_KEY — the
+        // service checks `LEDGER_PRIVATE_KEY || VAULT_PRIVATE_KEY`.
+        const envWithoutSigner = { ...process.env };
         delete envWithoutSigner.VAULT_PRIVATE_KEY;
+        delete envWithoutSigner.LEDGER_PRIVATE_KEY;
         process.env = envWithoutSigner;
         vi.resetModules();
 
@@ -166,7 +184,10 @@ describe('RecommendationLedgerService — chain-aware config', () => {
         process.env = {
             ...ORIGINAL_ENV,
             VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32),
+            CELO_MAINNET_LEDGER_CONTRACT: '',
+            ARBITRUM_MAINNET_LEDGER_CONTRACT: '',
             ARBITRUM_LEDGER_CONTRACT: '',
+            ZERO_G_MAINNET_LEDGER_CONTRACT: '',
             ZERO_G_LEDGER_CONTRACT: '0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED',
         };
         const { getDefaultLedgerChainId, getLedgerContractAddress } = await import('../recommendation-ledger.service');
@@ -178,6 +199,8 @@ describe('RecommendationLedgerService — chain-aware config', () => {
         process.env = {
             ...ORIGINAL_ENV,
             VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32),
+            CELO_MAINNET_LEDGER_CONTRACT: '',
+            ARBITRUM_MAINNET_LEDGER_CONTRACT: '',
             ARBITRUM_LEDGER_CONTRACT: '0x' + 'ab'.repeat(20),
         };
         const { getDefaultLedgerChainId, getLedgerContractAddress, buildLedgerExplorerUrl } = await import('../recommendation-ledger.service');
@@ -230,6 +253,10 @@ describe('buildLedgerExplorerUrl — chain-aware URL builder (Phase 0 audit A5)'
         const defaultChain = getDefaultLedgerChainId();
         if (defaultChain === 421614) {
             expect(url).toBe('https://sepolia.arbiscan.io/tx/0xabc123');
+        } else if (defaultChain === 42161) {
+            expect(url).toBe('https://arbiscan.io/tx/0xabc123');
+        } else if (defaultChain === 42220) {
+            expect(url).toBe('https://celoscan.io/tx/0xabc123');
         } else {
             expect(url).toBe('https://chainscan-galileo.0g.ai/tx/0xabc123');
         }

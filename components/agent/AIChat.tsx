@@ -368,6 +368,7 @@ export default function AIChat() {
   const { setActiveTab } = useNavigation();
   const { address } = useWalletContext();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dragStartYRef = useRef<number | null>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
@@ -415,14 +416,53 @@ export default function AIChat() {
     submitPrompt(inputValue.trim());
   };
 
-  // Auto-scroll to bottom on new messages (RAF ensures DOM has painted)
+  // Auto-scroll to bottom on new messages — but only if the user is already
+  // near the bottom. If they scrolled up to read, don't yank them down.
   useEffect(() => {
     requestAnimationFrame(() => {
-      if (scrollRef.current) {
-        scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      if (!scrollRef.current) return;
+      const el = scrollRef.current;
+      const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+      // Only auto-scroll if within 120px of the bottom
+      if (distanceFromBottom < 120) {
+        el.scrollTop = el.scrollHeight;
       }
     });
   }, [messages, isChatting]);
+
+  // Body scroll lock: prevent the page from scrolling behind the drawer
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isDrawerOpen]);
+
+  // visualViewport: handle iOS keyboard occlusion — keep the input visible
+  // when the soft keyboard opens by adjusting the drawer height.
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+
+    const onResize = () => {
+      // When the keyboard opens, visualViewport.height shrinks. Use it to
+      // constrain the drawer so the input stays above the keyboard.
+      document.documentElement.style.setProperty(
+        '--chat-drawer-max-h',
+        `${vv.height}px`,
+      );
+    };
+
+    vv.addEventListener('resize', onResize);
+    onResize();
+    return () => {
+      vv.removeEventListener('resize', onResize);
+      document.documentElement.style.removeProperty('--chat-drawer-max-h');
+    };
+  }, [isDrawerOpen]);
 
   // Only auto-open the drawer when a NEW user message is added.
   // Using a ref to track the previous count prevents re-opening when the user
@@ -500,15 +540,40 @@ export default function AIChat() {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60vh] max-h-[92vh] flex flex-col pointer-events-auto border-t border-white/10"
+          className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
         >
-          {/* Drag Handle */}
-        <div className="w-full flex justify-center py-3">
+          {/* Drag Handle — touch-draggable to dismiss */}
           <div
-            className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full"
-            onClick={() => setDrawerOpen(false)}
-          />
-        </div>
+            className="w-full flex justify-center py-3 cursor-grab active:cursor-grabbing"
+            style={{ touchAction: 'none' }}
+            onTouchStart={(e) => {
+              dragStartYRef.current = e.touches[0].clientY;
+            }}
+            onTouchMove={(e) => {
+              if (dragStartYRef.current === null) return;
+              const deltaY = e.touches[0].clientY - dragStartYRef.current;
+              if (deltaY > 0) {
+                e.currentTarget.parentElement?.setAttribute(
+                  'style',
+                  `transform: translateY(${deltaY}px); transition: none;`,
+                );
+              }
+            }}
+            onTouchEnd={(e) => {
+              if (dragStartYRef.current === null) return;
+              const deltaY = e.changedTouches[0].clientY - dragStartYRef.current;
+              e.currentTarget.parentElement?.removeAttribute('style');
+              dragStartYRef.current = null;
+              if (deltaY > 80) {
+                setDrawerOpen(false);
+              }
+            }}
+          >
+            <div
+              className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full"
+              onClick={() => setDrawerOpen(false)}
+            />
+          </div>
 
         {/* Freemium Status Banner */}
         <FreemiumPanel onGoodDollarClaim={handleClaimFromChat} />
@@ -622,10 +687,10 @@ export default function AIChat() {
 
                     <div className="w-full max-w-[320px] rounded-2xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/70 dark:bg-amber-900/10 p-3 text-left">
                       <p className="text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                        Premium research
+                        Verifiable AI
                       </p>
                       <p className="mt-1 text-xs text-amber-900 dark:text-amber-100">
-                        Paid evidence uses your Research Balance and costs between <span className="font-bold">$0.004</span> and <span className="font-bold">$0.015</span> USDC.
+                        High-impact recommendations are anchored with verifiable evidence, so you can audit what the AI used and why.
                       </p>
                     </div>
 
@@ -886,7 +951,7 @@ export default function AIChat() {
           <div className="flex-1 space-y-2">
             <div className="px-1">
               <ResearchCheck
-                isResearching={isChatting}
+                isActive={isChatting}
                 spent={autonomousStatus?.spent ?? 0}
               />
             </div>
@@ -918,9 +983,6 @@ export default function AIChat() {
                 </button>
               )}
             </form>
-            <p className="px-1 text-[11px] text-gray-500 dark:text-gray-400">
-              Each response uses research credits (~$0.015/query). Earn more via rewards above.
-            </p>
           </div>
         </div>
       </motion.div>

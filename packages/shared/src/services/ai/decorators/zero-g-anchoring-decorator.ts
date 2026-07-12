@@ -43,7 +43,14 @@ export class ZeroGAnchoringDecorator {
       return false;
     }
 
-    const contentToCheck = (options.messages || []).map(m => m.content || '').join(' ') + ' ' + result.data;
+    // System prompts contain words such as "recommend" and "strategy" by
+    // design; including them would make every advisor response look like a
+    // high-impact recommendation. Gate only on the latest user request and
+    // the generated response.
+    const latestUserMessage = [...(options.messages || [])]
+      .reverse()
+      .find(message => message.role === 'user')?.content || '';
+    const contentToCheck = `${latestUserMessage} ${result.data}`;
     const lowerContent = contentToCheck.toLowerCase();
 
     const anchorKeywords = [
@@ -60,6 +67,19 @@ export class ZeroGAnchoringDecorator {
     providerCall: () => Promise<ChatCompletionResult>
   ): Promise<ChatCompletionResult> {
     const result = await providerCall();
+
+    return this.finalizeChatCompletion(options, result);
+  }
+
+  /**
+   * Apply the normal post-completion anchoring policy to an already-generated
+   * result. Streaming uses this after the final chunk so it does not need to
+   * invoke the model a second time or maintain a parallel evidence path.
+   */
+  finalizeChatCompletion(
+    options: ChatCompletionOptions,
+    result: ChatCompletionResult,
+  ): ChatCompletionResult {
 
     // Only anchor on server-side (not in browser)
     if (typeof window === 'undefined' && this.shouldAnchorToZeroG(options, result)) {
@@ -82,7 +102,10 @@ export class ZeroGAnchoringDecorator {
     options: ChatCompletionOptions,
     result: ChatCompletionResult,
   ): Promise<void> {
-    const contentToCheck = (options.messages || []).map(m => m.content || '').join(' ') + ' ' + result.data;
+    const latestUserMessage = [...(options.messages || [])]
+      .reverse()
+      .find(message => message.role === 'user')?.content || '';
+    const contentToCheck = `${latestUserMessage} ${result.data}`;
     const lowerContent = contentToCheck.toLowerCase();
 
     // Action verbs only — same set as shouldAnchorToZeroG above, but

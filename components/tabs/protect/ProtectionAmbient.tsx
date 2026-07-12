@@ -204,25 +204,24 @@ export function ProtectionAmbient({ children }: Props) {
         }}
         className="motion-reduce:!transition-none"
       >
-        {/* Gradient surface — primary colour wash, ~55% so it's
-            unmistakable but content stays readable. */}
+        {/* Philosophy is a contextual tint, not an alternate app theme. */}
         <div
           style={{
             position: 'absolute',
             inset: 0,
             background: gradientFor(slot.archetype),
-            opacity: 0.55,
+            opacity: 0.18,
           }}
         />
-        {/* Cultural pattern overlay — kente / chakana / tessellation /
-            etc. at ~30% so the texture is *felt*, not just visible. */}
+        {/* Cultural pattern overlay stays textural and edge-safe behind the
+            readable vault canvas. */}
         {Pattern && slot.archetype && (
           <div
             className="motion-reduce:!animation-none"
             style={{
               position: 'absolute',
               inset: 0,
-              opacity: 0.32,
+              opacity: 0.09,
               animation: 'ambient-breathe 24s ease-in-out infinite',
             }}
           >
@@ -244,15 +243,15 @@ export function ProtectionAmbient({ children }: Props) {
             `}</style>
           </div>
         )}
-        {/* Soft vignette toward the deepest surface tone — frames the
-            content and ensures contrast against the bright mid-tone. */}
+        {/* A restrained vignette keeps content readable without turning the
+            viewport into a philosophy-coloured wallpaper. */}
         {slot.archetype && (
           <div
             style={{
               position: 'absolute',
               inset: 0,
               background: `radial-gradient(ellipse at center, transparent 40%, ${slot.archetype.surface.start}cc 100%)`,
-              opacity: 0.85,
+              opacity: 0.38,
             }}
           />
         )}
@@ -270,7 +269,7 @@ export function ProtectionAmbient({ children }: Props) {
           mask any negative-z-index child. */}
       <div
         aria-hidden
-        className="fixed inset-0 pointer-events-none overflow-hidden"
+        className="surface-vault fixed inset-0 pointer-events-none overflow-hidden"
         style={{ zIndex: 0 }}
       >
         {renderSlot('a')}

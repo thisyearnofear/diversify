@@ -55,6 +55,16 @@ export interface ChatCompletionResult {
   timestamp?: string;
 }
 
+/** Events emitted by a provider while producing a chat completion. */
+export type ProviderChatStreamEvent =
+  | { type: 'chunk'; text: string }
+  | { type: 'done'; modelUsed?: string };
+
+/** Provider-attributed events exposed by the shared AI streaming service. */
+export type ChatStreamEvent =
+  | { type: 'chunk'; text: string; provider: string; model?: string }
+  | { type: 'done'; provider: string; model?: string };
+
 /**
  * TTS options
  */

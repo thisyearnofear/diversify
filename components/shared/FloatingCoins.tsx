@@ -38,6 +38,9 @@ export interface CoinProps {
   color?: string;
   className?: string;
   style?: React.CSSProperties;
+  /** Assigns a visual job to the coin; compact roles deliberately remove
+   * ornamental detail so hierarchy stays clear in dense UI. */
+  variant?: 'ambient' | 'progress' | 'asset' | 'selection';
 }
 
 export function Coin({
@@ -46,11 +49,14 @@ export function Coin({
   color = GOLD,
   className = '',
   style,
+  variant = 'selection',
 }: CoinProps) {
   const gradId = useId();
   const light = mix(color, '#ffffff', 0.55);
   const dark = mix(color, '#000000', 0.35);
   const ink = mix(color, '#000000', 0.55);
+  const compact = variant === 'progress' || variant === 'asset';
+  const ambient = variant === 'ambient';
 
   return (
     <svg
@@ -69,26 +75,27 @@ export function Coin({
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
       </defs>
-      {/* Face */}
-      <circle cx="32" cy="32" r="30" fill={`url(#${gradId})`} stroke={dark} strokeWidth="2" />
-      {/* Embossed inner ring */}
-      <circle cx="32" cy="32" r="23" fill="none" stroke={light} strokeWidth="2" opacity="0.7" />
-      {/* Glossy highlight */}
-      <ellipse
-        cx="23"
-        cy="17"
-        rx="10"
-        ry="4.5"
-        fill="#ffffff"
-        opacity="0.35"
-        transform="rotate(-24 23 17)"
+      {/* Full minted detail is reserved for selection/hero moments. */}
+      <circle
+        cx="32"
+        cy="32"
+        r={compact ? 27 : 30}
+        fill={ambient ? color : `url(#${gradId})`}
+        stroke={dark}
+        strokeWidth={compact ? 1.5 : 2}
       />
+      {!compact && !ambient && (
+        <>
+          <circle cx="32" cy="32" r="23" fill="none" stroke={light} strokeWidth="2" opacity="0.7" />
+          <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity="0.35" transform="rotate(-24 23 17)" />
+        </>
+      )}
       <text
         x="32"
         y="33.5"
         textAnchor="middle"
         dominantBaseline="central"
-        fontSize={symbol.length > 1 ? 18 : 26}
+        fontSize={symbol.length > 1 ? (compact ? 16 : 18) : (compact ? 22 : 26)}
         fontWeight={800}
         fill={ink}
       >
@@ -148,7 +155,9 @@ export function FloatingCoins({ variant = 'panel', accent = null, className = ''
   const specs = variant === 'backdrop' ? BACKDROP_COINS : PANEL_COINS;
   return (
     <div
-      className={`absolute inset-0 overflow-hidden pointer-events-none ${className}`}
+      className={`floating-coins floating-coins--${variant} absolute inset-0 overflow-hidden pointer-events-none ${className}`}
+      data-coin-field={variant}
+      data-testid={`coin-field-${variant}`}
       aria-hidden="true"
     >
       {specs.map((c, i) => (
@@ -168,6 +177,7 @@ export function FloatingCoins({ variant = 'panel', accent = null, className = ''
             size={c.size}
             symbol={c.symbol}
             color={accent && c.tinted ? accent : GOLD}
+            variant="ambient"
           />
         </div>
       ))}

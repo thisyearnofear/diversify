@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useId } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface GuardianMascotProps {
   size?: number | string;
@@ -12,6 +12,9 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
   mood = 'happy',
   className = "" 
 }) => {
+  const prefersReducedMotion = useReducedMotion();
+  const gradientId = useId();
+  const compact = typeof size === 'number' && size <= 48;
   // Eye animations based on mood
   const eyeVariants = {
     happy: { scaleY: 1, y: 0 },
@@ -27,28 +30,30 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
       style={{ width: size, height: size }}
     >
       {/* Background Glow */}
-      <motion.div
-        className="absolute inset-0 bg-blue-500/20 rounded-full blur-2xl"
-        animate={{ 
-          scale: [1, 1.2, 1],
-          opacity: [0.3, 0.6, 0.3] 
-        }}
-        transition={{ duration: 4, repeat: Infinity }}
-      />
+      {!compact && (
+        <motion.div
+          className="absolute inset-0 bg-blue-500/20 rounded-full blur-2xl"
+          animate={prefersReducedMotion ? undefined : {
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.6, 0.3],
+          }}
+          transition={{ duration: 4, repeat: Infinity }}
+        />
+      )}
 
       <motion.svg
         viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className="w-full h-full relative z-10"
-        initial={{ y: 0 }}
-        animate={{ y: [0, -5, 0] }}
+        initial={false}
+        animate={prefersReducedMotion || compact ? undefined : { y: [0, -5, 0] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
       >
         {/* Shield Body */}
         <motion.path
           d="M50 10 L85 25 V50 C85 75 50 90 50 90 C50 90 15 75 15 50 V25 L50 10Z"
-          fill="url(#bodyGradient)"
+          fill={`url(#${gradientId})`}
           stroke="#2563EB"
           strokeWidth="2"
           initial={{ pathLength: 0 }}
@@ -74,7 +79,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
             rx="2"
             fill="#60A5FA"
             variants={eyeVariants}
-            animate={mood}
+            animate={prefersReducedMotion ? 'neutral' : mood}
           />
           {/* Right Eye */}
           <motion.rect
@@ -85,12 +90,12 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
             rx="2"
             fill="#60A5FA"
             variants={eyeVariants}
-            animate={mood}
+            animate={prefersReducedMotion ? 'neutral' : mood}
           />
         </g>
 
         {/* Thinking Indicator (Floating dots) */}
-        {mood === 'thinking' && (
+        {mood === 'thinking' && !compact && (
           <g>
             <motion.circle cx="50" cy="15" r="2" fill="#60A5FA" animate={{ opacity: [0, 1, 0] }} transition={{ delay: 0, repeat: Infinity }} />
             <motion.circle cx="60" cy="12" r="2" fill="#60A5FA" animate={{ opacity: [0, 1, 0] }} transition={{ delay: 0.2, repeat: Infinity }} />
@@ -100,7 +105,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
 
         {/* Gradients */}
         <defs>
-          <linearGradient id="bodyGradient" x1="50" y1="10" x2="50" y2="90" gradientUnits="userSpaceOnUse">
+          <linearGradient id={gradientId} x1="50" y1="10" x2="50" y2="90" gradientUnits="userSpaceOnUse">
             <stop offset="0%" stopColor="#EFF6FF" />
             <stop offset="100%" stopColor="#DBEAFE" />
           </linearGradient>
@@ -108,11 +113,13 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
       </motion.svg>
 
       {/* Shadow */}
-      <motion.div
-        className="absolute -bottom-2 w-1/2 h-2 bg-black/10 rounded-full blur-sm"
-        animate={{ scaleX: [1, 0.8, 1], opacity: [0.2, 0.1, 0.2] }}
-        transition={{ duration: 4, repeat: Infinity }}
-      />
+      {!compact && (
+        <motion.div
+          className="absolute -bottom-2 w-1/2 h-2 bg-black/10 rounded-full blur-sm"
+          animate={prefersReducedMotion ? undefined : { scaleX: [1, 0.8, 1], opacity: [0.2, 0.1, 0.2] }}
+          transition={{ duration: 4, repeat: Infinity }}
+        />
+      )}
     </div>
   );
 };

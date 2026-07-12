@@ -6,6 +6,8 @@
 import { 
   ChatCompletionOptions, 
   ChatCompletionResult, 
+  ChatStreamEvent,
+  ProviderChatStreamEvent,
   TTSOptions, 
   TTSResult, 
   TranscriptionResult,
@@ -268,6 +270,14 @@ class AIServiceImpl {
       .filter(p => p.isAvailable())
       .map(p => p.getName());
   }
+
+  /** Finalize an already-generated streamed result through the 0G policy. */
+  finalizeStreamedChat(
+    options: ChatCompletionOptions,
+    result: ChatCompletionResult,
+  ): ChatCompletionResult {
+    return this.zeroGAnchoringDecorator.finalizeChatCompletion(options, result);
+  }
 }
 
 // ============================================================================
@@ -365,6 +375,115 @@ export const analyzeWithWeb = async (
 };
 export const getAIServiceStatus = () => getAIServiceInstance().getStatus();
 
+const STREAM_FIRST_EVENT_TIMEOUT_MS = 15_000;
+const STREAM_INACTIVITY_TIMEOUT_MS = 30_000;
+
+async function* withStreamTimeout(
+  source: AsyncIterable<ProviderChatStreamEvent>,
+  provider: string,
+): AsyncGenerator<ProviderChatStreamEvent> {
+  const iterator = source[Symbol.asyncIterator]();
+  let timeoutMs = STREAM_FIRST_EVENT_TIMEOUT_MS;
+
+  try {
+    while (true) {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(
+          () => reject(new Error(`${provider} stream timed out after ${timeoutMs}ms`)),
+          timeoutMs,
+        );
+      });
+
+      let next: IteratorResult<ProviderChatStreamEvent>;
+      try {
+        next = await Promise.race([iterator.next(), timeout]);
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+
+      if (next.done) return;
+      yield next.value;
+      timeoutMs = STREAM_INACTIVITY_TIMEOUT_MS;
+    }
+  } finally {
+    await iterator.return?.();
+  }
+}
+
+/**
+ * Stream a provider-attributed chat completion in the same provider order as
+ * regular chat. Fallback is allowed only before text becomes visible; after
+ * that, switching providers would splice two unrelated answers together.
+ */
+export async function* chatStream(options: ChatCompletionOptions): AsyncGenerator<ChatStreamEvent> {
+  const instance = getAIServiceInstance();
+  const preferredProvider = options.preferredProvider === 'venice' || options.preferredProvider === 'gemini'
+    ? options.preferredProvider
+    : 'auto';
+  const providers = instance.chatOrchestrator.getProviderOrderForChat(options, preferredProvider);
+
+  for (const provider of providers) {
+    const streamFn = provider.generateChatCompletionStream;
+    if (typeof streamFn !== 'function') continue;
+
+    const providerName = provider.getName();
+    let emittedText = false;
+    let fullText = '';
+    let modelUsed: string | undefined;
+    let completed = false;
+
+    try {
+      await provider.initialize();
+      const circuitBreaker = circuitBreakerManager.getCircuit(`ai-${providerName}-chat`, {
+        failureThreshold: 3,
+        timeout: 12_000,
+        successThreshold: 2,
+      });
+      const protectedStream = circuitBreaker.callStream(() =>
+        withStreamTimeout(streamFn.call(provider, options), providerName),
+      );
+
+      for await (const event of protectedStream) {
+        if (event.type === 'chunk') {
+          emittedText = true;
+          fullText += event.text;
+          yield { type: 'chunk', text: event.text, provider: providerName, model: modelUsed };
+        } else {
+          completed = true;
+          modelUsed = event.modelUsed;
+        }
+      }
+
+      if (!completed || !emittedText) {
+        throw new Error(`${providerName} stream ended without a complete response`);
+      }
+
+      instance.finalizeStreamedChat(options, {
+        data: fullText,
+        content: fullText,
+        provider: providerName,
+        modelUsed,
+      });
+      yield { type: 'done', provider: providerName, model: modelUsed };
+      return; // Success — streaming complete
+    } catch (error: any) {
+      console.warn(`[AIService] Stream failed for ${providerName}:`, error.message);
+      if (emittedText) {
+        throw error;
+      }
+      // Safe to try the next provider because no text reached the caller.
+    }
+  }
+
+  // No streaming provider could start. Preserve availability through the
+  // regular decorated path and expose it as one attributed chunk.
+  const result = await generateChatCompletion(options);
+  const text = result.content ?? result.data;
+  yield { type: 'chunk', text, provider: result.provider, model: result.model ?? result.modelUsed };
+  yield { type: 'done', provider: result.provider, model: result.model ?? result.modelUsed };
+}
+
 // Backward compatibility named exports for utility functions
 export function cacheSystemPrompt(key: string, prompt: string): void {
   systemPromptCache.set(key, prompt);
@@ -387,6 +506,7 @@ export function getAdaptiveTokenLimit(requestType: keyof typeof TOKEN_LIMITS = '
 // Backward compatibility object export
 export const AIService = {
   chat: async (...args: Parameters<typeof generateChatCompletion>) => generateChatCompletion(...args),
+  chatStream,
   speech: async (...args: Parameters<typeof generateSpeech>) => generateSpeech(...args),
   transcribe: async (...args: Parameters<typeof transcribe>) => transcribe(...args),
   analyzeWithWeb: async (...args: Parameters<typeof analyzeWithWeb>) => analyzeWithWeb(...args),
