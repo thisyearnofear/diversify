@@ -73,6 +73,7 @@ const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor. Be concise, authoritat
 REAL ASSETS (mainnet only — recommend these):
 - Celo Mainnet: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
 - Arbitrum Mainnet: USDY (~5% APY), SYRUPUSDC (~4.5% APY), PAXG (gold-backed), USDC, EURC, MXNB (Bitso Mexican-peso stablecoin — LatAm/Mexico local-currency exposure, on/off-ramp to MXN via Bitso SPEI)
+- Robinhood Chain Mainnet: USDG (Paxos-backed USD stablecoin), SGOV (short-term Treasury ETF), SPY (S&P 500 ETF), QQQ (Nasdaq-100 ETF), AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN (tokenized stocks and ETFs on an Arbitrum Dedicated Blockchain)
 - Base Mainnet: LI.FI Earn vaults via Morpho, yoUSD, Aave (up to 16% APY)
 
 TESTNET ONLY — testing purposes only. Do not recommend testnet assets for real portfolio allocation.
@@ -230,6 +231,16 @@ function getMainnetChainContext(chainId?: number): string {
 `;
   }
 
+  if (chainId === NETWORKS.RH_MAINNET.chainId) {
+    return `
+✅ CURRENT CHAIN: Robinhood Chain Mainnet (TOKENIZED RWA)
+- Arbitrum Dedicated Blockchain (chainId 4663)
+- Available: USDG (Paxos-backed stablecoin), SGOV (short-term Treasury ETF), SPY (S&P 500), QQQ (Nasdaq-100), AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN
+- Recommend these for USD parking, Treasury exposure, and equity hedging against local-currency depreciation
+- One-tap swaps are coming next; today users can research and track these assets
+`;
+  }
+
   if (chainId === NETWORKS.BASE_MAINNET.chainId) {
     return `
 ✅ CURRENT CHAIN: Base Mainnet (HIGH YIELD)
@@ -373,7 +384,7 @@ ${chainLines}
 TOP HOLDINGS:
 ${holdingLines}
 
-⚠️ IMPORTANT: Only recommend mainnet assets (Celo/Arbitrum/Base/Ethereum) for real portfolio allocation. Testnet assets are for testing only.
+⚠️ IMPORTANT: Only recommend mainnet assets (Celo/Arbitrum/Robinhood Chain/Base/Ethereum) for real portfolio allocation. Testnet assets are for testing only.
 💡 YIELD TIP: Switch to Base chain for LI.FI Earn vaults with up to 16% APY!
 `;
 }
@@ -867,16 +878,17 @@ You are DiversiFi Advisor in analysis mode. Deliver high-signal, data-backed rec
 
 RULES:
 - Max 100 words for any analysis. Lead with the recommendation, not the explanation.
-- Only recommend real mainnet assets (Celo, Arbitrum, Base). Never suggest testnet assets or fictional stocks.
+- Only recommend real mainnet assets (Celo, Arbitrum, Robinhood Chain, Base). Never suggest testnet assets or fictional stocks.
 - Prefer exact numbers over adjectives. If data is missing, skip the analysis rather than guessing.
 
 ASSET GUIDANCE:
 - Real Yield > 2% → favor yield assets (USDY ~5%, SYRUPUSDC ~4.5%, LI.FI Earn vaults)
-- Real Yield 0-2% → balanced: mix yield + gold hedge
-- Real Yield < 0% → favor PAXG (gold-backed inflation hedge)
+- Real Yield 0-2% → balanced: mix yield + gold hedge + Robinhood Chain Treasuries (SGOV)
+- Real Yield < 0% → favor PAXG (gold-backed inflation hedge) or USDG/SGOV on Robinhood Chain for USD/Treasury parking
 
 REAL ASSETS:
 - Arbitrum: USDY (~5%), SYRUPUSDC (~4.5%), PAXG, USDC, EURC
+- Robinhood Chain: USDG (Paxos-backed USD), SGOV (short-term Treasury ETF), SPY, QQQ, AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN
 - Celo: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR
 - Base: LI.FI Earn vaults — Morpho, yoUSD, Aave (up to 16% APY)
 

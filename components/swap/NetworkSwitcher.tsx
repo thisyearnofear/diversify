@@ -121,6 +121,13 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
             color: 'gray',
         },
         {
+            ...NETWORKS.RH_MAINNET,
+            label: `${NETWORKS.RH_MAINNET.name} (RWA)`,
+            description: 'Tokenized stocks & USDG',
+            icon: '🏛️',
+            color: 'emerald',
+        },
+        {
             ...NETWORKS.RH_TESTNET,
             label: `${NETWORKS.RH_TESTNET.name} (Stocks)`,
             description: 'Tokenized equities testnet',
@@ -231,6 +238,11 @@ const NetworkSwitcher: React.FC<NetworkSwitcherProps> = ({
                             bg: 'bg-gray-50/50 dark:bg-gray-900/10 border-gray-200/50 dark:border-gray-800/50',
                             hover: 'hover:bg-gray-100/50 dark:hover:bg-gray-900/20',
                             text: 'text-gray-900 dark:text-gray-100',
+                        },
+                        emerald: {
+                            bg: 'bg-emerald-50/50 dark:bg-emerald-900/10 border-emerald-200/50 dark:border-emerald-800/50',
+                            hover: 'hover:bg-emerald-100/50 dark:hover:bg-emerald-900/20',
+                            text: 'text-emerald-900 dark:text-emerald-100',
                         },
                     };
 

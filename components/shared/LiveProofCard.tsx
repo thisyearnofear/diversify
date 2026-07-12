@@ -33,6 +33,7 @@ import {
   getMultiChainFreshnessLabel,
   getLedgerProofLabel,
   getProofTxUrl,
+  LEDGER_CHAIN_BADGES,
 } from '@/constants/proof-feed';
 
 const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
@@ -283,12 +284,16 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                         rec.chainId,
                         rec.settlementTxHash,
                     );
+                    const badge = rec.chainId != null ? LEDGER_CHAIN_BADGES[rec.chainId] : undefined;
                     const row = (
                         <>
                             <span className="size-1.5 rounded-full bg-emerald-500" />
                             {rec.chainId != null && (
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80 shrink-0">
-                                    {getLedgerProofLabel(rec.chainId)}
+                                <span
+                                    className={`text-[10px] font-bold uppercase tracking-wider shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${badge?.color ?? 'bg-emerald-100 text-emerald-700 border-emerald-200'} ${badge?.darkColor ?? 'dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'}`}
+                                >
+                                    <span aria-hidden="true">{badge?.icon ?? '🔗'}</span>
+                                    <span>{getLedgerProofLabel(rec.chainId)}</span>
                                 </span>
                             )}
                             <span className="font-mono text-emerald-600 dark:text-emerald-400">

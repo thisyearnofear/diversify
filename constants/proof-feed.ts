@@ -10,6 +10,18 @@ const LEDGER_CHAIN_LABELS: Record<number, string> = {
   11142220: 'Celo Sepolia',
 };
 
+/** Visual badge styles per chain for the live proof feed. */
+export const LEDGER_CHAIN_BADGES: Record<number, { icon: string; color: string; darkColor: string }> = {
+  42161: { icon: '🔗', color: 'bg-blue-100 text-blue-700 border-blue-200', darkColor: 'dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800' },
+  4663: { icon: '🏛️', color: 'bg-green-100 text-green-700 border-green-200', darkColor: 'dark:bg-green-900/30 dark:text-green-300 dark:border-green-800' },
+  42220: { icon: '🌍', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', darkColor: 'dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800' },
+  177: { icon: '⛩️', color: 'bg-red-100 text-red-700 border-red-200', darkColor: 'dark:bg-red-900/30 dark:text-red-300 dark:border-red-800' },
+  16661: { icon: '🔬', color: 'bg-purple-100 text-purple-700 border-purple-200', darkColor: 'dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-800' },
+  16602: { icon: '🔬', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
+  421614: { icon: '🔗', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
+  11142220: { icon: '🌍', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
+};
+
 /** Mainnet ledger chains — get the confident "Verified on X" headline. */
 const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661]);
 
