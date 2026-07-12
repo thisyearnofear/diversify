@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+// Bound Juno status check so a slow upstream can't hold up the onramp UI.
+const JUNO_STATUS_TIMEOUT_MS = 6000;
 
 export interface JunoStatus {
   configured: boolean;
@@ -22,7 +27,11 @@ export function useJunoStatus() {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE}/api/bitso/juno?resource=status`);
+        const response = await fetchWithTimeout(
+          `${API_BASE}/api/bitso/juno?resource=status`,
+          {},
+          JUNO_STATUS_TIMEOUT_MS,
+        );
         const json = await response.json();
 
         if (!response.ok) {

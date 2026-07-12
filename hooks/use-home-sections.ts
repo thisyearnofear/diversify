@@ -24,7 +24,8 @@ import { useExperience } from "../context/app/ExperienceContext";
 import { useProtectionProfile } from "./use-protection-profile";
 import { useColdStart } from "./use-cold-start";
 import { useStreakRewards } from "./use-streak-rewards";
-import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the agent-tier stack out of first-load.
+import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
 
 export type HomeMode = "beginner" | "standard" | "advanced";

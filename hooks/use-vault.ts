@@ -7,8 +7,15 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import type { ethers } from 'ethers';
+// Deep leaf import — NOT the barrel — keeps the promise timeout helper
+// available without dragging in the AI/swap/ethers stack.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
+// Bound each vault API call: a hung server can't leave the Guardian setup
+// modal stuck on "Loading...".
+const VAULT_FETCH_TIMEOUT_MS = 8000;
 
 export type VaultStatus = 'idle' | 'created' | 'funded' | 'active';
 
@@ -117,8 +124,10 @@ export function useVault(): UseVaultReturn {
       setError(null);
 
       // Fetch vault balance (includes vault, permission, fees, recent transactions)
-      const balanceResp = await fetch(
-        `${API_BASE}/api/vault/balance?userAddress=${encodeURIComponent(userAddress)}`
+      const balanceResp = await fetchWithTimeout(
+        `${API_BASE}/api/vault/balance?userAddress=${encodeURIComponent(userAddress)}`,
+        {},
+        VAULT_FETCH_TIMEOUT_MS,
       );
 
       if (balanceResp.ok) {
@@ -158,11 +167,15 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
-      const resp = await fetch(`${API_BASE}/api/vault/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress, strategy }),
-      });
+      const resp = await fetchWithTimeout(
+        `${API_BASE}/api/vault/create`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userAddress, strategy }),
+        },
+        VAULT_FETCH_TIMEOUT_MS,
+      );
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -190,11 +203,15 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
-      const resp = await fetch(`${API_BASE}/api/vault/permission`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress, permission: signedPermission }),
-      });
+      const resp = await fetchWithTimeout(
+        `${API_BASE}/api/vault/permission`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userAddress, permission: signedPermission }),
+        },
+        VAULT_FETCH_TIMEOUT_MS,
+      );
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -215,9 +232,10 @@ export function useVault(): UseVaultReturn {
 
   const revokePermission = useCallback(async (userAddress: string) => {
     try {
-      const resp = await fetch(
+      const resp = await fetchWithTimeout(
         `${API_BASE}/api/vault/permission?userAddress=${encodeURIComponent(userAddress)}`,
-        { method: 'DELETE' }
+        { method: 'DELETE' },
+        VAULT_FETCH_TIMEOUT_MS,
       );
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));
@@ -231,11 +249,15 @@ export function useVault(): UseVaultReturn {
   }, [vault, deriveStatus]);
 
   const triggerRebalance = useCallback(async (userAddress: string, dryRun = false) => {
-    const resp = await fetch(`${API_BASE}/api/vault/rebalance`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userAddress, dryRun }),
-    });
+    const resp = await fetchWithTimeout(
+      `${API_BASE}/api/vault/rebalance`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userAddress, dryRun }),
+      },
+      VAULT_FETCH_TIMEOUT_MS,
+    );
     return resp.json();
   }, []);
 
@@ -244,11 +266,15 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
-      const resp = await fetch(`${API_BASE}/api/vault/strategy`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress, strategy }),
-      });
+      const resp = await fetchWithTimeout(
+        `${API_BASE}/api/vault/strategy`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userAddress, strategy }),
+        },
+        VAULT_FETCH_TIMEOUT_MS,
+      );
 
       if (!resp.ok) {
         const data = await resp.json().catch(() => ({}));

@@ -5,16 +5,25 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ethers } from 'ethers';
+// Deep leaf imports — NOT the barrel — keeps the swap / position / bridge
+// stacks out of first-load. Each module owns its own value exports + types.
 import {
     HyperliquidPositionService,
+    type CommodityPosition,
+    type PortfolioSummary,
+} from '@diversifi/shared/src/services/swap/hyperliquid-position.service';
+import {
     HyperliquidBridgeService,
     getHyperliquidAccountStatus,
+    type HyperliquidBridgeResult,
+    type HyperliquidAccountStatus,
+} from '@diversifi/shared/src/services/swap/hyperliquid-bridge.service';
+import {
     fetchHyperliquidPrices,
     fetchHyperliquidMeta,
     HYPERLIQUID_MARKET_TICKERS,
     analyzeCommodityAvailability,
-} from '@diversifi/shared';
-import type { CommodityPosition, PortfolioSummary, HyperliquidAccountStatus, HyperliquidBridgeResult } from '@diversifi/shared';
+} from '@diversifi/shared/src/services/swap/strategies/hyperliquid-perp.strategy';
 
 interface CommodityPrice {
     symbol: string;

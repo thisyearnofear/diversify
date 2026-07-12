@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
-import { MarketPulseService, type MarketPulse } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the market-pulse stack out of first-load.
+import { MarketPulseService, type MarketPulse } from "@diversifi/shared/src/utils/market-pulse-service";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useStablecoinPortfolio } from "./use-stablecoin-portfolio";
 import { useWalletContext } from "../components/wallet/WalletProvider";

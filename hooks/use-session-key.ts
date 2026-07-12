@@ -27,9 +27,16 @@ import {
     deriveGuardianTierState,
     type GuardianTierState,
 } from '../packages/shared/src/services/vault/guardian-tier-state';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 
 const service = new ERC7715Service();
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
+// Bound every session endpoint: a wedged Guardian server can't leave the
+// Auto-Saver modal stuck on "Loading..." forever.
+const SESSION_FETCH_TIMEOUT_MS = 8000;
 
 export type SessionKeyStatus = 'idle' | 'requesting' | 'active' | 'expired' | 'error';
 
@@ -170,7 +177,8 @@ export interface UseSessionKeyReturn {
         chainId: number,
         overrides?: Partial<Pick<SessionPermission, 'spendingLimitUSD' | 'dailyLimitUSD'>>
     ) => Promise<SignedSessionPermission | null>;
-    revokePermission: () => void;
+    /** Resolves false (and sets `error`) if server-side revocation failed — the permission is still live. */
+    revokePermission: () => Promise<boolean>;
     isPermissionValid: () => boolean;
     triggerExecutionLoop: (dryRun?: boolean) => Promise<GuardianLoopResult>;
     /**
@@ -203,7 +211,11 @@ export function useSessionKey(): UseSessionKeyReturn {
     // Poll server for session status + execution receipts when active
     const pollSession = useCallback(async (userAddress: string) => {
         try {
-            const resp = await fetch(`${API_BASE}/api/vault/permission?userAddress=${userAddress}`);
+            const resp = await fetchWithTimeout(
+                `${API_BASE}/api/vault/permission?userAddress=${userAddress}`,
+                {},
+                SESSION_FETCH_TIMEOUT_MS,
+            );
             if (resp.ok) {
                 const data = await resp.json();
                 setSessionInfo(data);
@@ -292,17 +304,21 @@ export function useSessionKey(): UseSessionKeyReturn {
             const signed = await service.signPermission(permission, signer);
 
             // Register the session server-side so the Guardian can execute autonomously
-            const regResp = await fetch(`${API_BASE}/api/vault/permission`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    userAddress,
-                    permission: {
-                        ...permission,
-                        signature: signed.signature,
-                    },
-                }),
-            });
+            const regResp = await fetchWithTimeout(
+                `${API_BASE}/api/vault/permission`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userAddress,
+                        permission: {
+                            ...permission,
+                            signature: signed.signature,
+                        },
+                    }),
+                },
+                SESSION_FETCH_TIMEOUT_MS,
+            );
 
             if (!regResp.ok) {
                 const regData = await regResp.json().catch(() => ({}));
@@ -324,18 +340,36 @@ export function useSessionKey(): UseSessionKeyReturn {
         }
     }, []);
 
-    const revokePermission = useCallback(async () => {
-        // Revoke server-side
+    const revokePermission = useCallback(async (): Promise<boolean> => {
+        // Revoke server-side first — only clear local state once the server
+        // confirms, so the UI never claims autonomous trading is off while
+        // the session key is still live.
         if (signedPermission) {
             const userAddress = signedPermission.permission.userAddress;
-            fetch(`${API_BASE}/api/vault/permission?userAddress=${userAddress}`, {
-                method: 'DELETE',
-            }).catch(() => {});
+            try {
+                const resp = await fetchWithTimeout(
+                    `${API_BASE}/api/vault/permission?userAddress=${userAddress}`,
+                    { method: 'DELETE' },
+                    SESSION_FETCH_TIMEOUT_MS,
+                );
+                if (!resp.ok) {
+                    const data = await resp.json().catch(() => ({}));
+                    throw new Error(data.error || 'Failed to revoke Guardian permission');
+                }
+            } catch (e) {
+                setError(
+                    e instanceof Error
+                        ? e.message
+                        : 'Failed to revoke Guardian permission — Auto-Saver is still active. Please try again.',
+                );
+                return false;
+            }
         }
         setSignedPermission(null);
         setSessionInfo(null);
         setStatus('idle');
         setError(null);
+        return true;
     }, [signedPermission]);
 
     const isPermissionValid = useCallback((): boolean => {
@@ -349,11 +383,15 @@ export function useSessionKey(): UseSessionKeyReturn {
     }, [signedPermission, status]);
 
     const triggerExecutionLoopInternal = async (userAddress: string, dryRun = false): Promise<GuardianLoopResult> => {
-        const resp = await fetch(`${API_BASE}/api/vault/rebalance`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userAddress, dryRun }),
-        });
+        const resp = await fetchWithTimeout(
+            `${API_BASE}/api/vault/rebalance`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userAddress, dryRun }),
+            },
+            SESSION_FETCH_TIMEOUT_MS,
+        );
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) {
             return {

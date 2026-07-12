@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { NETWORKS } from "../../config";
+import Scrim from "../shared/Scrim";
 
 export interface MtPelerinOnrampProps {
   mode?: "buy" | "sell" | "swap";
@@ -210,9 +211,9 @@ function MtPelerinModal({ widgetUrl, onClose }: MtPelerinModalProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4"
     >
+      <Scrim intensity="heavy" onClick={onClose} />
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}

@@ -19,6 +19,14 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useWalletContext } from '../components/wallet/WalletProvider';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+
+// Bound streak API calls so a wedged server can't leave the G$ panel
+// in a permanent loading state. Anything past the bound falls back
+// gracefully (the provider already has localStorage fallback).
+const STREAK_FETCH_TIMEOUT_MS = 6000;
 
 import type { StreakActions, StreakData, StreakState } from '../modules/rewards/streak/types';
 import { STREAK_CONFIG } from '../modules/rewards/streak/types';
@@ -83,7 +91,9 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
 
       let realEntitlement = '~$0.25';
       try {
-        const { GoodDollarService } = await import('@diversifi/shared');
+        // Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack
+        // out of the G$ entitlement check.
+        const { GoodDollarService } = await import('@diversifi/shared/src/services/gooddollar-service');
         const service = GoodDollarService.createReadOnly();
         const eligibility = await service.checkClaimEligibility(address);
         if (eligibility.claimAmount && parseFloat(eligibility.claimAmount) > 0) {
@@ -160,11 +170,15 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       try {
-        const response = await fetch(`/api/streaks/${address}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amountUSD, source: source || 'swap' }),
-        });
+        const response = await fetchWithTimeout(
+          `/api/streaks/${address}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amountUSD, source: source || 'swap' }),
+          },
+          STREAK_FETCH_TIMEOUT_MS,
+        );
 
         if (response.ok) {
           const data = (await safeParseJson(response)) || {};
@@ -214,8 +228,11 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
       return { success: false, error: 'Not eligible to claim yet' };
     }
     try {
-      const [{ GoodDollarService, getWalletProvider }] = await Promise.all([
-        import('@diversifi/shared'),
+      // Deep leaf imports — NOT the barrel — so a claim click doesn't
+      // pull the AI/swap/ethers stack into the chunk.
+      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
+        import('@diversifi/shared/src/services/gooddollar-service'),
+        import('@diversifi/shared/src/modules/wallet/core/provider-registry'),
       ]);
       const walletProvider = await getWalletProvider();
       if (!walletProvider) {
@@ -241,8 +258,11 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
   const verifyIdentity = useCallback(async (): Promise<{ success: boolean; url?: string; error?: string }> => {
     if (!address) return { success: false, error: 'Wallet not connected' };
     try {
-      const [{ GoodDollarService, getWalletProvider }] = await Promise.all([
-        import('@diversifi/shared'),
+      // Deep leaf imports — NOT the barrel — keep the face-verification
+      // path off the AI/swap/ethers chunk.
+      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
+        import('@diversifi/shared/src/services/gooddollar-service'),
+        import('@diversifi/shared/src/modules/wallet/core/provider-registry'),
       ]);
       const walletProvider = await getWalletProvider();
       if (!walletProvider) {
@@ -263,7 +283,11 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
     if (!address) return;
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
-      await fetch(`/api/streaks/${address}`, { method: 'DELETE' });
+      await fetchWithTimeout(
+        `/api/streaks/${address}`,
+        { method: 'DELETE' },
+        STREAK_FETCH_TIMEOUT_MS,
+      );
     } catch (err) {
       console.warn('[StreakRewards] API reset failed:', err);
     }

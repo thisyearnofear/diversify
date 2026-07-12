@@ -1,7 +1,8 @@
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useSwapController } from "../../hooks/use-swap-controller";
-import { ChainDetectionService } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the swap/ethers stack out of first-load.
+import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import { NETWORKS } from "../../config";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";

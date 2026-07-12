@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "@/components/shared/TokenIcon";
 import { Coin } from "@/components/shared/FloatingCoins";
 import { NETWORKS, RH_MAINNET_TOKENS } from "@/config";
+import Scrim from "../../shared/Scrim";
 
 interface AssetChip {
   symbol: string;
@@ -120,9 +121,10 @@ interface AssetDetailModalProps {
 function AssetDetailModal({ asset, price, onClose }: AssetDetailModalProps) {
   return (
     <div
-      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
+      <Scrim intensity="heavy" />
       <motion.div
         initial={{ y: "100%", opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}

@@ -45,6 +45,22 @@
   background: radial-gradient(ellipse at 50% 20%, var(--surface-protection) 0%, transparent 65%);
 }
 
+/* ── Scrim / Overlay utilities ─────────────────────────────────────────── */
+.scrim {
+  background: var(--surface-scrim);
+  backdrop-filter: blur(var(--surface-scrim-blur));
+}
+
+.scrim-heavy {
+  background: var(--surface-scrim-heavy);
+  backdrop-filter: blur(var(--surface-scrim-blur));
+}
+
+.scrim-light {
+  background: var(--surface-scrim-light);
+  backdrop-filter: blur(var(--surface-scrim-blur));
+}
+
 /* The onboarding backdrop is intentionally quieter on small screens: the
    edge coins remain a motif without competing with the decision surface. */
 @media (max-width: 639px) {
@@ -278,14 +294,7 @@ body {
   }
 }
 
-@keyframes pulse-subtle {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.85; }
-}
-
-.animate-pulse-subtle {
-  animation: pulse-subtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
+/* (animate-pulse-subtle removed — unused) */
 
 /* Slim scrollbar for panels that opt in via .custom-scrollbar
    (was referenced app-wide but never defined) */

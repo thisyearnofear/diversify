@@ -1,5 +1,6 @@
 import React from "react";
 import { RWA_ASSETS } from "./RwaAssetCards";
+import Scrim from "../../shared/Scrim";
 
 interface AssetModalProps {
     assetSymbol: string | null;
@@ -19,11 +20,12 @@ export default function AssetModal({
 
     return (
         <div
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={onClose}
         >
+            <Scrim intensity="heavy" />
             <div
-                className="bg-white dark:bg-gray-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl"
+                className="bg-white dark:bg-gray-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative z-10"
                 onClick={(e) => e.stopPropagation()}
             >
                 <div className="flex items-center gap-4 mb-6">

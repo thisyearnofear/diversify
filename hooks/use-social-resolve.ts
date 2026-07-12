@@ -8,6 +8,13 @@
  */
 
 import { useCallback } from 'react';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+
+// Bound social-resolve & social-transfer: a wedged resolution server
+// would otherwise freeze the "send to phone" flow indefinitely.
+const SOCIAL_RESOLVE_TIMEOUT_MS = 6000;
 
 export interface SocialResolveResult {
   success: boolean;
@@ -21,11 +28,15 @@ export function useSocialResolve() {
     type: 'phone' | 'email' | 'twitter'
   ): Promise<string | null> => {
     try {
-      const response = await fetch('/api/agent/social-resolve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, type }),
-      });
+      const response = await fetchWithTimeout(
+        '/api/agent/social-resolve',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ identifier, type }),
+        },
+        SOCIAL_RESOLVE_TIMEOUT_MS,
+      );
 
       if (!response.ok) {
         throw new Error('Resolution failed');
@@ -50,11 +61,15 @@ export function useSocialResolve() {
     amount: string;
   }): Promise<SocialResolveResult> => {
     try {
-      const response = await fetch('/api/agent/social-transfer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
+      const response = await fetchWithTimeout(
+        '/api/agent/social-transfer',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(params),
+        },
+        SOCIAL_RESOLVE_TIMEOUT_MS,
+      );
 
       if (!response.ok) {
         throw new Error('Transfer failed');

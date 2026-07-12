@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+
+// Bound best-yield lookups server-side; lift here too so the spinner can't
+// freeze the Protect tab if the API is wedged.
+const BEST_YIELD_TIMEOUT_MS = 8000;
 
 export interface BestYieldRecommendation {
   id: string;
@@ -43,11 +50,15 @@ export function useBestYield(userAddress: string | null) {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${apiBase}/api/agent/best-yield`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userAddress }),
-      });
+      const res = await fetchWithTimeout(
+        `${apiBase}/api/agent/best-yield`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userAddress }),
+        },
+        BEST_YIELD_TIMEOUT_MS,
+      );
       if (!res.ok) throw new Error(`best-yield ${res.status}`);
       setData(await res.json());
     } catch (e) {

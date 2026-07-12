@@ -1,6 +1,7 @@
 import React from 'react';
 import { useWalletContext } from '../wallet/WalletProvider';
-import { ChainDetectionService } from '@diversifi/shared';
+// Deep leaf import — NOT the barrel — keeps the swap/ethers stack out of first-load.
+import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
 
 interface WealthJourneyWidgetProps {
   totalValue: number;

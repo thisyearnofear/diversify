@@ -284,7 +284,6 @@ export interface AIMessage {
   action?: {
     type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold" | "propose_sosovalue_trade" | "confirm_research";
     tab?: string;
-    delay?: number;
     amount?: string;
     network?: string;
     targetAsset?: string;

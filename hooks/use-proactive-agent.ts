@@ -168,7 +168,6 @@ export function useProactiveAgent() {
                openDrawer: true,
                action: {
                  type: 'claim_ubi',
-                 delay: 3500,
                }
              }).catch(() => {});
              markAlertSent(ubiAlertId);

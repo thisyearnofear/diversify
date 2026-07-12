@@ -13,6 +13,11 @@
 import { useState, useEffect } from 'react';
 import type { PeerBracket } from '@/pages/api/metrics/peer-stable-ratio';
 import { PEER_BRACKETS_FALLBACK } from '@/lib/peer-brackets';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load. We ALWAYS
+// fall back to hardcoded brackets on failure, so the bound is just to
+// prevent the request itself from hanging.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 
 export interface BracketEntry {
     minRatio: number;
@@ -45,10 +50,14 @@ export function usePeerStableRatio(): UsePeerStableRatioResult {
 
         async function fetchBrackets() {
             try {
-                const res = await fetch('/api/metrics/peer-stable-ratio', {
-                    method: 'GET',
-                    headers: { Accept: 'application/json' },
-                });
+                const res = await fetchWithTimeout(
+                    '/api/metrics/peer-stable-ratio',
+                    {
+                        method: 'GET',
+                        headers: { Accept: 'application/json' },
+                    },
+                    6000,
+                );
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 if (cancelled) return;

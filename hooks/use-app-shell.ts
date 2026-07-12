@@ -14,7 +14,7 @@ import { useExperience } from "../context/app/ExperienceContext";
 import { useUserRegion, type Region, REGIONS } from "./use-user-region";
 import { useInflationData } from "./use-inflation-data";
 import { useCurrencyPerformance } from "./use-currency-performance";
-import { useMultichainBalances } from "./use-multichain-balances";
+import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { getChainAssets, getPreferredChainIdForGoal } from "../config";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial } from "../components/wallet/WalletTutorial";
@@ -53,7 +53,7 @@ export function useAppShell() {
 
   // ── Portfolio ──
   const { config: profileConfig } = useProtectionProfile();
-  const multichainPortfolio = useMultichainBalances(address, profileConfig.userGoal || undefined);
+  const multichainPortfolio = useSharedMultichainBalances(address, profileConfig.userGoal || undefined);
   const { isLoading: isMultichainLoading, refresh } = multichainPortfolio;
 
   // ── Tokens ──

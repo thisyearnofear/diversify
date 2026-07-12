@@ -17,7 +17,8 @@ import type { TabId } from "@/constants/tabs";
 import { Card } from "../../shared/TabComponents";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
-import { StrategyService } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the strategy stack out of first-load.
+import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { isApacRailLive } from "@/constants/apac-rail";
 

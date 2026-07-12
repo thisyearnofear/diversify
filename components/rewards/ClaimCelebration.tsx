@@ -8,6 +8,7 @@
 import React, { useEffect } from 'react';
 import { NETWORKS } from "../../config";
 import { Coin } from '../shared/FloatingCoins';
+import Scrim from '../shared/Scrim';
 
 interface ClaimCelebrationProps {
   amount: string;
@@ -25,10 +26,8 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
   }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 backdrop-blur-md animate-in fade-in duration-300"
-      onClick={onClose}
-    >
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <Scrim intensity="default" onClick={onClose} />
       <div
         className="w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-8 animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 duration-500 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}

@@ -3,6 +3,13 @@ import { useWalletContext } from '../components/wallet/WalletProvider';
 import { useToast } from '../components/ui/Toast';
 import type { RewardActionKey } from '../constants/credits';
 import { REWARD_ACTIONS, FREE_TRIAL_DAYS, FREE_TRIAL_CREDITS, STORAGE_KEY, REQUIRES_PROOF } from '../constants/credits';
+// Deep leaf import — NOT the barrel — keeps the timeout helper available
+// without dragging the AI/swap/ethers stack into first-load.
+import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+
+// Bound each credits fetch so a hung server can't leave the credits display
+// in a permanent loading state.
+const CREDITS_FETCH_TIMEOUT_MS = 8000;
 
 export interface CreditsStatus {
   trial: {
@@ -54,7 +61,11 @@ function saveStored(data: StoredCredits, address?: string | null) {
 
 async function syncFromServer(address: string, local: StoredCredits): Promise<StoredCredits> {
   try {
-    const res = await fetch(`/api/agent/credits?userAddress=${encodeURIComponent(address)}`);
+    const res = await fetchWithTimeout(
+      `/api/agent/credits?userAddress=${encodeURIComponent(address)}`,
+      {},
+      CREDITS_FETCH_TIMEOUT_MS,
+    );
     if (!res.ok) return local;
     const { completedActions, totalEarned } = await res.json();
     const serverActions: RewardActionKey[] = completedActions || [];
@@ -139,11 +150,15 @@ export function useCredits() {
     }
     setClaimingAction(action);
     try {
-      const res = await fetch('/api/agent/credits', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, proof, userAddress: address }),
-      });
+      const res = await fetchWithTimeout(
+        '/api/agent/credits',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, proof, userAddress: address }),
+        },
+        CREDITS_FETCH_TIMEOUT_MS,
+      );
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: 'Verification failed' }));
         if (err.alreadyClaimed) {

@@ -6,6 +6,8 @@ import {
   STREAK_CONFIG,
 } from "../../hooks/use-streak-rewards";
 import { NETWORKS } from "../../config";
+import Scrim from "../shared/Scrim";
+import { haptics } from "../../lib/haptics";
 
 interface SwapSuccessCelebrationProps {
   isVisible: boolean;
@@ -54,6 +56,7 @@ export default function SwapSuccessCelebration({
 
   useEffect(() => {
     if (isVisible) {
+      haptics.confirm();
       // Generate confetti pieces
       const pieces = Array.from({ length: 30 }, (_, i) => ({
         id: i,
@@ -78,9 +81,10 @@ export default function SwapSuccessCelebration({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={onClose}
         >
+          <Scrim intensity="heavy" />
           {/* Confetti */}
           {confettiPieces.map((piece) => (
             <motion.div

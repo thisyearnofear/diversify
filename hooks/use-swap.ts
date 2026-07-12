@@ -5,20 +5,20 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import {
-    SwapOrchestratorService,
-    ProviderFactoryService,
-    ChainDetectionService,
-    SwapErrorHandler,
-    type SwapState,
-    type SwapResult,
-    type SwapParams as OrchestratorSwapParams
-} from '@diversifi/shared';
+// Deep leaf imports — NOT the barrel — keeps the swap / wallet-provider
+// stacks out of first-load.
+import { SwapOrchestratorService } from '@diversifi/shared/src/services/swap/swap-orchestrator.service';
+import { ProviderFactoryService } from '@diversifi/shared/src/services/swap/provider-factory.service';
+import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
+import { SwapErrorHandler } from '@diversifi/shared/src/services/swap/error-handler';
+import type { SwapState, SwapResult, SwapParams as OrchestratorSwapParams } from '@diversifi/shared/src/types/swap';
 import {
     isMiniPayEnvironment,
+} from '@diversifi/shared/src/utils/environment';
+import {
     getWalletProvider,
-    setupWalletEventListenersForProvider
-} from '@diversifi/shared';
+    setupWalletEventListenersForProvider,
+} from '@diversifi/shared/src/modules/wallet/core/provider-registry';
 import { NETWORKS, TX_CONFIG } from '../config';
 
 interface HookSwapParams {

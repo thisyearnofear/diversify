@@ -5,6 +5,7 @@ import { getVisibleTabIds } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
 import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
+import { haptics } from "@/lib/haptics";
 
 interface TabItem {
   id: TabId;
@@ -124,9 +125,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
               tabIndex={isActive ? 0 : -1}
               ref={el => { tabRefs.current[index] = el; }}
               onClick={() => {
-                if (typeof window !== 'undefined' && window.navigator && window.navigator.vibrate) {
-                  window.navigator.vibrate(10);
-                }
+                haptics.tap();
                 setActiveTab(tab.id);
                 recordTabBar();
                 recordTabVisit(tab.id);

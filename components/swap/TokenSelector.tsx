@@ -4,7 +4,9 @@ import { TokenIcon } from "../shared/TokenIcon";
 import TokenPickerSheet, { type TokenPickerItem } from "./TokenPickerSheet";
 import { REGION_COLORS, TOKEN_METADATA, EXCHANGE_RATES } from "../../config";
 import type { UserExperienceMode } from "@/context/app/types";
-import { StrategyService, type FinancialStrategy } from "@diversifi/shared";
+// Deep leaf imports — NOT the barrel — keeps the strategy stack out of first-load.
+import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
+import type { FinancialStrategy } from "@diversifi/shared/src/types/strategy";
 
 interface Token {
   symbol: string;

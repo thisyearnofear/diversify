@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useId, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { EarnService, type EarnVault } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the earn-service stack out of first-load.
+import { EarnService, type EarnVault } from "@diversifi/shared/src/services/earn-service";
 import { Card, StatBadge } from "../shared/TabComponents";
 import { NETWORKS } from "../../config";
 

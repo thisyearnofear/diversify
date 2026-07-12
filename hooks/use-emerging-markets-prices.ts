@@ -9,7 +9,8 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { fetchWithTimeout } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
+import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
 
 interface PriceData {
     symbol: string;

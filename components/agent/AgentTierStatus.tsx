@@ -24,7 +24,9 @@ import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { NETWORKS } from "../../config";
-import { GUARDIAN_TIER_STATE_LABELS, GUARDIAN_USER_COPY } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the agent-status stack out of
+// first-load and avoids the no-restricted-imports lint warning.
+import { GUARDIAN_TIER_STATE_LABELS, GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
 import GuardianWDKStatus from "./GuardianWDKStatus";
@@ -289,9 +291,16 @@ export const AgentTierStatus: React.FC<{
     sessionInfo,
     triggerExecutionLoop,
     deriveGuardianState,
+    error: sessionKeyError,
   } = useSessionKey();
   const hasValidPermission = isPermissionValid();
   const isRequesting = sessionStatus === "requesting";
+  const [isRevoking, setIsRevoking] = useState(false);
+  const handleRevokePermission = useCallback(async () => {
+    setIsRevoking(true);
+    await revokePermission();
+    setIsRevoking(false);
+  }, [revokePermission]);
 
   // Vault state (replaces old fuel/session pattern for Phase 2)
   const vault = useVault();
@@ -1144,11 +1153,17 @@ export const AgentTierStatus: React.FC<{
                           )}
                         </div>
                       )}
+                      {sessionKeyError && (
+                        <div className="text-xs font-semibold text-red-600 dark:text-red-400 mt-2" role="alert">
+                          ⚠️ {sessionKeyError}
+                        </div>
+                      )}
                       <button
-                        onClick={(e) => { e.stopPropagation(); revokePermission(); }}
-                        className="w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-2 mt-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                        onClick={(e) => { e.stopPropagation(); handleRevokePermission(); }}
+                        disabled={isRevoking}
+                        className="w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl py-2 mt-2 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        Pause Auto-Saver
+                        {isRevoking ? "Pausing…" : "Pause Auto-Saver"}
                       </button>
                     </div>
                   ) : (

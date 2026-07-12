@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
+import Scrim from "../shared/Scrim";
 
 export interface TokenPickerItem {
   symbol: string;
@@ -108,18 +109,12 @@ export default function TokenPickerSheet({
           aria-modal="true"
           aria-label={title}
         >
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          />
+          <Scrim intensity="light" onClick={onClose} />
           <motion.div
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
-            transition={{ type: "spring", damping: 28, stiffness: 340 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="relative w-full sm:max-w-md max-h-[80dvh] bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
           >
             {/* Header */}

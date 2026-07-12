@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChainDetectionService } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the swap/ethers stack out of first-load.
+import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import type { UserGoal } from "@/hooks/use-protection-profile";
 import { useExperience } from "@/context/app/ExperienceContext";
 

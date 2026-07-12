@@ -63,6 +63,12 @@
   --transition-normal: 200ms ease;
   --transition-slow:   300ms ease;
 
+  /* ── Scrim / Overlay ──────────────────────────────────────────────── */
+  --surface-scrim:    rgba(0, 0, 0, 0.5);
+  --surface-scrim-heavy: rgba(0, 0, 0, 0.6);
+  --surface-scrim-light: rgba(0, 0, 0, 0.4);
+  --surface-scrim-blur: 8px;
+
   /* ── Z-index Layers ────────────────────────────────────────────────── */
   --z-base:      0;
   --z-dropdown:  10;
@@ -71,7 +77,8 @@
   --z-fab:       40;
   --z-modal:     50;
   --z-tooltip:   50;
-  --z-toast:     60;
+  --z-drawer:    100;
+  --z-toast:     110;
 
   /* ── Font Weights ──────────────────────────────────────────────────── */
   --font-normal:     400;
@@ -87,6 +94,17 @@
   --tracking-wide:    0.025em;
   --tracking-wider:   0.05em;
   --tracking-widest:  0.2em;
+
+  /* ── Motion Tokens ────────────────────────────────────────────────────── */
+  --motion-spring-default: { type: "spring", damping: 25, stiffness: 300 };
+  --motion-spring-quick: { type: "spring", damping: 20, stiffness: 400 };
+  --motion-spring-gentle: { type: "spring", damping: 30, stiffness: 200 };
+  --motion-duration-fast: 0.15s;
+  --motion-duration-normal: 0.2s;
+  --motion-duration-slow: 0.3s;
+  --motion-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
 }
 
 /* ── Dark Mode Overrides ──────────────────────────────────────────────── */

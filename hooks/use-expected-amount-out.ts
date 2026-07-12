@@ -8,7 +8,10 @@ import {
 } from '../config';
 import { EXCHANGE_RATES } from '../config';
 import { NETWORKS } from '../config';
-import { TokenPriceService, ChainDetectionService, ProviderFactoryService } from '@diversifi/shared';
+// Deep leaf imports — NOT the barrel — keeps the api + swap stacks out of first-load.
+import { TokenPriceService } from '@diversifi/shared/src/utils/api-services';
+import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
+import { ProviderFactoryService } from '@diversifi/shared/src/services/swap/provider-factory.service';
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
@@ -245,8 +248,14 @@ export function useExpectedAmountOut({
         return result;
       }
 
-      // Create a read-only provider for Celo
-      const provider = new ethers.providers.JsonRpcProvider(networkConfig.rpcUrl);
+      // Create a read-only provider for Celo. The 8s timeout protects the
+      // output preview from hanging on a flaky RPC: the inner Promise.race
+      // timeouts above already bound the getAmountOut call, but the
+      // provider-level timeout is the last line of defence.
+      const provider = new ethers.providers.JsonRpcProvider({
+        url: networkConfig.rpcUrl,
+        timeout: 8000,
+      });
 
       // Convert amount to wei
       const amountInWei = ethers.utils.parseUnits(amount, 18);

@@ -17,7 +17,10 @@ export function useAppInit() {
 
     const init = async () => {
       try {
-        const { isMiniPayEnvironment } = await import("@diversifi/shared");
+        // Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack
+        // out of the initial-route bundle. `isMiniPayEnvironment` lives in
+        // `utils/environment` (not `wallet-provider`).
+        const { isMiniPayEnvironment } = await import("@diversifi/shared/src/utils/environment");
         const inMiniPay = isMiniPayEnvironment();
         setIsInMiniPay(inMiniPay);
 

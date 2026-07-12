@@ -1,14 +1,15 @@
 /**
  * TabContentRouter — Renders the active tab content with swipe navigation.
  *
- * Consumes useAppShell() directly — no prop relay needed.
+ * Reads the shared AppShellContext (set up once by AppShell) — no prop
+ * relay needed, and no second useAppShell() instance mounted.
  */
 import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { TabId } from "@/constants/tabs";
 
-import { useAppShell } from "@/hooks/use-app-shell";
+import { useAppShellContext } from "@/context/app/AppShellContext";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
@@ -98,7 +99,7 @@ export default function TabContentRouter() {
     isRegionLoading, userRegion, setUserRegion, REGIONS,
     inflationData, currencyPerformanceData, availableTokens,
     walletChainId, isMiniPay, isFarcaster,
-  } = useAppShell();
+  } = useAppShellContext();
   const { recordSwipe, recordTabVisit } = useTabDiscovery();
 
   return (

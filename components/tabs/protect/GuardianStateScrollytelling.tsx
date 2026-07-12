@@ -7,12 +7,13 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+// Deep leaf import — NOT the barrel — keeps the agent-tier stack out of first-load.
 import {
   GUARDIAN_TIER_STATE_LABELS,
   GUARDIAN_USER_FACING_LABELS,
   collapseGuardianTierForUser,
-} from '@diversifi/shared';
-import type { GuardianTierState } from '@diversifi/shared';
+  type GuardianTierState,
+} from '@diversifi/shared/src/services/vault/guardian-tier-state';
 
 interface GuardianStateStep {
   state: GuardianTierState;

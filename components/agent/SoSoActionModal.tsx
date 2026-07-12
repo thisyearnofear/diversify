@@ -11,6 +11,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SoSoNewsItem } from './SoSoIntelligenceCard';
+import { Scrim } from '@/components/shared/Scrim';
 
 export interface SoSoTradeProposal {
   newsItem: SoSoNewsItem;
@@ -77,13 +78,7 @@ export default function SoSoActionModal({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-            onClick={handleClose}
-          />
+          <Scrim intensity="light" onClick={handleClose} />
           
           {/* Modal */}
           <motion.div

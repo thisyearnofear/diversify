@@ -20,9 +20,11 @@ export interface GuidedTourState {
 
 export type UserExperienceMode = 'beginner' | 'intermediate' | 'advanced';
 
-// Re-export from shared package to ensure consistency
-export type { FinancialStrategy } from '@diversifi/shared';
-import type { FinancialStrategy as FinancialStrategyType } from '@diversifi/shared';
+// Deep leaf re-export from shared package to ensure consistency — bypasses
+// the barrel so this type-only import doesn't pull the AI/swap/ethers stack
+// into first-load.
+export type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
+import type { FinancialStrategy as FinancialStrategyType } from '@diversifi/shared/src/types/strategy';
 
 // Nullable version for local state
 export type NullableFinancialStrategy = FinancialStrategyType | null;

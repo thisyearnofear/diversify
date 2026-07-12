@@ -5,11 +5,9 @@ import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useInflationData } from "./use-inflation-data";
 import { useStreakRewards } from "./use-streak-rewards";
 import { NETWORKS } from "../config";
-import {
-  isTokenAvailableOnChain,
-  getTokensForChain,
-  SwapErrorHandler,
-} from "@diversifi/shared";
+// Deep leaf imports — NOT the barrel — keeps the swap + cross-chain-tokens stacks out of first-load.
+import { isTokenAvailableOnChain, getTokensForChain } from "@diversifi/shared/src/utils/cross-chain-tokens";
+import { SwapErrorHandler } from "@diversifi/shared/src/services/swap/error-handler";
 
 interface Token {
   symbol: string;

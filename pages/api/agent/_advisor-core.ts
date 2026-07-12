@@ -1,5 +1,19 @@
 import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
 import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS } from '../../../config';
+import { isTabId, LEGACY_TAB_MAP } from '../../../constants/tabs';
+
+/**
+ * Resolve a raw [ACTION:NAVIGATE:xxx] tab name from the LLM into a real
+ * tab id, or null if it hallucinated one. The system prompt tells the model
+ * which tab names are valid, but nothing enforces that — an unvalidated
+ * value here becomes a chat button that's clickable but silently does
+ * nothing (see the "Open EARN" bug).
+ */
+function resolveNavTab(raw: string): string | null {
+  const tab = raw.toLowerCase();
+  if (isTabId(tab)) return tab;
+  return LEGACY_TAB_MAP[tab] ?? null;
+}
 
 type ConversationRequest = {
   message: string;
@@ -534,7 +548,10 @@ export async function runAdvisorConversation(input: ConversationRequest) {
   } else if (responseText.includes('[ACTION:NAVIGATE:')) {
     const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
     if (match && match[1]) {
-      action = { type: 'navigate', tab: match[1].toLowerCase() };
+      const tab = resolveNavTab(match[1]);
+      if (tab) {
+        action = { type: 'navigate', tab };
+      }
       responseText = responseText.replace(match[0], '').trim();
     }
   }
@@ -657,7 +674,10 @@ function parseActionsAndSources(
   } else if (responseText.includes('[ACTION:NAVIGATE:')) {
     const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
     if (match && match[1]) {
-      action = { type: 'navigate', tab: match[1].toLowerCase() };
+      const tab = resolveNavTab(match[1]);
+      if (tab) {
+        action = { type: 'navigate', tab };
+      }
       responseText = responseText.replace(match[0], '').trim();
     }
   }

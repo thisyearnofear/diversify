@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import Scrim from "../shared/Scrim";
 
 export const GuardianGrantModal: React.FC<{
   pendingDailyLimit: number;
@@ -21,10 +22,8 @@ export const GuardianGrantModal: React.FC<{
   onContinue,
 }) => {
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
-      onClick={onCancel}
-    >
+    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+      <Scrim intensity="default" onClick={onCancel} />
       <div
         className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}

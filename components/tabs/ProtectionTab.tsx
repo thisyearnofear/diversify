@@ -14,7 +14,8 @@ import { useExperience } from "@/context/app/ExperienceContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
-import { StrategyService } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the strategy stack out of first-load.
+import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { useToast } from "@/components/ui/Toast";
 import EmptyState from "@/components/ui/EmptyState";
 
@@ -416,7 +417,7 @@ export default function ProtectionTab({
       )}
 
       {!hasChosenPlan && (
-        <div className="rounded-2xl bg-white/[0.02] backdrop-blur-[1px] py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+        <div className="rounded-2xl bg-white/[0.02] backdrop-blur-sm py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
           <ProtectionPlanGallery mobile />
         </div>
       )}

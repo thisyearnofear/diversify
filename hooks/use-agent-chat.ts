@@ -274,23 +274,22 @@ export function useAgentChat({
         updateChatState({ isChatting: true, thinkingStep: "Executing action..." });
 
         // Execute background side-effects (SocialConnect resolution, etc.) via consolidated service
-        await AgentActionService.execute(intent, effectiveContent, {});
-
-        // Determine the action for the UI component (AIChat) to execute after a delay
+        await AgentActionService.execute(intent, effectiveContent, {});        // Determine the action for the UI component (AIChat) to execute. The
+        // button now applies its own transition; carriers no longer set a
+        // `delay` (the field was carried but never read by the consumer).
         let navAction: AIMessage["action"] | undefined;
         if (intent.type === "NAVIGATE") {
-          navAction = { type: "navigate", tab: intent.tab, delay: 1500 };
+          navAction = { type: "navigate", tab: intent.tab };
         } else if (intent.type === "YIELD_EARN") {
           // Yield/earn content (BestYieldCard, YieldDiscoverySection) lives
           // inside the Protect tab — there is no standalone "earn" tab.
-          navAction = { type: "navigate", tab: "protect", delay: 1500 };
+          navAction = { type: "navigate", tab: "protect" };
         } else if (intent.type === "GOODDOLLAR") {
-          navAction = { 
-            type: intent.topic === 'claim' ? 'claim_ubi' : 'verify_identity', 
-            delay: 1500 
+          navAction = {
+            type: intent.topic === 'claim' ? 'claim_ubi' : 'verify_identity',
           };
         } else if (intent.type === "ONBOARDING" && intent.topic === "demo") {
-          navAction = { type: "navigate", tab: "overview", delay: 1500 };
+          navAction = { type: "navigate", tab: "overview" };
         }
 
         // Add the message to chat immediately — no artificial delay

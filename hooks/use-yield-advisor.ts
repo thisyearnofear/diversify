@@ -6,7 +6,8 @@
  */
 
 import { useCallback, useState } from 'react';
-import { EarnService, type EarnVault } from '@diversifi/shared';
+// Deep leaf import — NOT the barrel — keeps the earn-service stack out of first-load.
+import { EarnService, type EarnVault } from '@diversifi/shared/src/services/earn-service';
 import { useAdvisor } from './use-advisor';
 
 export interface YieldRecommendation {

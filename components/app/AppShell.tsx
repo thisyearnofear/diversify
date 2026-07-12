@@ -1,13 +1,14 @@
 /**
  * AppShell — The main application layout once the user has completed onboarding.
  *
- * Calls useAppShell() for all state, then delegates to:
- *   - TabContentRouter  (tab routing, swipe, dynamic imports)
+ * Calls useAppShell() once via AppShellProvider, then delegates to:
+ *   - TabContentRouter  (tab routing, swipe, dynamic imports) — reads the
+ *     same shared state via useAppShellContext(), no second hook instance.
  *   - FloatingControls  (advisor FAB, tour triggers, guided tour)
  *
  * index.tsx handles only page-level concerns (onboarding gate, SEO).
  */
-import { useAppShell } from "@/hooks/use-app-shell";
+import { AppShellProvider, useAppShellContext } from "@/context/app/AppShellContext";
 import { NETWORKS } from "@/config";
 import { shouldShowTestnetBanner } from "@/constants/testnet";
 import TabNavigation from "@/components/ui/TabNavigation";
@@ -19,6 +20,14 @@ import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
 
 export default function AppShell() {
+  return (
+    <AppShellProvider>
+      <AppShellInner />
+    </AppShellProvider>
+  );
+}
+
+function AppShellInner() {
   const {
     activeTab, setActiveTab,
     experienceMode, setExperienceMode,
@@ -27,7 +36,7 @@ export default function AppShell() {
     isMiniPay,
     openWalletTutorial, closeTutorial, isTutorialOpen,
     handleTranscription,
-  } = useAppShell();
+  } = useAppShellContext();
 
   const showTestnetBanner = shouldShowTestnetBanner(walletChainId);
 

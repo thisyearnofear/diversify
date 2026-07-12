@@ -18,6 +18,7 @@ import SoSoIntelligenceCard from "./SoSoIntelligenceCard";
 import SoSoActionModal, { type SoSoTradeProposal } from "./SoSoActionModal";
 import dynamic from "next/dynamic";
 import SimpleMarkdown from "../shared/SimpleMarkdown";
+import Scrim from "../shared/Scrim";
 import { ResearchCheck } from "./ResearchCheck";
 import { ResearchReceipt } from "./ResearchReceipt";
 import { TrustFlow } from "./TrustFlow";
@@ -285,18 +286,44 @@ function ModelSettingsModal({ onClose, userGeminiKey, onSaveKey }: {
 }) {
   const [draft, setDraft] = useState(userGeminiKey);
   const [saved, setSaved] = useState(false);
+  // Escape-to-close: focus-trap mirrors the pattern in GuardianPermissionModal
+  // so keyboard users land on the first input and can dismiss without a mouse.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[200] flex items-end justify-center p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[200] flex items-end justify-center p-4"
+      onClick={onClose}
+      role="presentation"
+    >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="model-settings-title"
+        aria-describedby="model-settings-desc"
         className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-5 mb-4"
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-tight">AI Model Settings</h3>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Default: Gemini (shared key). Add your own for higher limits.</p>
+            <h3 id="model-settings-title" className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-tight">AI Model Settings</h3>
+            <p id="model-settings-desc" className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Default: Gemini (shared key). Add your own for higher limits.</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold">×</button>
+          <button
+            onClick={onClose}
+            aria-label="Close settings"
+            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl font-bold"
+          >
+            ×
+          </button>
         </div>
 
         {/* Default model info */}
@@ -491,15 +518,13 @@ export default function AIChat() {
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
       {/* Backdrop */}
       {isDrawerOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+        <Scrim
+          intensity="default"
           onClick={() => {
             setDrawerOpen(false);
             setShowClearConfirm(false);
           }}
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto"
+          className="pointer-events-auto"
         />
       )}
 

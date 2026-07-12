@@ -10,7 +10,9 @@ import SwapInterface from "../swap/SwapInterface";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import { getChainAssets, getPreferredChainIdForGoal, NETWORKS, isTestnetChain } from "../../config";
-import { ChainDetectionService, StrategyService } from "@diversifi/shared";
+// Deep leaf imports — NOT the barrel — keeps the swap + strategy stacks out of first-load.
+import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
+import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getPersistedStrategy } from "../../hooks/useFinancialStrategies";
 import { TabHeader, Card, ConnectWalletPrompt, Skeleton } from "../shared/TabComponents";
 import { useSwap } from "../../hooks/use-swap";

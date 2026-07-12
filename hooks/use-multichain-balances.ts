@@ -183,7 +183,14 @@ async function fetchChainBalances(
   address: string,
   chain: (typeof PRODUCTION_CHAINS)[number],
 ): Promise<ChainBalance> {
-  const provider = new ethers.providers.JsonRpcProvider(chain.rpcUrl);
+  // Bound each underlying RPC call so a hung upstream can't leave the UI in
+  // a permanent "Loading..." state. ethers v5 honours `timeout` on the
+  // ConnectionInfo: it applies to every individual request made on this
+  // provider (e.g. multicall .call(), balance reads).
+  const provider = new ethers.providers.JsonRpcProvider({
+    url: chain.rpcUrl,
+    timeout: 8000,
+  });
   const tokensToFetch = NETWORK_TOKENS[chain.chainId] || [];
 
   if (tokensToFetch.length === 0) {
@@ -240,7 +247,7 @@ async function fetchChainBalances(
     const pricePromises = tokenInfoList.map(
       async ({ symbol, tokenAddress }) => {
         try {
-          const { TokenPriceService } = await import("@diversifi/shared");
+          const { TokenPriceService } = await import("@diversifi/shared/src/utils/api-services");
           const priceResult = await TokenPriceService.getTokenUsdPrice({
             chainId: chain.chainId,
             address: tokenAddress,

@@ -8,6 +8,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigation } from '../../context/app/NavigationContext';
+import Scrim from '../shared/Scrim';
 
 interface AgentQuickActionsProps {
   isOpen: boolean;
@@ -63,13 +64,7 @@ export default function AgentQuickActions({ isOpen, onClose }: AgentQuickActions
       {isOpen && (
         <>
           {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
-            onClick={onClose}
-          />
+          <Scrim intensity="light" onClick={onClose} />
 
           {/* Modal */}
           <motion.div

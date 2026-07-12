@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { REGION_COLORS } from "../../config";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useExperience } from "../../context/app/ExperienceContext";
-import { ChainDetectionService } from "@diversifi/shared";
+// Deep leaf import — NOT the barrel — keeps the swap/ethers stack out of first-load.
+import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import InflationVisualizer from "../inflation/InflationVisualizerEnhanced";
 import RealWorldUseCases from "../demo/RealWorldUseCases";
 import GoodDollarInfoCard from "../gooddollar/GoodDollarInfoCard";

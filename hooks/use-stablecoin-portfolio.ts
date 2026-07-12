@@ -49,10 +49,13 @@ export function useStablecoinPortfolio(address?: string) {
       setError(null);
 
       try {
-        // Create a read-only provider for Celo mainnet
-        const provider = new ethers.providers.JsonRpcProvider(
-          "https://forno.celo.org",
-        );
+        // Create a read-only provider for Celo mainnet. The 8s timeout
+        // prevents a hung forno RPC from leaving the dropdown stuck on
+        // "Loading balances..." forever.
+        const provider = new ethers.providers.JsonRpcProvider({
+          url: "https://forno.celo.org",
+          timeout: 8000,
+        });
 
         const balancePromises = Object.entries(CELO_TOKENS).map(
           async ([symbol, tokenAddress]) => {

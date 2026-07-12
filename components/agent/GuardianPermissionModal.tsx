@@ -5,7 +5,8 @@
  * BEFORE any signature. Shows on-chain awareness (chain + stable balance).
  */
 
-import React from "react";
+import React, { useEffect, useRef } from "react";
+import Scrim from "../shared/Scrim";
 
 const MIN_AUTO_SAVER_FUNDS_USD = 5;
 const ARBITRUM_CHAIN_ID = 42161;
@@ -43,18 +44,56 @@ export const GuardianPermissionModal: React.FC<{
   onCancel,
   onApprove,
 }) => {
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Focus trap: keep focus inside the modal while it's mounted, Escape to close.
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusableSelector = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onCancel();
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const focusable = dialog.querySelectorAll(focusableSelector);
+      if (!focusable.length) return;
+      const first = focusable[0] as HTMLElement;
+      const last = focusable[focusable.length - 1] as HTMLElement;
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    };
+
+    const firstFocusable = dialog.querySelector(focusableSelector) as HTMLElement;
+    firstFocusable?.focus();
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onCancel]);
+
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 backdrop-blur-sm"
-      onClick={onCancel}
-    >
+    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+      <Scrim intensity="default" onClick={onCancel} />
       <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guardian-permission-title"
         className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-2">
           <span className="text-4xl">🛡️</span>
-          <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+          <h3 id="guardian-permission-title" className="text-xl font-black text-gray-900 dark:text-gray-100">
             Set up Auto-Saver
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
