@@ -7,6 +7,24 @@ import SwapRecommendations from "./SwapRecommendations";
 import InflationBenefitCard from "./InflationBenefitCard";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 
+// Primary stablecoin per region — the first entry of REGION_STABLECOINS in
+// hooks/use-inflation-data.ts. Kept inline here (rather than imported) so
+// this file doesn't pull the inflation-data module into the swap bundle.
+// Fulfills the TODO: "replace with region→token mapping from
+// config/emerging-markets" — the mapping is the primary stablecoin per
+// region, which is what SwapInsightsPanel already implies when it asks
+// "Save X% by moving from {userRegion} to {targetRegion}".
+//
+// Only the 5 valid GeographicRegion values are listed (no "Global" or
+// "Commodities" — those are inflation-data keys, not user regions).
+const PRIMARY_STABLECOINS: Record<Region, string> = {
+  Africa: "KESm",
+  LatAm: "BRLm",
+  Asia: "PHPm",
+  Europe: "EURm",
+  USA: "USDm",
+};
+
 interface SwapInsightsPanelProps {
   userRegion: Region;
   inflationData: Record<string, RegionalInflationData>;
@@ -123,23 +141,19 @@ export default function SwapInsightsPanel({
         {/*
           InflationBenefitCard — the retail trust-builder that converts the
           abstract "+X% inflation delta" into a per-swap outcome
-          ("Save X% by moving from {userRegion} to {targetRegion}"). The
-          component self-gates via hasInflationBenefit; we only forward
-          the regional context SwapInsightsPanel already tracks (no
-          per-token mapping required — the visual treatment is
-          region-to-region, matching the existing inflation comparison
-          badge just above).
+          ("Save X% by swapping from {fromToken} to {toToken}"). The
+          fromToken / toToken are the primary stablecoin per region
+          (PRIMARY_STABLECOINS above) — what a user would actually swap
+          to hedge that inflation. The component self-gates via
+          hasInflationBenefit; we only forward when the delta is positive.
         */}
         <InflationBenefitCard
-          fromToken={userRegion}
-          toToken={targetRegion}
+          fromToken={PRIMARY_STABLECOINS[userRegion]}
+          toToken={PRIMARY_STABLECOINS[targetRegion]}
           fromTokenRegion={userRegion}
           toTokenRegion={targetRegion}
           inflationDifference={inflationDifference}
           hasInflationBenefit={inflationDifference > 0}
-          // TODO: replace with the region→token mapping from
-          // config/emerging-markets (e.g. Africa → "KESm", USA → "USDm")
-          // so the card shows the actual swap pair, not region names.
         />
       </DashboardCard>
     </div>
