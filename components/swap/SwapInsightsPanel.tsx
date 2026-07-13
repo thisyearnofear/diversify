@@ -4,6 +4,7 @@ import type { RegionalInflationData } from "../../hooks/use-inflation-data";
 import RealLifeScenario from "../demo/RealLifeScenario";
 import DashboardCard from "../shared/DashboardCard";
 import SwapRecommendations from "./SwapRecommendations";
+import InflationBenefitCard from "./InflationBenefitCard";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 
 interface SwapInsightsPanelProps {
@@ -118,6 +119,27 @@ export default function SwapInsightsPanel({
           userGoal={profileConfig.userGoal}
           riskTolerance={profileConfig.riskTolerance}
           timeHorizon={profileConfig.timeHorizon}
+        />
+        {/*
+          InflationBenefitCard — the retail trust-builder that converts the
+          abstract "+X% inflation delta" into a per-swap outcome
+          ("Save X% by moving from {userRegion} to {targetRegion}"). The
+          component self-gates via hasInflationBenefit; we only forward
+          the regional context SwapInsightsPanel already tracks (no
+          per-token mapping required — the visual treatment is
+          region-to-region, matching the existing inflation comparison
+          badge just above).
+        */}
+        <InflationBenefitCard
+          fromToken={userRegion}
+          toToken={targetRegion}
+          fromTokenRegion={userRegion}
+          toTokenRegion={targetRegion}
+          inflationDifference={inflationDifference}
+          hasInflationBenefit={inflationDifference > 0}
+          // TODO: replace with the region→token mapping from
+          // config/emerging-markets (e.g. Africa → "KESm", USA → "USDm")
+          // so the card shows the actual swap pair, not region names.
         />
       </DashboardCard>
     </div>
