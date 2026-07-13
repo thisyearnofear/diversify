@@ -33,6 +33,7 @@ function AppShellInner() {
     experienceMode, setExperienceMode,
     address, isWhitelisted, isFarcaster, walletChainId,
     connectWallet, openAdvisor, unreadCount,
+    guardianUpdates, openGuardianReview, dismissGuardianUpdate, muteGuardianUpdateType,
     isMiniPay,
     openWalletTutorial, closeTutorial, isTutorialOpen,
     handleTranscription,
@@ -45,6 +46,10 @@ function AppShellInner() {
       <FloatingControls
         openAdvisor={openAdvisor}
         unreadCount={unreadCount}
+        guardianUpdates={guardianUpdates}
+        onOpenGuardianReview={openGuardianReview}
+        onDismissGuardianUpdate={dismissGuardianUpdate}
+        onMuteGuardianUpdateType={muteGuardianUpdateType}
         experienceMode={experienceMode}
       />
 

@@ -12,7 +12,7 @@ import type { AIMessage } from './agent-types';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export function useAdvisor() {
-  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount } = useAIConversation();
+  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount, addGuardianUpdate, dismissGuardianUpdate, muteGuardianUpdateType, guardianUpdates, setActiveGuardianReview } = useAIConversation();
   const { capabilities } = useAgentStatus();
   const { config } = useAgentConfig();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
@@ -78,24 +78,46 @@ export function useAdvisor() {
       action,
       openDrawer = false,
       speak = false,
+      guardianUpdate,
     }: {
       content: string;
       type?: AIMessage['type'];
       action?: AIMessage['action'];
       openDrawer?: boolean;
       speak?: boolean;
+      /** When set, surfaces a compact Guardian update without opening the drawer. */
+      guardianUpdate?: {
+        summary: string;
+        detail?: string;
+        whyReason?: string;
+        updateType?: import('../context/AIConversationContext').GuardianUpdateType;
+        contract?: import('@diversifi/shared/src/types/guardian-protection').GuardianRecommendationContract;
+      };
     }) => {
+      if (guardianUpdate) {
+        addGuardianUpdate({
+          summary: guardianUpdate.summary,
+          detail: guardianUpdate.detail ?? content,
+          whyReason: guardianUpdate.whyReason,
+          type: guardianUpdate.updateType ?? (type === 'recommendation' ? 'proposal' : 'observation'),
+          action,
+          contract: guardianUpdate.contract,
+        });
+      }
+
       if (openDrawer) {
         setDrawerOpen(true);
       }
 
-      addMessage({
-        role: 'assistant',
-        content,
-        timestamp: new Date(),
-        type,
-        action,
-      });
+      if (!guardianUpdate) {
+        addMessage({
+          role: 'assistant',
+          content,
+          timestamp: new Date(),
+          type,
+          action,
+        });
+      }
 
       if (speak && config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
         try {
@@ -112,7 +134,7 @@ export function useAdvisor() {
         }
       }
     },
-    [addMessage, capabilities.voiceOutput, config.voiceResponsesEnabled, generateSpeech, setDrawerOpen],
+    [addMessage, capabilities.voiceOutput, config.voiceResponsesEnabled, generateSpeech, setDrawerOpen, addGuardianUpdate],
   );
 
   const openAdvisor = useCallback(() => {
@@ -120,11 +142,28 @@ export function useAdvisor() {
     markAsRead();
   }, [setDrawerOpen, markAsRead]);
 
+  const openGuardianReview = useCallback(
+    (updateId?: string) => {
+      if (updateId) {
+        const update = guardianUpdates.find((u) => u.id === updateId);
+        if (update) setActiveGuardianReview(update);
+        dismissGuardianUpdate(updateId);
+      }
+      setDrawerOpen(true);
+      markAsRead();
+    },
+    [dismissGuardianUpdate, guardianUpdates, markAsRead, setActiveGuardianReview, setDrawerOpen],
+  );
+
   return {
     askAdvisor,
     openAdvisor,
+    openGuardianReview,
     publishAdvisorUpdate,
     unreadCount,
+    guardianUpdates,
+    dismissGuardianUpdate,
+    muteGuardianUpdateType,
     ask: askAdvisor,
   };
 }

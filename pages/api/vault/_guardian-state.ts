@@ -1,13 +1,21 @@
 import dbConnect from '../../../lib/mongodb';
 import { GuardianState } from '../../../models/GuardianState';
+import type { GuardianRecommendationContract } from '@diversifi/shared/src/types/guardian-protection';
 
 export interface GuardianRecommendationSnapshot {
   capturedAt: string;
-  source: 'advisor-analysis' | 'proactive-yield';
+  source: 'advisor-analysis' | 'proactive-yield' | 'cycle-monitor' | 'firecrawl-webhook';
   action?: string;
   targetToken?: string;
   oneLiner?: string;
   reasoning?: string;
+  /** Purchase-cycle monitor — dedupe key when source is cycle-monitor */
+  cycleId?: string;
+  paymentDate?: string;
+  localCurrency?: string;
+  /** USD obligation for purchase-cycle protection (distinct from tradeAmountUSD) */
+  targetAmountUsd?: number;
+  contract?: GuardianRecommendationContract;
   /**
    * Notional size of the swap in USD — the amount actually spent. This is
    * distinct from `expectedSavings` (projected annual purchasing-power
@@ -55,7 +63,17 @@ export interface GuardianAnchorRecord {
 }
 
 export interface GuardianStateRecord {
+  /**
+   * Head of `recommendationQueue` — kept for backward-compatible readers
+   * (permission API, AgentTierStatus, rebalance). Prefer enqueue/dequeue
+   * helpers over writing this field directly.
+   */
   latestRecommendation?: GuardianRecommendationSnapshot;
+  /**
+   * Bounded pending recommendations, newest-first. Prevents cycle/yield/
+   * macro writers from clobbering each other via a single pointer.
+   */
+  recommendationQueue?: GuardianRecommendationSnapshot[];
   latestAnchor?: GuardianAnchorRecord;
   /**
    * Last N anchor records, newest-first. Bounded to `MAX_ANCHOR_HISTORY`
@@ -80,6 +98,9 @@ export interface GuardianStateRecord {
  */
 export const MAX_ANCHOR_HISTORY = 5;
 
+/** Upper bound on pending recommendations per user. */
+export const MAX_RECOMMENDATION_QUEUE = 5;
+
 function normalizeUserAddress(userAddress: string): string {
   return userAddress.trim().toLowerCase();
 }
@@ -87,10 +108,54 @@ function normalizeUserAddress(userAddress: string): string {
 /** Fields persisted on the GuardianState document that we project back out. */
 const STATE_FIELDS: Array<keyof GuardianStateRecord> = [
   'latestRecommendation',
+  'recommendationQueue',
   'latestAnchor',
   'latestAnchors',
   'alertCooldowns',
 ];
+
+/**
+ * Stable identity for deduping queue entries. Cycle monitors key by cycleId;
+ * other sources key by source+action+target so a newer yield alert replaces
+ * an older one for the same opportunity without wiping unrelated proposals.
+ */
+export function recommendationIdentityKey(rec: GuardianRecommendationSnapshot): string {
+  if (rec.source === 'cycle-monitor' && rec.cycleId) {
+    return `cycle-monitor:${rec.cycleId}`;
+  }
+  const target = (rec.targetToken || '').toLowerCase();
+  if (rec.source && rec.action) {
+    return `${rec.source}:${rec.action}:${target}`;
+  }
+  return rec.capturedAt;
+}
+
+/**
+ * Pure helper: upsert `next` into a newest-first queue, replacing any prior
+ * entry with the same identity key, then cap length.
+ */
+export function mergeRecommendationQueue(
+  existing: GuardianRecommendationSnapshot[] | undefined,
+  next: GuardianRecommendationSnapshot,
+  cap: number = MAX_RECOMMENDATION_QUEUE,
+): GuardianRecommendationSnapshot[] {
+  const key = recommendationIdentityKey(next);
+  const withoutDup = (existing ?? []).filter((r) => recommendationIdentityKey(r) !== key);
+  return [next, ...withoutDup].slice(0, Math.max(0, cap));
+}
+
+/**
+ * Normalize legacy single-pointer state into a queue. Used by enqueue/dequeue
+ * so older documents without `recommendationQueue` still behave correctly.
+ */
+export function resolveRecommendationQueue(
+  state: Pick<GuardianStateRecord, 'recommendationQueue' | 'latestRecommendation'> | null | undefined,
+): GuardianRecommendationSnapshot[] {
+  if (state?.recommendationQueue && state.recommendationQueue.length > 0) {
+    return state.recommendationQueue;
+  }
+  return state?.latestRecommendation ? [state.latestRecommendation] : [];
+}
 
 function toStateRecord(doc: Record<string, any> | null): GuardianStateRecord | null {
   if (!doc) return null;
@@ -99,6 +164,11 @@ function toStateRecord(doc: Record<string, any> | null): GuardianStateRecord | n
     if (doc[field] !== undefined && doc[field] !== null) {
       (record as any)[field] = doc[field];
     }
+  }
+  // Keep the legacy pointer aligned with the queue head for readers that
+  // only look at latestRecommendation.
+  if (record.recommendationQueue && record.recommendationQueue.length > 0) {
+    record.latestRecommendation = record.recommendationQueue[0];
   }
   return record;
 }
@@ -251,6 +321,23 @@ export async function releaseExecutionLock(
 }
 
 /**
+ * Enqueue a recommendation without clobbering unrelated pending proposals.
+ * Upserts by identity key, newest-first, capped at `MAX_RECOMMENDATION_QUEUE`.
+ * Mirrors queue head onto `latestRecommendation` for legacy readers.
+ */
+export async function enqueueRecommendation(
+  userAddress: string,
+  recommendation: GuardianRecommendationSnapshot,
+): Promise<GuardianStateRecord> {
+  const existing = await getGuardianState(userAddress);
+  const queue = mergeRecommendationQueue(resolveRecommendationQueue(existing), recommendation);
+  return updateGuardianState(userAddress, {
+    recommendationQueue: queue,
+    latestRecommendation: queue[0],
+  });
+}
+
+/**
  * Atomically dequeue (claim) a specific pending recommendation for execution.
  * Returns true if THIS caller removed it, false if it was already gone — i.e.
  * another concurrent tick claimed it, or it was already cleared.
@@ -261,20 +348,53 @@ export async function releaseExecutionLock(
  * execution lock's staleness window and a second tick reclaimed the lock — that
  * tick finds the recommendation already gone and skips. It also means a swap
  * that may have already landed on-chain before a post-submit failure is never
- * blindly retried (the recommendation is already dequeued). The `$unset` is the
- * single atomic claim point; whichever tick wins it is the sole executor.
+ * blindly retried (the recommendation is already dequeued).
+ *
+ * With a multi-entry queue, only the matched entry is removed; the next head
+ * is promoted to `latestRecommendation`.
  */
 export async function dequeueRecommendation(
   userAddress: string,
   capturedAt: string,
 ): Promise<boolean> {
   await dbConnect();
+  const normalized = normalizeUserAddress(userAddress);
+
+  const doc = await GuardianState.findOne({
+    userAddress: normalized,
+    $or: [
+      { 'latestRecommendation.capturedAt': capturedAt },
+      { 'recommendationQueue.capturedAt': capturedAt },
+    ],
+  }).lean();
+
+  if (!doc) return false;
+
+  const queue = resolveRecommendationQueue(toStateRecord(doc as Record<string, any>));
+  if (!queue.some((r) => r.capturedAt === capturedAt)) return false;
+
+  const nextQueue = queue.filter((r) => r.capturedAt !== capturedAt);
+  const $set: Record<string, unknown> = { recommendationQueue: nextQueue };
+  const $unset: Record<string, ''> = {};
+  if (nextQueue[0]) {
+    $set.latestRecommendation = nextQueue[0];
+  } else {
+    $unset.latestRecommendation = '';
+  }
+
+  const update: Record<string, unknown> = { $set };
+  if (Object.keys($unset).length > 0) update.$unset = $unset;
+
   const res = await GuardianState.findOneAndUpdate(
     {
-      userAddress: normalizeUserAddress(userAddress),
-      'latestRecommendation.capturedAt': capturedAt,
+      userAddress: normalized,
+      $or: [
+        { 'latestRecommendation.capturedAt': capturedAt },
+        { 'recommendationQueue.capturedAt': capturedAt },
+      ],
     },
-    { $unset: { latestRecommendation: '' } },
+    update,
   ).lean();
+
   return res !== null;
 }

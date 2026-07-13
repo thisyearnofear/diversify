@@ -23,6 +23,8 @@ import {
   CURRENCY_RISK_DATA,
   exampleSavingsFor,
 } from '../../../constants/currency-risk';
+import { saveMoneyPurpose } from '../../../hooks/use-protection-profile';
+import { MONEY_PURPOSES, type MoneyPurpose } from '../../../constants/money-purpose';
 import { showTestnetUi, optIntoTestnetUi } from '../../../constants/testnet';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
@@ -366,6 +368,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [waitlistEmail, setWaitlistEmail] = useState('');
     const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
     const [waitlistError, setWaitlistError] = useState<string | null>(null);
+    const [moneyPurpose, setMoneyPurpose] = useState<MoneyPurpose | null>('long_term_savings');
 
     // Local step state — user taps to advance (no auto-advance on detect).
     const [step, setStep] = useState<Phase>('detect');
@@ -437,12 +440,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
 
     const handleFinish = (country?: string | null) => {
       if (country && typeof window !== 'undefined') {
-        // Callers pass an ISO2 country code; use-user-region persists
-        // geographic regions, so map before storing or the saved value
-        // fails its REGIONS guard and detection falls back to locale.
         const region = regionForCountry(country);
         if (region) localStorage.setItem('user-region', region);
       }
+      saveMoneyPurpose(moneyPurpose);
       onComplete?.(countryCode ?? country ?? null);
     };
 
@@ -1009,6 +1010,36 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       <PlanPreviewCard preview={planPreview} />
                     </motion.div>
                   )}
+
+                  <motion.div variants={staggerChild} className="mb-5 text-left">
+                    <p className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
+                      What is this money for?
+                    </p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+                      Philosophy answers what you value. Money purpose answers when you need it.
+                    </p>
+                    <div className="space-y-2">
+                      {MONEY_PURPOSES.map((purpose) => (
+                        <button
+                          key={purpose.value}
+                          type="button"
+                          onClick={() => setMoneyPurpose(purpose.value)}
+                          className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                            moneyPurpose === purpose.value
+                              ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <span className="text-sm font-bold text-gray-900 dark:text-white">
+                            {purpose.icon} {purpose.label}
+                          </span>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                            {purpose.description}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
 
                   {/* Actions — archetype-aware when a philosophy is selected */}
                   <motion.div variants={staggerChild} className="space-y-2">

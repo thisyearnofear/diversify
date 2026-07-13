@@ -1,9 +1,28 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { AIMessage } from '../hooks/agent-types';
+import type { GuardianRecommendationContract } from '@diversifi/shared/src/types/guardian-protection';
+import { useWalletContext } from '@/components/wallet/WalletProvider';
 
 // Conversation persistence key
 const CONVERSATION_STORAGE_KEY = 'diversifi-conversation';
 const LAST_READ_KEY = 'diversifi-conversation-last-read';
+const GUARDIAN_UPDATES_KEY = 'diversifi-guardian-updates';
+const MUTED_UPDATE_TYPES_KEY = 'diversifi-guardian-muted-types';
+
+export type GuardianUpdateType = 'observation' | 'proposal' | 'alert' | 'claim' | 'yield';
+
+export interface GuardianUpdate {
+  id: string;
+  summary: string;
+  detail?: string;
+  whyReason?: string;
+  timestamp: Date;
+  type: GuardianUpdateType;
+  action?: AIMessage['action'];
+  contract?: GuardianRecommendationContract;
+  expiresAt: Date;
+  dismissed?: boolean;
+}
 
 interface AIConversationContextType {
   // Messages
@@ -18,6 +37,15 @@ interface AIConversationContextType {
    */
   patchMessage: (match: { id?: string; timestamp: Date }, patch: Partial<AIMessage>) => void;
   clearMessages: () => void;
+
+  // Proactive updates (non-modal — do not auto-open drawer)
+  guardianUpdates: GuardianUpdate[];
+  addGuardianUpdate: (update: Omit<GuardianUpdate, 'id' | 'timestamp' | 'expiresAt' | 'dismissed'> & { id?: string; timestamp?: Date; expiresAt?: Date }) => void;
+  dismissGuardianUpdate: (id: string) => void;
+  muteGuardianUpdateType: (type: GuardianUpdateType) => void;
+  mutedUpdateTypes: GuardianUpdateType[];
+  activeGuardianReview: GuardianUpdate | null;
+  setActiveGuardianReview: (update: GuardianUpdate | null) => void;
   
   // Unread tracking
   unreadCount: number;
@@ -36,52 +64,122 @@ interface AIConversationContextType {
 const AIConversationContext = createContext<AIConversationContextType | undefined>(undefined);
 
 export function AIConversationProvider({ children }: { children: ReactNode }) {
+  const { address } = useWalletContext();
+  const storageScope = address?.toLowerCase() ?? 'anonymous';
+  const scopedKey = useCallback((base: string) => `${base}:${storageScope}`, [storageScope]);
+  const [hydratedScope, setHydratedScope] = useState<string | null>(null);
   // Initialize from localStorage if available
-  const [messages, setMessages] = useState<AIMessage[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(CONVERSATION_STORAGE_KEY);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          // Restore Date objects
-          return parsed.map((m: AIMessage) => ({
-            ...m,
-            timestamp: new Date(m.timestamp)
-          }));
-        }
-      } catch (e) {
-        console.warn('[AIConversation] Failed to load from storage:', e);
-      }
-    }
-    return [];
-  });
+  const [messages, setMessages] = useState<AIMessage[]>([]);
   
-  const [lastReadTimestamp, setLastReadTimestamp] = useState<Date | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem(LAST_READ_KEY);
-        return stored ? new Date(stored) : null;
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  });
+  const [lastReadTimestamp, setLastReadTimestamp] = useState<Date | null>(null);
 
   const [isDrawerOpen, setDrawerOpen] = useState(false);
+
+  const [guardianUpdates, setGuardianUpdates] = useState<GuardianUpdate[]>([]);
+  const [activeGuardianReview, setActiveGuardianReview] = useState<GuardianUpdate | null>(null);
+
+  const [mutedUpdateTypes, setMutedUpdateTypes] = useState<GuardianUpdateType[]>([]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const storedMessages = localStorage.getItem(scopedKey(CONVERSATION_STORAGE_KEY));
+      const storedUpdates = localStorage.getItem(scopedKey(GUARDIAN_UPDATES_KEY));
+      const storedMuted = localStorage.getItem(scopedKey(MUTED_UPDATE_TYPES_KEY));
+      const storedLastRead = localStorage.getItem(scopedKey(LAST_READ_KEY));
+      setMessages(storedMessages
+        ? (JSON.parse(storedMessages) as AIMessage[]).map((m) => ({ ...m, timestamp: new Date(m.timestamp) }))
+        : []);
+      const now = Date.now();
+      setGuardianUpdates(storedUpdates
+        ? (JSON.parse(storedUpdates) as GuardianUpdate[])
+            .map((u) => ({
+              ...u,
+              timestamp: new Date(u.timestamp),
+              expiresAt: new Date(u.expiresAt),
+            }))
+            .filter((u) => u.expiresAt.getTime() > now)
+        : []);
+      setMutedUpdateTypes(storedMuted ? JSON.parse(storedMuted) : []);
+      setLastReadTimestamp(storedLastRead ? new Date(storedLastRead) : null);
+      setActiveGuardianReview(null);
+      localStorage.removeItem(CONVERSATION_STORAGE_KEY);
+      localStorage.removeItem(GUARDIAN_UPDATES_KEY);
+      localStorage.removeItem(MUTED_UPDATE_TYPES_KEY);
+      localStorage.removeItem(LAST_READ_KEY);
+    } catch {
+      setMessages([]);
+      setGuardianUpdates([]);
+      setMutedUpdateTypes([]);
+      setLastReadTimestamp(null);
+    }
+    setHydratedScope(storageScope);
+  }, [scopedKey, storageScope]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || hydratedScope !== storageScope) return;
+    try {
+      const capped = guardianUpdates.slice(-20);
+      localStorage.setItem(scopedKey(GUARDIAN_UPDATES_KEY), JSON.stringify(capped));
+    } catch {
+      // best-effort
+    }
+  }, [guardianUpdates, hydratedScope, scopedKey, storageScope]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || hydratedScope !== storageScope) return;
+    try {
+      localStorage.setItem(scopedKey(MUTED_UPDATE_TYPES_KEY), JSON.stringify(mutedUpdateTypes));
+    } catch {
+      // best-effort
+    }
+  }, [mutedUpdateTypes, hydratedScope, scopedKey, storageScope]);
+
+  const addGuardianUpdate = useCallback(
+    (update: Omit<GuardianUpdate, 'id' | 'timestamp' | 'expiresAt' | 'dismissed'> & { id?: string; timestamp?: Date; expiresAt?: Date }) => {
+      if (mutedUpdateTypes.includes(update.type)) return;
+      const entry: GuardianUpdate = {
+        id: update.id ?? `gu-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        summary: update.summary,
+        detail: update.detail,
+        whyReason: update.whyReason,
+        timestamp: update.timestamp ?? new Date(),
+        type: update.type,
+        action: update.action,
+        contract: update.contract,
+        expiresAt: update.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        dismissed: false,
+      };
+      setGuardianUpdates((prev) => [...prev.filter((u) => u.id !== entry.id), entry].slice(-20));
+    },
+    [mutedUpdateTypes],
+  );
+
+  const dismissGuardianUpdate = useCallback((id: string) => {
+    setGuardianUpdates((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, dismissed: true } : u)),
+    );
+  }, []);
+
+  const muteGuardianUpdateType = useCallback((type: GuardianUpdateType) => {
+    setMutedUpdateTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
+    setGuardianUpdates((prev) =>
+      prev.map((u) => (u.type === type ? { ...u, dismissed: true } : u)),
+    );
+  }, []);
 
   // Persist messages to localStorage (capped to last 100 to prevent
   // unbounded growth — the server only uses the last 10 for context anyway)
   useEffect(() => {
-    if (typeof window !== 'undefined' && messages.length > 0) {
+    if (typeof window !== 'undefined' && hydratedScope === storageScope) {
       try {
         const capped = messages.slice(-100);
-        localStorage.setItem(CONVERSATION_STORAGE_KEY, JSON.stringify(capped));
+        localStorage.setItem(scopedKey(CONVERSATION_STORAGE_KEY), JSON.stringify(capped));
       } catch (e) {
         console.warn('[AIConversation] Failed to save to storage:', e);
       }
     }
-  }, [messages]);
+  }, [messages, hydratedScope, scopedKey, storageScope]);
 
   const addMessage = useCallback((message: AIMessage) => {
     setMessages(prev => [...prev, message]);
@@ -123,18 +221,18 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     setMessages([]);
     setLastReadTimestamp(null);
     if (typeof window !== 'undefined') {
-      localStorage.removeItem(CONVERSATION_STORAGE_KEY);
-      localStorage.removeItem(LAST_READ_KEY);
+      localStorage.removeItem(scopedKey(CONVERSATION_STORAGE_KEY));
+      localStorage.removeItem(scopedKey(LAST_READ_KEY));
     }
-  }, []);
+  }, [scopedKey]);
 
   const markAsRead = useCallback(() => {
     const now = new Date();
     setLastReadTimestamp(now);
     if (typeof window !== 'undefined') {
-      localStorage.setItem(LAST_READ_KEY, now.toISOString());
+      localStorage.setItem(scopedKey(LAST_READ_KEY), now.toISOString());
     }
-  }, []);
+  }, [scopedKey]);
 
   // Calculate unread count
   const unreadCount = lastReadTimestamp 
@@ -154,6 +252,13 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     addAssistantMessage,
     patchMessage,
     clearMessages,
+    guardianUpdates,
+    addGuardianUpdate,
+    dismissGuardianUpdate,
+    muteGuardianUpdateType,
+    mutedUpdateTypes,
+    activeGuardianReview,
+    setActiveGuardianReview,
     unreadCount,
     markAsRead,
     hasUnread,

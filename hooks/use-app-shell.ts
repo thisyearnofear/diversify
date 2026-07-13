@@ -38,7 +38,14 @@ export function useAppShell() {
   } = useWalletContext();
 
   // ── Advisor ──
-  const { openAdvisor, unreadCount } = useAdvisor();
+  const {
+    openAdvisor,
+    unreadCount,
+    guardianUpdates,
+    openGuardianReview,
+    dismissGuardianUpdate,
+    muteGuardianUpdateType,
+  } = useAdvisor();
 
   // ── Streak / Rewards ──
   const { isWhitelisted } = useStreakRewards();
@@ -94,6 +101,10 @@ export function useAppShell() {
     // Advisor
     openAdvisor,
     unreadCount,
+    guardianUpdates,
+    openGuardianReview,
+    dismissGuardianUpdate,
+    muteGuardianUpdateType,
 
     // Region
     userRegion,

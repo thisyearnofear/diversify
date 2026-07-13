@@ -274,7 +274,7 @@ export default function RobinhoodRwaCard({ onLearnMore }: RobinhoodRwaCardProps)
                 onClick={onLearnMore}
                 className="w-full rounded-xl bg-white/10 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 active:scale-[0.98]"
               >
-                Ask Advisor about Robinhood RWA
+                Ask Guardian about Robinhood RWA
               </button>
             )}
             <p className="text-center text-[10px] text-emerald-200/80">

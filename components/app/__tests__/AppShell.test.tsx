@@ -105,6 +105,24 @@ vi.mock("@/hooks/use-app-shell", () => ({
   useAppShell: vi.fn(),
 }));
 
+vi.mock("@/hooks/use-advisor", () => ({
+  useAdvisor: () => ({
+    askAdvisor: vi.fn(),
+    openAdvisor: vi.fn(),
+    openGuardianReview: vi.fn(),
+    publishAdvisorUpdate: vi.fn(),
+    unreadCount: 0,
+    guardianUpdates: [],
+    dismissGuardianUpdate: vi.fn(),
+    muteGuardianUpdateType: vi.fn(),
+    ask: vi.fn(),
+  }),
+}));
+
+vi.mock("@/components/shared/GuardianMascot", () => ({
+  GuardianMascot: () => React.createElement("span", { "data-testid": "guardian-mascot" }, "🛡"),
+}));
+
 import AppShell from "../AppShell";
 import { useAppShell } from "@/hooks/use-app-shell";
 
@@ -124,6 +142,10 @@ const baseShellState = {
   connectWallet: vi.fn(),
   openAdvisor: vi.fn(),
   unreadCount: 0,
+  guardianUpdates: [],
+  openGuardianReview: vi.fn(),
+  dismissGuardianUpdate: vi.fn(),
+  muteGuardianUpdateType: vi.fn(),
   multichainPortfolio: {
     totalValue: 0,
     chainCount: 0,
@@ -191,18 +213,18 @@ describe("AppShell AI Chat FAB", () => {
     cleanup();
   });
 
-  it("renders the Advisor FAB in beginner mode", () => {
+  it("renders the Guardian FAB in beginner mode", () => {
     mockUseAppShell.mockReturnValue({ ...baseShellState, experienceMode: "beginner" });
 
     render(<AppShell />);
 
-    expect(screen.getByLabelText("Ask the Advisor — chat about your savings")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ask Guardian — ask about your protection")).toBeInTheDocument();
   });
 
-  it("renders the AI Chat FAB button", () => {
+  it("renders the Guardian FAB button", () => {
     render(<AppShell />);
 
-    expect(screen.getByLabelText("Ask the Advisor — chat about your savings")).toBeInTheDocument();
+    expect(screen.getByLabelText("Ask Guardian — ask about your protection")).toBeInTheDocument();
   });
 
   it("calls openAdvisor when FAB is clicked", () => {
@@ -211,7 +233,7 @@ describe("AppShell AI Chat FAB", () => {
 
     render(<AppShell />);
 
-    fireEvent.click(screen.getByLabelText("Ask the Advisor — chat about your savings"));
+    fireEvent.click(screen.getByLabelText("Ask Guardian — ask about your protection"));
     expect(openAdvisor).toHaveBeenCalled();
   });
 
@@ -239,10 +261,10 @@ describe("AppShell AI Chat FAB", () => {
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
-  it("renders the robot emoji in the FAB", () => {
+  it("renders the Guardian mascot in the FAB", () => {
     render(<AppShell />);
 
-    const button = screen.getByLabelText("Ask the Advisor — chat about your savings");
-    expect(button.textContent).toContain("💬");
+    const button = screen.getByLabelText("Ask Guardian — ask about your protection");
+    expect(button.querySelector('[data-testid="guardian-mascot"]')).toBeTruthy();
   });
 });

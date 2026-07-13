@@ -1,6 +1,6 @@
 # SME FX Strategy — Importer Working Capital & the Retail→Business Funnel
 
-**Status:** Drafted 2026-07-11 (north-star direction). Updated 2026-07-12 with current-state honesty labels and a link to the phased implementation plan.
+**Status:** Drafted 2026-07-11 (north-star direction). Updated 2026-07-13 with shipped payment-cycle slice + trust pass.
 **Purpose:** Capture the strategic direction that emerged from a real user
 conversation — a Ghanaian importer who buys in USD abroad (China, US, UK)
 and sells locally in cedis — plus the market research, competitive gap,
@@ -8,8 +8,7 @@ and funnel model that make this the long-term market opportunity.
 
 **Implementation plan:** `docs/sme-fx-implementation-plan.md` — the phased build plan that turns this strategy into code, aligned with the Core Principles.
 
-**Current-state honesty:** This doc is strategic design. The Importer/Trader archetype design is in
-§5; it is **not yet implemented in the consumer app**. The concierge FX drag report (`scripts/fx-drag-report.ts`) is the current validation tool. Code follows the existing protection-plan pattern when the wedge is validated (§8).
+**Current-state honesty:** This doc remains strategic design for the full Importer/Trader archetype (§5). The free payment-cycle report, wallet-authenticated cycle CRUD, monitoring proposals, and recommendation queue **are live** (2026-07-13). The Importer `FinancialStrategy` + graduation funnel are still planned. Concierge tooling (`scripts/fx-drag-report.ts`) remains useful for offline trader validation.
 
 ---
 
@@ -131,7 +130,7 @@ graduation-candidate signals before building any business tier.
 
 ---
 
-## 5. The Importer/Trader archetype (design, not yet implemented)
+## 5. The Importer/Trader archetype (design — FinancialStrategy still planned)
 
 Unlike the eight philosophy archetypes (allocation-target-based), the
 Importer archetype is **cycle-aware**:
@@ -198,9 +197,9 @@ Two implications:
 | Step | Status | What | Gate to next step |
 |---|---|---|---|
 | 1. **Concierge validation** | **Tooling shipped.** | Produce the Ghana user's personal FX drag report manually from their real cycle numbers (`currency-risk.ts` has the GHS data). Repeat with 10–20 traders (Accra, Lagos, Nairobi). `npx tsx scripts/fx-drag-report.ts <cycles.json>` — real historical mid rates, timing/spread/fees decomposition, honest negative-drag handling. Sample input: `scripts/fx-drag/sample-cycles.kenya-textbooks.json`. | "I want this running automatically" from ≥ a third of them |
-| 2. **Importer archetype** | **Planned.** Detailed in `docs/sme-fx-implementation-plan.md` Phase 1–2. | Ship §5 inside the existing app — an archetype, not a new product. Instrument graduation signals (§4). | Real cycles protected; drag reports generated from live data |
-| 3. **Self-serve drag report** | **In-app surface still planned** (`docs/sme-fx-implementation-plan.md` Phase 3). **A paid, agent-facing sibling shipped 2026-07-12 and is live on-chain**: `docs/hsp-fx-protection.md` — the same drag-calc engine, now in `@diversifi/shared`, exposed as an x402 source with a confirmed [HashKey mainnet anchor tx](https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b) (real PHP importer drag report, live rates). Not the free in-app report this row describes, but proves the engine works as a real, on-chain-verifiable API product and unblocks Phase 3's reuse. | Turn the concierge script into an in-app, per-cycle report for importer users. | Users generate reports from their own cycle data without manual support |
-| 4. **Cycle-aware Guardian execution** | **Planned.** `docs/sme-fx-implementation-plan.md` Phase 5. | Guardian reads active purchase cycles and autonomously converts local proceeds to USD-pegged stables as the payment date approaches. | Real payments protected end-to-end on a pilot cycle |
+| 2. **Importer archetype** | **Planned.** Detailed in `docs/sme-fx-implementation-plan.md` Phase 1. Purchase-cycle data model (Phase 2) shipped 2026-07-13. | Ship §5 philosophy framing inside the existing app — an archetype, not a new product. Instrument graduation signals (§4). | Real cycles protected; drag reports generated from live data |
+| 3. **Self-serve drag report** | **In-app free surface shipped 2026-07-13** (`PaymentCycleReport` + `fx-cycle-report`). **A paid, agent-facing sibling shipped 2026-07-12 and is live on-chain**: `docs/hsp-fx-protection.md` — same drag-calc engine in `@diversifi/shared`, x402 source with a confirmed [HashKey mainnet anchor tx](https://hashkey.blockscout.com/tx/0xb9c924ae5f7ace287d8a3222addd1831dad55cac6407f6134c8b40481142329b). | Turn the concierge script into an in-app, per-cycle report for importer users. | Users generate reports from their own cycle data without manual support |
+| 4. **Cycle-aware Guardian execution** | **Partial.** Monitoring + proposals + queue enqueue shipped (`docs/sme-fx-implementation-plan.md` Phase 5). Auto-execution of `CYCLE_PROTECTION` still uses the existing rebalance path when confidence/permissions allow. | Guardian reads active purchase cycles and proposes (then, within bounds, executes) conversion toward USD-pegged stables as the payment date approaches. | Real payments protected end-to-end on a pilot cycle |
 | 5. **Ramp partner** | **Planned.** | One GHS on/off-ramp integration via partner. No ramp building. | Cedis→protection→cedis loop works end-to-end for a pilot user |
 | 6. **Rails design partner** | **Planned.** | Pitch one Waza/Juicyway-tier player on embedding the intelligence + Guardian via the Track 1d gateway. | Signed design partner or LOI |
 | 7. **Promote to own track** | **Planned.** | Split SME product from the retail app only when forced by demand. | Repeated trader demand or the design-partner deal |
@@ -215,9 +214,11 @@ principle.
 
 - We are NOT building a payment rail, ramp, or supplier-payout leg —
   partners own the licensed money movement.
-- We are NOT claiming the importer archetype or purchase-cycle UI is live
-  in the consumer app today — it is design and sequenced in
-  `docs/sme-fx-implementation-plan.md`.
+- We are NOT claiming the full **Importer `FinancialStrategy` archetype** or
+  graduation funnel is live — those remain sequenced in
+  `docs/sme-fx-implementation-plan.md` Phases 1 and 4. The free payment-cycle
+  report + wallet-authenticated cycle CRUD + monitoring proposals *are* live
+  for `upcoming_payment` money-purpose users.
 - We are NOT claiming GHSm has sufficient Mento liquidity today — early
   cycles run cUSD/USDC with partner fiat legs.
 - We are NOT offering hedging derivatives (forwards/options). Protection

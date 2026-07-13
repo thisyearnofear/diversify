@@ -24,9 +24,9 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
     <ErrorBoundary>
       <PrivyProvider>
         <AppProviders>
-          <AIConversationProvider>
-            <ToastProvider>
-              <WalletProvider>
+          <WalletProvider>
+            <AIConversationProvider>
+              <ToastProvider>
                 <StreakRewardsProvider>
                   <ProofFeedProvider>
                     <ClaimFlowProvider>
@@ -34,9 +34,9 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
                     </ClaimFlowProvider>
                   </ProofFeedProvider>
                 </StreakRewardsProvider>
-              </WalletProvider>
-            </ToastProvider>
-          </AIConversationProvider>
+              </ToastProvider>
+            </AIConversationProvider>
+          </WalletProvider>
         </AppProviders>
       </PrivyProvider>
     </ErrorBoundary>

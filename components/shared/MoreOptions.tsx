@@ -125,7 +125,7 @@ export function MoreOptions({
                       className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900 text-left text-sm font-bold text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-colors"
                     >
                       <span aria-hidden="true">💬</span>
-                      Talk to Advisor
+                      Talk to Guardian
                     </button>
                   )}
                 </div>

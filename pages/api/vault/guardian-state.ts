@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getGuardianState, pruneAlertCooldowns, updateGuardianState } from './_guardian-state';
+import { getGuardianState, pruneAlertCooldowns, updateGuardianState, enqueueRecommendation } from './_guardian-state';
 
 /**
  * Cooldown window for proactive monitoring alerts. Mirrors the previous
@@ -25,9 +25,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'POST') {
     const { latestRecommendation, recordAlert } = req.body || {};
 
-    const updates: Parameters<typeof updateGuardianState>[1] = {};
-    if (latestRecommendation !== undefined) {
-      updates.latestRecommendation = latestRecommendation;
+    let state = await getGuardianState(userAddress);
+
+    if (latestRecommendation !== undefined && latestRecommendation !== null) {
+      state = await enqueueRecommendation(userAddress, latestRecommendation);
+    } else if (latestRecommendation === null) {
+      state = await updateGuardianState(userAddress, {
+        latestRecommendation: undefined,
+        recommendationQueue: [],
+      });
     }
 
     if (recordAlert !== undefined) {
@@ -39,22 +45,20 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         return res.status(400).json({ error: 'recordAlert.alertId must be a non-empty string' });
       }
 
-      const existing = await getGuardianState(userAddress);
+      const existing = state ?? (await getGuardianState(userAddress));
       const merged: Record<string, number> = {
         ...(existing?.alertCooldowns || {}),
         [alertId]: typeof firedAt === 'number' ? firedAt : Date.now(),
       };
-      updates.alertCooldowns = pruneAlertCooldowns(
-        merged,
-        ALERT_COOLDOWN_PRUNE_WINDOW_MS,
-      );
+      state = await updateGuardianState(userAddress, {
+        alertCooldowns: pruneAlertCooldowns(merged, ALERT_COOLDOWN_PRUNE_WINDOW_MS),
+      });
     }
 
-    if (Object.keys(updates).length === 0) {
+    if (latestRecommendation === undefined && recordAlert === undefined) {
       return res.status(400).json({ error: 'No updatable fields provided' });
     }
 
-    const state = await updateGuardianState(userAddress, updates);
     return res.status(200).json({ success: true, state });
   }
 

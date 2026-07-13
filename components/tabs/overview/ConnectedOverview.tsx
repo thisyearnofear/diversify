@@ -33,6 +33,7 @@ import { useAdvisor } from "@/hooks/use-advisor";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { ProtectionScorecard } from "./ProtectionScorecard";
+import { PaymentCycleReport } from "../protect/PaymentCycleReport";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -89,7 +90,8 @@ export function ConnectedOverview({
   const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
   const hasTrackedRegimeTip = useRef(false);
   const { isMiniPay } = useWalletContext();
-  const { openAdvisor } = useAdvisor();
+  const { openAdvisor, askAdvisor } = useAdvisor();
+  const { currencyCode } = useCurrencyRisk();
   const { navigateToSwap } = useNavigation();
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
@@ -359,6 +361,13 @@ export function ConnectedOverview({
           portfolio={portfolio}
           activePortfolio={activePortfolio}
           setActiveTab={setActiveTab}
+        />
+      )}
+
+      {profileConfig.moneyPurpose === 'upcoming_payment' && (
+        <PaymentCycleReport
+          defaultLocalCurrency={currencyCode ?? undefined}
+          onAskGuardian={(prompt) => askAdvisor(prompt)}
         />
       )}
 

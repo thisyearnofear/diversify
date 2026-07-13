@@ -431,7 +431,7 @@ export default function AutomationSettings({
                   AI Strategy Core
                 </h3>
               <p className="text-xs sm:text-xs text-gray-600 dark:text-gray-400">
-                Configure how the Advisor analyzes your wealth
+                Configure how Guardian analyzes your wealth
               </p>
             </div>
           </div>
@@ -598,7 +598,7 @@ export default function AutomationSettings({
                   Voice Responses
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Read Advisor messages aloud after they arrive
+                  Read Guardian messages aloud after they arrive
                 </p>
               </div>
             </div>
@@ -616,7 +616,7 @@ export default function AutomationSettings({
           </div>
 
           <div className="pl-11 space-y-2 text-sm text-gray-600 dark:text-gray-400">
-            <p>Disabled by default so Advisor stays quiet unless you opt in.</p>
+            <p>Disabled by default so Guardian stays quiet unless you opt in.</p>
             <p>Applies to normal replies and proactive alerts.</p>
           </div>
         </motion.div>

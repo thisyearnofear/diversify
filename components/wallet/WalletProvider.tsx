@@ -32,6 +32,7 @@ interface WalletContextType {
   formatAddress: (addr: string) => string;
   connectFarcasterWallet: () => Promise<void>;
   getFarcasterErrorMessage: (error: unknown) => string | null;
+  signMessage: (message: string) => Promise<string>;
 }
 
 // Create the context with default values
@@ -50,6 +51,7 @@ const WalletContext = createContext<WalletContextType>({
   formatAddress: (addr: string) => addr,
   connectFarcasterWallet: async () => { },
   getFarcasterErrorMessage: () => null,
+  signMessage: async () => { throw new Error('Wallet not connected'); },
 });
 
 // Provider component

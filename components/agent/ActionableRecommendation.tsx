@@ -17,12 +17,18 @@ import { type PortfolioAnalysis, type RebalancingOpportunity } from '@diversifi/
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import { useJunoStatus } from '../../hooks/use-juno-status';
 import { NETWORKS } from '../../config';
+import { GuardianRecommendationCard } from './GuardianRecommendationCard';
+import { buildPortfolioSwapContract } from '@diversifi/shared/src/services/guardian/recommendation-contract';
+import { useGuardianTierSnapshot } from './AgentTierStatus';
+import { useSessionKey } from '../../hooks/use-session-key';
 
 interface ActionableRecommendationProps {
     analysis: PortfolioAnalysis | null;
     portfolio: MultichainPortfolio | null;
-    onExecuteSwap: (fromToken: string, toToken: string, amount: string, reason: string) => void;
+    /** Opens the swap dry-run/quote surface. Execution requires its separate approval. */
+    onReviewSwap: (fromToken: string, toToken: string, amount: string, reason: string) => void;
     onExecuteBridge?: (fromChain: number, toChain: number, token: string, amount: string) => void;
+    onAskGuardian?: (prompt: string) => void;
 }
 
 interface ActionStep {
@@ -39,11 +45,21 @@ interface ActionStep {
 export default function ActionableRecommendation({
     analysis,
     portfolio,
-    onExecuteSwap,
-    onExecuteBridge
+    onReviewSwap,
+    onExecuteBridge,
+    onAskGuardian,
 }: ActionableRecommendationProps) {
+    // All recommendation actions route to the quote/review surface first.
+    const onExecuteSwap = onReviewSwap;
     const portfolioTotalValue = portfolio?.totalValue ?? 0;
     const { status: junoStatus } = useJunoStatus();
+    const { guardianState } = useGuardianTierSnapshot();
+    const { signedPermission } = useSessionKey();
+
+    const guardianBounds =
+        guardianState === 'monitoring' && signedPermission
+            ? `Guardian can act up to $${signedPermission.permission.dailyLimitUSD}/day within signed limits.`
+            : 'Manual review — set up Auto-Saver permissions for bounded execution.';
 
     if (!analysis && portfolioTotalValue > 0) {
         return (
@@ -52,7 +68,7 @@ export default function ActionableRecommendation({
                     💡 Portfolio detected (${portfolioTotalValue.toFixed(0)} total)
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                    Ask your Advisor for a fresh review to see personalized recommendations.
+                    Ask Guardian for a fresh review to see personalized recommendations.
                 </p>
             </div>
         );
@@ -79,11 +95,39 @@ export default function ActionableRecommendation({
     return (
         <div className="space-y-4">
             {/* Primary Recommendation */}
-            {actionSteps.length > 0 && (
+            {actionSteps.length > 0 && actionSteps[0].type === 'swap' && actionSteps[0].tokens && (
+                <GuardianRecommendationCard
+                    contract={buildPortfolioSwapContract({
+                        fromToken: actionSteps[0].tokens.from,
+                        toToken: actionSteps[0].tokens.to,
+                        fromRegion: analysis.rebalancingOpportunities[0]?.fromRegion,
+                        fromInflation: analysis.rebalancingOpportunities[0]?.fromInflation,
+                        toInflation: analysis.rebalancingOpportunities[0]?.toInflation,
+                        suggestedAmountUsd: analysis.rebalancingOpportunities[0]?.suggestedAmount,
+                        annualSavingsUsd: analysis.rebalancingOpportunities[0]?.annualSavings,
+                        guardianBounds,
+                    })}
+                    onReview={() =>
+                        onReviewSwap(
+                            actionSteps[0].tokens!.from,
+                            actionSteps[0].tokens!.to,
+                            actionSteps[0].tokens!.amount.replace('$', ''),
+                            actionSteps[0].description,
+                        )
+                    }
+                    onAskWhy={() =>
+                        onAskGuardian?.(
+                            `Explain why Guardian proposes swapping ${actionSteps[0].tokens!.from} → ${actionSteps[0].tokens!.to}: ${actionSteps[0].description}`,
+                        )
+                    }
+                />
+            )}
+
+            {actionSteps.length > 0 && actionSteps[0].type !== 'swap' && (
                 <PrimaryRecommendation
                     step={actionSteps[0]}
                     analysis={analysis}
-                    onExecute={onExecuteSwap}
+                    onExecute={onReviewSwap}
                 />
             )}
 

@@ -22,6 +22,9 @@ import Scrim from "../shared/Scrim";
 import { ResearchCheck } from "./ResearchCheck";
 import { ResearchReceipt } from "./ResearchReceipt";
 import { TrustFlow } from "./TrustFlow";
+import { GuardianMascot } from "../shared/GuardianMascot";
+import { GUARDIAN_DRAWER_SUBTITLE } from "@/constants/guardian-copy";
+import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
 
 const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
   ssr: false,
@@ -233,9 +236,9 @@ const STARTER_PROMPTS = [
     badge: "Free",
   },
   {
-    label: "Market intelligence",
-    prompt: "Show me the latest market news and sentiment signals from SoSoValue.",
-    badge: "SoSoValue",
+    label: "Currency risk",
+    prompt: "Explain my currency exposure and whether I should protect savings before the next payment cycle.",
+    badge: "Free",
   },
   {
     label: "Protection plan",
@@ -243,9 +246,9 @@ const STARTER_PROMPTS = [
     badge: "Free",
   },
   {
-    label: "Deep research",
-    prompt: "Run a paid premium research bundle using macro analysis, portfolio optimization, and risk assessment, then explain the result simply.",
-    badge: "3 sources",
+    label: "Payment readiness",
+    prompt: "Help me model FX drag for an upcoming supplier payment and decide whether to convert now or wait.",
+    badge: "Shield",
   },
 ] as const;
 
@@ -272,7 +275,7 @@ function ProviderBadge({ provider }: { provider?: string }) {
     </span>
   );
   if (provider === "venice") return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-purple-500 dark:text-purple-400 opacity-70 mt-0.5">
+    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 opacity-70 mt-0.5">
       ✦ Venice
     </span>
   );
@@ -381,6 +384,8 @@ export default function AIChat() {
     setDrawerOpen,
     clearMessages,
     addUserMessage,
+    activeGuardianReview,
+    setActiveGuardianReview,
   } = useAIConversation();
   const { key: userGeminiKey, save: saveGeminiKey } = useUserGeminiKey();
   const { capabilities, autonomousStatus } = useAgentStatus();
@@ -568,7 +573,7 @@ export default function AIChat() {
           animate={{ y: 0 }}
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
+          className="relative z-[50] isolate bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
         >
           {/* Drag Handle — pointer-capture drag-to-dismiss */}
           <div
@@ -620,27 +625,25 @@ export default function AIChat() {
         <FreemiumPanel onGoodDollarClaim={handleClaimFromChat} />
 
         {/* Header */}
-        <div className="px-6 pb-4 flex justify-between items-center border-b border-amber-200/30 dark:border-amber-800/20 bg-gradient-to-r from-amber-50/50 via-yellow-50/30 to-amber-50/50 dark:from-amber-900/10 dark:via-yellow-900/5 dark:to-amber-900/10">
+        <div className="px-6 pb-4 flex justify-between items-center border-b border-blue-200/60 dark:border-blue-800/30 bg-gradient-to-r from-blue-50/80 via-sky-50/50 to-blue-50/80 dark:from-blue-900/20 dark:via-sky-900/10 dark:to-blue-900/20">
           <div className="flex items-center gap-3">
-            <motion.div 
-              animate={{ rotate: [0, 10, -10, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-              className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 via-yellow-400 to-amber-500 flex items-center justify-center text-xl shadow-lg shadow-amber-500/20 border-2 border-amber-300"
-            >
-              🪙
-            </motion.div>
+            <GuardianMascot
+              size={42}
+              mood={isChatting ? "thinking" : "neutral"}
+              className="shrink-0"
+            />
             <div>
-              <h3 className="font-black text-amber-900 dark:text-amber-100 uppercase tracking-tight text-sm">
-                DiversiFi
+              <h3 className="font-black text-blue-950 dark:text-blue-100 uppercase tracking-tight text-sm">
+                Guardian
               </h3>
               <div className="flex items-center gap-1.5">
-                <motion.div 
+                <motion.div
                   animate={{ scale: [1, 1.2, 1] }}
                   transition={{ duration: 2, repeat: Infinity }}
-                  className="w-1.5 h-1.5 rounded-full bg-amber-500" 
+                  className="w-1.5 h-1.5 rounded-full bg-blue-500"
                 />
-                <span className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase">
-                  Protected savings assistant
+                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">
+                  {GUARDIAN_DRAWER_SUBTITLE}
                 </span>
               </div>
             </div>
@@ -657,8 +660,8 @@ export default function AIChat() {
               onClick={() => setCurrentView(currentView === 'chat' ? 'history' : 'chat')}
               className={`text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-colors ${
                 currentView === 'history' 
-                  ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-500/20' 
-                  : 'bg-white/50 dark:bg-gray-800/50 text-amber-700 dark:text-amber-400 border-amber-200/50 dark:border-amber-700/30'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/20' 
+                  : 'bg-white/50 dark:bg-gray-800/50 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-700/30'
               }`}
             >
               {currentView === 'chat' ? 'History' : 'Chat'}
@@ -699,39 +702,58 @@ export default function AIChat() {
                 className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar"
                 ref={scrollRef}
               >
-                {messages.length === 0 && !isChatting && (
+                {activeGuardianReview && (
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                      Guardian review
+                    </p>
+                    {activeGuardianReview.contract ? (
+                      <GuardianRecommendationCard
+                        contract={activeGuardianReview.contract}
+                        onDismiss={() => setActiveGuardianReview(null)}
+                      />
+                    ) : (
+                      <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
+                        <p className="text-sm font-bold text-gray-900 dark:text-white">{activeGuardianReview.summary}</p>
+                        {activeGuardianReview.detail && (
+                          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">{activeGuardianReview.detail}</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setActiveGuardianReview(null)}
+                          className="min-h-11 px-3 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {messages.length === 0 && !isChatting && !activeGuardianReview && (
                   <motion.div 
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
                     className="h-full flex flex-col items-center justify-center text-center space-y-5"
                   >
-                    {/* Animated gold coin stack */}
-                    <div className="relative">
-                      <motion.div
-                        animate={{ y: [0, -10, 0] }}
-                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                        className="text-5xl filter drop-shadow-lg"
-                      >
-                        🪙
-                      </motion.div>
-                    </div>
+                    <GuardianMascot size={82} mood="happy" />
                     
                     <div className="space-y-2">
-                      <p className="text-base font-bold text-amber-800 dark:text-amber-200">
-                        Ask for a clear next action
+                      <p className="text-base font-bold text-blue-900 dark:text-blue-100">
+                        Ask Guardian for a clear next action
                       </p>
                       <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">
-                        Start with a portfolio summary, a protection plan, or a paid research bundle with on-chain proof.
+                        Start with a portfolio summary, currency risk check, or a payment-readiness plan — with verifiable evidence when it matters.
                       </p>
                     </div>
 
-                    <div className="w-full max-w-[320px] rounded-2xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/70 dark:bg-amber-900/10 p-3 text-left">
-                      <p className="text-[11px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
-                        Verifiable AI
+                    <div className="w-full max-w-[320px] rounded-2xl border border-blue-200/70 dark:border-blue-800/40 bg-blue-50/70 dark:bg-blue-900/10 p-3 text-left">
+                      <p className="text-[11px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                        Verifiable protection
                       </p>
-                      <p className="mt-1 text-xs text-amber-900 dark:text-amber-100">
-                        High-impact recommendations are anchored with verifiable evidence, so you can audit what the AI used and why.
+                      <p className="mt-1 text-xs text-blue-900 dark:text-blue-100">
+                        High-impact recommendations are anchored with evidence so you can audit what Guardian used and why.
                       </p>
                     </div>
 
@@ -740,7 +762,7 @@ export default function AIChat() {
                         <motion.button
                           key={label}
                           onClick={() => submitPrompt(prompt)}
-                          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-amber-100 dark:bg-amber-800/30 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-700/30 hover:bg-amber-200 dark:hover:bg-amber-700/40 transition-colors"
+                          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full border border-blue-200 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors"
                         >
                           <span>{label}</span>
                           <span className="rounded-full bg-white/80 dark:bg-black/20 px-1.5 py-0.5 text-[10px] font-black">
@@ -760,9 +782,11 @@ export default function AIChat() {
                     className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} group`}
                   >
                     {msg.role === "assistant" && (
-                      <div className="w-8 h-8 mr-2 rounded-full bg-amber-400 flex items-center justify-center text-lg shadow-lg self-end border border-amber-300">
-                        🪙
-                      </div>
+                      <GuardianMascot
+                        size={32}
+                        mood={isChatting && i === messages.length - 1 ? "thinking" : "neutral"}
+                        className="mr-2 shrink-0 self-end"
+                      />
                     )}
                     
                     <div

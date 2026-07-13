@@ -352,6 +352,15 @@ export function useWallet() {
     }
   };
 
+  const signMessage = async (message: string): Promise<string> => {
+    const provider = await getActiveProvider();
+    if (!provider || !address) throw new Error('Connect your wallet to continue');
+    return provider.request({
+      method: 'personal_sign',
+      params: [message, address],
+    }) as Promise<string>;
+  };
+
   const switchNetwork = async (targetChainId: number) => {
     try {
       if (NON_EVM_CHAIN_IDS.has(targetChainId)) {
@@ -525,6 +534,7 @@ export function useWallet() {
     formatAddress,
     connectFarcasterWallet,
     getFarcasterErrorMessage,
+    signMessage,
   };
 }
 

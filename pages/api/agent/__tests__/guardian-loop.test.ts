@@ -51,6 +51,14 @@ vi.mock('../vault/_guardian-state', () => ({
   pushAnchorHistory: vi.fn().mockReturnValue([]),
 }));
 
+vi.mock('../../../../lib/guardian/cycle-monitor-run', () => ({
+  runCycleMonitor: vi.fn().mockResolvedValue({
+    checked: 0,
+    proposalWindowDays: 14,
+    results: [],
+  }),
+}));
+
 import handler from '../guardian-loop';
 
 type ApiMock = {

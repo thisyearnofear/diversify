@@ -5,6 +5,14 @@ import { useAgentConfig } from './use-agent-config';
 import { useAdvisor } from './use-advisor';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import {
+  buildCycleProtectionContract,
+  buildYieldAlertContract,
+  daysUntilPaymentDate,
+  shouldProposeCycleProtection,
+} from '@diversifi/shared/src/services/guardian/recommendation-contract';
+import type { PurchaseCycleRecord } from '@diversifi/shared/src/types/purchase-cycle';
+import { getWalletAuthHeaders } from '@/lib/wallet-auth';
 
 type YieldOpportunity = {
   protocol: string;
@@ -179,10 +187,16 @@ export function useProactiveAgent() {
              publishAdvisorUpdate({
                content: ubiInsight,
                type: 'recommendation',
-               openDrawer: true,
+               openDrawer: false,
                action: {
                  type: 'claim_ubi',
-               }
+               },
+               guardianUpdate: {
+                 summary: `Daily UBI ready to claim (${estimatedReward})`,
+                 detail: ubiInsight,
+                 whyReason: 'Guardian monitors your on-chain claim status on a schedule you configured.',
+                 updateType: 'claim',
+               },
              }).catch(() => {});
              markAlertSent(ubiAlertId);
         };
@@ -190,6 +204,76 @@ export function useProactiveAgent() {
         setTimeout(triggerUbiAlert, 4000);
     }
   }, [canClaim, alreadyClaimedOnChain, estimatedReward, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
+
+  // Payment cycle monitoring — propose as supplier payment approaches
+  useEffect(() => {
+    if (!address) return;
+
+    let cancelled = false;
+
+    const checkCycles = async () => {
+      try {
+        const authHeaders = await getWalletAuthHeaders(address);
+        if (!authHeaders) return;
+        const res = await fetchWithTimeout(
+          `${API_BASE}/api/agent/business/cycles`,
+          { headers: authHeaders },
+          GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+        );
+        if (!res.ok || cancelled) return;
+        const data = await res.json();
+        const cycles = (data.cycles ?? []) as PurchaseCycleRecord[];
+
+        for (const cycle of cycles) {
+          if (!cycle.monitoringEnabled || cycle.status !== 'active') continue;
+
+          const daysUntil = daysUntilPaymentDate(cycle.paymentDate);
+          if (!shouldProposeCycleProtection(daysUntil, true, cycle.status)) continue;
+
+          const alertId = `cycle:${cycle.id}:${daysUntil}`;
+          if (!shouldSendAlert(alertId, 24 * 60 * 60 * 1000)) continue;
+
+          const contract = buildCycleProtectionContract({
+            localCurrency: cycle.localCurrency,
+            targetCurrency: cycle.targetCurrency,
+            paymentDate: cycle.paymentDate,
+            daysUntilPayment: daysUntil,
+            targetAmountUsd: cycle.targetAmountUsd,
+            dragLine: cycle.lastReport?.dragLine,
+            monitoringEnabled: true,
+          });
+
+          const message = `${contract.whatChanged} ${contract.proposal}`;
+
+          publishAdvisorUpdate({
+            content: message,
+            type: 'recommendation',
+            openDrawer: false,
+            action: { type: 'guardian_review' },
+            guardianUpdate: {
+              summary: contract.proposal ?? `Payment cycle in ${daysUntil} days`,
+              detail: message,
+              whyReason: `You enabled monitoring for a ${cycle.localCurrency} supplier payment due ${cycle.paymentDate}.`,
+              updateType: 'proposal',
+              contract,
+            },
+          }).catch(() => {});
+
+          markAlertSent(alertId);
+        }
+      } catch {
+        // best-effort
+      }
+    };
+
+    const t = setTimeout(checkCycles, 6000);
+    const interval = setInterval(checkCycles, 300000);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+      clearInterval(interval);
+    };
+  }, [API_BASE, address, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
 
   // Real Market & Yield Monitoring Loop
   useEffect(() => {
@@ -223,6 +307,12 @@ export function useProactiveAgent() {
             content: volMessage,
             type: 'recommendation',
             openDrawer: false,
+            guardianUpdate: {
+              summary: `Market volatility spiked to ${Math.round(pulse.impliedVolatility)}%`,
+              detail: volMessage,
+              whyReason: `Your alert threshold is ${volatilityThreshold}% implied volatility.`,
+              updateType: 'alert',
+            },
           }).catch(() => {});
 
           // Reset alert after 30 minutes so it can fire again
@@ -299,7 +389,15 @@ export function useProactiveAgent() {
                     GUARDIAN_STATE_FETCH_TIMEOUT_MS,
                   ).catch(() => {});
 
-                  const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold. Should I have Guardian review a dry-run rebalance for this opportunity?`;
+                  const yieldContract = buildYieldAlertContract({
+                    protocol: best.protocol,
+                    chain: best.chain,
+                    symbol: best.symbol,
+                    apy: best.apy,
+                    tvlLabel: formattedTvl,
+                    targetToken,
+                  });
+                  const yieldMessage = `${yieldContract.whatChanged} ${yieldContract.proposal}`;
 
                   publishAdvisorUpdate({
                     content: yieldMessage,
@@ -308,15 +406,37 @@ export function useProactiveAgent() {
                     action: {
                       type: 'guardian_review',
                     },
+                    guardianUpdate: {
+                      summary: yieldContract.proposal ?? `Yield alert: ${best.apy.toFixed(1)}% APY`,
+                      detail: yieldMessage,
+                      whyReason: `Exceeds your ${yieldThreshold}% yield alert threshold.`,
+                      updateType: 'yield',
+                      contract: yieldContract,
+                    },
                   }).catch(() => {});
                   markAlertSent(alertId);
                 } else {
+                  const yieldContract = buildYieldAlertContract({
+                    protocol: best.protocol,
+                    chain: best.chain,
+                    symbol: best.symbol,
+                    apy: best.apy,
+                    tvlLabel: formattedTvl,
+                    targetToken: null,
+                  });
                   const yieldMessage = `📈 On-chain data shows ${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} (TVL: ${formattedTvl}). This exceeds your ${yieldThreshold}% alert threshold, but it is not currently supported as an automatic protection action. Treat this as a research alert, not an executable action.`;
 
                   publishAdvisorUpdate({
                     content: yieldMessage,
                     type: 'recommendation',
                     openDrawer: false,
+                    guardianUpdate: {
+                      summary: `Yield alert: ${best.protocol} at ${best.apy.toFixed(1)}% (research only)`,
+                      detail: yieldMessage,
+                      whyReason: 'This opportunity is not supported for automatic protection actions.',
+                      updateType: 'yield',
+                      contract: yieldContract,
+                    },
                   }).catch(() => {});
                   markAlertSent(alertId);
                 }

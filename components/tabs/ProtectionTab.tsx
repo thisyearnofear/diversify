@@ -36,6 +36,9 @@ import { GuardianMascot } from "../shared/GuardianMascot";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { GuardianStatusChip, useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
 import { GuardianStateScrollytelling } from "./protect/GuardianStateScrollytelling";
+import { ShieldGuardianRecommendation } from "./protect/ShieldGuardianRecommendation";
+import { PaymentCycleReport } from "./protect/PaymentCycleReport";
+import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useVault } from "@/hooks/use-vault";
@@ -132,6 +135,9 @@ export default function ProtectionTab({
     setRiskTolerance,
     setTimeHorizon,
   } = useProtectionProfile();
+
+  const { riskData, primaryDepreciation } = useCurrencyRisk();
+  const [dismissedInlineRec, setDismissedInlineRec] = useState(false);
 
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const selectedStrategyData = selectedStrategy ? getStrategyById(selectedStrategy) : null;
@@ -447,6 +453,39 @@ export default function ProtectionTab({
         </>
       )}
 
+      {config.moneyPurpose === 'upcoming_payment' && (
+        <PaymentCycleReport
+          defaultLocalCurrency={riskData?.code}
+          onAskGuardian={(prompt) => askAdvisor(prompt)}
+        />
+      )}
+
+      {displayTotalValue > 0 && !dismissedInlineRec && (riskData || topOpportunity) && (
+        <ShieldGuardianRecommendation
+          portfolio={activePortfolio as MultichainPortfolio}
+          riskData={riskData}
+          primaryDepreciationPct={primaryDepreciation}
+          topOpportunity={topOpportunity}
+          onReview={() => {
+            if (topOpportunity?.toToken) {
+              openProtectionFlow(
+                topOpportunity.toToken,
+                topOpportunity.fromToken,
+                topOpportunity.suggestedAmount?.toFixed(2),
+              );
+            } else {
+              setActiveTab?.("exchange");
+            }
+          }}
+          onAskWhy={() =>
+            askAdvisor(
+              `Why is ${riskData?.code ?? 'my currency'} exposure reducing my purchasing power, and what protection move would fit my plan?`,
+            )
+          }
+          onDismiss={() => setDismissedInlineRec(true)}
+        />
+      )}
+
       {/* =================================================================
           PRIMARY INSIGHT CARD - Dynamic based on selected goal
           ================================================================= */}
@@ -542,11 +581,11 @@ export default function ProtectionTab({
           ================================================================= */}
       <InsightCard
         icon="🤖"
-        title="Advisor Plan Review"
-        description="Ask the Advisor to review your holdings, inflation exposure, and protection plan."
+        title="Protection Plan Review"
+        description="Ask Guardian to review your holdings, currency exposure, and protection plan."
         variant="default"
         action={{
-          label: "Ask Advisor About My Plan",
+          label: "Ask Guardian about my plan",
           onClick: () => {
             const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
             askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);

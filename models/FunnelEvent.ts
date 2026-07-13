@@ -24,6 +24,8 @@ export const FUNNEL_EVENTS = [
   // Waitlist — self-selecting interest in the future business FX feature
   'business_hint_expanded',
   'waitlist_joined',
+  'cycle_report_run',
+  'cycle_monitoring_enabled',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

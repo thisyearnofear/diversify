@@ -51,7 +51,7 @@ const TABS: TabItem[] = [
   },
   {
     id: "agent",
-    label: "Advisor",
+    label: "Guardian",
     icon: (
       <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 2L3 7l9 5 9-5-9-5zM3 17l9 5 9-5M3 12l9 5 9-5" />

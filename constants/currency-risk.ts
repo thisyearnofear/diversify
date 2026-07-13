@@ -4,7 +4,8 @@
  * This is the single source of truth for the "aha" risk comparison shown
  * to first-time visitors. It provides historical depreciation of ~20
  * high-risk currencies against three benchmarks: USD (global reserve),
- * EUR (European benchmark), and XAU (gold — Sharia-compliant hard asset).
+ * EUR (European benchmark), and XAU (gold — a common hard-asset benchmark;
+ * Sharia compliance depends on asset structure and holding method).
  *
  * Three benchmarks because different protection philosophies value
  * different reference points:
@@ -22,6 +23,12 @@
  * directionally accurate — sufficient to make the risk visceral — and
  * should be refreshed periodically from a live API.
  */
+
+/** When this curated dataset was last reviewed — show in UX for transparency. */
+export const CURRENCY_RISK_DATA_AS_OF = '2025-07-01';
+
+export const CURRENCY_RISK_DATA_DISCLAIMER =
+  'Directionally accurate curated historical data. Not live FX. Not investment advice.';
 
 export interface RiskEvent {
   year: number;

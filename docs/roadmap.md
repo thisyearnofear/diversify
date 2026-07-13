@@ -442,11 +442,19 @@ pains (volatility, cognitive burden, inability to quantify) map directly
 onto shipped surfaces (currency-risk dataset, autonomous Guardian,
 verifiable ledger).
 
-**Current state honesty:** The SME business layer is the north star. The
-Importer/Trader archetype, purchase-cycle model, per-cycle drag report,
-and cycle-aware Guardian execution are **designed but not yet shipped** in
-the consumer app. The concierge FX drag report (`scripts/fx-drag-report.ts`)
-validates the math with real trader data. The phased implementation plan is
+**Current state (2026-07-13):** Guardian product consolidation (single identity, non-modal proactive updates, shared recommendation contract) shipped alongside the first SME FX vertical slice and a trust pass:
+
+- **Money purpose** in onboarding (`everyday_buffer` / `long_term_savings` / `upcoming_payment`) — separate from philosophy
+- **In-app payment-cycle report** on Shield/Home (`PaymentCycleReport`, `POST /api/agent/fx-cycle-report`) — current-rate + historical stress, USD-only, not a fabricated future quote
+- **Mongo `PurchaseCycle` model** + wallet-signed `GET/POST /api/agent/business/cycles` (`lib/wallet-auth.ts`); `payment_due` until user confirms outcome with achieved amount/rate/fees
+- **Cycle-aware proposals** via client proactive agent + inline `runCycleMonitor()` in guardian-loop cron
+- **Bounded `recommendationQueue`** on GuardianState so cycle/yield/macro writers cannot overwrite each other
+- **Review ≠ execute** — Review opens the swap quote path; Open review renders the structured Guardian contract
+- **Markdown/CSV export** via shared `fx-drag-report-renderer.ts`
+
+Still planned: Importer `FinancialStrategy` archetype, graduation funnel (Phase 4), full cycle execution in guardian-loop for `CYCLE_PROTECTION` action type.
+
+The concierge FX drag report (`scripts/fx-drag-report.ts`) still validates math with real trader data; it now delegates rendering to shared. Full phased plan:
 in [`docs/sme-fx-implementation-plan.md`](./sme-fx-implementation-plan.md).
 
 **Market:** China–Africa trade $348B (2025, +20% YoY); SSA stablecoin
@@ -464,7 +472,7 @@ lane: not another rail, the driver on top of the rails.
 | Business | Revenue — same person graduates working capital | Importer/Trader archetype (cycle-aware) + per-cycle FX drag report |
 | Protocol | Scale — rails players embed the intelligence | Track 1d enterprise gateway ("treasury autopilot") |
 
-**Sequencing (gated):** See `docs/sme-fx-implementation-plan.md` for the full phased plan. Summary: 1) concierge validation — manual FX drag reports for the Ghana user + 10–20 traders *(tooling shipped)*; 2) Importer archetype inside the existing app as a `FinancialStrategy` value *(planned)*; 3) self-serve per-cycle FX drag report in the app *(planned)*; 4) cycle-aware Guardian execution as payment dates approach *(planned)*; 5) GHS ramp via partner (Yellow Card / Accrue / Kotani — never build ramps); 6) one rails design partner via Track 1d; 7) split into its own product only when demand forces it.
+**Sequencing (gated):** See `docs/sme-fx-implementation-plan.md` for the full phased plan. Summary: 1) concierge validation *(shipped)*; 2) Importer archetype as `FinancialStrategy` *(planned)*; 3) self-serve per-cycle FX drag report in the app *(shipped 2026-07-13)*; 4) cycle-aware Guardian proposals as payment dates approach *(shipped — monitoring opt-in + cron tick; execution for `CYCLE_PROTECTION` still bounded by existing rebalance path)*; 5) GHS ramp via partner; 6) rails design partner; 7) split only when demand forces it.
 
 **Regulatory note:** Ghana's VASP Act 1154 (signed 2025-12-29, BoG
 licensing from Q1 2026) + BoG anti-dollarization posture make the

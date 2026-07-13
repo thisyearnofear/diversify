@@ -21,7 +21,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
-import { updateGuardianState } from '../vault/_guardian-state';
+import { enqueueRecommendation } from '../vault/_guardian-state';
 import { guardianEventBus } from './_guardian-event-bus';
 import { Permission } from '../../../models/Permission';
 import { Vault } from '../../../models/Vault';
@@ -181,17 +181,15 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       }
 
       const capturedAt = new Date().toISOString();
-      await updateGuardianState(perm.userAddress, {
-        latestRecommendation: {
-          capturedAt,
-          source: 'advisor-analysis',
-          action: 'REBALANCE',
-          targetToken,
-          oneLiner: parsed.oneLiner || 'Macro signal detected from monitored source',
-          reasoning: parsed.reasoning || `Signal: ${parsed.signal}. Source: ${url}`,
-          confidence: parsed.confidence,
-          riskLevel: parsed.confidence > 0.8 ? 'LOW' : 'MEDIUM',
-        },
+      await enqueueRecommendation(perm.userAddress, {
+        capturedAt,
+        source: 'firecrawl-webhook',
+        action: 'REBALANCE',
+        targetToken,
+        oneLiner: parsed.oneLiner || 'Macro signal detected from monitored source',
+        reasoning: parsed.reasoning || `Signal: ${parsed.signal}. Source: ${url}`,
+        confidence: parsed.confidence,
+        riskLevel: parsed.confidence > 0.8 ? 'LOW' : 'MEDIUM',
       });
       guardianEventBus.publish({
         type: 'recommendation',

@@ -1,10 +1,8 @@
 /**
- * AgentTab - Dedicated Agent Control Center
+ * AgentTab — Guardian Control Center
  *
- * Core Principles:
- * - ENHANCEMENT FIRST: Uses enhanced AgentTierStatus component
- * - CONSOLIDATION: No duplicate components, reuses existing ones
- * - MINIMAL: Only essential UI, no bloat
+ * Primary surface for Guardian state, permissions, timeline, and settings.
+ * Open-ended conversation lives on the global Ask Guardian drawer.
  */
 
 import React, { useCallback, useState } from "react";
@@ -25,6 +23,7 @@ import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { Skeleton } from "../shared/TabComponents";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import AgentQuickActions from "../agent/AgentQuickActions";
+import { GUARDIAN_CONTROL_TITLE } from "@/constants/guardian-copy";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -32,13 +31,9 @@ interface AgentTabProps {
   isMiniPay?: boolean;
   isFarcaster?: boolean;
   portfolio?: MultichainPortfolio;
-  /** Send the user to the Exchange tab where DepositHub + Swap live.
-   *  Wired by the parent shell so Auto-Saver's "Add funds" nudges resolve
-   *  to a real surface. */
   onNavigateToFund?: () => void;
 }
 
-import { useWDKAgent } from "../../hooks/use-wdk-agent";
 import { UnconnectedStateShell } from "../shared/UnconnectedStateShell";
 import type { HowItWorksStep } from "../shared/UnconnectedStateShell";
 import WalletButton from "../wallet/WalletButton";
@@ -46,19 +41,19 @@ import { useDemoMode } from "../../context/app/DemoModeContext";
 
 const HOW_IT_WORKS: HowItWorksStep[] = [
   {
-    icon: "🔮",
-    title: "AI Analysis",
-    text: "The Advisor analyzes your portfolio 24/7 for inflation risks and rebalancing opportunities.",
+    icon: "🛡️",
+    title: "Guardian watches",
+    text: "Guardian observes currency risk, your protection plan, and market conditions within your permission bounds.",
   },
   {
     icon: "⛓",
-    title: "Evidence-Backed",
-    text: "Premium research uses macro data, portfolio optimization, and risk assessment with on-chain proof.",
+    title: "Evidence-backed",
+    text: "Every consequential move is anchored with on-chain receipts and verifiable evidence.",
   },
   {
     icon: "⚡",
-    title: "One-Tap Actions",
-    text: "Execute recommended swaps, deposits, and protection moves directly from the chat.",
+    title: "Bounded execution",
+    text: "Auto-Saver can act within daily limits you set — or wait for your approval when outside bounds.",
   },
 ];
 
@@ -79,7 +74,6 @@ export default function AgentTab({
   } = useAgentStatus();
   const { config, updateConfig } = useAgentConfig();
   const { addActivity } = useAgentActivities();
-  const { executeViaWDK } = useWDKAgent();
   const noopMessage = useCallback(() => {}, []);
   const { portfolioAnalysis } = useAgentAnalysis({
     apiBase: API_BASE,
@@ -97,38 +91,29 @@ export default function AgentTab({
   const [showSettings, setShowSettings] = useState(false);
   const [dismissError, setDismissError] = useState(false);
 
-  const handleAskAgent = () => {
+  const handleViewTimeline = () => {
     askAdvisor(
-      "Give me a summary of my portfolio status and any recommended actions.",
+      "Show me my Guardian timeline — recent observations, proposals, and executed actions with proof.",
     );
   };
 
-  // Advisor: Market analysis prompt
-  const handleAdvisorClick = () => {
-    askAdvisor(
-      "Analyze current global inflation trends, currency devaluation risks, and recommend protective actions for my portfolio based on market conditions.",
-    );
-  };
-
-  // Empty state when wallet not connected
   if (!address) {
     const heroCard = (
       <div className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6 rounded-2xl">
         <div className="flex items-start justify-between mb-4">
           <div>
             <h3 className="text-xl font-black uppercase tracking-tight">
-              Your AI Advisor
+              Guardian
             </h3>
             <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-              Portfolio intelligence, verifiable on-chain
+              Protection system with verifiable receipts
             </p>
           </div>
-          <span className="text-3xl">🔮</span>
+          <span className="text-3xl">🛡️</span>
         </div>
         <p className="text-indigo-100 text-xs font-bold leading-relaxed mb-4">
-          The Advisor analyzes your portfolio 24/7, surfaces inflation risks and
-          rebalancing opportunities, and lets you execute recommended actions with
-          a single tap.
+          Guardian explains risk, proposes moves within your bounds, and proves
+          what happened — not a chatbot with savings features.
         </p>
         <WalletButton variant="inline" className="w-full" />
       </div>
@@ -145,27 +130,20 @@ export default function AgentTab({
     );
   }
 
-  // Extract the dashboard into a helper so it can be rendered as the main
-  // fallthrough content. Defined before the early-return blocks to avoid
-  // hoisting issues.
   const renderDashboard = () => (
     <>
-      {/* Header */}
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {experienceMode === "beginner"
-            ? "Your Advisor"
-            : "Advisor"}
+          {GUARDIAN_CONTROL_TITLE}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {experienceMode === "beginner"
-            ? "See what your AI is doing to protect your savings"
-            : "Understand recommendations and manage your protection settings"}
+            ? "What Guardian is doing to protect your savings"
+            : "State, permissions, timeline, and evidence"}
         </p>
       </div>
 
-      {/* Enhanced Tier Status with Activity Feed - with skeleton loader */}
-      <ErrorBoundary moduleName="Agent Status">
+      <ErrorBoundary moduleName="Guardian Status">
         {isStatusLoading ? (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 space-y-4">
             <div className="flex items-center gap-3">
@@ -182,105 +160,43 @@ export default function AgentTab({
             isMiniPay={isMiniPay}
             isFarcaster={isFarcaster}
             showActivityFeed={true}
-            onNavigateToAgent={handleAskAgent}
-            onAdvisorClick={handleAdvisorClick}
+            onNavigateToAgent={handleViewTimeline}
             onNavigateToFund={onNavigateToFund}
           />
         )}
       </ErrorBoundary>
 
-      {/* Actionable Recommendations — non-beginner only, shown when analysis exists */}
       {experienceMode !== "beginner" && (
         <ErrorBoundary moduleName="Portfolio Recommendations">
           <ActionableRecommendation
             analysis={portfolioAnalysis}
             portfolio={portfolio ?? null}
-            onExecuteSwap={async (fromToken, toToken, amount, reason) => {
-              if (config.walletProvider === 'TETHER_WDK') {
-                addActivity({
-                  type: 'execution',
-                  tier: 'GUARDIAN',
-                  description: `Initiating multi-chain settlement: ${fromToken} → ${toToken}`,
-                  status: 'pending',
-                });
-
-                const result = await executeViaWDK({
-                  action: "SWAP",
-                  asset: toToken,
-                  amount: amount,
-                  chain: "Arbitrum",
-                });
-
-                if (result.success) {
-                  addActivity({
-                    type: "execution",
-                    tier: "GUARDIAN",
-                    description: `Settlement Successful: ${fromToken} → ${toToken} ($${amount})`,
-                    status: "success",
-                    details: { txHash: result.txHash },
-                  });
-                  return;
-                }
-              }
-
-              askAdvisor(
-                `I'm about to swap ${fromToken} → ${toToken}${amount ? ` (${amount})` : ""} based on Advisor recommendation${reason ? `: ${reason}` : ""}. Please confirm this aligns with my strategy.`,
-              );
+            onAskGuardian={(prompt) => askAdvisor(prompt)}
+            onReviewSwap={(fromToken, toToken, amount, reason) => {
               addActivity({
-                type: "execution",
+                type: "recommendation",
                 tier: "GUARDIAN",
-                description: `Swap ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ""}${reason ? ` — ${reason}` : ""}`,
+                description: `Review opened: ${fromToken} → ${toToken}${amount ? ` ($${amount})` : ""}`,
                 status: "pending",
               });
+              // The swap screen fetches route, chain, fees, and slippage. Its
+              // separate confirmation is the only path that can execute.
               navigateToSwap({ fromToken, toToken, amount, reason });
             }}
           />
         </ErrorBoundary>
       )}
 
-      {/* Premium research — full-width, always visible */}
-      <div className="rounded-2xl border border-amber-200 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/10 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-              Premium research bundle
-            </p>
-            <p className="mt-1 text-sm text-amber-900 dark:text-amber-100">
-              Run macro analysis, portfolio optimization, and risk assessment with one Arc payment.
-            </p>
-          </div>
-          <span className="rounded-full bg-white/80 dark:bg-black/20 px-2 py-1 text-[11px] font-bold text-amber-700 dark:text-amber-300">
-            $0.015
-          </span>
-        </div>
-        <button
-          onClick={() => askAdvisor("Run a paid premium research bundle using macro analysis, portfolio optimization, and risk assessment, then explain the result simply.")}
-          className="mt-3 w-full flex items-center justify-center gap-2 py-3 px-4 rounded-2xl bg-amber-500 text-white font-semibold text-sm hover:bg-amber-600 transition-colors"
-        >
-          <span>⛓</span>
-          <span>Run premium research</span>
-        </button>
-      </div>
-
-      {/* Ask Advisor + Quick Actions — 2-column grid */}
       <div className="grid grid-cols-2 gap-3">
         <button
-          onClick={handleAskAgent}
-          className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold text-sm border border-blue-100 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors"
-        >
-          <span>💬</span>
-          <span>Ask Advisor</span>
-        </button>
-        <button
           onClick={() => setShowQuickActions(true)}
-          className="flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-semibold text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          className="col-span-2 flex items-center justify-center gap-2 py-3 px-3 rounded-2xl bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 font-semibold text-sm border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
         >
           <span>⚡</span>
-          <span>Quick Actions</span>
+          <span>Quick actions</span>
         </button>
       </div>
 
-      {/* Protection Settings — collapsible disclosure (advanced only) */}
       {experienceMode === "advanced" && (
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
           <button
@@ -294,10 +210,10 @@ export default function AgentTab({
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-                  Protection settings
+                  Guardian settings
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                  AI strategy, notifications, automation thresholds
+                  Permissions, notifications, automation thresholds
                 </p>
               </div>
             </div>
@@ -329,7 +245,6 @@ export default function AgentTab({
         </div>
       )}
 
-      {/* Quick Actions Modal */}
       <AgentQuickActions
         isOpen={showQuickActions}
         onClose={() => setShowQuickActions(false)}
@@ -337,7 +252,6 @@ export default function AgentTab({
     </>
   );
 
-  // ─── Error state: status check failed ────────────────────────────────
   if (statusError && !dismissError) {
     return (
       <div className="space-y-4 pb-6" role="alert" aria-live="assertive">
@@ -349,11 +263,9 @@ export default function AgentTab({
                 Connection issue
               </h3>
               <p className="text-sm text-red-700 dark:text-red-300 mt-1 leading-relaxed">
-                We couldn't reach the protection service. Your Auto-Saver status is
+                We couldn't reach the protection service. Guardian status is
                 unavailable right now — this is usually a temporary network issue.
               </p>
-              {/* Raw error string hidden — the friendly copy above is
-                  sufficient; projector/console noise is worse than useful. */}
               <div className="flex gap-3 mt-4">
                 <button
                   onClick={() => retryStatus()}
@@ -375,32 +287,24 @@ export default function AgentTab({
     );
   }
 
-  // ─── Beginner: compact Advisor surface (full cockpit is Standard+) ──
   if (experienceMode === "beginner") {
     return (
       <div className="space-y-4 pb-6">
         <GuardianStatusChip
-          onSetup={handleAskAgent}
+          onSetup={handleViewTimeline}
           onDeposit={onNavigateToFund}
-          onViewActivity={handleAskAgent}
+          onViewActivity={handleViewTimeline}
         />
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">
-            Ask your Advisor about your savings. Switch to Standard mode from Home for
-            full protection controls.
+            Guardian status lives here. Use the Ask Guardian button for explanations.
+            Switch to Standard mode from Home for full controls.
           </p>
-          <button
-            onClick={handleAskAgent}
-            className="w-full py-3 rounded-2xl bg-blue-600 text-white text-sm font-bold hover:bg-blue-700 transition-colors"
-          >
-            💬 Ask Advisor
-          </button>
         </div>
       </div>
     );
   }
 
-  // ─── Main fallthrough: standard / advanced dashboard ─────────────────
   return (
     <div className="space-y-4 pb-6">
       {renderDashboard()}

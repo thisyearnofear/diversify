@@ -27,6 +27,7 @@ import { VaultService, type RebalanceRecommendation } from '../../../packages/sh
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';
+import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -222,8 +223,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'stale_recommendation',
           reason: `Recommendation is ${Math.round(ageMinutes)} minutes old (max 60)`,
         });
-        // Clear stale recommendation
-        await updateGuardianState(userAddress, { latestRecommendation: undefined });
+        // Drop only this stale head; promote the next queued proposal if any.
+        await dequeueRecommendation(userAddress, recommendation.capturedAt).catch(() => {});
         continue;
       }
 
@@ -413,12 +414,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    let cycleMonitor: Awaited<ReturnType<typeof runCycleMonitor>> | null = null;
+    try {
+      cycleMonitor = await runCycleMonitor();
+    } catch (cycleErr: unknown) {
+      console.warn(
+        '[guardian-loop] cycle-monitor tick failed:',
+        cycleErr instanceof Error ? cycleErr.message : cycleErr,
+      );
+    }
+
     return res.status(200).json({
       success: true,
       timestamp: new Date().toISOString(),
       permissionsChecked: activePermissions.length,
       executionsAttempted: results.filter(r => r.action === 'executed' || r.action === 'attempted').length,
       executionsSucceeded: results.filter(r => r.status === 'success').length,
+      cycleMonitor,
       results,
     });
   } catch (error: any) {

@@ -7,10 +7,13 @@
 
 import { useState, useCallback, useEffect, useMemo, createContext, useContext, type ReactNode } from 'react';
 import type { FinancialStrategy } from '@diversifi/shared';
+import type { MoneyPurpose } from '@/constants/money-purpose';
 
 // ============================================================================
 // TYPES
 // ============================================================================
+
+export type { MoneyPurpose };
 
 export type UserGoal = 
   | 'inflation_protection' 
@@ -28,6 +31,8 @@ export interface ProtectionConfig {
   timeHorizon: TimeHorizon | null;
   /** Protection philosophy — single source of truth (replaces `financialStrategy` localStorage key). */
   philosophy: FinancialStrategy | null;
+  /** What this money is for — separate from values/philosophy. */
+  moneyPurpose: MoneyPurpose | null;
 }
 
 export type ProfileMode = 'editing' | 'viewing' | 'complete';
@@ -58,6 +63,7 @@ const DEFAULT_CONFIG: ProtectionConfig = {
   riskTolerance: null,
   timeHorizon: null,
   philosophy: null,
+  moneyPurpose: null,
 };
 
 const LEGACY_STRATEGY_KEY = 'financialStrategy';
@@ -182,6 +188,7 @@ function loadConfig(): ProtectionConfig {
         riskTolerance: parsed.riskTolerance || null,
         timeHorizon: parsed.timeHorizon || null,
         philosophy: parsed.philosophy || null,
+        moneyPurpose: parsed.moneyPurpose || null,
       });
     }
   } catch {
@@ -204,6 +211,16 @@ export function savePhilosophy(strategy: FinancialStrategy | null): void {
   } catch {
     // Ignore storage errors
   }
+}
+
+/** Persist money purpose into the protection profile. */
+export function saveMoneyPurpose(purpose: MoneyPurpose | null): void {
+  const config = loadConfig();
+  saveConfig({ ...config, moneyPurpose: purpose });
+}
+
+export function loadMoneyPurpose(): MoneyPurpose | null {
+  return loadConfig().moneyPurpose;
 }
 
 function saveConfig(config: ProtectionConfig): void {
@@ -440,6 +457,11 @@ function useProtectionProfileState() {
     setTimeHorizon: useCallback((time: TimeHorizon) => updateConfig('timeHorizon', time), [updateConfig]),
     setPhilosophy: useCallback(
       (philosophy: FinancialStrategy | null) => updateConfig('philosophy', philosophy),
+      [updateConfig],
+    ),
+
+    setMoneyPurpose: useCallback(
+      (purpose: MoneyPurpose | null) => updateConfig('moneyPurpose', purpose),
       [updateConfig],
     ),
 

@@ -18,7 +18,10 @@
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
 | `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
 | `/api/agent/zero-g-ledger` | GET/POST | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter. POST returns `{ status: 'anchored' \| 'pending' \| 'failed', txHash, explorerUrl, id? }`. |
-| `/api/agent/guardian-loop` | POST | Autonomous execution cron (server-to-server, secret-protected) |
+| `/api/agent/guardian-loop` | POST | Autonomous execution cron (server-to-server, secret-protected). Also runs the payment-cycle monitor tick inline (`cycleMonitor` in response). Pending actions live in a bounded `recommendationQueue` (head mirrored as `latestRecommendation`). |
+| `/api/agent/business/cycles` | GET/POST | Purchase-cycle CRUD. Requires wallet-signed headers (`x-wallet-auth-message` / `x-wallet-auth-signature`); address is derived server-side. Date pass → `payment_due`; `completed` requires `paymentOutcome`. |
+| `/api/agent/business/cycle-monitor` | POST | Standalone cycle-aware proposal tick (same logic as guardian-loop inline step); enqueues without overwriting unrelated pending recommendations |
+| `/api/agent/fx-cycle-report` | POST | Free in-app FX drag scenario: current mid-market rate + historical stress context (USD targets only). Not a forecast or locked quote. |
 | `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
 
 ## AI Providers

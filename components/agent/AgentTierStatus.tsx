@@ -10,6 +10,11 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
+import { GuardianMascot } from '@/components/shared/GuardianMascot';
+import {
+  deriveProtectionLifecycleState,
+  PROTECTION_STATE_LABELS,
+} from '@diversifi/shared/src/types/guardian-protection';
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentActivities } from "../../hooks/use-agent-activities";
 import { useAgentAnalysis } from "../../hooks/use-agent-analysis";
@@ -165,21 +170,23 @@ export function GuardianStatusChip({
           : 'border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20'
       } ${className}`}
       role="status"
-      aria-label={`Auto-Saver: ${copy.headline}`}
+      aria-label={`Guardian: ${copy.headline}`}
     >
       <div className="flex items-start gap-3">
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${
-            isActive ? 'bg-emerald-100 dark:bg-emerald-900/40' : 'bg-indigo-100 dark:bg-indigo-900/40'
-          }`}
-          aria-hidden="true"
-        >
-          {isActive ? '🛡️' : '🔒'}
-        </div>
+        <GuardianMascot
+          size={40}
+          mood={isActive ? 'happy' : 'neutral'}
+          className="shrink-0"
+        />
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-black text-gray-900 dark:text-white">
-            {copy.headline}
-          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-sm font-black text-gray-900 dark:text-white">
+              {copy.headline}
+            </h3>
+            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300">
+              {PROTECTION_STATE_LABELS[deriveProtectionLifecycleState(guardianState)]}
+            </span>
+          </div>
           <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">
             {copy.description}
           </p>
@@ -416,7 +423,7 @@ export const AgentTierStatus: React.FC<{
           tier: "GUARDIAN",
           description: hasExecuted
             ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || "target asset"}`
-            : "Auto-Saver received Advisor signal for follow-up review",
+            : "Auto-Saver received Guardian signal for follow-up review",
           status: hasExecuted ? "success" : "pending",
           details: {
             action: advice?.action,
@@ -702,15 +709,15 @@ export const AgentTierStatus: React.FC<{
             </span>
           </div>
           <h4 className="text-sm font-black text-gray-900 dark:text-gray-100 uppercase tracking-tight relative z-10 mt-2">
-            The Advisor
+            Guardian explains
           </h4>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 relative z-10">
             {isBeginner
-              ? "Explains risk and helps you act."
-              : "Unified analysis, chat, and quick actions."}
+              ? "Explains risk and helps you understand proposals."
+              : "Analysis, conversation, and context for protection moves."}
           </p>
           <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 relative z-10">
-            Produces the recommendation, rationale, and next action for the user or Guardian.
+            Produces recommendations and rationale for you or Auto-Saver to act on.
           </div>
           <div className="mt-3 flex flex-wrap gap-1.5 relative z-10">
             <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
@@ -871,7 +878,7 @@ export const AgentTierStatus: React.FC<{
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-2 text-xs font-bold text-blue-700 dark:text-blue-300">
             <span className="w-2 h-2 rounded-full bg-blue-500" />
-            Advisor recommends
+            Guardian proposes
           </div>
           <span className="text-xs text-gray-400">→</span>
           <div className="flex items-center gap-2 text-xs font-bold text-amber-700 dark:text-amber-300">

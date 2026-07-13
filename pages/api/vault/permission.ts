@@ -157,6 +157,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         executionCount: recentExecutions.length,
         recentExecutions,
         latestRecommendation: guardianState?.latestRecommendation || null,
+        recommendationQueue: guardianState?.recommendationQueue || (
+          guardianState?.latestRecommendation ? [guardianState.latestRecommendation] : []
+        ),
         latestAnchor: guardianState?.latestAnchor || null,
         latestAnchors: guardianState?.latestAnchors || [],
       });

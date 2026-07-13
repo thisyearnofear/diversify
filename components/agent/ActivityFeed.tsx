@@ -9,6 +9,7 @@ import React from "react";
 import { motion } from "framer-motion";
 import type { AgentActivity } from "../../hooks/agent-types";
 import { NETWORKS } from "../../config";
+import { GUARDIAN_TIMELINE_LABEL } from "@/constants/guardian-copy";
 
 export const ActivityFeed: React.FC<{
   activities: AgentActivity[];
@@ -37,6 +38,9 @@ export const ActivityFeed: React.FC<{
 
   return (
     <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 space-y-2">
+      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1">
+        {GUARDIAN_TIMELINE_LABEL}
+      </p>
       {activities.map((activity) => (
         <motion.div
           key={activity.id}

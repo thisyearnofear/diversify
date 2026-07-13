@@ -7,8 +7,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../../../lib/mongodb', () => ({ default: vi.fn(async () => {}) }));
 
 const findOneAndUpdate = vi.fn();
+const findOne = vi.fn();
 vi.mock('../../../../models/GuardianState', () => ({
-    GuardianState: { findOneAndUpdate: (...args: unknown[]) => findOneAndUpdate(...args) },
+    GuardianState: {
+        findOneAndUpdate: (...args: unknown[]) => findOneAndUpdate(...args),
+        findOne: (...args: unknown[]) => findOne(...args),
+    },
 }));
 
 /** A query-like return value that satisfies both `await q` and `q.lean()`. */
@@ -20,11 +24,14 @@ function queryResult(value: unknown) {
 
 import {
     MAX_ANCHOR_HISTORY,
+    MAX_RECOMMENDATION_QUEUE,
     pruneAlertCooldowns,
     pushAnchorHistory,
     claimExecutionLock,
     releaseExecutionLock,
     dequeueRecommendation,
+    mergeRecommendationQueue,
+    recommendationIdentityKey,
     type GuardianAnchorRecord,
 } from '../_guardian-state';
 
@@ -191,28 +198,83 @@ describe('execution lock (owner-checked release)', () => {
 describe('dequeueRecommendation (idempotency gate)', () => {
     beforeEach(() => {
         findOneAndUpdate.mockReset();
+        findOne.mockReset();
     });
 
-    it('returns true and atomically unsets the matched recommendation', async () => {
-        findOneAndUpdate.mockReturnValue(queryResult({ latestRecommendation: { capturedAt: 'R1' } }));
+    it('returns true and removes the matched recommendation from the queue', async () => {
+        findOne.mockReturnValue(queryResult({
+            userAddress: '0xabc',
+            latestRecommendation: { capturedAt: 'R1', source: 'proactive-yield', action: 'REBALANCE' },
+            recommendationQueue: [
+                { capturedAt: 'R1', source: 'proactive-yield', action: 'REBALANCE' },
+                { capturedAt: 'R0', source: 'cycle-monitor', action: 'CYCLE_PROTECTION', cycleId: 'c1' },
+            ],
+        }));
+        findOneAndUpdate.mockReturnValue(queryResult({ latestRecommendation: { capturedAt: 'R0' } }));
 
         const won = await dequeueRecommendation('0xABC', 'R1');
 
         expect(won).toBe(true);
         const [filter, update] = findOneAndUpdate.mock.calls[0];
-        expect(filter.userAddress).toBe('0xabc'); // normalized lowercase
-        // Claim is scoped to the EXACT recommendation by capturedAt — this is
-        // what makes a given recommendation executable at most once.
-        expect(filter['latestRecommendation.capturedAt']).toBe('R1');
-        expect(update).toEqual({ $unset: { latestRecommendation: '' } });
+        expect(filter.userAddress).toBe('0xabc');
+        expect(filter.$or).toEqual([
+            { 'latestRecommendation.capturedAt': 'R1' },
+            { 'recommendationQueue.capturedAt': 'R1' },
+        ]);
+        expect(update.$set.recommendationQueue).toEqual([
+            { capturedAt: 'R0', source: 'cycle-monitor', action: 'CYCLE_PROTECTION', cycleId: 'c1' },
+        ]);
+        expect(update.$set.latestRecommendation.capturedAt).toBe('R0');
     });
 
     it('returns false when the recommendation was already claimed/cleared', async () => {
-        // No document matched the capturedAt filter — another tick won first.
-        findOneAndUpdate.mockReturnValue(queryResult(null));
+        findOne.mockReturnValue(queryResult(null));
 
         const won = await dequeueRecommendation('0xabc', 'R1');
 
         expect(won).toBe(false);
+        expect(findOneAndUpdate).not.toHaveBeenCalled();
+    });
+});
+
+describe('recommendation queue helpers', () => {
+    it('mergeRecommendationQueue upserts by identity and keeps newest first', () => {
+        const queue = mergeRecommendationQueue(
+            [
+                { capturedAt: 'T1', source: 'proactive-yield', action: 'REBALANCE', targetToken: 'cEUR' },
+                { capturedAt: 'T0', source: 'cycle-monitor', action: 'CYCLE_PROTECTION', cycleId: 'c1' },
+            ],
+            { capturedAt: 'T2', source: 'proactive-yield', action: 'REBALANCE', targetToken: 'cEUR' },
+        );
+        expect(queue).toHaveLength(2);
+        expect(queue[0].capturedAt).toBe('T2');
+        expect(queue[1].cycleId).toBe('c1');
+    });
+
+    it('mergeRecommendationQueue caps at MAX_RECOMMENDATION_QUEUE', () => {
+        const existing = Array.from({ length: MAX_RECOMMENDATION_QUEUE }, (_, i) => ({
+            capturedAt: `T${i}`,
+            source: 'advisor-analysis' as const,
+            action: `A${i}`,
+        }));
+        const result = mergeRecommendationQueue(existing, {
+            capturedAt: 'NEW',
+            source: 'firecrawl-webhook',
+            action: 'REBALANCE',
+            targetToken: 'cEUR',
+        });
+        expect(result).toHaveLength(MAX_RECOMMENDATION_QUEUE);
+        expect(result[0].capturedAt).toBe('NEW');
+    });
+
+    it('recommendationIdentityKey scopes cycle proposals by cycleId', () => {
+        expect(
+            recommendationIdentityKey({
+                capturedAt: 'a',
+                source: 'cycle-monitor',
+                cycleId: 'abc',
+                action: 'CYCLE_PROTECTION',
+            }),
+        ).toBe('cycle-monitor:abc');
     });
 });

@@ -492,11 +492,13 @@ export default function InteractiveAdviceCard({ advice, onSelectAlternative, onE
                                             {alt.reasoning}
                                         </p>
 
-                                        {/* Alternative Metadata (Credibility) */}
+                                        {/* Alternative metadata — only when real sources exist on the advice object */}
+                                        {alt.comparisonVsPrimary && (
                                         <div className="mb-3 px-2 py-1 bg-gray-50 dark:bg-gray-800/50 rounded-lg flex items-center justify-between">
-                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Macro Proof</span>
-                                            <span className="text-xs font-mono text-blue-500">Source: WB Official 2024</span>
+                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Comparison</span>
+                                            <span className="text-xs font-mono text-blue-500">From portfolio analysis</span>
                                         </div>
+                                        )}
 
                                         {/* Comparison vs Primary */}
                                         {alt.comparisonVsPrimary && (
