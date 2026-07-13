@@ -28,12 +28,14 @@ import { HomeNav } from "../../shared/HomeNav";
 import { MoreOptions } from "../../shared/MoreOptions";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
-import { useStrategy } from "@/context/app/StrategyContext";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { ProtectionScorecard } from "./ProtectionScorecard";
 import { PaymentCycleReport } from "../protect/PaymentCycleReport";
+import ZakatCalculator from "../../portfolio/ZakatCalculator";
+import StrategyMetrics from "../../portfolio/StrategyMetrics";
+import RegionalRecommendations from "../../regional/RegionalRecommendations";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -364,6 +366,46 @@ export function ConnectedOverview({
         />
       )}
 
+      {/*
+        ── 2.55. STRATEGY METRICS + ZAKAT (philosophy-aware) ────────────
+        StrategyMetrics renders philosophy-aligned metrics (Pan-African
+        exposure, Sharia compliance, Buen Vivir harmony, etc.) right
+        below the scorecard. Zakat calculator augments the Islamic
+        Finance philosophy with the 2.5% nisab obligation — the
+        natural deliverable for a user who picked that philosophy.
+
+        `strategyMetricsData` converts `activePortfolio` (pie-chart
+        shape: region + value + color) into the percentage-exposure +
+        chains + tokens shape StrategyMetrics expects.
+      */}
+      {home.showStrategyMetrics && hasHoldings && (
+        <StrategyMetrics
+          portfolioData={{
+            regions: regionData.reduce<Record<string, number>>(
+              (acc, r) => {
+                acc[r.region] = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
+                return acc;
+              },
+              {},
+            ),
+            chains: Array.isArray((activePortfolio as { chains?: unknown }).chains)
+              ? ((activePortfolio as { chains: unknown[] }).chains
+                  .map((c) => (typeof c === "string" ? c : (c as { name?: string })?.name))
+                  .filter((c): c is string => typeof c === "string"))
+              : [],
+            tokens: (activePortfolio.allTokens ?? []).map((t) => ({
+              symbol: t.symbol,
+              balance: t.balance,
+              value: t.value,
+            })),
+          }}
+        />
+      )}
+
+      {home.showZakat && hasHoldings && (
+        <ZakatCalculator totalPortfolioValue={totalValue} />
+      )}
+
       {profileConfig.moneyPurpose === 'upcoming_payment' && (
         <PaymentCycleReport
           defaultLocalCurrency={currencyCode ?? undefined}
@@ -470,6 +512,36 @@ export function ConnectedOverview({
               />
             </>
           )}
+        </section>
+      )}
+
+      {/*
+        ── 3.5. REGIONAL INSIGHTS (geo-specific recommendations) ──────────
+        Compares the user's current regional allocation to the typical
+        pattern for their region (Africa / USA / Europe / LatAm / Asia).
+        Hidden in beginner mode to keep the page scannable; the
+        home-section flag ensures the gate is centralized alongside
+        every other visibility decision in `useHomeSections`.
+      */}
+      {home.showRegionalInsights && (
+        <section
+          id="regional-insights"
+          data-home-section="regional-insights"
+          className="scroll-mt-20"
+        >
+          <RegionalRecommendations
+            userRegion={userRegion}
+            currentAllocations={regionData.reduce<Record<string, number>>(
+              (acc, r) => {
+                acc[r.region] = totalValue > 0 ? r.value / totalValue : 0;
+                return acc;
+              },
+              {},
+            )}
+            onSelectToken={(token) =>
+              navigateToSwap({ fromToken: token, reason: `Add ${token} exposure` })
+            }
+          />
         </section>
       )}
 

@@ -93,6 +93,9 @@ export interface HomeSections {
   showInsightAccordion: boolean;
   showProtectionScorecard: boolean;
   showGuardianChip: boolean;
+  showStrategyMetrics: boolean;
+  showZakat: boolean;
+  showRegionalInsights: boolean;
 
   /** The "next best move" tip for the hero. */
   primaryTip: string | null;
@@ -239,6 +242,16 @@ export function useHomeSections({
     // to be meaningful). Renders the philosophy-aware protection summary.
     const showProtectionScorecard = hasHoldings;
     const showGuardianChip = hasHoldings && isBeginner;
+    // StrategyMetrics: philosophy-aligned breakdown (Pan-African exposure,
+    // Sharia compliance, etc.). Requires a chosen philosophy + portfolio.
+    const showStrategyMetrics = hasHoldings && profileConfig.philosophy !== null;
+    // Zakat calculator: Islamic Finance philosophy is the natural home for the
+    // 2.5% nisab obligation. Gated on the strategy key (`islamic`, not the
+    // `islamic_finance` archetype id).
+    const showZakat = hasHoldings && profileConfig.philosophy === "islamic";
+    // RegionalRecommendations: geo-specific token allocations + currency
+    // hedging rationale. Hidden in beginner mode (overloads the page).
+    const showRegionalInsights = hasHoldings && !isBeginner;
 
     // ── 5. Primary tip (next best move) ──────────────────────────────────
     // Mirrors the legacy buildTips() but is just a single line for the hero.
@@ -300,6 +313,9 @@ export function useHomeSections({
       showInsightAccordion,
       showProtectionScorecard,
       showGuardianChip,
+      showStrategyMetrics,
+      showZakat,
+      showRegionalInsights,
 
       primaryTip,
       primarySectionId: "protection-mix",
