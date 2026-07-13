@@ -27,6 +27,7 @@ import { HomeSection } from "../../shared/HomeSection";
 import { HomeNav } from "../../shared/HomeNav";
 import { MoreOptions } from "../../shared/MoreOptions";
 import { useHomeSections } from "@/hooks/use-home-sections";
+import { useMacroSignals } from "@/hooks/use-macro-signals";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
@@ -108,6 +109,14 @@ export function ConnectedOverview({
     userRegion,
     chainId,
   });
+
+  // ── Macro signals (Firecrawl-monitored central banks, yield trackers,
+  // depeg monitors) for the TradeIntelligence pill. Reuses the proof
+  // feed's cache — no new global fetch. Items are universal (impactAsset
+  // stripped to undefined), so the pill surfaces the latest fresh signal
+  // regardless of the user's corridor. The user gets screen space back
+  // 99% of the time; a 1-line pill appears when a fresh signal exists.
+  const { macroSignals } = useMacroSignals();
 
   const {
     diversificationScore,
@@ -646,10 +655,12 @@ export function ConnectedOverview({
                 - RiskMetrics: pure-props card showing liquidation
                   risk, IV, sentiment, vol trend for a single asset.
                 - TradeIntelligence: macro-signal pill. Smart-empty —
-                  returns null (0px) when there are no fresh,
-                  asset-relevant signals. Will wire to a real FX-events
-                  data source in a followup; for v1 the empty
-                  state means the user sees no extra UI weight.
+                  returns null (0px) when no fresh signal exists. The
+                  items come from `useMacroSignals()` which wraps the
+                  proof feed (no extra fetch) and filters for
+                  `MACRO_SIGNAL:*` actions. Items are universal
+                  (impactAsset stripped), so the pill shows the
+                  latest fresh signal regardless of corridor.
 
                 The 4 components are framed as "FX corridor" / "SME
                 working capital" tools, not crypto-trading. This is
@@ -660,7 +671,7 @@ export function ConnectedOverview({
                 <EmergingMarketsTracker showFictionalCTA={false} />
                 <PortfolioRiskWidget />
                 <RiskMetrics />
-                <TradeIntelligence items={[]} selectedAsset="FX" />
+                <TradeIntelligence items={macroSignals} selectedAsset="FX" />
               </div>
             )}
           </HomeSection>
