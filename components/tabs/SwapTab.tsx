@@ -104,6 +104,16 @@ export default function SwapTab({
   const [aiRecommendationReason, setAiRecommendationReason] = useState<
     string | null
   >(null);
+  // Inline banner shown when the wallet is being auto-switched to the
+  // prefilled source chain. Helps the user understand the chain
+  // change isn't accidental (especially the reverse-bridge case:
+  // user on Arbitrum, prefill says fromChainId=Celo, wallet moves
+  // to Celo). Auto-dismisses once the wallet chain actually changes,
+  // or on switch rejection.
+  const [autoSwitchNotice, setAutoSwitchNotice] = useState<{
+    chainName: string;
+    targetChainId: number;
+  } | null>(null);
 
   // Success celebration state
   const [showCelebration, setShowCelebration] = useState(false);
@@ -264,13 +274,28 @@ export default function SwapTab({
         switchNetwork &&
         !isMiniPay
       ) {
+        // Surface the auto-switch as an inline banner so the user
+        // understands the chain change isn't accidental. Reverse-
+        // bridge case (user on Arbitrum, prefill says fromChainId=
+        // Celo) is the most surprising — the wallet moves to a chain
+        // the user wasn't on, with no balance to bridge from, so
+        // context is essential.
+        const targetChainId = swapPrefill.fromChainId;
+        const chainName =
+          Object.values(NETWORKS).find((n) => n.chainId === targetChainId)
+            ?.name ?? `chain ${targetChainId}`;
+        setAutoSwitchNotice({ chainName, targetChainId });
+
         // Fire-and-forget: the form is already pre-filled, the wallet
         // switch is best-effort (user may reject the wallet prompt).
-        switchNetwork(swapPrefill.fromChainId).catch((err) => {
+        switchNetwork(targetChainId).catch((err) => {
           console.warn(
             "[SwapTab] auto-switch to fromChainId failed:",
             err
           );
+          // Clear the notice on rejection — the user will need to
+          // either retry or switch manually via the NetworkSwitcher.
+          setAutoSwitchNotice(null);
         });
       }
 
@@ -285,6 +310,19 @@ export default function SwapTab({
     switchNetwork,
     isMiniPay,
   ]);
+
+  // Auto-dismiss the auto-switch notice once the wallet chain has
+  // actually changed to the target. This is the success path — the
+  // user accepted the wallet prompt and the chain moved. Manual X
+  // and the rejection catch handle the other paths.
+  useEffect(() => {
+    if (
+      autoSwitchNotice &&
+      walletChainId === autoSwitchNotice.targetChainId
+    ) {
+      setAutoSwitchNotice(null);
+    }
+  }, [walletChainId, autoSwitchNotice]);
   // BUGFIX: Handle swap state changes with proper error prioritization
   useEffect(() => {
     // CRITICAL: Check error first and return early to prevent simultaneous success/error display
@@ -628,6 +666,27 @@ export default function SwapTab({
                 <button
                   onClick={() => setShowAiRecommendation(false)}
                   className="text-blue-400 font-bold"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {autoSwitchNotice && (
+              <div
+                className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 mb-4 rounded-xl flex justify-between items-start"
+                role="status"
+                aria-live="polite"
+                data-testid="auto-switch-notice"
+              >
+                <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                  🔄 Guardian is moving your wallet to{" "}
+                  {autoSwitchNotice.chainName} to sign the bridge
+                </p>
+                <button
+                  onClick={() => setAutoSwitchNotice(null)}
+                  className="text-amber-500 font-bold"
+                  aria-label="Dismiss"
                 >
                   ×
                 </button>

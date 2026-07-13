@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, cleanup, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import type { SwapPrefill } from "@/context/app/types";
@@ -293,6 +293,12 @@ import SwapTab from "../SwapTab";
 // ──────────────────────────────────────────────────────────────────────────
 
 describe("SwapTab prefill — wallet auto-switch", () => {
+  // Discoverable const: exact UX copy the auto-switch notice must render.
+  // Update here if the copy changes; the test below will fail loudly so
+  // the change is intentional, not silent.
+  const AUTO_SWITCH_NOTICE_COPY =
+    "Guardian is moving your wallet to Celo to sign the bridge";
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockSwapPrefill = null;
@@ -494,5 +500,32 @@ describe("SwapTab prefill — wallet auto-switch", () => {
     );
 
     warnSpy.mockRestore();
+  });
+
+  it("renders the auto-switch notice with the destination chain name when a bridge prefill arrives", () => {
+    // The notice is the UX feedback for the reverse-bridge case
+    // (user on Arbitrum, prefill says fromChainId=Celo) so the
+    // chain change isn't accidental. Lock the banner + copy as a
+    // contract: when a bridge prefill fires, the notice appears
+    // with the source chain's display name from NETWORKS.
+    const { rerender } = render(
+      <SwapTab userRegion="USA" inflationData={{}} />,
+    );
+
+    // Notice must NOT be visible on initial render — it's a side
+    // effect of the prefill consumer, not a default surface element.
+    expect(screen.queryByTestId("auto-switch-notice")).not.toBeInTheDocument();
+
+    mockSwapPrefill = {
+      fromToken: "cUSD",
+      toToken: "USDC",
+      fromChainId: 42220, // Celo (source — the chain we're moving to)
+      toChainId: 42161, // Arbitrum (destination)
+    };
+    rerender(<SwapTab userRegion="USA" inflationData={{}} />);
+
+    const notice = screen.getByTestId("auto-switch-notice");
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveTextContent(AUTO_SWITCH_NOTICE_COPY);
   });
 });
