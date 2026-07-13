@@ -83,7 +83,7 @@ interface BestYieldCardProps {
  */
 export function BestYieldCard({ userAddress, className = '' }: BestYieldCardProps) {
   const { data, isLoading, error } = useBestYield(userAddress);
-  const { focusedYieldKey, setFocusedYieldKey } = useNavigation();
+  const { focusedYieldKey, setFocusedYieldKey, navigateToSwap } = useNavigation();
   const [highlightedKey, setHighlightedKey] = useState<string | null>(null);
   const [activeChainIds, setActiveChainIds] = useState<Set<number>>(() => new Set());
   const rowRefs = useRef<Record<string, HTMLLIElement | null>>({});
@@ -265,6 +265,29 @@ export function BestYieldCard({ userAddress, className = '' }: BestYieldCardProp
                     GmDepositControl without relying on metadata.venue.
                     The legacy `metadata.venue` check stays until every
                     yield source emits a top-level `venue`/`actions` field. */}
+                {rec.chainId != null && (
+                  <button
+                    type="button"
+                    aria-label={`Review ${rec.title} in swap`}
+                    onClick={() => {
+                      // Token-resolution safety: never pre-fill a token
+                      // string here — BestYieldCard rows may carry
+                      // protocol-specific tokens (e.g. gmUSDC) that the
+                      // Mento/LI.FI indexed swap surface can't resolve
+                      // (thinker CRITICAL flag). Pre-selecting only the
+                      // destination chain lets the user pick a compatible
+                      // settlement token in the chain context. Source
+                      // chain defaults to the wallet's current chain.
+                      navigateToSwap({
+                        toChainId: rec.chainId,
+                        reason: `Yield on ${rec.chain ?? 'target chain'}: ${rec.title}`,
+                      });
+                    }}
+                    className="mt-2 w-full min-h-[44px] px-3 rounded-lg text-[11px] font-bold text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Review in Swap →
+                  </button>
+                )}
               </div>
               {apy != null && (
                 <div className="text-right shrink-0">

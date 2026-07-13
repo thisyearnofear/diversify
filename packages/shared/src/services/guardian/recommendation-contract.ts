@@ -7,6 +7,12 @@ import type { DataProvenance, GuardianRecommendationContract } from '../../types
 export interface PortfolioSwapContractInput {
   fromToken: string;
   toToken: string;
+  /**
+   * Destination-chain EVM chainId — forwarded into the typed
+   * `open_swap_review` payload so the drawer's handler can
+   * pre-select it on the swap surface without re-resolving.
+   */
+  chainId?: number;
   fromRegion?: string;
   fromInflation?: number;
   toInflation?: number;
@@ -78,6 +84,9 @@ export function buildPortfolioSwapContract(
       type: 'open_swap_review',
       fromToken: input.fromToken,
       toToken: input.toToken,
+      // Forward chainId when known so SwapTab can pre-select the
+      // destination network via swapPrefill.toChainId.
+      chainId: input.chainId,
       amount: input.suggestedAmountUsd != null ? String(Math.round(input.suggestedAmountUsd)) : undefined,
     },
   };

@@ -83,6 +83,18 @@ export type GuardianRecommendationAction =
       type: 'open_swap_review';
       fromToken?: string;
       toToken: string;
+      /**
+       * Destination-chain EVM chainId. Threaded into the swap
+       * prefill so Guardian-initiated cross-chain recommendations
+       * initialize on the target chain instead of defaulting to the
+       * wallet's currently connected chain (which often forces an
+       * extra switch losing the AI intent).
+       *
+       * Source chain defaults to the wallet's current chain; a future
+       * extension can add `fromChainId?: number` if Guardian needs to
+       * route withdrawals off a non-current chain.
+       */
+      chainId?: number;
       amount?: string;
       reason?: string;
     }

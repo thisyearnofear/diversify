@@ -734,9 +734,19 @@ export default function AIChat() {
                         const handleTypedAction = (a: GuardianRecommendationAction): void => {
                           switch (a.type) {
                             case 'open_swap_review':
+                              // chainId on the typed action is the
+                              // destination chain for Guardian's
+                              // recommended cross-chain swap. Thread
+                              // it into the swap prefill so the user
+                              // lands on the right network without an
+                              // extra switch losing the AI intent.
+                              // `SwapPrefill.toChainId` is already
+                              // `number | undefined`, so passing undefined
+                              // is a no-op for the swap consumer.
                               navigateToSwap({
                                 fromToken: a.fromToken,
                                 toToken: a.toToken,
+                                toChainId: a.chainId,
                                 amount: a.amount,
                                 reason: a.reason ?? activeGuardianReview.contract?.proposal
                                   ?? activeGuardianReview.summary,

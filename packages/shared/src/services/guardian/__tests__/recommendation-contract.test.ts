@@ -24,20 +24,6 @@ describe('recommendation-contract builders', () => {
     expect(c.proofTrail).toBeTruthy();
   });
 
-  it('marks non-executable yield as observed', () => {
-    const c = buildYieldAlertContract({
-      protocol: 'Foo',
-      chain: 'Celo',
-      symbol: 'MEME',
-      apy: 92,
-      tvlLabel: '$1M',
-      targetToken: null,
-    });
-    expect(c.lifecycleState).toBe('observed');
-    // Non-executable yield alerts are observations, noaction is appropriate
-    expect(c.action).toBeUndefined();
-  });
-
   it('yield with executable targetToken builds open_yield_review — not swap', () => {
     const c = buildYieldAlertContract({
       protocol: 'GMX',
@@ -58,6 +44,27 @@ describe('recommendation-contract builders', () => {
       // protocol/market pick, not a forced swap.
       expect('fromToken' in c.action).toBe(false);
       expect('amount' in c.action).toBe(false);
+    }
+  });
+
+  it('yield alert contract forwards chainId into the typed action payload', () => {
+    // Symmetric coverage with buildPortfolioSwapContract: when the
+    // producer passes chainId, the typed action payload carries it
+    // so the drawer's handler (or any future BestYieldCard
+    // affordance) can drive a chain-aware filter or swap route.
+    const c = buildYieldAlertContract({
+      protocol: 'GMX',
+      chain: 'Arbitrum',
+      chainId: 42161,
+      symbol: 'GLP',
+      apy: 18,
+      tvlLabel: '$120M',
+      targetToken: 'USDC',
+    });
+    if (c.action?.type === 'open_yield_review') {
+      expect(c.action.chainId).toBe(42161);
+    } else {
+      throw new Error('expected open_yield_review action');
     }
   });
 
@@ -120,5 +127,61 @@ describe('recommendation-contract builders', () => {
     } else {
       throw new Error('expected open_cycle_review action');
     }
+  });
+
+  it('portfolio swap contract forwards chainId into the typed action payload', () => {
+    // Guardian may recommend a cross-chain swap (e.g. cUSD on Celo →
+    // USDC on Base). The destination chainId is part of the typed
+    // action so the drawer's handler can pre-select it on the swap
+    // surface via SwapPrefill.toChainId.
+    const c = buildPortfolioSwapContract({
+      fromToken: 'cUSD',
+      toToken: 'USDC',
+      chainId: 8453, // Base
+      suggestedAmountUsd: 50,
+    });
+    if (c.action?.type === 'open_swap_review') {
+      expect(c.action.chainId).toBe(8453);
+      expect(c.action.toToken).toBe('USDC');
+    } else {
+      throw new Error('expected open_swap_review action');
+    }
+  });
+
+  it('portfolio swap contract without chainId leaves action.chainId undefined (back-compat)', () => {
+    // Older callers don't pass chainId — the typed action is
+    // optional on chainId, so back-compat paths still work without
+    // the swap prefill forcing a chain switch.
+    const c = buildPortfolioSwapContract({
+      fromToken: 'cUSD',
+      toToken: 'USDC',
+      suggestedAmountUsd: 50,
+      // No chainId — wallet-default chain.
+    });
+    if (c.action?.type === 'open_swap_review') {
+      expect(c.action.chainId).toBeUndefined();
+    } else {
+      throw new Error('expected open_swap_review action');
+    }
+  });
+
+  it('observed yield alert (no targetToken) does not build an action even with chainId', () => {
+    // Symmetric to the executable-branch test above: in the
+    // observed lifecycle, the action field is intentionally
+    // undefined regardless of chainId, because there is no
+    // destination for the user to act on yet. This documents the
+    // intentional asymmetry so a future refactor doesn't silently
+    // start building empty actions just because chainId is present.
+    const c = buildYieldAlertContract({
+      protocol: 'Foo',
+      chain: 'Celo',
+      chainId: 42220,
+      symbol: 'MEME',
+      apy: 92,
+      tvlLabel: '$1M',
+      targetToken: null,
+    });
+    expect(c.lifecycleState).toBe('observed');
+    expect(c.action).toBeUndefined();
   });
 });

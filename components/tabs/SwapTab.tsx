@@ -245,9 +245,46 @@ export default function SwapTab({
         setAiRecommendationReason(swapPrefill.reason);
         setShowAiRecommendation(true);
       }
+
+      // Auto-switch the wallet to the prefilled SOURCE chain
+      // (fromChainId) so the form is fully executable. The wallet must
+      // be on the source chain to sign the swap/bridge transaction.
+      //
+      // We deliberately do NOT switch on toChainId alone — for a yield
+      // review where only toChainId is set (e.g. BestYieldCard
+      // "Review in Swap"), the wallet is already the source for a
+      // bridge from the user's current chain to the yield's chain.
+      // Switching to the destination would strand the user with no
+      // source balance to bridge from.
+      //
+      // Skip for MiniPay (Celo-only, can't switch networks).
+      if (
+        swapPrefill.fromChainId &&
+        swapPrefill.fromChainId !== walletChainId &&
+        switchNetwork &&
+        !isMiniPay
+      ) {
+        // Fire-and-forget: the form is already pre-filled, the wallet
+        // switch is best-effort (user may reject the wallet prompt).
+        switchNetwork(swapPrefill.fromChainId).catch((err) => {
+          console.warn(
+            "[SwapTab] auto-switch to fromChainId failed:",
+            err
+          );
+        });
+      }
+
       setSwapPrefill(null);
     }
-  }, [swapPrefill, setSwapPrefill, setAiRecommendationReason, setShowAiRecommendation]);
+  }, [
+    swapPrefill,
+    setSwapPrefill,
+    setAiRecommendationReason,
+    setShowAiRecommendation,
+    walletChainId,
+    switchNetwork,
+    isMiniPay,
+  ]);
   // BUGFIX: Handle swap state changes with proper error prioritization
   useEffect(() => {
     // CRITICAL: Check error first and return early to prevent simultaneous success/error display
