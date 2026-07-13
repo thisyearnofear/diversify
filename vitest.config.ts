@@ -8,6 +8,10 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
     },
+    // setupFiles runs before each test file. The import registers
+    // @testing-library/react's auto-cleanup hook so component tests
+    // don't leak DOM between cases.
+    setupFiles: ['./vitest.setup.ts'],
     // Use jsdom for React component tests
     environmentMatchGlobs: [
       ['components/**/*.{test.ts,test.tsx}', 'jsdom'],

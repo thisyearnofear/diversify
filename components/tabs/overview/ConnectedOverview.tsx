@@ -30,6 +30,8 @@ import { useHomeSections } from "@/hooks/use-home-sections";
 import { useMacroSignals } from "@/hooks/use-macro-signals";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useAdvisor } from "@/hooks/use-advisor";
+import { useGraduationSignal } from "@/hooks/use-graduation-signal";
+import { BusinessPromptCard } from "@/components/business/BusinessPromptCard";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { ProtectionScorecard } from "./ProtectionScorecard";
@@ -194,6 +196,23 @@ export function ConnectedOverview({
   // 99% of the time; a 1-line pill appears when a fresh signal exists.
   const { macroSignals } = useMacroSignals();
 
+  // ── Graduation-funnel signal (Phase 4) — surfacing the retail→business
+  // graduation prompt for users whose on-chain activity looks like
+  // trader-pattern behaviour (cyclical deposits, local→USD corridor
+  // swaps, larger balance activity, or already-saved cycles). Non-
+  // prescriptive: shows a card with evidence chips and a "Why am I
+  // seeing this?" disclosure; the explore CTA scrolls to the FX
+  // Corridor section. SME-graduated users (moneyPurpose =
+  // upcoming_payment) already see the FX Corridor section, so the
+  // prompt is suppressed for them — the prompt is for the bridge, not
+  // a duplicate of the destination. Density-aware: returns null when
+  // no signal exists or the user already dismissed.
+  const {
+    data: graduationData,
+    isDismissed: graduationDismissed,
+    dismiss: dismissGraduationPrompt,
+  } = useGraduationSignal(address);
+
   const {
     diversificationScore,
     diversificationRating,
@@ -203,6 +222,18 @@ export function ConnectedOverview({
   } = activePortfolio;
 
   const hasHoldings = totalValue > 0;
+
+  // Graduation prompt only renders for: (a) a connected wallet, (b) a
+  // non-SME-graduated user (they already see the FX Corridor section),
+  // (c) server-confirmed shouldShow, (d) user has not dismissed, and
+  // (e) real signals parsed from data. Density-first: when all-true is
+  // not satisfied, the prompt is 0px — there's no empty placeholder.
+  const showGraduationPrompt =
+    Boolean(address) &&
+    profileConfig.moneyPurpose !== "upcoming_payment" &&
+    graduationData?.shouldShow === true &&
+    !graduationDismissed &&
+    graduationData.signals != null;
 
   // Track regime tip once per session (unchanged behaviour)
   useEffect(() => {
@@ -446,6 +477,31 @@ export function ConnectedOverview({
         <PaymentCycleReport
           defaultLocalCurrency={currencyCode ?? undefined}
           onAskGuardian={(prompt) => askAdvisor(prompt)}
+        />
+      )}
+
+      {/* ── GRADUATION PROMPT (Phase 4) ───────────────────────────────
+          Detected trader pattern surfaces here. Density-aware: 0px when
+          no signal OR user is SME-graduated OR dismissed. The explore
+          CTA scrolls to the FX Corridor section in the Insight Accordion
+          (the business section). The dismiss CTA is persistent — the
+          user's GuardianState is updated cross-device. */}
+      {showGraduationPrompt && graduationData && (
+        <BusinessPromptCard
+          confidence={graduationData.confidence}
+          signals={graduationData.signals}
+          onDismiss={dismissGraduationPrompt}
+          onExplore={() => {
+            // Find the FX Corridor HomeSection (its `id="business"` is
+            // bound by `sections.id`). If it's collapsed, the user can
+            // tap to expand after the scroll completes. Scrolling into
+            // view is enough — we don't force-open because that's
+            // opinionated state manipulation.
+            if (typeof document !== "undefined") {
+              const el = document.getElementById("business");
+              el?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+          }}
         />
       )}
 
