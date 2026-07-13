@@ -270,6 +270,80 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("fx-corridor-hint");
     });
 
+    it("suppresses goal-drift for first-visit SME-graduated users (lets the hint show first)", () => {
+      // Review nit: a persistent goal-drift state used to perpetually
+      // outrank the 50-priority fx-corridor-hint, so the user never
+      // discovered the FX Corridor section. Now: first-visit SME
+      // users (moneyPurpose=upcoming_payment + !dismissed) get the
+      // hint instead of goal-drift. Goal-drift returns after dismissal.
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "inflation_protection",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() =>
+        useHomeSections({
+          ...baseArgs(),
+          portfolio: basePortfolio({
+            goalScores: { hedge: 30, diversify: 30, rwa: 0 },
+          }) as any,
+        }),
+      );
+      // Without the nit fix this would be "goal-drift" (priority 60
+      // outranks 50). With the fix it's "fx-corridor-hint" because
+      // the user is a first-visit SME-graduated user.
+      expect(result.current.banner).toBe("fx-corridor-hint");
+    });
+
+    it("shows goal-drift for SME-graduated users after the hint is dismissed", () => {
+      // Once the hint is dismissed, goal-drift can take over (if the
+      // user is still in a drift state). The hint is one-time; goal-drift
+      // is ongoing.
+      window.localStorage.setItem(
+        "diversifi.fx_corridor_hint_dismissed",
+        "true",
+      );
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "inflation_protection",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() =>
+        useHomeSections({
+          ...baseArgs(),
+          portfolio: basePortfolio({
+            goalScores: { hedge: 30, diversify: 30, rwa: 0 },
+          }) as any,
+        }),
+      );
+      // After dismissal, the suppression gate clears and goal-drift
+      // resolves as the top-priority banner.
+      expect(result.current.banner).toBe("goal-drift");
+    });
+
+    it("still shows goal-drift for non-SME users with a drift state", () => {
+      // Backward-compat: users who are NOT SME-graduated (no
+      // moneyPurpose) get goal-drift as before. The suppression gate
+      // only applies to first-visit SME-graduated users.
+      mockUseProtectionProfile.mockReturnValue({
+        config: { userGoal: "inflation_protection" },
+        isComplete: true,
+      });
+      const { result } = renderHook(() =>
+        useHomeSections({
+          ...baseArgs(),
+          portfolio: basePortfolio({
+            goalScores: { hedge: 30, diversify: 30, rwa: 0 },
+          }) as any,
+        }),
+      );
+      expect(result.current.banner).toBe("goal-drift");
+    });
+
     it("cold-start outranks demo (a fresh connected user with no holdings and demo off)", () => {
       // Demo mode is the only banner triggered when isDemo is on; the cold-start
       // logic should not stack with demo. Verify the resolution is exactly one.

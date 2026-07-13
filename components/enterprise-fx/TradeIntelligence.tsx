@@ -30,6 +30,20 @@ export interface IntelligenceItem {
   id: string;
   type: "news" | "impact" | "alert";
   title: string;
+  /**
+   * Long-form description of the signal. The smart-empty pill only
+   * shows the title (1 line) — this field is not rendered in the
+   * current component. Kept for backward compat with the legacy
+   * 5-item feed (and any external callers that build items with
+   * a description). Safe to omit when constructing items for the
+   * new pill; the field is intentionally not marked optional so
+   * the type contract is explicit about "this field exists but is
+   * not used here."
+   *
+   * @deprecated Use `title` for the 1-line pill. Description is
+   * retained only for type compatibility with the legacy 5-item
+   * feed and external callers.
+   */
   description: string;
   impact?: "positive" | "negative" | "neutral";
   impactAsset?: string;

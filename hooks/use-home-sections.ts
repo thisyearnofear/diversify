@@ -201,11 +201,21 @@ export function useHomeSections({
       banner = "daily-claim";
       bannerPriority = Math.max(bannerPriority, DAILY_CLAIM_PRIORITY);
     }
+    // First-visit SME-graduated users (`moneyPurpose === 'upcoming_payment'`
+    // who haven't yet dismissed the FX Corridor hint) get the discovery
+    // hint first instead of goal-drift. The hint is a one-time nudge;
+    // goal-drift can take over once the hint is dismissed. Without this
+    // gate, a persistent goal-drift state would perpetually outrank the
+    // 50-priority fx-corridor-hint and the user would never discover the
+    // FX Corridor section.
+    const isFirstVisitSme =
+      profileConfig.moneyPurpose === "upcoming_payment" && !fxHintDismissed;
     if (
       profileComplete &&
       profileConfig.userGoal &&
       profileConfig.userGoal !== "exploring" &&
-      hasHoldings
+      hasHoldings &&
+      !isFirstVisitSme
     ) {
       // Goal drift overrides daily-claim but is overridden by cold-start.
       if (bannerPriority < GOAL_DRIFT_PRIORITY) {
