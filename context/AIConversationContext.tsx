@@ -11,6 +11,20 @@ const MUTED_UPDATE_TYPES_KEY = 'diversifi-guardian-muted-types';
 
 export type GuardianUpdateType = 'observation' | 'proposal' | 'alert' | 'claim' | 'yield';
 
+/**
+ * Type-specific expiry windows so a daily-claim notification does not linger
+ * for a week and a volatility alert is not still showing 6 hours later when
+ * the market has already calmed. Callers can still pass an explicit
+ * `expiresAt` to override (e.g. a payment-proposal tied to a specific date).
+ */
+const UPDATE_EXPIRY_MS: Record<GuardianUpdateType, number> = {
+  claim: 24 * 60 * 60 * 1000,        // 24 hours — UBI is daily
+  alert: 6 * 60 * 60 * 1000,          // 6 hours — volatility subsides
+  yield: 6 * 60 * 60 * 1000,          // 6 hours — APY spikes are short-lived
+  proposal: 7 * 24 * 60 * 60 * 1000,  // 7 days — payment proposals persist
+  observation: 48 * 60 * 60 * 1000,  // 48 hours — general observations
+};
+
 export interface GuardianUpdate {
   id: string;
   summary: string;
@@ -150,7 +164,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
         type: update.type,
         action: update.action,
         contract: update.contract,
-        expiresAt: update.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        expiresAt: update.expiresAt ?? new Date(Date.now() + (UPDATE_EXPIRY_MS[update.type] ?? UPDATE_EXPIRY_MS.observation)),
         dismissed: false,
         read: false,
       };

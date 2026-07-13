@@ -49,8 +49,6 @@ export default function ActionableRecommendation({
     onExecuteBridge,
     onAskGuardian,
 }: ActionableRecommendationProps) {
-    // All recommendation actions route to the quote/review surface first.
-    const onExecuteSwap = onReviewSwap;
     const portfolioTotalValue = portfolio?.totalValue ?? 0;
     const { status: junoStatus } = useJunoStatus();
     const { guardianState } = useGuardianTierSnapshot();
@@ -127,7 +125,7 @@ export default function ActionableRecommendation({
                 <PrimaryRecommendation
                     step={actionSteps[0]}
                     analysis={analysis}
-                    onExecute={onReviewSwap}
+                    onReviewSwap={onReviewSwap}
                 />
             )}
 
@@ -137,7 +135,7 @@ export default function ActionableRecommendation({
                 portfolio={portfolio}
                 junoConfigured={junoStatus?.configured ?? false}
                 junoMutationsEnabled={junoStatus?.mutationsEnabled ?? false}
-                onExecuteSwap={onExecuteSwap}
+                onReviewSwap={onReviewSwap}
             />
 
             {/* Cross-Chain Opportunities */}
@@ -152,7 +150,7 @@ export default function ActionableRecommendation({
             {analysis.rebalancingOpportunities.length > 0 && (
                 <RebalancingSection
                     opportunities={analysis.rebalancingOpportunities}
-                    onExecuteSwap={onExecuteSwap}
+                    onReviewSwap={onReviewSwap}
                 />
             )}
 
@@ -169,11 +167,11 @@ export default function ActionableRecommendation({
 function PrimaryRecommendation({
     step,
     analysis,
-    onExecute
+    onReviewSwap
 }: {
     step: ActionStep;
     analysis: PortfolioAnalysis;
-    onExecute: (from: string, to: string, amount: string, reason: string) => void;
+    onReviewSwap: (from: string, to: string, amount: string, reason: string) => void;
 }) {
     const isHighImpact = step.confidence === 'HIGH' && analysis.weightedInflationRisk > 5;
 
@@ -214,7 +212,7 @@ function PrimaryRecommendation({
 
                         {step.tokens && (
                             <button
-                                onClick={() => onExecute(
+                                onClick={() => onReviewSwap(
                                     step.tokens!.from,
                                     step.tokens!.to,
                                     step.tokens!.amount.replace('$', ''),
@@ -240,13 +238,13 @@ function BitsoMxnbOpportunity({
     portfolio,
     junoConfigured,
     junoMutationsEnabled,
-    onExecuteSwap
+    onReviewSwap
 }: {
     analysis: PortfolioAnalysis;
     portfolio: MultichainPortfolio | null;
     junoConfigured: boolean;
     junoMutationsEnabled: boolean;
-    onExecuteSwap: (from: string, to: string, amount: string, reason: string) => void;
+    onReviewSwap: (from: string, to: string, amount: string, reason: string) => void;
 }) {
     const totalValue = analysis.totalValue || portfolio?.totalValue || 0;
     const suggestedAmount = Math.max(10, Math.min(250, totalValue > 0 ? totalValue * 0.2 : 100));
@@ -296,7 +294,7 @@ function BitsoMxnbOpportunity({
                             <ConfidenceBadge level={junoConfigured ? 'HIGH' : 'MEDIUM'} />
                         </div>
                         <button
-                            onClick={() => onExecuteSwap(
+                            onClick={() => onReviewSwap(
                                 'USDC',
                                 'MXNB',
                                 suggestedAmount.toFixed(2),
@@ -362,10 +360,10 @@ function CrossChainSection({
 
 function RebalancingSection({
     opportunities,
-    onExecuteSwap
+    onReviewSwap
 }: {
     opportunities: RebalancingOpportunity[];
-    onExecuteSwap: (from: string, to: string, amount: string, reason: string) => void;
+    onReviewSwap: (from: string, to: string, amount: string, reason: string) => void;
 }) {
     // Show top 3 opportunities
     const topOpportunities = opportunities.slice(0, 3);
@@ -405,7 +403,7 @@ function RebalancingSection({
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-gray-700">${opp.suggestedAmount.toFixed(0)}</span>
                             <button
-                                onClick={() => onExecuteSwap(
+                                onClick={() => onReviewSwap(
                                     opp.fromToken,
                                     opp.toToken,
                                     opp.suggestedAmount.toFixed(2),

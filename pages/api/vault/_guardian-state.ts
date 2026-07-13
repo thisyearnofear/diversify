@@ -24,6 +24,12 @@ export interface GuardianRecommendationSnapshot {
    */
   tradeAmountUSD?: number;
   expectedSavings?: number;
+  /**
+   * Stable identity key stamped at enqueue time so the atomic pipeline
+   * update can dedup by key without a separate read. Computed by
+   * `recommendationIdentityKey()`.
+   */
+  identityKey?: string;
   confidence?: number;
   riskLevel?: string;
   protocol?: string;
@@ -321,20 +327,72 @@ export async function releaseExecutionLock(
 }
 
 /**
- * Enqueue a recommendation without clobbering unrelated pending proposals.
- * Upserts by identity key, newest-first, capped at `MAX_RECOMMENDATION_QUEUE`.
- * Mirrors queue head onto `latestRecommendation` for legacy readers.
+ * Atomically enqueue a recommendation without clobbering unrelated pending
+ * proposals or losing to a concurrent writer.
+ *
+ * Uses a MongoDB aggregation-pipeline update so the entire dedup-prepend-cap
+ * operation happens in a single server-side round-trip:
+ *
+ *  1. `$filter` the existing queue to drop any entry with the same
+ *     `identityKey` (the dedup).
+ *  2. `$concatArrays` the new entry (stamped with `identityKey`) at the front.
+ *  3. `$slice` to cap at `MAX_RECOMMENDATION_QUEUE`.
+ *  4. Set `latestRecommendation` to the new head.
+ *
+ * Because the whole mutation is one `findOneAndUpdate` call, two concurrent
+ * enqueues (e.g. cycle-monitor + firecrawl webhook) can no longer read the
+ * same queue and overwrite each other's merged result the way the old
+ * read-modify-write did.
+ *
+ * The `identityKey` field is stamped on the snapshot so the pipeline can
+ * match duplicates by that field. Legacy queue entries without `identityKey`
+ * are left in place (they'll be naturally evicted as the bounded queue
+ * overflows), which is acceptable — the atomicity guarantee is for concurrent
+ * *new* writes, not retroactive dedup of old data.
  */
 export async function enqueueRecommendation(
   userAddress: string,
   recommendation: GuardianRecommendationSnapshot,
 ): Promise<GuardianStateRecord> {
-  const existing = await getGuardianState(userAddress);
-  const queue = mergeRecommendationQueue(resolveRecommendationQueue(existing), recommendation);
-  return updateGuardianState(userAddress, {
-    recommendationQueue: queue,
-    latestRecommendation: queue[0],
-  });
+  await dbConnect();
+  const normalized = normalizeUserAddress(userAddress);
+  const identityKey = recommendationIdentityKey(recommendation);
+  const stamped: GuardianRecommendationSnapshot = { ...recommendation, identityKey };
+
+  const doc = await GuardianState.findOneAndUpdate(
+    { userAddress: normalized },
+    [
+      {
+        $set: {
+          recommendationQueue: {
+            $slice: [
+              {
+                $concatArrays: [
+                  [stamped],
+                  {
+                    $filter: {
+                      input: { $ifNull: ['$recommendationQueue', []] },
+                      as: 'item',
+                      cond: { $ne: ['$$item.identityKey', identityKey] },
+                    },
+                  },
+                ],
+              },
+              MAX_RECOMMENDATION_QUEUE,
+            ],
+          },
+        },
+      },
+      {
+        $set: {
+          latestRecommendation: { $arrayElemAt: ['$recommendationQueue', 0] },
+        },
+      },
+    ],
+    { new: true, upsert: true },
+  ).lean();
+
+  return toStateRecord(doc as Record<string, any> | null) ?? {};
 }
 
 /**
