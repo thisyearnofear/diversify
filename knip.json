@@ -1,0 +1,13 @@
+{
+  "ignore": [
+    "lib/openzeppelin-contracts/**",
+    "contracts/**",
+    "test/**",
+    "examples/**",
+    ".agents/**",
+    "docs/**"
+  ],
+  "ignoreBinaries": [],
+  "ignoreDependencies": [],
+  "ignoreWorkspaces": []
+}
