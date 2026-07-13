@@ -201,39 +201,42 @@ describe('dequeueRecommendation (idempotency gate)', () => {
         findOne.mockReset();
     });
 
-    it('returns true and removes the matched recommendation from the queue', async () => {
-        findOne.mockReturnValue(queryResult({
+    it('returns true and atomically removes the matched recommendation via pipeline update', async () => {
+        findOneAndUpdate.mockReturnValue(queryResult({
             userAddress: '0xabc',
-            latestRecommendation: { capturedAt: 'R1', source: 'proactive-yield', action: 'REBALANCE' },
-            recommendationQueue: [
-                { capturedAt: 'R1', source: 'proactive-yield', action: 'REBALANCE' },
-                { capturedAt: 'R0', source: 'cycle-monitor', action: 'CYCLE_PROTECTION', cycleId: 'c1' },
-            ],
+            latestRecommendation: { capturedAt: 'R0' },
+            recommendationQueue: [{ capturedAt: 'R0', source: 'cycle-monitor' }],
         }));
-        findOneAndUpdate.mockReturnValue(queryResult({ latestRecommendation: { capturedAt: 'R0' } }));
 
         const won = await dequeueRecommendation('0xABC', 'R1');
 
         expect(won).toBe(true);
-        const [filter, update] = findOneAndUpdate.mock.calls[0];
+        // No separate findOne — the pipeline update does everything in one call.
+        expect(findOne).not.toHaveBeenCalled();
+        const [filter, pipeline] = findOneAndUpdate.mock.calls[0];
         expect(filter.userAddress).toBe('0xabc');
         expect(filter.$or).toEqual([
             { 'latestRecommendation.capturedAt': 'R1' },
             { 'recommendationQueue.capturedAt': 'R1' },
         ]);
-        expect(update.$set.recommendationQueue).toEqual([
-            { capturedAt: 'R0', source: 'cycle-monitor', action: 'CYCLE_PROTECTION', cycleId: 'c1' },
-        ]);
-        expect(update.$set.latestRecommendation.capturedAt).toBe('R0');
+        // Pipeline is an array of stages — verify the $filter removes the
+        // matched capturedAt and the $arrayElemAt promotes the new head.
+        expect(Array.isArray(pipeline)).toBe(true);
+        expect(pipeline[0].$set.recommendationQueue.$filter).toBeDefined();
+        expect(pipeline[0].$set.recommendationQueue.$filter.cond).toEqual({
+            $ne: ['$$item.capturedAt', 'R1'],
+        });
+        expect(pipeline[1].$set.latestRecommendation).toEqual({
+            $arrayElemAt: ['$recommendationQueue', 0],
+        });
     });
 
     it('returns false when the recommendation was already claimed/cleared', async () => {
-        findOne.mockReturnValue(queryResult(null));
+        findOneAndUpdate.mockReturnValue(queryResult(null));
 
         const won = await dequeueRecommendation('0xabc', 'R1');
 
         expect(won).toBe(false);
-        expect(findOneAndUpdate).not.toHaveBeenCalled();
     });
 });
 

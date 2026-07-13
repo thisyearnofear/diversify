@@ -35,7 +35,7 @@ function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
   if (!report && !hasOutcome) return null;
 
   const title = hasPostEvent
-    ? 'Post-payment report'
+    ? 'Payment outcome recorded'
     : hasOutcome
       ? 'Payment recorded — outcome comparison pending'
       : 'Post-date illustrative snapshot';

@@ -64,14 +64,29 @@ export interface GuardianRecommendationContract {
   costsAndRisks?: string;
   proofTrail?: string;
   provenance?: DataProvenance;
-  action?: {
-    type: string;
-    label?: string;
-    fromToken?: string;
-    toToken?: string;
-    amount?: string;
-  };
+  action?: GuardianRecommendationAction;
 }
+
+/**
+ * Discriminated union for the action a user can take from a recommendation
+ * card. Each variant carries exactly the fields its handler needs, so the
+ * compiler catches missing payloads at the call site instead of at runtime.
+ */
+export type GuardianRecommendationAction =
+  | {
+      type: 'open_swap_review';
+      fromToken?: string;
+      toToken: string;
+      amount?: string;
+      reason?: string;
+    }
+  | {
+      type: 'open_cycle_review';
+      cycleId: string;
+    }
+  | {
+      type: 'observation_only';
+    };
 
 export function deriveProtectionLifecycleState(
   tierState: GuardianTierState,

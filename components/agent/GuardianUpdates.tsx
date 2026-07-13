@@ -15,6 +15,7 @@ export interface GuardianUpdatesProps {
   updates: GuardianUpdate[];
   onOpenReview: (update: GuardianUpdate) => void;
   onDismiss: (id: string) => void;
+  onSnooze: (id: string) => void;
   onMuteType: (type: GuardianUpdate['type']) => void;
 }
 
@@ -22,11 +23,14 @@ export function GuardianUpdates({
   updates,
   onOpenReview,
   onDismiss,
+  onSnooze,
   onMuteType,
 }: GuardianUpdatesProps) {
   const [expandedWhy, setExpandedWhy] = useState<string | null>(null);
+  const now = Date.now();
   const active = updates.filter(
-    (u) => !u.dismissed && u.expiresAt.getTime() > Date.now(),
+    (u) => !u.dismissed && u.expiresAt.getTime() > now &&
+      (!u.snoozedUntil || u.snoozedUntil.getTime() <= now),
   );
 
   if (active.length === 0) return null;
@@ -83,6 +87,13 @@ export function GuardianUpdates({
                   className="min-h-11 px-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Open review
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onSnooze(latest.id)}
+                  className="min-h-11 px-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  Snooze
                 </button>
                 <button
                   type="button"

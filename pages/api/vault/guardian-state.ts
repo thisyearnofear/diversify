@@ -34,7 +34,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let state = await getGuardianState(userAddress);
 
     if (latestRecommendation !== undefined && latestRecommendation !== null) {
-      state = await enqueueRecommendation(userAddress, latestRecommendation);
+      // Browser-originated recommendations are always manual-review — never
+      // eligible for Guardian auto-execution. Only trusted server-side
+      // writers (cron, firecrawl webhook, cycle-monitor) may enqueue
+      // guardian_eligible recommendations, and they call enqueueRecommendation
+      // directly, not through this HTTP endpoint.
+      const stamped = {
+        ...latestRecommendation,
+        executionEligibility: 'manual_review' as const,
+      };
+      state = await enqueueRecommendation(userAddress, stamped);
     } else if (latestRecommendation === null) {
       state = await updateGuardianState(userAddress, {
         latestRecommendation: undefined,

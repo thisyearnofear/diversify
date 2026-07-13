@@ -44,6 +44,7 @@ export function useAppShell() {
     guardianUpdates,
     openGuardianReview,
     dismissGuardianUpdate,
+    snoozeGuardianUpdate,
     muteGuardianUpdateType,
   } = useAdvisor();
 
@@ -104,6 +105,7 @@ export function useAppShell() {
     guardianUpdates,
     openGuardianReview,
     dismissGuardianUpdate,
+    snoozeGuardianUpdate,
     muteGuardianUpdateType,
 
     // Region

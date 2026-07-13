@@ -38,6 +38,8 @@ export interface GuardianUpdate {
   dismissed?: boolean;
   /** Opened for review but not yet resolved — stays in the inbox. */
   read?: boolean;
+  /** Snoozed until this timestamp — hidden from the tray but not dismissed. */
+  snoozedUntil?: Date;
 }
 
 interface AIConversationContextType {
@@ -59,6 +61,7 @@ interface AIConversationContextType {
   addGuardianUpdate: (update: Omit<GuardianUpdate, 'id' | 'timestamp' | 'expiresAt' | 'dismissed'> & { id?: string; timestamp?: Date; expiresAt?: Date }) => void;
   dismissGuardianUpdate: (id: string) => void;
   markGuardianUpdateRead: (id: string) => void;
+  snoozeGuardianUpdate: (id: string, until: Date) => void;
   muteGuardianUpdateType: (type: GuardianUpdateType) => void;
   mutedUpdateTypes: GuardianUpdateType[];
   activeGuardianReview: GuardianUpdate | null;
@@ -185,6 +188,12 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  const snoozeGuardianUpdate = useCallback((id: string, until: Date) => {
+    setGuardianUpdates((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, snoozedUntil: until } : u)),
+    );
+  }, []);
+
   const muteGuardianUpdateType = useCallback((type: GuardianUpdateType) => {
     setMutedUpdateTypes((prev) => (prev.includes(type) ? prev : [...prev, type]));
     setGuardianUpdates((prev) =>
@@ -280,6 +289,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     addGuardianUpdate,
     dismissGuardianUpdate,
     markGuardianUpdateRead,
+    snoozeGuardianUpdate,
     muteGuardianUpdateType,
     mutedUpdateTypes,
     activeGuardianReview,

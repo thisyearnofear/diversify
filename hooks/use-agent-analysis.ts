@@ -5,7 +5,7 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
-import { getWalletAuthHeaders } from "@/lib/wallet-auth";
+import { getCachedWalletAuth } from "@/lib/wallet-auth";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
 // full convention). 30s preserves the original AbortController budget for the
@@ -223,33 +223,36 @@ export function useAgentAnalysis({
             // Best-effort write of the analysis to guardian-state — 6s
             // budget is plenty for a same-origin POST and a hang here
             // shouldn't block the user from seeing the analysis result.
-            getWalletAuthHeaders(address, signMessage)
-              .then((authHeaders) => {
-                if (!authHeaders) return;
-                return fetchWithTimeout(
-                  `${apiBase}/api/vault/guardian-state`,
-                  {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", ...authHeaders },
-                    body: JSON.stringify({
-                      latestRecommendation: {
-                        capturedAt: new Date().toISOString(),
-                        source: "advisor-analysis",
-                        action: result.advice.action,
-                        targetToken: result.advice.targetToken || result.advice.token,
-                        oneLiner: result.advice.oneLiner,
-                        reasoning: result.advice.reasoning,
-                        expectedSavings: result.advice.expectedSavings,
-                        confidence: result.advice.confidence,
-                        riskLevel: result.advice.riskLevel,
-                        researchEvidence: result.advice.researchEvidence,
-                      },
-                    }),
+            // Uses cached auth only — never prompts for a signature.
+            const proof = getCachedWalletAuth(address);
+            if (proof) {
+              fetchWithTimeout(
+                `${apiBase}/api/vault/guardian-state`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
+                    "X-Wallet-Auth-Signature": proof.signature,
                   },
-                  GUARDIAN_STATE_TIMEOUT_MS,
-                );
-              })
-              .catch(() => {});
+                  body: JSON.stringify({
+                    latestRecommendation: {
+                      capturedAt: new Date().toISOString(),
+                      source: "advisor-analysis",
+                      action: result.advice.action,
+                      targetToken: result.advice.targetToken || result.advice.token,
+                      oneLiner: result.advice.oneLiner,
+                      reasoning: result.advice.reasoning,
+                      expectedSavings: result.advice.expectedSavings,
+                      confidence: result.advice.confidence,
+                      riskLevel: result.advice.riskLevel,
+                      researchEvidence: result.advice.researchEvidence,
+                    },
+                  }),
+                },
+                GUARDIAN_STATE_TIMEOUT_MS,
+              ).catch(() => {});
+            }
           }
           setTimeout(() => {
             updateState({

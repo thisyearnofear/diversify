@@ -114,6 +114,7 @@ vi.mock("@/hooks/use-advisor", () => ({
     unreadCount: 0,
     guardianUpdates: [],
     dismissGuardianUpdate: vi.fn(),
+    snoozeGuardianUpdate: vi.fn(),
     muteGuardianUpdateType: vi.fn(),
     ask: vi.fn(),
   }),
@@ -145,6 +146,7 @@ const baseShellState = {
   guardianUpdates: [],
   openGuardianReview: vi.fn(),
   dismissGuardianUpdate: vi.fn(),
+  snoozeGuardianUpdate: vi.fn(),
   muteGuardianUpdateType: vi.fn(),
   multichainPortfolio: {
     totalValue: 0,

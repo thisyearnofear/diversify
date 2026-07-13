@@ -190,6 +190,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
         reasoning: parsed.reasoning || `Signal: ${parsed.signal}. Source: ${url}`,
         confidence: parsed.confidence,
         riskLevel: parsed.confidence > 0.8 ? 'LOW' : 'MEDIUM',
+        executionEligibility: 'guardian_eligible',
       });
       guardianEventBus.publish({
         type: 'recommendation',

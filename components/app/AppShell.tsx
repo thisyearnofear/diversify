@@ -33,7 +33,7 @@ function AppShellInner() {
     experienceMode, setExperienceMode,
     address, isWhitelisted, isFarcaster, walletChainId,
     connectWallet, openAdvisor, unreadCount,
-    guardianUpdates, openGuardianReview, dismissGuardianUpdate, muteGuardianUpdateType,
+    guardianUpdates, openGuardianReview, dismissGuardianUpdate, snoozeGuardianUpdate, muteGuardianUpdateType,
     isMiniPay,
     openWalletTutorial, closeTutorial, isTutorialOpen,
     handleTranscription,
@@ -49,6 +49,7 @@ function AppShellInner() {
         guardianUpdates={guardianUpdates}
         onOpenGuardianReview={openGuardianReview}
         onDismissGuardianUpdate={dismissGuardianUpdate}
+        onSnoozeGuardianUpdate={(id) => snoozeGuardianUpdate(id, new Date(Date.now() + 60 * 60 * 1000))}
         onMuteGuardianUpdateType={muteGuardianUpdateType}
         experienceMode={experienceMode}
       />

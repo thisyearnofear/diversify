@@ -64,7 +64,6 @@ export function buildPortfolioSwapContract(
     proofTrail: 'After approval: transaction hash, ledger entry, and evidence anchor when available.',
     action: {
       type: 'open_swap_review',
-      label: 'Review swap',
       fromToken: input.fromToken,
       toToken: input.toToken,
       amount: input.suggestedAmountUsd != null ? String(Math.round(input.suggestedAmountUsd)) : undefined,
@@ -76,6 +75,7 @@ export function buildYieldAlertContract(
   input: YieldAlertContractInput,
 ): GuardianRecommendationContract {
   const executable = !!input.targetToken;
+  const targetToken = input.targetToken ?? undefined;
 
   return {
     lifecycleState: executable ? 'proposed' : 'observed',
@@ -94,11 +94,10 @@ export function buildYieldAlertContract(
     proofTrail: executable
       ? 'Dry-run preview, then on-chain receipt if you approve within bounds.'
       : 'Observation only — no execution path.',
-    action: executable
+    action: executable && targetToken
       ? {
           type: 'open_swap_review',
-          label: 'Review swap',
-          toToken: input.targetToken ?? undefined,
+          toToken: targetToken,
         }
       : undefined,
   };
@@ -134,10 +133,8 @@ export function buildCycleProtectionContract(
     proofTrail: 'Post-payment: cycle drag report and on-chain receipts for any executed protection.',
     provenance: input.provenance,
     action: {
-      type: 'open_swap_review',
-      label: 'Review protection',
-      toToken: input.targetCurrency === 'USD' ? 'cUSD' : input.targetCurrency,
-      amount: String(Math.round(input.targetAmountUsd)),
+      type: 'open_cycle_review',
+      cycleId: `${input.localCurrency}-${input.targetCurrency}-${input.paymentDate}`,
     },
   };
 }

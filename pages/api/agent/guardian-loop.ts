@@ -59,6 +59,9 @@ function isAutoExecutableCandidate(
   recommendation: GuardianRecommendationSnapshot,
   allowedTokens: string[] | undefined,
 ): boolean {
+  // Only trusted server-side recommendations are eligible for auto-execution.
+  // Browser-originated writes are stamped `manual_review` by the HTTP endpoint.
+  if (recommendation.executionEligibility !== 'guardian_eligible') return false;
   if ((recommendation.confidence ?? 0) < CONFIDENCE_THRESHOLD) return false;
   if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) return false;
   return isTokenAllowed(recommendation, allowedTokens);

@@ -86,6 +86,8 @@ export async function runCycleMonitor(now = new Date()): Promise<CycleMonitorSum
       paymentDate: paymentIso,
       localCurrency: cycle.localCurrency,
       targetAmountUsd: cycle.targetAmountUsd,
+      // Advisory-only — no tradeAmountUSD, so never auto-executable.
+      executionEligibility: 'manual_review' as const,
       contract,
     };
 

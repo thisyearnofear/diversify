@@ -23,6 +23,7 @@ export interface FloatingControlsProps {
   guardianUpdates: GuardianUpdate[];
   onOpenGuardianReview: (id: string) => void;
   onDismissGuardianUpdate: (id: string) => void;
+  onSnoozeGuardianUpdate: (id: string) => void;
   onMuteGuardianUpdateType: (type: GuardianUpdate['type']) => void;
 }
 
@@ -33,19 +34,27 @@ export default function FloatingControls({
   guardianUpdates = [],
   onOpenGuardianReview,
   onDismissGuardianUpdate,
+  onSnoozeGuardianUpdate,
   onMuteGuardianUpdateType,
 }: FloatingControlsProps) {
-  const [prevUnread, setPrevUnread] = useState(unreadCount);
+  const showGuardianFab = true;
+  // Active (non-dismissed, non-expired) updates stay in the tray for review.
+  const activeUpdates = guardianUpdates.filter(
+    (u) => !u.dismissed && u.expiresAt.getTime() > Date.now(),
+  );
+  // Unread updates drive the badge and the alert mood. A read-but-unresolved
+  // proposal remains in the tray without looking like a new alert.
+  const unreadUpdates = activeUpdates.filter((u) => !u.read);
+  const badgeCount = Math.max(unreadCount, unreadUpdates.length);
+
+  const [prevBadge, setPrevBadge] = useState(badgeCount);
   const [bounceKey, setBounceKey] = useState(0);
   useEffect(() => {
-    if (unreadCount > prevUnread) {
+    if (badgeCount > prevBadge) {
       setBounceKey((k) => k + 1);
     }
-    setPrevUnread(unreadCount);
-  }, [unreadCount, prevUnread]);
-
-  const showGuardianFab = true;
-  const activeUpdates = guardianUpdates.filter((u) => !u.dismissed);
+    setPrevBadge(badgeCount);
+  }, [badgeCount, prevBadge]);
 
   return (
     <>
@@ -59,6 +68,7 @@ export default function FloatingControls({
         updates={activeUpdates}
         onOpenReview={(update) => onOpenGuardianReview(update.id)}
         onDismiss={onDismissGuardianUpdate}
+        onSnooze={onSnoozeGuardianUpdate}
         onMuteType={onMuteGuardianUpdateType}
       />
 
@@ -77,11 +87,11 @@ export default function FloatingControls({
       >
         <GuardianMascot
           size={30}
-          mood={unreadCount > 0 || activeUpdates.length > 0 ? "alert" : "neutral"}
+          mood={badgeCount > 0 ? "alert" : "neutral"}
           className="shrink-0"
         />
         <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">{ASK_GUARDIAN_LABEL}</span>
-        {(unreadCount > 0 || activeUpdates.length > 0) && (
+        {badgeCount > 0 && (
           <motion.span
             key={`badge-${bounceKey}`}
             initial={{ scale: 0.6, opacity: 0 }}
@@ -89,7 +99,7 @@ export default function FloatingControls({
             transition={{ duration: 0.25, ease: "easeOut" }}
             className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
           >
-            {Math.max(unreadCount, activeUpdates.length) > 9 ? "9+" : Math.max(unreadCount, activeUpdates.length)}
+            {badgeCount > 9 ? "9+" : badgeCount}
           </motion.span>
         )}
       </motion.button>

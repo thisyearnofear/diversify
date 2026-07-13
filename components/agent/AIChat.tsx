@@ -386,6 +386,7 @@ export default function AIChat() {
     addUserMessage,
     activeGuardianReview,
     setActiveGuardianReview,
+    snoozeGuardianUpdate,
   } = useAIConversation();
   const { key: userGeminiKey, save: saveGeminiKey } = useUserGeminiKey();
   const { capabilities, autonomousStatus } = useAgentStatus();
@@ -707,28 +708,41 @@ export default function AIChat() {
                     <p className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
                       Guardian review
                     </p>
-                    {activeGuardianReview.contract ? (
-                      <GuardianRecommendationCard
-                        contract={activeGuardianReview.contract}
-                        onReview={
-                          activeGuardianReview.contract.action?.type === 'open_swap_review'
+                    {activeGuardianReview.contract ? (() => {
+                        const action = activeGuardianReview.contract.action;
+                        const onReview = action?.type === 'open_swap_review'
+                          ? () => {
+                              navigateToSwap({
+                                fromToken: action.fromToken,
+                                toToken: action.toToken,
+                                amount: action.amount,
+                                reason: activeGuardianReview.contract?.proposal
+                                  ?? activeGuardianReview.summary,
+                              });
+                              setActiveGuardianReview(null);
+                              setDrawerOpen(false);
+                            }
+                          : action?.type === 'open_cycle_review'
                             ? () => {
-                                const action = activeGuardianReview.contract?.action;
-                                navigateToSwap({
-                                  fromToken: action?.fromToken,
-                                  toToken: action?.toToken,
-                                  amount: action?.amount,
-                                  reason: activeGuardianReview.contract?.proposal
-                                    ?? activeGuardianReview.summary,
-                                });
+                                setActiveTab('protect');
                                 setActiveGuardianReview(null);
                                 setDrawerOpen(false);
                               }
-                            : undefined
-                        }
-                        onDismiss={() => setActiveGuardianReview(null)}
+                            : undefined;
+                        return (
+                      <GuardianRecommendationCard
+                        contract={activeGuardianReview.contract}
+                        onReview={onReview}
+                        onDismiss={() => {
+                          // Snooze for 1 hour — the update stays in the
+                          // background but stops nagging. Guardian keeps
+                          // monitoring; the user can find it again later.
+                          snoozeGuardianUpdate(activeGuardianReview.id, new Date(Date.now() + 60 * 60 * 1000));
+                          setActiveGuardianReview(null);
+                        }}
                       />
-                    ) : (
+                        );
+                      })() : (
                       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">
                         <p className="text-sm font-bold text-gray-900 dark:text-white">{activeGuardianReview.summary}</p>
                         {activeGuardianReview.detail && (

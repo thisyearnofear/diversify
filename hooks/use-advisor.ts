@@ -12,7 +12,7 @@ import type { AIMessage } from './agent-types';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export function useAdvisor() {
-  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount, addGuardianUpdate, dismissGuardianUpdate, markGuardianUpdateRead, muteGuardianUpdateType, guardianUpdates, setActiveGuardianReview } = useAIConversation();
+  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount, addGuardianUpdate, dismissGuardianUpdate, markGuardianUpdateRead, snoozeGuardianUpdate, muteGuardianUpdateType, guardianUpdates, setActiveGuardianReview } = useAIConversation();
   const { capabilities } = useAgentStatus();
   const { config } = useAgentConfig();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
@@ -164,6 +164,7 @@ export function useAdvisor() {
     unreadCount,
     guardianUpdates,
     dismissGuardianUpdate,
+    snoozeGuardianUpdate,
     muteGuardianUpdateType,
     ask: askAdvisor,
   };

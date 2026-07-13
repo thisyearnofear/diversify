@@ -12,7 +12,7 @@ import {
   shouldProposeCycleProtection,
 } from '@diversifi/shared/src/services/guardian/recommendation-contract';
 import type { PurchaseCycleRecord } from '@diversifi/shared/src/types/purchase-cycle';
-import { getWalletAuthHeaders } from '@/lib/wallet-auth';
+import { getCachedWalletAuth } from '@/lib/wallet-auth';
 
 type YieldOpportunity = {
   protocol: string;
@@ -49,22 +49,27 @@ function getExecutableTargetToken(symbol: string): string | null {
  * server. Replaces the old per-browser `localStorage` map. Returns a
  * `shouldSend(alertId, cooldownMs?)` check and a `markSent(alertId)` writer.
  *
+ * CRITICAL: This hook runs in the global background monitoring loop. It must
+ * NEVER trigger a wallet signature prompt — background monitoring is not
+ * user-initiated. It uses `getCachedWalletAuth` only; if no cached proof
+ * exists, the server cooldown read/write is skipped and an in-memory fallback
+ * is used instead. The proof is established when the user explicitly unlocks
+ * saved cycles or enables monitoring — both are user-initiated actions that
+ * already call `getWalletAuthHeaders` with a `signMessage` callback.
+ *
  * Behaviour:
  *  - On mount (and on address change) the current cooldown map is fetched
- *    once via GET /api/vault/guardian-state.
- *  - `markSent` POSTs `{ recordAlert: { alertId, firedAt } }` and updates
- *    local state optimistically so the rest of the loop doesn't have to
- *    wait for the round-trip.
+ *    once via GET /api/vault/guardian-state IF a cached proof exists.
+ *  - `markSent` POSTs `{ recordAlert: { alertId, firedAt } }` IF a cached
+ *    proof exists. Updates local state optimistically either way.
  *  - `shouldSend` accepts an optional `cooldownMs` per call so different
  *    alert types can use different windows (yield is 6h, UBI is 24h, etc.)
  *    without changing the hook signature. The default is 6h to match the
  *    historical behaviour.
- *  - When no wallet is connected, both helpers are no-ops. This matches
- *    the previous behaviour (the loop was guarded by `if (targetToken && address)`).
+ *  - When no wallet is connected, both helpers are no-ops.
  */
 function useAlertCooldown(
   userAddress: string | null | undefined,
-  signMessage?: (message: string) => Promise<string>,
 ): {
     shouldSend: (alertId: string, cooldownMs?: number) => boolean;
     markSent: (alertId: string) => void;
@@ -81,11 +86,18 @@ function useAlertCooldown(
         let cancelled = false;
         (async () => {
             try {
-                const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
-                if (!authHeaders || cancelled) return;
+                // Cached auth only — never prompt for a signature in the
+                // background monitoring loop.
+                const proof = getCachedWalletAuth(userAddress);
+                if (!proof || cancelled) return;
                 const res = await fetchWithTimeout(
                     `${API_BASE}/api/vault/guardian-state`,
-                    { headers: authHeaders },
+                    {
+                        headers: {
+                            'X-Wallet-Auth-Message': encodeURIComponent(proof.message),
+                            'X-Wallet-Auth-Signature': proof.signature,
+                        },
+                    },
                     GUARDIAN_STATE_FETCH_TIMEOUT_MS,
                 );
                 if (!res.ok || cancelled) return;
@@ -101,7 +113,7 @@ function useAlertCooldown(
         return () => {
             cancelled = true;
         };
-    }, [API_BASE, userAddress, signMessage]);
+    }, [API_BASE, userAddress]);
 
     const shouldSend = useCallback(
         (alertId: string, cooldownMs: number = YIELD_ALERT_COOLDOWN_MS) => {
@@ -120,13 +132,18 @@ function useAlertCooldown(
             setCooldowns((prev) => ({ ...prev, [alertId]: firedAt }));
             (async () => {
                 try {
-                    const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
-                    if (!authHeaders) return;
+                    // Cached auth only — never prompt for a signature here.
+                    const proof = getCachedWalletAuth(userAddress);
+                    if (!proof) return;
                     await fetchWithTimeout(
                         `${API_BASE}/api/vault/guardian-state`,
                         {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json', ...authHeaders },
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Wallet-Auth-Message': encodeURIComponent(proof.message),
+                                'X-Wallet-Auth-Signature': proof.signature,
+                            },
                             body: JSON.stringify({
                                 recordAlert: { alertId, firedAt },
                             }),
@@ -138,7 +155,7 @@ function useAlertCooldown(
                 }
             })();
         },
-        [API_BASE, userAddress, signMessage],
+        [API_BASE, userAddress],
     );
 
     return { shouldSend, markSent };
@@ -160,12 +177,13 @@ function useAlertCooldown(
 export function useProactiveAgent() {
   const { config } = useAgentConfig();
   const { publishAdvisorUpdate } = useAdvisor();
-  const { address, signMessage } = useWalletContext();
+  const { address } = useWalletContext();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   // Per-user alert cooldowns. Server-backed, so the 6h guarantee survives
-  // device switches, not just session reloads.
-  const { shouldSend: shouldSendAlert, markSent: markAlertSent } = useAlertCooldown(address, signMessage);
+  // device switches, not just session reloads. Uses cached auth only — never
+  // prompts for a signature during background monitoring.
+  const { shouldSend: shouldSendAlert, markSent: markAlertSent } = useAlertCooldown(address);
 
   // GoodDollar Integration
   const { canClaim, estimatedReward, alreadyClaimedOnChain } = useStreakRewards();
@@ -226,11 +244,19 @@ export function useProactiveAgent() {
 
     const checkCycles = async () => {
       try {
-        const authHeaders = await getWalletAuthHeaders(address, signMessage);
-        if (!authHeaders) return;
+        // Cached auth only — background monitoring must never trigger a
+        // signature prompt. If the user hasn't unlocked cycles yet, this
+        // is a no-op; the cycle-monitor-run on the server covers the gap.
+        const proof = getCachedWalletAuth(address);
+        if (!proof) return;
         const res = await fetchWithTimeout(
           `${API_BASE}/api/agent/business/cycles`,
-          { headers: authHeaders },
+          {
+            headers: {
+              'X-Wallet-Auth-Message': encodeURIComponent(proof.message),
+              'X-Wallet-Auth-Signature': proof.signature,
+            },
+          },
           GUARDIAN_STATE_FETCH_TIMEOUT_MS,
         );
         if (!res.ok || cancelled) return;
@@ -262,7 +288,6 @@ export function useProactiveAgent() {
             content: message,
             type: 'recommendation',
             openDrawer: false,
-            action: { type: 'guardian_review' },
             guardianUpdate: {
               summary: contract.proposal ?? `Payment cycle in ${daysUntil} days`,
               detail: message,
@@ -286,7 +311,7 @@ export function useProactiveAgent() {
       clearTimeout(t);
       clearInterval(interval);
     };
-  }, [API_BASE, address, signMessage, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
+  }, [API_BASE, address, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
 
   // Real Market & Yield Monitoring Loop
   useEffect(() => {
@@ -374,13 +399,19 @@ export function useProactiveAgent() {
                   : `$${(best.tvl / 1e3).toFixed(0)}k`;
 
                 if (targetToken && address) {
-                  const authHeaders = await getWalletAuthHeaders(address, signMessage);
-                  if (authHeaders) {
+                  // Cached auth only — this is a background monitoring loop,
+                  // not a user-initiated action. Never prompt for a signature.
+                  const proof = getCachedWalletAuth(address);
+                  if (proof) {
                     fetchWithTimeout(
                       `${API_BASE}/api/vault/guardian-state`,
                       {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', ...authHeaders },
+                        headers: {
+                          'Content-Type': 'application/json',
+                          'X-Wallet-Auth-Message': encodeURIComponent(proof.message),
+                          'X-Wallet-Auth-Signature': proof.signature,
+                        },
                         body: JSON.stringify({
                           latestRecommendation: {
                             capturedAt: new Date().toISOString(),
@@ -418,9 +449,6 @@ export function useProactiveAgent() {
                     content: yieldMessage,
                     type: 'recommendation',
                     openDrawer: false,
-                    action: {
-                      type: 'guardian_review',
-                    },
                     guardianUpdate: {
                       summary: yieldContract.proposal ?? `Yield alert: ${best.apy.toFixed(1)}% APY`,
                       detail: yieldMessage,
@@ -473,5 +501,5 @@ export function useProactiveAgent() {
     return () => {
       clearInterval(monitoringInterval);
     };
-  }, [API_BASE, address, signMessage, publishAdvisorUpdate, shouldSendAlert, markAlertSent, volatilityThreshold, yieldThreshold]);
+  }, [API_BASE, address, publishAdvisorUpdate, shouldSendAlert, markAlertSent, volatilityThreshold, yieldThreshold]);
 }

@@ -32,6 +32,15 @@ export interface GuardianRecommendationSnapshot {
   identityKey?: string;
   confidence?: number;
   riskLevel?: string;
+  /**
+   * Whether this recommendation may be auto-executed by the Guardian loop.
+   * Browser-originated writes via the HTTP endpoint are always stamped
+   * `manual_review` — only trusted server-side writers (cron, firecrawl
+   * webhook, cycle-monitor) may set `guardian_eligible`. The Guardian loop
+   * checks this field before auto-executing; a client-fabricated item with
+   * high confidence and a trade amount is still never auto-executed.
+   */
+  executionEligibility?: 'manual_review' | 'guardian_eligible';
   protocol?: string;
   chain?: string;
   marketSymbol?: string;
@@ -400,13 +409,23 @@ export async function enqueueRecommendation(
  * Returns true if THIS caller removed it, false if it was already gone — i.e.
  * another concurrent tick claimed it, or it was already cleared.
  *
+ * Uses a single MongoDB aggregation-pipeline `findOneAndUpdate` so the
+ * filter-and-rebuild happens server-side. Two concurrent dequeues targeting
+ * different `capturedAt` values can no longer read the same old document and
+ * restore each other's removed item the way the old read-modify-write did:
+ *
+ *   worker 1 removes A from [A, B] → [B]
+ *   worker 2 removes B from [A, B] → [A]   (stale read in the old code)
+ *
+ * With the pipeline update, worker 2's `$filter` runs against the document
+ * AFTER worker 1's write committed, so it sees [B] and returns an empty
+ * result — the recommendation is already gone.
+ *
  * Matching on `capturedAt` makes this the idempotency gate for auto-execution:
  * the recommendation is removed BEFORE the swap runs, so a given recommendation
- * can be executed at most once even if a slow `rebalance()` overran the
- * execution lock's staleness window and a second tick reclaimed the lock — that
- * tick finds the recommendation already gone and skips. It also means a swap
- * that may have already landed on-chain before a post-submit failure is never
- * blindly retried (the recommendation is already dequeued).
+ * can be executed at most once. The recommendation is already dequeued when a
+ * swap that may have landed on-chain before a post-submit failure is never
+ * blindly retried.
  *
  * With a multi-entry queue, only the matched entry is removed; the next head
  * is promoted to `latestRecommendation`.
@@ -418,32 +437,7 @@ export async function dequeueRecommendation(
   await dbConnect();
   const normalized = normalizeUserAddress(userAddress);
 
-  const doc = await GuardianState.findOne({
-    userAddress: normalized,
-    $or: [
-      { 'latestRecommendation.capturedAt': capturedAt },
-      { 'recommendationQueue.capturedAt': capturedAt },
-    ],
-  }).lean();
-
-  if (!doc) return false;
-
-  const queue = resolveRecommendationQueue(toStateRecord(doc as Record<string, any>));
-  if (!queue.some((r) => r.capturedAt === capturedAt)) return false;
-
-  const nextQueue = queue.filter((r) => r.capturedAt !== capturedAt);
-  const $set: Record<string, unknown> = { recommendationQueue: nextQueue };
-  const $unset: Record<string, ''> = {};
-  if (nextQueue[0]) {
-    $set.latestRecommendation = nextQueue[0];
-  } else {
-    $unset.latestRecommendation = '';
-  }
-
-  const update: Record<string, unknown> = { $set };
-  if (Object.keys($unset).length > 0) update.$unset = $unset;
-
-  const res = await GuardianState.findOneAndUpdate(
+  const doc = await GuardianState.findOneAndUpdate(
     {
       userAddress: normalized,
       $or: [
@@ -451,8 +445,25 @@ export async function dequeueRecommendation(
         { 'recommendationQueue.capturedAt': capturedAt },
       ],
     },
-    update,
+    [
+      {
+        $set: {
+          recommendationQueue: {
+            $filter: {
+              input: { $ifNull: ['$recommendationQueue', []] },
+              as: 'item',
+              cond: { $ne: ['$$item.capturedAt', capturedAt] },
+            },
+          },
+        },
+      },
+      {
+        $set: {
+          latestRecommendation: { $arrayElemAt: ['$recommendationQueue', 0] },
+        },
+      },
+    ],
   ).lean();
 
-  return res !== null;
+  return doc !== null;
 }
