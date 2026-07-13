@@ -96,6 +96,7 @@ export interface HomeSections {
   showStrategyMetrics: boolean;
   showZakat: boolean;
   showRegionalInsights: boolean;
+  showBusinessDashboard: boolean;
 
   /** The "next best move" tip for the hero. */
   primaryTip: string | null;
@@ -221,6 +222,24 @@ export function useHomeSections({
       });
     }
 
+    // Business / FX-corridor section: SME-graduated users see the 4
+    // staged enterprise-fx components here (CorridorMonitor, WorkingCapitalRisk,
+    // CorridorMetrics, MacroIntelligence). defaultOpen because this is
+    // the primary surface for the SME audience -- if they're here, they
+    // came for this.
+    // Uses the direct condition (not the `showBusinessDashboard` flag
+    // declared further down) to avoid a use-before-declaration error.
+    if (profileConfig.moneyPurpose === "upcoming_payment") {
+      sections.push({
+        id: "business",
+        title: "FX Corridor",
+        icon: "🌍",
+        teaser:
+          "Working capital tools for cyclical FX exposure and settlement timing.",
+        defaultOpen: true,
+      });
+    }
+
     // ── 3. Hero variant ───────────────────────────────────────────────────
     // Beginner → compact (one number, one sentence, one CTA).
     // Standard / Advanced → detailed (score + breakdown in same card).
@@ -252,6 +271,13 @@ export function useHomeSections({
     // RegionalRecommendations: geo-specific token allocations + currency
     // hedging rationale. Hidden in beginner mode (overloads the page).
     const showRegionalInsights = hasHoldings && !isBeginner;
+    // Business dashboard: SME-graduated users (`moneyPurpose ===
+    // 'upcoming_payment'`) see the FX-corridor section with the 4
+    // staged enterprise-fx components. Reuses the live signal that
+    // already gates `PaymentCycleReport` -- no new toggle needed.
+    // Per docs/sme-fx-strategy.md §4, this is the retail-to-business
+    // graduation moment; the section is the visible hand-off.
+    const showBusinessDashboard = profileConfig.moneyPurpose === "upcoming_payment";
 
     // ── 5. Primary tip (next best move) ──────────────────────────────────
     // Mirrors the legacy buildTips() but is just a single line for the hero.
@@ -316,6 +342,7 @@ export function useHomeSections({
       showStrategyMetrics,
       showZakat,
       showRegionalInsights,
+      showBusinessDashboard,
 
       primaryTip,
       primarySectionId: "protection-mix",
@@ -325,6 +352,7 @@ export function useHomeSections({
     profileConfig.userGoal,
     profileConfig.philosophy,
     profileConfig.userRegion,
+    profileConfig.moneyPurpose,
     profileComplete,
     canClaim,
     hasHoldings,

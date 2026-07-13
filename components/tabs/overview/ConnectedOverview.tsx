@@ -36,6 +36,10 @@ import { PaymentCycleReport } from "../protect/PaymentCycleReport";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import StrategyMetrics from "../../portfolio/StrategyMetrics";
 import RegionalRecommendations from "../../regional/RegionalRecommendations";
+import EmergingMarketsTracker from "../../enterprise-fx/EmergingMarketsTracker";
+import PortfolioRiskWidget from "../../enterprise-fx/PortfolioRiskWidget";
+import RiskMetrics from "../../enterprise-fx/RiskMetrics";
+import TradeIntelligence from "../../enterprise-fx/TradeIntelligence";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -618,6 +622,36 @@ export function ConnectedOverview({
                 onNavigateToAgent={() => setActiveTab("agent")}
                 onNavigateToFund={() => setActiveTab("exchange")}
               />
+            )}
+            {section.id === "business" && (
+              /*
+                FX Corridor — the SME-graduated surface. Mounts the 4
+                staged enterprise-fx components:
+
+                - EmergingMarketsTracker: real-time corridor prices
+                  (uses its own hooks — useEmergingMarketsPrices,
+                  useWatchlist). No props needed.
+                - PortfolioRiskWidget: working-capital risk dashboard
+                  (uses its own useRiskAssessment hook). No props.
+                - RiskMetrics: pure-props card showing liquidation
+                  risk, IV, sentiment, vol trend for a single asset.
+                - TradeIntelligence: macro-intel feed. REQUIRES items
+                  + selectedAsset; for v1 we pass isLoading={true} so
+                  the component shows a skeleton (signals "data
+                  pipeline coming") rather than null. Next iteration
+                  will wire this to a real FX-events data source.
+
+                The 4 components are framed as "FX corridor" / "SME
+                working capital" tools, not crypto-trading. This is
+                the retail-to-business graduation moment per
+                docs/sme-fx-strategy.md §4 — the visible hand-off.
+              */
+              <div className="space-y-3" data-testid="business-dashboard">
+                <EmergingMarketsTracker showFictionalCTA={false} />
+                <PortfolioRiskWidget />
+                <RiskMetrics />
+                <TradeIntelligence items={[]} selectedAsset="FX" isLoading />
+              </div>
             )}
           </HomeSection>
         ))}
