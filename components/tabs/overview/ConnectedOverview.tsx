@@ -260,6 +260,16 @@ export function ConnectedOverview({
         setActiveTab={setActiveTab}
         onDisableDemo={onDisableDemo}
         onEnableDemo={onEnableDemo}
+        onDismissFxCorridorHint={() => {
+          // Dismiss + scroll the FX Corridor section into view. The
+          // dismiss callback persists the dismissal in localStorage so
+          // the hint never reappears on this device.
+          home.dismissFxCorridorHint();
+          if (typeof document !== "undefined") {
+            const el = document.getElementById("business");
+            el?.scrollIntoView({ behavior: "smooth", block: "start" });
+          }
+        }}
       />
 
       {/* ── 2. HERO ─────────────────────────────────────────────────────
@@ -635,11 +645,11 @@ export function ConnectedOverview({
                   (uses its own useRiskAssessment hook). No props.
                 - RiskMetrics: pure-props card showing liquidation
                   risk, IV, sentiment, vol trend for a single asset.
-                - TradeIntelligence: macro-intel feed. REQUIRES items
-                  + selectedAsset; for v1 we pass isLoading={true} so
-                  the component shows a skeleton (signals "data
-                  pipeline coming") rather than null. Next iteration
-                  will wire this to a real FX-events data source.
+                - TradeIntelligence: macro-signal pill. Smart-empty —
+                  returns null (0px) when there are no fresh,
+                  asset-relevant signals. Will wire to a real FX-events
+                  data source in a followup; for v1 the empty
+                  state means the user sees no extra UI weight.
 
                 The 4 components are framed as "FX corridor" / "SME
                 working capital" tools, not crypto-trading. This is
@@ -650,7 +660,7 @@ export function ConnectedOverview({
                 <EmergingMarketsTracker showFictionalCTA={false} />
                 <PortfolioRiskWidget />
                 <RiskMetrics />
-                <TradeIntelligence items={[]} selectedAsset="FX" isLoading />
+                <TradeIntelligence items={[]} selectedAsset="FX" />
               </div>
             )}
           </HomeSection>

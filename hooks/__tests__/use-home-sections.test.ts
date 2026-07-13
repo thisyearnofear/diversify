@@ -16,7 +16,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { useHomeSections } from "../use-home-sections";
 
 // ── Mocks ────────────────────────────────────────────────────────────────
@@ -88,6 +88,8 @@ const baseArgs = () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Clear the FX Corridor hint dismissal flag so each test starts fresh.
+  window.localStorage.removeItem("diversifi.fx_corridor_hint_dismissed");
   mockUseExperience.mockReturnValue({ experienceMode: "standard" });
   mockUseProtectionProfile.mockReturnValue({
     config: { userGoal: "exploring" },
@@ -180,6 +182,94 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("apac-rail");
     });
 
+    it("shows fx-corridor-hint when moneyPurpose is upcoming_payment and not dismissed", () => {
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).toBe("fx-corridor-hint");
+    });
+
+    it("does not show fx-corridor-hint when the user has already dismissed it", () => {
+      // Pre-seed the dismissal flag (simulating a user who clicked the banner
+      // on a previous visit).
+      window.localStorage.setItem(
+        "diversifi.fx_corridor_hint_dismissed",
+        "true",
+      );
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      // Banner resolves to null (or another low-priority banner) — never
+      // fx-corridor-hint once dismissed.
+      expect(result.current.banner).not.toBe("fx-corridor-hint");
+    });
+
+    it("dismissFxCorridorHint persists the flag in localStorage and clears the banner", () => {
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).toBe("fx-corridor-hint");
+
+      // Dismiss the hint
+      act(() => {
+        result.current.dismissFxCorridorHint();
+      });
+
+      // localStorage was written
+      expect(
+        window.localStorage.getItem("diversifi.fx_corridor_hint_dismissed"),
+      ).toBe("true");
+      // Banner no longer resolves to fx-corridor-hint
+      expect(result.current.banner).not.toBe("fx-corridor-hint");
+    });
+
+    it("apac-rail outranks fx-corridor-hint for APAC + business audience", () => {
+      // An APAC user with both Confucian philosophy AND upcoming_payment:
+      // the APAC rail message is more specific, so it wins.
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          philosophy: "confucian",
+          userRegion: "Asia",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).toBe("apac-rail");
+    });
+
+    it("fx-corridor-hint outranks daily-claim for SME-graduated users with a streak", () => {
+      // An importer with a claimable streak: the FX Corridor hint is more
+      // relevant (it's a discovery moment for the new section) than the
+      // daily-claim reward.
+      mockUseStreakRewards.mockReturnValue({ canClaim: true, isWhitelisted: true });
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).toBe("fx-corridor-hint");
+    });
+
     it("cold-start outranks demo (a fresh connected user with no holdings and demo off)", () => {
       // Demo mode is the only banner triggered when isDemo is on; the cold-start
       // logic should not stack with demo. Verify the resolution is exactly one.
@@ -200,6 +290,45 @@ describe("useHomeSections", () => {
   });
 
   describe("section visibility", () => {
+    it("adds the FX Corridor business section when moneyPurpose is upcoming_payment", () => {
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      const businessSection = result.current.sections.find(
+        (s) => s.id === "business",
+      );
+      expect(businessSection).toBeDefined();
+      expect(businessSection?.title).toBe("FX Corridor");
+      expect(businessSection?.defaultOpen).toBe(true);
+      expect(result.current.showBusinessDashboard).toBe(true);
+    });
+
+    it("does not add the FX Corridor business section in beginner mode even with moneyPurpose set", () => {
+      // The business section is gated on moneyPurpose only; beginner mode
+      // is a separate concern (the user can still be a beginner importer).
+      // The hook adds the section regardless of experienceMode — the JSX
+      // is responsible for the beginner collapse.
+      mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          moneyPurpose: "upcoming_payment",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      const businessSection = result.current.sections.find(
+        (s) => s.id === "business",
+      );
+      expect(businessSection).toBeDefined();
+      expect(result.current.showBusinessDashboard).toBe(true);
+    });
+
     it("hides insight sections in beginner mode", () => {
       mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));

@@ -16,7 +16,7 @@
  * Adding a new mode (e.g. "sharia-compliant") or a new section is a one-line change.
  */
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Region } from "./use-user-region";
 import type { MultichainPortfolio } from "./use-multichain-balances";
 import type { TabId } from "@/constants/tabs";
@@ -35,6 +35,7 @@ export type ContextualBannerKind =
   | "demo"            // Demo mode is on
   | "goal-drift"      // Profile complete but goal is misaligned
   | "apac-rail" // APAC philosophy + Asia region — live or coming-soon copy
+  | "fx-corridor-hint" // SME-graduated user → discover the FX Corridor section
   | "daily-claim"     // GoodDollar reward ready
   | null;             // No banner — let the hero speak
 
@@ -103,12 +104,24 @@ export interface HomeSections {
 
   /** Default open section id, used by the in-page nav highlight. */
   primarySectionId: string;
+
+  /**
+   * Dismiss the FX Corridor hint banner + persist the dismissal in
+   * localStorage. The hint then never reappears on this device.
+   * Idempotent: calling it after the hint is already dismissed is a no-op.
+   */
+  dismissFxCorridorHint: () => void;
 }
+
+/** localStorage key for the FX Corridor hint dismissal flag. Stable across
+ *  versions so the hint doesn't reappear after a deploy. */
+const FX_CORRIDOR_HINT_DISMISSED_KEY = "diversifi.fx_corridor_hint_dismissed";
 
 const COLD_START_PRIORITY = 100;
 const DEMO_PRIORITY = 80;
 const GOAL_DRIFT_PRIORITY = 60;
 const APAC_RAIL_PRIORITY = 55;
+const FX_CORRIDOR_HINT_PRIORITY = 50; // below apac-rail, above daily-claim
 const DAILY_CLAIM_PRIORITY = 40;
 
 export function useHomeSections({
@@ -123,6 +136,25 @@ export function useHomeSections({
   const coldStart = useColdStart(chainId);
 
   const hasHoldings = (portfolio?.totalValue ?? 0) > 0;
+
+  // ── FX Corridor hint dismissal (localStorage-backed) ─────────────────
+  // Read once on mount; writes are idempotent. The state is local to this
+  // hook so the resolution sees the most up-to-date value after the user
+  // clicks the banner. The flag persists across reloads so the hint never
+  // reappears after dismissal.
+  const [fxHintDismissed, setFxHintDismissed] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.localStorage.getItem(FX_CORRIDOR_HINT_DISMISSED_KEY) === "true") {
+      setFxHintDismissed(true);
+    }
+  }, []);
+  const dismissFxCorridorHint = useCallback(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(FX_CORRIDOR_HINT_DISMISSED_KEY, "true");
+    }
+    setFxHintDismissed(true);
+  }, []);
 
   return useMemo<HomeSections>(() => {
     const mode: HomeMode =
@@ -175,6 +207,18 @@ export function useHomeSections({
     ) {
       banner = "apac-rail";
       bannerPriority = APAC_RAIL_PRIORITY;
+    }
+    // FX Corridor hint: SME-graduated users (`moneyPurpose ===
+    // 'upcoming_payment'`) who haven't yet dismissed the hint get a
+    // one-time discovery banner. Below apac-rail so the APAC audience
+    // gets the more specific regional rail message first.
+    if (
+      profileConfig.moneyPurpose === "upcoming_payment" &&
+      !fxHintDismissed &&
+      bannerPriority < FX_CORRIDOR_HINT_PRIORITY
+    ) {
+      banner = "fx-corridor-hint";
+      bannerPriority = FX_CORRIDOR_HINT_PRIORITY;
     }
 
     // ── 2. Determine which deep sections to show ─────────────────────────
@@ -346,6 +390,8 @@ export function useHomeSections({
 
       primaryTip,
       primarySectionId: "protection-mix",
+
+      dismissFxCorridorHint,
     };
   }, [
     experienceMode,
@@ -360,5 +406,6 @@ export function useHomeSections({
     portfolio,
     coldStart?.headline,
     userRegion,
+    fxHintDismissed,
   ]);
 }

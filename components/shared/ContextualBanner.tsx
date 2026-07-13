@@ -24,7 +24,7 @@ import { NetworkOptimizedOnramp } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
 export interface ContextualBannerProps {
-  kind: "cold-start" | "demo" | "goal-drift" | "daily-claim" | "apac-rail" | null;
+  kind: "cold-start" | "demo" | "goal-drift" | "daily-claim" | "apac-rail" | "fx-corridor-hint" | null;
   isDemo: boolean;
   /** Total value of the portfolio, for the demo banner copy */
   demoValue?: number;
@@ -40,6 +40,13 @@ export interface ContextualBannerProps {
   setActiveTab: (tab: TabId) => void;
   onDisableDemo?: () => void;
   onEnableDemo?: () => void;
+  /**
+   * Dismiss + scroll-to-FX-Corridor handler. Called when the user clicks
+   * the `fx-corridor-hint` banner. Should both persist the dismissal
+   * (so the hint doesn't reappear) AND scroll the business section
+   * into view. Wired in ConnectedOverview.
+   */
+  onDismissFxCorridorHint?: () => void;
 }
 
 /**
@@ -60,6 +67,7 @@ export function ContextualBanner({
   setActiveTab,
   onDisableDemo,
   onEnableDemo,
+  onDismissFxCorridorHint,
 }: ContextualBannerProps) {
   // Cold-start needs the coldStart hook for the contextual copy.
   // We always call the hook (Rules of Hooks) but only render the cold-start
@@ -106,6 +114,9 @@ export function ContextualBanner({
         />
       )}
       {kind === "apac-rail" && <ApacRailHonestyBanner variant="home" />}
+      {kind === "fx-corridor-hint" && (
+        <FxCorridorHintVariant onAction={() => onDismissFxCorridorHint?.()} />
+      )}
     </motion.div>
   );
 }
@@ -281,6 +292,48 @@ function GoalDriftVariant({
           {actionLabel} →
         </button>
       </div>
+    </Card>
+  );
+}
+
+/**
+ * FxCorridorHintVariant — One-time discovery hint for the FX Corridor
+ * section. Shows when the user has set `moneyPurpose === 'upcoming_payment'`
+ * but hasn't expanded the business section yet. Click → dismiss +
+ * scroll. After dismiss, never reappears (persisted in localStorage by
+ * the parent hook).
+ *
+ * Visual: a 1-line dense card (44px touch target) in blue, the same
+ * gradient family as the cold-start variant but visually distinct so
+ * the user can tell the two states apart without reading.
+ */
+function FxCorridorHintVariant({ onAction }: { onAction: () => void }) {
+  return (
+    <Card
+      padding="p-0"
+      className="overflow-hidden border-2 border-blue-200 dark:border-blue-900"
+    >
+      <button
+        onClick={onAction}
+        className="w-full flex items-center justify-between gap-3 p-3 min-h-[44px] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-colors text-left"
+        aria-label="Scroll to FX Corridor section"
+        data-testid="fx-corridor-hint"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <span className="text-xl shrink-0" aria-hidden="true">💼</span>
+          <div className="min-w-0">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+              Business Mode Active
+            </div>
+            <div className="text-sm font-bold text-blue-900 dark:text-blue-100 truncate">
+              Your FX Corridor dashboard is live below
+            </div>
+          </div>
+        </div>
+        <span className="text-blue-600 dark:text-blue-400 text-xs font-bold whitespace-nowrap shrink-0">
+          View ↓
+        </span>
+      </button>
     </Card>
   );
 }
