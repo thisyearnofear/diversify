@@ -28,6 +28,13 @@ export const FUNNEL_EVENTS = [
   'cycle_monitoring_enabled',
   // BestYieldCard chain-pill filter — coarse utility signal.
   'yield_chain_filter_toggled',
+  // Phase 4 graduation funnel — retail→business prompt lifecycle.
+  // Coarse: server emits `graduation_signal_detected` with composite
+  // confidence; client emits view/dismiss/click for engagement funnel.
+  'graduation_signal_detected',
+  'graduation_prompt_viewed',
+  'graduation_prompt_dismissed',
+  'graduation_prompt_clicked',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 
