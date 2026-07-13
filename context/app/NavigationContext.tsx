@@ -2,6 +2,23 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { isTabId, LEGACY_TAB_MAP, type TabId } from '@/constants/tabs';
 import type { NavigationState, SwapPrefill } from './types';
 
+/**
+ * Yield review focus key — identifies a specific opportunity in
+ * `BestYieldCard`. Computed from `(chain, symbol)` via the pure
+ * `deriveYieldFocusKey()` helper in `hooks/use-best-yield.ts`; both the
+ * drawer and the surface call that helper so the shape cannot drift.
+ */
+export type FocusedYieldKey = string;
+
+/**
+ * How long a freshly-focused row stays highlighted before the surface
+ * clears the focus and reverts to the unread-notification state. Shared
+ * by `PaymentCycleReport` (cycle focus) and `BestYieldCard` (yield focus)
+ * so the two surfaces tune UX together. Long enough to read, short enough
+ * that a page reload doesn't leave a stale highlight lingering.
+ */
+export const FOCUS_HIGHLIGHT_MS = 4000;
+
 type NavigationContextValue = NavigationState & {
   setActiveTab: (tab: TabId) => void;
   setChainId: (chainId: number | null) => void;
@@ -9,6 +26,22 @@ type NavigationContextValue = NavigationState & {
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
   initializeFromStorage: () => void;
+  /**
+   * Cycle to focus in `PaymentCycleReport`. Set when the drawer's
+   * `open_cycle_review` handler navigates to the Shield tab; consumed
+   * (and cleared) by the cycle list once the matching row has been
+   * scrolled into view. Stored string is opaque — works equally for
+   * MongoDB ObjectIds and the synthetic `${currency}-${currency}-${date}`
+   * fallback.
+   */
+  focusedCycleId: string | null;
+  setFocusedCycleId: (id: string | null) => void;
+  /**
+   * Yield opportunity to highlight in `BestYieldCard`. Same shape as
+   * `focusedCycleId` but for the yield review surface.
+   */
+  focusedYieldKey: FocusedYieldKey | null;
+  setFocusedYieldKey: (key: FocusedYieldKey | null) => void;
 };
 
 const NavigationContext = createContext<NavigationContextValue | undefined>(undefined);
@@ -20,6 +53,13 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     chainId: null,
     swapPrefill: null,
   });
+  // Transient focus hints set by the drawer's typed action router so the
+  // list surfaces can scroll to and highlight the right row. Cleared by
+  // the consuming surface once it has focused the row — these are NOT
+  // persisted (they reflect the user's current "open this review" gesture,
+  // not history).
+  const [focusedCycleId, setFocusedCycleId] = useState<string | null>(null);
+  const [focusedYieldKey, setFocusedYieldKey] = useState<FocusedYieldKey | null>(null);
 
   // init from storage (active tab)
   useEffect(() => {
@@ -80,9 +120,20 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navigateToSwap,
       clearSwapPrefill,
       initializeFromStorage,
+      focusedCycleId,
+      setFocusedCycleId,
+      focusedYieldKey,
+      setFocusedYieldKey,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, initializeFromStorage],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, initializeFromStorage, focusedCycleId, focusedYieldKey],
   );
+
+  // The consuming surfaces (PaymentCycleReport, BestYieldCard) already
+  // auto-clear the focus after 4s once they have highlighted the row.
+  // Do not add a parallel context-level clear — a redundant timer would
+  // race the surface and could erase the highlight before the surface
+  // noticed it. If the hint ever leaks because a surface was unmounted,
+  // navigate to the target tab again to reset.
 
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }

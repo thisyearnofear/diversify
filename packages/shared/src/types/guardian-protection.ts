@@ -71,6 +71,12 @@ export interface GuardianRecommendationContract {
  * Discriminated union for the action a user can take from a recommendation
  * card. Each variant carries exactly the fields its handler needs, so the
  * compiler catches missing payloads at the call site instead of at runtime.
+ *
+ * Every Guardian recommendation — including proactive updates that used
+ * to attach a loose `AIMessage.action` — should now use one of these
+ * variants. Missing variants here produce dead-end review surfaces
+ * (the drawer can render the contract text but has no actionable button);
+ * missing variants there produce invalid unions at the call site.
  */
 export type GuardianRecommendationAction =
   | {
@@ -82,7 +88,39 @@ export type GuardianRecommendationAction =
     }
   | {
       type: 'open_cycle_review';
+      /**
+       * MongoDB ObjectId of the saved PurchaseCycle record, NOT a synthetic
+       * `${currency}-${currency}-${date}` string. The drawer uses it to
+       * focus the exact cycle in the Shield tab.
+       */
       cycleId: string;
+    }    | {
+      /**
+       * Yield opportunity is not always a swap — it is a protocol + chain
+       * + market the user should review (APY, TVL, smart-contract risk,
+       * liquidity), then choose amount and source asset themselves.
+       * `targetToken` is informational only (the pool's settlement token).
+       *
+       * `chain` is the display-friendly name (say "Arbitrum" not "42161")
+       * so the drawer's `${chain}:${marketSymbol}` focus-key stays
+       * directly comparable with the surface (`BestYieldCard`). `chainId`
+       * is the numeric EVM identifier — emit it whenever known so
+       * chain-aware UI (filter pills, swap execution) has it on hand
+       * without re-resolving the name later.
+       */
+      type: 'open_yield_review';
+      protocol: string;
+      chain: string;
+      chainId?: number;
+      marketSymbol: string;
+      targetToken?: string;
+    }
+  | {
+      /**
+       * Daily UBI claim is ready. Carries no extra params — the underlying
+       * GoodDollar flow already knows the user's wallet and network.
+       */
+      type: 'claim_ubi';
     }
   | {
       type: 'observation_only';

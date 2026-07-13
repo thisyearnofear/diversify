@@ -30,6 +30,7 @@ import {
     claimExecutionLock,
     releaseExecutionLock,
     dequeueRecommendation,
+    dismissRecommendation,
     mergeRecommendationQueue,
     recommendationIdentityKey,
     type GuardianAnchorRecord,
@@ -237,6 +238,46 @@ describe('dequeueRecommendation (idempotency gate)', () => {
         const won = await dequeueRecommendation('0xabc', 'R1');
 
         expect(won).toBe(false);
+    });
+});
+
+describe('dismissRecommendation (user-initiated dismiss)', () => {
+    beforeEach(() => {
+        findOneAndUpdate.mockReset();
+        findOne.mockReset();
+    });
+
+    it('shares the same atomic pipeline mutation as dequeueRecommendation', async () => {
+        findOneAndUpdate.mockReturnValue(queryResult({
+            userAddress: '0xabc',
+            latestRecommendation: null,
+            recommendationQueue: [],
+        }));
+
+        const removed = await dismissRecommendation('0xABC', 'R1');
+
+        expect(removed).toBe(true);
+        expect(findOne).not.toHaveBeenCalled();
+        const [filter, pipeline] = findOneAndUpdate.mock.calls[0];
+        expect(filter.userAddress).toBe('0xabc');
+        // Same filter shape as dequeue — the two callers share the same
+        // atomic code path; the only difference is the semantic call site.
+        expect(filter.$or).toEqual([
+            { 'latestRecommendation.capturedAt': 'R1' },
+            { 'recommendationQueue.capturedAt': 'R1' },
+        ]);
+        expect(Array.isArray(pipeline)).toBe(true);
+        expect(pipeline[0].$set.recommendationQueue.$filter.cond).toEqual({
+            $ne: ['$$item.capturedAt', 'R1'],
+        });
+    });
+
+    it('returns false when the target recommendation was already gone', async () => {
+        findOneAndUpdate.mockReturnValue(queryResult(null));
+
+        const removed = await dismissRecommendation('0xabc', 'R1');
+
+        expect(removed).toBe(false);
     });
 });
 

@@ -113,11 +113,22 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
       const now = Date.now();
       setGuardianUpdates(storedUpdates
         ? (JSON.parse(storedUpdates) as GuardianUpdate[])
-            .map((u) => ({
-              ...u,
-              timestamp: new Date(u.timestamp),
-              expiresAt: new Date(u.expiresAt),
-            }))
+            // Rehydrate every Date field. JSON.parse yields strings (or
+            // null), but the filter and the GuardianUpdates tray both call
+            // .getTime() on these — a stored "snoozedUntil" string would
+            // throw after a page reload. Validate with Number.isNaN so a
+            // malformed string clears the field rather than thrown-ing.
+            .map((u) => {
+              const expiresAt = new Date(u.expiresAt);
+              const timestamp = new Date(u.timestamp);
+              const rawSnoozedUntil: unknown = (u as { snoozedUntil?: unknown }).snoozedUntil;
+              let snoozedUntil: Date | undefined;
+              if (rawSnoozedUntil) {
+                const parsed = new Date(rawSnoozedUntil as string | number | Date);
+                if (!Number.isNaN(parsed.getTime())) snoozedUntil = parsed;
+              }
+              return { ...u, timestamp, expiresAt, snoozedUntil };
+            })
             .filter((u) => u.expiresAt.getTime() > now)
         : []);
       setMutedUpdateTypes(storedMuted ? JSON.parse(storedMuted) : []);

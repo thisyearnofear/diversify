@@ -72,6 +72,11 @@ export async function runCycleMonitor(now = new Date()): Promise<CycleMonitorSum
       provenance: cycle.lastReport?.provenance as Parameters<typeof buildCycleProtectionContract>[0]['provenance'],
       guardianBounds,
       monitoringEnabled: true,
+      // Pass the saved MongoDB ObjectId so the drawer's open_cycle_review
+      // handler focuses the exact cycle in PaymentCycleReport, instead of
+      // the previous synthetic `${local}-${target}-${paymentDate}` key
+      // that did not match any cycle in the list.
+      cycleId: String(cycle._id),
     });
 
     const proposal = {

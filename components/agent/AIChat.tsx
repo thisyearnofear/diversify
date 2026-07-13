@@ -8,6 +8,8 @@ import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
 import { useClaimFlowContext, useOnClaimSuccess } from "../../hooks/claim-flow-context";
+import type { GuardianRecommendationAction } from "@diversifi/shared/src/types/guardian-protection";
+import { deriveYieldFocusKey } from "../../hooks/use-best-yield";
 // Deep leaf import — NOT the barrel — so this constant doesn't drag the
 // shared AI/swap/ethers stack into the chunk.
 import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared/src/config/celo-tokens";
@@ -398,7 +400,7 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { setActiveTab, navigateToSwap } = useNavigation();
+  const { setActiveTab, navigateToSwap, setFocusedCycleId, setFocusedYieldKey } = useNavigation();
   const { address } = useWalletContext();
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef<number | null>(null);
@@ -709,38 +711,121 @@ export default function AIChat() {
                       Guardian review
                     </p>
                     {activeGuardianReview.contract ? (() => {
-                        const action = activeGuardianReview.contract.action;
-                        const onReview = action?.type === 'open_swap_review'
-                          ? () => {
-                              navigateToSwap({
-                                fromToken: action.fromToken,
-                                toToken: action.toToken,
-                                amount: action.amount,
-                                reason: activeGuardianReview.contract?.proposal
-                                  ?? activeGuardianReview.summary,
-                              });
-                              setActiveGuardianReview(null);
-                              setDrawerOpen(false);
-                            }
-                          : action?.type === 'open_cycle_review'
-                            ? () => {
-                                setActiveTab('protect');
-                                setActiveGuardianReview(null);
-                                setDrawerOpen(false);
-                              }
-                            : undefined;
-                        return (
-                      <GuardianRecommendationCard
-                        contract={activeGuardianReview.contract}
-                        onReview={onReview}
-                        onDismiss={() => {
+                        const typedAction = activeGuardianReview.contract.action as
+                          | GuardianRecommendationAction
+                          | undefined;
+                        const dismiss = () => {
                           // Snooze for 1 hour — the update stays in the
                           // background but stops nagging. Guardian keeps
                           // monitoring; the user can find it again later.
                           snoozeGuardianUpdate(activeGuardianReview.id, new Date(Date.now() + 60 * 60 * 1000));
                           setActiveGuardianReview(null);
-                        }}
-                      />
+                        };
+                        const closeReview = () => {
+                          setActiveGuardianReview(null);
+                          setDrawerOpen(false);
+                        };
+                        // Typed action router: each variant carries the
+                        // exact payload its surface needs. Building the
+                        // handlers inline (rather than chaining ternaries
+                        // over `action?.type`) makes the per-variant intent
+                        // obvious and lets TypeScript exhaustively check
+                        // the union.
+                        const handleTypedAction = (a: GuardianRecommendationAction): void => {
+                          switch (a.type) {
+                            case 'open_swap_review':
+                              navigateToSwap({
+                                fromToken: a.fromToken,
+                                toToken: a.toToken,
+                                amount: a.amount,
+                                reason: a.reason ?? activeGuardianReview.contract?.proposal
+                                  ?? activeGuardianReview.summary,
+                              });
+                              closeReview();
+                              return;
+                            case 'open_cycle_review':
+                              setActiveTab('protect');
+                              setFocusedCycleId(a.cycleId);
+                              closeReview();
+                              return;
+                            case 'open_yield_review':
+                              // Yield review is a protocol/market pick —
+                              // hand focus off to the existing BestYieldCard
+                              // surface in the Shield tab. deriveYieldFocusKey
+                              // is the same helper the surface uses to derive
+                              // rowKey per row, so the focus key here
+                              // provably matches without a hand-built string.
+                              //
+                              // Defensive skip (LOW #5 from prior review):
+                              // if a server-side producer ever emits a
+                              // typed action with `chain: ''` (empty string),
+                              // the focus key would resolve to `:marketSymbol`
+                              // and silently fail to highlight any row. Skipping
+                              // here surfaces the gap as a no-op nav (best
+                              // case) rather than a phantom row highlight.
+                              if (!a.chain || !a.marketSymbol) {
+                                // Still navigate to the Protect tab so the
+                                // user lands somewhere relevant, just without
+                                // a focus signal on a non-existent row.
+                                setActiveTab('protect');
+                                closeReview();
+                                return;
+                              }
+                              setActiveTab('protect');
+                              setFocusedYieldKey(
+                                deriveYieldFocusKey({ chain: a.chain, symbol: a.marketSymbol }),
+                              );
+                              closeReview();
+                              return;
+                            case 'claim_ubi':
+                              // Daily claim is ready — drop into the
+                              // existing GoodDollar flow (closes the drawer
+                              // first so the celebration overlay renders
+                              // above the background).
+                              setDrawerOpen(false);
+                              setActiveGuardianReview(null);
+                              void flow.handleClaim();
+                              return;                            case 'observation_only':
+                              // Nothing actionable — just close.
+                              closeReview();
+                              return;
+                            default: {
+                              // Exhaustiveness check: if a new variant is
+                              // added to GuardianRecommendationAction, the
+                              // compiler will fail here until that variant
+                              // gets an explicit case — better than a silent
+                              // no-op review surface.
+                              const _exhaustive: never = a;
+                              throw new Error(`Unhandled GuardianRecommendationAction: ${JSON.stringify(_exhaustive)}`);
+                            }
+                        }
+                        };
+                        const isClaimAction = typedAction?.type === 'claim_ubi';
+                        return (
+                          <div className="space-y-2">
+                            <GuardianRecommendationCard
+                              contract={activeGuardianReview.contract}
+                              // For observation_only there is no actionable
+                              // next step; omit the Review button entirely.
+                              onReview={typedAction && typedAction.type !== 'observation_only'
+                                ? () => handleTypedAction(typedAction)
+                                : undefined}
+                              onDismiss={dismiss}
+                            />
+                            {/* claim_ubi gets an explicit Clover-style
+                                CTA outside the contract card so the user
+                                sees the action is about claiming, not
+                                "reviewing" a recommendation. */}
+                            {isClaimAction && (
+                              <button
+                                type="button"
+                                onClick={() => handleTypedAction(typedAction!)}
+                                className="w-full min-h-11 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                              >
+                                🪙 Claim Daily G$ UBI
+                              </button>
+                            )}
+                          </div>
                         );
                       })() : (
                       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 space-y-2">

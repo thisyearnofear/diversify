@@ -26,6 +26,8 @@ export const FUNNEL_EVENTS = [
   'waitlist_joined',
   'cycle_report_run',
   'cycle_monitoring_enabled',
+  // BestYieldCard chain-pill filter — coarse utility signal.
+  'yield_chain_filter_toggled',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

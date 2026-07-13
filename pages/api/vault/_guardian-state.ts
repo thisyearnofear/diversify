@@ -405,32 +405,12 @@ export async function enqueueRecommendation(
 }
 
 /**
- * Atomically dequeue (claim) a specific pending recommendation for execution.
- * Returns true if THIS caller removed it, false if it was already gone — i.e.
- * another concurrent tick claimed it, or it was already cleared.
- *
- * Uses a single MongoDB aggregation-pipeline `findOneAndUpdate` so the
- * filter-and-rebuild happens server-side. Two concurrent dequeues targeting
- * different `capturedAt` values can no longer read the same old document and
- * restore each other's removed item the way the old read-modify-write did:
- *
- *   worker 1 removes A from [A, B] → [B]
- *   worker 2 removes B from [A, B] → [A]   (stale read in the old code)
- *
- * With the pipeline update, worker 2's `$filter` runs against the document
- * AFTER worker 1's write committed, so it sees [B] and returns an empty
- * result — the recommendation is already gone.
- *
- * Matching on `capturedAt` makes this the idempotency gate for auto-execution:
- * the recommendation is removed BEFORE the swap runs, so a given recommendation
- * can be executed at most once. The recommendation is already dequeued when a
- * swap that may have landed on-chain before a post-submit failure is never
- * blindly retried.
- *
- * With a multi-entry queue, only the matched entry is removed; the next head
- * is promoted to `latestRecommendation`.
+ * Internal: the shared mutation for "remove by capturedAt". Two callers —
+ * `dequeueRecommendation` (executor-side idempotency gate) and
+ * `dismissRecommendation` (user-side dismiss from the drawer) — need the
+ * same atomic pipeline update; the difference is purely call-site intent.
  */
-export async function dequeueRecommendation(
+async function removeRecommendationByCapturedAt(
   userAddress: string,
   capturedAt: string,
 ): Promise<boolean> {
@@ -466,4 +446,57 @@ export async function dequeueRecommendation(
   ).lean();
 
   return doc !== null;
+}
+
+/**
+ * Atomically dequeue (claim) a specific pending recommendation for execution.
+ * Returns true if THIS caller removed it, false if it was already gone — i.e.
+ * another concurrent tick claimed it, or it was already cleared.
+ *
+ * Uses a single MongoDB aggregation-pipeline `findOneAndUpdate` so the
+ * filter-and-rebuild happens server-side. Two concurrent dequeues targeting
+ * different `capturedAt` values can no longer read the same old document and
+ * restore each other's removed item the way the old read-modify-write did:
+ *
+ *   worker 1 removes A from [A, B] → [B]
+ *   worker 2 removes B from [A, B] → [A]   (stale read in the old code)
+ *
+ * With the pipeline update, worker 2's `$filter` runs against the document
+ * AFTER worker 1's write committed, so it sees [B] and returns an empty
+ * result — the recommendation is already gone.
+ *
+ * Matching on `capturedAt` makes this the idempotency gate for auto-execution:
+ * the recommendation is removed BEFORE the swap runs, so a given recommendation
+ * can be executed at most once. The recommendation is already dequeued when a
+ * swap that may have landed on-chain before a post-submit failure is never
+ * blindly retried.
+ *
+ * With a multi-entry queue, only the matched entry is removed; the next head
+ * is promoted to `latestRecommendation`.
+ */
+export async function dequeueRecommendation(
+  userAddress: string,
+  capturedAt: string,
+): Promise<boolean> {
+  return removeRecommendationByCapturedAt(userAddress, capturedAt);
+}
+
+/**
+ * User-initiated dismiss — atomically remove a specific pending
+ * recommendation from the queue. Distinct from `dequeueRecommendation`
+ * (which is the executor's idempotency gate) because the caller is the
+ * user dismissing an advisory proposal the Guardian loop never intended
+ * to execute — e.g. a cycle contract whose monitoring was turned off, or
+ * a yield alert the user decided not to act on. Same atomic pipeline
+ * mutation; different semantic call site so we can grep audits without
+ * seeing "executor dequeue" in user-debug logs.
+ *
+ * Returns true if this caller removed it, false if it was already gone
+ * (e.g. dismissed twice, or already cleared by the executor).
+ */
+export async function dismissRecommendation(
+  userAddress: string,
+  capturedAt: string,
+): Promise<boolean> {
+  return removeRecommendationByCapturedAt(userAddress, capturedAt);
 }

@@ -3,6 +3,7 @@ import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
 import { ERC7715Service } from '../../../packages/shared/src/services/erc7715-service';
 import { getGuardianState } from './_guardian-state';
+import { requireWalletAuth } from '@/lib/require-wallet-auth';
 
 const erc7715 = new ERC7715Service();
 
@@ -11,18 +12,45 @@ const erc7715 = new ERC7715Service();
  *
  * Body: { userAddress, signedPermission, sessionPrivateKey }
  *
- * GET  /api/vault/permission?userAddress=0x... — Get active permission.
+ * GET  /api/vault/permission — Get active permission for the derived user.
  *
- * DELETE /api/vault/permission?userAddress=0x... — Revoke permission.
+ * DELETE /api/vault/permission — Revoke the active permission for the derived user.
+ *
+ * Authorization: the user address is derived from `requireWalletAuth()` on
+ * every method. Body/query `userAddress` and the EIP-712 payload
+ * `permission.userAddress` MUST all match the derived address — any
+ * mismatch is rejected. This closes the gap where a browser could query
+ * or revoke another user's permission by passing a forged address in the
+ * request body / query / EIP-712 payload.
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const auth = requireWalletAuth(req);
+  if (!auth) {
+    return res.status(401).json({ error: 'Wallet signature required' });
+  }
+
   await dbConnect();
 
   if (req.method === 'POST') {
-    const { userAddress, permission } = req.body;
+    const { userAddress: bodyAddress, permission } = req.body ?? {};
 
-    if (!userAddress || !permission?.dailyLimitUSD || !permission?.allowedTokens) {
+    if (!bodyAddress || !permission?.dailyLimitUSD || !permission?.allowedTokens) {
       return res.status(400).json({ error: 'Missing required fields: userAddress, permission.dailyLimitUSD, permission.allowedTokens' });
+    }
+
+    // Trust-boundary: the body says who the permission is for; the
+    // requireWalletAuth proof says who is making the request; the
+    // EIP-712 signature says who signed the permission grant. All three
+    // must agree, else this is a forged authorization.
+    if (typeof bodyAddress !== 'string' || bodyAddress.toLowerCase() !== auth) {
+      return res.status(403).json({
+        error: 'userAddress does not match the authenticated wallet — refusing to register a permission for another user',
+      });
+    }
+    if (typeof permission.userAddress === 'string' && permission.userAddress.toLowerCase() !== auth) {
+      return res.status(403).json({
+        error: 'permission.userAddress does not match the authenticated wallet — refusing to register a permission for another user',
+      });
     }
 
     if (typeof permission.signature !== 'string' || !/^0x[0-9a-fA-F]+$/.test(permission.signature)) {
@@ -40,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const signedPermission = {
       permission: {
         sessionKeyAddress: permission.sessionKeyAddress,
-        userAddress,
+        userAddress: auth,
         spendingLimitUSD: permission.spendingLimitUSD,
         dailyLimitUSD: permission.dailyLimitUSD,
         allowedActions: permission.allowedActions || [],
@@ -68,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      const vault = await vaultStore.findVaultByUser(userAddress);
+      const vault = await vaultStore.findVaultByUser(auth);
       if (!vault) return res.status(404).json({ error: 'No vault found. Create one first.' });
 
       // Revoke any existing active permission
@@ -79,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const created = await vaultStore.createPermission({
         vaultId: vault._id,
-        userAddress: userAddress.toLowerCase(),
+        userAddress: auth,
         sessionKeyAddress: permission.sessionKeyAddress,
         spendingLimitUSD: permission.spendingLimitUSD,
         dailyLimitUSD: permission.dailyLimitUSD,
@@ -113,13 +141,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'GET') {
-    const { userAddress } = req.query;
-    if (!userAddress || typeof userAddress !== 'string') {
-      return res.status(400).json({ error: 'Missing userAddress' });
-    }
-
     try {
-      const vault = await vaultStore.findVaultByUser(userAddress);
+      const vault = await vaultStore.findVaultByUser(auth);
       if (!vault) return res.status(404).json({ error: 'No vault found', hasPermission: false });
 
       const permission = await vaultStore.findActivePermission(vault._id);
@@ -143,7 +166,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           error: tx.error,
         }));
 
-      const guardianState = await getGuardianState(userAddress);
+      const guardianState = await getGuardianState(auth);
       const remainingTodayUSD = Math.max(0, permission.dailyLimitUSD - permission.spentTodayUSD);
 
       return res.status(200).json({
@@ -169,13 +192,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
-    const { userAddress } = req.query;
-    if (!userAddress || typeof userAddress !== 'string') {
-      return res.status(400).json({ error: 'Missing userAddress' });
-    }
-
     try {
-      const vault = await vaultStore.findVaultByUser(userAddress);
+      const vault = await vaultStore.findVaultByUser(auth);
       if (!vault) return res.status(404).json({ error: 'No vault found' });
 
       const permission = await vaultStore.findActivePermission(vault._id);

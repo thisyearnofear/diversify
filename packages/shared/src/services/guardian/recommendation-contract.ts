@@ -18,6 +18,8 @@ export interface PortfolioSwapContractInput {
 export interface YieldAlertContractInput {
   protocol: string;
   chain: string;
+  /** Numeric EVM chainId — optional, propagates to the typed action payload. */
+  chainId?: number;
   symbol: string;
   apy: number;
   tvlLabel: string;
@@ -36,6 +38,16 @@ export interface CycleProtectionContractInput {
   provenance?: DataProvenance;
   guardianBounds?: string;
   monitoringEnabled: boolean;
+  /**
+   * Saved PurchaseCycle ObjectId (or any opaque reference). When present,
+   * the action's `cycleId` is set to THIS value so the drawer can focus
+   * the actual saved cycle instead of a synthetic key. Server-side callers
+   * (cron, proactive monitoring) MUST pass `cycleId` because they have the
+   * saved record. The synthetic `${local}-${target}-${paymentDate}` key
+   * remains as the fallback for live-preview builds that haven't been
+   * saved yet (e.g. the in-tab draft in PaymentCycleReport).
+   */
+  cycleId?: string;
 }
 
 export function buildPortfolioSwapContract(
@@ -94,10 +106,26 @@ export function buildYieldAlertContract(
     proofTrail: executable
       ? 'Dry-run preview, then on-chain receipt if you approve within bounds.'
       : 'Observation only — no execution path.',
-    action: executable && targetToken
+    // Yield opportunities are not necessarily swaps — the user still has
+    // to pick the source asset (we never know it) and the amount. Route
+    // executable yield alerts to the yield review surface that already
+    // shows APY, TVL, and an in-portal deposit widget, instead of
+    // opening a generic swap screen with no amount and no source token
+    // (= not a meaningful review for a yield proposal).
+    // `targetToken` is informational — it identifies the pool's
+    // settlement token so the reviewer knows what an entry position
+    // looks like without dictating where the funds come from.
+    action: executable
       ? {
-          type: 'open_swap_review',
-          toToken: targetToken,
+          type: 'open_yield_review',
+          protocol: input.protocol,
+          chain: input.chain,
+          // Forward chainId when known so the drawer's typed action
+          // payload can drive a chain-aware filter pill or swap
+          // execution path directly, without re-resolving the name.
+          chainId: input.chainId,
+          marketSymbol: input.symbol,
+          targetToken,
         }
       : undefined,
   };
@@ -134,7 +162,10 @@ export function buildCycleProtectionContract(
     provenance: input.provenance,
     action: {
       type: 'open_cycle_review',
-      cycleId: `${input.localCurrency}-${input.targetCurrency}-${input.paymentDate}`,
+      // Prefer the real saved-cycle id when callers provide it; the
+      // synthetic key used previously did not match any cycle in the
+      // list, so the drawer navigated generically to the Protect tab.
+      cycleId: input.cycleId ?? `${input.localCurrency}-${input.targetCurrency}-${input.paymentDate}`,
     },
   };
 }

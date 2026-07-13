@@ -2,11 +2,12 @@
  * PaymentCycleReport — free FX drag scenario + cycle monitoring opt-in.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import type { FxCycleReportResponse } from '@/pages/api/agent/fx-cycle-report';
 import { usePaymentCycleDraft } from '@/hooks/use-payment-cycle';
 import { usePurchaseCycles } from '@/hooks/use-purchase-cycles';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { useNavigation, FOCUS_HIGHLIGHT_MS } from '@/context/app/NavigationContext';
 import { GuardianRecommendationCard } from '@/components/agent/GuardianRecommendationCard';
 import {
   buildCycleProtectionContract,
@@ -213,13 +214,38 @@ export function PaymentCycleReport({
   const { address, signMessage } = useWalletContext();
   const { draft, updateDraft } = usePaymentCycleDraft(defaultLocalCurrency);
   const { cycles, saveCycle, updateCycle, loading: cyclesLoading, needsUnlock, unlockCycles } = usePurchaseCycles(address, signMessage);
+  const { focusedCycleId, setFocusedCycleId } = useNavigation();
   const [report, setReport] = useState<FxCycleReportResponse | null>(null);
   const [savedCycleId, setSavedCycleId] = useState<string | null>(null);
   const [monitoringEnabled, setMonitoringEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [dismissed, setDismissed] = useState(false);
+  const [highlightedCycleId, setHighlightedCycleId] = useState<string | null>(null);
+  const cycleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const targetCurrency = 'USD';
+
+  // When the drawer's open_cycle_review handler sets focusedCycleId,
+  // scroll the matching saved-cycle row into view and pulse-highlight it
+  // so the user can confirm Guardian matched the right cycle. Falls back
+  // to the local draft id (savedCycleId) for the in-tab draft when the
+  // synthetic id was used.
+  useEffect(() => {
+    if (!focusedCycleId) return;
+    const targetId = focusedCycleId === savedCycleId || focusedCycleId === 'draft'
+      ? savedCycleId
+      : focusedCycleId;
+    const node = targetId ? cycleRefs.current[targetId] : null;
+    if (node && typeof node.scrollIntoView === 'function') {
+      node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    setHighlightedCycleId(targetId ?? focusedCycleId);
+    const handle = setTimeout(() => {
+      setHighlightedCycleId(null);
+      setFocusedCycleId(null);
+    }, FOCUS_HIGHLIGHT_MS);
+    return () => clearTimeout(handle);
+  }, [focusedCycleId, savedCycleId, setFocusedCycleId]);
 
   if (dismissed) return null;
 
@@ -512,12 +538,25 @@ export function PaymentCycleReport({
       {address && !cyclesLoading && upcomingCycles.length > 0 && (
         <div className="space-y-2 pt-2 border-t border-teal-200/60 dark:border-teal-800/40">
           <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Active cycles</p>
-          {upcomingCycles.map((c) => (
-            <div key={c.id} className="text-xs text-gray-600 dark:text-gray-400">
-              {c.localCurrency} → {c.targetCurrency} ${c.targetAmountUsd.toLocaleString()} · {c.paymentDate}
-              {c.monitoringEnabled ? ' · Monitoring on' : ''}
-            </div>
-          ))}
+          {upcomingCycles.map((c) => {
+            const isHighlighted = highlightedCycleId === c.id;
+            return (
+              <div
+                key={c.id}
+                ref={(node) => {
+                  cycleRefs.current[c.id] = node;
+                }}
+                className={`text-xs text-gray-600 dark:text-gray-400 rounded-lg px-2 py-1.5 transition-colors${
+                  isHighlighted
+                    ? ' bg-amber-50 dark:bg-amber-900/20 ring-2 ring-amber-300 dark:ring-amber-600'
+                    : ''
+                }`}
+              >
+                {c.localCurrency} → {c.targetCurrency} ${c.targetAmountUsd.toLocaleString()} · {c.paymentDate}
+                {c.monitoringEnabled ? ' · Monitoring on' : ''}
+              </div>
+            );
+          })}
         </div>
       )}
 

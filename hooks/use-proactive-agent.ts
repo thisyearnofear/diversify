@@ -219,14 +219,28 @@ export function useProactiveAgent() {
                content: ubiInsight,
                type: 'recommendation',
                openDrawer: false,
-               action: {
-                 type: 'claim_ubi',
-               },
+               // AIMessage-level action stays for the chat-rendered claim
+               // button (legacy surface that renders by msg.action.type).
+               action: { type: 'claim_ubi' },
                guardianUpdate: {
                  summary: `Daily UBI ready to claim (${estimatedReward})`,
                  detail: ubiInsight,
                  whyReason: 'Guardian monitors your on-chain claim status on a schedule you configured.',
                  updateType: 'claim',
+                 // The drawer's review surface (GuardianRecommendationCard)
+                 // reads its action from contract.action exclusively — the
+                 // loose AIMessage.action shape does not produce a button
+                 // there. Stamp the typed action on the GuardianUpdate-level
+                 // contract so the review surface renders the claim CTA.
+                 contract: {
+                   lifecycleState: 'proposed',
+                   whatChanged: `GoodDollar daily UBI (${estimatedReward}) ready to claim on Celo.`,
+                   whyItMatters: 'You can claim once per day — Guardian will not prompt again until tomorrow.',
+                   proposal: 'Open the claim flow to send the reward to your wallet.',
+                   costsAndRisks: 'A wallet signature is required (we will not auto-sign in the background).',
+                   proofTrail: 'On confirmation: tx hash + on-chain claim receipt are visible in the chat.',
+                   action: { type: 'claim_ubi' },
+                 },
                },
              }).catch(() => {});
              markAlertSent(ubiAlertId);
@@ -280,6 +294,13 @@ export function useProactiveAgent() {
             targetAmountUsd: cycle.targetAmountUsd,
             dragLine: cycle.lastReport?.dragLine,
             monitoringEnabled: true,
+            // Proactive monitoring loop has the saved PurchaseCycle record
+            // from the API response — pass its id (a string after
+            // serialization) so the drawer focuses the exact cycle in
+            // PaymentCycleReport instead of falling back to a synthetic
+            // `${local}-${target}-${date}` key that does not match any
+            // cycle in the list.
+            cycleId: cycle.id,
           });
 
           const message = `${contract.whatChanged} ${contract.proposal}`;

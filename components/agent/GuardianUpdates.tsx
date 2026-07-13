@@ -27,11 +27,23 @@ export function GuardianUpdates({
   onMuteType,
 }: GuardianUpdatesProps) {
   const [expandedWhy, setExpandedWhy] = useState<string | null>(null);
+  // Defense in depth: even though AIConversationContext rehydrates
+  // snoozedUntil with Number.isNaN validation, a malformed date slipped in
+  // through another path (or a future storage migration) should not throw
+  // when we call getTime() — treat unknown as "not snoozed" and drop
+  // entries whose expiresAt is itself invalid.
   const now = Date.now();
-  const active = updates.filter(
-    (u) => !u.dismissed && u.expiresAt.getTime() > now &&
-      (!u.snoozedUntil || u.snoozedUntil.getTime() <= now),
-  );
+  const active = updates.filter((u) => {
+    if (u.dismissed) return false;
+    if (Number.isNaN(u.expiresAt.getTime())) return false;
+    if (u.expiresAt.getTime() <= now) return false;
+    if (u.snoozedUntil) {
+      const untilMs = u.snoozedUntil.getTime();
+      if (Number.isNaN(untilMs)) return true;
+      if (untilMs > now) return false;
+    }
+    return true;
+  });
 
   if (active.length === 0) return null;
 
