@@ -50,6 +50,15 @@ export function GuardianPulse() {
 
   if (error || !data) return null;
 
+  // Density-first pass (per the "never feels crowded" constraint):
+  // collapse the entire component to 0px when there's no actionable
+  // signal. The 2-card grid (sentiment + warRisk) is "fixed scaffold"
+  // when the user has nothing to react to — the user shouldn't see a
+  // 5-line stat block with no insight attached. The section title
+  // remains visible in the parent HomeSection as a 1-line navigation
+  // anchor; this is the body returning null, not the whole section.
+  if (!data.insights.length && !data.regionalRisk) return null;
+
   const sentimentBgClass = data.pulse.sentiment >= 70 ? 'bg-blue-500/10' : 'bg-slate-500/10';
   const warRiskToneClass = data.pulse.warRisk > 70
     ? 'text-red-600 dark:text-red-400'

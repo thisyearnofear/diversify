@@ -102,61 +102,22 @@ export function ConnectedOverview({
   const { navigateToSwap } = useNavigation();
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
-  // ── Single source of truth for what the home page should show ──────────
-  const home = useHomeSections({
-    portfolio,
-    isDemo,
-    userRegion,
-    chainId,
-  });
-
-  // ── Macro signals (Firecrawl-monitored central banks, yield trackers,
-  // depeg monitors) for the TradeIntelligence pill. Reuses the proof
-  // feed's cache — no new global fetch. Items are universal (impactAsset
-  // stripped to undefined), so the pill surfaces the latest fresh signal
-  // regardless of the user's corridor. The user gets screen space back
-  // 99% of the time; a 1-line pill appears when a fresh signal exists.
-  const { macroSignals } = useMacroSignals();
-
-  const {
-    diversificationScore,
-    diversificationRating,
-    totalValue,
-    regionData,
-    diversificationTips,
-  } = activePortfolio;
-
-  const hasHoldings = totalValue > 0;
-
-  // Track regime tip once per session (unchanged behaviour)
-  useEffect(() => {
-    if (marketRegime && !hasTrackedRegimeTip.current) {
-      const groups = classifyAssets(activePortfolio.allTokens || []);
-      const totalVal = groups.totalValue;
-      const stableRatio = totalVal > 0 ? groups.trackedValue / totalVal : 0;
-      const tip = getRegimeTip(marketRegime.regime, stableRatio);
-      if (tip) {
-        hasTrackedRegimeTip.current = true;
-        trackRegimeTip(marketRegime.regime, stableRatio);
-      }
-    }
-  }, [marketRegime, activePortfolio, trackRegimeTip]);
-
-  const handleRefresh = async () => {
-    if (refreshChainId) await refreshChainId();
-    if (refreshBalances) await refreshBalances();
-  };
-
-  // Build the full tip list (used by the Smart Tips accordion section).
-  // Kept intact for parity with the original behaviour — `primaryTip` from
-  // the hook is what the hero shows, this list is what Smart Tips shows.
+  // ── Build the full tip list (used by the Smart Tips accordion section) ─
+  // Defined BEFORE `useHomeSections` is called so the IA hook can accept
+  // `tipsCount` and gate the smart-tips section entirely when the list is
+  // empty (0px-when-empty per the density-first pass).
+  //
+  // Uses `experienceMode` directly (not `home.isBeginner`) so the function
+  // doesn't depend on `home` — `home` is declared further down. The two
+  // are equivalent: `home.isBeginner === experienceMode === "beginner"`.
   const buildTips = (): string[] => {
     const gs = activePortfolio.goalScores;
     const missing = activePortfolio.missingRegions;
     const goal = profileConfig.userGoal;
+    const isBeginner = experienceMode === "beginner";
     let tips: string[] = [];
 
-    if (home.isBeginner && profileComplete && goal && goal !== "exploring") {
+    if (isBeginner && profileComplete && goal && goal !== "exploring") {
       const plain = getBeginnerPrimaryTip(
         goal as ProtectionUserGoal,
         gs,
@@ -212,7 +173,59 @@ export function ConnectedOverview({
     return tips;
   };
 
+  // ── Single source of truth for what the home page should show ──────────
+  // `tipsCount` gates the smart-tips section per the density-first pass:
+  // when the buildTips() result is empty, the section is filtered entirely
+  // (0px) instead of showing an empty-state message inside a 1-line header.
   const tips = buildTips();
+  const home = useHomeSections({
+    portfolio,
+    isDemo,
+    userRegion,
+    chainId,
+    tipsCount: tips.length,
+  });
+
+  // ── Macro signals (Firecrawl-monitored central banks, yield trackers,
+  // depeg monitors) for the TradeIntelligence pill. Reuses the proof
+  // feed's cache — no new global fetch. Items are universal (impactAsset
+  // stripped to undefined), so the pill surfaces the latest fresh signal
+  // regardless of the user's corridor. The user gets screen space back
+  // 99% of the time; a 1-line pill appears when a fresh signal exists.
+  const { macroSignals } = useMacroSignals();
+
+  const {
+    diversificationScore,
+    diversificationRating,
+    totalValue,
+    regionData,
+    diversificationTips,
+  } = activePortfolio;
+
+  const hasHoldings = totalValue > 0;
+
+  // Track regime tip once per session (unchanged behaviour)
+  useEffect(() => {
+    if (marketRegime && !hasTrackedRegimeTip.current) {
+      const groups = classifyAssets(activePortfolio.allTokens || []);
+      const totalVal = groups.totalValue;
+      const stableRatio = totalVal > 0 ? groups.trackedValue / totalVal : 0;
+      const tip = getRegimeTip(marketRegime.regime, stableRatio);
+      if (tip) {
+        hasTrackedRegimeTip.current = true;
+        trackRegimeTip(marketRegime.regime, stableRatio);
+      }
+    }
+  }, [marketRegime, activePortfolio, trackRegimeTip]);
+
+  const handleRefresh = async () => {
+    if (refreshChainId) await refreshChainId();
+    if (refreshBalances) await refreshBalances();
+  };
+
+  // Build the full tip list (used by the Smart Tips accordion section).
+  // Kept intact for parity with the original behaviour — `primaryTip` from
+  // the hook is what the hero shows, this list is what Smart Tips shows.
   const chainErrors = activePortfolio.errors ?? [];
 
   // Resolve a one-line drift summary for the goal-drift banner.

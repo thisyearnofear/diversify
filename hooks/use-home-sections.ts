@@ -66,6 +66,18 @@ export interface UseHomeSectionsInput {
   isDemo: boolean;
   userRegion: Region;
   chainId: number | null;
+  /**
+   * Number of Smart Tips available. When 0, the entire `smart-tips`
+   * section is filtered out of `sections` (0px-when-empty per the
+   * density-first pass). When undefined, the section is shown (default
+   * behaviour — the caller is opting out of the density check).
+   *
+   * Tips are computed in `ConnectedOverview` (not in this hook) because
+   * they depend on the buildTips() pure function which takes the full
+   * portfolio + profile + marketRegime context. We accept the count
+   * here so the IA decision stays centralised.
+   */
+  tipsCount?: number;
 }
 
 export interface HomeSections {
@@ -129,6 +141,7 @@ export function useHomeSections({
   isDemo,
   userRegion,
   chainId,
+  tipsCount,
 }: UseHomeSectionsInput): HomeSections {
   const { experienceMode } = useExperience();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
@@ -237,13 +250,18 @@ export function useHomeSections({
     }
 
     if (hasHoldings && !isBeginner) {
-      sections.push({
-        id: "smart-tips",
-        title: "Smart Tips",
-        icon: "💡",
-        teaser: "Personalised actions from your goal and the current market regime.",
-        defaultOpen: false,
-      });
+      // Density-first pass: filter the smart-tips section entirely when
+      // the caller reports 0 tips. The section disappears (0px) instead
+      // of showing an empty-state message inside a 1-line header.
+      if (tipsCount === undefined || tipsCount > 0) {
+        sections.push({
+          id: "smart-tips",
+          title: "Smart Tips",
+          icon: "💡",
+          teaser: "Personalised actions from your goal and the current market regime.",
+          defaultOpen: false,
+        });
+      }
     }
 
     if (hasHoldings && !isBeginner) {
@@ -407,5 +425,6 @@ export function useHomeSections({
     coldStart?.headline,
     userRegion,
     fxHintDismissed,
+    tipsCount,
   ]);
 }

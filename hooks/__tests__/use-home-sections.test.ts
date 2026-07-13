@@ -329,6 +329,44 @@ describe("useHomeSections", () => {
       expect(result.current.showBusinessDashboard).toBe(true);
     });
 
+    it("filters the smart-tips section entirely when tipsCount is 0 (0px-when-empty)", () => {
+      // Density-first pass: when the caller reports 0 tips, the
+      // smart-tips HomeSection disappears entirely (no empty-state
+      // message, no 1-line header) so the user gets the screen space
+      // back. Default behaviour (tipsCount undefined) preserves the
+      // old behaviour.
+      const { result } = renderHook(() =>
+        useHomeSections({ ...baseArgs(), tipsCount: 0 }),
+      );
+      const smartTips = result.current.sections.find(
+        (s) => s.id === "smart-tips",
+      );
+      expect(smartTips).toBeUndefined();
+      // The other sections are still present
+      expect(result.current.sections.length).toBeGreaterThan(0);
+    });
+
+    it("shows the smart-tips section when tipsCount is positive", () => {
+      const { result } = renderHook(() =>
+        useHomeSections({ ...baseArgs(), tipsCount: 3 }),
+      );
+      const smartTips = result.current.sections.find(
+        (s) => s.id === "smart-tips",
+      );
+      expect(smartTips).toBeDefined();
+      expect(smartTips?.title).toBe("Smart Tips");
+    });
+
+    it("shows the smart-tips section when tipsCount is undefined (backward-compat default)", () => {
+      // Older callers that don't pass tipsCount should still see the
+      // smart-tips section — the density filter is opt-in.
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      const smartTips = result.current.sections.find(
+        (s) => s.id === "smart-tips",
+      );
+      expect(smartTips).toBeDefined();
+    });
+
     it("hides insight sections in beginner mode", () => {
       mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
