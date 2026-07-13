@@ -6,19 +6,23 @@ export interface WalletAuthProof {
   signature: string;
 }
 
+type WalletAuthPurpose = 'session' | 'purchase-cycles';
+
 interface WalletAuthPayload {
   address: string;
   issuedAt: string;
   expiresAt: string;
-  purpose: 'purchase-cycles';
+  purpose: WalletAuthPurpose;
 }
+
+const VALID_PURPOSES = new Set<WalletAuthPurpose>(['session', 'purchase-cycles']);
 
 export function buildWalletAuthMessage(address: string, now = Date.now()): string {
   const payload: WalletAuthPayload = {
     address: address.toLowerCase(),
     issuedAt: new Date(now).toISOString(),
     expiresAt: new Date(now + SESSION_TTL_MS).toISOString(),
-    purpose: 'purchase-cycles',
+    purpose: 'session',
   };
   return `DiversiFi wallet session\n${JSON.stringify(payload)}`;
 }
@@ -29,7 +33,7 @@ export function parseWalletAuthMessage(message: string): WalletAuthPayload | nul
   try {
     const payload = JSON.parse(message.slice(prefix.length)) as WalletAuthPayload;
     if (
-      payload.purpose !== 'purchase-cycles' ||
+      !VALID_PURPOSES.has(payload.purpose) ||
       !/^0x[a-fA-F0-9]{40}$/.test(payload.address) ||
       !Number.isFinite(Date.parse(payload.issuedAt)) ||
       !Number.isFinite(Date.parse(payload.expiresAt))

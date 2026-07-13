@@ -62,6 +62,13 @@ export function buildPortfolioSwapContract(
         ? ` Modeled annual savings ~$${input.annualSavingsUsd.toFixed(0)} before costs.`
         : ''),
     proofTrail: 'After approval: transaction hash, ledger entry, and evidence anchor when available.',
+    action: {
+      type: 'open_swap_review',
+      label: 'Review swap',
+      fromToken: input.fromToken,
+      toToken: input.toToken,
+      amount: input.suggestedAmountUsd != null ? String(Math.round(input.suggestedAmountUsd)) : undefined,
+    },
   };
 }
 
@@ -87,6 +94,13 @@ export function buildYieldAlertContract(
     proofTrail: executable
       ? 'Dry-run preview, then on-chain receipt if you approve within bounds.'
       : 'Observation only — no execution path.',
+    action: executable
+      ? {
+          type: 'open_swap_review',
+          label: 'Review swap',
+          toToken: input.targetToken ?? undefined,
+        }
+      : undefined,
   };
 }
 
@@ -119,6 +133,12 @@ export function buildCycleProtectionContract(
       } Net benefit is not guaranteed.`,
     proofTrail: 'Post-payment: cycle drag report and on-chain receipts for any executed protection.',
     provenance: input.provenance,
+    action: {
+      type: 'open_swap_review',
+      label: 'Review protection',
+      toToken: input.targetCurrency === 'USD' ? 'cUSD' : input.targetCurrency,
+      amount: String(Math.round(input.targetAmountUsd)),
+    },
   };
 }
 

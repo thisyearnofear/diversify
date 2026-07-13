@@ -22,7 +22,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { Permission } from '../../../models/Permission';
 import { vaultStore } from '../vault/_store';
-import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, updateGuardianState, type GuardianAnchorRecord } from '../vault/_guardian-state';
+import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
@@ -43,6 +43,26 @@ const GUARDIAN_LOOP_SECRET = (() => {
 })();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
+
+function isTokenAllowed(
+  recommendation: GuardianRecommendationSnapshot,
+  allowedTokens: string[] | undefined,
+): boolean {
+  if (!allowedTokens || allowedTokens.length === 0) return true;
+  const targetToken = recommendation.targetToken || 'cEUR';
+  const allowed = allowedTokens.map((t) => t.toLowerCase());
+  return allowed.includes(targetToken.toLowerCase()) || allowed.includes('*');
+}
+
+/** True when a recommendation can be auto-executed (not advisory-only). */
+function isAutoExecutableCandidate(
+  recommendation: GuardianRecommendationSnapshot,
+  allowedTokens: string[] | undefined,
+): boolean {
+  if ((recommendation.confidence ?? 0) < CONFIDENCE_THRESHOLD) return false;
+  if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) return false;
+  return isTokenAllowed(recommendation, allowedTokens);
+}
 
 /**
  * Persist an anchor to BOTH the pointer field and the rolling history, then
@@ -112,10 +132,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const userAddress = perm.userAddress;
       const guardianState = await getGuardianState(userAddress);
-      const recommendation = guardianState?.latestRecommendation;
+      const queue = resolveRecommendationQueue(guardianState);
 
       // Skip if no pending recommendation
-      if (!recommendation) {
+      if (queue.length === 0) {
         continue;
       }
 
@@ -136,24 +156,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      // Check confidence threshold
-      const confidence = recommendation.confidence ?? 0;
-      if (confidence < CONFIDENCE_THRESHOLD) {
-        results.push({
-          userAddress,
-          action: 'skip',
-          status: 'low_confidence',
-          reason: `Confidence ${confidence.toFixed(2)} < threshold ${CONFIDENCE_THRESHOLD}`,
-        });
-        continue;
-      }
-
-      // Check daily spending limit. The trade NOTIONAL must be the explicit
-      // tradeAmountUSD on the recommendation — there is no default. Advisory
-      // recommendations (e.g. 0G heartbeat) that don't carry a notional are
-      // skipped, not silently executed with a guessed amount.
-      // expectedSavings (annual purchasing-power preserved) is NOT a spend
-      // amount and must never size the trade.
       const today = new Date().toISOString().slice(0, 10);
       const spentToday = perm.spentDate === today ? perm.spentTodayUSD : 0;
       const remainingToday = perm.dailyLimitUSD - spentToday;
@@ -168,25 +170,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      // Require an explicit tradeAmountUSD — no silent default.
-      // Recommendations without a notional (e.g. advisory/heartbeat recs)
-      // are skipped with a clear reason so the proof feed shows why.
-      if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) {
-        console.warn(
-          `[Guardian Loop] Skipping recommendation for ${userAddress}: no explicit tradeAmountUSD ` +
-          `(source: ${recommendation.source || 'unknown'}, action: ${recommendation.action || 'unknown'}). ` +
-          `Advisory recommendations are not auto-executed.`
-        );
-        results.push({
-          userAddress,
-          action: 'skip',
-          status: 'missing_notional',
-          reason: `Recommendation has no explicit trade amount (source: ${recommendation.source || 'unknown'}). Advisory recommendations are not auto-executed.`,
-        });
+      // Drop stale items, then select the first auto-executable recommendation.
+      // Advisory-only heads (e.g. cycle proposals without tradeAmountUSD) must
+      // not block later executable items in the queue.
+      let recommendation: GuardianRecommendationSnapshot | null = null;
+      let advisoryBlocked = 0;
+      for (const candidate of queue) {
+        const ageMinutes = (Date.now() - new Date(candidate.capturedAt).getTime()) / 60000;
+        if (ageMinutes > 60) {
+          results.push({
+            userAddress,
+            action: 'skip',
+            status: 'stale_recommendation',
+            reason: `Recommendation is ${Math.round(ageMinutes)} minutes old (max 60)`,
+          });
+          await dequeueRecommendation(userAddress, candidate.capturedAt).catch(() => {});
+          continue;
+        }
+        if (isAutoExecutableCandidate(candidate, perm.allowedTokens)) {
+          recommendation = candidate;
+          break;
+        }
+        advisoryBlocked += 1;
+      }
+
+      if (!recommendation) {
+        if (advisoryBlocked > 0) {
+          results.push({
+            userAddress,
+            action: 'skip',
+            status: 'advisory_pending_user_review',
+            reason: `${advisoryBlocked} queued proposal(s) require manual review (no auto-executable trade amount)`,
+          });
+        }
         continue;
       }
 
-      const tradeAmountUSD = Math.min(recommendation.tradeAmountUSD, remainingToday);
+      const tradeAmountUSD = Math.min(recommendation.tradeAmountUSD!, remainingToday);
+      const confidence = recommendation.confidence ?? 0;
 
       if (tradeAmountUSD < 1) {
         results.push({
@@ -198,35 +219,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      // Check if target token is allowed
+      // Check if target token is allowed (also enforced in isAutoExecutableCandidate)
       const targetToken = recommendation.targetToken || 'cEUR';
-      if (perm.allowedTokens && perm.allowedTokens.length > 0) {
-        const allowed = perm.allowedTokens.map((t: string) => t.toLowerCase());
-        if (!allowed.includes(targetToken.toLowerCase()) && !allowed.includes('*')) {
-          results.push({
-            userAddress,
-            action: 'skip',
-            status: 'token_not_allowed',
-            reason: `${targetToken} not in allowed tokens: ${perm.allowedTokens.join(', ')}`,
-          });
-          continue;
-        }
-      }
-
-      // Check staleness — don't execute recommendations older than 1 hour
-      const capturedAt = new Date(recommendation.capturedAt).getTime();
-      const ageMinutes = (Date.now() - capturedAt) / 60000;
-      if (ageMinutes > 60) {
-        results.push({
-          userAddress,
-          action: 'skip',
-          status: 'stale_recommendation',
-          reason: `Recommendation is ${Math.round(ageMinutes)} minutes old (max 60)`,
-        });
-        // Drop only this stale head; promote the next queued proposal if any.
-        await dequeueRecommendation(userAddress, recommendation.capturedAt).catch(() => {});
-        continue;
-      }
 
       // ─── All checks passed — EXECUTE ─────────────────────────────────
       const service = new VaultService(vaultStore, circleExecutor);

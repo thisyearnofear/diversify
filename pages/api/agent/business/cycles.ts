@@ -8,38 +8,10 @@ import { PurchaseCycle } from '@/models/PurchaseCycle';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { serializePurchaseCycle } from '@/lib/purchase-cycle-serialize';
 import type { PurchaseCycleRecord } from '@diversifi/shared/src/types/purchase-cycle';
-import { ethers } from 'ethers';
-import { parseWalletAuthMessage } from '@/lib/wallet-auth';
+import { requireWalletAuth } from '@/lib/require-wallet-auth';
 
 const RATE_LIMIT = 30;
 const RATE_WINDOW_MS = 60_000;
-const MAX_AUTH_TTL_MS = 20 * 60 * 1000;
-
-function authenticatedAddress(req: NextApiRequest): string | null {
-  const encodedMessage = req.headers['x-wallet-auth-message'];
-  const signature = req.headers['x-wallet-auth-signature'];
-  if (typeof encodedMessage !== 'string' || typeof signature !== 'string') return null;
-
-  try {
-    const message = decodeURIComponent(encodedMessage);
-    const payload = parseWalletAuthMessage(message);
-    if (!payload) return null;
-    const issuedAt = Date.parse(payload.issuedAt);
-    const expiresAt = Date.parse(payload.expiresAt);
-    const now = Date.now();
-    if (
-      issuedAt > now + 60_000 ||
-      expiresAt <= now ||
-      expiresAt - issuedAt > MAX_AUTH_TTL_MS
-    ) {
-      return null;
-    }
-    const recovered = ethers.utils.verifyMessage(message, signature).toLowerCase();
-    return recovered === payload.address.toLowerCase() ? recovered : null;
-  } catch {
-    return null;
-  }
-}
 
 export default async function handler(
   req: NextApiRequest,
@@ -51,7 +23,7 @@ export default async function handler(
     return res.status(429).json({ error: 'Too many requests — try again shortly.' });
   }
 
-  const userAddress = authenticatedAddress(req);
+  const userAddress = requireWalletAuth(req);
   if (!userAddress) {
     return res.status(401).json({ error: 'Wallet signature required' });
   }
@@ -121,21 +93,50 @@ export default async function handler(
             error: 'Confirming payment requires paymentOutcome.achievedLocalAmount > 0',
           });
         }
+        const existing = await PurchaseCycle.findOne({ _id: cycleId, userAddress }).lean();
+        if (!existing) return res.status(404).json({ error: 'Cycle not found' });
+
+        const achievedRate =
+          typeof outcome?.achievedRate === 'number' && outcome.achievedRate > 0
+            ? outcome.achievedRate
+            : undefined;
+        const achievedFeesLocal =
+          typeof outcome?.achievedFeesLocal === 'number' && outcome.achievedFeesLocal >= 0
+            ? outcome.achievedFeesLocal
+            : undefined;
+        const notes =
+          typeof outcome?.notes === 'string' ? outcome.notes.slice(0, 500) : undefined;
+
         updates.status = 'completed';
         updates.monitoringEnabled = false;
         updates.paymentOutcome = {
           confirmedAt: new Date(),
           achievedLocalAmount,
-          achievedRate:
-            typeof outcome?.achievedRate === 'number' && outcome.achievedRate > 0
-              ? outcome.achievedRate
-              : undefined,
-          achievedFeesLocal:
-            typeof outcome?.achievedFeesLocal === 'number' && outcome.achievedFeesLocal >= 0
-              ? outcome.achievedFeesLocal
-              : undefined,
-          notes:
-            typeof outcome?.notes === 'string' ? outcome.notes.slice(0, 500) : undefined,
+          achievedRate,
+          achievedFeesLocal,
+          notes,
+        };
+        // Persist an outcome record — do not reuse the pre-payment illustrative report.
+        updates.postEventReport = {
+          computedAt: new Date(),
+          totalDragLocal: existing.lastReport?.totalDragLocal ?? 0,
+          totalDragPct: existing.lastReport?.totalDragPct ?? 0,
+          exposureDays: existing.lastReport?.exposureDays ?? 0,
+          narrativeHeadline: 'Payment outcome recorded',
+          dragLine: `You paid ${achievedLocalAmount.toLocaleString()} ${existing.localCurrency}${
+            achievedRate != null ? ` at ${achievedRate.toLocaleString()} ${existing.localCurrency}/USD` : ''
+          }. Pre-payment stress scenario remains illustrative — not realized P&L.`,
+          protectionCostLine:
+            achievedFeesLocal != null
+              ? `Fees recorded: ${achievedFeesLocal.toLocaleString()} ${existing.localCurrency}.`
+              : existing.lastReport?.protectionCostLine ?? 'Fees not supplied.',
+          disclaimer:
+            'This is your confirmed outcome record. It is not a recomputed historical drag report.',
+          provenance: {
+            sourceType: 'illustrative',
+            isHistorical: true,
+            disclaimer: 'User-confirmed payment outcome',
+          },
         };
       }
       if (typeof label === 'string') updates.label = label.slice(0, 120);
@@ -169,13 +170,15 @@ export default async function handler(
     const normalizedLocal = localCurrency.toUpperCase();
     const normalizedTarget = (typeof targetCurrency === 'string' ? targetCurrency : 'USD').toUpperCase();
     const normalizedPaymentDate = new Date(paymentDate);
+    // Only upsert active cycles — never resurrect payment_due without an
+    // explicit reopen. Due cycles must be confirmed or cancelled first.
     const created = await PurchaseCycle.findOneAndUpdate(
       {
         userAddress,
         localCurrency: normalizedLocal,
         targetCurrency: normalizedTarget,
         paymentDate: normalizedPaymentDate,
-        status: { $in: ['active', 'payment_due'] },
+        status: 'active',
       },
       {
         $set: {

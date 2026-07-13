@@ -67,6 +67,9 @@ export interface GuardianRecommendationContract {
   action?: {
     type: string;
     label?: string;
+    fromToken?: string;
+    toToken?: string;
+    amount?: string;
   };
 }
 

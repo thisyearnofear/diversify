@@ -25,7 +25,9 @@ export function GuardianUpdates({
   onMuteType,
 }: GuardianUpdatesProps) {
   const [expandedWhy, setExpandedWhy] = useState<string | null>(null);
-  const active = updates.filter((u) => !u.dismissed);
+  const active = updates.filter(
+    (u) => !u.dismissed && u.expiresAt.getTime() > Date.now(),
+  );
 
   if (active.length === 0) return null;
 

@@ -22,6 +22,8 @@ export interface GuardianUpdate {
   contract?: GuardianRecommendationContract;
   expiresAt: Date;
   dismissed?: boolean;
+  /** Opened for review but not yet resolved — stays in the inbox. */
+  read?: boolean;
 }
 
 interface AIConversationContextType {
@@ -42,6 +44,7 @@ interface AIConversationContextType {
   guardianUpdates: GuardianUpdate[];
   addGuardianUpdate: (update: Omit<GuardianUpdate, 'id' | 'timestamp' | 'expiresAt' | 'dismissed'> & { id?: string; timestamp?: Date; expiresAt?: Date }) => void;
   dismissGuardianUpdate: (id: string) => void;
+  markGuardianUpdateRead: (id: string) => void;
   muteGuardianUpdateType: (type: GuardianUpdateType) => void;
   mutedUpdateTypes: GuardianUpdateType[];
   activeGuardianReview: GuardianUpdate | null;
@@ -149,6 +152,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
         contract: update.contract,
         expiresAt: update.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         dismissed: false,
+        read: false,
       };
       setGuardianUpdates((prev) => [...prev.filter((u) => u.id !== entry.id), entry].slice(-20));
     },
@@ -158,6 +162,12 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
   const dismissGuardianUpdate = useCallback((id: string) => {
     setGuardianUpdates((prev) =>
       prev.map((u) => (u.id === id ? { ...u, dismissed: true } : u)),
+    );
+  }, []);
+
+  const markGuardianUpdateRead = useCallback((id: string) => {
+    setGuardianUpdates((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, read: true } : u)),
     );
   }, []);
 
@@ -255,6 +265,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     guardianUpdates,
     addGuardianUpdate,
     dismissGuardianUpdate,
+    markGuardianUpdateRead,
     muteGuardianUpdateType,
     mutedUpdateTypes,
     activeGuardianReview,

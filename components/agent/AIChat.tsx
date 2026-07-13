@@ -397,7 +397,7 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { setActiveTab } = useNavigation();
+  const { setActiveTab, navigateToSwap } = useNavigation();
   const { address } = useWalletContext();
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef<number | null>(null);
@@ -710,6 +710,22 @@ export default function AIChat() {
                     {activeGuardianReview.contract ? (
                       <GuardianRecommendationCard
                         contract={activeGuardianReview.contract}
+                        onReview={
+                          activeGuardianReview.contract.action?.type === 'open_swap_review'
+                            ? () => {
+                                const action = activeGuardianReview.contract?.action;
+                                navigateToSwap({
+                                  fromToken: action?.fromToken,
+                                  toToken: action?.toToken,
+                                  amount: action?.amount,
+                                  reason: activeGuardianReview.contract?.proposal
+                                    ?? activeGuardianReview.summary,
+                                });
+                                setActiveGuardianReview(null);
+                                setDrawerOpen(false);
+                              }
+                            : undefined
+                        }
                         onDismiss={() => setActiveGuardianReview(null)}
                       />
                     ) : (

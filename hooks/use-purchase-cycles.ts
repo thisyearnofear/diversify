@@ -4,7 +4,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import type { CycleReportSnapshot, PurchaseCycleRecord } from '@diversifi/shared/src/types/purchase-cycle';
-import { getWalletAuthHeaders } from '@/lib/wallet-auth';
+import { getCachedWalletAuth, getWalletAuthHeaders } from '@/lib/wallet-auth';
 
 export function usePurchaseCycles(
   userAddress: string | null | undefined,
@@ -13,20 +13,35 @@ export function usePurchaseCycles(
   const [cycles, setCycles] = useState<PurchaseCycleRecord[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [needsUnlock, setNeedsUnlock] = useState(false);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (opts?: { promptSign?: boolean }) => {
     if (!userAddress) {
       setCycles([]);
+      setNeedsUnlock(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      const authHeaders = await getWalletAuthHeaders(userAddress);
-      if (!authHeaders) {
+      const hasCache = Boolean(getCachedWalletAuth(userAddress));
+      if (!opts?.promptSign && !hasCache) {
         setCycles([]);
+        setNeedsUnlock(true);
         return;
       }
+
+      const authHeaders = await getWalletAuthHeaders(
+        userAddress,
+        opts?.promptSign ? signMessage : undefined,
+      );
+      if (!authHeaders) {
+        setCycles([]);
+        setNeedsUnlock(true);
+        return;
+      }
+
+      setNeedsUnlock(false);
       const res = await fetch('/api/agent/business/cycles', { headers: authHeaders });
       const data = await res.json();
       if (!res.ok) {
@@ -41,10 +56,14 @@ export function usePurchaseCycles(
     } finally {
       setLoading(false);
     }
-  }, [userAddress]);
+  }, [userAddress, signMessage]);
 
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  const unlockCycles = useCallback(async () => {
+    await refresh({ promptSign: true });
   }, [refresh]);
 
   const saveCycle = useCallback(
@@ -67,6 +86,7 @@ export function usePurchaseCycles(
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to save cycle');
+      setNeedsUnlock(false);
       await refresh();
       return data.cycle as PurchaseCycleRecord;
     },
@@ -117,6 +137,8 @@ export function usePurchaseCycles(
     activeMonitored,
     loading,
     error,
+    needsUnlock,
+    unlockCycles,
     refresh,
     saveCycle,
     updateCycle,

@@ -225,7 +225,7 @@ function PrimaryRecommendation({
                                     : 'bg-blue-600 hover:bg-blue-700'
                                     }`}
                             >
-                                Execute
+                                Review swap
                             </button>
                         )}
                     </div>
@@ -413,7 +413,7 @@ function RebalancingSection({
                                 )}
                                 className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700 transition-colors"
                             >
-                                Swap
+                                Review
                             </button>
                         </div>
                     </motion.div>

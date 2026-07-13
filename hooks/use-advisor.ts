@@ -12,7 +12,7 @@ import type { AIMessage } from './agent-types';
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 export function useAdvisor() {
-  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount, addGuardianUpdate, dismissGuardianUpdate, muteGuardianUpdateType, guardianUpdates, setActiveGuardianReview } = useAIConversation();
+  const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount, addGuardianUpdate, dismissGuardianUpdate, markGuardianUpdateRead, muteGuardianUpdateType, guardianUpdates, setActiveGuardianReview } = useAIConversation();
   const { capabilities } = useAgentStatus();
   const { config } = useAgentConfig();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
@@ -147,12 +147,13 @@ export function useAdvisor() {
       if (updateId) {
         const update = guardianUpdates.find((u) => u.id === updateId);
         if (update) setActiveGuardianReview(update);
-        dismissGuardianUpdate(updateId);
+        // Opening marks read but keeps the update until Not now / Dismiss.
+        markGuardianUpdateRead(updateId);
       }
       setDrawerOpen(true);
       markAsRead();
     },
-    [dismissGuardianUpdate, guardianUpdates, markAsRead, setActiveGuardianReview, setDrawerOpen],
+    [guardianUpdates, markAsRead, markGuardianUpdateRead, setActiveGuardianReview, setDrawerOpen],
   );
 
   return {

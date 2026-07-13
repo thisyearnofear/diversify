@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getGuardianState, pruneAlertCooldowns, updateGuardianState, enqueueRecommendation } from './_guardian-state';
+import { requireWalletAuth } from '@/lib/require-wallet-auth';
 
 /**
  * Cooldown window for proactive monitoring alerts. Mirrors the previous
@@ -10,11 +11,16 @@ const ALERT_COOLDOWN_MS = 6 * 60 * 60 * 1000;
 /** Entries older than 4× the cooldown are pruned on every write. */
 const ALERT_COOLDOWN_PRUNE_WINDOW_MS = ALERT_COOLDOWN_MS * 4;
 
+/**
+ * Authenticated client read/write for Guardian state.
+ * Address is derived from wallet-signed headers — body/query userAddress is ignored.
+ * Server-side writers (cron, firecrawl, cycle-monitor) call enqueueRecommendation
+ * directly and must not use this HTTP endpoint.
+ */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const { userAddress } = req.method === 'GET' ? req.query : req.body || {};
-
-  if (!userAddress || typeof userAddress !== 'string') {
-    return res.status(400).json({ error: 'Missing userAddress' });
+  const userAddress = requireWalletAuth(req);
+  if (!userAddress) {
+    return res.status(401).json({ error: 'Wallet signature required' });
   }
 
   if (req.method === 'GET') {

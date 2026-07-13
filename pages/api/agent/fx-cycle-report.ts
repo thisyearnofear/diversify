@@ -93,8 +93,8 @@ export default async function handler(
 
     const dragLine =
       dragLocal >= 0
-        ? `Historical exposure scenario: approximately ${formatLocal(dragLocal, body.localCurrency)} of currency drag if the recent ${stressLookbackDays}-day move repeated.`
-        : `If the recent ${stressLookbackDays}-day move repeated, holding local currency would cost approximately ${formatLocal(Math.abs(dragLocal), body.localCurrency)} less than converting now.`;
+        ? `Historical exposure scenario: approximately ${formatLocal(dragLocal, body.localCurrency)} of currency drag if one recent ${stressLookbackDays}-day move were applied at the payment date.`
+        : `If one recent ${stressLookbackDays}-day move were applied at the payment date, holding local currency would cost approximately ${formatLocal(Math.abs(dragLocal), body.localCurrency)} less than converting now.`;
 
     const protectionCostLine = `Estimated spread and fees: approximately ${formatLocal(protectionCostLocal, body.localCurrency)}.`;
     const costsOutweighDrag = dragLocal > 0 && protectionCostLocal >= dragLocal;
@@ -117,7 +117,7 @@ export default async function handler(
         rateSourceNote: provider.sourceNote,
         isHistorical: true,
         disclaimer:
-          'This applies a recent historical currency move to today’s indicative mid-market rate. It is not a forecast, locked rate, or tradeable quote.',
+          'This applies one recent historical currency move to today’s indicative mid-market rate at the payment date. It is not compounded over the full horizon, and it is not a forecast, locked rate, or tradeable quote.',
       },
       input: { ...body, targetCurrency: 'USD', exposureStartDate: today },
     });

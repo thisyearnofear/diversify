@@ -29,14 +29,21 @@ interface PaymentCycleReportProps {
 }
 
 function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
-  const report = cycle.postEventReport ?? cycle.lastReport;
   const hasOutcome = Boolean(cycle.paymentOutcome);
+  const hasPostEvent = Boolean(cycle.postEventReport);
+  const report = cycle.postEventReport ?? (!hasOutcome ? cycle.lastReport : undefined);
   if (!report && !hasOutcome) return null;
+
+  const title = hasPostEvent
+    ? 'Post-payment report'
+    : hasOutcome
+      ? 'Payment recorded — outcome comparison pending'
+      : 'Post-date illustrative snapshot';
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 p-3 space-y-2">
       <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
-        {hasOutcome ? 'Post-payment report' : 'Post-date illustrative snapshot'}
+        {title}
       </p>
       {cycle.paymentOutcome && (
         <div className="text-xs text-gray-700 dark:text-gray-300 space-y-0.5">
@@ -62,6 +69,11 @@ function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{report.dragLine}</p>
           <p className="text-[10px] text-gray-400 italic">{report.disclaimer}</p>
         </>
+      )}
+      {hasOutcome && !hasPostEvent && cycle.lastReport && (
+        <p className="text-[11px] text-gray-500">
+          Pre-payment scenario remains illustrative and is not shown as realized P&amp;L.
+        </p>
       )}
     </div>
   );
@@ -200,7 +212,7 @@ export function PaymentCycleReport({
 }: PaymentCycleReportProps) {
   const { address, signMessage } = useWalletContext();
   const { draft, updateDraft } = usePaymentCycleDraft(defaultLocalCurrency);
-  const { cycles, saveCycle, updateCycle, loading: cyclesLoading } = usePurchaseCycles(address, signMessage);
+  const { cycles, saveCycle, updateCycle, loading: cyclesLoading, needsUnlock, unlockCycles } = usePurchaseCycles(address, signMessage);
   const [report, setReport] = useState<FxCycleReportResponse | null>(null);
   const [savedCycleId, setSavedCycleId] = useState<string | null>(null);
   const [monitoringEnabled, setMonitoringEnabled] = useState(false);
@@ -357,6 +369,22 @@ export function PaymentCycleReport({
         </p>
       )}
 
+      {address && needsUnlock && (
+        <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/20 p-3 space-y-2">
+          <p className="text-xs text-blue-900 dark:text-blue-100 leading-relaxed">
+            Unlock saved cycles with a short wallet signature. DiversiFi derives your address from the signature — it never trusts a pasted wallet address.
+          </p>
+          <button
+            type="button"
+            onClick={() => unlockCycles()}
+            disabled={cyclesLoading}
+            className="min-h-11 px-3 rounded-lg bg-blue-600 text-white text-xs font-bold disabled:opacity-50"
+          >
+            {cyclesLoading ? 'Unlocking…' : 'Unlock saved cycles'}
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-1 space-y-1">
           <span className="text-[10px] font-bold uppercase text-gray-500">Local currency</span>
@@ -398,7 +426,7 @@ export function PaymentCycleReport({
         </label>
       </div>
       <p id="payment-target-note" className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-        USD targets only for now. This uses today’s indicative rate with a recent historical move as stress context—not a forecast or locked quote.
+        USD targets only for now. This applies one recent historical stress move to today’s indicative rate at the payment date—not compounded over the full horizon, and not a forecast or locked quote.
       </p>
 
       <button

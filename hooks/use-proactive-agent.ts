@@ -62,7 +62,10 @@ function getExecutableTargetToken(symbol: string): string | null {
  *  - When no wallet is connected, both helpers are no-ops. This matches
  *    the previous behaviour (the loop was guarded by `if (targetToken && address)`).
  */
-function useAlertCooldown(userAddress: string | null | undefined): {
+function useAlertCooldown(
+  userAddress: string | null | undefined,
+  signMessage?: (message: string) => Promise<string>,
+): {
     shouldSend: (alertId: string, cooldownMs?: number) => boolean;
     markSent: (alertId: string) => void;
 } {
@@ -76,24 +79,29 @@ function useAlertCooldown(userAddress: string | null | undefined): {
         }
 
         let cancelled = false;
-        fetchWithTimeout(
-            `${API_BASE}/api/vault/guardian-state?userAddress=${encodeURIComponent(userAddress)}`,
-            {},
-            GUARDIAN_STATE_FETCH_TIMEOUT_MS,
-        )
-            .then((res) => res.ok ? res.json() : null)
-            .then((data) => {
-                if (cancelled || !data?.state?.alertCooldowns) return;
-                setCooldowns(data.state.alertCooldowns);
-            })
-            .catch(() => {
+        (async () => {
+            try {
+                const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
+                if (!authHeaders || cancelled) return;
+                const res = await fetchWithTimeout(
+                    `${API_BASE}/api/vault/guardian-state`,
+                    { headers: authHeaders },
+                    GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+                );
+                if (!res.ok || cancelled) return;
+                const data = await res.json();
+                if (data?.state?.alertCooldowns) {
+                    setCooldowns(data.state.alertCooldowns);
+                }
+            } catch {
                 // Best-effort only — missing cooldown state should not block alerts.
-            });
+            }
+        })();
 
         return () => {
             cancelled = true;
         };
-    }, [API_BASE, userAddress]);
+    }, [API_BASE, userAddress, signMessage]);
 
     const shouldSend = useCallback(
         (alertId: string, cooldownMs: number = YIELD_ALERT_COOLDOWN_MS) => {
@@ -110,22 +118,27 @@ function useAlertCooldown(userAddress: string | null | undefined): {
             if (!userAddress) return;
             const firedAt = Date.now();
             setCooldowns((prev) => ({ ...prev, [alertId]: firedAt }));
-            fetchWithTimeout(
-                `${API_BASE}/api/vault/guardian-state`,
-                {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        userAddress,
-                        recordAlert: { alertId, firedAt },
-                    }),
-                },
-                GUARDIAN_STATE_FETCH_TIMEOUT_MS,
-            ).catch(() => {
-                // Best-effort only.
-            });
+            (async () => {
+                try {
+                    const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
+                    if (!authHeaders) return;
+                    await fetchWithTimeout(
+                        `${API_BASE}/api/vault/guardian-state`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', ...authHeaders },
+                            body: JSON.stringify({
+                                recordAlert: { alertId, firedAt },
+                            }),
+                        },
+                        GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+                    );
+                } catch {
+                    // Best-effort only.
+                }
+            })();
         },
-        [API_BASE, userAddress],
+        [API_BASE, userAddress, signMessage],
     );
 
     return { shouldSend, markSent };
@@ -147,12 +160,12 @@ function useAlertCooldown(userAddress: string | null | undefined): {
 export function useProactiveAgent() {
   const { config } = useAgentConfig();
   const { publishAdvisorUpdate } = useAdvisor();
-  const { address } = useWalletContext();
+  const { address, signMessage } = useWalletContext();
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
   // Per-user alert cooldowns. Server-backed, so the 6h guarantee survives
   // device switches, not just session reloads.
-  const { shouldSend: shouldSendAlert, markSent: markAlertSent } = useAlertCooldown(address);
+  const { shouldSend: shouldSendAlert, markSent: markAlertSent } = useAlertCooldown(address, signMessage);
 
   // GoodDollar Integration
   const { canClaim, estimatedReward, alreadyClaimedOnChain } = useStreakRewards();
@@ -213,7 +226,7 @@ export function useProactiveAgent() {
 
     const checkCycles = async () => {
       try {
-        const authHeaders = await getWalletAuthHeaders(address);
+        const authHeaders = await getWalletAuthHeaders(address, signMessage);
         if (!authHeaders) return;
         const res = await fetchWithTimeout(
           `${API_BASE}/api/agent/business/cycles`,
@@ -273,7 +286,7 @@ export function useProactiveAgent() {
       clearTimeout(t);
       clearInterval(interval);
     };
-  }, [API_BASE, address, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
+  }, [API_BASE, address, signMessage, publishAdvisorUpdate, shouldSendAlert, markAlertSent]);
 
   // Real Market & Yield Monitoring Loop
   useEffect(() => {
@@ -361,33 +374,35 @@ export function useProactiveAgent() {
                   : `$${(best.tvl / 1e3).toFixed(0)}k`;
 
                 if (targetToken && address) {
-                  fetchWithTimeout(
-                    `${API_BASE}/api/vault/guardian-state`,
-                    {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        userAddress: address,
-                        latestRecommendation: {
-                          capturedAt: new Date().toISOString(),
-                          source: 'proactive-yield',
-                          action: 'REBALANCE',
-                          targetToken,
-                          oneLiner: `Review moving idle stablecoins toward ${targetToken} yield.`,
-                          reasoning: `${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} with TVL ${formattedTvl}.`,
-                          confidence: best.tvl >= 1_000_000 ? 0.72 : 0.55,
-                          riskLevel: best.tvl >= 1_000_000 ? 'MEDIUM' : 'HIGH',
-                          protocol: best.protocol,
-                          chain: best.chain,
-                          marketSymbol: best.symbol,
-                          apy: best.apy,
-                          tvl: best.tvl,
-                          expectedSavings: Math.max(25, Math.round(best.apy)),
-                        },
-                      }),
-                    },
-                    GUARDIAN_STATE_FETCH_TIMEOUT_MS,
-                  ).catch(() => {});
+                  const authHeaders = await getWalletAuthHeaders(address, signMessage);
+                  if (authHeaders) {
+                    fetchWithTimeout(
+                      `${API_BASE}/api/vault/guardian-state`,
+                      {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...authHeaders },
+                        body: JSON.stringify({
+                          latestRecommendation: {
+                            capturedAt: new Date().toISOString(),
+                            source: 'proactive-yield',
+                            action: 'REBALANCE',
+                            targetToken,
+                            oneLiner: `Review moving idle stablecoins toward ${targetToken} yield.`,
+                            reasoning: `${best.protocol} on ${best.chain} is offering ${best.apy.toFixed(1)}% APY on ${best.symbol} with TVL ${formattedTvl}.`,
+                            confidence: best.tvl >= 1_000_000 ? 0.72 : 0.55,
+                            riskLevel: best.tvl >= 1_000_000 ? 'MEDIUM' : 'HIGH',
+                            protocol: best.protocol,
+                            chain: best.chain,
+                            marketSymbol: best.symbol,
+                            apy: best.apy,
+                            tvl: best.tvl,
+                            expectedSavings: Math.max(25, Math.round(best.apy)),
+                          },
+                        }),
+                      },
+                      GUARDIAN_STATE_FETCH_TIMEOUT_MS,
+                    ).catch(() => {});
+                  }
 
                   const yieldContract = buildYieldAlertContract({
                     protocol: best.protocol,
@@ -458,5 +473,5 @@ export function useProactiveAgent() {
     return () => {
       clearInterval(monitoringInterval);
     };
-  }, [API_BASE, address, publishAdvisorUpdate, shouldSendAlert, markAlertSent, volatilityThreshold, yieldThreshold]);
+  }, [API_BASE, address, signMessage, publishAdvisorUpdate, shouldSendAlert, markAlertSent, volatilityThreshold, yieldThreshold]);
 }
