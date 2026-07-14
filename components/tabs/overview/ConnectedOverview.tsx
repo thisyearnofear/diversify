@@ -104,6 +104,20 @@ export function ConnectedOverview({
   const { navigateToSwap } = useNavigation();
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
+  // Destructured before `buildTips` below — `buildTips()` reads
+  // `diversificationTips` synchronously (not just inside a callback), so it
+  // must be declared before that call, not after. Declaring it later throws
+  // "Cannot access 'diversificationTips' before initialization" (TDZ) the
+  // instant a render path skips the goal-specific tips and falls through to
+  // `tips = diversificationTips`.
+  const {
+    diversificationScore,
+    diversificationRating,
+    totalValue,
+    regionData,
+    diversificationTips,
+  } = activePortfolio;
+
   // ── Build the full tip list (used by the Smart Tips accordion section) ─
   // Defined BEFORE `useHomeSections` is called so the IA hook can accept
   // `tipsCount` and gate the smart-tips section entirely when the list is
@@ -212,14 +226,6 @@ export function ConnectedOverview({
     isDismissed: graduationDismissed,
     dismiss: dismissGraduationPrompt,
   } = useGraduationSignal(address);
-
-  const {
-    diversificationScore,
-    diversificationRating,
-    totalValue,
-    regionData,
-    diversificationTips,
-  } = activePortfolio;
 
   const hasHoldings = totalValue > 0;
 
