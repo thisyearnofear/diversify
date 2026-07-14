@@ -56,6 +56,7 @@ export interface VaultPermission {
   spentTodayUSD: number;
   totalSpentUSD: number;
   firstAutoExecutionConfirmed: boolean;
+  autoExecuteCycleProtection?: boolean;
   status: string;
 }
 

@@ -42,6 +42,10 @@ export interface PurchaseCycleRecord {
   paymentDate: string;
   targetAmountUsd: number;
   monitoringEnabled: boolean;
+  cycleProtectionExecutionStatus?: 'claimed' | 'executed' | 'failed';
+  cycleProtectionExecutedAt?: string;
+  cycleProtectionTxHash?: string;
+  cycleProtectionError?: string;
   status: PurchaseCycleStatus;
   lastReport?: CycleReportSnapshot;
   postEventReport?: CycleReportSnapshot;

@@ -1,6 +1,6 @@
 # SME FX Layer Implementation Plan
 
-**Status:** In progress (2026-07-13). Phases 0–3 + Guardian trust pass shipped in-app; Phase 5 monitoring/proposals live.  
+**Status:** In progress (2026-07-14). Phases 0–3 + Guardian trust pass shipped in-app; Phase 5 (cycle-aware Guardian execution, fail-closed Celo-only) shipped.  
 **Purpose:** Close the gap between the aligned docs vision (FX-risk intelligence + philosophy moat) and the actual app. The importer wedge stays inside the existing app as an archetype until forced by demand, per `docs/sme-fx-strategy.md` §8.
 
 > **2026-07-13 update — Guardian + FX slice + trust pass:**
@@ -151,7 +151,7 @@ Goal: detect retail users who are actually traders and surface the business laye
 
 Goal: the Guardian autonomously protects working capital as a supplier payment approaches.
 
-**Status: partial (2026-07-13)** — monitoring opt-in, proposals, and cron tick shipped; `CYCLE_PROTECTION` auto-execution still uses the existing rebalance recommendation path when confidence/permissions allow.
+**Status: shipped (2026-07-14)** — monitoring opt-in, proposals, cron tick, and fail-closed `CYCLE_PROTECTION` auto-execution are all live. Auto-execution is intentionally scoped to Celo-only permissions and to local currencies with a verified Mento funding rail (KES, COP, PHP, BRL → cUSD); every other cycle stays advisory-only until a verified rail is added, rather than attempting an ambiguous swap.
 
 | Action | File(s) | Principle |
 |---|---|---|
@@ -160,10 +160,12 @@ Goal: the Guardian autonomously protects working capital as a supplier payment a
 | ✅ Inline cycle monitor in guardian-loop cron | `pages/api/agent/guardian-loop.ts` | ENHANCEMENT FIRST |
 | ✅ Client proactive alerts for monitored cycles | `hooks/use-proactive-agent.ts` | ENHANCEMENT FIRST |
 | ✅ Bounded recommendation queue (no single-pointer clobber) | `pages/api/vault/_guardian-state.ts` (`enqueueRecommendation` / `dequeueRecommendation`) | CLEAN |
-| Extend `guardian-loop.ts` to execute `CYCLE_PROTECTION` with cycle context | `pages/api/agent/guardian-loop.ts` | ENHANCEMENT FIRST |
-| Use existing chain-aware routing (Celo for local stables, Arbitrum for USD yield) | `recommendation-ledger.service.ts` | DRY |
-| Record on chain-aware ledger + 0G evidence | existing decorators | DRY |
-| Tests: cycle-aware recommendation generation | new tests | MODULAR |
+| ✅ Fail-closed execution plan (Celo-only, verified funding rail, vault-balance check) | `lib/guardian/cycle-execution.ts` (`deriveCycleExecutionPlan`) | ENHANCEMENT FIRST |
+| ✅ `guardian-loop.ts` executes `CYCLE_PROTECTION` with cycle context, atomic per-cycle claim/finish idempotency | `pages/api/agent/guardian-loop.ts`, `lib/guardian/cycle-execution.ts` | ENHANCEMENT FIRST |
+| ✅ Second-stage consent (`Permission.autoExecuteCycleProtection`) — `PATCH /api/vault/permission`, opt-in checkbox in the Protect tab | `pages/api/vault/permission.ts`, `hooks/use-purchase-cycles.ts`, `components/tabs/protect/PaymentCycleReport.tsx` | ENHANCEMENT FIRST |
+| ✅ Browser writes to `guardian-state` rejected for reserved server-origin fields (`source: 'cycle-monitor'`, `cycleId`) | `pages/api/vault/guardian-state.ts` | CLEAN |
+| ✅ Record on-chain with distinct `CYCLE_PROTECTION` action + `guardian-loop-cycle` serving model | `pages/api/agent/guardian-loop.ts` | DRY |
+| ✅ Tests: plan derivation, staleness gate, claim/finish idempotency, two-tick no-double-execute, consent trust boundary | `lib/guardian/__tests__/cycle-execution.test.ts`, `pages/api/agent/__tests__/guardian-loop.test.ts`, `pages/api/vault/__tests__/guardian-state-handler.test.ts` | MODULAR |
 
 **Why:** This is the autonomous protection half of the value proposition. It builds on Phase 2–4, not in parallel.
 

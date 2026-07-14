@@ -22,8 +22,13 @@ export default defineConfig({
       // transformed by Vite rather than loaded as native ESM. Without this
       // any test that imports gooddollar-service will crash with
       // "Named export 'X' not found" for the SDK's CJS transitive deps.
+      //
+      // @diversifi/shared-0g is inlined so test files that transitively pull
+      // in `@diversifi/shared` (which the AI decorator barrel re-exports
+      // from shared-0g's source path) don't fail with MODULE_NOT_FOUND
+      // against the unbuilt source under vitest's resolver.
       deps: {
-        inline: [/@goodsdks\//, /lz-string/, /axios/],
+        inline: [/@goodsdks\//, /lz-string/, /axios/, /@diversifi\/shared-0g/],
       },
     },
   },

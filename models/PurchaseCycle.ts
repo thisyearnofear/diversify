@@ -8,6 +8,7 @@
 import mongoose, { Schema, Document } from 'mongoose';
 
 export type PurchaseCycleStatus = 'draft' | 'active' | 'payment_due' | 'completed' | 'cancelled';
+export type CycleProtectionExecutionStatus = 'claimed' | 'executed' | 'failed';
 
 export interface ICycleReportSnapshot {
   computedAt: Date;
@@ -38,6 +39,11 @@ export interface IPurchaseCycle extends Document {
   paymentDate: Date;
   targetAmountUsd: number;
   monitoringEnabled: boolean;
+  cycleProtectionExecutionStatus?: CycleProtectionExecutionStatus;
+  cycleProtectionClaimedAt?: Date;
+  cycleProtectionExecutedAt?: Date;
+  cycleProtectionTxHash?: string;
+  cycleProtectionError?: string;
   status: PurchaseCycleStatus;
   lastReport?: ICycleReportSnapshot;
   postEventReport?: ICycleReportSnapshot;
@@ -82,6 +88,14 @@ const PurchaseCycleSchema = new Schema<IPurchaseCycle>(
     paymentDate: { type: Date, required: true },
     targetAmountUsd: { type: Number, required: true, min: 0 },
     monitoringEnabled: { type: Boolean, default: false },
+    cycleProtectionExecutionStatus: {
+      type: String,
+      enum: ['claimed', 'executed', 'failed'],
+    },
+    cycleProtectionClaimedAt: { type: Date },
+    cycleProtectionExecutedAt: { type: Date },
+    cycleProtectionTxHash: { type: String },
+    cycleProtectionError: { type: String, maxlength: 500 },
     status: {
       type: String,
       enum: ['draft', 'active', 'payment_due', 'completed', 'cancelled'],

@@ -11,6 +11,14 @@
  *   4. Anchor decision to 0G Storage + persist to Cognee memory
  *   5. Clear the recommendation so it doesn't re-fire
  *
+ * Phase 5 (Cycle-Aware Execution): CYCLE_PROTECTION proposals queued by
+ * `lib/guardian/cycle-monitor-run.ts` arrive stamped 'manual_review' with no
+ * tradeAmountUSD. The cycle-aware branch in the queue iteration below
+ * re-projects them as eligible for THIS tick only when:
+ *   1. The matching PurchaseCycle is still active + monitoring-enabled and
+ *      inside the 14-day auto-execution window.
+ *   2. Permission.autoExecuteCycleProtection === true (second-stage consent).
+ *
  * Security:
  *   - Protected by GUARDIAN_LOOP_SECRET header (server-to-server only)
  *   - Respects user's signed permission bounds (daily limit, allowed tokens, expiry)
@@ -22,6 +30,13 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { Permission } from '../../../models/Permission';
 import { vaultStore } from '../vault/_store';
+import {
+  claimCycleExecution,
+  finishCycleExecution,
+  loadCycleForExecution,
+  releaseCycleExecutionClaim,
+  type CycleExecutionContext,
+} from '../../../lib/guardian/cycle-execution';
 import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
@@ -66,6 +81,11 @@ function isAutoExecutableCandidate(
   if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) return false;
   return isTokenAllowed(recommendation, allowedTokens);
 }
+
+// Phase 5 helpers (`loadCycleForExecution`, `deriveCycleTargetToken`,
+// `CycleExecutionContext`, validity gate, Mento currency set, etc.) live in
+// `lib/guardian/cycle-execution.ts` so they're independently unit-testable
+// without spinning up the cron runtime.
 
 /**
  * Persist an anchor to BOTH the pointer field and the rolling history, then
@@ -173,11 +193,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
+      // Phase 5: resolve the vault strategy EARLY (only for users with a queue)
+      // so the cycle-aware branch below can derive the correct chain-aware
+      // target token + ledger routing context for APAC profiles.
+      // Cheap Mongo read — one extra hit per cron tick per user with a queue
+      // (empty-queue users already `continue` above).
+      const cycleVault = await vaultStore.findVaultByUser(userAddress);
+
       // Drop stale items, then select the first auto-executable recommendation.
       // Advisory-only heads (e.g. cycle proposals without tradeAmountUSD) must
       // not block later executable items in the queue.
       let recommendation: GuardianRecommendationSnapshot | null = null;
       let advisoryBlocked = 0;
+      // Phase 5: cycle-aware context for CYCLE_PROTECTION executions. null
+      // on the generic rebalance path. Carries everything needed to record a
+      // cycle-specific on-chain entry without mutating the queued snapshot.
+      let cycleExecution: CycleExecutionContext | null = null;
       for (const candidate of queue) {
         const ageMinutes = (Date.now() - new Date(candidate.capturedAt).getTime()) / 60000;
         if (ageMinutes > 60) {
@@ -190,6 +221,98 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           await dequeueRecommendation(userAddress, candidate.capturedAt).catch(() => {});
           continue;
         }
+
+        // ─── Phase 5: cycle-aware branch ────────────────────────────
+        // Detect CYCLE_PROTECTION BEFORE the generic eligibility check.
+        // The cycle-monitor enqueues proposals with executionEligibility
+        // 'manual_review' and no tradeAmountUSD — the generic path would
+        // skip them forever. When the user has opted in to cycle
+        // auto-execution AND the matching PurchaseCycle is still active
+        // + within window, re-project the candidate as eligible for THIS
+        // tick only (drawer still sees the original advisory contract).
+        if (
+          candidate.source === 'cycle-monitor' &&
+          candidate.action === 'CYCLE_PROTECTION' &&
+          candidate.cycleId
+        ) {
+          const cycleLoad = await loadCycleForExecution(
+            userAddress,
+            candidate.cycleId,
+            {
+              chainId: perm.chainId,
+              allocations: cycleVault?.allocations,
+            },
+          );
+          if (cycleLoad.kind === 'transient') {
+            // Mongo hiccup — leave the queue entry alone, no execution. The
+            // cycle-monitor will re-propose on its next tick; dropping here
+            // would lose the user's drawer visibility until that re-propose.
+            continue;
+          }
+          if (cycleLoad.kind === 'stale') {
+            // Stale cycle — drop with a specific reason the user can act on.
+            results.push({
+              userAddress,
+              action: 'skip',
+              status: 'cycle_unavailable',
+              reason: 'PurchaseCycle no longer active, monitoring disabled, or outside the 14-day auto-execution window',
+            });
+            await dequeueRecommendation(userAddress, candidate.capturedAt).catch(() => {});
+            continue;
+          }
+          if (cycleLoad.kind === 'unsupported') {
+            advisoryBlocked += 1;
+            results.push({
+              userAddress,
+              action: 'skip',
+              status: 'cycle_advisory_only',
+              reason: cycleLoad.reason,
+            });
+            continue;
+          }
+          // 'ready'
+          if (!perm.autoExecuteCycleProtection) {
+            // Don't drop, don't pick — leave as advisory so the drawer keeps
+            // surfacing the cycle proposal for manual review.
+            advisoryBlocked += 1;
+            continue;
+          }
+          const cycleCtx = cycleLoad.context;
+          // Re-project as eligible for this tick. The queued snapshot stays
+          // untouched so its `open_cycle_review` contract is unchanged.
+          recommendation = {
+            ...candidate,
+            executionEligibility: 'guardian_eligible',
+            tradeAmountUSD: cycleCtx.cycle.targetAmountUsd,
+            targetToken: cycleCtx.targetToken,
+            confidence: cycleCtx.daysUntil <= 7 ? 0.75 : 0.6,
+          };
+          if (!isAutoExecutableCandidate(recommendation, perm.allowedTokens)) {
+            recommendation = null;
+            advisoryBlocked += 1;
+            continue;
+          }
+          const remainingTotal = perm.spendingLimitUSD - perm.totalSpentUSD;
+          const allowedActions = perm.allowedActions ?? [];
+          if (
+            cycleCtx.cycle.targetAmountUsd > remainingToday ||
+            cycleCtx.cycle.targetAmountUsd > remainingTotal ||
+            (!allowedActions.includes('swap') && !allowedActions.includes('rebalance'))
+          ) {
+            recommendation = null;
+            advisoryBlocked += 1;
+            results.push({
+              userAddress,
+              action: 'skip',
+              status: 'cycle_outside_permission_bounds',
+              reason: 'The full cycle amount does not fit the signed action, daily, and total permission bounds',
+            });
+            continue;
+          }
+          cycleExecution = cycleCtx;
+          break;
+        }
+
         if (isAutoExecutableCandidate(candidate, perm.allowedTokens)) {
           recommendation = candidate;
           break;
@@ -209,7 +332,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
-      const tradeAmountUSD = Math.min(recommendation.tradeAmountUSD!, remainingToday);
+      const tradeAmountUSD = cycleExecution
+        ? recommendation.tradeAmountUSD!
+        : Math.min(recommendation.tradeAmountUSD!, remainingToday);
       const confidence = recommendation.confidence ?? 0;
 
       if (tradeAmountUSD < 1) {
@@ -227,7 +352,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       // ─── All checks passed — EXECUTE ─────────────────────────────────
       const service = new VaultService(vaultStore, circleExecutor);
-      const vault = await vaultStore.findVaultByUser(userAddress);
+      // The vault ref was already resolved earlier (for cycle-aware routing).
+      // Reuse it for the rebalance execution; only fall back to a fresh fetch
+      // if it was never resolved (queue was empty at the top of the loop).
+      const vault = cycleVault ?? (await vaultStore.findVaultByUser(userAddress));
       if (!vault) {
         results.push({ userAddress, action: 'skip', status: 'no_vault' });
         continue;
@@ -249,6 +377,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
 
+      let cycleClaimed = false;
+      let cycleExecutionFinished = false;
+      if (cycleExecution) {
+        cycleClaimed = await claimCycleExecution(userAddress, cycleExecution.cycle._id);
+        if (!cycleClaimed) {
+          await dequeueRecommendation(userAddress, recommendation.capturedAt).catch(() => {});
+          await releaseExecutionLock(userAddress, lockToken).catch(() => {});
+          results.push({
+            userAddress,
+            action: 'skip',
+            status: 'cycle_already_claimed',
+            reason: 'This purchase cycle already has an execution attempt',
+          });
+          continue;
+        }
+      }
+
       // Idempotency gate: atomically dequeue THIS exact recommendation before
       // executing. If a slow rebalance() overran the lock's staleness window
       // and a second tick reclaimed the lock, that tick finds the
@@ -257,6 +402,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // before a post-submit failure is never blindly retried.
       const claimed = await dequeueRecommendation(userAddress, recommendation.capturedAt).catch(() => false);
       if (!claimed) {
+        if (cycleExecution && cycleClaimed) {
+          await releaseCycleExecutionClaim(userAddress, cycleExecution.cycle._id).catch(() => {});
+        }
         await releaseExecutionLock(userAddress, lockToken).catch(() => {});
         results.push({
           userAddress,
@@ -277,15 +425,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // 18 decimals. floor() so we never round UP past the daily limit.
         const amountInWei = (BigInt(Math.floor(tradeAmountUSD * 1_000_000)) * 1_000_000_000_000n).toString();
 
+        const executionPlan = cycleExecution?.executionPlan;
         const rebalanceRecs: RebalanceRecommendation[] = [{
           action: 'swap',
           urgency: 'high',
-          tokenIn: 'cUSD',
-          tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
-          tokenOut: targetToken,
-          tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[targetToken] || CELO_TOKEN_ADDRESS_BY_SYMBOL.cEUR,
+          tokenIn: executionPlan?.tokenIn ?? 'cUSD',
+          tokenInAddress: executionPlan?.tokenInAddress ?? CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
+          tokenOut: executionPlan?.tokenOut ?? targetToken,
+          tokenOutAddress: executionPlan?.tokenOutAddress ?? CELO_TOKEN_ADDRESS_BY_SYMBOL[targetToken],
           amountIn: amountInWei,
-          reason: recommendation.oneLiner || `Guardian auto-execute: ${recommendation.reasoning || 'AI-recommended rebalance'}`,
+          // Phase 5: cycle-aware executions carry their own reasoning copy
+          // ("Auto-protected KES→USD cycle: ...") so the proof feed tells a
+          // supplier-payment story rather than a generic rebalance story.
+          reason: cycleExecution
+            ? `Auto-protected ${cycleExecution.cycle.localCurrency}\u2192USD cycle: ~$${tradeAmountUSD} \u2192 ${targetToken} as payment approaches on ${cycleExecution.cycle.paymentDateIso} (${cycleExecution.daysUntil}d remaining).`
+            : (recommendation.oneLiner || `Guardian auto-execute: ${recommendation.reasoning || 'AI-recommended rebalance'}`),
           estimatedAmountUSD: tradeAmountUSD,
         }];
 
@@ -294,6 +448,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (result.executed > 0) {
           executionCount++;
           const txHash = result.results?.[0]?.txHash || '';
+
+          if (cycleExecution) {
+            await finishCycleExecution(userAddress, cycleExecution.cycle._id, {
+              status: 'executed',
+              txHash,
+            });
+            cycleExecutionFinished = true;
+          }
 
           results.push({
             userAddress,
@@ -311,14 +473,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // swallowed — the Guardian proof feed surfaces this status.
           const anchor = await recommendationLedgerService.recordRecommendation({
             user: userAddress,
-            action: 'AUTONOMOUS_REBALANCE',
+            // Phase 5: cycle-aware executions stamp the distinct
+            // `CYCLE_PROTECTION` action so on-chain history is grep-able
+            // separately from generic AUTONOMOUS_REBALANCE entries.
+            action: cycleExecution ? 'CYCLE_PROTECTION' : 'AUTONOMOUS_REBALANCE',
             targetToken,
-            reasoning: recommendation.oneLiner || recommendation.reasoning || 'Guardian auto-execution',
+            reasoning: cycleExecution
+              ? cycleExecution.reasoning
+              : (recommendation.oneLiner || recommendation.reasoning || 'Guardian auto-execution'),
             evidenceCid: '', // Will be populated if 0G Storage upload precedes
-            servingModel: 'guardian-loop',
+            // Phase 5: cycle executions stamp `guardian-loop-cycle` so the
+            // servingModel field distinguishes them from generic rebalances
+            // in downstream 0G Serving analytics.
+            servingModel: cycleExecution ? 'guardian-loop-cycle' : 'guardian-loop',
             settlementTxHash: txHash,
             confidence: Math.round(confidence * 10000), // Contract uses basis points
-            routingContext: deriveLedgerRoutingContextFromVault(vault.strategy),
+            routingContext: cycleExecution ? undefined : deriveLedgerRoutingContextFromVault(vault.strategy),
           });
 
           // Mirror to 0G evidence anchor (fire-and-forget). This creates a
@@ -374,6 +544,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         } else {
           const failureReason = result.results?.[0]?.reason || 'Unknown execution failure';
+          if (cycleExecution) {
+            await finishCycleExecution(userAddress, cycleExecution.cycle._id, {
+              status: 'failed',
+              error: failureReason,
+            }).catch(() => {});
+            cycleExecutionFinished = true;
+          }
           results.push({
             userAddress,
             action: 'attempted',
@@ -389,6 +566,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }).catch(() => {});
         }
       } catch (execError: any) {
+        if (cycleExecution && cycleClaimed && !cycleExecutionFinished) {
+          await finishCycleExecution(userAddress, cycleExecution.cycle._id, {
+            status: 'failed',
+            error: execError.message,
+          }).catch(() => {});
+          cycleExecutionFinished = true;
+        }
         results.push({
           userAddress,
           action: 'attempted',

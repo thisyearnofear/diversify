@@ -55,6 +55,7 @@ function toPermissionType(doc: IPermission): VaultPermission {
     spentDate: doc.spentDate,
     totalSpentUSD: doc.totalSpentUSD,
     firstAutoExecutionConfirmed: doc.firstAutoExecutionConfirmed ?? false,
+    autoExecuteCycleProtection: doc.autoExecuteCycleProtection ?? false,
     status: doc.status,
   };
 }

@@ -35,6 +35,7 @@ export async function runCycleMonitor(now = new Date()): Promise<CycleMonitorSum
   const monitored = await PurchaseCycle.find({
     monitoringEnabled: true,
     status: 'active',
+    cycleProtectionExecutionStatus: { $exists: false },
     paymentDate: { $gte: now },
   })
     .sort({ paymentDate: 1 })

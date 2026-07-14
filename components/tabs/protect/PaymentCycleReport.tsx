@@ -213,13 +213,23 @@ export function PaymentCycleReport({
 }: PaymentCycleReportProps) {
   const { address, signMessage } = useWalletContext();
   const { draft, updateDraft } = usePaymentCycleDraft(defaultLocalCurrency);
-  const { cycles, saveCycle, updateCycle, loading: cyclesLoading, needsUnlock, unlockCycles } = usePurchaseCycles(address, signMessage);
+  const {
+    cycles,
+    saveCycle,
+    updateCycle,
+    loading: cyclesLoading,
+    needsUnlock,
+    cycleAutoExecutionEnabled,
+    unlockCycles,
+    setCycleAutoExecution,
+  } = usePurchaseCycles(address, signMessage);
   const { focusedCycleId, setFocusedCycleId } = useNavigation();
   const [report, setReport] = useState<FxCycleReportResponse | null>(null);
   const [savedCycleId, setSavedCycleId] = useState<string | null>(null);
   const [monitoringEnabled, setMonitoringEnabled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [cycleConsentSaving, setCycleConsentSaving] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [highlightedCycleId, setHighlightedCycleId] = useState<string | null>(null);
   const cycleRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -316,6 +326,18 @@ export function PaymentCycleReport({
     } catch (e) {
       setMonitoringEnabled(!enabled);
       setError(e instanceof Error ? e.message : 'Could not update monitoring');
+    }
+  };
+
+  const toggleCycleAutoExecution = async (enabled: boolean) => {
+    setCycleConsentSaving(true);
+    setError(null);
+    try {
+      await setCycleAutoExecution(enabled);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not update cycle execution consent');
+    } finally {
+      setCycleConsentSaving(false);
     }
   };
 
@@ -508,7 +530,27 @@ export function PaymentCycleReport({
                   Let Guardian monitor this payment cycle
                 </p>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-                  Guardian may propose protection as the date approaches. Auto-execution only within your signed limits. You can mute or cancel anytime.
+                  Guardian may propose protection as the date approaches. Monitoring alone never authorizes a trade.
+                </p>
+              </div>
+            </label>
+          )}
+
+          {savedCycleId && address && monitoringEnabled && (
+            <label className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/20 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cycleAutoExecutionEnabled}
+                disabled={cycleConsentSaving}
+                onChange={(e) => toggleCycleAutoExecution(e.target.checked)}
+                className="mt-1"
+              />
+              <div>
+                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                  Allow Guardian to execute supported cycle protection
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                  Separate consent: Guardian may make one verified Celo local-stable → cUSD trade for the full cycle amount, only within your active GUARDIAN limits. Unsupported currencies and insufficient balances stay advisory-only.
                 </p>
               </div>
             </label>

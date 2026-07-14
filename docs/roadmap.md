@@ -451,8 +451,9 @@ verifiable ledger).
 - **Bounded `recommendationQueue`** on GuardianState so cycle/yield/macro writers cannot overwrite each other
 - **Review ≠ execute** — Review opens the swap quote path; Open review renders the structured Guardian contract
 - **Markdown/CSV export** via shared `fx-drag-report-renderer.ts`
+- **Fail-closed `CYCLE_PROTECTION` auto-execution** (2026-07-14) — Celo-only, verified Mento funding rail (KES/COP/PHP/BRL → cUSD), per-cycle atomic idempotency, second-stage opt-in consent (`Permission.autoExecuteCycleProtection`); unsupported currencies stay advisory-only
 
-Still planned: Importer `FinancialStrategy` archetype, graduation funnel (Phase 4), full cycle execution in guardian-loop for `CYCLE_PROTECTION` action type.
+Still planned: Importer `FinancialStrategy` archetype, graduation funnel (Phase 4).
 
 The concierge FX drag report (`scripts/fx-drag-report.ts`) still validates math with real trader data; it now delegates rendering to shared. Full phased plan:
 in [`docs/sme-fx-implementation-plan.md`](./sme-fx-implementation-plan.md).
@@ -472,7 +473,7 @@ lane: not another rail, the driver on top of the rails.
 | Business | Revenue — same person graduates working capital | Importer/Trader archetype (cycle-aware) + per-cycle FX drag report |
 | Protocol | Scale — rails players embed the intelligence | Track 1d enterprise gateway ("treasury autopilot") |
 
-**Sequencing (gated):** See `docs/sme-fx-implementation-plan.md` for the full phased plan. Summary: 1) concierge validation *(shipped)*; 2) Importer archetype as `FinancialStrategy` *(planned)*; 3) self-serve per-cycle FX drag report in the app *(shipped 2026-07-13)*; 4) cycle-aware Guardian proposals as payment dates approach *(shipped — monitoring opt-in + cron tick; execution for `CYCLE_PROTECTION` still bounded by existing rebalance path)*; 5) GHS ramp via partner; 6) rails design partner; 7) split only when demand forces it.
+**Sequencing (gated):** See `docs/sme-fx-implementation-plan.md` for the full phased plan. Summary: 1) concierge validation *(shipped)*; 2) Importer archetype as `FinancialStrategy` *(planned)*; 3) self-serve per-cycle FX drag report in the app *(shipped 2026-07-13)*; 4) cycle-aware Guardian proposals + fail-closed auto-execution as payment dates approach *(shipped 2026-07-14 — monitoring opt-in + cron tick + Celo-only verified-rail execution with consent + idempotency)*; 5) GHS ramp via partner; 6) rails design partner; 7) split only when demand forces it.
 
 **Regulatory note:** Ghana's VASP Act 1154 (signed 2025-12-29, BoG
 licensing from Q1 2026) + BoG anti-dollarization posture make the

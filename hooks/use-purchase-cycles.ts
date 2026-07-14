@@ -14,6 +14,7 @@ export function usePurchaseCycles(
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [needsUnlock, setNeedsUnlock] = useState(false);
+  const [cycleAutoExecutionEnabled, setCycleAutoExecutionEnabled] = useState(false);
 
   const refresh = useCallback(async (opts?: { promptSign?: boolean }) => {
     if (!userAddress) {
@@ -50,6 +51,16 @@ export function usePurchaseCycles(
         return;
       }
       setCycles(data.cycles ?? []);
+
+      const permissionRes = await fetch('/api/vault/permission', { headers: authHeaders });
+      if (permissionRes.ok) {
+        const permissionData = await permissionRes.json();
+        setCycleAutoExecutionEnabled(
+          permissionData.permission?.autoExecuteCycleProtection === true,
+        );
+      } else {
+        setCycleAutoExecutionEnabled(false);
+      }
     } catch {
       setError('Network error');
       setCycles([]);
@@ -128,6 +139,20 @@ export function usePurchaseCycles(
     [userAddress, signMessage, refresh],
   );
 
+  const setCycleAutoExecution = useCallback(async (enabled: boolean) => {
+    if (!userAddress) throw new Error('Connect your wallet first');
+    const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
+    if (!authHeaders) throw new Error('Wallet signature required');
+    const res = await fetch('/api/vault/permission', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders },
+      body: JSON.stringify({ autoExecuteCycleProtection: enabled }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error ?? 'Could not update cycle execution consent');
+    setCycleAutoExecutionEnabled(enabled);
+  }, [userAddress, signMessage]);
+
   const activeMonitored = cycles.filter(
     (c) => c.status === 'active' && c.monitoringEnabled,
   );
@@ -138,9 +163,11 @@ export function usePurchaseCycles(
     loading,
     error,
     needsUnlock,
+    cycleAutoExecutionEnabled,
     unlockCycles,
     refresh,
     saveCycle,
     updateCycle,
+    setCycleAutoExecution,
   };
 }

@@ -14,6 +14,8 @@ const erc7715 = new ERC7715Service();
  *
  * GET  /api/vault/permission — Get active permission for the derived user.
  *
+ * PATCH /api/vault/permission — Toggle explicit cycle auto-execution consent.
+ *
  * DELETE /api/vault/permission — Revoke the active permission for the derived user.
  *
  * Authorization: the user address is derived from `requireWalletAuth()` on
@@ -191,6 +193,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
+  if (req.method === 'PATCH') {
+    const { autoExecuteCycleProtection } = req.body ?? {};
+    if (typeof autoExecuteCycleProtection !== 'boolean') {
+      return res.status(400).json({ error: 'autoExecuteCycleProtection must be a boolean' });
+    }
+
+    try {
+      const vault = await vaultStore.findVaultByUser(auth);
+      if (!vault) return res.status(404).json({ error: 'No vault found' });
+
+      const permission = await vaultStore.findActivePermission(vault._id);
+      if (!permission) return res.status(404).json({ error: 'No active Auto-Saver permission found' });
+      if (autoExecuteCycleProtection && permission.autonomyLevel !== 'GUARDIAN') {
+        return res.status(409).json({ error: 'Cycle auto-execution requires a GUARDIAN permission' });
+      }
+
+      await vaultStore.updatePermission(permission._id, { autoExecuteCycleProtection });
+      return res.status(200).json({ success: true, autoExecuteCycleProtection });
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
+  }
+
   if (req.method === 'DELETE') {
     try {
       const vault = await vaultStore.findVaultByUser(auth);
@@ -207,5 +232,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
+  res.setHeader('Allow', 'GET, POST, PATCH, DELETE');
   return res.status(405).json({ error: 'Method not allowed' });
 }

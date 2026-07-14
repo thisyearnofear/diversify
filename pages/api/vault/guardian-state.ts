@@ -66,6 +66,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           error: 'latestRecommendation must be an object — use POST { dismiss: { capturedAt } } to remove a single recommendation',
         });
       }
+      // Reserved server-origin fields. The guardian-loop cycle branch treats
+      // `source: 'cycle-monitor'` + `cycleId` as a trusted tuple and
+      // re-projects it past the manual_review stamp, so a browser must never
+      // be able to submit either — even for a cycle the caller legitimately
+      // owns, enqueueing it is the cycle-monitor's job, not the client's.
+      if (latestRecommendation.source === 'cycle-monitor' || latestRecommendation.cycleId !== undefined) {
+        return res.status(400).json({
+          error: 'source "cycle-monitor" and cycleId are reserved for server-side writers',
+        });
+      }
       const stamped = {
         ...latestRecommendation,
         executionEligibility: 'manual_review' as const,

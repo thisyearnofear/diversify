@@ -52,6 +52,22 @@ export interface IPermission extends Document {
   // EIP-712 consent for autonomous execution) or after first manual execution.
   firstAutoExecutionConfirmed: boolean;
 
+  /**
+   * Second-stage consent for cycle-aware Guardian execution (Phase 5). When
+   * true, the Guardian loop may auto-execute a `CYCLE_PROTECTION` proposal
+   * inside the 14-day payment window against the matching PurchaseCycle's
+   * context, within the existing daily limit + GUARDIAN-tier gates.
+   *
+   * Distinct from `monitoringEnabled` on the cycle itself (which controls
+   * whether cycle *proposals* get queued in the first place). Users opt
+   * into proposals and auto-execution on separate signals so the leap from
+   * "Guardian suggests" to "Guardian acts" remains explicit.
+   *
+   * Default false. Existing permissions in Mongo get `undefined` from
+   * `.lean()`; the guardian-loop treats undefined the same as false.
+   */
+  autoExecuteCycleProtection?: boolean;
+
   // Status
   status: PermissionStatus;
 
@@ -86,6 +102,8 @@ const PermissionSchema = new Schema<IPermission>(
     totalSpentUSD: { type: Number, default: 0 },
 
     firstAutoExecutionConfirmed: { type: Boolean, default: false },
+
+    autoExecuteCycleProtection: { type: Boolean, default: false },
 
     status: {
       type: String,

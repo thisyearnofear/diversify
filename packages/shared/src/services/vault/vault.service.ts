@@ -74,6 +74,7 @@ export interface VaultPermission {
   spentDate: string;
   totalSpentUSD: number;
   firstAutoExecutionConfirmed: boolean;
+  autoExecuteCycleProtection?: boolean;
   status: 'active' | 'expired' | 'revoked';
 }
 
