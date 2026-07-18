@@ -175,7 +175,7 @@ ERC-8004 compliant; Self Protocol adds a Proof-of-Human layer on top.
 | Registry | Address | Chain | Status |
 |---|---|---|---|
 | ERC-8004 Identity Registry (8004scan) | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | Celo mainnet | **Registered** — agentId 9654, owner `0x3542…Af48` |
-| Self Protocol Agent ID | `0x043DaCac8b0771DD5b444bCC88f2f8BBDBEdd379` | Celo Sepolia (testnet) | **Registered** — agentId 82, verified, proof-of-human (passport strength 100) |
+| Self Protocol Agent ID | `0xaC3DF9ABf80d0F5c020C06B04Cced27763355944` (registry) | Celo mainnet (42220) | **Registered** — agent `0xE8cDb7CA…f170`, verified with real passport (proof-of-human, mainnet) |
 
 **ERC-8004 (8004scan):** Portable, censorship-resistant agent identity. The
 registration file at `public/.well-known/erc8004.json` describes the agent

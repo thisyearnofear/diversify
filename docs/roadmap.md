@@ -490,7 +490,6 @@ design, honesty guardrails, and risks: [`sme-fx-strategy.md`](./sme-fx-strategy.
 
 | Task | Why deferred |
 |---|---|
-| **Agent identity on-chain registration** (ERC-8004 mint + Self Protocol passport scan) | **ERC-8004 done** (agentId 9654 on Celo mainnet). **Self Protocol on testnet** (agentId 82 on Celo Sepolia, proof-of-human verified with mock documents). Mainnet Self Protocol registration with real passport is a Wave 3 / Celo grant priority — testnet + mock docs scored zero on the Celo rubric. See `docs/agent-identity.md`. |
 | **Package split** (`@diversifi/shared` → `shared-ai`, `shared-swap`, `shared-guardian`, `shared-data`, `shared-core`) | 33K-line monolith will surface circular dependency nightmares. Revisit when the package hits 50K+ lines or a second team starts contributing. |
 | **API versioning** (`/api/v1/` prefix) | Zero external consumers. All API routes are internal Next.js routes consumed by the same app. Add versioning when the first SDK or mobile app is built. |
 | **Turbopack migration** (remove `--webpack` flag) | Mixing bundler changes with component refactors makes debugging untraceable. Do this as a standalone task after this plan is complete and the codebase is stable. |
