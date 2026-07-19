@@ -15,6 +15,14 @@ export interface AIProviderConfig {
   elevenlabsVoiceId?: string;
   /** NVIDIA integrate API key — OpenAI-compatible, 100+ models, ~40 req/min free. */
   nvidiaApiKey?: string;
+  /**
+   * DashScope (Alibaba Cloud Bailian) API key — direct Qwen Cloud access.
+   * OpenAI-compatible. Inert when unset; only reachable via
+   * `preferredProvider: 'dashscope'` (e.g. memory consolidation).
+   */
+  dashscopeApiKey?: string;
+  /** Override the DashScope model (default: qwen-plus; try qwen-long for 1M ctx). */
+  dashscopeModel?: string;
 }
 
 /**

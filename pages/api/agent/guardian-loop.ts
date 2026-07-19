@@ -40,7 +40,7 @@ import {
 import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '../../../packages/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
-import { cogneeMemoryService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
+import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
 
@@ -58,6 +58,77 @@ const GUARDIAN_LOOP_SECRET = (() => {
 })();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
+
+/**
+ * Memory maintenance pass — runs automatic forgetting (sweep) on every tick
+ * and memory consolidation on a gated cadence (~every 6h). Both are
+ * provider-agnostic and fire-and-forget; a failure for one user never blocks
+ * the others or wedges the cron.
+ *
+ * Consolidation gate: the first 5 minutes of every 6-hour window. The 5-min
+ * cron catches this once per window, giving ~4 consolidation passes per user
+ * per day. Override the window with `MEMORY_CONSOLIDATION_WINDOW_HOURS`.
+ */
+const CONSOLIDATION_WINDOW_HOURS = Number(process.env.MEMORY_CONSOLIDATION_WINDOW_HOURS) || 6;
+function shouldConsolidateNow(now: number): boolean {
+  const windowMs = CONSOLIDATION_WINDOW_HOURS * 3_600_000;
+  return Math.floor(now / 60_000) % Math.floor(windowMs / 60_000) < 5;
+}
+
+async function runMemoryMaintenance(userAddresses: string[]): Promise<{
+  sweepedUsers: number;
+  consolidatedUsers: number;
+  consolidationWindow: boolean;
+  details: Array<{ user: string; sweep?: { swept: number; evicted: number }; consolidation?: any }>;
+}> {
+  const consolidationWindow = shouldConsolidateNow(Date.now());
+  const details: Array<{ user: string; sweep?: { swept: number; evicted: number }; consolidation?: any }> = [];
+  let sweepedUsers = 0;
+  let consolidatedUsers = 0;
+
+  // De-duplicate — a user with multiple permissions should only be processed once.
+  const uniqueUsers = Array.from(new Set(userAddresses));
+
+  for (const userAddress of uniqueUsers) {
+    const entry: { user: string; sweep?: { swept: number; evicted: number }; consolidation?: any } = { user: userAddress };
+
+    // Sweep (soft + hard forgetting) — every tick, cheap.
+    try {
+      const sweep = await cogneeMemoryService.sweepStaleMemories(userAddress);
+      if (sweep.swept > 0) {
+        sweepedUsers++;
+        entry.sweep = { swept: sweep.swept, evicted: sweep.evicted };
+      }
+    } catch (err: unknown) {
+      console.warn(`[guardian-loop] memory sweep failed for ${userAddress}:`, err instanceof Error ? err.message : err);
+    }
+
+    // Consolidation — gated to ~every 6h. Uses Qwen long-context when
+    // DashScope is available, falls back to the normal chain otherwise.
+    if (consolidationWindow) {
+      try {
+        const consolidation = await memoryConsolidationService.consolidate(userAddress);
+        if (consolidation.consolidated) {
+          consolidatedUsers++;
+          entry.consolidation = {
+            provider: consolidation.provider,
+            model: consolidation.model,
+            statements: consolidation.profileStatements.length,
+            evicted: consolidation.evicted,
+          };
+        }
+      } catch (err: unknown) {
+        console.warn(`[guardian-loop] memory consolidation failed for ${userAddress}:`, err instanceof Error ? err.message : err);
+      }
+    }
+
+    if (entry.sweep || entry.consolidation) {
+      details.push(entry);
+    }
+  }
+
+  return { sweepedUsers, consolidatedUsers, consolidationWindow, details };
+}
 
 function isTokenAllowed(
   recommendation: GuardianRecommendationSnapshot,
@@ -605,6 +676,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       );
     }
 
+    // Memory maintenance pass — automatic forgetting + consolidation.
+    // Runs for every active user. Sweep is cheap (one search + a few deletes)
+    // so it runs every tick. Consolidation is heavier (an LLM call) so it's
+    // gated to the first 5 minutes of every 6-hour window — the 5-min cron
+    // catches it once per window, giving ~4 consolidation passes per user
+    // per day. Both are fire-and-forget; failures never wedge the loop.
+    const memoryMaintenance = await runMemoryMaintenance(
+      activePermissions.map(p => p.userAddress).filter(Boolean) as string[]
+    );
+
     return res.status(200).json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -612,6 +693,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       executionsAttempted: results.filter(r => r.action === 'executed' || r.action === 'attempted').length,
       executionsSucceeded: results.filter(r => r.status === 'success').length,
       cycleMonitor,
+      memoryMaintenance,
       results,
     });
   } catch (error: any) {

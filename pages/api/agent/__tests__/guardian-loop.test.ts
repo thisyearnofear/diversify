@@ -21,6 +21,18 @@ vi.mock('@diversifi/shared', () => ({
   cogneeMemoryService: {
     persistInteraction: vi.fn().mockReturnValue({ catch: vi.fn() }),
     isAvailable: vi.fn().mockReturnValue(false),
+    sweepStaleMemories: vi.fn().mockResolvedValue({ swept: 0, attempted: 0, evicted: 0 }),
+  },
+  memoryConsolidationService: {
+    consolidate: vi.fn().mockResolvedValue({
+      consolidated: false,
+      rawMemoriesRead: 0,
+      profileStatements: [],
+      provider: null,
+      model: null,
+      evicted: 0,
+      reason: 'memory_service_unavailable',
+    }),
   },
   recommendationLedgerService: {
     recordRecommendation: vi.fn().mockResolvedValue({

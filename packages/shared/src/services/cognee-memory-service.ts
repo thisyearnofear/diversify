@@ -20,6 +20,21 @@ const COGNEE_API_URL = process.env.COGNEE_API_URL || 'https://api.cognee.ai';
 const COGNEE_API_KEY = process.env.COGNEE_API_KEY || '';
 const COGNEE_TENANT_ID = process.env.COGNEE_TENANT_ID || '';
 
+/**
+ * Memory TTL in days. Memories older than this begin to decay (their recall
+ * score is penalized proportional to age). At 2×TTL the score reaches zero
+ * and the memory is a candidate for hard eviction via `sweepStaleMemories`.
+ *
+ * This implements the "timely forgetting of outdated information" requirement
+ * for the Qwen Cloud MemoryAgent track: outdated info fades from the context
+ * window (decay) and is eventually evicted (sweep), keeping the recall set
+ * focused on what's current.
+ *
+ * Default 30 days. Override per-deploy with `COGNEE_MEMORY_TTL_DAYS`.
+ */
+const COGNEE_MEMORY_TTL_DAYS = Number(process.env.COGNEE_MEMORY_TTL_DAYS) || 30;
+const DAY_MS = 86_400_000;
+
 interface CogneeMemory {
   id: string;
   content: string;
@@ -64,6 +79,36 @@ class CogneeMemoryServiceImpl {
 
   isAvailable(): boolean {
     return this.enabled;
+  }
+
+  /**
+   * Apply time-based decay to a memory's recall score.
+   *
+   * Memories fade from the context window as they age:
+   *   - age < TTL:           no penalty (score unchanged)
+   *   - TTL ≤ age < 2×TTL:   linear decay from full score → 0
+   *   - age ≥ 2×TTL:         score is 0 (candidate for hard eviction)
+   *
+   * Age is read from `metadata.timestamp` (set on every `remember()` call).
+   * A memory with no timestamp is treated as age 0 (never decays) — this
+   * covers memories created before the decay feature shipped.
+   *
+   * This is the "soft forgetting" layer: outdated info is less likely to be
+   * injected into the advisor's context window, even if Cognee's relevance
+   * score is high. The "hard forgetting" layer is `sweepStaleMemories`.
+   */
+  private applyDecay(memory: CogneeMemory): CogneeMemory {
+    const ts = memory.metadata?.timestamp as string | undefined;
+    if (!ts) return memory;
+
+    const ageMs = Date.now() - new Date(ts).getTime();
+    if (ageMs <= 0) return memory;
+
+    const ageDays = ageMs / DAY_MS;
+    if (ageDays < COGNEE_MEMORY_TTL_DAYS) return memory;
+
+    const decayFactor = Math.max(0, 1 - (ageDays - COGNEE_MEMORY_TTL_DAYS) / COGNEE_MEMORY_TTL_DAYS);
+    return { ...memory, score: memory.score * decayFactor };
   }
 
   /**
@@ -187,6 +232,91 @@ class CogneeMemoryServiceImpl {
   }
 
   /**
+   * Sweep stale memories for a user — the "hard forgetting" layer.
+   *
+   * Recalls a broad pool of recent memories, identifies those whose decayed
+   * score has dropped below the eviction threshold (age ≥ 2×TTL), and
+   * attempts per-memory deletion via the Cognee API. Gracefully no-ops if
+   * the per-memory delete endpoint is unavailable — in that case the
+   * memories are already effectively invisible to recall (decayed score 0
+   * never passes the `> 0.5` filter in `getAdvisorContext`).
+   *
+   * Intended to be called periodically (e.g. from the Guardian heartbeat
+   * cron) — not on every request. Returns a summary of what was evicted.
+   *
+   * This closes the "timely forgetting of outdated information" requirement:
+   * decay handles soft forgetting (outdated info fades from context), sweep
+   * handles hard forgetting (dead memories are evicted from the store).
+   */
+  async sweepStaleMemories(
+    userId: string,
+    options: { evictBelowScore?: number; poolSize?: number } = {}
+  ): Promise<{ swept: number; attempted: number; evicted: number }> {
+    if (!this.enabled || !userId) {
+      return { swept: 0, attempted: 0, evicted: 0 };
+    }
+
+    const evictBelow = options.evictBelowScore ?? 0.1;
+    const poolSize = options.poolSize ?? 50;
+
+    try {
+      const dataset = `user_${userId}`;
+      const payload = {
+        query: 'user preferences recommendations portfolio actions',
+        datasets: [dataset],
+        top_k: poolSize,
+      };
+
+      const response = await fetchWithTimeout(`${this.apiUrl}/v1/search`, {
+        method: 'POST',
+        headers: this.authHeaders(),
+        body: JSON.stringify(payload),
+      }, 5000);
+
+      if (!response.ok) {
+        console.warn(`[Cognee] sweep recall failed: ${response.status}`);
+        return { swept: 0, attempted: 0, evicted: 0 };
+      }
+
+      const result = await response.json();
+      const all: CogneeMemory[] = (result.data || result.results || []).map((item: any) => ({
+        id: item.id || item.node_id || '',
+        content: item.text || item.content || item.payload?.text || '',
+        score: item.score || item.relevance || 0,
+        metadata: item.metadata || item.payload?.metadata,
+      }));
+
+      const stale = all
+        .map(m => this.applyDecay(m))
+        .filter(m => m.score < evictBelow && m.id);
+
+      if (stale.length === 0) {
+        return { swept: all.length, attempted: 0, evicted: 0 };
+      }
+
+      let evicted = 0;
+      for (const memory of stale) {
+        try {
+          const del = await fetchWithTimeout(`${this.apiUrl}/v1/memories/${memory.id}`, {
+            method: 'DELETE',
+            headers: this.authHeaders(),
+          }, 2000);
+          if (del.ok) evicted++;
+        } catch {
+          // Per-memory delete may not be supported by this Cognee version —
+          // the memory is already invisible to recall (decayed score 0), so
+          // this is a best-effort cleanup, not a correctness requirement.
+        }
+      }
+
+      return { swept: all.length, attempted: stale.length, evicted };
+    } catch (error) {
+      console.warn('[Cognee] sweep error:', error);
+      return { swept: 0, attempted: 0, evicted: 0 };
+    }
+  }
+
+  /**
    * Build the knowledge graph from stored data (async background).
    */
   private async cognify(dataset: string): Promise<void> {
@@ -218,6 +348,7 @@ class CogneeMemoryServiceImpl {
       }
 
       const contextLines = memories
+        .map(m => this.applyDecay(m))
         .filter(m => m.score > 0.5)
         .map(m => `- ${m.content}`)
         .slice(0, 3);

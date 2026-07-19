@@ -64,7 +64,7 @@ export class FallbackOrchestrator {
    */
   async executeChatCompletion(
     options: ChatCompletionOptions,
-    preferredProvider?: "venice" | "gemini" | "auto"
+    preferredProvider?: "venice" | "gemini" | "dashscope" | "auto"
   ): Promise<ChatCompletionResult> {
     // Determine provider order based on preference and JSON requirement
     const orderedProviders = this.getProviderOrderForChat(options, preferredProvider);
@@ -116,7 +116,7 @@ export class FallbackOrchestrator {
    */
   getProviderOrderForChat(
     options: ChatCompletionOptions,
-    preferredProvider?: "venice" | "gemini" | "auto"
+    preferredProvider?: "venice" | "gemini" | "dashscope" | "auto"
   ): BaseAIProvider[] {
     // Create a map of provider name to provider instance
     const providerMap: Record<string, BaseAIProvider> = {};
@@ -131,6 +131,11 @@ export class FallbackOrchestrator {
       orderedNames = ["venice", "gemini"];
     } else if (preferredProvider === "gemini") {
       orderedNames = ["gemini", "venice"];
+    } else if (preferredProvider === "dashscope") {
+      // Qwen Cloud via Alibaba DashScope — used for memory consolidation and
+      // other Qwen-showcase calls. Falls back to the normal chain if DashScope
+      // is unavailable (no key set), so callers never depend on Qwen.
+      orderedNames = ["dashscope", "gemini", "venice"];
     } else if (options.responseFormat?.type === "json_object") {
       // Prefer Gemini for JSON if available
       if (providerMap["gemini"] && providerMap["gemini"].isAvailable()) {

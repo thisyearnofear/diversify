@@ -24,6 +24,7 @@ import { OpenAIProvider } from './providers/openai-provider';
 import { AimlApiProvider } from './providers/aimlapi-provider';
 import { ElevenLabsProvider } from './providers/elevenlabs-provider';
 import { NvidiaProvider } from './providers/nvidia-provider';
+import { DashScopeProvider } from './providers/dashscope-provider';
 import { FallbackOrchestrator } from './fallback/fallback-orchestrator';
 import { CachingDecorator } from './decorators/caching-decorator';
 import { CircuitBreakerDecorator } from './decorators/circuit-breaker-decorator';
@@ -104,7 +105,8 @@ class AIServiceImpl {
       ModalProvider,
       OpenAIProvider,
       ElevenLabsProvider,
-      NvidiaProvider
+      NvidiaProvider,
+      DashScopeProvider
     ];
 
     for (const ProviderClass of providerClasses) {
@@ -307,7 +309,9 @@ export function getAIServiceInstance(): AIServiceImpl {
       aimlApiKey: process.env.AIML_API_KEY,
       elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
       elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
-      nvidiaApiKey: process.env.NVIDIA_API_KEY
+      nvidiaApiKey: process.env.NVIDIA_API_KEY,
+      dashscopeApiKey: process.env.DASHSCOPE_API_KEY,
+      dashscopeModel: process.env.DASHSCOPE_MODEL
     };
     aiServiceInstance = new AIServiceImpl(config);
   }
@@ -317,7 +321,7 @@ export function getAIServiceInstance(): AIServiceImpl {
 // Backward compatibility named exports for the main methods
 export const generateChatCompletion = async (
   options: ChatCompletionOptions,
-  preferredProvider?: 'venice' | 'gemini' | 'auto'
+  preferredProvider?: 'venice' | 'gemini' | 'dashscope' | 'auto'
 ) => {
   const instance = getAIServiceInstance();
 
@@ -423,7 +427,7 @@ async function* withStreamTimeout(
  */
 export async function* chatStream(options: ChatCompletionOptions): AsyncGenerator<ChatStreamEvent> {
   const instance = getAIServiceInstance();
-  const preferredProvider = options.preferredProvider === 'venice' || options.preferredProvider === 'gemini'
+  const preferredProvider = options.preferredProvider === 'venice' || options.preferredProvider === 'gemini' || options.preferredProvider === 'dashscope'
     ? options.preferredProvider
     : 'auto';
   const providers = instance.chatOrchestrator.getProviderOrderForChat(options, preferredProvider);
