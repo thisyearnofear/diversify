@@ -91,7 +91,7 @@ Each chain has a genuine, irreplaceable role. The ledger of record follows the m
 
 ```bash
 pnpm install
-# Ensure .env.local is configured per docs/getting-started.md
+# Ensure .env.local is configured per docs/README.md § Getting Started
 pnpm dev
 ```
 For deep-dive documentation on our cross-chain architecture and settlement flow, see [docs/architecture.md](docs/architecture.md).

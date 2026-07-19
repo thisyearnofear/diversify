@@ -52,5 +52,5 @@ Every intelligence response includes:
 
 ## Integration guide
 
-See [`docs/integration-guide.md`](../../docs/integration-guide.md) for the
+See [`docs/integrations.md`](../../docs/integrations.md) § External Agent Integration Guide for the
 full API reference, authentication flow, and integration patterns.

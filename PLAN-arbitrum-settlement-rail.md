@@ -132,7 +132,7 @@ Add a new describe block:
 ### Step 9 — Update docs
 
 - `docs/integrations.md`: add `ARBITRUM` to the settlement-rail table and note that it is the only rail with a live, verified mainnet USDC contract today.
-- `docs/getting-started.md`: mention Arbitrum as a settlement option, especially for the buildathon.
+- `docs/README.md` § Getting Started: mention Arbitrum as a settlement option, especially for the buildathon.
 - `docs/roadmap.md`: update the mainnet settlement blocker to state that Arbitrum is now a supported rail and is the preferred path for the buildathon.
 - `README.md`: update the Money Movement / x402 Settlement Stack section to include Arbitrum.
 
