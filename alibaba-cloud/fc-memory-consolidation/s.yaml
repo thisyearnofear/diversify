@@ -1,0 +1,64 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Alibaba Cloud Function Compute — Serverless Devs deployment manifest
+#
+# Deploys the DiversiFi memory consolidation handler to Alibaba Cloud
+# Function Compute. This is the Alibaba Cloud deployment proof for the
+# Qwen Cloud Hackathon Track 1 (MemoryAgent).
+#
+# Prerequisites:
+#   1. Install Serverless Devs:  npm i -g @serverless-devs/s
+#   2. Configure credentials:    s config add --AccessKeyID <key> --AccessKeySecret <secret> -a default
+#   3. Set environment variables (or configure them in the FC console after deploy):
+#      - DASHSCOPE_API_KEY
+#      - TABLESTORE_ENDPOINT
+#      - TABLESTORE_INSTANCE_NAME
+#      - ALIBABA_CLOUD_ACCESS_KEY_ID
+#      - ALIBABA_CLOUD_ACCESS_KEY_SECRET
+#      - TABLESTORE_MEMORY_STORE_NAME (default: diversifi_agent_memory)
+#      - TABLESTORE_APP_ID (default: diversifi)
+#      - DASHSCOPE_MODEL (default: qwen-plus; try qwen-long for 1M ctx)
+#
+# Deploy:
+#   s deploy
+#
+# The function exposes an HTTP trigger that the Guardian cron (on Hetzner)
+# calls to trigger memory consolidation for a specific user.
+# ─────────────────────────────────────────────────────────────────────────────
+
+edition: 3.0.0
+name: diversifi-memory-agent
+access: default
+
+services:
+  fc-memory-consolidation:
+    component: fc3
+    props:
+      region: ap-southeast-1
+      functionName: diversifi-memory-consolidation
+      description: >-
+        DiversiFi MemoryAgent consolidation — uses Tablestore Agent Memory
+        + DashScope (Qwen long-context). Qwen Cloud Hackathon Track 1.
+      runtime: nodejs18
+      handler: index.handler
+      memorySize: 512
+      timeout: 120
+      instanceConcurrency: 1
+      internetAccess: true
+      environmentVariables:
+        DASHSCOPE_MODEL: qwen-plus
+        TABLESTORE_MEMORY_STORE_NAME: diversifi_agent_memory
+        TABLESTORE_APP_ID: diversifi
+        # Set these in the FC console after deploy (secrets):
+        # DASHSCOPE_API_KEY: <your-dashscope-key>
+        # TABLESTORE_ENDPOINT: https://<instance>.ap-southeast-1.ots.aliyuncs.com
+        # TABLESTORE_INSTANCE_NAME: <your-instance>
+        # ALIBABA_CLOUD_ACCESS_KEY_ID: <your-access-key-id>
+        # ALIBABA_CLOUD_ACCESS_KEY_SECRET: <your-access-key-secret>
+      triggers:
+        - triggerName: http-trigger
+          triggerType: http
+          triggerConfig:
+            authType: anonymous
+            methods:
+              - POST
+              - GET

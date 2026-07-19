@@ -1,0 +1,13 @@
+{
+  "name": "diversifi-fc-memory-consolidation",
+  "version": "1.0.0",
+  "description": "Alibaba Cloud Function Compute handler for DiversiFi MemoryAgent consolidation — uses Tablestore Agent Memory + DashScope (Qwen)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

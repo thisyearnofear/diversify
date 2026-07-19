@@ -25,6 +25,14 @@ vi.mock('../cognee-memory-service', () => {
   };
 });
 
+// Mock the Tablestore memory service — unavailable in tests (no env vars).
+vi.mock('../tablestore-memory-service', () => {
+  const isAvailable = vi.fn(() => false);
+  return {
+    tablestoreMemoryService: { isAvailable },
+  };
+});
+
 // Mock generateChatCompletion so we never hit a real LLM.
 vi.mock('../ai/ai-service', () => ({
   generateChatCompletion: vi.fn(async () => ({
@@ -73,7 +81,7 @@ describe('memoryConsolidationService.consolidate', () => {
   it('skips when userId is empty', async () => {
     const r = await memoryConsolidationService.consolidate('');
     expect(r.consolidated).toBe(false);
-    expect(r.reason).toBe('memory_service_unavailable');
+    expect(r.reason).toBe('no_user_id');
   });
 
   it('skips when raw memory count is below the minimum threshold', async () => {

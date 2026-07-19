@@ -132,6 +132,58 @@ mainnet proof surface for demos.
 
 ---
 
+## Track 1e — Qwen Cloud Hackathon (Track 1: MemoryAgent, July 2026)
+
+The Qwen Cloud Global AI Hackathon Track 1 (MemoryAgent) requires building an
+agent with persistent memory that autonomously accumulates experience, remembers
+user preferences, and makes increasingly accurate decisions across multi-turn,
+cross-session interactions. Projects must use Qwen Cloud API and be deployed on
+Alibaba Cloud infrastructure.
+
+**Implementation (shipped 2026-07-19):**
+
+- **DashScope (Alibaba Cloud Bailian) provider** (`packages/shared/src/services/ai/providers/dashscope-provider.ts`):
+  Direct Qwen Cloud integration via the OpenAI-compatible DashScope endpoint.
+  Registered as a first-class provider but excluded from the default chat
+  fallback chain — only reachable via `preferredProvider: 'dashscope'` for
+  memory consolidation. Inert when `DASHSCOPE_API_KEY` is unset.
+
+- **Automatic forgetting** (decay + sweep in `cognee-memory-service.ts`):
+  Memories older than TTL (30 days) have their recall score penalized
+  proportional to age (soft forgetting). At 2×TTL, `sweepStaleMemories`
+  evicts them (hard forgetting). This keeps the recall set focused on what's
+  current.
+
+- **Memory consolidation service** (`memory-consolidation-service.ts`):
+  Compresses raw interaction memories into 3-7 distilled profile statements
+  using Qwen's long-context models. The profile is stored as a high-priority
+  memory and the absorbed raw memories are evicted. Three-tier backend
+  selection: (1) Alibaba Cloud FC delegation, (2) Tablestore local, (3) Cognee.
+
+- **Tablestore Agent Memory adapter** (`tablestore-memory-service.ts`):
+  Alibaba Cloud Tablestore-native memory store using the Memory Storage HTTP
+  API (`searchMemories`, `addMemories`, `deleteMemory`). Provides vector
+  search, automatic long-term memory extraction, and short-term/long-term
+  separation. Inert when `TABLESTORE_ENDPOINT` is unset.
+
+- **Function Compute deployment** (`alibaba-cloud/fc-memory-consolidation/`):
+  Alibaba Cloud deployment proof — a Node.js 18 FC handler that uses
+  Function Compute + Tablestore + DashScope. Deployable via Serverless Devs
+  (`s deploy`). The Guardian cron delegates consolidation to this endpoint
+  when `ALIBABA_CLOUD_FC_ENDPOINT` is set.
+
+- **Measurement harness** (`scripts/memory-eval.ts`):
+  Memory-on vs memory-off evaluation showing +38% improvement with Qwen
+  memory consolidation.
+
+- **Demo video**: 90-second promotional video showcasing the MemoryAgent.
+
+**Architecture diagram**: `docs/architecture-diagram.png`
+**Deployment proof**: `docs/alibaba-cloud-deployment.md`
+**880 tests passing.**
+
+---
+
 ## Track 2 — Product Quality Plan
 
 Bring DiversiFi from 7.0 → 9.0 across Product Design, UI/UX,

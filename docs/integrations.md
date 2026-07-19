@@ -35,6 +35,7 @@
 | **Featherless** | OpenAI-compatible fallback | 0G Serving |
 | **0G Serving** | Decentralized inference via 0G Router (`deepseek-v4-pro`, `GLM-5.1`, `qwen3.6-plus`) | Modal (GLM) |
 | **Modal (GLM)** | Tertiary fallback | Error response |
+| **DashScope (Alibaba Cloud)** | Qwen long-context for memory consolidation only (not in general chat chain) | N/A (preferred provider, not fallback) |
 
 > **User-supplied keys**: Users can paste their own Gemini API key in the ⚙️ chat settings modal. The key is stored in `localStorage` and forwarded via the `x-gemini-key` request header — it is never persisted server-side. This removes shared rate-limit pressure and qualifies for the Google prize track.
 
@@ -55,7 +56,10 @@
 | **GoodDollar** | UBI distribution | — |
 | **SoSoValue** | LEGACY — crypto flash news + sentiment (off-thesis, disabled in chat UI); API is crypto-native with US-only macro events | Free tier + API key |
 | **Firecrawl** | Event-driven macro page monitoring (ECB, Fed, yield trackers) | 500 credits/month free |
-| **Cognee** | Agent memory — cross-session persistent context | Tenant API (REST) |
+| **Cognee** | Agent memory — cross-session persistent context (fallback) | Tenant API (REST) |
+| **Tablestore (Alibaba Cloud)** | Agent memory — persistent memory with vector search + automatic long-term extraction (preferred when configured) | Pay-as-you-go |
+| **DashScope (Alibaba Cloud)** | Qwen long-context LLM for memory consolidation | API key |
+| **Function Compute (Alibaba Cloud)** | Serverless compute hosting the memory consolidation handler | Pay-as-you-go |
 
 ## Autonomous Guardian Loop
 
@@ -65,7 +69,8 @@ The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio 
 Firecrawl detects macro change → webhook → AI extracts signal → guardian-state updated
 → cron ticks → guardian-loop checks permissions → confidence > threshold? → auto-execute
 → chain-aware RecommendationLedger records on the chain where the action settled
-  (Celo for savings, Arbitrum for yield) → 0G Storage anchors evidence CID → Cognee persists memory
+  (Celo for savings, Arbitrum for yield) → 0G Storage anchors evidence CID → memory persists
+  (Tablestore preferred when configured, Cognee fallback)
 ```
 
 | Component | File | Purpose |
@@ -74,7 +79,10 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 | Firecrawl Webhook | `pages/api/agent/firecrawl-webhook.ts` | Macro signal ingestion |
 | Firecrawl Setup | `scripts/setup-firecrawl-monitors.ts` | Register page watchers |
 | Guardian State | `pages/api/vault/_guardian-state.ts` | Pending recommendation store |
-| Cognee Memory | `packages/shared/src/services/cognee-memory-service.ts` | Cross-session learning |
+| Cognee Memory | `packages/shared/src/services/cognee-memory-service.ts` | Cross-session learning (fallback) |
+| Tablestore Memory | `packages/shared/src/services/tablestore-memory-service.ts` | Alibaba Cloud Agent Memory (preferred when configured) |
+| Memory Consolidation | `packages/shared/src/services/memory-consolidation-service.ts` | Qwen long-context consolidation (FC delegation or local) |
+| FC Handler | `alibaba-cloud/fc-memory-consolidation/index.js` | Alibaba Cloud Function Compute proof file |
 
 ### Security
 - `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only)
@@ -327,7 +335,7 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Frontend | Next.js 15, React 19, Tailwind CSS |
 | Smart Accounts | Privy + Safe (ERC-4337) |
 | AI | Gemini (primary), Venice AI, AI/ML API, NVIDIA, Featherless, 0G Serving, Modal GLM (fallback chain) |
-| Agent Memory | Cognee (cross-session learning) |
+| Agent Memory | Tablestore (Alibaba Cloud, preferred) → Cognee (fallback); Qwen long-context consolidation via DashScope |
 | Macro Monitoring | Firecrawl (event-driven page watching) |
 | Swaps | Mento Protocol (Celo), 1inch/Uniswap (Arbitrum) |
 | Bridging | Circle CCTP, LiFi |

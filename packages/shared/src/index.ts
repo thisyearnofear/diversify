@@ -162,6 +162,7 @@ export { AgentActionService, type ExecutionCallbacks } from './services/ai/agent
 export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yield-advisor.service';
 export { BrightDataService } from './services/bright-data-service';
 export { cogneeMemoryService } from './services/cognee-memory-service';
+export { tablestoreMemoryService } from './services/tablestore-memory-service';
 export { memoryConsolidationService } from './services/memory-consolidation-service';
 export {
   requestGuardianAdvancedPermission,

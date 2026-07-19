@@ -16,18 +16,39 @@
  * provider is available, the job skips — raw memories stay as-is, and recall
  * still works. The app is fully functional without Qwen.
  *
+ * Memory backend selection (preferred → fallback):
+ *   1. Alibaba Cloud Function Compute endpoint (when ALIBABA_CLOUD_FC_ENDPOINT
+ *      is set) — delegates the entire consolidation to the FC function which
+ *      uses Tablestore + DashScope natively on Alibaba Cloud
+ *   2. Tablestore Agent Memory (when TABLESTORE_ENDPOINT is set) — uses
+ *      Tablestore for memory storage with Qwen for consolidation
+ *   3. Cognee (when COGNEE_API_KEY is set) — the original memory backend
+ *   4. Skip — no memory backend available, raw memories stay as-is
+ *
  * Integration points:
  *   - Called from the Guardian cron (every N ticks) per active user
  *   - Also exposed as a standalone script: `scripts/memory-consolidate.ts`
- *   - Reads raw memories via `cogneeMemoryService.recall()` (broad pool)
- *   - Writes the distilled profile back via `cogneeMemoryService.remember()`
- *     with `metadata.type = 'consolidated_profile'` and a high-priority flag
+ *   - Reads raw memories via the preferred memory backend's `recall()` (broad pool)
+ *   - Writes the distilled profile back via the preferred memory backend's
+ *     `remember()` with `metadata.type = 'consolidated_profile'` and a
+ *     high-priority flag
  *   - Triggers `sweepStaleMemories()` after consolidation to evict the raw
  *     inputs that were absorbed into the profile
  */
 
 import { cogneeMemoryService } from './cognee-memory-service';
+import { tablestoreMemoryService } from './tablestore-memory-service';
 import { generateChatCompletion } from './ai/ai-service';
+import { fetchWithTimeout } from '../utils/promise-utils';
+
+/**
+ * When set, the consolidation service delegates to the Alibaba Cloud Function
+ * Compute endpoint (which uses Tablestore + DashScope natively). This is the
+ * strongest Alibaba Cloud deployment proof — the entire consolidation pipeline
+ * runs on Alibaba Cloud infrastructure.
+ */
+const ALIBABA_CLOUD_FC_ENDPOINT =
+  process.env.ALIBABA_CLOUD_FC_ENDPOINT || '';
 
 /**
  * Minimum number of raw memories required to trigger consolidation. Below
@@ -69,6 +90,39 @@ class MemoryConsolidationServiceImpl {
    * raw memories to justify consolidation, or no LLM provider is available,
    * or the LLM returns nothing useful, the call is a no-op.
    */
+  /**
+   * Select the active memory backend — Tablestore (Alibaba Cloud) preferred,
+   * Cognee as fallback. Returns the service interface or null if neither is
+   * available.
+   */
+  private getMemoryBackend(): {
+    recall: typeof cogneeMemoryService.recall;
+    remember: typeof cogneeMemoryService.remember;
+    sweepStaleMemories: typeof cogneeMemoryService.sweepStaleMemories;
+    isAvailable: typeof cogneeMemoryService.isAvailable;
+    name: string;
+  } | null {
+    if (tablestoreMemoryService.isAvailable()) {
+      return {
+        recall: tablestoreMemoryService.recall.bind(tablestoreMemoryService),
+        remember: tablestoreMemoryService.remember.bind(tablestoreMemoryService),
+        sweepStaleMemories: tablestoreMemoryService.sweepStaleMemories.bind(tablestoreMemoryService),
+        isAvailable: tablestoreMemoryService.isAvailable.bind(tablestoreMemoryService),
+        name: 'tablestore',
+      };
+    }
+    if (cogneeMemoryService.isAvailable()) {
+      return {
+        recall: cogneeMemoryService.recall.bind(cogneeMemoryService),
+        remember: cogneeMemoryService.remember.bind(cogneeMemoryService),
+        sweepStaleMemories: cogneeMemoryService.sweepStaleMemories.bind(cogneeMemoryService),
+        isAvailable: cogneeMemoryService.isAvailable.bind(cogneeMemoryService),
+        name: 'cognee',
+      };
+    }
+    return null;
+  }
+
   async consolidate(
     userId: string,
     options: { poolSize?: number; minMemories?: number } = {}
@@ -80,8 +134,62 @@ class MemoryConsolidationServiceImpl {
     model: string | null;
     evicted: number;
     reason?: string;
+    backend?: string;
   }> {
-    if (!cogneeMemoryService.isAvailable() || !userId) {
+    if (!userId) {
+      return {
+        consolidated: false,
+        rawMemoriesRead: 0,
+        profileStatements: [],
+        provider: null,
+        model: null,
+        evicted: 0,
+        reason: 'no_user_id',
+      };
+    }
+
+    // ─── Path 1: Delegate to Alibaba Cloud Function Compute ──────────────
+    // When the FC endpoint is configured, the entire consolidation runs on
+    // Alibaba Cloud (Tablestore + DashScope). This is the strongest
+    // deployment proof — the Guardian cron just fires an HTTP request.
+    if (ALIBABA_CLOUD_FC_ENDPOINT) {
+      try {
+        const response = await fetchWithTimeout(
+          ALIBABA_CLOUD_FC_ENDPOINT,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId }),
+          },
+          90000 // 90s — Qwen long-context consolidation can be slow
+        );
+
+        if (!response.ok) {
+          throw new Error(`FC endpoint returned ${response.status}`);
+        }
+
+        const result = await response.json();
+        return {
+          consolidated: !!result.consolidated,
+          rawMemoriesRead: result.rawMemoriesRead ?? 0,
+          profileStatements: result.profileStatements ?? [],
+          provider: result.provider ?? 'dashscope',
+          model: result.model ?? null,
+          evicted: result.evicted ?? 0,
+          backend: 'alibaba-cloud-fc',
+          ...(result.reason ? { reason: result.reason } : {}),
+        };
+      } catch (err: any) {
+        // FC endpoint failed — fall through to local consolidation
+        console.warn(
+          `[memory-consolidation] FC endpoint failed, falling back to local: ${err?.message}`
+        );
+      }
+    }
+
+    // ─── Path 2: Local consolidation (Tablestore or Cognee) ──────────────
+    const memoryBackend = this.getMemoryBackend();
+    if (!memoryBackend) {
       return {
         consolidated: false,
         rawMemoriesRead: 0,
@@ -97,7 +205,7 @@ class MemoryConsolidationServiceImpl {
     const minMemories = options.minMemories ?? MIN_MEMORIES_TO_CONSOLIDATE;
 
     // 1. Pull a broad pool of raw memories for this user.
-    const { memories } = await cogneeMemoryService.recall(
+    const { memories } = await memoryBackend.recall(
       'user preferences recommendations portfolio actions philosophy risk tolerance',
       userId,
       { limit: poolSize }
@@ -199,7 +307,7 @@ class MemoryConsolidationServiceImpl {
 
     // 5. Store the distilled profile as a single high-priority memory.
     const profileText = `CONSOLIDATED USER PROFILE:\n${profileStatements.map(s => `- ${s}`).join('\n')}`;
-    await cogneeMemoryService.remember(profileText, userId, {
+    await memoryBackend.remember(profileText, userId, {
       metadata: {
         type: 'consolidated_profile',
         consolidatedAt: new Date().toISOString(),
@@ -214,7 +322,7 @@ class MemoryConsolidationServiceImpl {
     // We use sweepStaleMemories with a high eviction threshold so only the
     // oldest, lowest-score memories get evicted — preserving recent raw
     // interactions that may still be useful for short-term context.
-    const sweep = await cogneeMemoryService.sweepStaleMemories(userId, {
+    const sweep = await memoryBackend.sweepStaleMemories(userId, {
       evictBelowScore: 0.3,
       poolSize,
     });
@@ -226,6 +334,7 @@ class MemoryConsolidationServiceImpl {
       provider: result.provider,
       model: result.modelUsed ?? null,
       evicted: sweep.evicted,
+      backend: memoryBackend.name,
     };
   }
 }
