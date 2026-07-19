@@ -1,6 +1,8 @@
 /**
- * SoSoValue Trade Action Modal
- * 
+ * SoSoValue Trade Action Modal — LEGACY (crypto-era, off-thesis)
+ *
+ * Disabled in the chat UI as of 2026-07-19. Kept for reference.
+ *
  * Confirmation modal that appears when user clicks "Propose Trade"
  * on a SoSoValue news item. Shows news summary, proposed order details,
  * risk warning, and SoDEX execution button.

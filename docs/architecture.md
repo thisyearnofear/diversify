@@ -338,7 +338,7 @@ flowchart TD
         CG["CoinGecko<br/>market prices"]
         DFL["DeFiLlama<br/>TVL + yield"]
         FC["Firecrawl webhooks<br/>STATIN Jamaica · CBTT · ECCB<br/>FAO Food Price Index<br/>USTR tariff policy · NHC hurricane alerts"]
-        SS["SoSoValue / BrightData<br/>market intelligence"]
+        SS["BrightData<br/>market intelligence"]
         MEM["Cognee<br/>cross-session agent memory"]
     end
 
@@ -443,7 +443,7 @@ flowchart TD
 
 | Element | Where in diagram |
 |---|---|
-| **Inputs** | Blue nodes — World Bank, FRED, CoinGecko, DeFiLlama, Firecrawl (Caribbean inflation + hurricane + tariff signals), SoSoValue/BrightData, Cognee memory |
+| **Inputs** | Blue nodes — World Bank, FRED, CoinGecko, DeFiLlama, Firecrawl (Caribbean inflation + hurricane + tariff signals), BrightData, Cognee memory |
 | **Agent orchestration** | Green nodes — Firecrawl webhook → AI signal extraction → guardian-state store → cron loop → permission query → AI synthesis (multi-provider failover) → recommendation generation → threshold/bounds/routing decisions → execute → anchor → ledger → clear |
 | **Human-in-the-loop** | Purple nodes — wallet connect → plan selection → ERC-7715 permission signing (EIP-712) → approve/reject recommendation → withdraw anytime |
 | **Data sources & APIs** | Blue nodes + AI provider chain — 7 external data sources, 7 AI providers with circuit breakers, Cognee memory, MongoDB state |
@@ -690,7 +690,7 @@ the marketplace is just discovery.
 
 **Never pay for what we can get free.** DiversiFi already has a deep free/keyed
 data stack — CoinGecko + CoinPaprika (crypto prices), Frankfurter + Alpha
-Vantage (FX), World Bank (economic), DefiLlama (yield), SoSoValue, plus our own
+Vantage (FX), World Bank (economic), DefiLlama (yield), plus our own
 governance/news feeds and Firecrawl monitors. Marketplace services that
 duplicate these are **not** resale candidates — we serve them from the free
 source and pass the saving to the user.
@@ -700,8 +700,8 @@ Encoded in code: every catalog entry has a `freeAlternative` field.
 
 **Free stack (what we never pay to duplicate):** CoinGecko + CoinPaprika
 (crypto prices), Frankfurter + Alpha Vantage (FX), World Bank (economic),
-DefiLlama (yield), SoSoValue, our governance/news feeds, Firecrawl monitors,
-and now **TinyFish Search API** (`TINYFISH_API_KEY`) — free web search + news +
+DefiLlama (yield), our governance/news feeds, Firecrawl monitors,
+and **TinyFish Search API** (`TINYFISH_API_KEY`) — free web search + news +
 research-paper search, verified live (returns relevant EM/cedi news).
 
 **Honest marketplace finding (2026-07-11):** searched ~13 categories (prices,

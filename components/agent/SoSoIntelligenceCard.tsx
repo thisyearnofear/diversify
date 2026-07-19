@@ -1,6 +1,10 @@
 /**
- * SoSoValue Intelligence Card
- * 
+ * SoSoValue Intelligence Card — LEGACY (crypto-era, off-thesis)
+ *
+ * Displays crypto market intelligence from SoSoValue API. Disabled in the
+ * chat UI as of 2026-07-19 — the API is crypto-native and does not serve
+ * the FX-risk protection thesis. Kept for reference.
+ *
  * Displays market intelligence from SoSoValue API as an inline card
  * in the AI chat interface. Shows sentiment, news headlines, and
  * provides quick actions for trade proposals.

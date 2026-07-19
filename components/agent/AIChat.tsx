@@ -1068,28 +1068,7 @@ export default function AIChat() {
                         </div>
                       )}
 
-                      {/* SoSoValue Intelligence Card */}
-                      {msg.type === 'sosovalue_intelligence' && msg.sosovalueData && (
-                        <div className="mt-3">
-                          <SoSoIntelligenceCard
-                            data={msg.sosovalueData}
-                            onProposeTrade={(newsItem) => {
-                              const isBullish = newsItem.sentiment >= 55;
-                              const proposal: SoSoTradeProposal = {
-                                newsItem,
-                                suggestedAction: isBullish ? 'BUY' : 'SELL',
-                                confidence: Math.round(newsItem.sentiment),
-                                reasoning: `Based on ${newsItem.sentiment}/100 sentiment score for "${newsItem.title}"`,
-                              };
-                              setSoSoTradeProposal(proposal);
-                              setSoSoModalOpen(true);
-                            }}
-                            onAnalyze={(newsItem) => {
-                              addUserMessage(`Analyze this market intelligence: "${newsItem.title}" - sentiment ${newsItem.sentiment}/100`);
-                            }}
-                          />
-                        </div>
-                      )}
+                      {/* SoSoValue Intelligence Card — disabled (legacy crypto-era, off-thesis) */}
                       
                       <div className={`flex items-center gap-2 mt-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         <span className={`text-[10px] opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>

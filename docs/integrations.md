@@ -16,7 +16,7 @@
 | `/api/agent/execute-swap` | POST | Execute swap via agent |
 | `/api/agent/x402-gateway` | GET | Payment challenge + paid evidence retrieval |
 | `/api/agent/x402-metrics` | GET | Transaction-frequency + pricing proof payload |
-| `/api/agent/sosovalue` | GET | SoSoValue market intelligence (news, sentiment, SSI index); `?tier=premium` for SSI |
+| `/api/agent/sosovalue` | GET | SoSoValue market intelligence (legacy — crypto-era, disabled in chat UI) |
 | `/api/agent/zero-g-ledger` | GET/POST | 0G `RecommendationLedger` on-chain recommendations + stats; `?user=0x...` to filter. POST returns `{ status: 'anchored' \| 'pending' \| 'failed', txHash, explorerUrl, id? }`. |
 | `/api/agent/guardian-loop` | POST | Autonomous execution cron (server-to-server, secret-protected). Also runs the payment-cycle monitor tick inline (`cycleMonitor` in response). Pending actions live in a bounded `recommendationQueue` (head mirrored as `latestRecommendation`). |
 | `/api/agent/business/cycles` | GET/POST | Purchase-cycle CRUD. Requires wallet-signed headers (`x-wallet-auth-message` / `x-wallet-auth-signature`); address is derived server-side. Date pass → `payment_due`; `completed` requires `paymentOutcome`. |
@@ -53,7 +53,7 @@
 | **CoinGecko** | Exchange rates | 50k req/month |
 | **DeFiLlama** | TVL, yields | 100 req/day |
 | **GoodDollar** | UBI distribution | — |
-| **SoSoValue** | Flash news + market sentiment → feeds Guardian AI macro awareness (one source among 12+) | Free tier + API key for live data |
+| **SoSoValue** | LEGACY — crypto flash news + sentiment (off-thesis, disabled in chat UI); API is crypto-native with US-only macro events | Free tier + API key |
 | **Firecrawl** | Event-driven macro page monitoring (ECB, Fed, yield trackers) | 500 credits/month free |
 | **Cognee** | Agent memory — cross-session persistent context | Tenant API (REST) |
 

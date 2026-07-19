@@ -167,7 +167,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | **Guardian loop** | Cron-driven autonomous execution with user-signed permission enforcement (app-layer; ERC-7710 on-chain enforcement is deferred), confidence thresholds, and daily caps |
 | **Chain-aware ledger** | `RecommendationLedger` records decisions on the chain where the action settles — Celo for savings, Arbitrum for yield. Each ledger entry references a 0G Storage evidence CID. |
 | **0G verifiability** | Evidence layer: Storage (reasoning CIDs), Compute (TEE-verified inference), DA (state snapshots). 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
-| **Live data** | 12+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, SoSoValue, Firecrawl |
+| **Live data** | 11+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, TinyFish Search, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
 | **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — deploy pending HSK), 0G (evidence/anchoring), Arc (x402 nanopayment rail) |
 | **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |

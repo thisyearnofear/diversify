@@ -339,31 +339,11 @@ export function useAgentChat({
         thinkingStep: "Thinking...",
       });
 
-      // SoSoValue intelligence: show card for data requests, fetch silently for synthesis
-      const SOSOVALUE_TRIGGERS = /\b(news|market|sentiment|flash|sosovalue|ssi|signal|headline|crypto news|market intel)\b/i;
-      const isMarketQuery = SOSOVALUE_TRIGGERS.test(effectiveContent);
+      // SoSoValue intelligence: legacy crypto-era integration, disabled (off-thesis).
+      // The API is crypto-native (no EM macro events, no fiat currency data).
+      // TinyFish Search + FRED + World Bank + Firecrawl cover the FX-risk data needs.
+      const isMarketQuery = false;
       let sosovalueData: any = undefined;
-
-      if (isMarketQuery) {
-        try {
-          updateChatState({ thinkingStep: "Fetching SoSoValue market intelligence..." });
-          const ssRes = await fetch(`${apiBase}/api/agent/sosovalue`);
-          if (ssRes.ok) {
-            sosovalueData = await ssRes.json();
-            if (responseFormat === 'card') {
-              addMessage({
-                role: 'assistant',
-                content: "Here's the latest market intelligence from SoSoValue:",
-                timestamp: new Date(),
-                type: 'sosovalue_intelligence',
-                sosovalueData,
-              });
-            }
-          }
-        } catch {
-          // Non-blocking — advisor still runs below
-        }
-      }
 
       // Fetch research evidence from the Arc Data Hub gateway.
       // Uses fetchPaidSource which handles the full 402→pay→re-fetch cycle.

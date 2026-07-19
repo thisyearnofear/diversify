@@ -1,7 +1,12 @@
 /**
- * SoSoValue Intelligence Service
- * Single source of truth for SoSoValue API integration.
- * Used by: /api/agent/sosovalue, /api/agent/x402-gateway
+ * SoSoValue Intelligence Service — LEGACY (crypto-era, off-thesis)
+ *
+ * The SoSoValue API is crypto-native: flash news, crypto sentiment, SSI index,
+ * and US-only macro events (no country/currency dimension). It does not serve
+ * the FX-risk protection thesis. Disabled in the chat UI as of 2026-07-19.
+ *
+ * Kept for reference; not actively used. The x402 gateway still exposes the
+ * sources for backward compatibility, but the chat UI no longer triggers them.
  *
  * API docs: https://sosovalue-1.gitbook.io/sosovalue-api-doc
  */

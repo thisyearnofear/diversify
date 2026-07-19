@@ -222,7 +222,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
   },
   sosovalue_intelligence: {
     id: 'sosovalue_intelligence',
-    label: 'SoSoValue Intelligence',
+    label: 'SoSoValue Intelligence (legacy)',
     aliases: ['sosovalue', 'sosovalue-news', 'market-intelligence', 'flash-news'],
     category: 'basic',
     price: '0.001',
@@ -232,11 +232,11 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     priority: 2,
     reputation: 0.88,
     freshnessWindowMinutes: 10,
-    description: 'Flash news, sentiment analysis, and SSI index signals from SoSoValue',
+    description: 'LEGACY: Crypto flash news/sentiment — off-thesis, disabled in chat UI',
   },
   sosovalue_macro_events: {
     id: 'sosovalue_macro_events',
-    label: 'SoSoValue Macro Events',
+    label: 'SoSoValue Macro Events (legacy)',
     aliases: ['sosovalue-macro', 'sosovalue-events', 'macro-events'],
     category: 'basic',
     price: '0.001',
@@ -246,7 +246,7 @@ export const ARC_RESEARCH_SOURCE_REGISTRY: Record<string, ArcResearchSourceDefin
     priority: 1,
     reputation: 0.85,
     freshnessWindowMinutes: 60,
-    description: 'Central bank decisions, CPI, employment, and GDP events from SoSoValue',
+    description: 'LEGACY: US-only macro events (no country/currency dimension) — off-thesis',
   },
   brightdata_central_banks: {
     id: 'brightdata_central_banks',

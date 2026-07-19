@@ -205,7 +205,7 @@ Importer/Exporter archetype is **cycle-aware** — and currency-agnostic:
 | **Philosophy** | Protect trade margin, not idle savings. Park sales proceeds in a stable value between purchase cycles; be liquid on payment day. |
 | **Core model** | A **purchase cycle**: expected obligation in the supplier's currency (amount + approximate date) → protect accumulating local-currency proceeds against slippage until conversion. This obligation/cycle model is the one genuinely new concept — everything else reuses the existing pattern. Works for GHS→USD, GBP→EUR, BRL→USD, PHP→USD, or any currency pair. |
 | **Default allocation** | USD-pegged stables (cUSD/USDC on Celo, or region-canonical stable) between cycles; local-currency leg only as ramp liquidity allows |
-| **Guardian behavior** | Monitor local currency depreciation + macro signals (central bank decisions, inflation prints via SoSoValue macro events); rebalance proceeds toward the supplier-currency stable as the payment date approaches; never prescriptive — the user picks the protection level |
+| **Guardian behavior** | Monitor local currency depreciation + macro signals (central bank decisions, inflation prints via FRED + World Bank + Firecrawl monitors); rebalance proceeds toward the supplier-currency stable as the payment date approaches; never prescriptive — the user picks the protection level |
 | **Signature surface** | **Per-cycle FX drag report** — "this cycle, protection preserved X vs holding local currency" — quantified, exportable, ledger-backed |
 | **Proof** | Every cycle decision on the chain-aware ledger + 0G evidence = an audit trail for the business's books |
 
