@@ -40,6 +40,7 @@
 'use strict';
 
 const https = require('https');
+const TableStore = require('tablestore');
 
 // ─── Configuration (from FC environment variables) ────────────────────────
 
@@ -61,6 +62,103 @@ const TABLESTORE_APP_ID = process.env.TABLESTORE_APP_ID || 'diversifi';
 
 const MIN_MEMORIES_TO_CONSOLIDATE = 8;
 const CONSOLIDATION_POOL_SIZE = 40;
+
+// ─── Tablestore Client ────────────────────────────────────────────────────
+
+let tsClient = null;
+let memoryStoreEnsured = false;
+
+function getTablestoreClient() {
+  if (!tsClient) {
+    tsClient = new TableStore.Client({
+      accessKeyId: TABLESTORE_ACCESS_KEY_ID,
+      secretAccessKey: TABLESTORE_ACCESS_KEY_SECRET,
+      endpoint: TABLESTORE_ENDPOINT,
+      instancename: TABLESTORE_INSTANCE,
+    });
+  }
+  return tsClient;
+}
+
+async function ensureMemoryStore() {
+  if (memoryStoreEnsured) return;
+  const client = getTablestoreClient();
+  try {
+    await client.createMemoryStore({
+      memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
+      description:
+        'DiversiFi agent long-term memory store (Qwen Cloud Hackathon Track 1)',
+    });
+  } catch (err) {
+    // Already exists — expected on subsequent calls
+    if (
+      err &&
+      err.message &&
+      !/already exist|ObjectAlreadyExist|4002/i.test(err.message)
+    ) {
+      console.warn('[fc] createMemoryStore warning:', err.message);
+    }
+  }
+  memoryStoreEnsured = true;
+}
+
+// ─── Tablestore Memory Operations ─────────────────────────────────────────
+
+async function searchMemories(userId, query, topK) {
+  const client = getTablestoreClient();
+  const result = await client.searchMemories({
+    memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
+    scope: {
+      appId: TABLESTORE_APP_ID,
+      tenantId: userId,
+      agentId: '*',
+      runId: '*',
+    },
+    query,
+    topK: topK || 40,
+    enableRerank: true,
+  });
+
+  return (result.results || []).map((item) => ({
+    id: (item.unit && item.unit.id) || item.id || '',
+    content: (item.unit && item.unit.text) || item.text || '',
+    score: item.score || 0,
+    metadata: (item.unit && item.unit.metadata) || item.metadata || {},
+  }));
+}
+
+async function addMemory(userId, text, metadata) {
+  const client = getTablestoreClient();
+  return client.addMemories({
+    memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
+    scope: {
+      appId: TABLESTORE_APP_ID,
+      tenantId: userId,
+      agentId: 'guardian',
+      runId: 'consolidation',
+    },
+    text,
+    metadata: {
+      timestamp: new Date().toISOString(),
+      ...metadata,
+    },
+    sync: false,
+  });
+}
+
+async function deleteMemory(userId, memoryId) {
+  const client = getTablestoreClient();
+  return client.deleteMemory({
+    memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
+    memoryId,
+    scope: {
+      appId: TABLESTORE_APP_ID,
+      tenantId: userId,
+      agentId: '*',
+      runId: '*',
+    },
+  });
+}
 
 // ─── DashScope (Qwen) Consolidation ───────────────────────────────────────
 
@@ -88,6 +186,7 @@ Format strictly as a JSON array of strings. No prose, no markdown fences.`;
  *
  * Uses Alibaba Cloud's DashScope API (Bailian / Model Studio):
  *   https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+ *   (or a dedicated MaaS workspace endpoint if DASHSCOPE_BASE_URL is set)
  */
 function consolidateWithQwen(rawMemories) {
   const memoryBlock = rawMemories
@@ -147,119 +246,6 @@ function consolidateWithQwen(rawMemories) {
   });
 }
 
-// ─── Tablestore Agent Memory API ──────────────────────────────────────────
-
-/**
- * Call the Tablestore Memory Storage HTTP API.
- *
- * The Memory Storage API is accessed via HTTP JSON protocol at:
- *   {endpoint}/api/v1/memory/{operation}
- *
- * See: https://www.alibabacloud.com/help/en/tablestore/memory-storage-api-reference
- */
-function tablestoreCall(operation, payload) {
-  const body = JSON.stringify(payload);
-
-  return new Promise((resolve, reject) => {
-    const url = new URL(TABLESTORE_ENDPOINT + '/api/v1/memory/' + operation);
-    const options = {
-      method: 'POST',
-      hostname: url.hostname,
-      path: url.pathname,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-ots-accesskeyid': TABLESTORE_ACCESS_KEY_ID,
-        'x-ots-accesskeysecret': TABLESTORE_ACCESS_KEY_SECRET,
-        'x-ots-instancename': TABLESTORE_INSTANCE,
-        'Content-Length': Buffer.byteLength(body),
-      },
-      timeout: 10000,
-    };
-
-    const req = https.request(options, (res) => {
-      let data = '';
-      res.on('data', (chunk) => (data += chunk));
-      res.on('end', () => {
-        if (res.statusCode !== 200) {
-          reject(
-            new Error(`Tablestore ${operation} error: ${res.statusCode} ${data}`)
-          );
-          return;
-        }
-        try {
-          resolve(JSON.parse(data));
-        } catch (err) {
-          reject(new Error(`Tablestore ${operation} parse error: ${err.message}`));
-        }
-      });
-    });
-
-    req.on('error', reject);
-    req.on('timeout', () =>
-      reject(new Error(`Tablestore ${operation} timeout`))
-    );
-    req.write(body);
-    req.end();
-  });
-}
-
-/**
- * Search memories for a user via Tablestore's vector search.
- * Uses agentId: '*' and runId: '*' to search across all sessions.
- */
-async function searchMemories(userId, query, topK) {
-  const result = await tablestoreCall('searchMemories', {
-    memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
-    scope: {
-      appId: TABLESTORE_APP_ID,
-      tenantId: userId,
-      agentId: '*',
-      runId: '*',
-    },
-    query,
-    topK: topK || 40,
-  });
-
-  return (result.results || []).map((item) => ({
-    id: item.memoryId || item.id || '',
-    content: item.text || item.content || '',
-    score: item.score || 0,
-    metadata: item.metadata || {},
-  }));
-}
-
-/**
- * Add a memory (preprocessed text) to the Tablestore memory store.
- * The service extracts long-term memory signals in the background.
- */
-async function addMemory(userId, text, metadata) {
-  return tablestoreCall('addMemories', {
-    memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
-    scope: {
-      appId: TABLESTORE_APP_ID,
-      tenantId: userId,
-      agentId: 'guardian',
-      runId: 'consolidation',
-    },
-    text,
-    metadata: {
-      timestamp: new Date().toISOString(),
-      ...metadata,
-    },
-    sync: false,
-  });
-}
-
-/**
- * Delete a memory by ID from the Tablestore memory store.
- */
-async function deleteMemory(memoryId) {
-  return tablestoreCall('deleteMemory', {
-    memoryStoreName: TABLESTORE_MEMORY_STORE_NAME,
-    memoryId,
-  });
-}
-
 // ─── Main Handler ─────────────────────────────────────────────────────────
 
 /**
@@ -303,14 +289,28 @@ exports.handler = async (event, context, callback) => {
   if (!userId) {
     const msg = 'Missing userId in event payload';
     console.error('[fc-memory-consolidation] ' + msg);
-    if (callback) return callback(null, {
-      statusCode: 400,
-      body: JSON.stringify({ error: msg }),
-    });
+    if (callback)
+      return callback(null, {
+        statusCode: 400,
+        body: JSON.stringify({ error: msg }),
+      });
     return { error: msg };
   }
 
-  console.log(`[fc-memory-consolidation] Starting consolidation for user: ${userId}`);
+  console.log(
+    `[fc-memory-consolidation] Starting consolidation for user: ${userId}`
+  );
+
+  // ─── Ensure memory store exists ────────────────────────────────────────
+  try {
+    await ensureMemoryStore();
+  } catch (err) {
+    console.error(
+      '[fc-memory-consolidation] ensureMemoryStore failed:',
+      err.message
+    );
+    // Continue — the store may already exist, the search will tell us
+  }
 
   // ─── 1. Read raw memories from Tablestore ──────────────────────────────
   let rawMemories;
@@ -322,29 +322,41 @@ exports.handler = async (event, context, callback) => {
     );
     // Filter out previously-consolidated profiles
     rawMemories = all.filter(
-      (m) => m.metadata?.type !== 'consolidated_profile'
+      (m) => m.metadata && m.metadata.type !== 'consolidated_profile'
     );
   } catch (err) {
-    console.error('[fc-memory-consolidation] Tablestore search failed:', err.message);
-    if (callback) return callback(null, {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'tablestore_search_failed', detail: err.message }),
-    });
+    console.error(
+      '[fc-memory-consolidation] Tablestore search failed:',
+      err.message
+    );
+    if (callback)
+      return callback(null, {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'tablestore_search_failed',
+          detail: err.message,
+        }),
+      });
     return { error: 'tablestore_search_failed', detail: err.message };
   }
 
   if (rawMemories.length < MIN_MEMORIES_TO_CONSOLIDATE) {
     const msg = `below_min_memories (${rawMemories.length}/${MIN_MEMORIES_TO_CONSOLIDATE})`;
     console.log(`[fc-memory-consolidation] Skipping: ${msg}`);
-    if (callback) return callback(null, {
-      statusCode: 200,
-      body: JSON.stringify({
-        consolidated: false,
-        reason: msg,
-        rawMemoriesRead: rawMemories.length,
-      }),
-    });
-    return { consolidated: false, reason: msg, rawMemoriesRead: rawMemories.length };
+    if (callback)
+      return callback(null, {
+        statusCode: 200,
+        body: JSON.stringify({
+          consolidated: false,
+          reason: msg,
+          rawMemoriesRead: rawMemories.length,
+        }),
+      });
+    return {
+      consolidated: false,
+      reason: msg,
+      rawMemoriesRead: rawMemories.length,
+    };
   }
 
   // ─── 2. Consolidate with Qwen (DashScope) ──────────────────────────────
@@ -352,11 +364,18 @@ exports.handler = async (event, context, callback) => {
   try {
     qwenResult = await consolidateWithQwen(rawMemories);
   } catch (err) {
-    console.error('[fc-memory-consolidation] DashScope consolidation failed:', err.message);
-    if (callback) return callback(null, {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'qwen_consolidation_failed', detail: err.message }),
-    });
+    console.error(
+      '[fc-memory-consolidation] DashScope consolidation failed:',
+      err.message
+    );
+    if (callback)
+      return callback(null, {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'qwen_consolidation_failed',
+          detail: err.message,
+        }),
+      });
     return { error: 'qwen_consolidation_failed', detail: err.message };
   }
 
@@ -377,20 +396,27 @@ exports.handler = async (event, context, callback) => {
   }
 
   if (profileStatements.length === 0) {
-    if (callback) return callback(null, {
-      statusCode: 200,
-      body: JSON.stringify({
-        consolidated: false,
-        reason: 'empty_profile',
-        rawMemoriesRead: rawMemories.length,
-        model: qwenResult.model,
-      }),
-    });
-    return { consolidated: false, reason: 'empty_profile', model: qwenResult.model };
+    if (callback)
+      return callback(null, {
+        statusCode: 200,
+        body: JSON.stringify({
+          consolidated: false,
+          reason: 'empty_profile',
+          rawMemoriesRead: rawMemories.length,
+          model: qwenResult.model,
+        }),
+      });
+    return {
+      consolidated: false,
+      reason: 'empty_profile',
+      model: qwenResult.model,
+    };
   }
 
   // ─── 4. Store the distilled profile in Tablestore ──────────────────────
-  const profileText = `CONSOLIDATED USER PROFILE:\n${profileStatements.map((s) => `- ${s}`).join('\n')}`;
+  const profileText = `CONSOLIDATED USER PROFILE:\n${profileStatements
+    .map((s) => `- ${s}`)
+    .join('\n')}`;
 
   try {
     await addMemory(userId, profileText, {
@@ -400,11 +426,18 @@ exports.handler = async (event, context, callback) => {
       priority: 'high',
     });
   } catch (err) {
-    console.error('[fc-memory-consolidation] Tablestore addMemory failed:', err.message);
-    if (callback) return callback(null, {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'tablestore_store_failed', detail: err.message }),
-    });
+    console.error(
+      '[fc-memory-consolidation] Tablestore addMemory failed:',
+      err.message
+    );
+    if (callback)
+      return callback(null, {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'tablestore_store_failed',
+          detail: err.message,
+        }),
+      });
     return { error: 'tablestore_store_failed', detail: err.message };
   }
 
@@ -413,7 +446,7 @@ exports.handler = async (event, context, callback) => {
   for (const memory of rawMemories) {
     if (!memory.id) continue;
     try {
-      await deleteMemory(memory.id);
+      await deleteMemory(userId, memory.id);
       evicted++;
     } catch {
       // Best-effort — the profile is already stored
@@ -430,11 +463,14 @@ exports.handler = async (event, context, callback) => {
     timestamp: new Date().toISOString(),
   };
 
-  console.log(`[fc-memory-consolidation] Success: ${profileStatements.length} statements, ${evicted} evicted`);
+  console.log(
+    `[fc-memory-consolidation] Success: ${profileStatements.length} statements, ${evicted} evicted`
+  );
 
-  if (callback) return callback(null, {
-    statusCode: 200,
-    body: JSON.stringify(result),
-  });
+  if (callback)
+    return callback(null, {
+      statusCode: 200,
+      body: JSON.stringify(result),
+    });
   return result;
 };

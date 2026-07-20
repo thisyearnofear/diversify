@@ -1,10 +1,11 @@
 /**
  * Tablestore Agent Memory Service
  *
- * Alibaba Cloud Tablestore-native persistent agent memory. Uses the Tablestore
- * Memory Storage API (createMemoryStore, addMemories, searchMemories) for
- * long-term memory with automatic extraction, vector search, and cross-session
- * scoping.
+ * Alibaba Cloud Tablestore-native persistent agent memory. Uses the official
+ * Tablestore Node.js SDK (`tablestore@^5.6.5`) Memory Storage API
+ * (createMemoryStore, addMemories, searchMemories, deleteMemory) for
+ * long-term memory with automatic extraction, vector search, and
+ * cross-session scoping.
  *
  * This is the Alibaba Cloud deployment proof file for the Qwen Cloud
  * Hackathon Track 1 (MemoryAgent). It demonstrates use of Alibaba Cloud
@@ -34,7 +35,8 @@
  * See: https://help.aliyun.com/en/tablestore/memory-storage-nodejs-sdk
  */
 
-import { fetchWithTimeout } from '../utils/promise-utils';
+ 
+const TableStore = require('tablestore') as any;
 
 /**
  * Tablestore instance endpoint, e.g.
@@ -85,20 +87,8 @@ interface RememberOptions {
   metadata?: Record<string, unknown>;
 }
 
-/**
- * Scope for Tablestore memory operations. All four fields are required by the
- * API. `tenantId` is the user identifier; `agentId` is the agent identifier;
- * `runId` is the session/run identifier. Using `*` for agentId/runId in
- * searchMemories searches across all agents/sessions for a given user.
- */
-interface MemoryScope {
-  appId: string;
-  tenantId: string;
-  agentId: string;
-  runId: string;
-}
-
 class TablestoreMemoryServiceImpl {
+  private client: any | null = null;
   private endpoint: string;
   private instanceName: string;
   private accessKeyId: string;
@@ -106,6 +96,7 @@ class TablestoreMemoryServiceImpl {
   private memoryStoreName: string;
   private appId: string;
   private enabled: boolean;
+  private memoryStoreEnsured: boolean;
 
   constructor() {
     this.endpoint = TABLESTORE_ENDPOINT;
@@ -120,6 +111,7 @@ class TablestoreMemoryServiceImpl {
       this.accessKeyId &&
       this.accessKeySecret
     );
+    this.memoryStoreEnsured = false;
   }
 
   isAvailable(): boolean {
@@ -127,37 +119,47 @@ class TablestoreMemoryServiceImpl {
   }
 
   /**
-   * Build the HTTP API URL for a Tablestore memory operation.
-   * The Memory Storage API is accessed via HTTP JSON protocol at:
-   *   {endpoint}/api/v1/memory/{operation}
+   * Lazily initialize the Tablestore client. The SDK client is created on
+   * first use to avoid importing the native module when the service is
+   * not configured (inert when unset).
    */
-  private apiUrl(operation: string): string {
-    return `${this.endpoint}/api/v1/memory/${operation}`;
+  private getClient(): any {
+    if (!this.client) {
+      this.client = new TableStore.Client({
+        accessKeyId: this.accessKeyId,
+        secretAccessKey: this.accessKeySecret,
+        endpoint: this.endpoint,
+        instancename: this.instanceName,
+      });
+    }
+    return this.client;
   }
 
   /**
-   * Auth headers for the Tablestore Memory Storage HTTP API.
-   * Uses Alibaba Cloud AccessKey authentication.
+   * Ensure the memory store exists. Creates it on first call. Idempotent —
+   * if it already exists, the create call fails silently.
    */
-  private authHeaders(): Record<string, string> {
-    return {
-      'Content-Type': 'application/json',
-      'x-ots-accesskeyid': this.accessKeyId,
-      'x-ots-accesskeysecret': this.accessKeySecret,
-      'x-ots-instancename': this.instanceName,
-    };
-  }
-
-  private scopeForUser(
-    userId: string,
-    sessionId?: string
-  ): MemoryScope {
-    return {
-      appId: this.appId,
-      tenantId: userId,
-      agentId: 'guardian',
-      runId: sessionId || 'default',
-    };
+  private async ensureMemoryStore(): Promise<void> {
+    if (this.memoryStoreEnsured) return;
+    const client = this.getClient();
+    try {
+      await client.createMemoryStore({
+        memoryStoreName: this.memoryStoreName,
+        description:
+          'DiversiFi agent long-term memory store (Qwen Cloud Hackathon Track 1)',
+      });
+    } catch (err: any) {
+      // Already exists — this is expected on subsequent calls
+      if (
+        err?.message &&
+        !/already exist|ObjectAlreadyExist|4002/i.test(err.message)
+      ) {
+        // Real error — log but don't throw (the store may have been created
+        // via the console; we'll find out on the first real operation)
+        console.warn('[Tablestore] createMemoryStore warning:', err.message);
+      }
+    }
+    this.memoryStoreEnsured = true;
   }
 
   /**
@@ -186,39 +188,28 @@ class TablestoreMemoryServiceImpl {
     }
 
     try {
-      const scope = this.scopeForUser(userId, options.sessionId);
-      const body = {
+      await this.ensureMemoryStore();
+      const client = this.getClient();
+
+      const result = await client.addMemories({
         memoryStoreName: this.memoryStoreName,
-        scope,
+        scope: {
+          appId: this.appId,
+          tenantId: userId,
+          agentId: 'guardian',
+          runId: options.sessionId || 'default',
+        },
         text,
         metadata: {
           timestamp: new Date().toISOString(),
           ...options.metadata,
         },
         sync: false,
-      };
+      });
 
-      const response = await fetchWithTimeout(
-        this.apiUrl('addMemories'),
-        {
-          method: 'POST',
-          headers: this.authHeaders(),
-          body: JSON.stringify(body),
-        },
-        5000
-      );
-
-      if (!response.ok) {
-        console.warn(
-          `[Tablestore] remember failed: ${response.status} ${response.statusText}`
-        );
-        return { success: false };
-      }
-
-      const result = await response.json();
       return {
         success: true,
-        id: result.memoryId || result.id,
+        id: result?.memoryId || result?.id,
       };
     } catch (error) {
       console.warn('[Tablestore] remember error:', error);
@@ -247,7 +238,9 @@ class TablestoreMemoryServiceImpl {
     }
 
     try {
-      const body = {
+      const client = this.getClient();
+
+      const result = await client.searchMemories({
         memoryStoreName: this.memoryStoreName,
         scope: {
           appId: this.appId,
@@ -257,34 +250,16 @@ class TablestoreMemoryServiceImpl {
         },
         query,
         topK: options.limit || 5,
-      };
+        enableRerank: true,
+      });
 
-      const response = await fetchWithTimeout(
-        this.apiUrl('searchMemories'),
-        {
-          method: 'POST',
-          headers: this.authHeaders(),
-          body: JSON.stringify(body),
-        },
-        3000
-      );
-
-      if (!response.ok) {
-        console.warn(
-          `[Tablestore] recall failed: ${response.status} ${response.statusText}`
-        );
-        return { memories: [] };
-      }
-
-      const result = await response.json();
       const now = Date.now();
-
       const memories: TablestoreMemory[] = (result.results || [])
         .map((item: any) => ({
-          id: item.memoryId || item.id || '',
-          content: item.text || item.content || '',
-          score: item.score || item.relevance || 0,
-          metadata: item.metadata || {},
+          id: item.unit?.id || item.id || '',
+          content: item.unit?.text || item.text || '',
+          score: item.score || 0,
+          metadata: item.unit?.metadata || item.metadata || {},
         }))
         .filter((m: TablestoreMemory) => {
           // Client-side TTL filter — mirrors Cognee decay
@@ -342,23 +317,22 @@ class TablestoreMemoryServiceImpl {
         return { swept: memories.length, attempted: 0, evicted: 0 };
       }
 
+      const client = this.getClient();
       let evicted = 0;
       for (const memory of stale) {
         if (!memory.id) continue;
         try {
-          const del = await fetchWithTimeout(
-            this.apiUrl('deleteMemory'),
-            {
-              method: 'POST',
-              headers: this.authHeaders(),
-              body: JSON.stringify({
-                memoryStoreName: this.memoryStoreName,
-                memoryId: memory.id,
-              }),
+          await client.deleteMemory({
+            memoryStoreName: this.memoryStoreName,
+            memoryId: memory.id,
+            scope: {
+              appId: this.appId,
+              tenantId: userId,
+              agentId: '*',
+              runId: '*',
             },
-            2000
-          );
-          if (del.ok) evicted++;
+          });
+          evicted++;
         } catch {
           // Best-effort — stale memories are already filtered by TTL in recall
         }
@@ -385,49 +359,38 @@ class TablestoreMemoryServiceImpl {
     }
 
     try {
-      // List all memories for this user
-      const listResponse = await fetchWithTimeout(
-        this.apiUrl('listMemories'),
-        {
-          method: 'POST',
-          headers: this.authHeaders(),
-          body: JSON.stringify({
+      const client = this.getClient();
+
+      const listResult = await client.listMemories({
+        memoryStoreName: this.memoryStoreName,
+        scope: {
+          appId: this.appId,
+          tenantId: userId,
+          agentId: '*',
+          runId: '*',
+        },
+        limit: 1000,
+      });
+
+      const memories: Array<{ id?: string; memoryId?: string }> =
+        listResult.memories || listResult.units || [];
+
+      let deleted = 0;
+      for (const mem of memories) {
+        const id = mem.id || mem.memoryId;
+        if (!id) continue;
+        try {
+          await client.deleteMemory({
             memoryStoreName: this.memoryStoreName,
+            memoryId: id,
             scope: {
               appId: this.appId,
               tenantId: userId,
               agentId: '*',
               runId: '*',
             },
-            maxResults: 1000,
-          }),
-        },
-        5000
-      );
-
-      if (!listResponse.ok) {
-        return { success: false };
-      }
-
-      const listResult = await listResponse.json();
-      const memories: Array<{ memoryId: string }> = listResult.memories || [];
-
-      let deleted = 0;
-      for (const mem of memories) {
-        try {
-          const del = await fetchWithTimeout(
-            this.apiUrl('deleteMemory'),
-            {
-              method: 'POST',
-              headers: this.authHeaders(),
-              body: JSON.stringify({
-                memoryStoreName: this.memoryStoreName,
-                memoryId: mem.memoryId,
-              }),
-            },
-            2000
-          );
-          if (del.ok) deleted++;
+          });
+          deleted++;
         } catch {
           // Best-effort
         }
