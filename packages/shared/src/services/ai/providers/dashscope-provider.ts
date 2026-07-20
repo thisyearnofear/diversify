@@ -38,9 +38,14 @@ import { withTimeout } from "../../../utils/promise-utils";
  * The default `qwen-plus` balances quality and cost; override per-deploy with
  * `DASHSCOPE_MODEL` (e.g. `qwen-max` for highest quality, `qwen-long` for
  * 1M-token context windows — ideal for memory consolidation).
+ *
+ * Base URL: defaults to the public DashScope endpoint. Override with
+ * `DASHSCOPE_BASE_URL` to point at a dedicated MaaS / Bailian workspace
+ * endpoint (e.g. `https://<workspace>.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1`).
  */
 const DASHSCOPE_DEFAULT_MODEL = 'qwen-plus';
-const DASHSCOPE_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const DASHSCOPE_DEFAULT_BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+const DASHSCOPE_BASE_URL = process.env.DASHSCOPE_BASE_URL || DASHSCOPE_DEFAULT_BASE_URL;
 
 export class DashScopeProvider extends BaseAIProvider {
   private client: OpenAI | null = null;
