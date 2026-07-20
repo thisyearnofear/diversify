@@ -33,7 +33,7 @@ services:
   fc-memory-consolidation:
     component: fc3
     props:
-      region: ap-southeast-1
+      region: cn-beijing
       functionName: diversifi-memory-consolidation
       description: >-
         DiversiFi MemoryAgent consolidation — uses Tablestore Agent Memory
@@ -50,7 +50,7 @@ services:
         TABLESTORE_APP_ID: diversifi
         # Set these in the FC console after deploy (secrets):
         # DASHSCOPE_API_KEY: <your-dashscope-key>
-        # TABLESTORE_ENDPOINT: https://<instance>.ap-southeast-1.ots.aliyuncs.com
+        # TABLESTORE_ENDPOINT: https://<instance>.cn-beijing.ots.aliyuncs.com
         # TABLESTORE_INSTANCE_NAME: <your-instance>
         # ALIBABA_CLOUD_ACCESS_KEY_ID: <your-access-key-id>
         # ALIBABA_CLOUD_ACCESS_KEY_SECRET: <your-access-key-secret>
