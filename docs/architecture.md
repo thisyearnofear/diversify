@@ -699,7 +699,8 @@ Encoded in code: every catalog entry has a `freeAlternative` field.
 `shouldPayFor()` returns true **only** when it's `null`.
 
 **Free stack (what we never pay to duplicate):** CoinGecko + CoinPaprika
-(crypto prices), Frankfurter + Alpha Vantage (FX), World Bank (economic),
+(crypto prices), fawazahmed0 + Frankfurter (FX — fawazahmed0 covers 200+
+currencies including KES/GHS/NGN that Frankfurter/ECB does not), World Bank (economic),
 DefiLlama (yield), our governance/news feeds, Firecrawl monitors,
 and **TinyFish Search API** (`TINYFISH_API_KEY`) — free web search + news +
 research-paper search, verified live (returns relevant EM/cedi news).
