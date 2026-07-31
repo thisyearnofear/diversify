@@ -21,6 +21,8 @@ import {
   BENCHMARKS,
   type Benchmark,
   CURRENCY_RISK_DATA,
+  CURRENCY_RISK_DATA_AS_OF,
+  CURRENCY_RISK_DATA_DISCLAIMER,
   exampleSavingsFor,
 } from '../../../constants/currency-risk';
 import { saveMoneyPurpose } from '../../../hooks/use-protection-profile';
@@ -809,6 +811,11 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
                       A negative figure means {riskData.code} bought less of that benchmark over this period.
                     </p>
+                    <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 border border-amber-500/20">
+                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {CURRENCY_RISK_DATA_AS_OF}</span>
+                      <span className="text-[9px] text-slate-500">·</span>
+                      <span className="text-[9px] text-slate-400 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
+                    </div>
                   </motion.div>
 
                   <motion.div variants={staggerChild} className="space-y-2 mb-4">

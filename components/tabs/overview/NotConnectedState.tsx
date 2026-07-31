@@ -5,6 +5,8 @@ import { useStrategy } from "@/context/app/StrategyContext";
 import {
   BENCHMARKS,
   type Benchmark,
+  CURRENCY_RISK_DATA_AS_OF,
+  CURRENCY_RISK_DATA_DISCLAIMER,
 } from "@/constants/currency-risk";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
@@ -110,6 +112,11 @@ export function NotConnectedState({
                     </div>
                   );
                 })}
+              </div>
+              <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/15 px-2.5 py-1.5 border border-amber-200 dark:border-amber-800/40 mb-4">
+                <span className="text-[9px] text-amber-700 dark:text-amber-300 font-bold uppercase tracking-wider">Data as of {CURRENCY_RISK_DATA_AS_OF}</span>
+                <span className="text-[9px] text-gray-400">·</span>
+                <span className="text-[9px] text-gray-500 dark:text-gray-400 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
               </div>
 
               {/* Counterfactual calculator */}

@@ -12,7 +12,7 @@ interface CurrencyPerformanceChartProps {
       percentChange: number;
     }[];
     baseCurrency: string;
-    source?: "api" | "cache" | "fallback";
+    source?: "api" | "cache" | "fallback" | "unavailable";
   };
   title?: string;
 }
@@ -178,7 +178,7 @@ export default function CurrencyPerformanceChart({
         <div className="flex items-center">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <span className="text-xs text-gray-700 font-medium ml-2 bg-gray-100 px-2 py-0.5 rounded">
-            Alpha Vantage
+            Open FX rates
           </span>
         </div>
         <div>
@@ -190,6 +190,11 @@ export default function CurrencyPerformanceChart({
           {data.source === "cache" && (
             <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
               Cached Data
+            </span>
+          )}
+          {data.source === "unavailable" && (
+            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-1 rounded-full font-medium">
+              Data Unavailable
             </span>
           )}
         </div>
@@ -257,7 +262,7 @@ export default function CurrencyPerformanceChart({
           <div className="text-center">
             <p className="mb-2">No currency performance data available</p>
             <p className="text-xs text-gray-400">
-              Data provided by Alpha Vantage
+              Live FX rates temporarily unavailable
             </p>
           </div>
         </div>

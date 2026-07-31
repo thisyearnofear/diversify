@@ -13,7 +13,7 @@ interface PerformanceData {
   dates: string[];
   currencies: CurrencyPerformance[];
   baseCurrency: string;
-  source: 'api' | 'cache' | 'fallback';
+  source: 'api' | 'cache' | 'fallback' | 'unavailable';
 }
 
 // Currency metadata - currencies are tied to geographic regions
@@ -35,7 +35,7 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
     dates: [],
     currencies: [],
     baseCurrency,
-    source: 'fallback'
+    source: 'unavailable'
   });
   const [isLoading, setIsLoading] = useState(enabled);
   const [error, setError] = useState<string | null>(null);
@@ -89,9 +89,9 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
         // Wait for all fetches to complete
         const results = await Promise.all(fetchPromises);
 
-        // Check if we got any real data
+        // Check if we got any real data (not unavailable/empty)
         const anyRealData = results.some(result =>
-          result.historicalData && result.historicalData.source !== 'fallback'
+          result.historicalData && result.historicalData.source !== 'unavailable'
         );
 
         // If we have at least some real data, use it
@@ -139,16 +139,21 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
             dates: last30Dates,
             currencies: currencyData,
             baseCurrency,
-            source: results.some((item) => item.historicalData?.source === 'fallback')
-              ? 'fallback'
+            source: results.some((item) => item.historicalData?.source === 'unavailable')
+              ? 'unavailable'
               : 'api'
           };
 
           setData(result);
         } else {
-          // Use fallback data
-          const fallbackData = generateFallbackData(baseCurrency, currencyData);
-          setData(fallbackData);
+          // No real data available — return an honest empty state instead
+          // of fabricating random values that look like market data.
+          setData({
+            dates: [],
+            currencies: currencyData.map(c => ({ ...c, values: [], percentChange: 0 })),
+            baseCurrency,
+            source: 'unavailable'
+          });
         }
 
         setIsLoading(false);
@@ -156,118 +161,26 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
         console.error('Error fetching currency performance:', err);
         setError(err.message || 'Failed to fetch currency performance data');
 
-        // Use fallback data
-        const fallbackData = generateFallbackData(baseCurrency,
-          TRACKED_CURRENCIES.map(symbol => ({
+        // No data available — return an honest empty state instead
+        // of fabricating random values that look like market data.
+        setData({
+          dates: [],
+          currencies: TRACKED_CURRENCIES.map(symbol => ({
             symbol,
             name: CURRENCY_METADATA[symbol]?.name || symbol,
             region: CURRENCY_METADATA[symbol]?.region || 'USA',
             values: [],
             percentChange: 0
-          }))
-        );
-        setData(fallbackData);
+          })),
+          baseCurrency,
+          source: 'unavailable'
+        });
         setIsLoading(false);
       }
     };
 
     fetchCurrencyPerformance();
   }, [baseCurrency, enabled]);
-
-  // Generate fallback data when API fails
-  const generateFallbackData = (
-    baseCurrency: string,
-    currencyData: CurrencyPerformance[]
-  ): PerformanceData => {
-    // Generate dates for the last 30 days
-    const today = new Date();
-    const dates: string[] = [];
-
-    for (let i = 30; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      dates.push(date.toISOString().split('T')[0]);
-    }
-
-    // Base values (approximately realistic as of 2023)
-    const baseValues: Record<string, number> = {
-      'USD': 1,
-      'EUR': 0.92,
-      'KES': 130,
-      'COP': 4000,
-      'PHP': 56,
-      'GHS': 12.5,
-      'BRL': 5.2
-    };
-
-    // Trends (annual % change, both up and down)
-    const trends: Record<string, number> = {
-      'USD': 0,  // Base currency
-      'EUR': 2.5,  // Euro strengthening against USD
-      'KES': -5,   // KES weakening against USD
-      'COP': -3,   // COP weakening against USD
-      'PHP': 1.5,  // PHP strengthening against USD
-      'GHS': -8,   // GHS weakening against USD
-      'BRL': -2    // BRL weakening against USD
-    };
-
-    // Volatility (daily random fluctuation %)
-    const volatility: Record<string, number> = {
-      'USD': 0,    // Base currency
-      'EUR': 0.2,  // Low volatility
-      'KES': 0.5,  // Higher volatility
-      'COP': 0.4,  // Medium-high volatility
-      'PHP': 0.3,  // Medium volatility
-      'GHS': 0.6,  // High volatility
-      'BRL': 0.4   // Medium-high volatility
-    };
-
-    // Generate values for each currency
-    currencyData.forEach(currency => {
-      const values: number[] = [];
-
-      // If this is the base currency, all values are 1
-      if (currency.symbol === baseCurrency) {
-        values.push(...dates.map(() => 1));
-        currency.values = values;
-        currency.percentChange = 0;
-        return;
-      }
-
-      // For other currencies, generate realistic values
-      const baseValue = baseValues[currency.symbol] || 1;
-      const annualTrend = trends[currency.symbol] || 0;
-      const dailyVolatility = volatility[currency.symbol] || 0.3;
-
-      // Calculate daily trend factor (compounded)
-      const dailyTrendFactor = Math.pow(1 + annualTrend / 100, 1 / 365);
-
-      for (let i = 0; i < dates.length; i++) {
-        // Apply trend and random volatility
-        const daysFactor = Math.pow(dailyTrendFactor, i);
-        const randomFactor = 1 + (Math.random() * 2 - 1) * dailyVolatility / 100;
-
-        // Calculate exchange rate
-        const exchangeRate = baseValue * daysFactor * randomFactor;
-
-        // Convert to "value of 1 base currency worth of this currency over time"
-        values.push(1 / exchangeRate);
-      }
-
-      // Calculate percent change (last 30 days)
-      const percentChange = ((values[values.length - 1] - values[0]) / values[0]) * 100;
-
-      currency.values = values;
-      currency.percentChange = percentChange;
-    });
-
-    return {
-      dates,
-      currencies: currencyData,
-      baseCurrency,
-      source: 'fallback'
-    };
-  };
 
   // Calculate the value of $1 invested in each currency over time
   const calculateDollarPerformance = () => {

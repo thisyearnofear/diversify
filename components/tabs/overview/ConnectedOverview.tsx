@@ -73,7 +73,7 @@ interface ConnectedOverviewProps {
       percentChange: number;
     }[];
     baseCurrency: string;
-    source?: "api" | "cache" | "fallback";
+    source?: "api" | "cache" | "fallback" | "unavailable";
   };
 }
 
