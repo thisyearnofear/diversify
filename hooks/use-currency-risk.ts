@@ -17,6 +17,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useUserRegion } from './use-user-region';
 import {
   getCurrencyRisk,
+  CURRENCY_RISK_DATA_AS_OF,
   type CurrencyRiskEntry,
   type Benchmark,
   type Horizon,
@@ -29,6 +30,18 @@ import {
   type PlanPreview,
 } from '../components/protection-cards/plan-preview';
 import type { ArchetypeId } from '../components/protection-cards/tokens';
+
+interface LiveDepreciationResponse {
+  currency: string;
+  depreciation: {
+    '1yr': number | null;
+    '3yr': number | null;
+    '5yr': number | null;
+    asOf: string;
+  } | null;
+  source: string;
+  note?: string;
+}
 
 export interface UseCurrencyRiskReturn {
   /** The matched currency risk entry, or null if the user's currency is not in the dataset. */
@@ -47,7 +60,7 @@ export interface UseCurrencyRiskReturn {
   setCountryOverride: (code: string | null) => void;
   /** The "primary" depreciation number for quick display (5yr vs USD). */
   primaryDepreciation: number;
-  /** All benchmark depreciations for the given horizon. */
+  /** All benchmark depreciations for the given horizon. Live 1yr overrides static when available. */
   getDepreciation: (benchmark: Benchmark, horizon: Horizon) => number;
   /** Calculate the preserved value counterfactual for a given shield %, benchmark, and horizon. */
   calculateCounterfactual: (
@@ -66,6 +79,12 @@ export interface UseCurrencyRiskReturn {
     savingsAmount: number,
     shieldPercent?: number,
   ) => PlanPreview;
+  /** Live 1yr depreciation vs USD from fawazahmed0, or null if unavailable. */
+  liveDepreciation1yr: number | null;
+  /** Date the live data was fetched, or the curated dataset date if live is unavailable. */
+  dataAsOf: string;
+  /** Whether the 1yr figure is from live data or the curated static dataset. */
+  isLive1yr: boolean;
 }
 
 export function useCurrencyRisk(): UseCurrencyRiskReturn {
@@ -112,12 +131,45 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
   const currencyCode = riskData?.code ?? null;
   const countryName = riskData?.countryName ?? detectedCountryName ?? null;
 
+  // ── Live depreciation enrichment ─────────────────────────────────
+  // Fetches live 1yr depreciation from the fawazahmed0 dataset via the
+  // API route. Overrides the static curated 1yr vsUSD number when available.
+  // 3yr/5yr remain from the curated dataset (live dataset starts 2024-03-02).
+  const [liveDep, setLiveDep] = useState<LiveDepreciationResponse | null>(null);
+
+  useEffect(() => {
+    if (!currencyCode) {
+      setLiveDep(null);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/currency-risk/live?currency=${encodeURIComponent(currencyCode)}`)
+      .then((res) => res.json())
+      .then((data: LiveDepreciationResponse) => {
+        if (!cancelled) setLiveDep(data);
+      })
+      .catch(() => {
+        // Silent fail — the curated static data is the fallback
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [currencyCode]);
+
+  const liveDepreciation1yr = liveDep?.depreciation?.['1yr'] ?? null;
+  const isLive1yr = liveDepreciation1yr != null;
+  const dataAsOf = liveDep?.depreciation?.asOf ?? CURRENCY_RISK_DATA_AS_OF;
+
   const primaryDepreciation = riskData
     ? riskData.depreciation.vsUSD['5yr']
     : 0;
 
   const getDepreciation = (benchmark: Benchmark, horizon: Horizon): number => {
     if (!riskData) return 0;
+    // Override 1yr vsUSD with live data when available
+    if (benchmark === 'USD' && horizon === '1yr' && liveDepreciation1yr != null) {
+      return liveDepreciation1yr;
+    }
     const key = `vs${benchmark}` as keyof typeof riskData.depreciation;
     return riskData.depreciation[key][horizon];
   };
@@ -166,5 +218,8 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     riskEvents,
     isBenchmarkCurrency,
     getPlanPreview,
+    liveDepreciation1yr,
+    dataAsOf,
+    isLive1yr,
   };
 }

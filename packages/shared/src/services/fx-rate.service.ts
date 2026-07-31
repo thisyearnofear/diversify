@@ -174,3 +174,86 @@ export async function getLiveHistoricalRates(
 export const FX_RATE_SOURCE_NOTE =
   'Mid-market rates: fawazahmed0 open currency dataset (daily snapshots). ' +
   'Indicative mid-market, not tradeable quotes.';
+
+export interface DepreciationResult {
+  /** Depreciation percentage. Negative = currency weakened vs benchmark. */
+  '1yr': number | null;
+  '3yr': number | null;
+  '5yr': number | null;
+  /** The date the data was fetched. */
+  asOf: string;
+  /** Whether each horizon was computed from live data or is null. */
+  source: 'fawazahmed0';
+}
+
+/**
+ * Compute live depreciation of a currency against USD over 1/3/5 year horizons.
+ *
+ * Depreciation = ((rate_now / rate_then) - 1) * 100
+ * A negative number means the currency weakened (you get fewer USD per unit).
+ *
+ * The fawazahmed0 dataset starts 2024-03-02, so:
+ * - 1yr: available if today > 2025-03-02 (we are)
+ * - 3yr: not available from this dataset (need pre-2024 data)
+ * - 5yr: not available from this dataset
+ *
+ * Returns null for horizons where no historical data exists. The caller
+ * (API route / hook) should merge with the curated static dataset for
+ * those horizons.
+ */
+export async function getLiveDepreciation(
+  currency: string,
+): Promise<DepreciationResult | null> {
+  if (currency.toUpperCase() === 'USD') {
+    return { '1yr': 0, '3yr': 0, '5yr': 0, asOf: new Date().toISOString().slice(0, 10), source: 'fawazahmed0' };
+  }
+
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+
+  // Calculate the historical dates for each horizon
+  const horizons: Array<{ key: '1yr' | '3yr' | '5yr'; years: number }> = [
+    { key: '1yr', years: 1 },
+    { key: '3yr', years: 3 },
+    { key: '5yr', years: 5 },
+  ];
+
+  const result: DepreciationResult = {
+    '1yr': null,
+    '3yr': null,
+    '5yr': null,
+    asOf: todayIso,
+    source: 'fawazahmed0',
+  };
+
+  // Current rate: local per USD (e.g., 130 KES per 1 USD)
+  const currentRate = await resolveRate(currency, todayIso);
+  if (currentRate == null) return null;
+
+  for (const { key, years } of horizons) {
+    const pastDate = new Date(today);
+    pastDate.setFullYear(pastDate.getFullYear() - years);
+    const pastIso = pastDate.toISOString().slice(0, 10);
+
+    // Dataset doesn't cover dates before 2024-03-02
+    if (pastIso < DATASET_MIN_DATE) {
+      continue;
+    }
+
+    const pastRate = await resolveRate(currency, pastIso);
+    if (pastRate == null) continue;
+
+    // Depreciation: if 1 USD bought 100 KES then and 130 now,
+    // the KES weakened by 30%: (130/100 - 1) * 100 = +30
+    // We want the user's currency perspective: how much value it lost.
+    // If KES went from 100→130 per USD, KES lost (1 - 100/130) = -23%
+    // = ((pastRate / currentRate) - 1) * 100
+    const dep = ((pastRate / currentRate) - 1) * 100;
+    result[key] = Math.round(dep * 10) / 10;
+  }
+
+  // If we couldn't compute even 1yr, the service is not useful
+  if (result['1yr'] == null) return null;
+
+  return result;
+}

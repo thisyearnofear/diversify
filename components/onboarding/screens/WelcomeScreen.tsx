@@ -21,7 +21,6 @@ import {
   BENCHMARKS,
   type Benchmark,
   CURRENCY_RISK_DATA,
-  CURRENCY_RISK_DATA_AS_OF,
   CURRENCY_RISK_DATA_DISCLAIMER,
   exampleSavingsFor,
 } from '../../../constants/currency-risk';
@@ -352,6 +351,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       riskEvents,
       isBenchmarkCurrency,
       getPlanPreview,
+      dataAsOf,
+      isLive1yr,
     } = useCurrencyRisk();
     const { setFinancialStrategy } = useStrategy();
     const { enableDemoMode } = useDemoMode();
@@ -366,6 +367,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
     const [showHistoricalExample, setShowHistoricalExample] = useState(false);
+    const [showOnrampInfo, setShowOnrampInfo] = useState(false);
     const [showBusinessContext, setShowBusinessContext] = useState(false);
     const [waitlistEmail, setWaitlistEmail] = useState('');
     const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -812,7 +814,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       A negative figure means {riskData.code} bought less of that benchmark over this period.
                     </p>
                     <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 border border-amber-500/20">
-                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {CURRENCY_RISK_DATA_AS_OF}</span>
+                      {isLive1yr && (
+                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
+                      )}
+                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {dataAsOf}</span>
                       <span className="text-[9px] text-slate-500">·</span>
                       <span className="text-[9px] text-slate-400 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
                     </div>
@@ -915,6 +920,30 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       ))}
                     </motion.div>
                   )}
+
+                  {/* How protection works — honest expectation setting */}
+                  <motion.div variants={staggerChild} className="space-y-2 mb-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowOnrampInfo((shown) => !shown)}
+                      className="w-full flex items-center justify-between rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/15 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                    >
+                      <span className="text-xs font-bold text-blue-800 dark:text-blue-200">How does protection actually work?</span>
+                      <span className="text-blue-700 dark:text-blue-300">{showOnrampInfo ? '−' : '+'}</span>
+                    </button>
+                    <AnimatePresence initial={false}>
+                      {showOnrampInfo && (
+                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-xl bg-blue-50/70 dark:bg-blue-900/10 px-3">
+                          <p className="py-3 text-xs leading-relaxed text-blue-900 dark:text-blue-100">
+                            DiversiFi protects savings you hold as <strong>stablecoins</strong> (digital dollars, euros, or local-currency tokens on Celo). To use it, you convert your local currency to a stablecoin on your preferred exchange or on-ramp, then connect your wallet here. The Guardian then helps you allocate across stablecoins, gold-backed tokens, and yield vaults — with every decision recorded on-chain.
+                          </p>
+                          <p className="pb-3 text-[11px] leading-relaxed text-blue-700 dark:text-blue-300">
+                            We don&apos;t convert fiat directly. If your money is in a bank, the first step is moving it to a stablecoin wallet — DiversiFi handles everything after that.
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </motion.div>
 
                   {/* Neutral framing */}
                   <motion.div variants={staggerChild}>

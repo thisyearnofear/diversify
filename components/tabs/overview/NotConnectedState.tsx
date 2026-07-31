@@ -5,7 +5,6 @@ import { useStrategy } from "@/context/app/StrategyContext";
 import {
   BENCHMARKS,
   type Benchmark,
-  CURRENCY_RISK_DATA_AS_OF,
   CURRENCY_RISK_DATA_DISCLAIMER,
 } from "@/constants/currency-risk";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
@@ -32,6 +31,8 @@ export function NotConnectedState({
     riskData,
     getDepreciation,
     calculateCounterfactual,
+    dataAsOf,
+    isLive1yr,
   } = useCurrencyRisk();
   const { financialStrategy } = useStrategy();
   const archetypeId = strategyToArchetype(financialStrategy);
@@ -114,7 +115,10 @@ export function NotConnectedState({
                 })}
               </div>
               <div className="flex items-center gap-1.5 rounded-lg bg-amber-50 dark:bg-amber-900/15 px-2.5 py-1.5 border border-amber-200 dark:border-amber-800/40 mb-4">
-                <span className="text-[9px] text-amber-700 dark:text-amber-300 font-bold uppercase tracking-wider">Data as of {CURRENCY_RISK_DATA_AS_OF}</span>
+                {isLive1yr && (
+                  <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
+                )}
+                <span className="text-[9px] text-amber-700 dark:text-amber-300 font-bold uppercase tracking-wider">Data as of {dataAsOf}</span>
                 <span className="text-[9px] text-gray-400">·</span>
                 <span className="text-[9px] text-gray-500 dark:text-gray-400 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
               </div>
@@ -225,6 +229,11 @@ export function NotConnectedState({
           <p className="text-center text-xs text-emerald-700 dark:text-emerald-300">
             Connect a wallet to choose your protection philosophy, or try demo mode first.
           </p>
+          <div className="mt-2 rounded-lg bg-blue-50 dark:bg-blue-900/15 border border-blue-100 dark:border-blue-800/40 px-3 py-2">
+            <p className="text-[11px] leading-relaxed text-blue-700 dark:text-blue-300">
+              <strong>How it works:</strong> DiversiFi protects savings you hold as stablecoins. Convert your local currency to a stablecoin on your preferred exchange, then connect your wallet here. The Guardian handles allocation from there.
+            </p>
+          </div>
         </div>
       </div>
     </Card>

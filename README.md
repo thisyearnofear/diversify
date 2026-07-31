@@ -1,16 +1,16 @@
 # DiversiFi: Risk-Aware, Values-Driven Treasury Management
 
-## FX-risk intelligence and autonomous protection for businesses that earn in one currency and must purchase in another
+## Currency-risk awareness and values-driven savings protection
 
-> *DiversiFi is an FX-risk intelligence and autonomous protection layer for businesses that earn in one currency and must purchase in another. We quantify the currency drag on working capital and autonomously flatten it — every decision recorded on the chain where the money moves, with AI reasoning anchored to 0G. The retail savings app is top-of-funnel; the business intelligence layer is the real product. The philosophy/values system is the retention moat. Full pitch: [`docs/product.md`](./docs/product.md).*
+> *DiversiFi is a retail savings app that detects your local currency's depreciation against USD, EUR, and gold — then helps you protect what matters through stablecoin allocation, gold-backed tokens, and yield vaults. Every Guardian decision is recorded on-chain, with AI reasoning anchored to 0G. The SME business FX layer (importer archetype, per-cycle drag reports, cycle-aware autonomous execution) is in development. The philosophy/values system is the retention moat. Full pitch: [`docs/product.md`](./docs/product.md).*
 
 Two things make DiversiFi unique. Everything else is commodity:
 
-1. **FX-risk intelligence layer** — the ability to quantify and autonomously flatten currency risk for a business that earns in one currency and must purchase in another. A Ghanaian importer buying from China in USD. A US retailer sourcing from the Eurozone. A UK business paying suppliers in USD. The currencies change; the problem is identical. No player in the market offers FX risk quantification + autonomous protection.
+1. **Currency-risk awareness** — the ability to detect a visitor's country/currency and show them, in their own money, how much value their local currency has lost against global benchmarks. A Ghanaian visitor sees GHS depreciation. A Kenyan visitor sees KES. A US visitor sees USD's depreciation against gold. The risk is universal; the response is values-driven. Live FX rates are sourced from the fawazahmed0 open dataset (200+ currencies). **What ships today:** risk detection, philosophy-aware allocation guidance, and stablecoin/gold/yield protection for funds already on-chain. **What doesn't ship yet:** direct fiat-to-stablecoin conversion (users must convert via their own exchange first) and the full SME business FX drag report (a concierge CLI tool exists and is validating the math with real traders).
 
 2. **The philosophy/values system** — no other product in DeFi or fintech has this. It's not a feature; it's a structural moat that creates identity-based retention and cultural community.
 
-**Current state (2026-07-12):** The philosophy/values system and the retail FX-risk moment are live in the app. The SME business layer (importer archetype, purchase cycles, per-cycle drag reports, cycle-aware Guardian execution) is the north star and is sequenced in [`docs/sme-fx-implementation-plan.md`](./docs/sme-fx-implementation-plan.md). The concierge FX drag report is already validating the math with real traders.
+**Current state (2026-07-31):** The philosophy/values system and the retail currency-risk moment are live in the app. The SME business layer (importer archetype, purchase cycles, per-cycle drag reports, cycle-aware Guardian execution) is the north star and is sequenced in [`docs/sme-fx-implementation-plan.md`](./docs/sme-fx-implementation-plan.md). The concierge FX drag report (`npx tsx scripts/fx-drag-report.ts`) is already validating the math with real traders.
 
 The **DiversiFi Guardian** is the autonomous agent that executes this protection — routing capital between Celo/Mento (local stablecoins, low-cost savings), Arbitrum (deep liquidity, RWA yield), and HashKey Chain (APAC regulated-market savings), with on-chain proof of every decision.
 
@@ -95,3 +95,9 @@ pnpm install
 pnpm dev
 ```
 For deep-dive documentation on our cross-chain architecture and settlement flow, see [docs/architecture.md](docs/architecture.md).
+
+---
+
+## AG Grid
+
+[AG Grid](https://www.ag-grid.com/javascript-data-grid/getting-started/) (free Community edition) could make DiversiFi's currency risk tables, portfolio allocation views, and recommendation ledger sortable/filterable — letting users sort currencies by depreciation rate, filter by region, or group allocations by chain without custom table code.
