@@ -47,6 +47,15 @@ const nextConfig = {
         'dtrace-provider': false,
       };
 
+      // tablestore (Alibaba Cloud SDK) is server-only — its browser shim
+      // references bower_components paths webpack can't resolve. IgnorePlugin
+      // prevents it from being bundled on the client entirely.
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^tablestore$/,
+        }),
+      );
+
       config.plugins.push(
         new webpack.ProvidePlugin({
           Buffer: ['buffer', 'Buffer'],
@@ -67,6 +76,9 @@ const nextConfig = {
       child_process: './lib/empty-module.js',
       readline: './lib/empty-module.js',
       'dtrace-provider': './lib/empty-module.js',
+      // tablestore (Alibaba Cloud SDK) — server-only, its browser shim
+      // references unresolvable bower_components paths
+      tablestore: './lib/empty-module.js',
     },
   },
 
