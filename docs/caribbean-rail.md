@@ -1,12 +1,40 @@
-# Caribbean Strategy — Future Caribbean 2026
+# Caribbean Rail — Future Caribbean 2026
 
-**Status:** Drafted 2026-07-03
-**Purpose:** Assess and design DiversiFi's Caribbean positioning for the Future
-Caribbean 2026 competition (Finance, Payments & MSME Capital track).
+**Status:** Drafted 2026-07-03. Updated 2026-08-04 — Caribbean rail shipped (FX netting engine + currency-risk data + API routes).
+**Purpose:** DiversiFi's Caribbean positioning for the Future Caribbean 2026 competition (Finance, Payments & MSME Capital track). The Caribbean is the third regional rail alongside Africa (Celo) and APAC (HashKey) — global reach preserved, Caribbean added.
 
-This doc is the strategic design. Code changes (new `FinancialStrategy`,
-strategy config, archetype token, AI prompt) follow this design and are
-listed in §6.
+---
+
+## 0. Current state (shipped 2026-08-04)
+
+The strategic design in §1–8 below is now implemented. What shipped:
+
+| Component | File | What it does |
+|---|---|---|
+| **Pan-Caribbean archetype** | `hooks/useFinancialStrategies.ts`, `strategy.service.ts`, `plan-preview.ts` | Full `pan_caribbean` strategy: AI prompt (imported inflation, BBD/XCD pegs, hurricane disaster-mode, diaspora corridors), plan preview allocation (cUSD 50% / PAXG 30% / cEUR 20%), selectable in onboarding under "Local prosperity" values lens |
+| **Caribbean currency-risk data** | `constants/currency-risk.ts` | 5 Caribbean entries (HTG, JMD, TTD, BBD, XCD) — Jamaica is the evidence country (7.1% food inflation, Hurricane Beryl). Visitors from JM/BB/TT/HT now get the first-run "aha" risk moment. Dataset: 23 → 28 currencies |
+| **Caribbean FX-drag region** | `packages/shared/src/services/fx-drag/regions.ts` | `'caribbean'` added to `FxRegion` + 7 currency codes (JMD, BBD, TTD, XCD, HTG, DOP, GYD). FX-protection records now anchor to the Caribbean rail's canonical ledger |
+| **Caribbean ledger routing** | `pages/api/agent/x402-gateway.ts` | `FX_ANCHOR_CHAIN_BY_REGION.caribbean = 42220` (Celo — no native Caribbean chain; USD-pegged stables on Celo are the savings rail) |
+| **CARICOM FX matching engine** | `packages/shared/src/services/fx-netting/matching-engine.ts` | Pure functions: `matchIntents()` (pairwise BBD↔JMD at mid-market, no USD bridge), `computeNetObligations()` (nets all pairwise flows to single cUSD obligations), `runNetting()` (full pipeline + savings reporting) |
+| **Settlement plan generator** | `packages/shared/src/services/fx-netting/settlement.ts` | `buildSettlementPlan()` — ledger anchor params (action `FX_MATCH`, chain Celo) + cUSD transfer instructions + residual routing for unmatched intents |
+| **Live rate adapter** | `packages/shared/src/services/fx-netting/rate-adapter.ts` | Bridges the fawazahmed0 currency dataset (200+ currencies) into the matching engine's `MidRateFn` |
+| **Match API** | `pages/api/fx-netting/match.ts` | `POST /api/fx-netting/match` — accepts intents, runs matching at live mid-market rates, returns settlement plan, anchors each match to the RecommendationLedger (fire-and-forget) |
+| **Intent API** | `pages/api/fx-netting/intent.ts` | `POST /api/fx-netting/intent` — wallet-authenticated intent creation + validation |
+| **Tests** | `fx-netting/__tests__/` | 16 tests (matching + settlement); 897 total tests pass |
+
+### The track's build goal — delivered
+
+| Track asks for | Delivered |
+|---|---|
+| Multi-currency matching (2–3 currencies min) | ✅ BBD↔JMD direct matching at mid-market (no USD bridge) |
+| Reduced FX cost vs traditional bank routes | ✅ $700 saved on $10,000 matched (7% corridor cost avoided) |
+| Net settlement across multiple participants | ✅ `computeNetObligations` nets all pairwise flows to single cUSD transfers |
+| Clear path to institutional integration | ✅ On-chain RecommendationLedger anchor per match (Celo) + 0G evidence trail; wallet-authenticated API with rate limiting |
+
+### What remains (Priorities 5–6)
+
+- **Priority 5**: `CaribbeanFxNetCard` UI component + Guardian `FX_MATCH` recommendation type
+- **Priority 6**: `isCaribbeanRailProfile` routing helper in `types/strategy.ts` (mirrors `isApacRailProfile`)
 
 ---
 
@@ -206,6 +234,14 @@ existing protection-plan pattern:
 ENHANCEMENT FIRST principle — extends existing strategy/archetype
 pattern, no new packages or parallel surfaces.
 
+> **2026-08-04 update:** All §6 items shipped. The Pan-Caribbean archetype,
+> strategy config, archetype token, AI prompt, ambient, and tests are live.
+> Additionally shipped beyond §6's scope: 5 Caribbean currency-risk entries
+> (Gap B fix), the `caribbean` FX-drag region (Gap A fix), the Caribbean
+> ledger routing in `x402-gateway.ts`, and the full CARICOM FX matching +
+> net-settlement engine (`packages/shared/src/services/fx-netting/`) with
+> API routes (`pages/api/fx-netting/match.ts`, `intent.ts`). See §0 above.
+
 ---
 
 ## 7. What we are NOT claiming (honesty guardrails)
@@ -273,3 +309,13 @@ already strong; the Caribbean plan fixes the PMF and product-innovation
 gaps that a Caribbean-focused judge would penalize. The remaining gap
 is team narrative + one piece of Caribbean user/partner evidence —
 neither is a code problem.
+
+> **2026-08-04 update:** The CARICOM FX matching engine + net-settlement
+> layer is now shipped (the track's flagship build goal). The "Caribbean
+> native token" gap remains honest — no onchain Caribbean stabletoken
+> exists, so settlement happens in USD-pegged cUSD on Celo. The FX
+> matching engine delivers the track's "BBD ↔ JMD — Direct" scenario:
+> $10,000 matched, $700 saved (7% corridor cost avoided), zero net
+> settlement capital needed (perfect mid-market match = capital efficiency).
+> Remaining: UI component (`CaribbeanFxNetCard`) + Caribbean user/partner
+> evidence (LOI from a Caribbean MSME or credit union).

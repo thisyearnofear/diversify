@@ -202,6 +202,22 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     ],
   },
   {
+    code: 'HTG',
+    countryName: 'Haiti',
+    iso2: 'HT',
+    iso3: 'HTI',
+    flag: '🇭🇹',
+    depreciation: {
+      vsUSD: { '1yr': -5, '3yr': -18, '5yr': -22 },
+      vsEUR: { '1yr': -3, '3yr': -16, '5yr': -20 },
+      vsXAU: { '1yr': -20, '3yr': -38, '5yr': -45 },
+    },
+    riskEvents: [
+      { year: 2021, event: 'Presidential assassination', impact: 'President Jovenel Moïse killed; political collapse triggered economic freefall' },
+      { year: 2024, event: 'Gang crisis + state of emergency', impact: 'Armed groups controlled most of Port-au-Prince; gourde plunged as institutions collapsed' },
+    ],
+  },
+  {
     code: 'RUB',
     countryName: 'Russia',
     iso2: 'RU',
@@ -324,6 +340,22 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     ],
   },
   {
+    code: 'JMD',
+    countryName: 'Jamaica',
+    iso2: 'JM',
+    iso3: 'JAM',
+    flag: '🇯🇲',
+    depreciation: {
+      vsUSD: { '1yr': -2, '3yr': -7, '5yr': -10 },
+      vsEUR: { '1yr': 0, '3yr': -5, '5yr': -8 },
+      vsXAU: { '1yr': -17, '3yr': -28, '5yr': -36 },
+    },
+    riskEvents: [
+      { year: 2022, event: 'Food inflation surge', impact: 'Jamaica food inflation hit 11% as import dependence (43% from US) and commodity prices squeezed households' },
+      { year: 2024, event: 'Hurricane Beryl', impact: 'Category 4 storm devastated southern Jamaica; infrastructure and agriculture losses compounded FX pressure' },
+    ],
+  },
+  {
     code: 'VND',
     countryName: 'Vietnam',
     iso2: 'VN',
@@ -354,6 +386,22 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     ],
   },
   {
+    code: 'TTD',
+    countryName: 'Trinidad & Tobago',
+    iso2: 'TT',
+    iso3: 'TTO',
+    flag: '🇹🇹',
+    depreciation: {
+      vsUSD: { '1yr': 0, '3yr': -2, '5yr': -3 },
+      vsEUR: { '1yr': 2, '3yr': 0, '5yr': -1 },
+      vsXAU: { '1yr': -15, '3yr': -24, '5yr': -31 },
+    },
+    riskEvents: [
+      { year: 2020, event: 'Oil price crash', impact: 'Energy exporter revenue collapsed as oil went negative; TTD pressured despite managed float' },
+      { year: 2023, event: 'Foreign exchange scarcity', impact: 'Central bank rationed USD as reserves tightened; businesses faced queues for hard currency' },
+    ],
+  },
+  {
     code: 'UGX',
     countryName: 'Uganda',
     iso2: 'UG',
@@ -366,6 +414,42 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     },
     riskEvents: [
       { year: 2023, event: 'Coffee export decline', impact: "UGX pressured as Uganda's largest export earner fell on global price dip" },
+    ],
+  },
+  // ── Caribbean USD-pegged currencies ──────────────────────────────
+  // Fixed-peg Caribbean currencies (BBD 2:1, XCD 2.7:1) show ~0% vs USD,
+  // but gold depreciation, imported inflation, and hurricane/disaster
+  // risk are real — the "aha" is that "stable" is not "safe."
+  {
+    code: 'BBD',
+    countryName: 'Barbados',
+    iso2: 'BB',
+    iso3: 'BRB',
+    flag: '🇧🇧',
+    depreciation: {
+      vsUSD: { '1yr': 0, '3yr': 0, '5yr': 0 },
+      vsEUR: { '1yr': 3, '3yr': 10, '5yr': 8 },
+      vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
+    },
+    riskEvents: [
+      { year: 2018, event: 'Sovereign debt default + restructuring', impact: 'Barbados defaulted on external debt; historic restructuring wiped out bondholders' },
+      { year: 2024, event: 'Hurricane Beryl', impact: 'First Category 4 hurricane to hit Barbados in decades; coral reefs and fishing industry devastated' },
+    ],
+  },
+  {
+    code: 'XCD',
+    countryName: 'Eastern Caribbean',
+    iso2: 'LC',
+    iso3: 'LCA',
+    flag: '🇱🇨',
+    depreciation: {
+      vsUSD: { '1yr': 0, '3yr': 0, '5yr': 0 },
+      vsEUR: { '1yr': 3, '3yr': 10, '5yr': 8 },
+      vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
+    },
+    riskEvents: [
+      { year: 2020, event: 'Tourism collapse', impact: 'Eastern Caribbean economies lost 60%+ of GDP from tourism as pandemic halted travel' },
+      { year: 2024, event: 'Hurricane Beryl', impact: 'St. Vincent and the Grenadines devastated; storm surge destroyed infrastructure across the Windwards' },
     ],
   },
   // ── Benchmark currencies ──────────────────────────────────────────

@@ -8,7 +8,7 @@
  * region → the specific ledger chain it knows about (see the x402 gateway anchor).
  */
 
-export type FxRegion = 'asia' | 'africa' | 'latam' | 'other';
+export type FxRegion = 'asia' | 'africa' | 'latam' | 'caribbean' | 'other';
 
 const REGION_BY_CURRENCY: Record<string, FxRegion> = {
     // APAC
@@ -22,6 +22,10 @@ const REGION_BY_CURRENCY: Record<string, FxRegion> = {
     // LatAm
     ARS: 'latam', BRL: 'latam', COP: 'latam', MXN: 'latam', CLP: 'latam',
     PEN: 'latam', UYU: 'latam', BOB: 'latam', PYG: 'latam',
+    // Caribbean (CARICOM) — no native onchain stabletoken exists; USD-pegged
+    // stables on Celo are the savings rail (see docs/archive/caribbean-strategy.md).
+    JMD: 'caribbean', BBD: 'caribbean', TTD: 'caribbean', XCD: 'caribbean',
+    HTG: 'caribbean', DOP: 'caribbean', GYD: 'caribbean',
 };
 
 /** Region for an ISO-4217 currency code; 'other' for reserve/unknown currencies. */

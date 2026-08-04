@@ -256,3 +256,8 @@ export * from './services/fx-drag/rates-serverless';
 export * from './services/fx-drag/regions';
 export { GHANA_IMPORTER_SAMPLE } from './services/fx-drag/sample-ghana';
 export { MANILA_IMPORTER_SAMPLE } from './services/fx-drag/sample-apac';
+
+// Export FX-netting engine (CARICOM FX matching + net settlement — Future Caribbean track)
+export * from './services/fx-netting/intent';
+export * from './services/fx-netting/matching-engine';
+export * from './services/fx-netting/settlement';

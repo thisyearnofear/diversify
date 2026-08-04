@@ -1,9 +1,11 @@
 # Roadmap
 
-Three tracks run in parallel, each serving a different grant program but
+Five tracks run in parallel, each serving a different grant program but
 sharing one architecture: the **0G Bridge buildathon** (0G as evidence
 layer), the **Celo Prezenti grant** (Celo as savings + identity layer),
-and the **Arbitrum Open House** (Arbitrum as yield + execution layer).
+the **Arbitrum Open House** (Arbitrum as yield + execution layer), the
+**HashKey Chain Horizon hackathon** (APAC regulated-market savings rail),
+and the **Future Caribbean buildathon** (Caribbean FX coordination layer).
 The **product quality plan** brings DiversiFi from 7.0 → 9.0 across
 Product Design, UI/UX, Cogency, Performance, and System Architecture.
 

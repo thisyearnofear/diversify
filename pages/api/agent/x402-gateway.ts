@@ -81,6 +81,7 @@ const FX_ANCHOR_CHAIN_BY_REGION: Record<string, number | undefined> = {
     asia: 177,      // HashKey — APAC rail
     africa: 42220,  // Celo — Africa / EM savings ledger
     latam: 42220,   // Celo — LatAm shares the EM ledger
+    caribbean: 42220, // Celo — Caribbean rail (no native onchain stabletoken; USD-pegged stables on Celo)
     other: undefined, // default routing (Arbitrum)
 };
 

@@ -23,6 +23,8 @@
 | `/api/agent/business/cycle-monitor` | POST | Standalone cycle-aware proposal tick (same logic as guardian-loop inline step); enqueues without overwriting unrelated pending recommendations |
 | `/api/agent/fx-cycle-report` | POST | Free in-app FX drag scenario: current mid-market rate + historical stress context (USD targets only). Not a forecast or locked quote. |
 | `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
+| `/api/fx-netting/intent` | POST | Wallet-authenticated FX intent creation for the CARICOM FX matching engine. Validates + normalizes a single intent (sellCurrency, sellAmount, buyCurrency). `participantId` derived from signed message. |
+| `/api/fx-netting/match` | POST | CARICOM FX matching + net settlement. Accepts `{ intents: FxIntent[] }`, matches opposing currency needs at live mid-market rates (no USD bridge), nets obligations to cUSD transfers, anchors each match to the RecommendationLedger on Celo. Returns matches + savings + settlement plan. |
 
 ## AI Providers
 

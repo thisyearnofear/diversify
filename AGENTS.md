@@ -37,7 +37,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Validation**: Never submit a PR without running the specialized verification commands if core agent logic is modified.
 
 ## Active Work
-Three grant tracks run in parallel, sharing one architecture: the **0G Bridge buildathon** (0G as evidence layer), the **Celo Prezenti grant** (Celo as savings + identity layer), and the **Arbitrum Open House London** (Arbitrum as yield + execution layer, July 10-12). The authoritative file-by-file, wave-by-wave plan lives in `docs/roadmap.md` § 0G Bridge Plan. The broader product quality plan is also in `docs/roadmap.md`.
+Five grant tracks run in parallel, sharing one architecture: the **0G Bridge buildathon** (0G as evidence layer), the **Celo Prezenti grant** (Celo as savings + identity layer), the **Arbitrum Open House London** (Arbitrum as yield + execution layer, July 10-12), the **HashKey Chain Horizon hackathon** (APAC regulated-market savings rail), and the **Future Caribbean buildathon** (Caribbean FX coordination layer). The authoritative file-by-file, wave-by-wave plan lives in `docs/roadmap.md` § 0G Bridge Plan. The broader product quality plan is also in `docs/roadmap.md`.
 
 **Product reframe (2026-07-09):**
 The product has been reframed from "AI intelligence marketplace" to "risk-aware, values-driven treasury management." The core insight: nobody wakes up wanting premium macro research; they wake up wanting to know their savings won't evaporate. The app now:
@@ -88,6 +88,16 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 
 **APAC rail — HashKey Chain (2026-07-10, code shipped):**
 Fourth grant track: HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track, submission deadline **July 11 23:59 GMT+8**). The APAC rail from `docs/apac-rail.md` is implemented against HashKey mainnet (chain 177): ledger registry + explorer, `getLedgerChainForAction` routing (`isApacRailProfile` in `types/strategy.ts`), heartbeat APAC leg, multi-chain proof feed (Arbitrum + Celo + HashKey), config-aware `apac-rail` banner, guardian-loop `routingContext`, deploy/seed tooling. **Deployment gated on HSK gas** — runbook in `docs/apac-rail.md`. Alignment: HashKey holds APAC savings core; Arbitrum stays yield engine.
+
+**Caribbean rail — Future Caribbean buildathon (2026-08-04, code shipped):**
+Fifth grant track: Future Caribbean Global AI Buildathon (Finance, Payments & MSME Capital track). The Caribbean rail from `docs/caribbean-rail.md` is the third regional rail alongside Africa (Celo) and APAC (HashKey) — global reach preserved, Caribbean added. What shipped:
+- **Pan-Caribbean archetype**: `pan_caribbean` FinancialStrategy (AI prompt with imported inflation, BBD/XCD pegs, hurricane disaster-mode, diaspora corridors; plan preview cUSD 50% / PAXG 30% / cEUR 20%; selectable in onboarding under "Local prosperity" values lens)
+- **Caribbean currency-risk data**: 5 entries in `constants/currency-risk.ts` (HTG, JMD, TTD, BBD, XCD) — Jamaica is the evidence country (7.1% food inflation, Hurricane Beryl). Visitors from JM/BB/TT/HT now get the first-run "aha" risk moment. Dataset: 23 → 28 currencies
+- **Caribbean FX-drag region**: `'caribbean'` in `FxRegion` + 7 currency codes in `packages/shared/src/services/fx-drag/regions.ts`; `FX_ANCHOR_CHAIN_BY_REGION.caribbean = 42220` (Celo) in `x402-gateway.ts`
+- **CARICOM FX matching engine**: `packages/shared/src/services/fx-netting/` — pure-function matching + net-settlement engine (`matchIntents`, `computeNetObligations`, `runNetting`, `buildSettlementPlan`). Matches opposing currency needs directly at mid-market (BBD ↔ JMD, no USD bridge), nets obligations to single cUSD transfers, anchors each match to the RecommendationLedger on Celo
+- **API routes**: `POST /api/fx-netting/match` (matching + settlement + ledger anchor), `POST /api/fx-netting/intent` (wallet-authenticated intent creation)
+- **897 tests pass** (16 new: matching-engine + settlement). TypeScript + ESLint clean
+- **Remaining**: `CaribbeanFxNetCard` UI component + Guardian `FX_MATCH` recommendation type + `isCaribbeanRailProfile` routing helper + Caribbean user/partner evidence (LOI)
 
 **North star + growth, integrations, yield engine (2026-07-11/12):**
 

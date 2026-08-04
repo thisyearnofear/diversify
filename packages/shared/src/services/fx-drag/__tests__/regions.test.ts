@@ -14,6 +14,12 @@ describe('fxRegionForCurrency — anchor "follows the money"', () => {
         }
     });
 
+    it('maps Caribbean currencies to the Caribbean rail (Celo)', () => {
+        for (const c of ['JMD', 'BBD', 'TTD', 'XCD', 'HTG', 'DOP', 'GYD']) {
+            expect(fxRegionForCurrency(c)).toBe('caribbean');
+        }
+    });
+
     it('maps LatAm currencies to the LatAm rail', () => {
         for (const c of ['ARS', 'BRL', 'COP', 'MXN']) {
             expect(fxRegionForCurrency(c)).toBe('latam');
@@ -22,6 +28,7 @@ describe('fxRegionForCurrency — anchor "follows the money"', () => {
 
     it('is case/whitespace-insensitive and defaults reserve/unknown to other', () => {
         expect(fxRegionForCurrency(' ghs ')).toBe('africa');
+        expect(fxRegionForCurrency('jmd')).toBe('caribbean');
         expect(fxRegionForCurrency('usd')).toBe('other');
         expect(fxRegionForCurrency('EUR')).toBe('other');
         expect(fxRegionForCurrency('')).toBe('other');
