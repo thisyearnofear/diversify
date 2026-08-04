@@ -49,6 +49,7 @@ import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 // These are below-the-fold and shouldn't block the initial render.
 const SavingsLoopCard = lazy(() => import("../rewards/SavingsLoopCard").then(mod => ({ default: mod.SavingsLoopCard })));
 const BestYieldCard = lazy(() => import("../earn/BestYieldCard").then(mod => ({ default: mod.BestYieldCard })));
+const CaribbeanFxNetCard = lazy(() => import("../enterprise-fx/CaribbeanFxNetCard").then(mod => ({ default: mod.CaribbeanFxNetCard })));
 const YieldDiscoverySection = lazy(() => import("../earn/YieldDiscoverySection").then(mod => ({ default: mod.default })));
 
 // Skeleton placeholder for lazy-loaded sections
@@ -622,6 +623,15 @@ export default function ProtectionTab({
       {!isBeginner && (
         <Suspense fallback={<LazySectionSkeleton />}>
           <BestYieldCard userAddress={address} className="mb-4" />
+        </Suspense>
+      )}
+
+      {/* CARICOM FX matching — gated to Pan-Caribbean profiles. The track's
+          flagship: BBD ↔ JMD direct (no USD bridge), net-settled in cUSD on
+          Celo, anchored to the RecommendationLedger. */}
+      {financialStrategy === 'pan_caribbean' && !isBeginner && (
+        <Suspense fallback={<LazySectionSkeleton />}>
+          <CaribbeanFxNetCard userAddress={address} />
         </Suspense>
       )}
 

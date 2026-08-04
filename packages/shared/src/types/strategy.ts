@@ -54,6 +54,39 @@ export function isApacRailProfile(
 }
 
 /**
+ * Protection philosophies whose savings home is the Caribbean rail
+ * (see docs/caribbean-rail.md). Shared by ledger routing (server) and
+ * the Caribbean FX netting UI (client) — keep this the single source of truth.
+ *
+ * Unlike APAC (HashKey chain 177), the Caribbean rail has no native
+ * onchain chain — it settles on Celo (USD-pegged stables, chain 42220).
+ * The routing helper exists so Caribbean savings/hold actions can be
+ * identified and routed/anchored to Celo explicitly, the same way
+ * APAC actions route to HashKey.
+ */
+export const CARIBBEAN_PHILOSOPHIES: ReadonlySet<FinancialStrategy> = new Set<FinancialStrategy>([
+  'pan_caribbean',
+]);
+
+/**
+ * Whether a user profile targets the Caribbean rail: a Caribbean-facing
+ * philosophy chosen from the Caribbean region. Both signals are required —
+ * a Pan-Caribbean-plan user in Nairobi still routes through Celo/Arbitrum.
+ *
+ * Inputs are normalized (case, whitespace): callers range from client
+ * region detection ('Caribbean') to server-side profile records.
+ */
+export function isCaribbeanRailProfile(
+  philosophy: string | null | undefined,
+  region: string | null | undefined,
+): boolean {
+  if (!philosophy || !region) return false;
+  const normalizedPhilosophy = philosophy.trim().toLowerCase() as FinancialStrategy;
+  const normalizedRegion = region.trim().toLowerCase();
+  return CARIBBEAN_PHILOSOPHIES.has(normalizedPhilosophy) && normalizedRegion === 'caribbean';
+}
+
+/**
  * Server-side routing context when only vault.strategy is available.
  * APAC philosophies assume Asia region until userRegion is persisted on
  * the vault (see docs/apac-rail.md).
@@ -63,6 +96,7 @@ export function deriveLedgerRoutingContextFromVault(
 ): { philosophy: string; region: string } | undefined {
   if (!strategy) return undefined;
   const philosophy = strategy.trim().toLowerCase() as FinancialStrategy;
-  if (!APAC_PHILOSOPHIES.has(philosophy)) return undefined;
-  return { philosophy, region: 'Asia' };
+  if (APAC_PHILOSOPHIES.has(philosophy)) return { philosophy, region: 'Asia' };
+  if (CARIBBEAN_PHILOSOPHIES.has(philosophy)) return { philosophy, region: 'Caribbean' };
+  return undefined;
 }

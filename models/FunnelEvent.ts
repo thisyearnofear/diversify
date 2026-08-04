@@ -35,6 +35,8 @@ export const FUNNEL_EVENTS = [
   'graduation_prompt_viewed',
   'graduation_prompt_dismissed',
   'graduation_prompt_clicked',
+  // Caribbean FX netting — coarse engagement signal (which pair was requested)
+  'fx_netting_match_requested',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

@@ -19,7 +19,7 @@
  */
 
 import { ethers } from 'ethers6';
-import { isApacRailProfile } from '../types/strategy';
+import { isApacRailProfile, isCaribbeanRailProfile } from '../types/strategy';
 
 // ============================================================================
 // TYPES
@@ -283,17 +283,18 @@ export interface LedgerRoutingContext {
 }
 
 /**
- * Savings-stance actions that belong on the APAC rail for APAC profiles.
- * Yield rotations (SWAP to USDY etc.) stay on Arbitrum — the APAC rail
+ * Savings-stance actions that belong on a regional rail for regional profiles.
+ * Yield rotations (SWAP to USDY etc.) stay on Arbitrum — the regional rail
  * holds the trust-sensitive core, it is not another yield chain.
  */
-const APAC_SAVINGS_ACTIONS = new Set(['HOLD', 'SAVE', 'PROTECT', 'ADVISORY_HEARTBEAT']);
+const SAVINGS_ACTIONS = new Set(['HOLD', 'SAVE', 'PROTECT', 'ADVISORY_HEARTBEAT', 'FX_MATCH']);
 
 /**
  * Determine the correct ledger chain for a given action based on the
  * target token. The ledger of record follows the money:
  * - Celo savings tokens (cUSD, cREAL, KESm, etc.) → Celo mainnet
  * - APAC-profile savings/hold actions → HashKey mainnet (when configured)
+ * - Caribbean-profile savings/hold/FX_MATCH actions → Celo mainnet
  * - Yield/RWA tokens (USDY, PAXG, USDC, etc.) → Arbitrum mainnet
  * - HOLD or unspecified → default chain (Arbitrum mainnet if configured,
  *   else Arbitrum Sepolia for backward compat)
@@ -325,10 +326,22 @@ export function getLedgerChainForAction(
     if (
         context &&
         isApacRailProfile(context.philosophy, context.region) &&
-        APAC_SAVINGS_ACTIONS.has((action || '').toUpperCase().trim())
+        SAVINGS_ACTIONS.has((action || '').toUpperCase().trim())
     ) {
         const hashkeyConfig = resolveLedgerConfig(HASHKEY_MAINNET_CHAIN_ID);
         if (hashkeyConfig?.contractAddress) return HASHKEY_MAINNET_CHAIN_ID;
+    }
+
+    // Caribbean savings home: hold/save/FX_MATCH decisions for Pan-Caribbean
+    // plans in the Caribbean region settle on the Celo ledger (no native
+    // Caribbean chain — USD-pegged stables on Celo are the savings rail).
+    if (
+        context &&
+        isCaribbeanRailProfile(context.philosophy, context.region) &&
+        SAVINGS_ACTIONS.has((action || '').toUpperCase().trim())
+    ) {
+        const celoConfig = resolveLedgerConfig(CELO_MAINNET_CHAIN_ID);
+        if (celoConfig?.contractAddress) return CELO_MAINNET_CHAIN_ID;
     }
 
     // Everything else (yield, RWA, USDC, BRIDGE) → Arbitrum mainnet
