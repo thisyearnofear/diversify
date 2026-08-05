@@ -94,9 +94,9 @@ Fifth grant track: Future Caribbean Global AI Buildathon (Finance, Payments & MS
 - **Pan-Caribbean archetype**: `pan_caribbean` FinancialStrategy (AI prompt with imported inflation, BBD/XCD pegs, hurricane disaster-mode, diaspora corridors; plan preview cUSD 50% / PAXG 30% / cEUR 20%; selectable in onboarding under "Local prosperity" values lens)
 - **Caribbean currency-risk data**: 5 entries in `constants/currency-risk.ts` (HTG, JMD, TTD, BBD, XCD) — Jamaica is the evidence country (7.1% food inflation, Hurricane Beryl). Visitors from JM/BB/TT/HT now get the first-run "aha" risk moment. Dataset: 23 → 28 currencies
 - **Caribbean FX-drag region**: `'caribbean'` in `FxRegion` + 7 currency codes in `packages/shared/src/services/fx-drag/regions.ts`; `FX_ANCHOR_CHAIN_BY_REGION.caribbean = 42220` (Celo) in `x402-gateway.ts`
-- **CARICOM FX matching engine**: `packages/shared/src/services/fx-netting/` — pure-function matching + net-settlement engine (`matchIntents`, `computeNetObligations`, `runNetting`, `buildSettlementPlan`). Matches opposing currency needs directly at mid-market (BBD ↔ JMD, no USD bridge), nets obligations to single cUSD transfers, anchors each match to the RecommendationLedger on Celo
+- **FX matching engine**: `packages/shared/src/services/fx-netting/` — pure-function matching + net-settlement engine (`matchIntents`, `computeNetObligations`, `runNetting`, `buildSettlementPlan`). Currency-agnostic: matches opposing currency needs directly at mid-market (BBD↔JMD, GHS↔NGN, XOF↔XAF — any pair, no USD bridge), nets obligations to single cUSD transfers, anchors each match to the region-canonical chain (Africa/Caribbean/LatAm → Celo, APAC → HashKey via region detection from the currency pair)
 - **API routes**: `POST /api/fx-netting/match` (matching + settlement + ledger anchor), `POST /api/fx-netting/intent` (wallet-authenticated intent creation)
-- **897 tests pass** (16 new: matching-engine + settlement). TypeScript + ESLint clean
+- **912 tests pass** (26 in fx-netting: Caribbean + African currency pairs). TypeScript + ESLint clean
 - **Remaining**: `CaribbeanFxNetCard` UI component + Guardian `FX_MATCH` recommendation type + `isCaribbeanRailProfile` routing helper + Caribbean user/partner evidence (LOI)
 
 **North star + growth, integrations, yield engine (2026-07-11/12):**

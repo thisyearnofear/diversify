@@ -1,21 +1,23 @@
 /**
- * FX Netting — Intent types for the CARICOM FX coordination layer.
+ * FX Netting — Intent types for the multi-region FX coordination layer.
  *
- * A participant posts an FX intent: "I need to convert BBD → JMD." The
- * matching engine (./matching-engine.ts) finds opposing or complementary
- * intents — "a Jamaican entity needs BBD" — and nets them so the pair can
- * settle directly, without routing through USD (the Future Caribbean track's
- * flagship ask).
+ * A participant posts an FX intent: "I need to convert BBD → JMD" (Caribbean)
+ * or "GHS → NGN" (Africa). The matching engine (./matching-engine.ts) finds
+ * opposing or complementary intents — a counterparty who needs the inverse —
+ * and nets them so the pair settles directly, without routing through USD
+ * as a bridge currency. This is graph-based clearing (cf. Keynes's bancor,
+ * Slovenia's TETRIS, Sardex's mutual credit): cycles of obligation are
+ * extinguished at mid-market, leaving only residuals for external settlement.
  *
  * This mirrors the existing PurchaseCycle model (working-capital payment
  * intent) and the fx-drag/calc.ts convention: pure data types here, pure
  * functions + injected rate provider in the engine, I/O in the API route.
  *
- * Design note: there is no native Caribbean stabletoken on any public chain
- * (docs/archive/caribbean-strategy.md §1 — JAM-DEX, SandDollar, DCash, Carib$
- * are all private/permissioned). Settlement therefore happens in USD-pegged
- * stablecoins (cUSD/USDC on Celo), and net obligations are denominated in
- * the settlement currency, not the original local currencies.
+ * Design note: for regions without a native onchain stabletoken (Caribbean,
+ * most of Africa), settlement happens in USD-pegged stablecoins (cUSD/USDC on
+ * Celo), and net obligations are denominated in the settlement currency, not
+ * the original local currencies. The matching itself is currency-agnostic —
+ * any pair with a mid-market rate can be matched and netted.
  */
 
 /** ISO 4217 currency code (e.g. 'BBD', 'JMD'). */

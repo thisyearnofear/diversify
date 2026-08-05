@@ -1,5 +1,5 @@
 /**
- * POST /api/fx-netting/intent — validate and normalize a CARICOM FX intent.
+ * POST /api/fx-netting/intent — validate and normalize an FX intent.
  *
  * Wallet-authenticated: the participantId is derived from the signed
  * message, never trusted from the body (same pattern as
@@ -9,7 +9,8 @@
  * Response: { intent: FxIntent }
  *
  * The normalized intent can then be submitted to POST /api/fx-netting/match
- * alongside other participants' intents.
+ * alongside other participants' intents. Works for any currency pair
+ * (BBD↔JMD, GHS↔NGN, XOF↔XAF, etc.) — the matching engine is currency-agnostic.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';

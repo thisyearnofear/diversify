@@ -77,6 +77,71 @@ describe('matchIntents — CARICOM FX direct matching (no USD bridge)', () => {
     });
 });
 
+// ─── African FX matching (GHS↔NGN, XOF↔XAF) ─────────────────────────────
+// The same engine handles African currency pairs — a Ghanaian importer
+// paying a Nigerian supplier can match directly (GHS↔NGN) without a
+// USD bridge. This is the tweet thesis: "a path through the graph."
+// Rates approximate (2026 mid-market): 1 USD ≈ 12.5 GHS ≈ 1600 NGN,
+// so 1 GHS ≈ 128 NGN. XOF = XAF (CFA franc, 1:1 peg).
+const africaRate: MidRateFn = (base, quote) => {
+    const usdPerUnit: Record<string, number> = {
+        GHS: 0.08, NGN: 0.000625, USD: 1, cUSD: 1, USDC: 1, // 1 USD ≈ 12.5 GHS ≈ 1600 NGN → 1 GHS = 128 NGN
+        XOF: 0.00167, XAF: 0.00167, // CFA franc, pegged to EUR but we use USD here
+    };
+    return (usdPerUnit[base] ?? 1) / (usdPerUnit[quote] ?? 1);
+};
+
+describe('matchIntents — African FX direct matching (no USD bridge)', () => {
+    it('matches a GHS→NGN intent against a NGN→GHS intent at mid-market', () => {
+        // Ghanaian importer needs NGN to pay a Nigerian supplier;
+        // Nigerian exporter needs GHS to pay a Ghanaian supplier.
+        // 50000 GHS × 128 = 6,400,000 NGN → full match
+        const ghana = createIntent('i1', '0xGH', 'GHS', 50000, 'NGN');
+        const nigeria = createIntent('i2', '0xNG', 'NGN', 6400000, 'GHS');
+        const { matches, residualIntents } = matchIntents([ghana, nigeria], africaRate, 1000);
+
+        expect(matches).toHaveLength(1);
+        const m = matches[0];
+        expect(m.matchedAmount).toBeCloseTo(50000, 0);
+        expect(m.rate).toBeCloseTo(128, 0); // GHS→NGN rate
+        expect(m.intentA.participantId).toBe('0xGH');
+        expect(m.intentB.participantId).toBe('0xNG');
+
+        const gh = residualIntents.find((i) => i.intentId === 'i1');
+        expect(gh?.status).toBe('matched');
+        expect(gh?.remainingSell).toBeCloseTo(0, 2);
+    });
+
+    it('matches XOF↔XAF (CFA franc zone, 1:1 peg)', () => {
+        // Senegal (XOF) and Cameroon (XAF) — both CFA franc, 1:1 peg.
+        const senegal = createIntent('i1', '0xSN', 'XOF', 1000000, 'XAF');
+        const cameroon = createIntent('i2', '0xCM', 'XAF', 1000000, 'XOF');
+        const { matches } = matchIntents([senegal, cameroon], africaRate, 1000);
+
+        expect(matches).toHaveLength(1);
+        expect(matches[0].matchedAmount).toBeCloseTo(1000000, 0);
+        expect(matches[0].rate).toBeCloseTo(1, 2); // 1:1 peg
+    });
+
+    it('does not match same-direction African intents', () => {
+        const a = createIntent('i1', '0xGH', 'GHS', 10000, 'NGN');
+        const b = createIntent('i2', '0xKE', 'GHS', 10000, 'NGN');
+        expect(matchIntents([a, b], africaRate, 1000).matches).toHaveLength(0);
+    });
+
+    it('partially fills GHS↔NGN when amounts do not align', () => {
+        const ghana = createIntent('i1', '0xGH', 'GHS', 80000, 'NGN');
+        const nigeria = createIntent('i2', '0xNG', 'NGN', 5000000, 'GHS');
+        // 80000 GHS × 128 = 10,240,000 NGN, but Nigeria only has 5M NGN
+        const { matches, residualIntents } = matchIntents([ghana, nigeria], africaRate, 1000);
+
+        expect(matches).toHaveLength(1);
+        const gh = residualIntents.find((i) => i.intentId === 'i1');
+        expect(gh?.status).toBe('partially_matched');
+        expect(gh?.remainingSell).toBeGreaterThan(0);
+    });
+});
+
 import { computeNetObligations, runNetting } from '../matching-engine';
 
 describe('computeNetObligations — net settlement across participants', () => {
@@ -149,6 +214,32 @@ describe('runNetting — full pipeline', () => {
         expect(result.matches).toHaveLength(0);
         expect(result.unmatchedIntents).toHaveLength(1);
         expect(result.totalSavingsUsd).toBe(0);
+    });
+});
+
+describe('runNetting — African FX pipeline', () => {
+    it('reports total matched USD and savings for GHS↔NGN', () => {
+        // 50000 GHS × 128 = 6,400,000 NGN → full match
+        const ghana = createIntent('i1', '0xGH', 'GHS', 50000, 'NGN');
+        const nigeria = createIntent('i2', '0xNG', 'NGN', 6400000, 'GHS');
+        const result = runNetting([ghana, nigeria], africaRate, 'cUSD', 1000);
+
+        expect(result.matches).toHaveLength(1);
+        // 50000 GHS × 0.08 USD/GHS = 4000 USD
+        expect(result.totalMatchedUsd).toBeCloseTo(4000, 0);
+        // 7% corridor cost savings = 280 USD
+        expect(result.totalSavingsUsd).toBeCloseTo(280, 0);
+        expect(result.unmatchedIntents).toHaveLength(0);
+    });
+
+    it('produces no net obligation for a perfect GHS↔NGN match', () => {
+        const ghana = createIntent('i1', '0xGH', 'GHS', 50000, 'NGN');
+        const nigeria = createIntent('i2', '0xNG', 'NGN', 6400000, 'GHS');
+        const { matches } = matchIntents([ghana, nigeria], africaRate, 1000);
+        const obligations = computeNetObligations(matches, 'cUSD', africaRate);
+
+        // Perfect mid-market match → equal USD value → no net obligation
+        expect(obligations).toHaveLength(0);
     });
 });
 

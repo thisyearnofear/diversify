@@ -7,15 +7,16 @@
  * cUSD transfer instructions for each net obligation + residual routing
  * for unmatched intents.
  *
- * Settlement currency is USD-pegged stablecoin (cUSD on Celo) because no
- * native Caribbean stabletoken exists on any public chain (see
- * docs/archive/caribbean-strategy.md §1). The RecommendationLedger is
- * deployed at the same address on Celo/Arbitrum/HashKey/0G, so the API
- * route anchors each match on the Caribbean region's canonical chain
- * (Celo, via getLedgerChainForAction / FX_ANCHOR_CHAIN_BY_REGION).
+ * Settlement currency is USD-pegged stablecoin (cUSD on Celo) for regions
+ * without a native onchain stabletoken (Caribbean, most of Africa). The
+ * RecommendationLedger is deployed at the same address on
+ * Celo/Arbitrum/HashKey/0G, so the API route anchors each match on the
+ * region's canonical chain — detected from the matched currency pair via
+ * fxRegionForCurrency (Africa/Caribbean/LatAm → Celo, APAC → HashKey).
  */
 
 import type { NettingResult, FxMatch, NetObligation, FxIntent } from './intent';
+import { fxRegionForCurrency, type FxRegion } from '../fx-drag/regions';
 
 /** Ledger-anchor params for a single match — mirrors recordRecommendation's args. */
 export interface MatchAnchorParams {
@@ -79,8 +80,8 @@ export interface SettlementConfig {
 
 export const DEFAULT_SETTLEMENT_CONFIG: SettlementConfig = {
     settlementCurrency: 'cUSD',
-    settlementChainId: 42220,   // Celo mainnet
-    anchorChainId: 42220,       // Caribbean → Celo (no native Caribbean chain)
+    settlementChainId: 42220,   // Celo mainnet (default for Africa/Caribbean/LatAm)
+    anchorChainId: 42220,       // Celo — overridden per-match by region detection
 };
 
 /**
@@ -117,17 +118,60 @@ export function buildSettlementPlan(
     };
 }
 
+/** Region label for anchor reasoning (human-readable). */
+function regionLabel(region: FxRegion): string {
+    switch (region) {
+        case 'africa': return 'Africa';
+        case 'caribbean': return 'Caribbean (CARICOM)';
+        case 'asia': return 'APAC';
+        case 'latam': return 'LatAm';
+        default: return 'cross-region';
+    }
+}
+
+/** Canonical anchor chain for a region (mirrors FX_ANCHOR_CHAIN_BY_REGION in x402-gateway). */
+function anchorChainForRegion(region: FxRegion): number | undefined {
+    switch (region) {
+        case 'asia': return 177;       // HashKey — APAC rail
+        case 'africa': return 42220;   // Celo — Africa / EM savings ledger
+        case 'latam': return 42220;    // Celo — LatAm shares the EM ledger
+        case 'caribbean': return 42220; // Celo — Caribbean rail
+        default: return undefined;      // default routing (Arbitrum)
+    }
+}
+
+/**
+ * Detect the dominant region for a match — the region of the sell currency.
+ * If both currencies are in the same region, that's unambiguous. If they
+ * differ (cross-region match), we use the sell currency's region and label
+ * it "cross-region" in the reasoning.
+ */
+function matchRegion(match: FxMatch): { region: FxRegion; label: string } {
+    const sellRegion = fxRegionForCurrency(match.intentA.sellCurrency);
+    const buyRegion = fxRegionForCurrency(match.intentA.buyCurrency);
+    if (sellRegion === buyRegion && sellRegion !== 'other') {
+        return { region: sellRegion, label: regionLabel(sellRegion) };
+    }
+    // Cross-region match — use sell currency's region for chain routing
+    if (sellRegion !== 'other') {
+        return { region: sellRegion, label: `cross-region (${regionLabel(sellRegion)}→${regionLabel(buyRegion)})` };
+    }
+    return { region: 'other', label: regionLabel('other') };
+}
+
 function matchToAnchor(m: FxMatch, config: SettlementConfig): MatchAnchorParams {
     const a = m.intentA;
+    const { region, label } = matchRegion(m);
+    const anchorChain = anchorChainForRegion(region) ?? config.anchorChainId;
     return {
         user: a.participantId,
         action: 'FX_MATCH',
         targetToken: config.settlementCurrency,
-        reasoning: `CARICOM FX netting: matched ${m.matchedAmount} ${a.sellCurrency}↔${a.buyCurrency} at mid-market ${m.rate.toFixed(4)} (no USD bridge). Saved ~$${(m.notionalUsd * m.savingsBps / 10_000).toFixed(0)} vs ${m.savingsBps / 100}% corridor.`,
+        reasoning: `FX netting (${label}): matched ${m.matchedAmount} ${a.sellCurrency}↔${a.buyCurrency} at mid-market ${m.rate.toFixed(4)} (no USD bridge). Saved ~$${(m.notionalUsd * m.savingsBps / 10_000).toFixed(0)} vs ${m.savingsBps / 100}% corridor.`,
         evidenceCid: config.evidenceCid ?? '',
         servingModel: 'fx-netting/v1',
         confidence: 9000,
-        chainId: config.anchorChainId,
+        chainId: anchorChain,
     };
 }
 

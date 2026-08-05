@@ -15,18 +15,18 @@ The strategic design in §1–8 below is now implemented. What shipped:
 | **Caribbean currency-risk data** | `constants/currency-risk.ts` | 5 Caribbean entries (HTG, JMD, TTD, BBD, XCD) — Jamaica is the evidence country (7.1% food inflation, Hurricane Beryl). Visitors from JM/BB/TT/HT now get the first-run "aha" risk moment. Dataset: 23 → 28 currencies |
 | **Caribbean FX-drag region** | `packages/shared/src/services/fx-drag/regions.ts` | `'caribbean'` added to `FxRegion` + 7 currency codes (JMD, BBD, TTD, XCD, HTG, DOP, GYD). FX-protection records now anchor to the Caribbean rail's canonical ledger |
 | **Caribbean ledger routing** | `pages/api/agent/x402-gateway.ts` | `FX_ANCHOR_CHAIN_BY_REGION.caribbean = 42220` (Celo — no native Caribbean chain; USD-pegged stables on Celo are the savings rail) |
-| **CARICOM FX matching engine** | `packages/shared/src/services/fx-netting/matching-engine.ts` | Pure functions: `matchIntents()` (pairwise BBD↔JMD at mid-market, no USD bridge), `computeNetObligations()` (nets all pairwise flows to single cUSD obligations), `runNetting()` (full pipeline + savings reporting) |
-| **Settlement plan generator** | `packages/shared/src/services/fx-netting/settlement.ts` | `buildSettlementPlan()` — ledger anchor params (action `FX_MATCH`, chain Celo) + cUSD transfer instructions + residual routing for unmatched intents |
+| **FX matching engine** | `packages/shared/src/services/fx-netting/matching-engine.ts` | Pure functions: `matchIntents()` (pairwise currency matching at mid-market, no USD bridge — BBD↔JMD, GHS↔NGN, XOF↔XAF, any pair), `computeNetObligations()` (nets all pairwise flows to single cUSD obligations), `runNetting()` (full pipeline + savings reporting) |
+| **Settlement plan generator** | `packages/shared/src/services/fx-netting/settlement.ts` | `buildSettlementPlan()` — region-aware ledger anchor params (action `FX_MATCH`, detects region from currency pair → routes to canonical chain: Africa/Caribbean/LatAm → Celo, APAC → HashKey) + cUSD transfer instructions + residual routing for unmatched intents |
 | **Live rate adapter** | `packages/shared/src/services/fx-netting/rate-adapter.ts` | Bridges the fawazahmed0 currency dataset (200+ currencies) into the matching engine's `MidRateFn` |
 | **Match API** | `pages/api/fx-netting/match.ts` | `POST /api/fx-netting/match` — accepts intents, runs matching at live mid-market rates, returns settlement plan, anchors each match to the RecommendationLedger (fire-and-forget) |
 | **Intent API** | `pages/api/fx-netting/intent.ts` | `POST /api/fx-netting/intent` — wallet-authenticated intent creation + validation |
-| **Tests** | `fx-netting/__tests__/` | 16 tests (matching + settlement); 897 total tests pass |
+| **Tests** | `fx-netting/__tests__/` | 26 tests (matching + settlement, Caribbean + African currency pairs); 912 total tests pass |
 
 ### The track's build goal — delivered
 
 | Track asks for | Delivered |
 |---|---|
-| Multi-currency matching (2–3 currencies min) | ✅ BBD↔JMD direct matching at mid-market (no USD bridge) |
+| Multi-currency matching (2–3 currencies min) | ✅ BBD↔JMD + GHS↔NGN + XOF↔XAF direct matching at mid-market (no USD bridge) — engine is currency-agnostic, any pair with a mid-market rate can be matched |
 | Reduced FX cost vs traditional bank routes | ✅ $700 saved on $10,000 matched (7% corridor cost avoided) |
 | Net settlement across multiple participants | ✅ `computeNetObligations` nets all pairwise flows to single cUSD transfers |
 | Clear path to institutional integration | ✅ On-chain RecommendationLedger anchor per match (Celo) + 0G evidence trail; wallet-authenticated API with rate limiting |
@@ -310,6 +310,14 @@ gaps that a Caribbean-focused judge would penalize. The remaining gap
 is team narrative + one piece of Caribbean user/partner evidence —
 neither is a code problem.
 
+> **2026-08-05 update:** The FX matching engine has been generalized from
+> Caribbean-only to multi-region. It now handles African currency pairs
+> (GHS↔NGN, XOF↔XAF) and any other pair with a mid-market rate. The
+> settlement layer is region-aware: it detects the region from the matched
+> currency pair and routes the ledger anchor to the canonical chain
+> (Africa/Caribbean/LatAm → Celo, APAC → HashKey). 26 tests cover Caribbean
+> + African pairs; 912 total tests pass.
+>
 > **2026-08-04 update:** The CARICOM FX matching engine + net-settlement
 > layer is now shipped (the track's flagship build goal). The "Caribbean
 > native token" gap remains honest — no onchain Caribbean stabletoken

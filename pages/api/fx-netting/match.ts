@@ -1,14 +1,15 @@
 /**
- * POST /api/fx-netting/match — CARICOM FX matching + net settlement.
+ * POST /api/fx-netting/match — Multi-region FX matching + net settlement.
  *
  * Accepts a set of open FX intents, runs the matching engine at live
  * mid-market rates, and returns matches + net obligations + savings +
  * the settlement plan. Anchors each match to the RecommendationLedger
- * on the Caribbean region's canonical chain (Celo) — fire-and-forget,
- * same pattern as the x402-gateway FX Protection Insight anchor.
+ * on the matched currency pair's region-canonical chain (Celo for
+ * Africa/Caribbean/LatAm, HashKey for APAC) — fire-and-forget, same
+ * pattern as the x402-gateway FX Protection Insight anchor.
  *
- * This is the flagship endpoint for the Future Caribbean Financial track:
- * "BBD ↔ JMD — Direct" (removing USD as the default bridge).
+ * Originally built for the Caribbean (CARICOM) track, now generalized
+ * to any region: BBD↔JMD, GHS↔NGN, XOF↔XAF, PHP↔BRL, etc.
  *
  * Body: { intents: FxIntent[] }
  * Response: { matches, netObligations, unmatchedIntents, settlementPlan,

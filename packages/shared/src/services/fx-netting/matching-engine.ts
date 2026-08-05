@@ -1,13 +1,13 @@
 /**
- * CARICOM FX matching & net-settlement engine. Pure functions, no I/O —
+ * Multi-region FX matching & net-settlement engine. Pure functions, no I/O —
  * callers wire in a mid-rate function (the API route uses the same
  * rate provider as fx-drag/rates-serverless.ts) and settlement.
  *
- * This is the flagship deliverable for the Future Caribbean Financial track:
- * a regional FX coordination layer that matches opposing currency needs
- * directly, nets obligations across participants, and settles only the net
- * — removing USD as the default bridge for Caribbean trade (BBD ↔ JMD
- * instead of BBD → USD → JMD).
+ * Originally built for the Caribbean (CARICOM) FX coordination layer, now
+ * generalized to any region: matches opposing currency needs directly,
+ * nets obligations across participants, and settles only the net — removing
+ * USD as the default bridge for regional trade (BBD ↔ JMD, GHS ↔ NGN,
+ * XOF ↔ XAF, etc.).
  *
  * Algorithm:
  *   1. matchIntents()     — find opposing intent pairs, settle at mid-market
