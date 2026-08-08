@@ -59,7 +59,7 @@ Function Compute (this handler)          ← Alibaba Cloud compute
 ### 3. Deploy the function
 
 ```bash
-cd alibaba-cloud/fc-memory-consolidation
+cd ops/alibaba-cloud/fc-memory-consolidation
 s deploy
 ```
 

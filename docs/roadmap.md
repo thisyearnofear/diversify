@@ -168,7 +168,7 @@ Alibaba Cloud infrastructure.
   search, automatic long-term memory extraction, and short-term/long-term
   separation. Inert when `TABLESTORE_ENDPOINT` is unset.
 
-- **Function Compute deployment** (`alibaba-cloud/fc-memory-consolidation/`):
+- **Function Compute deployment** (`ops/alibaba-cloud/fc-memory-consolidation/`):
   Alibaba Cloud deployment proof — a Node.js 18 FC handler that uses
   Function Compute + Tablestore + DashScope. Deployable via Serverless Devs
   (`s deploy`). The Guardian cron delegates consolidation to this endpoint

@@ -2,6 +2,20 @@
 
 Index for `docs/`. Start at the top, drill down by need.
 
+## Repository layout
+
+| Area | Where |
+|---|---|
+| UI | `components/`, `hooks/`, `pages/` |
+| Domain logic | `packages/shared/` |
+| Agent APIs | `pages/api/agent/` |
+| Contracts | `contracts/`, `scripts/Deploy*.s.sol` |
+| Ops (Alibaba FC, etc.) | `ops/` |
+| Contributor guide | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| Agent conventions | [`../AGENTS.md`](../AGENTS.md) |
+
+`test/` = Foundry (Solidity). `tests/` = x402 Node smoke scripts. Root map: [`../README.md`](../README.md).
+
 ## The 11 docs
 
 | # | Doc | What's in it |
@@ -39,7 +53,8 @@ Index for `docs/`. Start at the top, drill down by need.
 
 ## Top-level
 
-- **[`../README.md`](../README.md)** — marketing / deployment proofs / quick demo flow
+- **[`../README.md`](../README.md)** — product summary, quick start, repo map
+- **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)** — setup, commands, “where do I change X?”
 - **[`../AGENTS.md`](../AGENTS.md)** — repo conventions, build/test commands, coding style for coding agents
 
 ## Archived

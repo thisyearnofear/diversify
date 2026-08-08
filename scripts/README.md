@@ -1,6 +1,17 @@
 # Scripts Directory
 
-This directory contains utility scripts for development, testing, and deployment.
+Utility scripts for development, testing, and deployment. Paths below are relative to the repo root.
+
+## Index
+
+| Category | Scripts |
+|---|---|
+| **Deploy** | `deploy-to-hetzner.sh`, `deploy-all.sh`, `Deploy*.s.sol`, `deploy-env-to-server.sh.example` |
+| **Register / identity** | `register-erc8004.ts`, `register-on-agentscan.ts`, `setup-arc-agent.js`, `create-circle-wallet.ts` |
+| **FX / product** | `fx-drag-report.ts`, `fx-drag/`, `hashkey-fx-demo.ts` |
+| **Validate / smoke** | `test-guardian-loop.sh`, `test-record-recommendation.ts`, `test-0g-agent-intelligence.ts`, `check-env-drift*.sh`, `check-secrets.sh`, `server-health-check.sh`, `memory-eval.ts` |
+| **Seed / generate** | `seed-mainnet-recommendation.ts`, `generate-x402-volume.mjs`, `setup-firecrawl-monitors.ts` |
+| **Runtime templates** | `start-runtime.sh.example`, `pm2.ecosystem.config.cjs.example`, `nginx-diversifi-api.conf.example` |
 
 ## FX Drag Report (concierge analysis)
 

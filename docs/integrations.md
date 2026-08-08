@@ -84,7 +84,7 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 | Cognee Memory | `packages/shared/src/services/cognee-memory-service.ts` | Cross-session learning (fallback) |
 | Tablestore Memory | `packages/shared/src/services/tablestore-memory-service.ts` | Alibaba Cloud Agent Memory (preferred when configured) |
 | Memory Consolidation | `packages/shared/src/services/memory-consolidation-service.ts` | Qwen long-context consolidation (FC delegation or local) |
-| FC Handler | `alibaba-cloud/fc-memory-consolidation/index.js` | Alibaba Cloud Function Compute proof file |
+| FC Handler | `ops/alibaba-cloud/fc-memory-consolidation/index.js` | Alibaba Cloud Function Compute proof file |
 
 ### Security
 - `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only)

@@ -55,12 +55,12 @@ services and APIs:
 
 | File | Alibaba Cloud Service | Purpose |
 |------|----------------------|---------|
-| [`alibaba-cloud/fc-memory-consolidation/index.js`](../alibaba-cloud/fc-memory-consolidation/index.js) | **Function Compute** + **Tablestore** + **DashScope** | FC handler that runs on Alibaba Cloud — reads memories from Tablestore, consolidates with Qwen via DashScope, writes profile back |
+| [`ops/alibaba-cloud/fc-memory-consolidation/index.js`](../ops/alibaba-cloud/fc-memory-consolidation/index.js) | **Function Compute** + **Tablestore** + **DashScope** | FC handler that runs on Alibaba Cloud — reads memories from Tablestore, consolidates with Qwen via DashScope, writes profile back |
 | [`packages/shared/src/services/tablestore-memory-service.ts`](../packages/shared/src/services/tablestore-memory-service.ts) | **Tablestore** | Memory adapter using the Tablestore Memory Storage HTTP API (`searchMemories`, `addMemories`, `deleteMemory`) |
 | [`packages/shared/src/services/ai/providers/dashscope-provider.ts`](../packages/shared/src/services/ai/providers/dashscope-provider.ts) | **DashScope (Bailian)** | Qwen long-context LLM provider via the OpenAI-compatible DashScope API |
 | [`packages/shared/src/services/memory-consolidation-service.ts`](../packages/shared/src/services/memory-consolidation-service.ts) | **Function Compute** (via HTTP delegation) + **Tablestore** + **DashScope** | Orchestrates the consolidation pipeline — delegates to FC when `ALIBABA_CLOUD_FC_ENDPOINT` is set, falls back to local Tablestore/Cognee |
 
-**Primary proof file:** `alibaba-cloud/fc-memory-consolidation/index.js`
+**Primary proof file:** `ops/alibaba-cloud/fc-memory-consolidation/index.js`
 
 This is a Function Compute handler that runs on Alibaba Cloud infrastructure
 and uses three Alibaba Cloud services:
@@ -84,7 +84,7 @@ user.
 - **Trigger:** HTTP (POST)
 - **Region:** `cn-beijing` (co-located with the Tablestore instance — Memory Storage is only available in this region)
 
-Deployment manifest: [`alibaba-cloud/fc-memory-consolidation/s.yaml`](../alibaba-cloud/fc-memory-consolidation/s.yaml)
+Deployment manifest: [`ops/alibaba-cloud/fc-memory-consolidation/s.yaml`](../ops/alibaba-cloud/fc-memory-consolidation/s.yaml)
 
 ### 2. Tablestore (Agent Memory)
 
@@ -226,7 +226,7 @@ The consolidation pipeline implements the three Track 1 requirements:
 ### Step 2: Deploy the Function Compute handler
 
 ```bash
-cd alibaba-cloud/fc-memory-consolidation
+cd ops/alibaba-cloud/fc-memory-consolidation
 s deploy
 ```
 
