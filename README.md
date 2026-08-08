@@ -24,10 +24,10 @@ Requires Node ≥22.11 and pnpm. Setup details, env tables, and test drive: [`do
 
 | Area | Where |
 |---|---|
-| UI | `components/`, `hooks/`, `pages/` |
+| Next.js app | `apps/web/` (`components/`, `hooks/`, `pages/`, …) |
 | Domain logic | `packages/shared/` |
-| Agent APIs | `pages/api/agent/` |
-| Contracts | `contracts/`, `scripts/Deploy*.s.sol` |
+| Agent APIs | `apps/web/pages/api/agent/` |
+| Contracts | `contracts/`, `scripts/Deploy*.s.sol` (Foundry libs in root `lib/`) |
 | Docs index | [`docs/README.md`](./docs/README.md) |
 | Agent / coding conventions | [`AGENTS.md`](./AGENTS.md) |
 | Ops (Alibaba FC, etc.) | `ops/` |

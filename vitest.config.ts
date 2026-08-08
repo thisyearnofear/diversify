@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/*.test.{ts,tsx}'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', 'lib/**'],
     env: {
       NODE_ENV: 'test',
     },
@@ -14,8 +15,9 @@ export default defineConfig({
     setupFiles: ['./vitest.setup.ts'],
     // Use jsdom for React component tests
     environmentMatchGlobs: [
-      ['components/**/*.{test.ts,test.tsx}', 'jsdom'],
-      ['context/**/*.{test.ts,test.tsx}', 'jsdom'],
+      ['apps/web/components/**/*.{test.ts,test.tsx}', 'jsdom'],
+      ['apps/web/context/**/*.{test.ts,test.tsx}', 'jsdom'],
+      ['apps/web/hooks/**/*.{test.ts,test.tsx}', 'jsdom'],
     ],
     server: {
       // The GoodDollar SDK + its CJS deps (lz-string, etc.) need to be
@@ -34,7 +36,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, '.'),
+      '@': path.resolve(__dirname, 'apps/web'),
     },
   },
 });

@@ -1,6 +1,7 @@
 {
   "ignore": [
     "lib/openzeppelin-contracts/**",
+    "lib/forge-std/**",
     "contracts/**",
     "test/**",
     "examples/**",
@@ -9,5 +10,14 @@
   ],
   "ignoreBinaries": [],
   "ignoreDependencies": [],
-  "ignoreWorkspaces": []
+  "ignoreWorkspaces": [],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/**/*.{js,ts,mjs}", "tests/**/*.mjs"]
+    },
+    "apps/web": {
+      "entry": ["pages/**/*.{ts,tsx}", "next.config.js"],
+      "project": ["**/*.{ts,tsx,js,jsx}"]
+    }
+  }
 }

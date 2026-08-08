@@ -13,9 +13,9 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { STORY_REGISTRY } from '../components/protection-cards/cards';
-import { ARCHETYPE_ORDER, ArchetypeId } from '../components/protection-cards/tokens';
-import { STORY_SIZE } from '../components/protection-cards/StoryCard';
+import { STORY_REGISTRY } from '../apps/web/components/protection-cards/cards';
+import { ARCHETYPE_ORDER, ArchetypeId } from '../apps/web/components/protection-cards/tokens';
+import { STORY_SIZE } from '../apps/web/components/protection-cards/StoryCard';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = path.resolve(HERE, '..', 'docs', 'makeathon', 'assets', 'stories');

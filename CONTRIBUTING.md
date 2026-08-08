@@ -1,6 +1,10 @@
 # Contributing to DiversiFi
 
-Thanks for taking a look. This repo is a pnpm monorepo: Next.js app at the root, shared domain logic in `packages/`, Foundry contracts in `contracts/`.
+Thanks for taking a look. This is a pnpm monorepo:
+
+- **`apps/web`** — Next.js app (UI + API routes)
+- **`packages/`** — shared domain logic
+- **`contracts/`** — Foundry contracts (libs in root `lib/`)
 
 ## Prerequisites
 
@@ -12,8 +16,8 @@ Thanks for taking a look. This repo is a pnpm monorepo: Next.js app at the root,
 
 ```bash
 pnpm install
-cp .env.example .env.local
-pnpm dev    # http://localhost:3042
+cp .env.example .env.local   # monorepo root — Next loads this via apps/web next.config
+pnpm dev                     # http://localhost:3042
 ```
 
 **Minimum env** to boot the app:
@@ -29,7 +33,7 @@ Everything else (AI providers, feeds, ledgers, x402) is optional per feature —
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | Next.js on port 3042 |
+| `pnpm dev` | Next.js on port 3042 (`@diversifi/web`) |
 | `pnpm test` | Vitest suite |
 | `pnpm lint` | Workspace ESLint |
 | `pnpm build` | Shared packages + Next build |
@@ -40,8 +44,8 @@ Everything else (AI providers, feeds, ledgers, x402) is optional per feature —
 
 | You want to… | Start here |
 |---|---|
-| UI / tabs / onboarding | `components/`, `hooks/`, `pages/` |
-| Guardian loop, advisor, AI | `pages/api/agent/`, `packages/shared/src/services/ai/` |
+| UI / tabs / onboarding | `apps/web/components/`, `apps/web/hooks/`, `apps/web/pages/` |
+| Guardian loop, advisor, AI | `apps/web/pages/api/agent/`, `packages/shared/src/services/ai/` |
 | Ledger / chain routing | `packages/shared` recommendation-ledger services, `contracts/` |
 | FX netting / drag | `packages/shared/src/services/fx-netting/`, `scripts/fx-drag-report.ts` |
 | Deploy / register / ops scripts | `scripts/` (index in [`scripts/README.md`](./scripts/README.md)), `ops/` |

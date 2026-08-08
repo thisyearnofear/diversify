@@ -16,28 +16,38 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "paths": {
-      "@/*": [
-        "./*"
-      ]
-    },
     "incremental": true,
     "moduleResolution": "bundler",
-    "allowJs": true
+    "allowJs": true,
+    "paths": {
+      "@/*": [
+        "./apps/web/*"
+      ],
+      "@diversifi/shared": [
+        "./packages/shared/src/index.ts"
+      ],
+      "@diversifi/shared/*": [
+        "./packages/shared/*"
+      ]
+    }
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
-    "types/**/*.d.ts"
+    "apps/web/**/*.ts",
+    "apps/web/**/*.tsx",
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "scripts/**/*.ts",
+    "vitest.setup.ts"
   ],
   "exclude": [
     "node_modules",
     "node_modules_hidden",
+    "apps/web/.next",
     ".next",
     "out",
     "cache",
     "contracts",
-    "script",
-    "lib"
+    "lib",
+    "**/dist"
   ]
 }

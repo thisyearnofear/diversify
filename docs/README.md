@@ -6,10 +6,10 @@ Index for `docs/`. Start at the top, drill down by need.
 
 | Area | Where |
 |---|---|
-| UI | `components/`, `hooks/`, `pages/` |
+| Next.js app | `apps/web/` (`components/`, `hooks/`, `pages/`, …) |
 | Domain logic | `packages/shared/` |
-| Agent APIs | `pages/api/agent/` |
-| Contracts | `contracts/`, `scripts/Deploy*.s.sol` |
+| Agent APIs | `apps/web/pages/api/agent/` |
+| Contracts | `contracts/`, `scripts/Deploy*.s.sol` (Foundry libs in root `lib/`) |
 | Ops (Alibaba FC, etc.) | `ops/` |
 | Contributor guide | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
 | Agent conventions | [`../AGENTS.md`](../AGENTS.md) |

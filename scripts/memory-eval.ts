@@ -159,7 +159,7 @@ async function runAdvisor(
   // We import the advisor core lazily so the script doesn't pull the whole
   // shared barrel at module load (the bundle-size guard applies to _app; this
   // is a script, but the lazy import keeps the pattern consistent).
-  const { runAdvisorConversation } = await import('../pages/api/agent/_advisor-core');
+  const { runAdvisorConversation } = await import('../apps/web/pages/api/agent/_advisor-core');
   // The advisor core reads memory via cogneeMemoryService.getAdvisorContext
   // when an address is supplied. To force a "cold" run, we pass a synthetic
   // address that has no seeded memory; for a "warm" run we pass the

@@ -1,0 +1,38 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "useDefineForClassFields": true,
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@/*": [
+        "./*"
+      ]
+    },
+    "incremental": true,
+    "moduleResolution": "bundler",
+    "allowJs": true
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "types/**/*.d.ts",
+    "next-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    ".next"
+  ]
+}

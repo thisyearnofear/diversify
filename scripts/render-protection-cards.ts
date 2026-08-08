@@ -26,8 +26,8 @@ import { writeFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CARD_REGISTRY } from '../components/protection-cards/cards';
-import { ARCHETYPE_ORDER, CARD_SIZE, ArchetypeId } from '../components/protection-cards/tokens';
+import { CARD_REGISTRY } from '../apps/web/components/protection-cards/cards';
+import { ARCHETYPE_ORDER, CARD_SIZE, ArchetypeId } from '../apps/web/components/protection-cards/tokens';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ASSETS_DIR = path.resolve(HERE, '..', 'docs', 'makeathon', 'assets');

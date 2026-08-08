@@ -33,7 +33,11 @@ module.exports = [
     // module instead, e.g. '@diversifi/shared/src/config/celo-tokens'.
     // Type-only imports are erased and therefore allowed.
     // See docs/internal/bundle-analysis-2026-07-11.md.
-    files: ['hooks/**/*.{ts,tsx}', 'components/**/*.{ts,tsx}', 'context/**/*.{ts,tsx}'],
+    files: [
+      'apps/web/hooks/**/*.{ts,tsx}',
+      'apps/web/components/**/*.{ts,tsx}',
+      'apps/web/context/**/*.{ts,tsx}',
+    ],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
         'warn',
@@ -62,7 +66,9 @@ module.exports = [
       'cache/**',
       '.cache/**',
       'broadcast/**',
-      'lib/openzeppelin-contracts/**'
+      'lib/openzeppelin-contracts/**',
+      'lib/forge-std/**',
+      'apps/web/.next/**',
     ]
   }
 ];

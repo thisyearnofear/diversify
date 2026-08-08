@@ -1,12 +1,14 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. Core business logic is decoupled from the Next.js frontend into shared packages:
+DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. The Next.js app lives in `apps/web/`; core business logic is decoupled into shared packages:
+- `apps/web/`: Next.js UI + API routes (`components/`, `hooks/`, `pages/`, app-local `lib/`).
 - `packages/shared`: Unified services for AI synthesis (`ai-service.ts`), data orchestration (`market-pulse-service.ts`), agent memory (`cognee-memory-service.ts`), and chain-settled research. Contains the AI provider strategy pattern under `services/ai/providers/`, decorator pattern under `services/ai/decorators/`, and shared type definitions under `types/`.
 - `packages/shared/src/types/`: Shared TypeScript type definitions (`wallet-provider.ts`, `swap.ts`, `portfolio.ts`, `inflation.ts`, `intelligence.ts`, `strategy.ts`).
 - `packages/shared-0g`: Dedicated integration for 0G Storage (audit trail) and Persistence (verifiable state).
-- `hooks/`: Domain-driven React hooks for agent proactivity (`use-proactive-agent.ts`) and wallet-policy enforcement.
-- `pages/api/agent/`: Core backend endpoints for x402 payment negotiation, AI-driven market intelligence, autonomous Guardian loop (`guardian-loop.ts`), and Firecrawl macro signal webhooks (`firecrawl-webhook.ts`).
+- `apps/web/hooks/`: Domain-driven React hooks for agent proactivity (`use-proactive-agent.ts`) and wallet-policy enforcement.
+- `apps/web/pages/api/agent/`: Core backend endpoints for x402 payment negotiation, AI-driven market intelligence, autonomous Guardian loop (`guardian-loop.ts`), and Firecrawl macro signal webhooks (`firecrawl-webhook.ts`).
+- `contracts/` + root `lib/` (Foundry submodules only): on-chain ledgers and vaults.
 - `scripts/`: Utility scripts including `setup-firecrawl-monitors.ts` for registering Firecrawl watchers.
 
 ## Build, Test, and Development Commands
@@ -49,8 +51,8 @@ The product has been reframed from "AI intelligence marketplace" to "risk-aware,
 
 Key new files:
 - `constants/currency-risk.ts`: Curated multi-benchmark depreciation dataset for 20 high-risk currencies
-- `hooks/use-currency-risk.ts`: Consolidated non-prescriptive currency risk hook
-- `components/tabs/overview/ProtectionScorecard.tsx`: Philosophy-aware protection summary card
+- `apps/web/hooks/use-currency-risk.ts`: Consolidated non-prescriptive currency risk hook
+- `apps/web/components/tabs/overview/ProtectionScorecard.tsx`: Philosophy-aware protection summary card
 
 **Design principle: risk is universal, not currency-specific.**
 "Stable" currencies (USD, EUR, GBP) are not risk-free. Gold has outperformed all of them, inflation erodes purchasing power universally, and political/concentration risk exists in every jurisdiction. The dataset includes benchmark currency entries with their vsXAU depreciation and political risk events so that US/EU visitors get the same "aha" risk moment as visitors from volatile-currency economies. A US investor worried about political instability, an African diaspora member in New York whose family's savings are in KES, or a Muslim in London seeking Sharia-compliant holdings — all of them have risk, and all of them can find a philosophy that matches their values. Risk is contextual; the response is values-driven.
@@ -68,8 +70,8 @@ Key new files:
 
 **Onboarding UI/UX pass (2026-07-10):**
 The stablecoin "coin motif" is now the onboarding design language. Reusable pieces live in shared components — prefer them over one-off decorations:
-- `components/shared/FloatingCoins.tsx`: `Coin` SVG primitive (any accent color, glyph or kawaii face) + `FloatingCoins` ambient drift field (SSR-safe deterministic layout, reduced-motion aware). Used by the StrategyModal backdrop and WelcomeScreen.
-- `components/shared/TokenIcon.tsx` + `constants/token-logos.ts`: real token logos (Trust Wallet assets, incl. Mento regionals cUSD/cEUR/KESm/COPm) with automatic `Coin` fallback for unknown symbols — never renders a broken image. Used by all allocation chips.
+- `apps/web/components/shared/FloatingCoins.tsx`: `Coin` SVG primitive (any accent color, glyph or kawaii face) + `FloatingCoins` ambient drift field (SSR-safe deterministic layout, reduced-motion aware). Used by the StrategyModal backdrop and WelcomeScreen.
+- `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts`: real token logos (Trust Wallet assets, incl. Mento regionals cUSD/cEUR/KESm/COPm) with automatic `Coin` fallback for unknown symbols — never renders a broken image. Used by all allocation chips.
 - Onboarding progress is the 3-step `CoinSteps` indicator in `WelcomeScreen.tsx`; completed steps navigate back.
 - **Scroll rule:** the StrategyModal dialog is the single scroll container. Do not add `overflow-y-auto` or `justify-center` to WelcomeScreen's root — center via the `my-auto` wrapper (justify-center on an overflowing flex container makes the top unreachable).
 - `.custom-scrollbar`, `.coin-float`, `.aurora-drift` utilities are defined in `styles/globals.css`.
@@ -130,7 +132,7 @@ The AI chat drawer is the app's front door (mounted globally, auto-opens on any 
 
 Also fixed: 7 pre-existing `recommendation-ledger.service.test.ts` failures caused by production env vars leaking from `.env.local` into the test runner (tests now properly isolate `CELO_MAINNET_LEDGER_CONTRACT`, `ARBITRUM_MAINNET_LEDGER_CONTRACT`, `ZERO_G_MAINNET_LEDGER_CONTRACT`, `LEDGER_PRIVATE_KEY`, etc.). Dead code `components/ai/AIAssistant.tsx` (1,778 lines) deleted.
 
-Key files: `hooks/use-agent-chat.ts`, `components/agent/AIChat.tsx`, `components/agent/TrustFlow.tsx`, `components/agent/ResearchCheck.tsx`, `pages/api/agent/advisor.ts`, `pages/api/agent/_advisor-core.ts`, `packages/shared/src/services/ai/ai-service.ts`, `packages/shared/src/services/ai/providers/gemini-provider.ts`, `packages/shared/src/services/ai/providers/venice-provider.ts`, `context/AIConversationContext.tsx`, `models/FunnelEvent.ts`.
+Key files: `apps/web/hooks/use-agent-chat.ts`, `apps/web/components/agent/AIChat.tsx`, `apps/web/components/agent/TrustFlow.tsx`, `apps/web/components/agent/ResearchCheck.tsx`, `apps/web/pages/api/agent/advisor.ts`, `apps/web/pages/api/agent/_advisor-core.ts`, `packages/shared/src/services/ai/ai-service.ts`, `packages/shared/src/services/ai/providers/gemini-provider.ts`, `packages/shared/src/services/ai/providers/venice-provider.ts`, `apps/web/context/AIConversationContext.tsx`, `apps/web/models/FunnelEvent.ts`.
 
 **SME waitlist + UI/UX standardization (2026-07-12):**
 - **SME waitlist CTA**: the onboarding "How this can affect a business" toggle now expands into an email-capture form for the future business FX feature. `models/WaitlistLead.ts` (compound `(email, feature)` unique index, no TTL — leads persist for outreach). `pages/api/waitlist/join.ts` (atomic `findOneAndUpdate` upsert — not `create()` + catch-duplicate, which is racy on a fresh collection where the unique index builds async). 5/min IP rate limit. Funnel events `business_hint_expanded` + `waitlist_joined` added to `FunnelEvent.ts` allowlist. Emails stored plain-text in MongoDB (pragmatic for hackathon stage; encrypt at rest or move to a managed service for production).

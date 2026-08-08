@@ -103,9 +103,9 @@ ok "SSH connection established"
 if [ "$SKIP_BUILD" = "true" ]; then
     warn "Skipping build (DEPLOY_SKIP_BUILD=true)"
 else
-    # Ensure we're in the project root
-    if [ ! -f "package.json" ]; then
-        fail "Run this script from the project root (where package.json lives)"
+    # Ensure we're in the monorepo root
+    if [ ! -f "package.json" ] || [ ! -f "apps/web/package.json" ]; then
+        fail "Run this script from the monorepo root (package.json + apps/web/)"
     fi
 
     info "Building locally (pnpm build)..."
@@ -114,11 +114,11 @@ else
     fi
     ok "Local build complete"
 
-    # Verify build artifacts exist
-    if [ ! -f ".next/BUILD_ID" ]; then
-        fail "Build artifacts not found at .next/BUILD_ID — build may have failed silently"
+    # Verify build artifacts exist (Next app lives under apps/web)
+    if [ ! -f "apps/web/.next/BUILD_ID" ]; then
+        fail "Build artifacts not found at apps/web/.next/BUILD_ID — build may have failed silently"
     fi
-    ok "Build artifacts verified (.next/BUILD_ID present)"
+    ok "Build artifacts verified (apps/web/.next/BUILD_ID present)"
 fi
 
 # ── 3. Snapshot server state for rollback ───────────────────────────────────
@@ -142,18 +142,26 @@ ssh "$REMOTE" "rm -f '$RUNTIME_DIR/.next.bak-latest.tar.gz'" 2>/dev/null || true
 ok "snapshot taken"
 
 # ── 4. Rsync standalone build to Hetzner runtime dir ────────────────────────
-# The standalone output may be at .next/standalone/server.js or .next/standalone/Dev/diversifi/server.js
-# depending on the project structure. Check both paths.
+# Standalone output location varies with monorepo nesting / machine path.
+WEB_NEXT="apps/web/.next"
 STANDALONE_SERVER=""
-if [ -f ".next/standalone/server.js" ]; then
-    STANDALONE_SERVER=".next/standalone"
-elif [ -f ".next/standalone/Dev/diversifi/server.js" ]; then
-    STANDALONE_SERVER=".next/standalone/Dev/diversifi"
-else
-    fail "Standalone output not found — ensure next.config uses output: 'standalone'"
+for candidate in \
+    "$WEB_NEXT/standalone/apps/web" \
+    "$WEB_NEXT/standalone" \
+    "$WEB_NEXT/standalone/Dev/diversifi/apps/web" \
+    "$WEB_NEXT/standalone/Dev/diversifi"
+do
+    if [ -f "$candidate/server.js" ]; then
+        STANDALONE_SERVER="$candidate"
+        break
+    fi
+done
+if [ -z "$STANDALONE_SERVER" ]; then
+    fail "Standalone output not found under $WEB_NEXT/standalone — ensure next.config uses output: 'standalone'"
 fi
 
 info "Syncing standalone build to $REMOTE:$RUNTIME_DIR/ ..."
+info "Using standalone path: $STANDALONE_SERVER"
 
 LOCAL_SIZE=$(du -sh "$STANDALONE_SERVER" 2>/dev/null | cut -f1)
 info "Local standalone size: $LOCAL_SIZE"
@@ -174,7 +182,7 @@ rsync -az --delete --no-owner --no-group \
 # Static assets live inside .next/static/ which standalone doesn't include
 info "Syncing static assets..."
 rsync -az --delete --no-owner --no-group \
-    .next/static/ \
+    "$WEB_NEXT/static/" \
     "$REMOTE:$RUNTIME_DIR/.next/static/" 2>&1 | tail -3
 
 ok "Rsync complete"
