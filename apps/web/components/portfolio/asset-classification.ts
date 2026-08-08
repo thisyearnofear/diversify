@@ -2,7 +2,7 @@
 // barrel so the test suite doesn't pull in @diversifi/shared-0g through the
 // dist (which isn't built). TOKEN_METADATA is a pure data structure — no
 // runtime side effects.
-import { TOKEN_METADATA } from '../../../../packages/shared/src/config';
+import { TOKEN_METADATA } from '@diversifi/shared/src/config';
 import type { TokenBalance } from '@/hooks/use-multichain-balances';
 
 // Pre-compute the set of valid symbol keys (case-insensitive) once at

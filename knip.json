@@ -3,7 +3,7 @@
     "lib/openzeppelin-contracts/**",
     "lib/forge-std/**",
     "contracts/**",
-    "test/**",
+    "contracts/test/**",
     "examples/**",
     ".agents/**",
     "docs/**"
@@ -13,7 +13,7 @@
   "ignoreWorkspaces": [],
   "workspaces": {
     ".": {
-      "entry": ["scripts/**/*.{js,ts,mjs}", "tests/**/*.mjs"]
+      "entry": ["scripts/**/*.{js,ts,mjs}", "scripts/smoke/**/*.mjs"]
     },
     "apps/web": {
       "entry": ["pages/**/*.{ts,tsx}", "next.config.js"],

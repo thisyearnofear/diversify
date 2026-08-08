@@ -38,7 +38,7 @@ import {
   type CycleExecutionContext,
 } from '../../../lib/guardian/cycle-execution';
 import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
-import { VaultService, type RebalanceRecommendation } from '../../../../../packages/shared/src/services/vault/vault.service';
+import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';

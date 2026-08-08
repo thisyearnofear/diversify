@@ -2,7 +2,7 @@
  * Record a test recommendation on the new RecommendationLedger contract
  * and verify it shows in the /api/agent/zero-g-ledger endpoint
  */
-import { recordRecommendation } from '../packages/shared/src/services/recommendation-ledger.service';
+import { recordRecommendation } from '@diversifi/shared/src/services/recommendation-ledger.service';
 
 async function main() {
   const testUser = '0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8'; // VAULT_PRIVATE_KEY deployer

@@ -37,8 +37,8 @@ Everything else (AI providers, feeds, ledgers, x402) is optional per feature —
 | `pnpm test` | Vitest suite |
 | `pnpm lint` | Workspace ESLint |
 | `pnpm build` | Shared packages + Next build |
-| `pnpm test-x402` | x402 gateway smoke (`tests/`) |
-| `forge test` | Solidity tests in `test/` (Foundry) |
+| `pnpm test-x402` | x402 gateway smoke (`scripts/smoke/`) |
+| `forge test` | Solidity tests in `contracts/test/` (Foundry) |
 
 ## Where do I change X?
 
@@ -56,8 +56,8 @@ Coding conventions for agents and humans: [`AGENTS.md`](./AGENTS.md).
 
 ## Test layout
 
-- **`test/`** — Foundry (Solidity) contract tests
-- **`tests/`** — Node x402 smoke scripts (`pnpm test-x402*`)
+- **`contracts/test/`** — Foundry (Solidity) contract tests
+- **`scripts/smoke/`** — Node x402 smoke scripts (`pnpm test-x402*`)
 - Co-located `__tests__/` / `*.test.ts` — Vitest unit tests next to source
 
 ## PRs

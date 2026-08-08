@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { TokenVaultClient } from '../../../../../packages/shared/src/services/auth0-token-vault';
+import { TokenVaultClient } from '@diversifi/shared/src/services/auth0-token-vault';
 import { readJsonFile, writeJsonFile } from '../agent/_json-store';
 import * as path from 'path';
 

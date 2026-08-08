@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
-import { feeEngine } from '../../../../../packages/shared/src/services/vault/fee-engine';
+import { feeEngine } from '@diversifi/shared/src/services/vault/fee-engine';
 
 /**
  * GET /api/vault/fees?userAddress=0x... — Fee summary for a vault.

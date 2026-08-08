@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../contracts/RecommendationLedger.sol";
+import "../RecommendationLedger.sol";
 
 contract RecommendationLedgerTest is Test {
     RecommendationLedger public ledger;

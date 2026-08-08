@@ -25,7 +25,7 @@
  */
 
 import { ethers } from 'ethers';
-import { buildGmDepositMulticall } from '../packages/shared/src/services/swap/gmx/gmx-deposit-builder';
+import { buildGmDepositMulticall } from '@diversifi/shared/src/services/swap/gmx/gmx-deposit-builder';
 
 const ERC20_ABI = [
   'function approve(address spender, uint256 amount) external returns (bool)',

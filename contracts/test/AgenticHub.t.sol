@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../contracts/AgenticHub.sol";
+import "../AgenticHub.sol";
 import "./mocks/MockERC20.sol";
 
 contract AgenticHubTest is Test {

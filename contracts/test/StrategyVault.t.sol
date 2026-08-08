@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "forge-std/Test.sol";
-import "../contracts/StrategyVault.sol";
+import "../StrategyVault.sol";
 import "./mocks/MockERC20.sol";
 import "./mocks/MockUniswapV2Router.sol";
 

@@ -10,7 +10,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getLiveRate, getLiveHistoricalRates } from '../../../../../packages/shared/src/services/fx-rate.service';
+import { getLiveRate, getLiveHistoricalRates } from '@diversifi/shared/src/services/fx-rate.service';
 
 const FRANKFURTER_URL = 'https://api.frankfurter.app';
 

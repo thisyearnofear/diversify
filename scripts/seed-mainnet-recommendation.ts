@@ -13,7 +13,7 @@
  * chainId — the APAC routingContext (Confucian plan, Asia region) is what
  * sends the HOLD to the HashKey ledger.
  */
-import { recordRecommendation } from '../packages/shared/src/services/recommendation-ledger.service';
+import { recordRecommendation } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import * as fs from 'fs';
 import * as path from 'path';
 

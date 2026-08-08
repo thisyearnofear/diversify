@@ -307,7 +307,8 @@ diversifi/
     shared-0g/              # 0G Storage + DA integration
     mento-utils/            # Mento Protocol helpers
   scripts/                  # Firecrawl setup, wallet creation, volume generation
-  tests/                    # x402 + integration test harnesses
+  scripts/smoke/            # x402 smoke harnesses
+  contracts/test/           # Foundry contract tests
 ```
 
 ## Key Design Patterns

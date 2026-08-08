@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
-import { ERC7715Service } from '../../../../../packages/shared/src/services/erc7715-service';
+import { ERC7715Service } from '@diversifi/shared/src/services/erc7715-service';
 import { getGuardianState } from './_guardian-state';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
 

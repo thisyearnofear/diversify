@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getLiFiApiKey, getLiFiIntegratorId } from '../../../../../packages/shared/src/services/swap/lifi-config';
+import { getLiFiApiKey, getLiFiIntegratorId } from '@diversifi/shared/src/services/swap/lifi-config';
 
 const EARN_API_BASE = 'https://earn.li.fi/v1';
 const LIFI_API_BASE = 'https://li.quest/v1';

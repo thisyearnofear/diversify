@@ -6,4 +6,4 @@
  * Canonical source: packages/shared/src/services/fx-drag/calc.ts
  */
 
-export * from '../../packages/shared/src/services/fx-drag/calc';
+export * from '@diversifi/shared/src/services/fx-drag/calc';

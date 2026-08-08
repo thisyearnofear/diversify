@@ -314,7 +314,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
         },
       ],
     });
-    vi.doMock('../../../../../../packages/shared/src/services/vault/vault.service', () => ({
+    vi.doMock('@diversifi/shared/src/services/vault/vault.service', () => ({
       VaultService: vi.fn().mockImplementation(() => ({ rebalance })),
     }));
 

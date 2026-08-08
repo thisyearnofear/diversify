@@ -14,7 +14,7 @@ Index for `docs/`. Start at the top, drill down by need.
 | Contributor guide | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
 | Agent conventions | [`../AGENTS.md`](../AGENTS.md) |
 
-`test/` = Foundry (Solidity). `tests/` = x402 Node smoke scripts. Root map: [`../README.md`](../README.md).
+`contracts/test/` = Foundry (Solidity). `scripts/smoke/` = x402 Node smoke scripts. Root map: [`../README.md`](../README.md).
 
 ## The 11 docs
 

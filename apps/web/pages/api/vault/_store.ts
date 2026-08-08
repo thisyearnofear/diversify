@@ -7,7 +7,7 @@ import mongoose from 'mongoose';
 import { Vault, type IVault } from '../../../models/Vault';
 import { Permission, type IPermission } from '../../../models/Permission';
 import { Transaction, type ITransaction } from '../../../models/Transaction';
-import type { VaultStore, Vault as VaultType, VaultPermission, VaultTransaction } from '../../../../../packages/shared/src/services/vault/vault.service';
+import type { VaultStore, Vault as VaultType, VaultPermission, VaultTransaction } from '@diversifi/shared/src/services/vault/vault.service';
 
 function toVaultType(doc: IVault): VaultType {
   return {

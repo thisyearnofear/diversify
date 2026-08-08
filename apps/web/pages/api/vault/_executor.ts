@@ -19,16 +19,16 @@ import type {
   VaultExecutor,
   Vault,
   VaultAllocation,
-} from '../../../../../packages/shared/src/services/vault/vault.service';
+} from '@diversifi/shared/src/services/vault/vault.service';
 import {
   getSmartAccountProvider,
   type SmartAccountProvider,
-} from '../../../../../packages/shared/src/services/vault/smart-account-provider';
-import { CELO_TOKEN_ADDRESSES } from '../../../../../packages/shared/src/config/celo-tokens';
+} from '@diversifi/shared/src/services/vault/smart-account-provider';
+import { CELO_TOKEN_ADDRESSES } from '@diversifi/shared/src/config/celo-tokens';
 import { NETWORKS } from '../../../config';
 
 // Register providers (ensures they're available)
-import '../../../../../packages/shared/src/services/vault/providers';
+import '@diversifi/shared/src/services/vault/providers';
 
 const NETWORK_RPCS: Record<number, string> = {
   [NETWORKS.CELO_MAINNET.chainId]: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',

@@ -22,11 +22,11 @@ import {
     type AutonomyLevel,
     type SignedSessionPermission,
     type SessionPermission,
-} from '../../../packages/shared/src/services/erc7715-service';
+} from '@diversifi/shared/src/services/erc7715-service';
 import {
     deriveGuardianTierState,
     type GuardianTierState,
-} from '../../../packages/shared/src/services/vault/guardian-tier-state';
+} from '@diversifi/shared/src/services/vault/guardian-tier-state';
 // Deep leaf import — NOT the barrel — keeps the timeout helper available
 // without dragging the AI/swap/ethers stack into first-load.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';

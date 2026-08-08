@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
 import { circleExecutor } from './_executor';
-import { VaultService, type RebalanceRecommendation } from '../../../../../packages/shared/src/services/vault/vault.service';
-import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '../../../../../packages/shared/src/config/celo-tokens';
+import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
+import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '@diversifi/shared/src/config/celo-tokens';
 import {
   getGuardianState,
 } from './_guardian-state';

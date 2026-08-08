@@ -1,6 +1,9 @@
 /**
- * Centralized configuration for DiversiFi
- * Single source of truth for all constants, network settings, and asset metadata.
+ * App-facing network/token metadata for UI + client hooks (`@/config`).
+ *
+ * Service-layer chain registries and swap routing live in
+ * `@diversifi/shared/src/config` — prefer that package for agent/API logic.
+ * Keep these tables in sync when adding a chain both surfaces need.
  */
 
 // Network Configuration

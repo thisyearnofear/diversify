@@ -17,14 +17,14 @@
  */
 
 import { ethers } from 'ethers';
-import { getBlueChipStableGmMarkets } from '../packages/shared/src/services/gmx-gm.service';
-import { getGmxAddresses } from '../packages/shared/src/services/swap/gmx/gmx-config';
-import { buildGmDepositMulticall } from '../packages/shared/src/services/swap/gmx/gmx-deposit-builder';
+import { getBlueChipStableGmMarkets } from '@diversifi/shared/src/services/gmx-gm.service';
+import { getGmxAddresses } from '@diversifi/shared/src/services/swap/gmx/gmx-config';
+import { buildGmDepositMulticall } from '@diversifi/shared/src/services/swap/gmx/gmx-deposit-builder';
 import {
   estimateExecutionFeeWei,
   getGmTokenPriceUsd30,
   computeMinMarketTokens,
-} from '../packages/shared/src/services/swap/gmx/gmx-deposit-quote';
+} from '@diversifi/shared/src/services/swap/gmx/gmx-deposit-quote';
 
 const ARBITRUM = 42161;
 const NATIVE_USDC = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';

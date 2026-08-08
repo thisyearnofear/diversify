@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from './_store';
 import { circleExecutor } from './_executor';
-import { VaultService } from '../../../../../packages/shared/src/services/vault/vault.service';
+import { VaultService } from '@diversifi/shared/src/services/vault/vault.service';
 
 /**
  * POST /api/vault/deposit — Record a deposit to a vault.

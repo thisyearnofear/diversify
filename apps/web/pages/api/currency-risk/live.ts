@@ -12,7 +12,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getLiveDepreciation } from '../../../../../packages/shared/src/services/fx-rate.service';
+import { getLiveDepreciation } from '@diversifi/shared/src/services/fx-rate.service';
 
 // Simple per-process cache: currency → { data, expiry }
 const cache = new Map<string, { data: any; expiry: number }>();

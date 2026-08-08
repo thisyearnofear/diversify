@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ArcAgent } from '@diversifi/shared';
-import { erc7715Service } from '../../../../../packages/shared/src/services/erc7715-service';
-import type { SignedSessionPermission } from '../../../../../packages/shared/src/services/erc7715-service';
+import { erc7715Service } from '@diversifi/shared/src/services/erc7715-service';
+import type { SignedSessionPermission } from '@diversifi/shared/src/services/erc7715-service';
 import { getPreferredNetworkForGoal } from '../../../config';
 
 // Chain ID the server accepts permissions for
