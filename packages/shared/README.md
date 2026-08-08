@@ -11,6 +11,7 @@ Domain services and types shared by the Next.js app and scripts. Prefer extendin
 | Guardian helpers | `src/services/guardian/` |
 | FX netting | `src/services/fx-netting/` |
 | FX drag math | `src/services/fx-drag/` |
+| Wallet / streak modules | `src/modules/wallet/`, `src/modules/rewards/streak/` |
 | Memory (Cognee / Tablestore) | `src/services/cognee-memory-service.ts`, `tablestore-memory-service.ts` |
 | Shared types | `src/types/` |
 

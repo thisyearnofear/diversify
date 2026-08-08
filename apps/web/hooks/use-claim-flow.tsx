@@ -22,7 +22,7 @@ import dynamic from 'next/dynamic';
 import { useStreakRewards } from './use-streak-rewards';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { NETWORKS } from '@/config';
-import { STREAK_CONFIG } from '../modules/rewards/streak/types';
+import { STREAK_CONFIG } from '@diversifi/shared/src/modules/rewards/streak/types';
 import { haptic } from '@/lib/haptics';
 
 // Lazy-load the celebration so consumers that don't reach success never

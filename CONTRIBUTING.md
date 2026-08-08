@@ -46,6 +46,7 @@ Everything else (AI providers, feeds, ledgers, x402) is optional per feature —
 |---|---|
 | UI / tabs / onboarding | `apps/web/components/`, `apps/web/hooks/`, `apps/web/pages/` |
 | Guardian loop, advisor, AI | `apps/web/pages/api/agent/`, `packages/shared/src/services/ai/` |
+| Wallet providers / streak rewards | `packages/shared/src/modules/wallet/`, `packages/shared/src/modules/rewards/` |
 | Ledger / chain routing | `packages/shared` recommendation-ledger services, `contracts/` |
 | FX netting / drag | `packages/shared/src/services/fx-netting/`, `scripts/fx-drag-report.ts` |
 | Deploy / register / ops scripts | `scripts/` (index in [`scripts/README.md`](./scripts/README.md)), `ops/` |

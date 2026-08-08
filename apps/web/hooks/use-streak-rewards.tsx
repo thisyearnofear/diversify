@@ -28,24 +28,24 @@ import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 // gracefully (the provider already has localStorage fallback).
 const STREAK_FETCH_TIMEOUT_MS = 6000;
 
-import type { StreakActions, StreakData, StreakState } from '../modules/rewards/streak/types';
-import { STREAK_CONFIG } from '../modules/rewards/streak/types';
+import type { StreakActions, StreakData, StreakState } from '@diversifi/shared/src/modules/rewards/streak/types';
+import { STREAK_CONFIG } from '@diversifi/shared/src/modules/rewards/streak/types';
 import {
   calculateStreakState,
   clearLocalStreak,
   getLocalStreak,
   safeParseJson,
   saveLocalStreak,
-} from '../modules/rewards/streak/utils';
-import { diffAchievements } from '../modules/rewards/streak/achievements';
-import { fetchStreakFromApi } from '../modules/rewards/streak/internal/api';
-import { fetchOnChainStatus } from '../modules/rewards/streak/internal/onchain';
+} from '@diversifi/shared/src/modules/rewards/streak/utils';
+import { diffAchievements } from '@diversifi/shared/src/modules/rewards/streak/achievements';
+import { fetchStreakFromApi } from '@diversifi/shared/src/modules/rewards/streak/internal/api';
+import { fetchOnChainStatus } from '@diversifi/shared/src/modules/rewards/streak/internal/onchain';
 import {
   computeEligibleForGraduation,
   patchActivity,
   type RecordActivityParams,
-} from '../modules/rewards/streak/internal/activity';
-import { computeNextLocalStreak } from '../modules/rewards/streak/internal/local-fallback';
+} from '@diversifi/shared/src/modules/rewards/streak/internal/activity';
+import { computeNextLocalStreak } from '@diversifi/shared/src/modules/rewards/streak/internal/local-fallback';
 
 const INITIAL_STATE: StreakState = {
   streak: null,
@@ -357,5 +357,5 @@ export function useStreakRewards(): StreakState & StreakActions {
 }
 
 // Re-exports for backwards compatibility
-export { STREAK_CONFIG } from '../modules/rewards/streak/types';
-export type { StreakData } from '../modules/rewards/streak/types';
+export { STREAK_CONFIG } from '@diversifi/shared/src/modules/rewards/streak/types';
+export type { StreakData } from '@diversifi/shared/src/modules/rewards/streak/types';
