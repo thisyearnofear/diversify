@@ -12,7 +12,7 @@ import {
   type DragInput,
 } from './fx-drag/calc';
 import { buildRateProvider } from './fx-drag/rates';
-import { CURRENCY_BY_CODE } from '../constants/currency-risk';
+import { CURRENCY_BY_CODE } from '../apps/web/constants/currency-risk';
 import {
   renderFxDragReportMarkdown,
   type CurrencyRiskContext,
