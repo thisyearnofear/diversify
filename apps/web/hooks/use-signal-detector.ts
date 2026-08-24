@@ -10,12 +10,13 @@
  * - Wallet: connected? chains? balances?
  * - History: has cycles? previous visits? behavior patterns?
  * - Device: mobile? browser? referrer?
+ * - Onboarding: philosophy, user goal, money purpose, risk tolerance
  *
  * The config is returned as a stable reference (useMemo) so consumers
  * don't trigger unnecessary re-renders when signals are unchanged.
  *
  * Phase 1 (shipped): geo + wallet-based personas with content routing
- * Phase 2 (next): cycle history + behavioral patterns
+ * Phase 2 (shipped): onboarding persona detection from profile choices
  */
 
 import { useMemo, useState, useEffect } from "react";
@@ -63,6 +64,12 @@ export interface DetectedSignals {
   device: {
     isMobile: boolean;
     method: DetectionMethod;
+  };
+  onboarding: {
+    philosophy: string | null;
+    userGoal: string | null;
+    moneyPurpose: string | null;
+    riskTolerance: string | null;
   };
 }
 
@@ -178,61 +185,134 @@ function detectDevice(): { isMobile: boolean; method: DetectionMethod } {
 /**
  * Resolve persona from signals.
  *
- * Phase 1: geo + wallet-based detection with diaspora awareness.
- * Diaspora detection: US/EU visitor with currency risk data from
- * a high-inflation country (the risk module detects their home
- * country, not their current location).
+ * Phase 2 (onboarding): refines geo-based persona with onboarding choices.
+ * If the user has completed onboarding, their philosophy + goal + money
+ * purpose can override or refine the geo-derived persona.
+ *
+ * Resolution order:
+ *  1. Geo + wallet + history (Phase 1 rules)
+ *  2. Onboarding signals refine (Phase 2)
+ *  3. Fallback to geo-based default
  */
 function resolvePersona(
   signals: DetectedSignals,
 ): AdaptivePersona {
-  const { geo, wallet, history } = signals;
+  const { geo, wallet, history, onboarding } = signals;
   const country = geo.countryCode;
   const currency = geo.currency;
 
+  // ── Phase 1: geo + wallet + history ──────────────────────────
+  let persona: AdaptivePersona;
+
   // GH visitors
   if (country === "GH") {
-    if (history.hasCycles) return "ghanaian_importer";
-    if (wallet.connected) return "ghanaian_saver";
-    return "ghanaian_importer"; // default to importer for GH visitors
+    if (history.hasCycles) persona = "ghanaian_importer";
+    else if (wallet.connected) persona = "ghanaian_saver";
+    else persona = "ghanaian_importer";
   }
-
   // Diaspora: high-inflation currency exposure regardless of current geo
-  // This catches US/EU visitors whose money is at risk in their home country
-  const highInflationCurrencies = ["GHS", "KES", "NGN", "PHP", "INR", "BRL", "ZAR", "EGP", "TRY"];
-  if (
-    highInflationCurrencies.includes(currency) &&
+  else if (
+    ["GHS", "KES", "NGN", "PHP", "INR", "BRL", "ZAR", "EGP", "TRY"].includes(currency) &&
     (country === "US" || country === "GB" || country === "DE" || country === "FR")
   ) {
-    return "diaspora";
+    persona = "diaspora";
+  }
+  else if (country === "US") {
+    persona = "us_saver";
+  }
+  else if (country === "PH") {
+    persona = history.hasCycles ? "philippine_bpo" : "apac_user";
+  }
+  else if (["KE", "NG", "TZ", "UG", "ET"].includes(country ?? "")) {
+    persona = "generic_user";
+  }
+  else if (["AR", "BR", "CO", "CL", "PE"].includes(country ?? "")) {
+    persona = "latam_user";
+  }
+  else if (["GB", "DE", "FR", "IT", "ES", "NL", "SE"].includes(country ?? "")) {
+    persona = "european_user";
+  }
+  else if (["IN", "ID", "TH", "VN", "MY", "SG"].includes(country ?? "")) {
+    persona = "apac_user";
+  }
+  else {
+    persona = "generic_user";
   }
 
-  if (country === "US") {
-    return "us_saver";
+  // ── Phase 2: onboarding refinement ───────────────────────────
+  // If the user has completed onboarding, their choices can promote
+  // a more specific persona (e.g. a US user who picks upcoming_payment
+  // money purpose is likely an importer/diaspora).
+  if (onboarding.moneyPurpose === "upcoming_payment") {
+    // Importer pattern: money purpose = upcoming payment
+    if (
+      ["GHS", "NGN", "KES", "PHP", "INR", "ZAR", "BRL", "EGP", "TRY", "ARS", "PKR", "LKR", "VND", "IDR", "THB", "MXN", "COP", "TZS", "UGX", "HTG", "JMD", "TTD", "BBD", "XCD"].includes(currency)
+    ) {
+      // High-inflation currency + payment purpose = importer
+      persona = country === "GH" ? "ghanaian_importer"
+        : country === "PH" ? "philippine_bpo"
+        : "generic_user"; // keep geo-based but show business surfaces
+    }
+  }
+  else if (onboarding.philosophy === "islamic" && onboarding.userGoal === "inflation_protection") {
+    // Islamic Finance + inflation protection = conservative saver
+    // Can refine us_saver/european_user into a more specific persona
+    if (persona === "us_saver" || persona === "european_user") {
+      persona = persona; // keep geo, but content routing below will adjust
+    }
+  }
+  else if (onboarding.userGoal === "geographic_diversification" && persona === "generic_user") {
+    // Someone who didn't match a geo pattern but chose diversification
+    // → treat them as the geo-based generic_user but with active intent
+    persona = persona; // no change, but content routing will use the goal
   }
 
-  if (country === "PH") {
-    if (history.hasCycles) return "philippine_bpo";
-    return "apac_user";
+  return persona;
+}
+
+/**
+ * Determine content routing overrides based on onboarding signals.
+ * Returns a partial ContentRouting — only the fields that should be
+ * overridden based on profile choices (not geo/wallet).
+ *
+ * Onboarding signals refine, never replace, geo-based defaults.
+ */
+function buildOnboardingOverrides(
+  onboarding: DetectedSignals["onboarding"],
+): Partial<ContentRouting> | null {
+  if (!onboarding.moneyPurpose && !onboarding.userGoal && !onboarding.philosophy) {
+    return null; // no onboarding data — rely on geo defaults
   }
 
-  if (["KE", "NG", "TZ", "UG", "ET"].includes(country ?? "")) {
-    return "generic_user";
+  const overrides: Partial<ContentRouting> = {};
+
+  // Money purpose drives business surfaces and guardian mode
+  if (onboarding.moneyPurpose === "upcoming_payment") {
+    overrides.showBusiness = true;
+    overrides.contextualBanner = "fx-drag-warning" as ContextualBannerKind;
   }
 
-  if (["AR", "BR", "CO", "CL", "PE"].includes(country ?? "")) {
-    return "latam_user";
+  // Philosophy-driven overrides
+  if (onboarding.philosophy === "islamic") {
+    // Islamic Finance — emphasize Sharia-compliant yield options
+    // (handled downstream in individual components)
   }
 
-  if (["GB", "DE", "FR", "IT", "ES", "NL", "SE"].includes(country ?? "")) {
-    return "european_user";
+  // User goal drives tab order and hero
+  if (onboarding.userGoal === "inflation_protection") {
+    // Protection-first ordering
+    if (!overrides.shieldSections) {
+      overrides.shieldSections = ["scorecard", "yield", "strategy"];
+    }
+  }
+  else if (onboarding.userGoal === "geographic_diversification") {
+    // Diversification-first
+    if (!overrides.shieldSections) {
+      overrides.shieldSections = ["scorecard", "strategy", "yield"];
+    }
   }
 
-  if (["IN", "ID", "TH", "VN", "MY", "SG"].includes(country ?? "")) {
-    return "apac_user";
-  }
-
-  return "generic_user";
+  return Object.keys(overrides).length > 0 ? overrides : null;
 }
 
 // ─── Content routing builders ──────────────────────────────────
@@ -405,6 +485,13 @@ function buildConfig(
   // Build persona-aware content routing
   const content = buildContentRouting(persona, walletConnected);
 
+  // Merge onboarding overrides into content routing
+  const onboardingOverrides = buildOnboardingOverrides(signals.onboarding);
+  if (onboardingOverrides) {
+    // Onboarding refines geo defaults — merge selectively
+    Object.assign(content, onboardingOverrides);
+  }
+
   switch (persona) {
     case "ghanaian_importer":
       return {
@@ -480,6 +567,7 @@ export function useSignalDetector() {
   const { address, walletChainId } = useAppShellContext();
   const { countryCode, countryName, region, detectionMethod } = useUserRegion();
   const { riskData } = useCurrencyRisk();
+  const { config: profileConfig } = useProtectionProfile();
 
   // Wallet state
   const [hasHoldings, setHasHoldings] = useState(false);
@@ -535,10 +623,12 @@ export function useSignalDetector() {
       protectionScore,
     },
     device,
+    onboarding: profileConfig,
   }), [
     address, walletChainId, countryCode, countryName, region,
     riskData?.code, riskData?.flag,
     hasHoldings, totalValueUsd, device,
+    profileConfig,
   ]);
 
   // Resolve persona and config
