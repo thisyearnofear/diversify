@@ -392,17 +392,28 @@ export function ConnectedOverview({
               </p>
             )}
 
-            {/* Single primary CTA. Secondary CTAs are demoted to text links
-                so they don't compete with the hero action. */}
-            <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center">
-              <button
-                onClick={() =>
-                  setActiveTab(hasHoldings ? "exchange" : "protect")
-                }
-                className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
-              >
-                {hasHoldings ? "Review Your Shield" : "Set Up Your Plan"}
-              </button>
+            {/* Single primary CTA — adaptive based on persona.
+                Uses config.content.hero.ctaLabel (text) and ctaTab (target).
+                Falls back to the legacy "Review Your Shield" / "Set Up Your Plan"
+                when no hero CTA is defined. */}
+            <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center items-center">
+              {(() => {
+                const ctaLabel = home.isBeginner
+                  ? (hasHoldings ? "Review Your Shield" : "Set Up Your Plan")
+                  : adaptiveConfig.content.hero.ctaLabel;
+                const ctaTab = home.isBeginner
+                  ? (hasHoldings ? "exchange" : "protect")
+                  : (adaptiveConfig.content.hero.ctaTab as TabId | null);
+                if (!ctaLabel) return null;
+                return (
+                  <button
+                    onClick={() => setActiveTab(ctaTab ?? (hasHoldings ? "exchange" : "protect"))}
+                    className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
+                  >
+                    {ctaLabel}
+                  </button>
+                );
+              })()}
               {hasHoldings && (
                 <button
                   onClick={() => setActiveTab("protect")}
@@ -495,8 +506,11 @@ export function ConnectedOverview({
           no signal OR user is SME-graduated OR dismissed. The explore
           CTA scrolls to the FX Corridor section in the Insight Accordion
           (the business section). The dismiss CTA is persistent — the
-          user's GuardianState is updated cross-device. */}
-      {showGraduationPrompt && graduationData && (
+          user's GuardianState is updated cross-device.
+          Gated: only shown when the business surface is enabled for this
+          persona (adaptiveConfig.content.showBusiness). */}
+      {adaptiveConfig.content.showBusiness &&
+        showGraduationPrompt && graduationData && (
         <BusinessPromptCard
           confidence={graduationData.confidence}
           signals={graduationData.signals}
@@ -721,7 +735,7 @@ export function ConnectedOverview({
                 onNavigateToFund={() => setActiveTab("exchange")}
               />
             )}
-            {section.id === "business" && (
+            {section.id === "business" && adaptiveConfig.content.showBusiness && (
               /*
                 FX Corridor — the SME-graduated surface. Mounts the 4
                 staged enterprise-fx components:

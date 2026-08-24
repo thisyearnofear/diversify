@@ -152,6 +152,16 @@ export default function ProtectionTab({
     return sectionIndex;
   }, [adaptiveConfig.content.shieldSections]);
 
+  // Sort-key helper — maps a section identifier to its position in the
+  // persona-priority order. Sections not listed in shieldSections fall
+  // back to their document order via `fallbackIndex`.
+  const getSectionSortKey = useCallback(
+    (sectionId: string, fallbackIndex: number) => {
+      return shieldSectionOrder.get(sectionId) ?? fallbackIndex;
+    },
+    [shieldSectionOrder],
+  );
+
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const selectedStrategyData = selectedStrategy ? getStrategyById(selectedStrategy) : null;
   const { showToast } = useToast();
@@ -428,243 +438,270 @@ export default function ProtectionTab({
           G$ SAVINGS LOOP — Claim G$ → Build streak → Protect → Repeat.
           This is the explicit loop GoodBuilders S4 reviewers asked for.
           ===================================================================== */}
-      {/* G$ savings loop — after first deposit, standard+ only */}
-      {!isBeginner && displayTotalValue > 0 && (
-        <Suspense fallback={<LazySectionSkeleton />}>
-          <SavingsLoopCard />
-        </Suspense>
-      )}
-
-      {!hasChosenPlan && (
-        <div className="rounded-2xl bg-white/[0.02] backdrop-blur-sm py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
-          <ProtectionPlanGallery mobile />
-        </div>
-      )}
-
-      {<ProtectionPlanCard
-        experienceMode={experienceMode}
-        address={address}
-        portfolio={activePortfolio as MultichainPortfolio}
-        userRegion={userRegion}
-        isComplete={isComplete}
-        currentGoalLabel={currentGoalLabel}
-      />}
-
-      {address && !isGuardianStatusLoading && !showMobileWizard && (
-        <>
-          <GuardianStatusChip
-            onSetup={() => setShowMobileWizard(true)}
-            onDeposit={() => setActiveTab?.("exchange")}
-            onViewActivity={() => setActiveTab?.("agent")}
-          />
-          {isBeginner && guardianState !== 'monitoring' && (
-            <GuardianStateScrollytelling
-              variant="compact"
-              currentState={guardianState}
-            />
-          )}
-        </>
-      )}
-
-      {config.moneyPurpose === 'upcoming_payment' && (
-        <PaymentCycleReport
-          defaultLocalCurrency={riskData?.code}
-          onAskGuardian={(prompt) => askAdvisor(prompt)}
-        />
-      )}
-
-      {displayTotalValue > 0 && !dismissedInlineRec && (riskData || topOpportunity) && (
-        <ShieldGuardianRecommendation
-          portfolio={activePortfolio as MultichainPortfolio}
-          riskData={riskData}
-          primaryDepreciationPct={primaryDepreciation}
-          topOpportunity={topOpportunity}
-          onReview={() => {
-            if (topOpportunity?.toToken) {
-              openProtectionFlow(
-                topOpportunity.toToken,
-                topOpportunity.fromToken,
-                topOpportunity.suggestedAmount?.toFixed(2),
-              );
-            } else {
-              setActiveTab?.("exchange");
+      {/* Ordered shield sections — persona-aware render order.
+          Each section has an `id` that maps to shieldSectionOrder.
+          Sections render in persona-priority order, not document order. */}
+      {(() => {
+        // Build ordered sections array
+        const sections = [
+          { id: 'savings-loop', order: getSectionSortKey('savings-loop', 0), render: !isBeginner && displayTotalValue > 0 && adaptiveConfig.content.showYield },
+          { id: 'plan-gallery', order: getSectionSortKey('plan-gallery', 1), render: !hasChosenPlan },
+          { id: 'plan-card', order: getSectionSortKey('plan-card', 2), render: true },
+          { id: 'guardian-chip', order: getSectionSortKey('guardian-chip', 3), render: Boolean(address) && !isGuardianStatusLoading && !showMobileWizard },
+          { id: 'payment-cycle', order: getSectionSortKey('payment-cycle', 4), render: config.moneyPurpose === 'upcoming_payment' },
+          { id: 'shield-rec', order: getSectionSortKey('shield-rec', 5), render: displayTotalValue > 0 && !dismissedInlineRec && (riskData || topOpportunity) },
+          { id: 'primary-insight', order: getSectionSortKey('primary-insight', 6), render: displayTotalValue === 0 && address },
+          { id: 'optimization-insight', order: getSectionSortKey('optimization-insight', 7), render: Boolean(liveAnalysis) && Boolean(topOpportunity) && displayTotalValue > 0 },
+          { id: 'ai-analysis', order: getSectionSortKey('ai-analysis', 8), render: true },
+          { id: 'rwa-assets', order: getSectionSortKey('rwa-assets', 9), render: !isBeginner },
+          { id: 'robinhood-rwa', order: getSectionSortKey('robinhood-rwa', 10), render: !isBeginner },
+          { id: 'best-yield', order: getSectionSortKey('best-yield', 11), render: !isBeginner && adaptiveConfig.content.showYield },
+          { id: 'caribbean-fx', order: getSectionSortKey('caribbean-fx', 12), render: financialStrategy === 'pan_caribbean' && !isBeginner && adaptiveConfig.content.showYield },
+          { id: 'yield-discovery', order: getSectionSortKey('yield-discovery', 13), render: !isBeginner && adaptiveConfig.content.showYield },
+        ];
+        return sections
+          .filter(s => s.render)
+          .sort((a, b) => a.order - b.order)
+          .map(s => s.id)
+          .map(sectionId => {
+            switch (sectionId) {
+              case 'savings-loop':
+                return (
+                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
+                    <SavingsLoopCard />
+                  </Suspense>
+                );
+              case 'plan-gallery':
+                return (
+                  <div key={sectionId} className="rounded-2xl bg-white/[0.02] backdrop-blur-sm py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+                    <ProtectionPlanGallery mobile />
+                  </div>
+                );
+              case 'plan-card':
+                return (
+                  <ProtectionPlanCard
+                    key={sectionId}
+                    experienceMode={experienceMode}
+                    address={address}
+                    portfolio={activePortfolio as MultichainPortfolio}
+                    userRegion={userRegion}
+                    isComplete={isComplete}
+                    currentGoalLabel={currentGoalLabel}
+                  />
+                );
+              case 'guardian-chip':
+                return (
+                  <React.Fragment key={sectionId}>
+                    <GuardianStatusChip
+                      onSetup={() => setShowMobileWizard(true)}
+                      onDeposit={() => setActiveTab?.("exchange")}
+                      onViewActivity={() => setActiveTab?.("agent")}
+                    />
+                    {isBeginner && guardianState !== 'monitoring' && (
+                      <GuardianStateScrollytelling
+                        variant="compact"
+                        currentState={guardianState}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              case 'payment-cycle':
+                return (
+                  <PaymentCycleReport
+                    key={sectionId}
+                    defaultLocalCurrency={riskData?.code}
+                    onAskGuardian={(prompt) => askAdvisor(prompt)}
+                  />
+                );
+              case 'shield-rec':
+                return (
+                  <ShieldGuardianRecommendation
+                    key={sectionId}
+                    portfolio={activePortfolio as MultichainPortfolio}
+                    riskData={riskData}
+                    primaryDepreciationPct={primaryDepreciation}
+                    topOpportunity={topOpportunity}
+                    onReview={() => {
+                      if (topOpportunity?.toToken) {
+                        openProtectionFlow(
+                          topOpportunity.toToken,
+                          topOpportunity.fromToken,
+                          topOpportunity.suggestedAmount?.toFixed(2),
+                        );
+                      } else {
+                        setActiveTab?.("exchange");
+                      }
+                    }}
+                    onAskWhy={() =>
+                      askAdvisor(
+                        `Why is ${riskData?.code ?? 'my currency'} exposure reducing my purchasing power, and what protection move would fit my plan?`,
+                      )
+                    }
+                    onDismiss={() => setDismissedInlineRec(true)}
+                  />
+                );
+              case 'primary-insight':
+                return (
+                  <Card
+                    key={sectionId}
+                    className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800"
+                    aiPrompt={() => `I want to start protecting my savings but have no funds yet. What should I do? Which onramp is best for ${userRegion}?`}
+                    aiQuickQuestions={[
+                      "How do I add funds?",
+                      "What's the minimum to start?",
+                      "Which payment methods are available?",
+                      "Is it safe to deposit?"
+                    ]}
+                  >
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">🚀</span>
+                        <div>
+                          <h3 className="font-bold text-purple-900 dark:text-purple-100">
+                            Ready to Protect Your Savings?
+                          </h3>
+                          <p className="text-sm text-purple-700 dark:text-purple-300">
+                            Add funds to activate your protection plan
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <DepositHub compact={true} />
+                  </Card>
+                );
+              case 'optimization-insight':
+                return (
+                  <OptimizationInsight
+                    key={sectionId}
+                    icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
+                    title={
+                      config.userGoal === 'geographic_diversification'
+                        ? `Expand ${topOpportunity.toRegion} Presence`
+                        : config.userGoal === 'rwa_access'
+                        ? `Add ${topOpportunity.toToken} to Your Plan`
+                        : config.userGoal === 'inflation_protection'
+                        ? `Reduce ${topOpportunity.fromRegion} Inflation Exposure`
+                        : `Improve Your Protection Plan`
+                    }
+                    description={
+                      config.userGoal === 'geographic_diversification'
+                        ? `Adding ${topOpportunity.toToken} gives you exposure to ${topOpportunity.toRegion} economy. Your current ${topOpportunity.fromToken} is mainly ${topOpportunity.fromRegion}-focused.`
+                        : config.userGoal === 'rwa_access'
+                        ? `${topOpportunity.toToken} provides ${topOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${topOpportunity.fromToken} can't match.`
+                        : `Your ${topOpportunity.fromToken} holdings face ${Math.round(topOpportunity.fromInflation)}% inflation. Swapping to ${topOpportunity.toToken} preserves purchasing power.`
+                    }
+                    fromToken={topOpportunity.fromToken}
+                    toToken={topOpportunity.toToken}
+                    fromInflation={topOpportunity.fromInflation}
+                    toInflation={topOpportunity.toInflation}
+                    impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
+                    variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
+                    action={{
+                      label: `Review ${topOpportunity.fromToken} → ${topOpportunity.toToken} in Protect`,
+                      onClick: () =>
+                        openProtectionFlow(
+                          topOpportunity.toToken,
+                          topOpportunity.fromToken,
+                          topOpportunity.suggestedAmount.toFixed(2),
+                        ),
+                    }}
+                    secondaryOptions={
+                      liveAnalysis.rebalancingOpportunities
+                        .filter((opp) => {
+                          if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
+                          if (config.userGoal === 'geographic_diversification') {
+                            return opp.toRegion !== 'Global' && opp.fromRegion !== opp.toRegion;
+                          }
+                          if (config.userGoal === 'rwa_access') {
+                            return ['PAXG', 'USDY', 'SYRUPUSDC'].includes(opp.toToken);
+                          }
+                          return true;
+                        })
+                        .slice(0, 3)
+                        .map(opp => ({
+                          fromToken: opp.fromToken,
+                          toToken: opp.toToken,
+                          annualSavings: opp.annualSavings,
+                          onClick: () => openProtectionFlow(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))
+                        }))
+                    }
+                  />
+                );
+              case 'ai-analysis':
+                return (
+                  <InsightCard
+                    key={sectionId}
+                    icon="🤖"
+                    title="Protection Plan Review"
+                    description="Ask Guardian to review your holdings, currency exposure, and protection plan."
+                    variant="default"
+                    action={{
+                      label: "Ask Guardian about my plan",
+                      onClick: () => {
+                        const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
+                        askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
+                      },
+                    }}
+                  />
+                );
+              case 'rwa-assets':
+                return (
+                  <RwaAssetCards
+                    key={sectionId}
+                    chains={chains}
+                    userGoal={config.userGoal}
+                    chainId={chainId}
+                    onSwap={openProtectionFlow}
+                    onShowModal={setShowAssetModal}
+                    experienceMode={experienceMode}
+                  />
+                );
+              case 'robinhood-rwa':
+                return (
+                  <RobinhoodRwaCard
+                    key={sectionId}
+                    onLearnMore={() => {
+                      askAdvisor(
+                        "How can I use Robinhood Chain tokenized stocks and USDG to protect my savings against local currency depreciation?"
+                      );
+                    }}
+                  />
+                );
+              case 'best-yield':
+                return (
+                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
+                    <BestYieldCard userAddress={address} className="mb-4" />
+                  </Suspense>
+                );
+              case 'caribbean-fx':
+                return (
+                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
+                    <CaribbeanFxNetCard userAddress={address} />
+                  </Suspense>
+                );
+              case 'yield-discovery':
+                return (
+                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
+                    <YieldDiscoverySection
+                      chainId={chainId ?? undefined}
+                      title="Protection Yield Opportunities"
+                      description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
+                      actionLabel="Review in Protect"
+                      onSelectVault={(vault) => {
+                        openProtectionFlow(
+                          `lifi-earn:${vault.id}`,
+                          vault.asset.symbol,
+                          ""
+                        );
+                      }}
+                    />
+                  </Suspense>
+                );
+              default:
+                return null;
             }
-          }}
-          onAskWhy={() =>
-            askAdvisor(
-              `Why is ${riskData?.code ?? 'my currency'} exposure reducing my purchasing power, and what protection move would fit my plan?`,
-            )
-          }
-          onDismiss={() => setDismissedInlineRec(true)}
-        />
-      )}
-
-      {/* =================================================================
-          PRIMARY INSIGHT CARD - Dynamic based on selected goal
-          ================================================================= */}
-      {displayTotalValue === 0 && address && (
-        <Card
-          className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 border-2 border-purple-200 dark:border-purple-800"
-          aiPrompt={() => `I want to start protecting my savings but have no funds yet. What should I do? Which onramp is best for ${userRegion}?`}
-          aiQuickQuestions={[
-            "How do I add funds?",
-            "What's the minimum to start?",
-            "Which payment methods are available?",
-            "Is it safe to deposit?"
-          ]}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🚀</span>
-              <div>
-                <h3 className="font-bold text-purple-900 dark:text-purple-100">
-                  Ready to Protect Your Savings?
-                </h3>
-                <p className="text-sm text-purple-700 dark:text-purple-300">
-                  Add funds to activate your protection plan
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <DepositHub compact={true} />
-        </Card>
-      )}
-      
-      {liveAnalysis && topOpportunity && displayTotalValue > 0 && (
-        <OptimizationInsight
-          icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
-          title={
-            config.userGoal === 'geographic_diversification'
-              ? `Expand ${topOpportunity.toRegion} Presence`
-              : config.userGoal === 'rwa_access'
-              ? `Add ${topOpportunity.toToken} to Your Plan`
-              : config.userGoal === 'inflation_protection'
-              ? `Reduce ${topOpportunity.fromRegion} Inflation Exposure`
-              : `Improve Your Protection Plan`
-          }
-          description={
-            config.userGoal === 'geographic_diversification'
-              ? `Adding ${topOpportunity.toToken} gives you exposure to ${topOpportunity.toRegion} economy. Your current ${topOpportunity.fromToken} is mainly ${topOpportunity.fromRegion}-focused.`
-              : config.userGoal === 'rwa_access'
-              ? `${topOpportunity.toToken} provides ${topOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${topOpportunity.fromToken} can't match.`
-              : `Your ${topOpportunity.fromToken} holdings face ${Math.round(topOpportunity.fromInflation)}% inflation. Swapping to ${topOpportunity.toToken} preserves purchasing power.`
-          }
-          fromToken={topOpportunity.fromToken}
-          toToken={topOpportunity.toToken}
-          fromInflation={topOpportunity.fromInflation}
-          toInflation={topOpportunity.toInflation}
-          impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
-          variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
-          action={{
-            label: `Review ${topOpportunity.fromToken} → ${topOpportunity.toToken} in Protect`,
-            onClick: () =>
-              openProtectionFlow(
-                topOpportunity.toToken,
-                topOpportunity.fromToken,
-                topOpportunity.suggestedAmount.toFixed(2),
-              ),
-          }}
-          secondaryOptions={
-            liveAnalysis.rebalancingOpportunities
-              .filter((opp) => {
-                if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
-                // Filter by goal
-                if (config.userGoal === 'geographic_diversification') {
-                  return opp.toRegion !== 'Global' && opp.fromRegion !== opp.toRegion;
-                }
-                if (config.userGoal === 'rwa_access') {
-                  return ['PAXG', 'USDY', 'SYRUPUSDC'].includes(opp.toToken);
-                }
-                return true;
-              })
-              .slice(0, 3)
-              .map(opp => ({
-                fromToken: opp.fromToken,
-                toToken: opp.toToken,
-                annualSavings: opp.annualSavings,
-                onClick: () => openProtectionFlow(opp.toToken, opp.fromToken, opp.suggestedAmount.toFixed(2))
-              }))
-          }
-        />
-      )}
-
-      {/* =================================================================
-          AI ANALYSIS CTA
-          ================================================================= */}
-      <InsightCard
-        icon="🤖"
-        title="Protection Plan Review"
-        description="Ask Guardian to review your holdings, currency exposure, and protection plan."
-        variant="default"
-        action={{
-          label: "Ask Guardian about my plan",
-          onClick: () => {
-            const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
-            askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
-          },
-        }}
-      />
-
-      {/* RWA Assets - Non-beginner only */}
-      {!isBeginner && (
-        <RwaAssetCards
-          chains={chains}
-          userGoal={config.userGoal}
-          chainId={chainId}
-          onSwap={openProtectionFlow}
-          onShowModal={setShowAssetModal}
-          experienceMode={experienceMode}
-        />
-      )}
-
-      {/* Robinhood Chain RWA expansion — stock tokens + USDG on an Arbitrum L2 */}
-      {!isBeginner && (
-        <RobinhoodRwaCard
-          onLearnMore={() => {
-            askAdvisor(
-              "How can I use Robinhood Chain tokenized stocks and USDG to protect my savings against local currency depreciation?"
-            );
-          }}
-        />
-      )}
-
-      {/* Personalized best-yield (vaults.fyi + GMX) — the paid layer is
-          engagement-gated server-side (on-chain balance); free-tier users see
-          free yields + an unlock prompt. */}
-      {!isBeginner && (
-        <Suspense fallback={<LazySectionSkeleton />}>
-          <BestYieldCard userAddress={address} className="mb-4" />
-        </Suspense>
-      )}
-
-      {/* CARICOM FX matching — gated to Pan-Caribbean profiles. The track's
-          flagship: BBD ↔ JMD direct (no USD bridge), net-settled in cUSD on
-          Celo, anchored to the RecommendationLedger. */}
-      {financialStrategy === 'pan_caribbean' && !isBeginner && (
-        <Suspense fallback={<LazySectionSkeleton />}>
-          <CaribbeanFxNetCard userAddress={address} />
-        </Suspense>
-      )}
-
-      {/* LI.FI Earn Yield Discovery - Non-beginner only */}
-      {!isBeginner && (
-        <Suspense fallback={<LazySectionSkeleton />}>
-          <YieldDiscoverySection
-            chainId={chainId ?? undefined}
-            title="Protection Yield Opportunities"
-            description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
-            actionLabel="Review in Protect"
-            onSelectVault={(vault) => {
-              openProtectionFlow(
-                `lifi-earn:${vault.id}`,
-                vault.asset.symbol,
-                ""
-              );
-            }}
-          />
-        </Suspense>
-      )}
+          });
+      })()}
 
       {/* =====================================================================
           DASHBOARD CARDS (Replaced Collapsible Sections)
