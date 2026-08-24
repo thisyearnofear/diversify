@@ -14,7 +14,7 @@
  * The config is returned as a stable reference (useMemo) so consumers
  * don't trigger unnecessary re-renders when signals are unchanged.
  *
- * Phase 1 (now): geo + wallet connected state
+ * Phase 1 (shipped): geo + wallet-based personas with content routing
  * Phase 2 (next): cycle history + behavioral patterns
  */
 
@@ -22,7 +22,6 @@ import { useMemo, useState, useEffect } from "react";
 import { useAppShellContext } from "../context/app/AppShellContext";
 import { useUserRegion } from "./use-user-region";
 import { useCurrencyRisk } from "./use-currency-risk";
-import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useProtectionProfile } from "./use-protection-profile";
 
 // ─── Types ─────────────────────────────────────────────────────
@@ -67,27 +66,89 @@ export interface DetectedSignals {
   };
 }
 
+// ─── Persona types ─────────────────────────────────────────────
+
 /**
  * Which persona the signals map to. This drives adaptive routing.
  */
 export type AdaptivePersona =
   | "ghanaian_importer"     // GH, has cycles, working capital pattern
   | "ghanaian_saver"        // GH, connected wallet, savings pattern
-  | "diaspora"              // US/EU, has Ghana/currency risk data
-  | "us_saver"              // US, generic retail
+  | "diaspora"              // US/EU, has high-inflation currency exposure
+  | "us_saver"              // US, generic retail saver
   | "philippine_bpo"        // PH, has cycles, BPO/trader pattern
   | "apac_user"             // Asia, any persona
   | "latam_user"            // LatAm, any persona
   | "european_user"         // Europe, any persona
   | "generic_user"          // No pattern matched — default retail
 
+// ─── Content routing types ─────────────────────────────────────
+
+/** What the home tab hero looks like for this persona. */
+export type HeroType = "cycle" | "protection" | "risk-moment" | "family" | "generic";
+
+/** Home tab hero content — persona-aware headline and subtitle. */
+export interface HeroContent {
+  type: HeroType;
+  /** Main headline shown in the home hero banner */
+  headline: string;
+  /** Subtitle with supporting context */
+  subtitle: string;
+  /** Emoji icon for the hero */
+  icon: string;
+  /** Primary CTA text — null means no action */
+  ctaLabel: string | null;
+  /** Where the CTA navigates (tab id) */
+  ctaTab: string | null;
+}
+
+/**
+ * What the shield tab focuses on for this persona.
+ * Shield sections render in order; persona determines priority.
+ */
+export type ShieldSection =
+  | "cycle-protection"  // Active cycle dashboard, payment countdown
+  | "fx-drag"           // FX drag decomposition card
+  | "scorecard"         // Protection scorecard (philosophy-aware)
+  | "yield"             // Yield vault recommendations
+  | "strategy"          // Strategy alignment bar
+  | "family";           // Family savings context (diaspora)
+
+/** Contextual banner shown at the top of the home tab. */
+export type ContextualBannerKind =
+  | "fx-drag-warning"     // Importer: FX drag is eating margins
+  | "family-savings"      // Diaspora: family savings context
+  | "currency-risk"       // US/EU: currency risk awareness
+  | "cycle-alert"         // Importer: payment approaching
+  | null;
+
+/**
+ * Content routing configuration per persona.
+ * This is what makes surfaces adaptive — different personas see
+ * different content, layouts, and priorities in the same shell.
+ */
+export interface ContentRouting {
+  /** Hero content for the home tab */
+  hero: HeroContent;
+  /** Tab display order — first tab is the primary surface */
+  tabOrder: string[];
+  /** Shield tab focus areas — which sections render first, in priority order */
+  shieldSections: ShieldSection[];
+  /** Contextual banner for the home tab */
+  contextualBanner: ContextualBannerKind;
+  /** Whether to show business FX surfaces (FX netting, corridors) */
+  showBusiness: boolean;
+  /** Whether yield engine is prominent for this persona */
+  showYield: boolean;
+}
+
+/**
+ * Full adaptive config. Replaces the old flat showBusiness/showYield fields
+ * with structured content routing.
+ */
 export interface AdaptiveConfig {
   /** Which persona the system has detected */
   persona: AdaptivePersona;
-  /** Whether to show business FX surfaces */
-  showBusiness: boolean;
-  /** Whether to show yield engine (true for most, false for pure FX users) */
-  showYield: boolean;
   /** Guardian mode: savings vs cycle-aware */
   guardianMode: "savings" | "cycle" | "disabled";
   /** Tab label overrides by persona */
@@ -98,6 +159,8 @@ export interface AdaptiveConfig {
   displayCurrency: string;
   /** Currency flag emoji */
   currencyFlag: string;
+  /** Content routing — the adaptive part that makes surfaces different */
+  content: ContentRouting;
 }
 
 // ─── Persona resolution rules ──────────────────────────────────
@@ -112,23 +175,39 @@ function detectDevice(): { isMobile: boolean; method: DetectionMethod } {
   };
 }
 
+/**
+ * Resolve persona from signals.
+ *
+ * Phase 1: geo + wallet-based detection with diaspora awareness.
+ * Diaspora detection: US/EU visitor with currency risk data from
+ * a high-inflation country (the risk module detects their home
+ * country, not their current location).
+ */
 function resolvePersona(
   signals: DetectedSignals,
 ): AdaptivePersona {
   const { geo, wallet, history } = signals;
-  const country = signals.geo.countryCode;
-  const address = signals.wallet.connected ? signals.wallet.address ?? null : null;
-  const walletChainId = signals.wallet.chainId;
+  const country = geo.countryCode;
+  const currency = geo.currency;
 
-  // Phase 1: geo + wallet-based personas
+  // GH visitors
   if (country === "GH") {
     if (history.hasCycles) return "ghanaian_importer";
     if (wallet.connected) return "ghanaian_saver";
     return "ghanaian_importer"; // default to importer for GH visitors
   }
 
+  // Diaspora: high-inflation currency exposure regardless of current geo
+  // This catches US/EU visitors whose money is at risk in their home country
+  const highInflationCurrencies = ["GHS", "KES", "NGN", "PHP", "INR", "BRL", "ZAR", "EGP", "TRY"];
+  if (
+    highInflationCurrencies.includes(currency) &&
+    (country === "US" || country === "GB" || country === "DE" || country === "FR")
+  ) {
+    return "diaspora";
+  }
+
   if (country === "US") {
-    // US visitor — could be diaspora or generic saver
     return "us_saver";
   }
 
@@ -153,13 +232,156 @@ function resolvePersona(
     return "apac_user";
   }
 
-  if (country === "US") {
-    // US visitor with diaspora signals could be detected here
-    // Phase 2: check wallet history for international patterns
-    return "us_saver";
-  }
-
   return "generic_user";
+}
+
+// ─── Content routing builders ──────────────────────────────────
+
+function buildHeroContent(persona: AdaptivePersona, walletConnected: boolean): HeroContent {
+  switch (persona) {
+    case "ghanaian_importer":
+      return {
+        type: "cycle",
+        headline: "Your next cycle",
+        subtitle: walletConnected
+          ? "FX drag is eating your margins — here's what this cycle costs"
+          : "See what your cedi is costing you in FX drag",
+        icon: "🔄",
+        ctaLabel: walletConnected ? "View cycle" : "Connect wallet",
+        ctaTab: walletConnected ? "protect" : null,
+      };
+
+    case "ghanaian_saver":
+      return {
+        type: "protection",
+        headline: "Protect your cedi savings",
+        subtitle: walletConnected
+          ? "Your GHS is losing ~20% annually to inflation"
+          : "See how your savings are depreciating against USD, EUR, and gold",
+        icon: "🛡️",
+        ctaLabel: "Protect savings",
+        ctaTab: "protect",
+      };
+
+    case "diaspora":
+      return {
+        type: "family",
+        headline: "Protect your family's savings",
+        subtitle: walletConnected
+          ? "Your home currency is depreciating — here's how to protect what matters"
+          : "Your family's savings in the home country are at risk — see the data",
+        icon: "🏠",
+        ctaLabel: walletConnected ? "View protection" : "Connect wallet",
+        ctaTab: walletConnected ? "protect" : null,
+      };
+
+    case "us_saver":
+      return {
+        type: "risk-moment",
+        headline: "Currency risk is universal",
+        subtitle: walletConnected
+          ? "Even strong currencies lose to inflation and concentration risk"
+          : "The USD, EUR, and GBP have all lost purchasing power to inflation over the last 5 years",
+        icon: "💱",
+        ctaLabel: walletConnected ? "View risk" : "Learn more",
+        ctaTab: walletConnected ? "protect" : null,
+      };
+
+    case "philippine_bpo":
+      return {
+        type: "cycle",
+        headline: "Your next payment",
+        subtitle: walletConnected
+          ? "PHP exposure is active — monitor FX drag this cycle"
+          : "See what the peso is costing you in FX drag",
+        icon: "🔄",
+        ctaLabel: walletConnected ? "View cycle" : "Connect wallet",
+        ctaTab: walletConnected ? "protect" : null,
+      };
+
+    default:
+      return {
+        type: "generic",
+        headline: "Your treasury",
+        subtitle: walletConnected
+          ? "Portfolio overview and protection status"
+          : "Understand your currency risk across 200+ currencies",
+        icon: "💰",
+        ctaLabel: walletConnected ? "Dashboard" : "Get started",
+        ctaTab: walletConnected ? "protect" : null,
+      };
+  }
+}
+
+function buildContentRouting(
+  persona: AdaptivePersona,
+  walletConnected: boolean,
+): ContentRouting {
+  const hero = buildHeroContent(persona, walletConnected);
+
+  switch (persona) {
+    case "ghanaian_importer":
+      return {
+        hero,
+        // Shield first for importers — cycle protection is the primary surface
+        tabOrder: ["protect", "overview", "exchange", "agent", "info"],
+        shieldSections: ["cycle-protection", "fx-drag", "yield", "strategy"],
+        contextualBanner: "fx-drag-warning",
+        showBusiness: true,
+        showYield: true,
+      };
+
+    case "ghanaian_saver":
+      return {
+        hero,
+        tabOrder: ["protect", "overview", "exchange", "agent", "info"],
+        shieldSections: ["scorecard", "yield", "strategy"],
+        contextualBanner: null,
+        showBusiness: false,
+        showYield: true,
+      };
+
+    case "diaspora":
+      return {
+        hero,
+        // Home first for diaspora — risk moment then protection
+        tabOrder: ["overview", "protect", "exchange", "agent", "info"],
+        shieldSections: ["scorecard", "family", "strategy"],
+        contextualBanner: "family-savings",
+        showBusiness: false,
+        showYield: true,
+      };
+
+    case "us_saver":
+      return {
+        hero,
+        tabOrder: ["overview", "protect", "exchange", "agent", "info"],
+        shieldSections: ["scorecard", "yield", "strategy"],
+        contextualBanner: "currency-risk",
+        showBusiness: false,
+        showYield: true,
+      };
+
+    case "philippine_bpo":
+      return {
+        hero,
+        tabOrder: ["protect", "overview", "exchange", "agent", "info"],
+        shieldSections: ["cycle-protection", "fx-drag", "yield", "strategy"],
+        contextualBanner: "fx-drag-warning",
+        showBusiness: true,
+        showYield: true,
+      };
+
+    default:
+      return {
+        hero,
+        tabOrder: ["overview", "protect", "exchange", "agent", "info"],
+        shieldSections: ["scorecard", "yield", "strategy"],
+        contextualBanner: null,
+        showBusiness: false,
+        showYield: true,
+      };
+  }
 }
 
 // ─── Config builder ────────────────────────────────────────────
@@ -169,91 +391,85 @@ function buildConfig(
   persona: AdaptivePersona,
 ): AdaptiveConfig {
   const { currency, flag } = signals.geo;
+  const walletConnected = signals.wallet.connected;
 
   // Default tab labels
-  const defaultLabels = {
+  const defaultLabels: Record<string, string> = {
     overview: "Home",
     protect: "Shield",
     exchange: "Exchange",
-    agent: "Agent",
+    agent: "Guardian",
     info: "Learn",
   };
 
-  const labels = { ...defaultLabels };
+  // Build persona-aware content routing
+  const content = buildContentRouting(persona, walletConnected);
 
   switch (persona) {
     case "ghanaian_importer":
-      labels.protect = "Shield";
       return {
         persona,
-        showBusiness: true,
-        showYield: true,
         guardianMode: "cycle",
-        tabLabels: labels,
-        primaryCTA: signals.wallet.connected ? "save-cycle" : "connect-wallet",
+        tabLabels: { ...defaultLabels, protect: "Shield" },
+        primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
         displayCurrency: "GHS",
         currencyFlag: flag || "🇬🇭",
+        content,
       };
 
     case "ghanaian_saver":
       return {
         persona,
-        showBusiness: false,
-        showYield: true,
         guardianMode: "savings",
-        tabLabels: labels,
-        primaryCTA: signals.wallet.connected ? "enable-guardian" : "connect-wallet",
+        tabLabels: defaultLabels,
+        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "GHS",
         currencyFlag: flag || "🇬🇭",
+        content,
       };
 
     case "philippine_bpo":
-      labels.protect = "Shield";
       return {
         persona,
-        showBusiness: signals.history.hasCycles,
-        showYield: true,
         guardianMode: signals.history.hasCycles ? "cycle" : "savings",
-        tabLabels: labels,
-        primaryCTA: signals.wallet.connected ? "save-cycle" : "connect-wallet",
+        tabLabels: { ...defaultLabels, protect: "Shield" },
+        primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
         displayCurrency: "PHP",
         currencyFlag: flag || "🇵🇭",
-      };
-
-    case "us_saver":
-      return {
-        persona,
-        showBusiness: false,
-        showYield: true,
-        guardianMode: "savings",
-        tabLabels: labels,
-        primaryCTA: signals.wallet.connected ? "enable-guardian" : "connect-wallet",
-        displayCurrency: "USD",
-        currencyFlag: flag || "🇺🇸",
+        content,
       };
 
     case "diaspora":
       return {
         persona,
-        showBusiness: false,
-        showYield: true,
         guardianMode: "savings",
-        tabLabels: labels,
-        primaryCTA: signals.wallet.connected ? "enable-guardian" : "connect-wallet",
+        tabLabels: defaultLabels,
+        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "USD",
         currencyFlag: flag || "🇺🇸",
+        content,
+      };
+
+    case "us_saver":
+      return {
+        persona,
+        guardianMode: "savings",
+        tabLabels: defaultLabels,
+        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
+        displayCurrency: "USD",
+        currencyFlag: flag || "🇺🇸",
+        content,
       };
 
     default:
       return {
         persona,
-        showBusiness: false,
-        showYield: true,
         guardianMode: "savings",
-        tabLabels: labels,
-        primaryCTA: signals.wallet.connected ? "enable-guardian" : "connect-wallet",
+        tabLabels: defaultLabels,
+        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "USD",
         currencyFlag: flag || "💱",
+        content,
       };
   }
 }

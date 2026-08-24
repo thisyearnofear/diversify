@@ -2,12 +2,14 @@
  * AdaptiveContext — Provides the current session's adaptive config to the
  * entire app tree.
  *
- * This is the wiring point between signal detection (Phase 0: geo + wallet)
- * and app surfaces (Phase 1: tab labels, Guardian mode, business surfaces).
+ * This is the wiring point between signal detection (Phase 1: geo + wallet)
+ * and app surfaces (content routing: hero, tab order, shield sections, banners).
  *
  * Usage:
  *   const { config } = useAdaptiveContext();
- *   if (config.showBusiness) { /* render business surfaces *\/ }
+ *   if (config.content.showBusiness) { /* render business surfaces *\/ }
+ *   const hero = config.content.hero;
+ *   const tabOrder = config.content.tabOrder;
  *
  * The config is stable (useMemo in the provider) so consumers don't
  * trigger unnecessary re-renders when signals are unchanged.
@@ -43,22 +45,36 @@ export function useAdaptiveContext(): AdaptiveContextValue {
   const ctx = useContext(AdaptiveContext);
   if (!ctx) {
     // Fallback for tests and contexts outside AdaptiveProvider
+    const defaultLabels: Record<string, string> = {
+      overview: "Home",
+      protect: "Shield",
+      exchange: "Exchange",
+      agent: "Guardian",
+      info: "Learn",
+    };
     const fallback: AdaptiveContextValue = {
       config: {
         persona: "generic_user",
-        showBusiness: false,
-        showYield: true,
         guardianMode: "savings",
-        tabLabels: {
-          overview: "Home",
-          protect: "Shield",
-          exchange: "Exchange",
-          agent: "Guardian",
-          info: "Learn",
-        },
+        tabLabels: defaultLabels,
         primaryCTA: null,
         displayCurrency: "USD",
         currencyFlag: "💱",
+        content: {
+          hero: {
+            type: "generic",
+            headline: "Your treasury",
+            subtitle: "Connect your wallet to get started",
+            icon: "💰",
+            ctaLabel: null,
+            ctaTab: null,
+          },
+          tabOrder: ["overview", "protect", "exchange", "agent", "info"],
+          shieldSections: ["scorecard", "yield", "strategy"],
+          contextualBanner: null,
+          showBusiness: false,
+          showYield: true,
+        },
       },
       isMobile: false,
       detectionMethod: "none",

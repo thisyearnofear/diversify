@@ -104,12 +104,29 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     tabRefs.current[newIndex]?.focus();
   }, [visibleTabs, setActiveTab, recordTabVisit]);
 
-  // Read adaptive tab labels — persona-specific overrides
+  // Read adaptive tab labels and order — persona-specific overrides.
+  // Importers see Shield first, savers see Overview first.
   const { config: adaptiveConfig } = useAdaptiveContext();
   const tabLabels = useMemo(
     () => adaptiveConfig?.tabLabels ?? {},
     [adaptiveConfig],
   );
+
+  // Sort visible tabs according to adaptive order (e.g., ["protect","overview",...]
+  // for importers vs ["overview","protect",...] for savers).
+  const adaptiveOrder = useMemo(() => {
+    const order = adaptiveConfig?.content?.tabOrder;
+    if (!order || order.length === 0) return visibleTabs;
+    return [...visibleTabs].sort((a, b) => {
+      const ai = order.indexOf(a.id);
+      const bi = order.indexOf(b.id);
+      // Unlisted tabs go to the end
+      if (ai === -1 && bi === -1) return visibleTabs.indexOf(a) - visibleTabs.indexOf(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }, [adaptiveConfig?.content?.tabOrder, visibleTabs]);
 
   return (
     <>
@@ -120,12 +137,10 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
         className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
       >
         <div className="max-w-md mx-auto flex">
-        {visibleTabs.map((tab, index) => {
+        {adaptiveOrder.map((tab, index) => {
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           const isActive = activeTab === tab.id;
-          // Override label from adaptive config (e.g., "Shield" → "Shield" stays same
-          // but we could swap to "Watch" for importers later)
           const label = tabLabels[tab.id] ?? tab.label;
 
           return (
@@ -175,7 +190,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
                 )}
               </motion.div>
               <span className={`text-xs sm:text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
-                {tab.label}
+                {label}
               </span>
             </motion.button>
           );

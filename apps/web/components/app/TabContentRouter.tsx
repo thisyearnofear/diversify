@@ -3,6 +3,11 @@
  *
  * Reads the shared AppShellContext (set up once by AppShell) — no prop
  * relay needed, and no second useAppShell() instance mounted.
+ *
+ * Reads adaptive config to determine tab order — importers see Shield
+ * first, savers see Overview first. This is the foundation of the
+ * adaptive experience: different personas see different information
+ * architecture in the same shell.
  */
 import { type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -66,8 +71,6 @@ function TabPane({ id, children }: TabPaneProps) {
   );
 }
 
-const TAB_DISPLAY_ORDER = ["protect", "overview", "exchange", "agent", "info"] as const;
-
 // ── Component ──
 
 export default function TabContentRouter() {
@@ -84,6 +87,16 @@ export default function TabContentRouter() {
   // Determine Guardian mode — cycle-aware for importers, savings for savers
   const guardianMode = adaptiveConfig?.guardianMode ?? "savings";
 
+  // Adaptive tab order — importers see Shield first, savers see Overview
+  // This is the foundation of the adaptive UX: different personas see
+  // different information architecture, not just different labels.
+  const defaultOrder: TabId[] = ["overview", "protect", "exchange", "agent", "info"];
+  const rawOrder = adaptiveConfig?.content?.tabOrder ?? defaultOrder;
+  const validIds = new Set(defaultOrder);
+  const tabOrder = rawOrder
+    .map((id: string) => id as TabId)
+    .filter((id: TabId) => validIds.has(id));
+
   return (
     <motion.div
       className="pt-2 pb-20"
@@ -92,19 +105,19 @@ export default function TabContentRouter() {
       dragElastic={0.05}
       onPanEnd={(_e, info) => {
         const SWIPE_THRESHOLD = 60;
-        const idx = TAB_DISPLAY_ORDER.indexOf(activeTab);
-        if (info.offset.x < -SWIPE_THRESHOLD && idx < TAB_DISPLAY_ORDER.length - 1) {
-          const newTab = TAB_DISPLAY_ORDER[idx + 1];
+        const idx = tabOrder.indexOf(activeTab);
+        if (info.offset.x < -SWIPE_THRESHOLD && idx < tabOrder.length - 1) {
+          const newTab = tabOrder[idx + 1];
           trackTabChange(activeTab, newTab);
-          setActiveTab(newTab as TabId);
+          setActiveTab(newTab);
           recordSwipe();
-          recordTabVisit(newTab as TabId);
+          recordTabVisit(newTab);
         } else if (info.offset.x > SWIPE_THRESHOLD && idx > 0) {
-          const newTab = TAB_DISPLAY_ORDER[idx - 1];
+          const newTab = tabOrder[idx - 1];
           trackTabChange(activeTab, newTab);
-          setActiveTab(newTab as TabId);
+          setActiveTab(newTab);
           recordSwipe();
-          recordTabVisit(newTab as TabId);
+          recordTabVisit(newTab);
         }
       }}
     >
