@@ -8,6 +8,7 @@ import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AppProviders } from "@/context/app/AppProviders";
+import { AdaptiveProvider } from "@/context/app/AdaptiveContext";
 import { AIConversationProvider } from "@/context/AIConversationContext";
 import { PrivyProvider } from "@/context/PrivyProvider";
 import { StreakRewardsProvider } from "@/hooks/use-streak-rewards";
@@ -25,17 +26,19 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
       <PrivyProvider>
         <AppProviders>
           <WalletProvider>
-            <AIConversationProvider>
-              <ToastProvider>
-                <StreakRewardsProvider>
-                  <ProofFeedProvider>
-                    <ClaimFlowProvider>
-                      <ProtectionAmbient>{children}</ProtectionAmbient>
-                    </ClaimFlowProvider>
-                  </ProofFeedProvider>
-                </StreakRewardsProvider>
-              </ToastProvider>
-            </AIConversationProvider>
+            <AdaptiveProvider>
+              <AIConversationProvider>
+                <ToastProvider>
+                  <StreakRewardsProvider>
+                    <ProofFeedProvider>
+                      <ClaimFlowProvider>
+                        <ProtectionAmbient>{children}</ProtectionAmbient>
+                      </ClaimFlowProvider>
+                    </ProofFeedProvider>
+                  </StreakRewardsProvider>
+                </ToastProvider>
+              </AIConversationProvider>
+            </AdaptiveProvider>
           </WalletProvider>
         </AppProviders>
       </PrivyProvider>

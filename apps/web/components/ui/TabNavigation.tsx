@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useMemo } from "react";
 import { motion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
 import { getVisibleTabIds } from "@/constants/tabs";
@@ -6,6 +6,7 @@ import type { UserExperienceMode } from "@/context/app/types";
 import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { haptics } from "@/lib/haptics";
+import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 
 interface TabItem {
   id: TabId;
@@ -103,6 +104,13 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     tabRefs.current[newIndex]?.focus();
   }, [visibleTabs, setActiveTab, recordTabVisit]);
 
+  // Read adaptive tab labels — persona-specific overrides
+  const { config: adaptiveConfig } = useAdaptiveContext();
+  const tabLabels = useMemo(
+    () => adaptiveConfig?.tabLabels ?? {},
+    [adaptiveConfig],
+  );
+
   return (
     <>
       <TabNavHint activeTab={activeTab} />
@@ -116,6 +124,9 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           const isActive = activeTab === tab.id;
+          // Override label from adaptive config (e.g., "Shield" → "Shield" stays same
+          // but we could swap to "Watch" for importers later)
+          const label = tabLabels[tab.id] ?? tab.label;
 
           return (
             <motion.button

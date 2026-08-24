@@ -11,6 +11,7 @@ import type { TabId } from "@/constants/tabs";
 
 import { useAppShellContext } from "@/context/app/AppShellContext";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
+import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
@@ -78,6 +79,10 @@ export default function TabContentRouter() {
     walletChainId, isMiniPay, isFarcaster,
   } = useAppShellContext();
   const { recordSwipe, recordTabVisit } = useTabDiscovery();
+  const { config: adaptiveConfig } = useAdaptiveContext();
+
+  // Determine Guardian mode — cycle-aware for importers, savings for savers
+  const guardianMode = adaptiveConfig?.guardianMode ?? "savings";
 
   return (
     <motion.div
