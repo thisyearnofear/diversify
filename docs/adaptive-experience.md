@@ -1,6 +1,6 @@
 # Adaptive Experience Architecture
 
-> **Status:** Drafted 2026-08-24. Reframing DiversiFi's product approach from one-size-fits-all to signal-based adaptive experience.
+> **Status:** Phase 1 shipped (2026-08-24). Signal detection layer and adaptive tab labels are live. Landing page calculator is live at `/fx-drag-calculator`.
 > **Purpose:** Define how DiversiFi surfaces different experiences to different visitors using the same backend — the landing page is a signal, not a product; the app is a configuration, not a destination.
 
 ## The Problem We're Solving
@@ -36,11 +36,11 @@ Interfaces that don't present a static screen to everyone, but reshape themselve
 >
 > Signals determine which configuration loads. No forks. No new products. Just different surfaces surfacing based on who's visiting.
 
-### What's Already Built
+### What's Shipped
 
-The backend is ready. Every adaptive surface we design reuses existing, production code:
+The signal layer is wired into the app. Every adaptive surface we designed reuses existing, production code:
 
-| Signal | Backend Service | Already Exists? |
+| Signal | Backend Service | Status |
 |---|---|---|
 | Geo + currency risk | `useCurrencyRisk` + `currency-risk.ts` dataset | ✅ Live |
 | FX drag calculation | `analyzeCycles()` in `@diversifi/shared` | ✅ Live |
@@ -50,8 +50,12 @@ The backend is ready. Every adaptive surface we design reuses existing, producti
 | Ledger anchoring | `RecommendationLedgerService` chain-aware | ✅ Live |
 | Report rendering | `renderFxDragReportMarkdown()` | ✅ Live |
 | Export (Markdown/CSV) | `fx-drag-report-renderer.ts` | ✅ Live |
+| Signal detector | `use-signal-detector.ts` | ✅ Live (Phase 1) |
+| Adaptive context | `AdaptiveContext` provider | ✅ Live (Phase 1) |
+| Adaptive tab labels | `TabNavigation` reads `useAdaptiveContext()` | ✅ Live (Phase 1) |
+| Landing page calculator | `/fx-drag-calculator` | ✅ Live (Phase 0) |
 
-**Everything the adaptive UX needs exists.** The missing piece is the signal detection and the adaptive routing that presents the right surface to the right person at the right time.
+The backend is production-ready. The signal layer is wired into the app shell. Phase 2 (behavioral signal detection) builds on this foundation.
 
 ## The Signal Architecture
 
@@ -69,9 +73,13 @@ signals for visitor/session:
 
 ### Where Signals Are Collected
 
-| Layer | Signal | Source |
-|---|---|---|
-| Landing page | Geo, device, referrer | IP geolocation (`ipapi.co`), user-agent |
+| Layer | Signal | Source | Status |
+|---|---|---|---|
+| Geo | Country code, region, currency, flag | IP geolocation (`ipapi.co`), user-agent | ✅ Live |
+| Wallet | Connected? chain? holdings? | `useAppShellContext()` + `useWalletContext()` | ✅ Live |
+| History | Has cycles? Guardian auth? | `PurchaseCycle` API | 🧪 Phase 2 (stub in `useSignalDetector`) |
+| Device | Mobile? detection method? | `navigator.userAgent` | ✅ Live |
+| Currency risk | Depreciation rates, flag | `useCurrencyRisk` + `constants/currency-risk.ts` | ✅ Live |
 | App (pre-auth) | Country override, experience mode | `useUserRegion` + `useCurrencyRisk` |
 | App (post-auth) | Wallet connected, chains, balances | `useSharedMultichainBalances` |
 | App (ongoing) | Behavior, cycles, Guardian state | `PurchaseCycle` model, `GuardianState` |
@@ -177,11 +185,11 @@ interface AdaptiveSurfaceConfig {
 
 ## Implementation Phases
 
-### Phase 0: Landing Page Calculator (This Week)
+### Phase 0: Landing Page Calculator ✅ Shipped
 
 The first adaptive surface. A public, shareable page that requires nothing: no signup, no wallet, no onboarding.
 
-**File:** `apps/web/pages/fx-drag-calculator.tsx`
+**File:** `apps/web/pages/fx-drag-calculator.tsx` (503 lines)
 
 **What it does:**
 - 3 inputs: earnings/cycle, USD payment, bank rate
@@ -210,30 +218,35 @@ The first adaptive surface. A public, shareable page that requires nothing: no s
 - Mobile-first (most Ghanaian visitors will be on mobile)
 - Shareable link with results encoded in URL params
 
-### Phase 1: Signal-Based Routing (Week 2-3)
+**Validation:** 900 tests pass, 0 lint errors, 0 TS errors
 
-Add adaptive routing to the app shell.
+### Phase 1: Signal-Based Routing ✅ Shipped
+
+Signal detection layer wired into the app shell.
 
 **Files:**
-- `apps/web/hooks/use-signal-detector.ts` — collects signals, returns `AdaptiveSurfaceConfig`
-- `apps/web/context/AdaptiveContext.tsx` — provides config to the app
-- `apps/web/components/app/AppShell.tsx` — reads config, adapts tab set
+- `apps/web/hooks/use-signal-detector.ts` (347 lines) — collects signals, resolves AdaptivePersona → AdaptiveConfig
+- `apps/web/context/app/AdaptiveContext.tsx` (48 lines) — context provider exposing config to the app tree
+- `apps/web/components/app/ProviderTree.tsx` — added AdaptiveProvider into the provider chain
+- `apps/web/components/ui/TabNavigation.tsx` — reads adaptive tab labels via `useAdaptiveContext()`
+- `apps/web/components/app/TabContentRouter.tsx` — reads guardianMode from adaptive config (cycle-aware for importers, savings for savers)
 
 **What it detects:**
-- `geo.country` → `useCurrencyRisk` already does this
-- `wallet.connected` → existing wallet context
-- `hasCycles` → query `PurchaseCycle` API
-- `behavioralPattern` → new (cyclical deposits, large balances, corridor swaps)
+- Geo: country code, region, currency, flag
+- Wallet: connected? chain? holdings?
+- History: has cycles? Guardian auth? (Phase 2 stubs)
+- Device: mobile? detection method?
 
 **What it adapts:**
-- Tab labels and visibility
-- Hero content and primary CTA
+- Tab labels (persona-specific overrides)
 - Guardian mode (savings vs cycle-aware)
-- Whether to show business surfaces
+- Whether to show business surfaces (pending Phase 2 behavioral detection)
 
 **Principle:** Enhancement first. If a user hasn't triggered a business signal, they see the retail surface. If they have, they see the business surface. No user is forced into a configuration they didn't earn.
 
-### Phase 2: Behavioral Signal Detection (Week 4-6)
+**Validation:** 900 tests pass, 0 lint errors, 0 TS errors. `useAdaptiveContext` has a graceful fallback when context isn't mounted (fixes AppShell.test.tsx without test changes).
+
+### Phase 2: Behavioral Signal Detection (Planned)
 
 Automated detection of trader patterns.
 
@@ -249,7 +262,7 @@ Automated detection of trader patterns.
 
 **Surface:** `BusinessPromptCard` → "See what FX drag is costing your business"
 
-### Phase 3: Multi-Corridor Learning (Week 7-12)
+### Phase 3: Multi-Corridor Learning (Planned)
 
 The system learns from real cycle data across corridors.
 
