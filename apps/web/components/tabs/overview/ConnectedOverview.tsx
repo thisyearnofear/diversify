@@ -43,6 +43,7 @@ import EmergingMarketsTracker from "../../enterprise-fx/EmergingMarketsTracker";
 import PortfolioRiskWidget from "../../enterprise-fx/PortfolioRiskWidget";
 import RiskMetrics from "../../enterprise-fx/RiskMetrics";
 import TradeIntelligence from "../../enterprise-fx/TradeIntelligence";
+import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -94,6 +95,7 @@ export function ConnectedOverview({
   currencyPerformanceData,
 }: ConnectedOverviewProps) {
   const { experienceMode } = useExperience();
+  const { config: adaptiveConfig } = useAdaptiveContext();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const marketRegime = useMarketRegime();
   const { trackAssetDetailsToggle, trackRegimeTip } = useAnalytics();
@@ -349,7 +351,9 @@ export function ConnectedOverview({
               className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 shadow-sm"
             >
               <span className="size-1.5 rounded-full bg-blue-500" />
-              Home Overview
+              {home.isBeginner
+                ? "Home Overview"
+                : adaptiveConfig.content.hero.icon && `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
             </div>
             <HeroValue
               value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}

@@ -44,6 +44,7 @@ import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useVault } from "@/hooks/use-vault";
 import { useSessionKey } from "@/hooks/use-session-key";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
+import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 
 // Lazy-load heavy sub-sections that fire network requests on mount.
 // These are below-the-fold and shouldn't block the initial render.
@@ -83,6 +84,7 @@ export default function ProtectionTab({
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { askAdvisor } = useAdvisor();
+  const { config: adaptiveConfig } = useAdaptiveContext();
   const isDemo = demoMode.isActive;
   const isBeginner = experienceMode === "beginner";
 
@@ -139,6 +141,16 @@ export default function ProtectionTab({
 
   const { riskData, primaryDepreciation } = useCurrencyRisk();
   const [dismissedInlineRec, setDismissedInlineRec] = useState(false);
+
+  // Shield section priority — persona-aware ordering of shield tab sections.
+  // The adaptiveConfig.content.shieldSections array defines the priority order;
+  // sections appear earlier if they're listed first in that array.
+  const shieldSectionOrder = useMemo(() => {
+    const order = adaptiveConfig.content.shieldSections;
+    const sectionIndex = new Map<string, number>();
+    order.forEach((id, i) => sectionIndex.set(id, i));
+    return sectionIndex;
+  }, [adaptiveConfig.content.shieldSections]);
 
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const selectedStrategyData = selectedStrategy ? getStrategyById(selectedStrategy) : null;

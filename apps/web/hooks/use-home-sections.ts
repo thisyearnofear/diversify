@@ -27,6 +27,7 @@ import { useStreakRewards } from "./use-streak-rewards";
 // Deep leaf import — NOT the barrel — keeps the agent-tier stack out of first-load.
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
+import { useAdaptiveContext } from "../context/app/AdaptiveContext";
 
 export type HomeMode = "beginner" | "standard" | "advanced";
 
@@ -37,6 +38,10 @@ export type ContextualBannerKind =
   | "apac-rail" // APAC philosophy + Asia region — live or coming-soon copy
   | "fx-corridor-hint" // SME-graduated user → discover the FX Corridor section
   | "daily-claim"     // GoodDollar reward ready
+  | "fx-drag-warning" // Importer: FX drag is eating margins
+  | "family-savings"  // Diaspora: family savings context
+  | "currency-risk"   // US/EU: currency risk awareness
+  | "cycle-alert"     // Importer: payment approaching
   | null;             // No banner — let the hero speak
 
 export interface HomeSectionDescriptor {
@@ -147,6 +152,7 @@ export function useHomeSections({
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const { canClaim } = useStreakRewards();
   const coldStart = useColdStart(chainId);
+  const { config: adaptiveConfig } = useAdaptiveContext();
 
   const hasHoldings = (portfolio?.totalValue ?? 0) > 0;
 
@@ -242,6 +248,20 @@ export function useHomeSections({
     ) {
       banner = "fx-corridor-hint";
       bannerPriority = FX_CORRIDOR_HINT_PRIORITY;
+    }
+    // Persona-driven contextual banners from content routing. These sit
+    // below the priority wall (cold-start, demo, goal-drift) so they only
+    // render when no higher-priority banner wins — they're ambient
+    // persona-aware copy, not interruptive.
+    const ADAPTIVE_BANNER_PRIORITY = 20;
+    const personaBanner = adaptiveConfig.content.contextualBanner;
+    if (
+      personaBanner &&
+      bannerPriority < ADAPTIVE_BANNER_PRIORITY &&
+      !isDemo
+    ) {
+      banner = personaBanner;
+      bannerPriority = ADAPTIVE_BANNER_PRIORITY;
     }
 
     // ── 2. Determine which deep sections to show ─────────────────────────

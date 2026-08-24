@@ -24,7 +24,18 @@ import { NetworkOptimizedOnramp } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
 export interface ContextualBannerProps {
-  kind: "cold-start" | "demo" | "goal-drift" | "daily-claim" | "apac-rail" | "fx-corridor-hint" | null;
+  kind:
+    | "cold-start"
+    | "demo"
+    | "goal-drift"
+    | "daily-claim"
+    | "apac-rail"
+    | "fx-corridor-hint"
+    | "fx-drag-warning"
+    | "family-savings"
+    | "currency-risk"
+    | "cycle-alert"
+    | null;
   isDemo: boolean;
   /** Total value of the portfolio, for the demo banner copy */
   demoValue?: number;
@@ -47,6 +58,11 @@ export interface ContextualBannerProps {
    * into view. Wired in ConnectedOverview.
    */
   onDismissFxCorridorHint?: () => void;
+  /**
+   * Primary CTA handler for persona banner variants.
+   * Navigates to the target tab defined in content.hero.ctaTab.
+   */
+  onHeroAction?: () => void;
 }
 
 /**
@@ -68,6 +84,7 @@ export function ContextualBanner({
   onDisableDemo,
   onEnableDemo,
   onDismissFxCorridorHint,
+  onHeroAction,
 }: ContextualBannerProps) {
   // Cold-start needs the coldStart hook for the contextual copy.
   // We always call the hook (Rules of Hooks) but only render the cold-start
@@ -117,6 +134,9 @@ export function ContextualBanner({
       {kind === "fx-corridor-hint" && (
         <FxCorridorHintVariant onAction={() => onDismissFxCorridorHint?.()} />
       )}
+      {kind === "fx-drag-warning" && <FxDragWarningVariant />}
+      {kind === "family-savings" && <FamilySavingsVariant />}
+      {kind === "currency-risk" && <CurrencyRiskVariant />}
     </motion.div>
   );
 }
@@ -366,5 +386,93 @@ function DailyClaimVariant({
         Claim Now
       </div>
     </button>
+  );
+}
+
+// ── Persona banner variants ─────────────────────────────────────────────────
+
+/**
+ * FxDragWarningVariant — One-line alert for importers/SMEs.
+ * Shows when the persona is ghanaian_importer (or similar) and has
+ * meaningful FX drag data. Signals that their margins are being eaten.
+ *
+ * Visual: red/orange, subtle urgency without panic.
+ */
+function FxDragWarningVariant() {
+  return (
+    <Card
+      padding="p-0"
+      className="overflow-hidden border-2 border-red-200 dark:border-red-900"
+    >
+      <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4 flex items-center gap-3">
+        <span className="text-xl shrink-0">⚠️</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
+            FX Drag Alert
+          </div>
+          <div className="text-sm font-bold text-red-900 dark:text-red-100">
+            FX drag is eating your margins — see your real cost breakdown
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * FamilySavingsVariant — Diaspora savings context card.
+ * Shows when the persona is diaspora (US/EU visitor with a
+ * high-inflation home currency). Connects personal savings to
+ * family impact without prescriptive advice.
+ *
+ * Visual: purple/indigo, warm and connective.
+ */
+function FamilySavingsVariant() {
+  return (
+    <Card
+      padding="p-0"
+      className="overflow-hidden border-2 border-purple-200 dark:border-purple-900"
+    >
+      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-4 flex items-center gap-3">
+        <span className="text-xl shrink-0">👨‍👩‍👧‍👦</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-purple-600 dark:text-purple-400">
+            Family Savings
+          </div>
+          <div className="text-sm font-bold text-purple-900 dark:text-purple-100">
+            Your savings could protect your family back home too
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/**
+ * CurrencyRiskVariant — US/EU currency risk awareness.
+ * Shows when the persona is us_saver, european_user, or apac_user.
+ * Reminds users that even "strong" currencies lose purchasing power
+ * over time — neutral data, never prescriptive.
+ *
+ * Visual: teal/blue, calm and informative.
+ */
+function CurrencyRiskVariant() {
+  return (
+    <Card
+      padding="p-0"
+      className="overflow-hidden border-2 border-teal-200 dark:border-teal-900"
+    >
+      <div className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 flex items-center gap-3">
+        <span className="text-xl shrink-0">📉</span>
+        <div className="flex-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-wide text-teal-600 dark:text-teal-400">
+            Currency Risk
+          </div>
+          <div className="text-sm font-bold text-teal-900 dark:text-teal-100">
+            Even strong currencies lose purchasing power — see the data
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 }
