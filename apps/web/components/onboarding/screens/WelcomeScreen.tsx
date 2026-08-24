@@ -22,6 +22,7 @@ import {
   type Benchmark,
   CURRENCY_RISK_DATA,
   CURRENCY_RISK_DATA_DISCLAIMER,
+  HORIZONS,
   exampleSavingsFor,
 } from '../../../constants/currency-risk';
 import { saveMoneyPurpose } from '../../../hooks/use-protection-profile';
@@ -32,7 +33,6 @@ import { GuardianMascot } from '../../shared/GuardianMascot';
 import { Coin, FloatingCoins } from '../../shared/FloatingCoins';
 import { TokenIcon } from '../../shared/TokenIcon';
 import { PlanPreviewCard } from '../../protection-cards/PlanPreviewCard';
-import { PhilosophyPromptCard } from '../../protection-cards/PhilosophyPromptCard';
 
 // ── Animation variants ─────────────────────────────────────────────────
 // Blur-swap phase transition (transitions.dev "text states swap" pattern)
@@ -349,7 +349,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       getDepreciation,
       calculateCounterfactual,
       riskEvents,
-      isBenchmarkCurrency,
       getPlanPreview,
       dataAsOf,
       isLive1yr,
@@ -366,9 +365,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
-    const [showHistoricalExample, setShowHistoricalExample] = useState(false);
-    const [showOnrampInfo, setShowOnrampInfo] = useState(false);
+    const [showOnboardingDetails, setShowOnboardingDetails] = useState(false);
     const [showBusinessContext, setShowBusinessContext] = useState(false);
+    const [openEventKey, setOpenEventKey] = useState<string | null>(null);
     const [waitlistEmail, setWaitlistEmail] = useState('');
     const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
     const [waitlistError, setWaitlistError] = useState<string | null>(null);
@@ -466,8 +465,27 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     // visitor's own currency so no mental FX is required.
     const localExample = riskData ? exampleSavingsFor(riskData.code) : 10000;
     const localPrefix = riskData && riskData.code !== 'USD' ? `${riskData.code} ` : '$';
+
+    // Hero + comparison bars — the benchmark with the largest |depreciation|
+    // at the selected horizon becomes the single focal number; the rest
+    // render as bars scaled to the hero's magnitude, so bar length alone
+    // tells the comparison story.
+    const benchmarkRows = riskData
+      ? (['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => ({
+          bench,
+          value: getDepreciation(bench, selectedHorizon),
+        })).filter((row) => row.value !== 0)
+      : [];
+    const heroRow = benchmarkRows.reduce(
+      (worst, row) => (!worst || Math.abs(row.value) > Math.abs(worst.value) ? row : worst),
+      null as { bench: Benchmark; value: number } | null,
+    );
+    const otherRows = heroRow ? benchmarkRows.filter((row) => row.bench !== heroRow.bench) : [];
+    const maxAbs = heroRow ? Math.abs(heroRow.value) : 1;
+
+    // Counterfactual, horizon-aware and in the visitor's own money.
     const xauPreserved = riskData
-      ? calculateCounterfactual(localExample, 20, 'XAU', '5yr')
+      ? calculateCounterfactual(localExample, 20, 'XAU', selectedHorizon)
       : 0;
 
     const planPreview = selectedArchetype
@@ -767,12 +785,15 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     Compare how it has moved against selected benchmarks. Historical data, not a projection.
                   </motion.p>
 
-                  <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-4 shadow-lg">
-                    <div className="flex items-center justify-between gap-2 mb-4">
+                  <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-3 shadow-lg">
+                    <p className="sr-only">
+                      {riskData.countryName}&apos;s {riskData.code} moved {benchmarkRows
+                        .map((row) => `${row.value}% against the ${BENCHMARKS[row.bench].label}`)
+                        .join(', ')} over {HORIZONS[selectedHorizon].label}.
+                    </p>
+                    <div className="flex items-center justify-between gap-2 mb-3">
                       <p className="text-xs font-bold text-slate-300">
-                        {isBenchmarkCurrency
-                          ? `${riskData.countryName}'s ${riskData.code} compared with hard assets`
-                          : `${riskData.countryName}'s ${riskData.code} compared with`}
+                        {riskData.countryName} · {riskData.code}
                       </p>
                       <div className="flex rounded-lg bg-white/10 p-0.5" role="group" aria-label="Comparison period">
                         {(['1yr', '3yr', '5yr'] as Horizon[]).map((horizon) => (
@@ -780,175 +801,249 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                             key={horizon}
                             type="button"
                             onClick={() => setSelectedHorizon(horizon)}
+                            aria-pressed={selectedHorizon === horizon}
                             className={`px-2 min-h-[44px] py-1 rounded-md text-[10px] font-black transition-colors ${
                               selectedHorizon === horizon ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
                             }`}
                           >
-                            {horizon.replace('yr', 'Y')}
+                            {HORIZONS[horizon].short}
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench, i) => {
-                        const value = getDepreciation(bench, selectedHorizon);
-                        const b = BENCHMARKS[bench];
-                        if (value === 0) return null;
-                        return (
-                          <motion.div key={bench} variants={staggerChild} className="flex items-center justify-between rounded-xl bg-white/8 px-3 py-3 border border-white/10">
-                            <span className="text-sm font-bold">{b.flag} {b.label}</span>
-                            <AnimatedNumber
-                              value={value}
-                              decimals={0}
-                              suffix="%"
-                              duration={0.7}
-                              delay={i * 100}
-                              className="text-lg font-black text-amber-300"
-                            />
-                          </motion.div>
-                        );
-                      })}
-                    </div>
-                    <p className="mt-3 text-[10px] leading-relaxed text-slate-400">
-                      A negative figure means {riskData.code} bought less of that benchmark over this period.
-                    </p>
-                    <div className="mt-2 flex items-center gap-1.5 rounded-lg bg-amber-500/10 px-2.5 py-1.5 border border-amber-500/20">
-                      {isLive1yr && (
-                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
-                      )}
-                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {dataAsOf}</span>
-                      <span className="text-[9px] text-slate-500">·</span>
-                      <span className="text-[9px] text-slate-400 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
+                    {/* Hero — the benchmark with the largest movement at this
+                        horizon, as the single focal number. */}
+                    {heroRow ? (
+                      <div className="mb-3">
+                        <AnimatedNumber
+                          value={heroRow.value}
+                          decimals={0}
+                          suffix="%"
+                          duration={0.8}
+                          className={`text-4xl font-black tracking-tight ${heroRow.value < 0 ? 'text-amber-300' : 'text-emerald-300'}`}
+                        />
+                        <p className="mt-1 text-xs font-semibold text-slate-400">
+                          vs {BENCHMARKS[heroRow.bench].flag} {BENCHMARKS[heroRow.bench].label} · {HORIZONS[selectedHorizon].label}
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="mb-3 text-sm font-bold text-slate-300">
+                        Roughly stable against all three benchmarks over {HORIZONS[selectedHorizon].label}.
+                      </p>
+                    )}
+
+                    {/* Comparison bars — scaled to the hero&apos;s magnitude */}
+                    {otherRows.length > 0 && (
+                      <div className="space-y-2.5 mb-3">
+                        {otherRows.map((row) => {
+                          const b = BENCHMARKS[row.bench];
+                          const pct = Math.max(4, Math.round((Math.abs(row.value) / maxAbs) * 100));
+                          return (
+                            <div key={row.bench} className="flex items-center gap-2">
+                              <span className="w-[76px] flex-shrink-0 text-[11px] font-bold text-slate-300 whitespace-nowrap">
+                                {b.flag} {b.label}
+                              </span>
+                              <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
+                                <motion.div
+                                  className="h-full rounded-full bg-white/40"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: `${pct}%` }}
+                                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                                />
+                              </div>
+                              <span className="w-11 flex-shrink-0 text-right text-xs font-black text-slate-200">
+                                {row.value > 0 ? '+' : row.value < 0 ? '-' : ''}{Math.abs(row.value)}%
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* Counterfactual — the number in the visitor&apos;s own money */}
+                    {xauPreserved > 0 && (
+                      <div className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-2">
+                        <p className="text-[11px] leading-relaxed text-amber-200">
+                          If 20% of {localPrefix}{localExample.toLocaleString()} had followed gold over {HORIZONS[selectedHorizon].label},{' '}
+                          <AnimatedNumber
+                            value={xauPreserved}
+                            decimals={0}
+                            prefix={localPrefix}
+                            duration={1}
+                            className="font-black text-amber-300"
+                          />{' '}
+                          more would still be in your pocket. A past comparison, not advice.
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="pt-2 border-t border-white/10">
+                      <p className="text-[10px] leading-relaxed text-slate-400">
+                        Negative means {riskData.code} bought less of the benchmark over this period.
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                        {isLive1yr && (
+                          <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
+                        )}
+                        <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {dataAsOf}</span>
+                        <span className="text-[9px] text-slate-500">·</span>
+                        <span className="text-[9px] text-slate-500 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
+                      </div>
                     </div>
                   </motion.div>
 
-                  <motion.div variants={staggerChild} className="space-y-2 mb-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowHistoricalExample((shown) => !shown)}
-                      className="w-full flex items-center justify-between rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/15 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                    >
-                      <span className="text-xs font-bold text-amber-800 dark:text-amber-200">See a historical example</span>
-                      <span className="text-amber-700 dark:text-amber-300">{showHistoricalExample ? '−' : '+'}</span>
-                    </button>
-                    <AnimatePresence initial={false}>
-                      {showHistoricalExample && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-xl bg-amber-50/70 dark:bg-amber-900/10 px-3">
-                          <p className="py-3 text-xs leading-relaxed text-amber-900 dark:text-amber-100">
-                            Historically, if 20% of {localPrefix}{localExample.toLocaleString()} had followed gold&apos;s five-year comparison,
-                            the difference would have been{' '}
-                            <AnimatedNumber value={xauPreserved} decimals={0} prefix={localPrefix} duration={1} className="font-black" />.
-                            This is a past comparison, not a recommendation or forecast.
-                          </p>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const opening = !showBusinessContext;
-                        setShowBusinessContext(opening);
-                        if (opening) {
-                          trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
-                        }
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
-                    >
-                      {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
-                    </button>
-                    <AnimatePresence initial={false}>
-                      {showBusinessContext && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-                          <p className="px-3 pb-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                            When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
-                          </p>
-                          <div className="px-3 pb-3 space-y-2">
-                            {waitlistStatus === 'success' ? (
-                              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                ✓ You&apos;re on the list — we&apos;ll email you when it&apos;s ready.
-                              </p>
-                            ) : (
-                              <>
-                                <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                  Want early access when business protection launches?
-                                </p>
-                                <div className="flex gap-2">
-                                  <input
-                                    type="email"
-                                    inputMode="email"
-                                    autoComplete="email"
-                                    aria-label="Email address for waitlist"
-                                    placeholder="you@business.com"
-                                    value={waitlistEmail}
-                                    onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
-                                    disabled={waitlistStatus === 'submitting'}
-                                    className="flex-1 min-w-0 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={handleJoinWaitlist}
-                                    disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
-                                    className="shrink-0 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
-                                  >
-                                    {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
-                                  </button>
-                                </div>
-                                {waitlistStatus === 'error' && waitlistError && (
-                                  <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
-                                )}
-                                <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
-                                  We&apos;ll only use this to invite you to early access when business protection launches — no other emails, ever. You can ask us to delete it anytime.
-                                </p>
-                              </>
-                            )}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-
+                  {/* Context events — a quiet swipeable strip; tap a chip for the detail */}
                   {riskEvents.length > 0 && (
-                    <motion.div variants={staggerChild} className="border-l-2 border-amber-300 dark:border-amber-600 pl-3 mb-4 text-left">
-                      <p className="text-[10px] uppercase tracking-widest font-black text-amber-700 dark:text-amber-300 mb-2">Context events</p>
-                      {riskEvents.slice(0, 2).map((ev) => (
-                        <div key={`${ev.year}-${ev.event}`} className="mb-3 last:mb-0">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white"><span className="text-amber-600 dark:text-amber-400">{ev.year}</span> · {ev.event}</p>
-                          <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 mt-0.5">{ev.impact}</p>
-                        </div>
-                      ))}
+                    <motion.div variants={staggerChild} className="mb-4">
+                      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1" aria-label="Context events">
+                        {riskEvents.map((ev) => {
+                          const key = `${ev.year}-${ev.event}`;
+                          const open = openEventKey === key;
+                          return (
+                            <button
+                              key={key}
+                              type="button"
+                              onClick={() => setOpenEventKey(open ? null : key)}
+                              aria-expanded={open}
+                              className={`flex-shrink-0 whitespace-nowrap rounded-full border px-2.5 py-1.5 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
+                                open
+                                  ? 'border-amber-400 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200'
+                                  : 'border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/10 text-amber-700 dark:text-amber-300 hover:border-amber-400'
+                              }`}
+                            >
+                              {ev.year} · {ev.event}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <AnimatePresence initial={false}>
+                        {openEventKey &&
+                          (() => {
+                            const ev = riskEvents.find((e) => `${e.year}-${e.event}` === openEventKey);
+                            if (!ev) return null;
+                            return (
+                              <motion.p
+                                key={openEventKey}
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden text-left"
+                              >
+                                <span className="block pt-1.5 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">{ev.impact}</span>
+                              </motion.p>
+                            );
+                          })()}
+                      </AnimatePresence>
                     </motion.div>
                   )}
 
-                  {/* How protection works — honest expectation setting */}
-                  <motion.div variants={staggerChild} className="space-y-2 mb-4">
+                  {/* Single disclosure — everything secondary lives behind one
+                      quiet tap: how protection works + business context. The
+                      persuasion work (numbers, counterfactual, events) sits
+                      above; this tier is for the curious. */}
+                  <motion.div variants={staggerChild} className="mb-4">
                     <button
                       type="button"
-                      onClick={() => setShowOnrampInfo((shown) => !shown)}
-                      className="w-full flex items-center justify-between rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/15 px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                      onClick={() => setShowOnboardingDetails((shown) => !shown)}
+                      aria-expanded={showOnboardingDetails}
+                      className="w-full flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 px-3 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                     >
-                      <span className="text-xs font-bold text-blue-800 dark:text-blue-200">How does protection actually work?</span>
-                      <span className="text-blue-700 dark:text-blue-300">{showOnrampInfo ? '−' : '+'}</span>
+                      <span>What this means for your money</span>
+                      <span className="text-gray-400">{showOnboardingDetails ? '−' : '+'}</span>
                     </button>
                     <AnimatePresence initial={false}>
-                      {showOnrampInfo && (
-                        <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden rounded-xl bg-blue-50/70 dark:bg-blue-900/10 px-3">
-                          <p className="py-3 text-xs leading-relaxed text-blue-900 dark:text-blue-100">
+                      {showOnboardingDetails && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="overflow-hidden border border-t-0 border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 rounded-b-xl px-3"
+                        >
+                          <p className="pt-3 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
                             DiversiFi protects savings you hold as <strong>stablecoins</strong> (digital dollars, euros, or local-currency tokens on Celo). To use it, you convert your local currency to a stablecoin on your preferred exchange or on-ramp, then connect your wallet here. The Guardian then helps you allocate across stablecoins, gold-backed tokens, and yield vaults — with every decision recorded on-chain.
                           </p>
-                          <p className="pb-3 text-[11px] leading-relaxed text-blue-700 dark:text-blue-300">
+                          <p className="pb-2 pt-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
                             We don&apos;t convert fiat directly. If your money is in a bank, the first step is moving it to a stablecoin wallet — DiversiFi handles everything after that.
                           </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const opening = !showBusinessContext;
+                              setShowBusinessContext(opening);
+                              if (opening) {
+                                trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
+                              }
+                            }}
+                            className="w-full text-left py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                          >
+                            {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
+                          </button>
+                          <AnimatePresence initial={false}>
+                            {showBusinessContext && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <p className="pb-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                                  When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
+                                </p>
+                                <div className="pb-3 space-y-2">
+                                  {waitlistStatus === 'success' ? (
+                                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                      ✓ You&apos;re on the list — we&apos;ll email you when it&apos;s ready.
+                                    </p>
+                                  ) : (
+                                    <>
+                                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                        Want early access when business protection launches?
+                                      </p>
+                                      <div className="flex gap-2">
+                                        <input
+                                          type="email"
+                                          inputMode="email"
+                                          autoComplete="email"
+                                          aria-label="Email address for waitlist"
+                                          placeholder="you@business.com"
+                                          value={waitlistEmail}
+                                          onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
+                                          onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
+                                          disabled={waitlistStatus === 'submitting'}
+                                          className="flex-1 min-w-0 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                                        />
+                                        <button
+                                          type="button"
+                                          onClick={handleJoinWaitlist}
+                                          disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
+                                          className="shrink-0 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
+                                        >
+                                          {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
+                                        </button>
+                                      </div>
+                                      {waitlistStatus === 'error' && waitlistError && (
+                                        <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
+                                      )}
+                                      <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
+                                        We&apos;ll only use this to invite you to early access when business protection launches — no other emails, ever. You can ask us to delete it anytime.
+                                      </p>
+                                    </>
+                                  )}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </motion.div>
                       )}
                     </AnimatePresence>
                   </motion.div>
 
-                  {/* Neutral framing */}
-                  <motion.div variants={staggerChild}>
-                    <PhilosophyPromptCard variant="panel" className="mb-5" />
-                  </motion.div>
+                  {/* Neutral framing — the philosophy card compressed to its one
+                      promise; phase 3 carries the full selection. */}
+                  <motion.p variants={staggerChild} className="mb-4 text-xs font-semibold leading-relaxed text-gray-500 dark:text-gray-400">
+                    No lock-ups. No subscriptions. Your values, your plan.
+                  </motion.p>
 
                   <motion.button
                     variants={staggerChild}
