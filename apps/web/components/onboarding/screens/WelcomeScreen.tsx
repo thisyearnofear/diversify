@@ -501,7 +501,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       : 0;
 
     const planPreview = selectedArchetype
-      ? getPlanPreview(selectedArchetype, 10000, 20)
+      ? getPlanPreview(selectedArchetype, localExample, 20)
       : null;
 
     return (
@@ -591,7 +591,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     Is your money quietly <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">losing value?</span>
                   </motion.h2>
                   <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    Find out in 30 seconds — then pick a way to protect it that matches how you think about money.
+                    Find out in 30 seconds.
                   </motion.p>
 
                   {/* Detected country card */}
@@ -1164,7 +1164,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
 
                   {planPreview && (
                     <motion.div variants={staggerChild} className="mb-5">
-                      <PlanPreviewCard preview={planPreview} />
+                      <PlanPreviewCard preview={planPreview} currencyPrefix={localPrefix} />
                     </motion.div>
                   )}
 

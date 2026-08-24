@@ -21,6 +21,10 @@ interface LensCoinSelectorProps {
   lenses: LensCoinDef[];
   selected: string | null;
   onSelect: (id: string) => void;
+  /** Accessible group name (e.g. "Strategies"). */
+  ariaLabel?: string;
+  /** Let the row wrap instead of single-file (for longer option lists). */
+  wrap?: boolean;
 }
 
 /** Velocity (px/s) for a flick to advance the selection one step. */
@@ -39,7 +43,7 @@ const FLICK_VELOCITY = 500;
  *   not decoration.
  * - Reduced-motion: drag + tilt off; tap stays.
  */
-export function LensCoinSelector({ lenses, selected, onSelect }: LensCoinSelectorProps) {
+export function LensCoinSelector({ lenses, selected, onSelect, ariaLabel = "Values lenses", wrap = false }: LensCoinSelectorProps) {
   const reduceMotion = useReducedMotion();
   const x = useMotionValue(0);
   // Rubber-band tilt: small rotation proportional to drag displacement.
@@ -61,10 +65,10 @@ export function LensCoinSelector({ lenses, selected, onSelect }: LensCoinSelecto
     <div
       className="flex items-center justify-center gap-3 select-none cursor-grab active:cursor-grabbing"
       role="radiogroup"
-      aria-label="Values lenses"
+      aria-label={ariaLabel}
     >
       <motion.div
-        className="flex items-center justify-center gap-3"
+        className={`flex items-center justify-center gap-3${wrap ? " flex-wrap" : ""}`}
         drag={reduceMotion ? false : "x"}
         dragElastic={0.6}
         dragSnapToOrigin

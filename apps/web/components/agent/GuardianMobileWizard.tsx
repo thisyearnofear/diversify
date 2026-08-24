@@ -19,6 +19,7 @@ import { useMobile } from "@/hooks/use-mobile";
 import { LiveProofCard } from "../shared/LiveProofCard";
 import { STRATEGIES as CANONICAL_STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { STRATEGY_ALLOCATIONS, type AllocationSlice } from "@/components/protection-cards/plan-preview";
+import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,21 @@ const STRATEGIES: Strategy[] = CANONICAL_STRATEGIES
     regions: s.regions,
     allocation: STRATEGY_ALLOCATIONS[s.id] ?? [],
   }));
+
+// Coin accents reuse the archetype palette where ids align (tokens.ts), with
+// choices for strategies that have no archetype: halo = bullion amber,
+// taco = neutral slate.
+const STRATEGY_ACCENT: Record<string, string> = {
+  africapitalism: "#d97706",
+  buen_vivir: "#0d9488",
+  pan_caribbean: "#06b6d4",
+  confucian: "#b91c1c",
+  gotong_royong: "#ea580c",
+  islamic: "#059669",
+  global: "#0284c7",
+  halo: "#b45309",
+  taco: "#64748b",
+};
 
 const TOKENS = [
   { symbol: "cUSD", region: "US" },
@@ -222,70 +238,59 @@ export function GuardianMobileWizard({
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {isChangeMode
-            ? "Choose a new allocation strategy for your vault."
-            : "This shapes how Auto-Saver diversifies your stablecoins. You can change it later."}
+            ? "It rebalances the vault over time. Nothing moves now."
+            : "Shapes how Auto-Saver spreads your stablecoins. Change anytime."}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        {STRATEGIES.map((s) => {
-          const isSelected = selectedStrategy === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => setSelectedStrategy(s.id)}
-              aria-pressed={isSelected}
-              className={`relative text-left p-3 rounded-xl border-2 transition-colors min-h-[104px] ${
-                isSelected
-                  ? "border-purple-500 bg-purple-50 dark:bg-purple-900/20 shadow-sm"
-                  : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}
-            >
-              <div className="flex items-start justify-between mb-2">
-                <span className="text-2xl leading-none" aria-hidden="true">{s.icon}</span>
-                {isSelected && (
-                  <span className="size-5 rounded-full bg-purple-600 text-white flex items-center justify-center text-[11px] font-black">
-                    ✓
-                  </span>
-                )}
-              </div>
-              <div className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                {s.name}
-              </div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                {s.tagline}
-              </div>
-            </button>
-          );
-        })}
+      {/* Strategy coins — same control as onboarding's lens coins */}
+      <LensCoinSelector
+        ariaLabel="Strategies"
+        wrap
+        lenses={STRATEGIES.map((s) => ({
+          id: s.id,
+          label: s.name,
+          glyph: s.icon,
+          accent: STRATEGY_ACCENT[s.id] ?? "#8b5cf6",
+        }))}
+        selected={selectedStrategy}
+        onSelect={setSelectedStrategy}
+      />
+
+      {/* Name + tagline swap — one line, no card wall */}
+      <div className="text-center min-h-[22px]">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={selectedStrategy}
+            initial={{ opacity: 0, filter: "blur(4px)" }}
+            animate={{ opacity: 1, filter: "blur(0px)" }}
+            exit={{ opacity: 0, filter: "blur(4px)" }}
+            transition={{ duration: 0.18 }}
+            className="text-sm font-bold text-gray-900 dark:text-white"
+          >
+            {selectedStrategyData.name}
+            <span className="font-medium text-gray-500 dark:text-gray-400">
+              {" "}— {selectedStrategyData.tagline}
+            </span>
+          </motion.p>
+        </AnimatePresence>
       </div>
 
       {/* Live allocation preview for selected strategy */}
-      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-              Target allocation
-            </p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
-              {selectedStrategyData.name}
-            </p>
-          </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 max-w-[55%] text-right leading-snug">
-            {selectedStrategyData.description}
-          </p>
-        </div>
-
-        <div className="space-y-1.5 pt-1">
+      {selectedStrategyData.allocation.length > 0 && (
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-1.5">
           {selectedStrategyData.allocation.map((a) => (
             <div key={a.token} className="flex items-center gap-2 text-xs">
-              <span className="w-12 font-bold text-gray-900 dark:text-white truncate">
+              <span className="w-14 font-bold text-gray-900 dark:text-white truncate">
                 {a.token}
               </span>
               <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-purple-500"
-                  style={{ width: `${a.percent}%` }}
+                  className="h-full rounded-full"
+                  style={{
+                    width: `${a.percent}%`,
+                    background: STRATEGY_ACCENT[selectedStrategyData.id] ?? "#8b5cf6",
+                  }}
                 />
               </div>
               <span className="w-8 text-right text-gray-500 dark:text-gray-400 tabular-nums">
@@ -294,7 +299,7 @@ export function GuardianMobileWizard({
             </div>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 

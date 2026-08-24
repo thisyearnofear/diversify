@@ -1,5 +1,7 @@
 /**
  * PlanPreviewCard — read-only allocation preview for onboarding phase 3.
+ * Currency-localized: shows amounts in the visitor's own currency (same
+ * language as the phase-2 counterfactual) via the currencyPrefix prop.
  */
 import React from 'react';
 import type { PlanPreview } from './plan-preview';
@@ -9,9 +11,11 @@ import { TokenIcon } from '../shared/TokenIcon';
 export interface PlanPreviewCardProps {
   preview: PlanPreview;
   className?: string;
+  /** Currency prefix for the amounts (e.g. "$", "NGN ", "KES "). Defaults to USD. */
+  currencyPrefix?: string;
 }
 
-export function PlanPreviewCard({ preview, className = '' }: PlanPreviewCardProps) {
+export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' }: PlanPreviewCardProps) {
   const archetype = ARCHETYPES[preview.archetypeId];
 
   return (
@@ -22,19 +26,14 @@ export function PlanPreviewCard({ preview, className = '' }: PlanPreviewCardProp
         background: `linear-gradient(135deg, ${archetype.surface.start}12 0%, ${archetype.surface.mid}18 100%)`,
       }}
     >
-      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1">
-        Your plan preview
-      </p>
       <p className="text-sm font-black text-gray-900 dark:text-white mb-0.5">
         {preview.archetypeName}
       </p>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        If you protect{' '}
-        <strong className="text-gray-700 dark:text-gray-200">{preview.shieldPercent}%</strong> of{' '}
+        Shield {preview.shieldPercent}% of{' '}
         <strong className="text-gray-700 dark:text-gray-200">
-          ${preview.savingsAmount.toLocaleString()}
-        </strong>{' '}
-        (${preview.shieldAmount.toLocaleString(undefined, { maximumFractionDigits: 0 })} shielded)
+          {currencyPrefix}{preview.savingsAmount.toLocaleString()}
+        </strong>
       </p>
 
       <div className="space-y-2 mb-3">
@@ -58,10 +57,10 @@ export function PlanPreviewCard({ preview, className = '' }: PlanPreviewCardProp
                 {slice.percent}%
               </span>
               <span
-                className="w-14 text-right font-bold tabular-nums"
+                className="w-20 text-right font-bold tabular-nums"
                 style={{ color: archetype.accent }}
               >
-                ${slice.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                {currencyPrefix}{slice.amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}
               </span>
             </div>
           ))
@@ -74,11 +73,11 @@ export function PlanPreviewCard({ preview, className = '' }: PlanPreviewCardProp
 
       {preview.preservedValue != null && preview.preservedValue > 0 && (
         <p className="text-[11px] text-gray-600 dark:text-gray-400 border-t border-gray-200 dark:border-gray-700 pt-2">
-          Based on 5-year gold performance, that shield could have preserved{' '}
+          Followed gold over 5 years:{' '}
           <strong className="text-gray-900 dark:text-white">
-            ${preview.preservedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+            {currencyPrefix}{preview.preservedValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </strong>{' '}
-          in real value.
+          preserved.
         </p>
       )}
     </div>

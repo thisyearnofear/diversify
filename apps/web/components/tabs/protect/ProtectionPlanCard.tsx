@@ -58,15 +58,11 @@ export function ProtectionPlanCard({
       <Card padding="p-0" className="overflow-hidden shadow-[0_20px_50px_-24px_rgba(79,70,229,0.45)] border border-indigo-200/40 dark:border-indigo-900/40">
         <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-purple-700 p-6 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-3xl" />
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-center mb-6">
             <div>
-              <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-white/15 border border-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-indigo-50 backdrop-blur-sm">
-                <span className="size-1.5 rounded-full bg-white" />
-                Plan Setup
-              </div>
               <h3 className="text-xl font-black uppercase tracking-tight">Protection Plan</h3>
-              <p className="text-indigo-100 text-sm font-semibold opacity-90 mt-2 max-w-[220px] leading-relaxed">
-                {isComplete ? "Your plan is ready" : "Set up your protection plan"}
+              <p className="text-indigo-100 text-xs font-semibold opacity-90 mt-0.5">
+                {isComplete ? "Ready" : "Three quick steps"}
               </p>
             </div>
             <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/30 shadow-sm">
