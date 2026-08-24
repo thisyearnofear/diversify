@@ -20,8 +20,9 @@ Index for `docs/`. Start at the top, drill down by need.
 
 | # | Doc | What's in it |
 |---|-----|--------------|
-| 1 | **[`product.md`](./product.md)** | What DiversiFi is, who it's for, protection plans, current priorities |
-| 2 | **[`architecture.md`](./architecture.md)** | System architecture, AI provider chain, swap orchestrator, Guardian loop + workflow diagram, 0G stack, Circle agent stack & marketplace, dependency audit |
+| 1 | **[`product.md`](./product.md)** | What DiversiFi is, who it's for, protection plans, current priorities, adaptive experience framing |
+| 2 | **[`adaptive-experience.md`](./adaptive-experience.md)** | Signal-based adaptive architecture — how the same backend serves different experiences (AX), ASD methodology, landing page calculator design |
+| 3 | **[`architecture.md`](./architecture.md)** | System architecture, AI provider chain, swap orchestrator, Guardian loop + workflow diagram, 0G stack, Circle agent stack & marketplace, dependency audit |
 | 3 | **[`roadmap.md`](./roadmap.md)** | Product quality plan, grant tracks (0G, Celo, Arbitrum, HashKey, Future Caribbean), 0G Bridge file-by-file plan, Arbitrum yield engine strategy |
 | 4 | **[`integrations.md`](./integrations.md)** | API endpoints, AI providers, data sources, env var tables, external agent integration guide (x402 flow, code example) |
 | 5 | **[`sme-fx-strategy.md`](./sme-fx-strategy.md)** | North star — universal FX-risk problem, Ghanaian importer as wedge, global market research, competitive gap, funnel design |
@@ -38,6 +39,7 @@ Index for `docs/`. Start at the top, drill down by need.
 - **External agent integrating with the intelligence gateway** → [`integrations.md`](./integrations.md) § External Agent Integration Guide
 - **Looking up an API endpoint, provider, or env var** → [`integrations.md`](./integrations.md)
 - **Understanding the Guardian's spending bounds & security** → [`guardian-enforcement-model.md`](./guardian-enforcement-model.md)
+- **Adaptive experience / signal-based routing** → [`adaptive-experience.md`](./adaptive-experience.md)
 - **APAC rail (HashKey Chain)** → [`apac-rail.md`](./apac-rail.md)
 - **Caribbean rail (Future Caribbean track)** → [`caribbean-rail.md`](./caribbean-rail.md)
 - **Agent identity (ERC-8004 + Self Protocol)** → [`agent-identity.md`](./agent-identity.md)

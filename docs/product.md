@@ -2,6 +2,8 @@
 
 > **What ships today (2026-07-31):** A retail savings app that detects a visitor's local currency and shows its depreciation against USD, EUR, and gold using live FX rates (fawazahmed0 dataset, 200+ currencies). Users choose a values-based philosophy, then protect savings via stablecoin allocation, gold-backed tokens, and yield vaults on Celo/Arbitrum — with every Guardian decision recorded on-chain. The SME business FX layer (importer archetype, per-cycle drag reports, cycle-aware autonomous execution) is the north star described below — a concierge CLI tool validates the math, but the in-app experience is not yet shipped.
 
+> **Adaptive experience (2026-08-24):** DiversiFi is shifting from one-size-fits-all to signal-based adaptive experience. The same backend serves all personas; the frontend is a configuration. See [`docs/adaptive-experience.md`](./adaptive-experience.md) for the full architecture — signals, routing, and landing page calculator.
+
 ## Core Story
 
 DiversiFi is an **FX-risk intelligence and autonomous protection layer**
