@@ -21,7 +21,6 @@ import {
   BENCHMARKS,
   type Benchmark,
   CURRENCY_RISK_DATA,
-  CURRENCY_RISK_DATA_DISCLAIMER,
   HORIZONS,
   exampleSavingsFor,
 } from '../../../constants/currency-risk';
@@ -31,6 +30,7 @@ import { showTestnetUi, optIntoTestnetUi } from '../../../constants/testnet';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
 import { Coin, FloatingCoins } from '../../shared/FloatingCoins';
+import { LensCoinSelector } from '../LensCoinSelector';
 import { TokenIcon } from '../../shared/TokenIcon';
 import { PlanPreviewCard } from '../../protection-cards/PlanPreviewCard';
 
@@ -101,36 +101,48 @@ const VALUES_LENSES: Array<{
   label: string;
   description: string;
   archetypes: ArchetypeId[];
+  glyph: string;
+  accent: string;
 }> = [
   {
     id: 'local',
     label: 'Local prosperity',
     description: 'Keep wealth connected to the economies and communities you know.',
     archetypes: ['africapitalism', 'pan_caribbean'],
+    glyph: '🌍',
+    accent: '#10b981',
   },
   {
     id: 'community',
     label: 'Community & balance',
     description: 'Balance personal resilience with people and place.',
     archetypes: ['buen_vivir', 'gotong_royong'],
+    glyph: '🤝',
+    accent: '#14b8a6',
   },
   {
     id: 'faith',
     label: 'Faith & ethics',
     description: 'Put clear ethical principles at the centre of your plan.',
     archetypes: ['islamic_finance', 'confucian'],
+    glyph: '🕊️',
+    accent: '#d4af37',
   },
   {
     id: 'global',
     label: 'Global resilience',
     description: 'Spread risk across regions and asset types.',
     archetypes: ['global_diversification'],
+    glyph: '🌐',
+    accent: '#0ea5e9',
   },
   {
     id: 'custom',
     label: 'Build my own',
     description: 'Start with your own allocation and priorities.',
     archetypes: ['custom'],
+    glyph: '⚙️',
+    accent: '#a78bfa',
   },
 ];
 
@@ -782,7 +794,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     Your <span className="text-blue-500">{riskData.flag} {riskData.code}</span> in context
                   </motion.h2>
                   <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Compare how it has moved against selected benchmarks. Historical data, not a projection.
+                    History, not a projection.
                   </motion.p>
 
                   <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-3 shadow-lg">
@@ -791,10 +803,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         .map((row) => `${row.value}% against the ${BENCHMARKS[row.bench].label}`)
                         .join(', ')} over {HORIZONS[selectedHorizon].label}.
                     </p>
-                    <div className="flex items-center justify-between gap-2 mb-3">
-                      <p className="text-xs font-bold text-slate-300">
-                        {riskData.countryName} · {riskData.code}
-                      </p>
+                    <div className="flex items-center justify-end gap-2 mb-3">
                       <div className="flex rounded-lg bg-white/10 p-0.5" role="group" aria-label="Comparison period">
                         {(['1yr', '3yr', '5yr'] as Horizon[]).map((horizon) => (
                           <button
@@ -824,7 +833,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           className={`text-4xl font-black tracking-tight ${heroRow.value < 0 ? 'text-amber-300' : 'text-emerald-300'}`}
                         />
                         <p className="mt-1 text-xs font-semibold text-slate-400">
-                          vs {BENCHMARKS[heroRow.bench].flag} {BENCHMARKS[heroRow.bench].label} · {HORIZONS[selectedHorizon].label}
+                          vs {BENCHMARKS[heroRow.bench].flag} {BENCHMARKS[heroRow.bench].label} · {HORIZONS[selectedHorizon].label} — your {riskData.code} bought {Math.abs(heroRow.value)}% {heroRow.value < 0 ? 'less' : 'more'}
                         </p>
                       </div>
                     ) : (
@@ -865,7 +874,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     {xauPreserved > 0 && (
                       <div className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-2">
                         <p className="text-[11px] leading-relaxed text-amber-200">
-                          If 20% of {localPrefix}{localExample.toLocaleString()} had followed gold over {HORIZONS[selectedHorizon].label},{' '}
+                          Had 20% of {localPrefix}{localExample.toLocaleString()} followed gold:{' '}
                           <AnimatedNumber
                             value={xauPreserved}
                             decimals={0}
@@ -873,23 +882,18 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                             duration={1}
                             className="font-black text-amber-300"
                           />{' '}
-                          more would still be in your pocket. A past comparison, not advice.
+                          more kept.
                         </p>
                       </div>
                     )}
 
-                    <div className="pt-2 border-t border-white/10">
-                      <p className="text-[10px] leading-relaxed text-slate-400">
-                        Negative means {riskData.code} bought less of the benchmark over this period.
-                      </p>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-1">
-                        {isLive1yr && (
-                          <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
-                        )}
-                        <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {dataAsOf}</span>
-                        <span className="text-[9px] text-slate-500">·</span>
-                        <span className="text-[9px] text-slate-500 leading-tight">{CURRENCY_RISK_DATA_DISCLAIMER}</span>
-                      </div>
+                    <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                      {isLive1yr && (
+                        <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
+                      )}
+                      <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">Data as of {dataAsOf}</span>
+                      <span className="text-[9px] text-slate-500">·</span>
+                      <span className="text-[9px] text-slate-500">history, not advice.</span>
                     </div>
                   </motion.div>
 
@@ -1076,65 +1080,87 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-md"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                    Start with what <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">matters to you</span>
+                    What do you <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">value?</span>
                   </motion.h2>
-                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-5">
-                    Pick a values lens first. You can always explore every approach afterwards.
+                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Flick or tap a coin — your values pick the plan.
                   </motion.p>
 
-                  {!selectedLens && !showAllApproaches ? (
-                    <motion.div
-                      variants={{ animate: { transition: { staggerChildren: 0.05 } } }}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4"
-                    >
-                      {VALUES_LENSES.map((lens) => (
-                        <motion.button
-                          key={lens.id}
-                          variants={staggerChild}
-                          type="button"
-                          onClick={() => setSelectedLens(lens.id)}
-                          className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-slate-800/70 p-3 text-left transition-colors hover:border-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400"
-                        >
-                          <p className="text-sm font-black text-gray-900 dark:text-white">{lens.label}</p>
-                          <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-1">{lens.description}</p>
-                        </motion.button>
-                      ))}
-                    </motion.div>
-                  ) : (
-                    <motion.div
-                      variants={{ animate: { transition: { staggerChildren: 0.05 } } }}
-                      className="space-y-2 mb-4"
-                    >
-                      <div className="flex items-center justify-between px-1">
-                        <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">
-                          {showAllApproaches ? 'All approaches' : VALUES_LENSES.find((lens) => lens.id === selectedLens)?.label}
-                        </p>
-                        <button type="button" onClick={() => { setSelectedLens(null); setShowAllApproaches(false); }} className="text-xs font-bold text-gray-500 hover:text-gray-900 dark:hover:text-white">
-                          Values lenses
-                        </button>
-                      </div>
-                      {(showAllApproaches
-                        ? ARCHETYPE_ORDER
-                        : VALUES_LENSES.find((lens) => lens.id === selectedLens)?.archetypes ?? []
-                      ).map((id, i) => (
-                        <ArchetypeCard
-                          key={id}
-                          id={id}
-                          isActive={selectedArchetype === id}
-                          isDimmed={selectedArchetype !== null && selectedArchetype !== id}
-                          onSelect={handleArchetypeSelect}
-                          index={i}
-                        />
-                      ))}
-                      {!showAllApproaches && <button
-                        type="button"
-                        onClick={() => setShowAllApproaches(true)}
-                        className="w-full py-2 text-xs font-bold text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                  {/* Lens coins — the coin IS the control (no text cards) */}
+                  <motion.div variants={staggerChild} className="mb-3">
+                    <LensCoinSelector
+                      lenses={VALUES_LENSES}
+                      selected={showAllApproaches ? null : selectedLens}
+                      onSelect={(id) => {
+                        setSelectedLens((prev) => (prev === id ? null : (id as ValuesLens)));
+                        setShowAllApproaches(false);
+                      }}
+                    />
+                  </motion.div>
+
+                  {/* One-line fold description — swaps on lens change */}
+                  <motion.div variants={staggerChild} className="mb-3 min-h-[40px]">
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.p
+                        key={showAllApproaches ? 'all' : selectedLens ?? 'hint'}
+                        initial={{ opacity: 0, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, filter: 'blur(4px)' }}
+                        transition={{ duration: 0.2 }}
+                        className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 px-2"
                       >
-                        See all approaches
-                      </button>}
-                    </motion.div>
-                  )}
+                        {showAllApproaches
+                          ? 'Every approach in one list — pick the one that reads like home.'
+                          : selectedLens
+                          ? `${VALUES_LENSES.find((lens) => lens.id === selectedLens)?.label} — ${VALUES_LENSES.find((lens) => lens.id === selectedLens)?.description}`
+                          : 'Each coin is a way of thinking about money.'}
+                      </motion.p>
+                    </AnimatePresence>
+                  </motion.div>
+
+                  {/* Archetype fold — opens like paper from the coins above */}
+                  <AnimatePresence initial={false}>
+                    {(selectedLens || showAllApproaches) && (
+                      <motion.div
+                        key={showAllApproaches ? 'all-approaches' : `lens-${selectedLens}`}
+                        initial={{ opacity: 0, rotateX: -70 }}
+                        animate={{ opacity: 1, rotateX: 0 }}
+                        exit={{ opacity: 0, rotateX: -30, transition: { duration: 0.15 } }}
+                        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                        style={{ transformOrigin: 'top center', perspective: 800 }}
+                        variants={{ animate: { transition: { staggerChildren: 0.06 } } }}
+                        className="space-y-2 mb-4"
+                      >
+                        <div className="flex items-center justify-between px-1">
+                          <p className="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                            {showAllApproaches ? 'All approaches' : VALUES_LENSES.find((lens) => lens.id === selectedLens)?.label}
+                          </p>
+                          {!showAllApproaches && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllApproaches(true)}
+                              className="text-xs font-bold text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                            >
+                              See all
+                            </button>
+                          )}
+                        </div>
+                        {(showAllApproaches
+                          ? ARCHETYPE_ORDER
+                          : VALUES_LENSES.find((lens) => lens.id === selectedLens)?.archetypes ?? []
+                        ).map((id, i) => (
+                          <ArchetypeCard
+                            key={id}
+                            id={id}
+                            isActive={selectedArchetype === id}
+                            isDimmed={selectedArchetype !== null && selectedArchetype !== id}
+                            onSelect={handleArchetypeSelect}
+                            index={i}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {planPreview && (
                     <motion.div variants={staggerChild} className="mb-5">
@@ -1142,34 +1168,46 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     </motion.div>
                   )}
 
-                  <motion.div variants={staggerChild} className="mb-5 text-left">
-                    <p className="text-xs font-black uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2">
-                      What is this money for?
+                  {/* Money purpose — one segmented row, same control as 1Y/3Y/5Y */}
+                  <motion.div variants={staggerChild} className="mb-4">
+                    <p className="text-xs font-black text-gray-700 dark:text-gray-300 mb-2 text-left">
+                      When will you need it?
                     </p>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
-                      Philosophy answers what you value. Money purpose answers when you need it.
-                    </p>
-                    <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-label="Money purpose">
                       {MONEY_PURPOSES.map((purpose) => (
                         <button
                           key={purpose.value}
                           type="button"
+                          role="radio"
+                          aria-checked={moneyPurpose === purpose.value}
                           onClick={() => setMoneyPurpose(purpose.value)}
-                          className={`w-full text-left rounded-xl border px-3 py-2.5 transition-colors ${
+                          className={`min-h-[44px] rounded-lg px-1 py-2 text-[11px] font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                             moneyPurpose === purpose.value
-                              ? 'border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20'
-                              : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                              ? 'bg-emerald-500 text-white shadow-sm'
+                              : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                           }`}
                         >
-                          <span className="text-sm font-bold text-gray-900 dark:text-white">
-                            {purpose.icon} {purpose.label}
-                          </span>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                            {purpose.description}
-                          </p>
+                          {purpose.icon}{' '}
+                          {purpose.value === 'everyday_buffer'
+                            ? 'Soon'
+                            : purpose.value === 'long_term_savings'
+                            ? 'Years'
+                            : 'By date'}
                         </button>
                       ))}
                     </div>
+                    <AnimatePresence mode="wait" initial={false}>
+                      <motion.p
+                        key={moneyPurpose ?? 'none'}
+                        initial={{ opacity: 0, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, filter: 'blur(0px)' }}
+                        exit={{ opacity: 0, filter: 'blur(4px)' }}
+                        transition={{ duration: 0.2 }}
+                        className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 mt-2 text-left"
+                      >
+                        {MONEY_PURPOSES.find((p) => p.value === moneyPurpose)?.description}
+                      </motion.p>
+                    </AnimatePresence>
                   </motion.div>
 
                   {/* Actions — archetype-aware when a philosophy is selected */}
@@ -1220,13 +1258,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         enableDemoMode();
                         handleFinish(countryCode);
                       }}
-                      className={`w-full px-6 py-3 font-bold rounded-2xl active:scale-[0.97] transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 ${
-                        selectedArchetype
-                          ? 'bg-transparent border border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 text-sm'
-                          : 'bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white'
-                      }`}
+                      className="w-full px-6 py-2.5 text-xs font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 rounded-lg"
                     >
-                      {selectedArchetype ? 'Explore demo first' : 'Explore Demo First'}
+                      Explore demo first
                     </button>
                     {riskData && (
                       <button
