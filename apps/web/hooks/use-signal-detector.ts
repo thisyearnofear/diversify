@@ -20,7 +20,7 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
-import { useAppShellContext } from "../context/app/AppShellContext";
+import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useUserRegion } from "./use-user-region";
 import { useCurrencyRisk } from "./use-currency-risk";
 import { useProtectionProfile } from "./use-protection-profile";
@@ -564,7 +564,7 @@ function buildConfig(
 // ─── Hook ──────────────────────────────────────────────────────
 
 export function useSignalDetector() {
-  const { address, walletChainId } = useAppShellContext();
+  const { address, chainId: walletChainId } = useWalletContext();
   const { countryCode, countryName, region, detectionMethod } = useUserRegion();
   const { riskData } = useCurrencyRisk();
   const { config: profileConfig } = useProtectionProfile();
