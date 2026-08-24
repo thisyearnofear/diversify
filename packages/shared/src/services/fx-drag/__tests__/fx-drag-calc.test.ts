@@ -5,7 +5,7 @@ import {
   requiredDates,
   type Cycle,
   type MidRateProvider,
-} from '../fx-drag/calc';
+} from '../calc';
 
 /** Currency slides from 100 to 110 local-per-USD across the window */
 const depreciatingRates: MidRateProvider = (date) =>

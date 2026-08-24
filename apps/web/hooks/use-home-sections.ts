@@ -436,5 +436,6 @@ export function useHomeSections({
     userRegion,
     fxHintDismissed,
     tipsCount,
+    dismissFxCorridorHint,
   ]);
 }

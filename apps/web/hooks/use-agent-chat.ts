@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { getPersistedStrategy } from "./useFinancialStrategies";
@@ -70,12 +70,19 @@ export function useAgentChat({
   const ctx = useAgentChatContext();
   const [localChatState, setLocalChatState] = useState<ChatStoreState>(defaultChatState);
   const chatState = ctx?.chatState ?? localChatState;
-  const updateChatState = ctx?.updateChatState ?? ((updater: Partial<ChatStoreState> | ((prev: ChatStoreState) => Partial<ChatStoreState>)) => {
+  const localUpdateChatStateRef = useRef((updater: Partial<ChatStoreState> | ((prev: ChatStoreState) => Partial<ChatStoreState>)) => {
     setLocalChatState((prev) => {
       const partial = typeof updater === "function" ? updater(prev) : updater;
       return { ...prev, ...partial };
     });
   });
+  // Stable reference: context update is already stable, fallback lives in a ref.
+  const updateChatState = useCallback(
+    (updater: Partial<ChatStoreState> | ((prev: ChatStoreState) => Partial<ChatStoreState>)) => {
+      (ctx?.updateChatState ?? localUpdateChatStateRef.current)(updater);
+    },
+    [ctx?.updateChatState],
+  );
 
   const [localMessages, setLocalMessages] = useState<AIMessage[]>([]);
 
@@ -731,6 +738,7 @@ export function useAgentChat({
       fetchPaidSource,
       patchMessage,
       deductCredits,
+      updateChatState,
     ],
   );
 
