@@ -1,26 +1,31 @@
 /**
- * FX Drag Calculator — landing page for import working-capital diagnosis.
+ * Currency selector for the FX Drag Calculator landing page.
  *
- * Zero friction: no sign-up, no wallet, no onboarding. Three inputs, real
- * numbers from live mid-market rates, plain-language output.
- *
- * This is Phase 0 of the adaptive experience architecture (docs/adaptive-experience.md).
- * The landing page is a signal, not a product — the first interaction with a
- * system that adapts to who's visiting.
- *
- * Reuses production services:
- * - analyzeCycles() from @diversifi/shared
- * - buildServerlessRateProvider() from @diversifi/shared
- * - renderFxDragReportMarkdown() from @diversifi/shared
+ * Opt-in approach — no IP detection. User picks their currency, then
+ * everything adapts around that choice. Shows a curated set of common
+ * currencies first, then a full list of all 28 currencies.
  */
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import Head from 'next/head';
 import { analyzeCycles, requiredDates, DEFAULT_OPTIONS, type DragInput, type CycleResult } from '@diversifi/shared/src/services/fx-drag/calc';
 import { buildServerlessRateProvider } from '@diversifi/shared/src/services/fx-drag/rates-serverless';
 import { renderFxDragReportMarkdown } from '@diversifi/shared/src/services/fx-drag/fx-drag-report-renderer';
 import { GHANA_IMPORTER_SAMPLE } from '@diversifi/shared/src/services/fx-drag/sample-ghana';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+
+/**
+ * Currency selector for the FX Drag Calculator landing page.
+ *
+ * Opt-in approach — no IP detection. User picks their currency, then
+ * everything adapts around that choice. Shows a curated set of common
+ * currencies first, then a full list of all 28 currencies.
+ */
+
+/** Curated list of common currencies to show first */
+const COMMON_CURRENCIES = ['GHS', 'NGN', 'KES', 'PHP', 'ZAR', 'BRL', 'INR', 'USD', 'EUR'];
+const DEFAULT_CYCLES = GHANA_IMPORTER_SAMPLE.cycles;
+const DEFAULT_CURRENCY = GHANA_IMPORTER_SAMPLE.currency;
 
 /* ─── helpers ─────────────────────────────────────────────────── */
 
@@ -32,35 +37,118 @@ function money(currency: string, n: number): string {
   return `${sign}${currency} ${fmt(Math.abs(n))}`;
 }
 
-const LOCALE_BY_CODE: Record<string, string> = {
-  GHS: 'en-GH',
-  KES: 'en-KE',
-  NGN: 'en-NG',
-  PHP: 'en-PH',
-  INR: 'en-IN',
-  BRL: 'pt-BR',
-  ZAR: 'en-ZA',
-  USD: 'en-US',
-  EUR: 'en-GB',
-  GBP: 'en-GB',
-};
+/* ─── currency selector component ─────────────────────────────── */
 
-/* ─── inputs component ───────────────────────────────────────── */
-
-interface CurrencyRiskEntry {
-  code: string;
-  countryName: string;
-  iso2: string;
-  iso3: string;
-  flag: string;
-  depreciation: {
-    vsUSD: { '1yr': number; '3yr': number; '5yr': number };
-  };
-  riskEvents: Array<{ year: number; event: string; impact: string }>;
+interface CurrencySelectorProps {
+  selectedCode: string;
+  onSelect: (code: string) => void;
 }
 
-const DEFAULT_CYCLES = GHANA_IMPORTER_SAMPLE.cycles;
-const DEFAULT_CURRENCY = GHANA_IMPORTER_SAMPLE.currency;
+export function CurrencySelector({ selectedCode, onSelect }: CurrencySelectorProps) {
+  const [showAll, setShowAll] = useState(false);
+  const allCodes = Object.keys(CURRENCY_BY_CODE);
+  const common = COMMON_CURRENCIES.filter(c => CURRENCY_BY_CODE[c]);
+
+  // Data for the selected currency (for header display)
+  const selectedData = CURRENCY_BY_CODE[selectedCode];
+
+  return (
+    <>
+      {/* Selectable currency badge in header */}
+      <div className="text-center mb-8">
+        <button
+          onClick={() => setShowAll(!showAll)}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 rounded-full shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-lg transition-all mb-4 group"
+        >
+          <span className="text-2xl">{selectedData?.flag ?? '🌍'}</span>
+          <span className="text-sm font-bold text-gray-900 dark:text-white">{selectedCode}</span>
+          <span className="text-xs text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors">
+            {showAll ? '−' : '+ '}
+            {showAll ? 'close' : 'currency'}
+          </span>
+        </button>
+
+        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2">
+          WHAT YOUR {selectedCode} IS COSTING YOU
+        </h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          A free FX drag report — no sign-up, no wallet needed.
+        </p>
+      </div>
+
+      {/* Currency selection grid */}
+      {showAll && (
+        <div className="max-w-lg mx-auto mb-8">
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3 text-center">
+            Choose your currency
+          </p>
+
+          {/* Common currencies first */}
+          {common.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                Common
+              </p>
+              <div className="flex flex-wrap gap-2 justify-center">
+                {common.map((code) => {
+                  const data = CURRENCY_BY_CODE[code];
+                  const isSelected = code === selectedCode;
+                  return (
+                    <button
+                      key={code}
+                      onClick={() => {
+                        onSelect(code);
+                        setShowAll(false);
+                      }}
+                      className={`px-3 py-2 rounded-xl border text-sm font-bold transition-all ${
+                        isSelected
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-md'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
+                      }`}
+                    >
+                      <span className="mr-1">{data?.flag}</span>
+                      {code}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* All currencies */}
+          <div>
+            <p className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+              All currencies
+            </p>
+            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+              {allCodes.map((code) => {
+                const data = CURRENCY_BY_CODE[code];
+                const isSelected = code === selectedCode;
+                return (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      onSelect(code);
+                      setShowAll(false);
+                    }}
+                    className={`flex items-center gap-1 px-2 py-1.5 rounded-lg border text-xs font-bold transition-all ${
+                      isSelected
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:border-blue-300 dark:hover:border-blue-700'
+                    }`}
+                  >
+                    <span>{data?.flag}</span>
+                    <span className="truncate">{code}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
 
 function InputForm({
   currency,
@@ -359,6 +447,28 @@ export default function FXDragCalculator() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Persist currency choice so returning visitors keep theirs
+  const handleSelectCurrency = useCallback((code: string) => {
+    setCurrency(code);
+    try {
+      localStorage.setItem('fx-drag-currency', code);
+    } catch { /* ignore */ }
+  }, []);
+
+  // Restore saved currency on mount (opt-in: only if user previously chose)
+  const [currencyReady, setCurrencyReady] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('fx-drag-currency');
+      if (saved && CURRENCY_BY_CODE[saved]) {
+        setCurrency(saved);
+      }
+    } catch { /* ignore */ }
+    setCurrencyReady(true);
+  }, []);
+
+  if (!currencyReady) return null; // SSR-safe
+
   const handleCalculate = useCallback(async (values: {
     earningsLocal: number;
     paymentUsd: number;
@@ -439,8 +549,8 @@ export default function FXDragCalculator() {
   return (
     <>
       <Head>
-        <title>FX Drag Calculator — See what your cedi is costing you</title>
-        <meta name="description" content="Free FX drag report for import businesses. Enter your numbers, see exactly how much currency conversion costs you per cycle." />
+        <title>FX Drag Calculator — See what your {currency.toLowerCase()} is costing you</title>
+        <meta name="description" content={`Free FX drag report for import businesses. Enter your numbers, see exactly how much currency conversion costs you per cycle.`} />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
@@ -455,14 +565,10 @@ export default function FXDragCalculator() {
             ← DiversiFi
           </a>
 
-          <div className="text-center mb-8">
-            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mb-2">
-              WHAT YOUR {currency.toUpperCase()} IS COSTING YOU
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              A free FX drag report — no sign-up, no wallet needed.
-            </p>
-          </div>
+          <CurrencySelector
+            selectedCode={currency}
+            onSelect={handleSelectCurrency}
+          />
         </div>
 
         {/* Main content */}
