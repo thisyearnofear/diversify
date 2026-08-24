@@ -27,6 +27,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 
 ## Coding Style & Naming Conventions
 - **Enhancement First**: Prioritize extending existing components and shared services before creating new ones.
+- **Surface Design Principles**: Full language in `docs/design-language.md`. The rules: one job per screen (CTA in first viewport); one object gets the color, everything else quiet; every text block names a job no other block names (no meta-lectures, no duplicate disclaimers); controls are the motif — coins decide (`Coin`, `LensCoinSelector`), segmented controls learned once get reused; motion reveals/selects/confirms (framer-motion only, flick/fold/tilt count, no GSAP); numbers carry their own meaning ("your NGN bought 72% less", not a footnote); reduced-motion is a first-class mode.
 - **Service Pattern**: All non-UI logic must reside in shared package services to maintain a single source of truth.
 - **AI Routing**: Use `AIService` from `@diversifi/shared` for all LLM interactions. It handles multi-provider failover (Venice/Gemini/AI·ML API/NVIDIA/Featherless/0G/Modal) and automatic 0G anchoring.
 - **Verifiable AI**: Every high-impact recommendation must be anchored to 0G Storage via `zeroGStorageService` and recorded on-chain via `recommendationLedgerService`.

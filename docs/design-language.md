@@ -1,0 +1,171 @@
+# Design Language — surface principles for DiversiFi
+
+How DiversiFi screens earn (or lose) their user's attention. These rules
+were extracted from the Phase 2 "risk moment" and Phase 3 "philosophy"
+reworks (2026-08-24) and apply to every surface: onboarding, tabs,
+modals, cards, empty states, funnels.
+
+The short version lives in `AGENTS.md` under **Surface design principles**.
+This doc is the long version: reasoning, patterns, and review checklist.
+
+---
+
+## 1. The screen has one job
+
+Every surface exists to make one thing happen. Phase 2's job: *make the
+number land*. Phase 3's job: *pick a philosophy*. If you can't finish the
+sentence "this screen exists to ___", the screen has two jobs, and you
+should split it.
+
+Everything else sorts into two permitted tiers:
+
+- **Trust** — why the numbers are credible (data source, freshness,
+  method). Must be *quiet*.
+- **Transition** — what happens next. Must be *one line*.
+
+Anything that's neither the job, trust, nor transition gets cut or
+moved. Example: the SME business waitlist used to sit mid-scroll in the
+risk moment — an email form interrupting the emotional beat. It moved
+behind a disclosure.
+
+**Measure:** the CTA must be in or near the first viewport (~600px of
+content). Scroll depth between insight and action is where users leave;
+every element between the aha and the action is a chance to stop.
+
+## 2. One object gets the color
+
+Expressiveness is a budget, spent in one place. The dark slate risk card
+owns the phase: amber hero number, gold accents, glow. Everything else on
+that phase drops to quiet gray. A gallery wall is white so the painting
+hits harder — the rework didn't tone down the design language, it
+*concentrated* it.
+
+Don't let secondary elements compete: no amber-box next to blue-box next
+to badge-chip-strip. When you find two accents fighting, one of them is
+wrong, and it's usually the new one.
+
+## 3. Every text block says something no other block says
+
+The review test: read each text block and name its job. If two blocks
+share a job, merge or delete one.
+
+Concrete failure this fixed — "this is honest historical data" was said
+three times in phase 2 ("Historical data, not a projection" in the
+subtitle, "curated… not live FX… not investment advice" in the footer,
+"A past comparison, not advice" in the counterfactual), and the meaning
+of the minus sign was explained twice. The honesty instinct was right;
+the repetition wasn't. Each statement now appears exactly once.
+
+**Watch particularly for:**
+- Meta-lectures — sentences about the app's taxonomy ("Philosophy
+  answers what you value. Money purpose answers when you need it.")
+  instead of about the user.
+- Explainers of symbols — if you're explaining what "−72%" means in a
+  footnote, the number should carry the meaning instead (see §6).
+- Redundant chrome — the card's "Nigeria · NGN" header under an H2 that
+  already said "Your 🇳🇬 NGN in context."
+
+## 4. Controls are the motif, not decoration
+
+The design system owns a coin primitive (`Coin` in
+`components/shared/FloatingCoins.tsx`), coin steps, tilt, flip springs,
+and `FloatingCoins`. Rule: **the coins do work**.
+
+- Phase 3 lens selection used to be five text cards. It's now
+  `LensCoinSelector` — five flickable coins, each with a per-lens accent;
+  tapping flips the coin (the minting animation doing real work) and
+  unfolds its archetypes.
+- The segmented control (1Y/3Y/5Y in the risk card) is the *same
+  control* used for money purpose (Soon/Years/By date) one phase later.
+  Users learn a control once; the design loans that learning forward.
+
+When you need a new control, first check whether an existing motif can
+carry it. Inventing a new control idiom costs the user learning you
+already paid for once.
+
+## 5. Motion does work; surfaces disclose in tiers
+
+Animation budget goes to motion that *reveals, selects, or confirms* —
+not to ambient freshness.
+
+Working motion (all framer-motion, **no GSAP** — one runtime, already in
+the bundle):
+
+- **Flick carousel** (`LensCoinSelector`): `drag` + `dragElastic` +
+  `dragSnapToOrigin` + velocity threshold (`FLICK_VELOCITY`). Momentum
+  makes the row feel physical.
+- **Rubber-band tilt**: `useTransform(x, v => clamp(v * 0.02))` —
+  rotation proportional to drag displacement. The object argues back.
+- **Origami fold** (`rotateX` from `transformOrigin: top`): the reveal
+  IS the transition — no fade-through-a-middle-state.
+- **Blur-swap** (`phaseVariants`/`staggerChild` in onboarding): content
+  swaps through a 6px blur, never a y-jump.
+- **Count-up** (`AnimatedNumber`): the number arrives as a punch.
+
+Progressive disclosure is three tiers, never more:
+
+1. **Visible** — the numbers, the counterfactual, the single CTA.
+2. **One tap** — "What this means for your money" (how protection works,
+   business context), event chip detail.
+3. **Next phase** — full selection surfaces.
+
+Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
+tap stays, content identical. Gate with `useReducedMotion()` (see
+`LensCoinSelector`).
+
+## 6. Numbers carry their own meaning
+
+The best copy edit is deletion into the number itself.
+
+- Before: `−72%` … footer: "Negative means NGN bought less of the
+  benchmark over this period."
+- After: hero subline reads "vs 🏅 Gold · 5 years — **your NGN bought
+  72% less**". The explainer line is gone; the number says it.
+
+The gold counterfactual works the same way: not "depreciation
+illustration" but "Had 20% of NGN 15,000,000 followed gold: NGN
+2,160,000 more kept." — magnitude in the visitor's own money, no mental
+FX, no percentages to convert. (`exampleSavingsFor` + `calculateCounterfactual`
+in `constants/currency-risk.ts` do the currency-local math.)
+
+## 7. Honesty is styled as restraint
+
+Visibility of disclaimers is inversely proportional to how much they
+work. One plain line — "● Live 1Y · Data as of 2026-08-24 · history, not
+advice." — beats a badge strip with a chip for every sub-claim. Plain
+words are the trust signal; chrome undermines it. Never fabricate
+numbers to fill a gap (per AGENTS.md Wave 8 — expired cache before a
+fake `+0.0%`); apply the same rule to copy: no claim you're not making
+truthfully somewhere verifiable.
+
+## 8. PR checklist for any new surface
+
+- [ ] One sentence states the screen's job; if it needs "and", split it.
+- [ ] CTA in or near first viewport on mobile (~600px content above it).
+- [ ] Each text block names a job that no other block names.
+- [ ] One expressive object; everything else quiet.
+- [ ] Controls reuse an existing motif (coin, segmented control, disclosure).
+- [ ] Motion reveals/selects/confirms; no ambient decoration.
+- [ ] Reduced-motion path verified.
+- [ ] Disclaimers/honesty copy appear exactly once, in plain words.
+- [ ] No email form or input interrupting an emotional beat.
+- [ ] Parse budget: count words. If a "moment" screen exceeds ~80
+      visible words, something can be folded, merged, or cut.
+
+---
+
+## Where the primitives live
+
+| Primitive | Path | Used for |
+|---|---|---|
+| `Coin`, `FloatingCoins` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif, ambient field |
+| `LensCoinSelector` | `apps/web/components/onboarding/LensCoinSelector.tsx` | flickable selection row |
+| `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
+| `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
+| `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` | real token logos w/ coin fallback |
+| `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |
+| segmented control | risk card + money purpose | period/purpose selector |
+| `.scrollbar-hide` | `globals.css` | horizontal chip strips |
+| currency-risk data | `apps/web/constants/currency-risk.ts` | depreciation, counterfactuals, events |
+
+Grammar of the app: **coins decide, numbers convince, one button acts.**
