@@ -40,6 +40,7 @@ const COUNTRY_TO_REGION: Record<string, Region> = {
   'NL': 'Europe', 'BE': 'Europe', 'CH': 'Europe', 'AT': 'Europe', 'SE': 'Europe',
   'NO': 'Europe', 'DK': 'Europe', 'FI': 'Europe', 'PT': 'Europe', 'GR': 'Europe',
   'IE': 'Europe', 'PL': 'Europe', 'RO': 'Europe', 'CZ': 'Europe', 'HU': 'Europe',
+  'UA': 'Europe', 'BG': 'Europe', 'SK': 'Europe', 'HR': 'Europe', 'RS': 'Europe',
 
   // Latin America
   'BR': 'LatAm', 'AR': 'LatAm', 'CO': 'LatAm', 'CL': 'LatAm', 'PE': 'LatAm',

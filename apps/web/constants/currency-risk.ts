@@ -89,6 +89,22 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     ],
   },
   {
+    code: 'UAH',
+    countryName: 'Ukraine',
+    iso2: 'UA',
+    iso3: 'UKR',
+    flag: '🇺🇦',
+    depreciation: {
+      vsUSD: { '1yr': -3, '3yr': -22, '5yr': -35 },
+      vsEUR: { '1yr': -2, '3yr': -20, '5yr': -33 },
+      vsXAU: { '1yr': -15, '3yr': -38, '5yr': -50 },
+    },
+    riskEvents: [
+      { year: 2022, event: 'Full-scale invasion', impact: 'UAH dropped 30% on day one of the Russian invasion before capital controls were imposed' },
+      { year: 2024, event: 'War economy pressure', impact: 'Continued FX strain as defense spending consumes 30%+ of GDP; Hryvnia managed float under pressure' },
+    ],
+  },
+  {
     code: 'EGP',
     countryName: 'Egypt',
     iso2: 'EG',
@@ -600,6 +616,7 @@ export function calculatePreservedValue(
 export const EXAMPLE_SAVINGS_LOCAL: Record<string, number> = {
   ARS: 15_000_000,
   TRY: 450_000,
+  UAH: 400_000,
   EGP: 500_000,
   NGN: 15_000_000,
   GHS: 100_000,
