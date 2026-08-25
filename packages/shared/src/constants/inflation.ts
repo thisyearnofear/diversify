@@ -109,6 +109,7 @@ export const COUNTRY_TO_REGION: Record<string, string> = {
   'BRA': 'LatAm', 'ARG': 'LatAm', 'MEX': 'LatAm', 'COL': 'LatAm', 'CHL': 'LatAm',
   'IND': 'Asia', 'THA': 'Asia', 'VNM': 'Asia', 'PHL': 'Asia', 'IDN': 'Asia', 'JPN': 'Asia', 'AUS': 'Asia',
   'DEU': 'Europe', 'FRA': 'Europe', 'ITA': 'Europe', 'ESP': 'Europe', 'NLD': 'Europe', 'CHE': 'Europe', 'GBR': 'Europe',
+  'UKR': 'Europe', 'RUS': 'Europe', 'POL': 'Europe', 'ROU': 'Europe', 'HUN': 'Europe', 'SVK': 'Europe',
   'USA': 'USA', 'CAN': 'USA'
 };
 
@@ -117,13 +118,14 @@ export const CURRENCY_TO_COUNTRY: Record<string, string> = {
   'KES': 'KEN', 'GHS': 'GHA', 'ZAR': 'ZAF', 'EGP': 'EGY', 'NGN': 'NGA',
   'BRL': 'BRA', 'ARS': 'ARG', 'MXN': 'MEX', 'COP': 'COL', 'CLP': 'CHL',
   'INR': 'IND', 'THB': 'THA', 'VND': 'VNM', 'PHP': 'PHL', 'IDR': 'IDN', 'JPY': 'JPN', 'AUD': 'AUS',
-  'EUR': 'DEU', 'GBP': 'GBR', 'CHF': 'CHE', 'USD': 'USA', 'CAD': 'CAN'
+  'EUR': 'DEU', 'GBP': 'GBR', 'CHF': 'CHE', 'USD': 'USA', 'CAD': 'CAN',
+  'UAH': 'UKR', 'RUB': 'RUS'
 };
 
-// Priority countries for API requests
+// Priority countries for API requests (IMF / World Bank)
 export const PRIORITY_COUNTRIES = [
   'USA', 'DEU', 'JPN', 'GBR', 'FRA', 'ITA', 'CAN', 'KOR', 'AUS', 'ESP',
-  'BRA', 'IND', 'CHN', 'ZAF', 'NGA', 'EGY', 'MEX', 'ARG', 'COL'
+  'BRA', 'IND', 'CHN', 'ZAF', 'NGA', 'EGY', 'MEX', 'ARG', 'COL', 'UKR', 'RUS'
 ];
 
 // Country code to country name mapping
@@ -146,7 +148,13 @@ export const COUNTRY_NAMES: Record<string, string> = {
   'EGY': 'Egypt',
   'MEX': 'Mexico',
   'ARG': 'Argentina',
-  'COL': 'Colombia'
+  'COL': 'Colombia',
+  'UKR': 'Ukraine',
+  'RUS': 'Russia',
+  'POL': 'Poland',
+  'ROU': 'Romania',
+  'HUN': 'Hungary',
+  'SVK': 'Slovakia'
 };
 
 // Function to get fallback data by region

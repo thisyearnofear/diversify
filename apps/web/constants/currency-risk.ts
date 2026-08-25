@@ -27,6 +27,16 @@
 /** When this curated dataset was last reviewed — show in UX for transparency. */
 export const CURRENCY_RISK_DATA_AS_OF = '2025-07-01';
 
+/**
+ * Data source note for consumers: 1yr depreciation is enriched with live
+ * data from the fawazahmed0 open dataset via /api/currency-risk/live.
+ * 3yr and 5yr figures are always from this curated static dataset
+ * (the live dataset only goes back to 2024-03-02).
+ *
+ * All figures in this file are directionally accurate — sourced from
+ * central bank rates, IMF, World Bank — and should be refreshed
+ * periodically. They are not live numbers.
+ */
 export const CURRENCY_RISK_DATA_DISCLAIMER =
   'Directionally accurate curated historical data. Not live FX. Not investment advice.';
 
