@@ -24,7 +24,6 @@ interface ProtectionJourneyProps {
   financialStrategy: string | null;
   strategyAlignmentScore: number;
   strategyAlignmentFeedback: string[];
-  displayTotalValue: number;
   hasChosenPlan: boolean;
   onNavigateToProtection?: () => void;
   onNavigateToExchange?: () => void;
@@ -34,7 +33,6 @@ export function ProtectionJourney({
   financialStrategy,
   strategyAlignmentScore,
   strategyAlignmentFeedback,
-  displayTotalValue,
   hasChosenPlan,
   onNavigateToProtection,
   onNavigateToExchange,
@@ -66,8 +64,13 @@ export function ProtectionJourney({
     };
   } else if (!isMonitoring) {
     // Guardian is set up but not yet monitoring — fund it or enable it.
+    // isActive (guardianState === 'monitoring') is false in this branch,
+    // so the label is always "Enable Guardian protection". Use the actual
+    // state to pick between the two sub-states (authorized → "Enable",
+    // funded  → "Fund").
+    const needsFunding = guardianState === 'funded';
     action = {
-      label: isActive
+      label: needsFunding
         ? "Fund your Guardian to start protection"
         : "Enable Guardian protection",
       onClick: onNavigateToExchange ? onNavigateToExchange : () => {},

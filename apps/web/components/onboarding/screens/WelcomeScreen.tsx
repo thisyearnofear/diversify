@@ -1183,52 +1183,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       <span className="text-[9px] text-slate-500">·</span>
                       <span className="text-[9px] text-slate-500">history, not advice.</span>
 
-                      {/* Request a country not in the dataset — subtle, never
-                          pushes the main flow. Shown only when the user's
-                          detected country is unknown (riskData is null). */}
-                      {!riskData && countryCode && (
-                        <div className="mt-2 pt-2 border-t border-white/5">
-                          {countryRequestStatus === 'success' ? (
-                            <p className="text-[10px] text-emerald-400 font-bold text-center">
-                              ✓ Request sent — we'll add it soon.
-                            </p>
-                          ) : (
-                            <>
-                              <p className="text-[10px] text-slate-400 text-center mb-1.5">
-                                Don't see your country?
-                              </p>
-                              <div className="flex items-center justify-center gap-2">
-                                <input
-                                  type="text"
-                                  maxLength={2}
-                                  placeholder="UA"
-                                  value={countryRequestCountry}
-                                  onChange={(e) => {
-                                    setCountryRequestCountry(e.target.value);
-                                    setCountryRequestError(null);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleCountryRequest();
-                                  }}
-                                  className="w-12 px-2 py-1.5 text-[10px] font-bold text-center rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 outline-none uppercase"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={handleCountryRequest}
-                                  disabled={countryRequestStatus === 'submitting'}
-                                  className="px-3 py-1.5 text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 disabled:opacity-50"
-                                >
-                                  {countryRequestStatus === 'submitting' ? 'Sending…' : 'Request'}
-                                </button>
-                              </div>
-                              {countryRequestError && (
-                                <p className="text-[9px] text-rose-400 text-center mt-1">{countryRequestError}</p>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                      </div>
                   </motion.div>
 
                   {/* One quiet line — the how-it-works diagram is moved to the

@@ -21,9 +21,6 @@ interface CountryRequestDoc {
   createdAt: Date;
 }
 
-// Reuse mongoose model pattern.
-const collectionName = 'countryrequests';
-
 // Reuse the same 5/min IP rate limit as the waitlist endpoint.
 function rateLimit(key: string, limit: number, windowMs: number) {
   const now = Date.now();
@@ -102,6 +99,11 @@ export default async function handler(
   const cleanSource = (source ?? 'unknown').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
 
   try {
+    // Establish the shared connection before writing — sibling write
+    // endpoints (waitlist, analytics) all do this. Without it, a cold
+    // process buffers Model.create for ~10s, throws, and the catch below
+    // would silently report success while dropping the record.
+    await connectDB();
     const mongoose = (await import('mongoose')).default;
     const Model =
       mongoose.models.CountryRequest ??

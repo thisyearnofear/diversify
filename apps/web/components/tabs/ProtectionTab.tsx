@@ -33,7 +33,6 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 import DepositHub from "../onramp/DepositHub";
 import dynamic from "next/dynamic";
-import { GuardianMascot } from "../shared/GuardianMascot";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { GuardianStatusChip, useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
 import { GuardianStateScrollytelling } from "./protect/GuardianStateScrollytelling";
@@ -164,7 +163,6 @@ export default function ProtectionTab({
   );
 
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
-  const selectedStrategyData = selectedStrategy ? getStrategyById(selectedStrategy) : null;
   const { showToast } = useToast();
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
@@ -452,7 +450,6 @@ export default function ProtectionTab({
         financialStrategy={financialStrategy}
         strategyAlignmentScore={strategyAlignmentScore}
         strategyAlignmentFeedback={strategyAlignmentFeedback}
-        displayTotalValue={displayTotalValue}
         hasChosenPlan={hasChosenPlan}
         onNavigateToProtection={() => setActiveTab?.("protect")}
         onNavigateToExchange={() => setActiveTab?.("exchange")}
