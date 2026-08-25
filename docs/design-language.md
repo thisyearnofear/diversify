@@ -154,11 +154,60 @@ truthfully somewhere verifiable.
 
 ---
 
+## 9. The Guardian — mascot spec
+
+The Guardian is the app's personified presence. It carries the same constraint
+system as the app's design grammar (coins decide, numbers convince, one button
+acts) — built on principles from s1dashu/ip-as-logo-skill (MIT-licensed),
+adapted for our SVG codebase.
+
+**Core rules (non-negotiable):**
+- One dominant silhouette: a plump rounded shield, domed head, soft cheek bulge,
+  rounded U-bottom. No sharp tips, no angular points, no needle-thin anything.
+  Every tip is blunt and rounded.
+- Three semantic colors only: blue body family (two tonal shades within one
+  family), navy face (#1e3a8a), coin gold (#f59e0b — the same hex as the Coin
+  primitive; the Guardian literally carries the app's motif).
+- Two big round eyes, widely spaced (rx 5.5 at rest, mood-driven reshaping). A
+  tiny mouth only when the mood needs expression (neutral = no mouth).
+- Belly coin as the one defining feature (a flat gold disc + thin inner ring).
+  Always present, even at small sizes.
+- Readable at 32×32. At ≤48px: the "compact" mode — body + eyes + coin, no
+  mouth, no thinking dots. If a feature disappears at 32px, the compact mark
+  must survive without it.
+
+**Mood inventory (five states):**
+| Mood | Eyes | Mouth | Extra | When |
+|---|---|---|---|---|
+| happy | round (rx 5.5, ry 5.5) | small smile arc | — | strategy aligned, streaks |
+| neutral | round | none | — | idle, waiting |
+| thinking | round, slightly smaller | tiny "o" offset | two thought dots above-right | AI processing |
+| protective | closed slit (ry 1.2) | gentle smile | slight downward gaze | shield active |
+| alert | widened (rx 6.5, ry 6.5) | small open "o" | slight upward shift | notifications |
+
+**Motion rules (§5):**
+- Mood animations communicate state only — they are legitimate (confirms).
+- Zero ambient loops: no infinite pulse, bob, breathe, or drift. The Guardian
+  settles once on mount (spring scale 0.92→1) then is still.
+- Reduced motion: no keyframes, no repeats. Moods render discretely (eye shape
+  still reflects mood; gaze is static). Motion budget stays spent on work that
+  reveals or confirms.
+
+**Composition for raster assets (icon.png, OG image, splash):**
+- Lower-corner emergence: the Guardian emerges from bottom-left or bottom-right,
+  filling 85–95% of a 1:1 square, visually dominant.
+- Solid named background color (gently muted saturation, clearly chromatic).
+- Never bottom-center or top-center the character.
+- Clean square outer corners, no presentation chrome.
+- Generate with a top-tier model (GPT Image 2 preferred; Seedance 5.0 Pro,
+  Nano Banana Pro, or Nano Banana 2 acceptable). See `docs/mascot-raster-brief.md`.
+
 ## Where the primitives live
 
 | Primitive | Path | Used for |
 |---|---|---|
 | `Coin`, `FloatingCoins` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif, ambient field |
+| `GuardianMascot` | `apps/web/components/shared/GuardianMascot.tsx` | rounded shield mascot, mood system |
 | `LensCoinSelector` | `apps/web/components/onboarding/LensCoinSelector.tsx` | flickable selection row |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
