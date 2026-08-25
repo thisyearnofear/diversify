@@ -91,10 +91,17 @@ export function LensCoinSelector({ lenses, selected, onSelect, ariaLabel = "Valu
               aria-label={lens.label}
               onClick={() => onSelect(lens.id)}
               whileTap={{ scale: 0.92 }}
+              whileHover={isActive ? undefined : { scale: 1.06 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
               className="min-w-11 min-h-11 flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+              style={
+                isActive
+                  ? ({ ['--lens-accent' as string]: lens.accent, ['--lens-accent-soft' as string]: `${lens.accent}80` } as React.CSSProperties)
+                  : undefined
+              }
             >
               <motion.span
-                className="block"
+                className={`block ${isActive ? 'lens-coin-active lens-coin-pulse' : ''}`}
                 animate={{
                   scale: isActive ? 1.12 : 0.86,
                   rotateY: isActive ? 360 : 0,

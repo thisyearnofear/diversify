@@ -11,9 +11,9 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 
-function shouldBeDarkBasedOnTime(): boolean {
-  const hour = new Date().getHours();
-  return hour >= 18 || hour < 6;
+function shouldBeDarkBasedOnOS(): boolean {
+  if (typeof window === 'undefined' || !window.matchMedia) return false;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
 function getStoredPreference(): boolean | null {
@@ -39,7 +39,7 @@ function getStoredThemeMode(): ThemeMode {
 }
 
 function calculateDarkMode(themeMode: ThemeMode): boolean {
-  if (themeMode === 'auto') return shouldBeDarkBasedOnTime();
+  if (themeMode === 'auto') return shouldBeDarkBasedOnOS();
   return themeMode === 'dark';
 }
 
@@ -71,23 +71,32 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     setThemeLoaded(true);
   }, []);
 
-  // auto update (hourly)
+  // auto update — react to the OS-level theme change so the app follows
+  // the user's device setting (system dark mode toggles, etc).
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.matchMedia) return;
 
-    const interval = setInterval(() => {
+    const mql = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = () => {
       setThemeMode((prevMode) => {
         if (prevMode !== 'auto') return prevMode;
-        const nextDark = shouldBeDarkBasedOnTime();
+        const nextDark = mql.matches;
         setDarkModeState((prevDark) => {
           if (prevDark !== nextDark) applyTheme(nextDark);
           return nextDark;
         });
         return prevMode;
       });
-    }, 60 * 60 * 1000);
+    };
 
-    return () => clearInterval(interval);
+    // Safari < 14 only supports addListener/removeListener (deprecated but
+    // still shipped). Modern browsers use addEventListener.
+    if (mql.addEventListener) {
+      mql.addEventListener('change', onChange);
+      return () => mql.removeEventListener('change', onChange);
+    }
+    mql.addListener(onChange);
+    return () => mql.removeListener(onChange);
   }, []);
 
   const toggleDarkMode = useCallback(() => {

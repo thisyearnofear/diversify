@@ -350,8 +350,35 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .coin-float,
-  .aurora-drift {
+  .aurora-drift,
+  .lens-coin-pulse {
     animation: none;
+  }
+}
+
+/* ── Lens coin motif (Phase 3 value-lens selector) ─────────────────
+   The five value-lens coins need a persistent "I'm selected" signal
+   that survives after the rotateY flip settles. A low-intensity accent
+   glow + slow pulse says "this is the one" without competing with the
+   countdown of stage copy. */
+.lens-coin-active {
+  filter: drop-shadow(0 0 6px var(--lens-accent, #10b981))
+          drop-shadow(0 0 14px var(--lens-accent-soft, rgba(16,185,129,0.4)));
+}
+.lens-coin-pulse {
+  animation: lens-coin-pulse 2.6s ease-in-out infinite;
+  will-change: filter, transform;
+}
+@keyframes lens-coin-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 6px var(--lens-accent, #10b981))
+            drop-shadow(0 0 14px var(--lens-accent-soft, rgba(16,185,129,0.4)));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 0 10px var(--lens-accent, #10b981))
+            drop-shadow(0 0 22px var(--lens-accent-soft, rgba(16,185,129,0.55)));
+    transform: scale(1.04);
   }
 }
 

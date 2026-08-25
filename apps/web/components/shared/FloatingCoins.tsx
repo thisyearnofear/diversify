@@ -75,20 +75,30 @@ export function Coin({
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
       </defs>
-      {/* Full minted detail is reserved for selection/hero moments. */}
+      {/* Ambient coins keep the gradient + inner ring so they read as
+          minted medallions, not as disabled UI tokens. Only the gloss
+          ellipse is reserved for selection/hero moments. */}
       <circle
         cx="32"
         cy="32"
         r={compact ? 27 : 30}
-        fill={ambient ? color : `url(#${gradId})`}
+        fill={`url(#${gradId})`}
         stroke={dark}
         strokeWidth={compact ? 1.5 : 2}
       />
+      {!compact && (
+        <circle
+          cx="32"
+          cy="32"
+          r="23"
+          fill="none"
+          stroke={light}
+          strokeWidth={ambient ? '1.2' : '2'}
+          opacity={ambient ? 0.45 : 0.7}
+        />
+      )}
       {!compact && !ambient && (
-        <>
-          <circle cx="32" cy="32" r="23" fill="none" stroke={light} strokeWidth="2" opacity="0.7" />
-          <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity="0.35" transform="rotate(-24 23 17)" />
-        </>
+        <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity="0.35" transform="rotate(-24 23 17)" />
       )}
       <text
         x="32"
@@ -133,15 +143,17 @@ const BACKDROP_COINS: FloatSpec[] = [
   { left: '35%', top: '76%', size: 18, symbol: '$', duration: 7, delay: 4, opacity: 0.28, blur: 3 },
 ];
 
-// Sparse edge-hugging field inside the onboarding panel — low opacity so
-// copy stays legible.
+// Sparse edge-hugging field inside the onboarding panel. Opacity is
+// tuned so the largest coins read as part of the scene (with the new
+// ambient variant keeping its inner ring); smaller coins still recede so
+// the dialog copy stays legible.
 const PANEL_COINS: FloatSpec[] = [
-  { left: '2%', top: '16%', size: 32, symbol: '$', duration: 10, delay: 0.4, opacity: 0.35 },
-  { left: '88%', top: '10%', size: 24, symbol: '€', duration: 8.5, delay: 1.6, opacity: 0.3, blur: 1, tinted: true },
-  { left: '90%', top: '52%', size: 38, symbol: '₹', duration: 12, delay: 0.8, opacity: 0.4 },
-  { left: '3%', top: '66%', size: 22, symbol: '₱', duration: 9, delay: 2.4, opacity: 0.28, blur: 1, tinted: true },
-  { left: '84%', top: '88%', size: 28, symbol: '¢', duration: 10.5, delay: 1.1, opacity: 0.32 },
-  { left: '8%', top: '92%', size: 18, symbol: '€', duration: 7.5, delay: 3, opacity: 0.25, blur: 2 },
+  { left: '2%', top: '16%', size: 36, symbol: '$', duration: 10, delay: 0.4, opacity: 0.5 },
+  { left: '88%', top: '10%', size: 28, symbol: '€', duration: 8.5, delay: 1.6, opacity: 0.45, tinted: true },
+  { left: '90%', top: '52%', size: 42, symbol: '₹', duration: 12, delay: 0.8, opacity: 0.55 },
+  { left: '3%', top: '66%', size: 24, symbol: '₱', duration: 9, delay: 2.4, opacity: 0.4, tinted: true },
+  { left: '84%', top: '88%', size: 32, symbol: '¢', duration: 10.5, delay: 1.1, opacity: 0.42 },
+  { left: '8%', top: '92%', size: 20, symbol: '€', duration: 7.5, delay: 3, opacity: 0.35, blur: 1, tinted: true },
 ];
 
 export interface FloatingCoinsProps {
