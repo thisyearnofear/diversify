@@ -843,11 +843,32 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       </div>
                     )}
 
-                    {/* Counterfactual — the number in the visitor&apos;s own money */}
+                    {/* Counterfactual — a split you can see: five parts of the
+                        example savings, one minted in gold, and the amount it
+                        would have kept. The coins carry the "20%"; the number
+                        carries the payoff. */}
                     {xauPreserved > 0 && (
-                      <div className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-2">
-                        <p className="text-[11px] leading-relaxed text-amber-200">
-                          Had 20% of {localPrefix}{localExample.toLocaleString()} followed gold:{' '}
+                      <div
+                        className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-2 flex items-center gap-3"
+                        aria-label={`If 20% of ${localPrefix}${localExample.toLocaleString()} had followed gold: ${localPrefix}${Math.round(xauPreserved).toLocaleString()} more kept.`}
+                      >
+                        <div className="flex items-center gap-1 flex-shrink-0" aria-hidden="true">
+                          {[0, 1, 2, 3].map((i) => (
+                            <span key={i} className="opacity-45">
+                              <Coin size={20} symbol={riskData.flag} color="#64748b" variant="asset" />
+                            </span>
+                          ))}
+                          <motion.span
+                            initial={{ scale: 0.6, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 18 }}
+                            className="drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
+                          >
+                            <Coin size={24} symbol={BENCHMARKS.XAU.flag} color="#d4af37" variant="asset" />
+                          </motion.span>
+                        </div>
+                        <p className="text-[11px] leading-snug text-amber-200">
+                          20% in gold:{' '}
                           <AnimatedNumber
                             value={xauPreserved}
                             decimals={0}
@@ -944,11 +965,30 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           exit={{ opacity: 0, height: 0 }}
                           className="overflow-hidden border border-t-0 border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 rounded-b-xl px-3"
                         >
-                          <p className="pt-3 text-xs leading-relaxed text-gray-600 dark:text-gray-300">
-                            DiversiFi protects savings you hold as <strong>stablecoins</strong> (digital dollars, euros, or local-currency tokens on Celo). To use it, you convert your local currency to a stablecoin on your preferred exchange or on-ramp, then connect your wallet here. The Guardian then helps you allocate across stablecoins, gold-backed tokens, and yield vaults — with every decision recorded on-chain.
-                          </p>
-                          <p className="pb-2 pt-2 text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
-                            We don&apos;t convert fiat directly. If your money is in a bank, the first step is moving it to a stablecoin wallet — DiversiFi handles everything after that.
+                          {/* How protection works — the old two paragraphs
+                              (~70 words) drawn as three steps instead. */}
+                          <div
+                            className="pt-3 pb-1 flex items-start gap-1"
+                            aria-label="How it works: buy stablecoins on any exchange or on-ramp, connect your wallet, and the Guardian allocates across stablecoins, gold-backed tokens, and yield vaults with every decision recorded on-chain."
+                          >
+                            {[
+                              { glyph: '🏦', label: 'Buy stablecoins', color: '#94a3b8' },
+                              { glyph: '🔌', label: 'Connect wallet', color: '#60a5fa' },
+                              { glyph: '🛡️', label: 'Guardian allocates · on-chain', color: '#10b981' },
+                            ].map((step, i) => (
+                              <React.Fragment key={step.label}>
+                                {i > 0 && (
+                                  <div className="mt-[15px] h-px w-2 sm:w-4 flex-shrink-0 bg-gray-300 dark:bg-gray-600" aria-hidden="true" />
+                                )}
+                                <div className="flex-1 min-w-0 flex flex-col items-center gap-1 text-center">
+                                  <Coin size={30} symbol={step.glyph} color={step.color} variant="asset" />
+                                  <span className="text-[10px] font-bold leading-tight text-gray-600 dark:text-gray-300">{step.label}</span>
+                                </div>
+                              </React.Fragment>
+                            ))}
+                          </div>
+                          <p className="pb-2 pt-1 text-[10px] leading-relaxed text-gray-500 dark:text-gray-400">
+                            We don&apos;t convert fiat — step one happens on any exchange or on-ramp you trust. DiversiFi handles everything after.
                           </p>
                           <button
                             type="button"
