@@ -414,4 +414,268 @@ body {
 }
 
 /* REMOVED: Wallet button was intentionally hidden during onboarding causing UX friction */
-/* Users should be able to connect wallet anytime, not just after completing onboarding */
+/* Users should be to connect wallet anytime, not just after completing onboarding */
+
+
+/* ── Phase 2: Geometric background patterns ─────────────────────────
+   Each archetype gets a subtle CSS-generated pattern at ~3% opacity.
+   These are strictly geometric — sourced from documented design
+   traditions, never figurative, never calligraphic. They sit behind
+   the card stack in the Shields tab and provide visual texture that
+   connects the user's philosophy to the actual execution space.
+
+   Rules:
+   - Max 3% opacity so they're felt, never seen
+   - No figurative elements (no dragons, no palm trees, no flags)
+   - No calligraphy or sacred geometry
+   - Pure CSS gradients only — no external assets
+   - Respects prefers-reduced-motion (animations, not opacity, gated)
+   ──────────────────────────────────────────────────────────────────── */
+
+/* ── Base layer: shared across all patterns ───────────────────────── */
+.shields-pattern-layer {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.03;
+  will-change: opacity;
+}
+
+/* ── Africapitalism — Mudcloth geometry (Mali tradition) ────────────
+   Subtle diagonal crosshatch: parallel lines at 45° alternating
+   with double lines. The mudcloth tradition uses hand-stitched
+   geometric marks on hand-woven cotton. We translate this to
+   mathematically precise parallel lines. */
+.shields-pattern--africapitalism {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 20px,
+      currentColor 20px,
+      currentColor 21px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 20px,
+      currentColor 20px,
+      currentColor 21px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 36px,
+      currentColor 36px,
+      currentColor 38px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 36px,
+      currentColor 36px,
+      currentColor 38px
+    );
+  background-size: 40px 40px;
+}
+
+/* ── Buen Vivir — Andean stepped motifs ─────────────────────────────
+   A gentle zigzag (sawtooth) step pattern inspired by Andean textile
+   geometry. The stepped motif appears in Inca stonework and textile
+   borders — representing mountain peaks and terraced landscapes. */
+.shields-pattern--buen_vivir {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 4px,
+      currentColor 4px,
+      currentColor 5px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 4px,
+      currentColor 4px,
+      currentColor 5px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 4px,
+      currentColor 4px,
+      currentColor 5px,
+      transparent 5px,
+      transparent 8px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 4px,
+      currentColor 4px,
+      currentColor 5px,
+      transparent 5px,
+      transparent 8px
+    );
+  background-size: 16px 16px;
+}
+
+/* ── Pan-Caribbean — Maroon beadwork arcs ───────────────────────────
+   Concentric arcs inspired by Jamaican Maroon beadwork and Carib
+   shell motifs. The arcs suggest water ripples — fitting for
+   "weather every storm" — without literal wave imagery. */
+.shields-pattern--pan_caribbean {
+  background-image:
+    repeating-radial-gradient(
+      circle at 50% 50%,
+      transparent,
+      transparent 20px,
+      currentColor 20px,
+      currentColor 21px
+    );
+  background-size: 40px 40px;
+}
+
+/* ── Confucian — Chinese lattice (Song dynasty) ─────────────────────
+   A clean cross-grid lattice inspired by Song dynasty window lattices
+   and Ming furniture joinery. Minimalist, generous negative space,
+   geometric precision. */
+.shields-pattern--confucian {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 24px,
+      currentColor 24px,
+      currentColor 25px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 24px,
+      currentColor 24px,
+      currentColor 25px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 24px,
+      currentColor 24px,
+      currentColor 25px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 24px,
+      currentColor 24px,
+      currentColor 25px
+    );
+  background-size: 48px 48px;
+}
+
+/* ── Gotong Royong — Batik kawung geometry ──────────────────────────
+   Concentric diamond motif inspired by Indonesian batik kawung
+   (palm kernel motif). The diamond is geometric, not figurative —
+   it's a tessellation of overlapping ellipses rendered as precise
+   geometric shapes. */
+.shields-pattern--gotong_royong {
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 14px,
+      currentColor 14px,
+      currentColor 15px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 14px,
+      currentColor 14px,
+      currentColor 15px
+    );
+  background-size: 20px 20px;
+}
+
+/* ── Islamic — Girih (8-fold geometric star) ────────────────────────
+   The classic 8-pointed Islamic geometric star pattern used in
+   mosque tilework (Alhambra, Isfahan). Strictly geometric: two
+   overlapping squares rotated 45° form the star. We translate this
+   to repeating cross-hatched diagonals. */
+.shields-pattern--islamic {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 16px,
+      currentColor 16px,
+      currentColor 17px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 16px,
+      currentColor 16px,
+      currentColor 17px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 16px,
+      currentColor 16px,
+      currentColor 17px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 16px,
+      currentColor 16px,
+      currentColor 17px
+    );
+  background-size: 32px 32px;
+}
+
+/* ── Global Diversification — Bauhaus grid ──────────────────────────
+   Clean grid squares in the Bauhaus international style — universal,
+   geometric, no cultural reference. Primary grid + diagonal accent
+   lines at reduced frequency. */
+.shields-pattern--global_diversification {
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 24px,
+      currentColor 24px,
+      currentColor 25px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 24px,
+      currentColor 24px,
+      currentColor 25px
+    ),
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 32px,
+      currentColor 32px,
+      currentColor 33px
+    );
+  background-size: 48px 48px;
+}
+
+/* ── Custom / halo / taco / inflation_protection — no pattern ──────
+   Generic strategies and unrecognized archetypes get no pattern.
+   The parent container's background is the default slate. */
+
+/* ── Reduced motion: patterns stay static (no animation gating needed,
+   since patterns are pure gradients — but we keep them at 0.03
+   opacity for accessibility compliance). ─────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .shields-pattern-layer {
+    opacity: 0.02;
+  }
+}

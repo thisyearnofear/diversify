@@ -374,6 +374,37 @@ export default function ProtectionTab({
   // RENDER: Not Connected
   // ============================================================================
 
+  // Derive the CSS pattern class from the user's strategy (or selected
+  // strategy) so the Shields tab background carries their philosophy.
+  // Must be called before any early return to satisfy rules-of-hooks.
+  const patternClass = useMemo(() => {
+    const key = (selectedStrategy || financialStrategy) as string | null;
+    if (!key) return '';
+    // Normalize: "islamic" → "islamic", "global_diversification" → "global".
+    const normalized = key
+      .replace('_finance', '')
+      .replace('_diversification', '');
+    return `shields-pattern--${normalized}`;
+  }, [selectedStrategy, financialStrategy]);
+
+  const patternColor = useMemo(() => {
+    const key = (selectedStrategy || financialStrategy) as string | null;
+    // Map strategy → accent color for the pattern.
+    switch (key) {
+      case 'africapitalism': return '#d97706';
+      case 'buen_vivir': return '#0d9488';
+      case 'pan_caribbean': return '#06b6d4';
+      case 'confucian': return '#b91c1c';
+      case 'gotong_royong': return '#ea580c';
+      case 'islamic': return '#059669';
+      case 'halo': return '#7c3aed';
+      case 'taco': return '#0284c7';
+      case 'global_diversification':
+      case 'global': return '#0284c7';
+      default: return '#64748b';
+    }
+  }, [selectedStrategy, financialStrategy]);
+
   if (isLoading && address && !isDemo) {
     return <ProtectionSkeleton />;
   }
@@ -403,7 +434,16 @@ export default function ProtectionTab({
   const hasChosenPlan = !!(financialStrategy || selectedStrategy);
 
   return (
-    <div className="space-y-4">
+    <div className="relative space-y-4">
+      {/* Archetype-aware geometric pattern layer — sits behind cards,
+          derived from the user's chosen philosophy. */}
+      {patternClass && patternColor && (
+        <div
+          className={`shields-pattern-layer ${patternClass}`}
+          style={{ color: patternColor }}
+          aria-hidden="true"
+        />
+      )}
       {/* Strategy Alignment Bar */}
       {selectedStrategyData && (
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
