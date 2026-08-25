@@ -25,6 +25,10 @@ interface LensCoinSelectorProps {
   ariaLabel?: string;
   /** Let the row wrap instead of single-file (for longer option lists). */
   wrap?: boolean;
+  /** Optional shared-layout id factory. When set, the tapped coin carries
+      a `layoutId` so the surface continuing the choice can fly it in
+      (hero transition). Leave unset for standalone rows. */
+  coinLayoutId?: (id: string) => string;
 }
 
 /** Velocity (px/s) for a flick to advance the selection one step. */
@@ -43,7 +47,7 @@ const FLICK_VELOCITY = 500;
  *   not decoration.
  * - Reduced-motion: drag + tilt off; tap stays.
  */
-export function LensCoinSelector({ lenses, selected, onSelect, ariaLabel = "Values lenses", wrap = false }: LensCoinSelectorProps) {
+export function LensCoinSelector({ lenses, selected, onSelect, ariaLabel = "Values lenses", wrap = false, coinLayoutId }: LensCoinSelectorProps) {
   const reduceMotion = useReducedMotion();
   const x = useMotionValue(0);
   // Rubber-band tilt: small rotation proportional to drag displacement.
@@ -80,6 +84,7 @@ export function LensCoinSelector({ lenses, selected, onSelect, ariaLabel = "Valu
           return (
             <motion.button
               key={lens.id}
+              layoutId={coinLayoutId ? coinLayoutId(lens.id) : undefined}
               type="button"
               role="radio"
               aria-checked={isActive}
