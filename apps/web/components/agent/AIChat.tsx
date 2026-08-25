@@ -862,7 +862,7 @@ export default function AIChat() {
                     transition={{ duration: 0.5 }}
                     className="h-full flex flex-col items-center justify-center text-center space-y-5"
                   >
-                    <GuardianMascot size={82} mood="happy" />
+                    <GuardianMascot size={82} mood="happy" gaze="pointer" />
                     
                     <div className="space-y-2">
                       <p className="text-base font-bold text-blue-900 dark:text-blue-100">

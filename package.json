@@ -24,6 +24,7 @@
     "validate-agent": "npx tsx -e \"import { validateAgentConfig } from './packages/shared/src/utils/arc-agent-setup'; console.log(validateAgentConfig());\"",
     "register-agent": "npx tsx scripts/register-on-agentscan.ts",
     "register-erc8004": "npx tsx scripts/register-erc8004.ts",
+    "render-guardian-assets": "npx tsx scripts/render-guardian-assets.ts",
     "prepare": "husky"
   },
   "devDependencies": {

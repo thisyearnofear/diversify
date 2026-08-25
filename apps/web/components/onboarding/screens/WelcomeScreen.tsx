@@ -264,13 +264,10 @@ function ArchetypeStrip({
   ids,
   activeId,
   onSelect,
-  children,
 }: {
   ids: ArchetypeId[];
   activeId: ArchetypeId | null;
   onSelect: (id: ArchetypeId) => void;
-  /** Trailing node inside the scroll strip (e.g. a "See all" chip). */
-  children?: React.ReactNode;
 }) {
   return (
     <div
@@ -314,7 +311,6 @@ function ArchetypeStrip({
           </button>
         );
       })}
-      {children}
     </div>
   );
 }
@@ -344,11 +340,11 @@ function RiskSparkline({ values, code }: { values: number[]; code: string }) {
 
   return (
     <div className="mb-3">
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-center gap-2 mb-1">
         <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
           12-month path vs USD
         </span>
-        <span className="text-[9px] text-slate-500">live · indexed to 100</span>
+        <span className="text-[9px] text-slate-500">· live · indexed to 100</span>
       </div>
       <svg
         viewBox={`0 0 ${W} ${H}`}
@@ -408,7 +404,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
-    const [showOnboardingDetails, setShowOnboardingDetails] = useState(false);
     const [showBusinessContext, setShowBusinessContext] = useState(false);
     const [openEventKey, setOpenEventKey] = useState<string | null>(null);
     const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -580,6 +575,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     <GuardianMascot
                       size={72}
                       mood={selectedArchetype ? 'happy' : 'neutral'}
+                      gaze="pointer"
                       className="shrink-0"
                     />
                     <div className="max-w-[210px]">
@@ -624,7 +620,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-sm"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                    Is your money quietly <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">losing value?</span>
+                    Is your money quietly{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-300 dark:to-indigo-300">
+                      losing value?
+                    </span>
                   </motion.h2>
                   <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-5">
                     Find out in 30 seconds.
@@ -824,12 +823,12 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   initial="initial"
                   animate="animate"
                   exit="exit"
-                  className="w-full max-w-sm"
+                  className="w-full max-w-sm text-center"
                 >
                   {/* No subtitle — the card footer carries the honesty line
                       ("history, not advice.") exactly once. */}
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-4 leading-tight">
-                    Your <span className="text-blue-500">{riskData.flag} {riskData.code}</span> in context
+                    Your <span className="text-blue-500 dark:text-blue-300">{riskData.flag} {riskData.code}</span> in context
                   </motion.h2>
 
                   <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-3 shadow-lg">
@@ -838,7 +837,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         .map((row) => `${row.value}% against the ${BENCHMARKS[row.bench].label}`)
                         .join(', ')} over {HORIZONS[selectedHorizon].label}.
                     </p>
-                    <div className="flex items-center justify-end gap-2 mb-3">
+                    <div className="flex items-center justify-center gap-2 mb-3">
                       <div className="flex rounded-lg bg-white/10 p-0.5" role="group" aria-label="Comparison period">
                         {(['1yr', '3yr', '5yr'] as Horizon[]).map((horizon) => (
                           <button
@@ -884,15 +883,19 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       <RiskSparkline values={liveSeries.values} code={riskData.code} />
                     )}
 
-                    {/* Comparison bars — scaled to the hero&apos;s magnitude */}
-                    {otherRows.length > 0 && (
-                      <div className="space-y-2.5 mb-3">
+                    {/* Comparison bars — only at the 1Y horizon where the
+                        sparkline carries the path; 3Y/5Y are three points and
+                        a bars chart would just repeat the hero number twice.
+                        The whole bar block is centred (max-w) so the bars
+                        unit reads as one object, not a left-pinned chart. */}
+                    {selectedHorizon === '1yr' && otherRows.length > 0 && (
+                      <div className="space-y-2.5 mb-3 mx-auto max-w-[280px]">
                         {otherRows.map((row) => {
                           const b = BENCHMARKS[row.bench];
                           const pct = Math.max(4, Math.round((Math.abs(row.value) / maxAbs) * 100));
                           return (
                             <div key={row.bench} className="flex items-center gap-2">
-                              <span className="w-[76px] flex-shrink-0 text-[11px] font-bold text-slate-300 whitespace-nowrap">
+                              <span className="w-[64px] flex-shrink-0 text-[11px] font-bold text-slate-300 whitespace-nowrap text-left">
                                 {b.flag} {b.label}
                               </span>
                               <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
@@ -903,7 +906,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                                   transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                                 />
                               </div>
-                              <span className="w-11 flex-shrink-0 text-right text-xs font-black text-slate-200">
+                              <span className="w-11 flex-shrink-0 text-xs font-black text-slate-200">
                                 {row.value > 0 ? '+' : row.value < 0 ? '-' : ''}{Math.abs(row.value)}%
                               </span>
                             </div>
@@ -915,13 +918,14 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     {/* Counterfactual — a split you can see: five parts of the
                         example savings, one minted in gold, and the amount it
                         would have kept. The coins carry the "20%"; the number
-                        carries the payoff. */}
+                        carries the payoff. Stacked (coins above text) so the
+                        whole block centres as one unit. */}
                     {xauPreserved > 0 && (
                       <div
-                        className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-2 flex items-center gap-3"
+                        className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-3 flex flex-col items-center gap-2"
                         aria-label={`If 20% of ${localPrefix}${localExample.toLocaleString()} had followed gold: ${localPrefix}${Math.round(xauPreserved).toLocaleString()} more kept.`}
                       >
-                        <div className="flex items-center gap-1 flex-shrink-0" aria-hidden="true">
+                        <div className="flex items-center gap-1" aria-hidden="true">
                           {[0, 1, 2, 3].map((i) => (
                             <span key={i} className="opacity-45">
                               <Coin size={20} symbol={riskData.flag} color="#64748b" variant="asset" />
@@ -950,55 +954,48 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       </div>
                     )}
 
-                    {/* Context events — inside the card, so the whole data
-                        story (numbers, why, provenance) is one object. The
-                        phase outside reads: headline → card → disclosure →
-                        button. Quiet white chips; amber only on open. */}
+                    {/* Context events — collapsed to a single quiet line in
+                        the data footer. Tapping expands a stacked year list
+                        with the explanation for each. Stays inside the card
+                        so the whole data story (numbers, why, provenance)
+                        is one object. */}
                     {riskEvents.length > 0 && (
-                      <div className="mb-3">
-                        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide -mx-1 px-1" aria-label="Context events">
-                          {riskEvents.map((ev) => {
-                            const key = `${ev.year}-${ev.event}`;
-                            const open = openEventKey === key;
-                            return (
-                              <button
-                                key={key}
-                                type="button"
-                                onClick={() => setOpenEventKey(open ? null : key)}
-                                aria-expanded={open}
-                                className={`inline-flex items-center min-h-[44px] flex-shrink-0 whitespace-nowrap rounded-full border px-3 text-[10px] font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${
-                                  open
-                                    ? 'border-amber-400/60 bg-amber-400/10 text-amber-200'
-                                    : 'border-white/15 bg-white/5 text-slate-300 hover:border-white/30'
-                                }`}
-                              >
-                                {ev.year} · {ev.event}
-                              </button>
-                            );
-                          })}
-                        </div>
+                      <div className="pt-2 border-t border-white/10">
+                        <button
+                          type="button"
+                          onClick={() => setOpenEventKey(openEventKey === '__events__' ? null : '__events__')}
+                          aria-expanded={openEventKey === '__events__'}
+                          className="w-full min-h-[28px] flex items-center justify-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
+                        >
+                          <span>
+                            Context: {riskEvents.map((ev) => ev.year).join(', ')}
+                          </span>
+                          <span className="text-slate-500">{openEventKey === '__events__' ? '−' : '+'}</span>
+                        </button>
                         <AnimatePresence initial={false}>
-                          {openEventKey &&
-                            (() => {
-                              const ev = riskEvents.find((e) => `${e.year}-${e.event}` === openEventKey);
-                              if (!ev) return null;
-                              return (
-                                <motion.p
-                                  key={openEventKey}
-                                  initial={{ opacity: 0, height: 0 }}
-                                  animate={{ opacity: 1, height: 'auto' }}
-                                  exit={{ opacity: 0, height: 0 }}
-                                  className="overflow-hidden text-left"
-                                >
-                                  <span className="block pt-1.5 text-[11px] leading-relaxed text-slate-400">{ev.impact}</span>
-                                </motion.p>
-                              );
-                            })()}
+                          {openEventKey === '__events__' && (
+                            <motion.ul
+                              key="events"
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: 'auto' }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="overflow-hidden text-left space-y-1 pt-1.5"
+                            >
+                              {riskEvents.map((ev) => (
+                                <li key={`${ev.year}-${ev.event}`} className="text-[11px] leading-relaxed text-slate-300">
+                                  <span className="font-black text-slate-100">{ev.year}</span>
+                                  <span className="text-slate-500"> · </span>
+                                  <span className="text-slate-400">{ev.event}</span>
+                                  <span className="block text-slate-400/80">{ev.impact}</span>
+                                </li>
+                              ))}
+                            </motion.ul>
+                          )}
                         </AnimatePresence>
                       </div>
                     )}
 
-                    <div className="pt-2 border-t border-white/10 flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                    <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
                       {isLive1yr && (
                         <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
                       )}
@@ -1012,121 +1009,81 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     </div>
                   </motion.div>
 
-                  {/* Single disclosure — everything secondary lives behind one
-                      quiet tap: how protection works + business context. The
-                      persuasion work (numbers, counterfactual, events) sits
-                      above; this tier is for the curious. */}
+                  {/* One quiet line — the how-it-works diagram is moved to the
+                      Phase 3 (philosophy) stage, so this tier is just the
+                      business sub-disclosure. Tap once for context, tap again
+                      for the email capture. */}
                   <motion.div variants={staggerChild} className="mb-4">
+                    <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                      DiversiFi never holds your fiat — buy stablecoins anywhere you trust, we allocate from there.
+                    </p>
                     <button
                       type="button"
-                      onClick={() => setShowOnboardingDetails((shown) => !shown)}
-                      aria-expanded={showOnboardingDetails}
-                      className="w-full min-h-[44px] flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 px-3 py-3 text-left text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                      onClick={() => {
+                        const opening = !showBusinessContext;
+                        setShowBusinessContext(opening);
+                        if (opening) {
+                          trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
+                        }
+                      }}
+                      className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
                     >
-                      <span>What this means for your money</span>
-                      <span className="text-gray-400">{showOnboardingDetails ? '−' : '+'}</span>
+                      {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
                     </button>
                     <AnimatePresence initial={false}>
-                      {showOnboardingDetails && (
+                      {showBusinessContext && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
                           exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden border border-t-0 border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 rounded-b-xl px-3"
+                          className="overflow-hidden"
                         >
-                          {/* How protection works — the old two paragraphs
-                              (~70 words) drawn as three steps instead. */}
-                          <div
-                            className="pt-3 pb-1 flex items-start gap-1"
-                            aria-label="How it works: buy stablecoins on any exchange or on-ramp, connect your wallet, and the Guardian allocates across stablecoins, gold-backed tokens, and yield vaults with every decision recorded on-chain."
-                          >
-                            {[
-                              { glyph: '🏦', label: 'Buy stablecoins', color: '#94a3b8' },
-                              { glyph: '🔌', label: 'Connect wallet', color: '#60a5fa' },
-                              { glyph: '🛡️', label: 'Guardian allocates · on-chain', color: '#10b981' },
-                            ].map((step, i) => (
-                              <Fragment key={step.label}>
-                                {i > 0 && (
-                                  <div className="mt-[15px] h-px w-2 sm:w-4 flex-shrink-0 bg-gray-300 dark:bg-gray-600" aria-hidden="true" />
-                                )}
-                                <div className="flex-1 min-w-0 flex flex-col items-center gap-1 text-center">
-                                  <Coin size={30} symbol={step.glyph} color={step.color} variant="asset" />
-                                  <span className="text-[10px] font-bold leading-tight text-gray-600 dark:text-gray-300">{step.label}</span>
-                                </div>
-                              </Fragment>
-                            ))}
-                          </div>
-                          <p className="pb-2 pt-1 text-[10px] leading-relaxed text-gray-500 dark:text-gray-400">
-                            We don&apos;t convert fiat — step one happens on any exchange or on-ramp you trust. DiversiFi handles everything after.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const opening = !showBusinessContext;
-                              setShowBusinessContext(opening);
-                              if (opening) {
-                                trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
-                              }
-                            }}
-                            className="w-full text-left py-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
-                          >
-                            {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
-                          </button>
-                          <AnimatePresence initial={false}>
-                            {showBusinessContext && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden"
-                              >
-                                <p className="pb-2 text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                                  When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
+                          <div className="mt-2 bg-white/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
+                            <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
+                              When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
+                            </p>
+                            <div className="mt-2 space-y-2">
+                              {waitlistStatus === 'success' ? (
+                                <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                  ✓ You&apos;re on the list — we&apos;ll email you when it&apos;s ready.
                                 </p>
-                                <div className="pb-3 space-y-2">
-                                  {waitlistStatus === 'success' ? (
-                                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                      ✓ You&apos;re on the list — we&apos;ll email you when it&apos;s ready.
-                                    </p>
-                                  ) : (
-                                    <>
-                                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                                        Want early access when business protection launches?
-                                      </p>
-                                      <div className="flex gap-2">
-                                        <input
-                                          type="email"
-                                          inputMode="email"
-                                          autoComplete="email"
-                                          aria-label="Email address for waitlist"
-                                          placeholder="you@business.com"
-                                          value={waitlistEmail}
-                                          onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
-                                          onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
-                                          disabled={waitlistStatus === 'submitting'}
-                                          className="flex-1 min-w-0 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                                        />
-                                        <button
-                                          type="button"
-                                          onClick={handleJoinWaitlist}
-                                          disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
-                                          className="shrink-0 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
-                                        >
-                                          {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
-                                        </button>
-                                      </div>
-                                      {waitlistStatus === 'error' && waitlistError && (
-                                        <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
-                                      )}
-                                      <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
-                                        We&apos;ll only use this to invite you to early access when business protection launches — no other emails, ever. You can ask us to delete it anytime.
-                                      </p>
-                                    </>
+                              ) : (
+                                <>
+                                  <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                                    Want early access when business protection launches?
+                                  </p>
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="email"
+                                      inputMode="email"
+                                      autoComplete="email"
+                                      aria-label="Email address for waitlist"
+                                      placeholder="you@business.com"
+                                      value={waitlistEmail}
+                                      onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
+                                      onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
+                                      disabled={waitlistStatus === 'submitting'}
+                                      className="flex-1 min-w-0 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={handleJoinWaitlist}
+                                      disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
+                                      className="shrink-0 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
+                                    >
+                                      {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
+                                    </button>
+                                  </div>
+                                  {waitlistStatus === 'error' && waitlistError && (
+                                    <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
                                   )}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                                  <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
+                                    We&apos;ll only use this to invite you to early access when business protection launches — no other emails, ever. You can ask us to delete it anytime.
+                                  </p>
+                                </>
+                              )}
+                            </div>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -1140,20 +1097,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     whileTap={{ scale: 0.97 }}
                   >
                     <ShimmerText>Choose Your Approach →</ShimmerText>
-                  </motion.button>
-
-                  {/* Reassurance demoted to a caption on the transition zone —
-                      it reads with the button, not as a standalone block. */}
-                  <motion.p variants={staggerChild} className="mt-2 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
-                    No lock-ups. No subscriptions. Your values, your plan.
-                  </motion.p>
-
-                  <motion.button
-                    variants={staggerChild}
-                    onClick={() => { setCountryOverride(null); setStep('detect'); }}
-                    className="w-full min-h-[44px] py-2 mt-1 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-                  >
-                    ← Pick a different country
                   </motion.button>
                 </motion.div>
               )}
@@ -1169,27 +1112,32 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-md"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
-                    What do you <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600">value?</span>
+                    What do you{' '}
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-300 dark:to-teal-300">
+                      value?
+                    </span>
                   </motion.h2>
                   <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-4">
                     Flick or tap a coin — your values pick the plan.
                   </motion.p>
 
-                  {/* Stage — a fixed-height box the choice transforms.
-                      Coins (state A) swap in place for the lens detail
-                      (state B): the tapped coin flies to the header, the
-                      archetypes unfold beneath it, and nothing below the
-                      stage (money purpose, CTA) ever moves. */}
-                  <motion.div variants={staggerChild} className="relative h-[420px] mb-4">
-                    <AnimatePresence initial={false}>
+                  {/* Stage — a flex container whose height grows with content.
+                      Coins (state A) and lens detail (state B) flow
+                      naturally; the parent's `layout` animates the height
+                      transition so nothing below (money purpose, CTA) ever
+                      jumps. ~200 px of dead space reclaimed from the old
+                      420 px fixed stage. */}
+                  <motion.div variants={staggerChild} layout className="mb-4">
+                    <AnimatePresence initial={false} mode="wait">
                       {!selectedLens && !showAllApproaches ? (
                         <motion.div
                           key="choose"
+                          layout
                           initial={{ opacity: 0, filter: 'blur(6px)' }}
                           animate={{ opacity: 1, filter: 'blur(0px)' }}
                           exit={{ opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } }}
                           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                          className="absolute inset-0 flex flex-col items-center justify-center gap-5"
+                          className="flex flex-col items-center justify-center gap-5 min-h-[200px]"
                         >
                           <LensCoinSelector
                             lenses={VALUES_LENSES}
@@ -1204,12 +1152,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       ) : (
                         <motion.div
                           key={showAllApproaches ? 'all-approaches' : `lens-${selectedLens}`}
+                          layout
                           initial={{ opacity: 0, rotateX: -50, filter: 'blur(4px)' }}
                           animate={{ opacity: 1, rotateX: 0, filter: 'blur(0px)' }}
                           exit={{ opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } }}
                           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                           style={{ transformOrigin: 'top center', perspective: 800 }}
-                          className="absolute inset-0 flex flex-col"
+                          className="flex flex-col"
                         >
                           {/* Lens header — the tapped coin lands here */}
                           <div className="flex items-center gap-3 mb-3">
@@ -1230,6 +1179,15 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                                   ? 'Every approach in one list — pick the one that reads like home.'
                                   : activeLens?.description}
                               </p>
+                              {!showAllApproaches && activeLens && (
+                                <button
+                                  type="button"
+                                  onClick={() => setShowAllApproaches(true)}
+                                  className="mt-0.5 text-[10px] font-bold text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
+                                >
+                                  See all 8 →
+                                </button>
+                              )}
                             </div>
                             <button
                               type="button"
@@ -1240,25 +1198,23 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                             </button>
                           </div>
 
-                          {/* Archetype strip — compact cards, one row */}
+                          {/* Archetype strip — compact cards, one row. The
+                              "See all" chip was a third affordance for the
+                              same list (tap a coin, tap a card, tap See all);
+                              once a lens is selected the implicit promise is
+                              "these 2 fit, pick one". The "All approaches"
+                              view is reached via a separate tap on the lens
+                              header's description if a user really wants it. */}
                           <ArchetypeStrip
                             ids={showAllApproaches ? ARCHETYPE_ORDER : activeLens?.archetypes ?? []}
                             activeId={selectedArchetype}
                             onSelect={handleArchetypeSelect}
-                          >
-                            {!showAllApproaches && (
-                              <button
-                                type="button"
-                                onClick={() => setShowAllApproaches(true)}
-                                className="flex-shrink-0 w-[76px] min-h-[44px] rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-600 text-[11px] font-bold text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-600 transition-colors"
-                              >
-                                See all →
-                              </button>
-                            )}
-                          </ArchetypeStrip>
+                          />
 
-                          {/* Plan preview — the numeric payoff, or a quiet prompt */}
-                          <div className="flex-1 min-h-0 mt-3 flex flex-col">
+                          {/* Plan preview — the numeric payoff, or a quiet prompt.
+                              Caps at a fixed max-height so a long plan doesn't
+                              push the CTA off-screen; the card itself scrolls. */}
+                          <div className="mt-3 max-h-[260px] overflow-y-auto scrollbar-hide">
                             <AnimatePresence mode="wait" initial={false}>
                               {planPreview ? (
                                 <motion.div
@@ -1289,12 +1245,11 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     </AnimatePresence>
                   </motion.div>
 
-                  {/* Money purpose — one segmented row, same control as 1Y/3Y/5Y */}
+                  {/* Money purpose — compact single-line segmented control.
+                      Icon + label per chip; the heading + description caption
+                      are gone (chip labels already say it). */}
                   <motion.div variants={staggerChild} className="mb-4">
-                    <p className="text-xs font-black text-gray-700 dark:text-gray-300 mb-2 text-left">
-                      When will you need it?
-                    </p>
-                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-label="Money purpose">
+                    <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-label="When you will need this money">
                       {MONEY_PURPOSES.map((purpose) => (
                         <button
                           key={purpose.value}
@@ -1302,13 +1257,14 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           role="radio"
                           aria-checked={moneyPurpose === purpose.value}
                           onClick={() => setMoneyPurpose(purpose.value)}
+                          aria-label={purpose.label}
                           className={`min-h-[44px] rounded-lg px-1 py-2 text-[11px] font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                             moneyPurpose === purpose.value
                               ? 'bg-emerald-500 text-white shadow-sm'
                               : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
                           }`}
                         >
-                          {purpose.icon}{' '}
+                          <span aria-hidden="true">{purpose.icon}</span>{' '}
                           {purpose.value === 'everyday_buffer'
                             ? 'Soon'
                             : purpose.value === 'long_term_savings'
@@ -1317,18 +1273,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                         </button>
                       ))}
                     </div>
-                    <AnimatePresence mode="wait" initial={false}>
-                      <motion.p
-                        key={moneyPurpose ?? 'none'}
-                        initial={{ opacity: 0, filter: 'blur(4px)' }}
-                        animate={{ opacity: 1, filter: 'blur(0px)' }}
-                        exit={{ opacity: 0, filter: 'blur(4px)' }}
-                        transition={{ duration: 0.2 }}
-                        className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400 mt-2 text-left"
-                      >
-                        {MONEY_PURPOSES.find((p) => p.value === moneyPurpose)?.description}
-                      </motion.p>
-                    </AnimatePresence>
                   </motion.div>
 
                   {/* Actions — archetype-aware when a philosophy is selected */}

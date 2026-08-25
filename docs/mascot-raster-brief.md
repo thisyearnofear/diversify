@@ -1,5 +1,14 @@
 # Guardian Mascot — Raster Asset Brief
 
+> **STATUS (2026-08-25): SUPERSEDED.** This brief was written for the
+> "Rounded Guardian" redesign, which was rejected in review — the AI
+> raster candidates came back cutesy, beveled, and toy-like, and the team
+> preferred the original digital-shield identity. The current production
+> path is the opposite: the SVG `GuardianMascot` (digital shield) IS the
+> mascot; rasters are **deterministic renders of the SVG source**, not AI
+> generations. See `docs/design-language.md` §9. This file is retained as
+> a record of the ip-as-logo workflow and its failure mode.
+
 **Generated:** 2026-08-25 · **Source:** Adapted from [s1dashu/ip-as-logo-skill](https://github.com/s1dashu/ip-as-logo-skill) (MIT)
 
 This brief follows the ip-as-logo skill's generation workflow and constraint

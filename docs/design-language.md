@@ -156,58 +156,94 @@ truthfully somewhere verifiable.
 
 ## 9. The Guardian — mascot spec
 
-The Guardian is the app's personified presence. It carries the same constraint
-system as the app's design grammar (coins decide, numbers convince, one button
-acts) — built on principles from s1dashu/ip-as-logo-skill (MIT-licensed),
-adapted for our SVG codebase.
+The Guardian is the app's personified presence: **protective tech, not a toy.**
+It carries the same constraint system as the app's design grammar (coins
+decide, numbers convince, one button acts).
+
+**Identity history (why the spec looks like this):** The original Guardian
+(pre-2026-08) was a digital shield — pointed silhouette, dark visor, square
+blue eyes. The 2026-08-25 "Rounded Guardian" redesign softened everything into
+a kawaii blob (domed head, cheek bulges, round cartoon eyes, no points), and
+the AI raster candidates generated for it (GPT Image 2,
+`docs/mascot-raster-brief.md`) made the problem concrete: cute, beveled,
+toy-like — the robustness was gone. The current spec restores the digital
+shield's visual DNA and keeps the redesign's motion discipline.
 
 **Core rules (non-negotiable):**
-- One dominant silhouette: a plump rounded shield, domed head, soft cheek bulge,
-  rounded U-bottom. No sharp tips, no angular points, no needle-thin anything.
-  Every tip is blunt and rounded.
-- Three semantic colors only: blue body family (two tonal shades within one
-  family), navy face (#1e3a8a), coin gold (#f59e0b — the same hex as the Coin
-  primitive; the Guardian literally carries the app's motif).
-- Two big round eyes, widely spaced (rx 5.5 at rest, mood-driven reshaping). A
-  tiny mouth only when the mood needs expression (neutral = no mouth).
-- Belly coin as the one defining feature (a flat gold disc + thin inner ring).
+- One dominant silhouette: the **pointed heraldic shield** — apex top, straight
+  shoulders, tapering to one point below. The point is the identity; do not
+  round it away again.
+- **Dark visor screen face** (`#1e293b`) inset in the shield — the eyes live on
+  a screen. **No mouth, ever** — the visor is the face; the eyes do the talking.
+- Two **digital square eyes** (8×8, rx 2, `#60a5fa`), mood-driven reshaping
+  only. Squared eyes read as tech, not kawaii.
+- **Pale ice armor** fill (`#eff6ff → #dbeafe`) with the **2px blue edge**
+  (`#2563eb`) defining the form, plus a barely-there bottom shade
+  (blue 0→14%). No glow, no cast shadow.
+- **Belly coin** — gold `#f59e0b`, identical to the Coin primitive — sits low,
+  straddling the visor's bottom edge: the app's motif as the Guardian's core.
   Always present, even at small sizes.
-- Readable at 32×32. At ≤48px: the "compact" mode — body + eyes + coin, no
-  mouth, no thinking dots. If a feature disappears at 32px, the compact mark
-  must survive without it.
+- Three semantic colors: ice/edge blue family, visor slate, coin gold.
+- Readable at 32×32. At ≤48px: "compact" mode — shield + eyes + coin, no
+  thinking dots. If a feature disappears at 32px, the compact mark must
+  survive without it.
 
-**Mood inventory (five states):**
-| Mood | Eyes | Mouth | Extra | When |
-|---|---|---|---|---|
-| happy | round (rx 5.5, ry 5.5) | small smile arc | — | strategy aligned, streaks |
-| neutral | round | none | — | idle, waiting |
-| thinking | round, slightly smaller | tiny "o" offset | two thought dots above-right | AI processing |
-| protective | closed slit (ry 1.2) | gentle smile | slight downward gaze | shield active |
-| alert | widened (rx 6.5, ry 6.5) | small open "o" | slight upward shift | notifications |
+**Mood inventory (five states — eyes only):**
+| Mood | Eyes | Extra | When |
+|---|---|---|---|
+| happy | full squares | — | strategy aligned, streaks |
+| neutral | full squares | — | idle, waiting |
+| thinking | squashed (scaleY 0.8), slow x-wander | two signal dots above-right | AI processing |
+| protective | narrow slit (scaleY 0.35), gaze drops | — | shield active |
+| alert | enlarged (1.25×), gaze lifts | — | notifications |
 
 **Motion rules (§5):**
 - Mood animations communicate state only — they are legitimate (confirms).
-- Zero ambient loops: no infinite pulse, bob, breathe, or drift. The Guardian
-  settles once on mount (spring scale 0.92→1) then is still.
-- Reduced motion: no keyframes, no repeats. Moods render discretely (eye shape
-  still reflects mood; gaze is static). Motion budget stays spent on work that
-  reveals or confirms.
+- Zero ambient loops: no bob, no glow pulse, no breathing shadow (all three
+  existed in the pre-redesign original and are retired for good). The Guardian
+  draws in once (pathLength 0→1) and settles on mount (spring scale 0.92→1)
+  then is still.
+- **Life comes from attention, not idling.** `gaze="pointer"` lets the eyes
+  follow the user's pointer — awareness, not ambience. It only moves when
+  you move: rAF-throttled, spring-damped pursuit, capped at ±4/±2.5 viewBox
+  units, cleaned up on unmount. Use it on greeting surfaces
+  (`WelcomeScreen`, AIChat empty state); keep it off on utility surfaces.
+  A fixed `{x, y}` target (each axis [-1, 1]) is available for directed
+  attention. Moods also settle on springs (`MOOD_SPRING`), never linear snaps.
+- Reduced motion: no keyframes, no repeats, no gaze tracking. Moods render
+  discretely (eye shape still reflects mood; gaze is static). Motion budget
+  stays spent on work that reveals or confirms.
 
-**Composition for raster assets (icon.png, OG image, splash):**
-- Lower-corner emergence: the Guardian emerges from bottom-left or bottom-right,
-  filling 85–95% of a 1:1 square, visually dominant.
-- Solid named background color (gently muted saturation, clearly chromatic).
-- Never bottom-center or top-center the character.
-- Clean square outer corners, no presentation chrome.
-- Generate with a top-tier model (GPT Image 2 preferred; Seedance 5.0 Pro,
-  Nano Banana Pro, or Nano Banana 2 acceptable). See `docs/mascot-raster-brief.md`.
+**Raster assets (icon.png, OG image, splash):**
+- Render from the SVG source — deterministic export, character-faithful.
+  AI image generation is **not** the production path for the mark: the
+  2026-08-25 GPT Image 2 tests (see `docs/mascot-raster-brief.md`) came back
+  cutesy and beveled. The SVG IS the mascot; rasters are screenshots of it.
+- Single source of truth: `apps/web/components/shared/guardian-mark.ts` holds
+  the geometry + palette; the live component AND
+  `pnpm render-guardian-assets` (`scripts/render-guardian-assets.ts`,
+  satori-free Resvg pipeline) both consume it, so exports never diverge.
+  Outputs: `icon.png` 1024², `preview.png` 1024², `splash.png` 1024²
+  (centered mark on the slate field), `embed-image.png` 1200×630
+  (lower-right emergence). Re-run after any mark change.
+- Composition when placing the mark: lower-corner emergence for wide
+  formats; centered for square formats with the mark ≥80% of the canvas to
+  survive PWA maskable safe zones. Solid named background (canonical field:
+  deep slate navy `#0f172a`). Never bottom-center the character in wide
+  formats. Clean square outer corners, no presentation chrome, no text.
+
+**Blink (life without ambience):**
+- The Guardian blinks — but only as a **transition confirmation** (§5):
+  once after the mount draw-in settles, and once on every mood change.
+  There is no periodic idle blink; that would be an ambient loop.
+- Skipped entirely in compact mode and reduced motion.
 
 ## Where the primitives live
 
 | Primitive | Path | Used for |
 |---|---|---|
 | `Coin`, `FloatingCoins` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif, ambient field |
-| `GuardianMascot` | `apps/web/components/shared/GuardianMascot.tsx` | rounded shield mascot, mood system |
+| `GuardianMascot` | `apps/web/components/shared/GuardianMascot.tsx` | digital shield mascot, mood + gaze system |
 | `LensCoinSelector` | `apps/web/components/onboarding/LensCoinSelector.tsx` | flickable selection row |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
