@@ -26,45 +26,59 @@ export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' 
   const archetype = ARCHETYPES[preview.archetypeId];
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
 
+  // Top-N aggregation: this moment needs the *flavor* of the plan, not
+  // the ledger. Six chips wrap into an unreadable stack and the 10%
+  // tail carries no decision value — show the leading four, name the
+  // count of the rest. (The full split is one tap away, in-app.)
+  const MAX_CHIPS = 4;
+  const visible = preview.slices.slice(0, MAX_CHIPS);
+  const hiddenCount = preview.slices.length - visible.length;
+
   return (
     <div
       className={`rounded-xl border px-3 py-2.5 text-left ${className}`}
       style={{
-        borderColor: `${archetype.accent}40`,
-        background: `linear-gradient(135deg, ${archetype.surface.start}12 0%, ${archetype.surface.mid}18 100%)`,
+        borderColor: `${archetype.accent}66`,
+        background: `linear-gradient(135deg, ${archetype.surface.start}1e 0%, ${archetype.surface.mid}2a 100%)`,
       }}
     >
       {preview.slices.length > 0 ? (
         <>
-          <p className="text-xs text-gray-600 dark:text-slate-300 mb-1.5">
+          <p className="text-[13px] text-gray-700 dark:text-slate-200 mb-1.5">
             Shield <strong className="text-gray-900 dark:text-white">{preview.shieldPercent}%</strong> of{' '}
             <strong className="text-gray-900 dark:text-white">
               {currencyPrefix}{fmt(preview.savingsAmount)}
             </strong>
           </p>
           <div className="flex flex-wrap items-center gap-1.5">
-            {preview.slices.map((slice) => (
+            {visible.map((slice) => (
               <span
                 key={slice.token}
-                className="inline-flex items-center gap-1 rounded-full bg-gray-200/70 dark:bg-white/10 px-2 py-1 text-xs font-bold text-gray-800 dark:text-white"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-bold text-gray-900 dark:text-white bg-white/60 dark:bg-white/[0.08]"
+                style={{ borderColor: `${archetype.accent}4d` }}
               >
-                <TokenIcon symbol={slice.token} size={12} />
+                <TokenIcon symbol={slice.token} size={16} />
                 {slice.token}
                 <span className="tabular-nums" style={{ color: archetype.accent }}>
                   {slice.percent}%
                 </span>
               </span>
             ))}
+            {hiddenCount > 0 && (
+              <span className="inline-flex items-center px-2.5 py-1 text-sm font-bold text-gray-500 dark:text-slate-400">
+                +{hiddenCount} more
+              </span>
+            )}
           </div>
         </>
       ) : (
-        <p className="text-xs text-gray-500 dark:text-slate-400">
+        <p className="text-[13px] text-gray-500 dark:text-slate-400">
           You&apos;ll set your own token targets after connecting your wallet.
         </p>
       )}
 
       {preview.preservedValue != null && preview.preservedValue > 0 && (
-        <p className="text-xs text-gray-600 dark:text-slate-300 border-t border-gray-200 dark:border-white/10 mt-2 pt-2">
+        <p className="text-[13px] text-gray-700 dark:text-slate-200 border-t border-gray-200 dark:border-white/15 mt-2 pt-2">
           Followed gold over 5 years:{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
             {currencyPrefix}{fmt(preview.preservedValue)}
