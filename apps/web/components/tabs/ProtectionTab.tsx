@@ -22,6 +22,7 @@ import EmptyState from "@/components/ui/EmptyState";
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
+import { ProtectionJourney } from "./protect/ProtectionJourney";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
 import RwaAssetCards from "./protect/RwaAssetCards";
 import RobinhoodRwaCard from "./protect/RobinhoodRwaCard";
@@ -444,35 +445,18 @@ export default function ProtectionTab({
           aria-hidden="true"
         />
       )}
-      {/* Strategy Alignment Bar */}
-      {selectedStrategyData && (
-        <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800">
-          <GuardianMascot size={40} mood={strategyAlignmentScore > 80 ? 'happy' : 'thinking'} />
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300 truncate">
-                {selectedStrategyData.name}
-              </span>
-...
-
-              <span className="text-xs font-bold text-indigo-500 dark:text-indigo-400 ml-2 shrink-0">
-                {strategyAlignmentScore}% aligned
-              </span>
-            </div>
-            <div className="w-full bg-indigo-200 dark:bg-indigo-900 rounded-full h-1.5">
-              <div
-                className="bg-indigo-600 dark:bg-indigo-400 h-1.5 rounded-full transition-colors duration-500"
-                style={{ width: `${Math.min(strategyAlignmentScore, 100)}%` }}
-              />
-            </div>
-            {strategyAlignmentFeedback.length > 0 && (
-              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 truncate">
-                {strategyAlignmentFeedback[0]}
-              </p>
-            )}
-          </div>
-        </div>
-      )}
+      {/* Protection Journey — connects the user's philosophy to Guardian
+          execution and offers a clear next action. Replaces the generic
+          Strategy Alignment Bar with philosophy-aware guidance. */}
+      <ProtectionJourney
+        financialStrategy={financialStrategy}
+        strategyAlignmentScore={strategyAlignmentScore}
+        strategyAlignmentFeedback={strategyAlignmentFeedback}
+        displayTotalValue={displayTotalValue}
+        hasChosenPlan={hasChosenPlan}
+        onNavigateToProtection={() => setActiveTab?.("protect")}
+        onNavigateToExchange={() => setActiveTab?.("exchange")}
+      />
 
       {/* =====================================================================
           G$ SAVINGS LOOP — Claim G$ → Build streak → Protect → Repeat.
