@@ -621,7 +621,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
                     Is your money quietly{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-300 dark:to-indigo-300">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-fuchsia-500 to-amber-500">
                       losing value?
                     </span>
                   </motion.h2>
@@ -828,7 +828,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   {/* No subtitle — the card footer carries the honesty line
                       ("history, not advice.") exactly once. */}
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-4 leading-tight">
-                    Your <span className="text-blue-500 dark:text-blue-300">{riskData.flag} {riskData.code}</span> in context
+                    Your <span className="text-amber-500 dark:text-amber-300">{riskData.flag} {riskData.code}</span> in context
                   </motion.h2>
 
                   <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-3 shadow-lg">
@@ -1113,7 +1113,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
                     What do you{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-300 dark:to-teal-300">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-pink-500 to-violet-500">
                       value?
                     </span>
                   </motion.h2>
