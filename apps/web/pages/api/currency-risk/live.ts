@@ -12,7 +12,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getLiveDepreciation } from '@diversifi/shared/src/services/fx-rate.service';
+import { getLiveDepreciation, getLiveValueSeries } from '@diversifi/shared/src/services/fx-rate.service';
 
 // Simple per-process cache: currency → { data, expiry }
 const cache = new Map<string, { data: any; expiry: number }>();
@@ -42,11 +42,17 @@ export default async function handler(
   }
 
   try {
-    const result = await getLiveDepreciation(code);
+    // Depreciation + sampled 12-month value series in parallel; both land
+    // in the same 6-hour cache entry.
+    const [result, series] = await Promise.all([
+      getLiveDepreciation(code),
+      getLiveValueSeries(code),
+    ]);
     if (!result) {
       return res.status(200).json({
         currency: code,
         depreciation: null,
+        series: null,
         source: 'fawazahmed0',
         note: 'No live data available for this currency. Using curated historical data.',
       });
@@ -55,6 +61,7 @@ export default async function handler(
     const response = {
       currency: code,
       depreciation: result,
+      series,
       source: 'fawazahmed0' as const,
       note:
         result['3yr'] == null
@@ -71,6 +78,7 @@ export default async function handler(
     return res.status(200).json({
       currency: code,
       depreciation: null,
+      series: null,
       source: 'fawazahmed0',
       note: 'Live data temporarily unavailable. Using curated historical data.',
     });

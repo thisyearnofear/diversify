@@ -175,6 +175,80 @@ export const FX_RATE_SOURCE_NOTE =
   'Mid-market rates: fawazahmed0 open currency dataset (daily snapshots). ' +
   'Indicative mid-market, not tradeable quotes.';
 
+// ── Live value series (sparkline data) ─────────────────────────────────
+
+export interface FxSeriesResult {
+  /** ISO dates, oldest → newest. */
+  dates: string[];
+  /** Currency value vs USD indexed to 100 at the start of the window.
+      Declining values = the currency bought less USD over time. */
+  values: number[];
+  source: 'fawazahmed0';
+}
+
+/**
+ * Pure helper: turn resolved (date, local-per-USD rate) pairs into a value
+ * series indexed to 100 at the start of the window.
+ *
+ * The dataset quotes local-per-USD (e.g. 130 KES per USD), so the
+ * currency's USD value is proportional to 1/rate. Indexing:
+ * value_i = (rate_first / rate_i) * 100 — a weakening currency produces a
+ * declining line. This draws the REAL path from sampled daily tables;
+ * nothing is interpolated or fabricated (Wave 8 honesty rule).
+ */
+export function buildIndexedSeries(
+  dates: string[],
+  rates: number[],
+): { dates: string[]; values: number[] } | null {
+  if (dates.length !== rates.length || dates.length < 2) return null;
+  const first = rates[0];
+  if (!first || first <= 0) return null;
+  const values = rates.map((r) => Math.round((first / r) * 100 * 100) / 100);
+  return { dates: [...dates], values };
+}
+
+/**
+ * Sampled ~12-month value series for a currency against USD, for the
+ * risk-card sparkline. Fetches `points` evenly spaced daily tables in
+ * parallel (biweekly by default) — a full 365-day sequential walk would
+ * take minutes; 26 parallel fetches land in about a second cold, then
+ * the per-process memo and the route cache carry the load.
+ *
+ * Returns null for USD (a flat line against itself carries no story)
+ * or when too few dates resolve.
+ */
+export async function getLiveValueSeries(
+  currency: string,
+  points = 26,
+): Promise<FxSeriesResult | null> {
+  if (currency.toUpperCase() === 'USD') return null;
+
+  const today = new Date();
+  const dates: string[] = [];
+  for (let i = points - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - Math.round((i * 365) / (points - 1)));
+    dates.push(d.toISOString().slice(0, 10));
+  }
+
+  // Parallel resolution; memo makes overlaps with getLiveDepreciation free.
+  const resolved = await Promise.all(
+    dates.map(async (iso) => ({ iso, rate: await resolveRate(currency, iso) })),
+  );
+  const ok = resolved.filter(
+    (r): r is { iso: string; rate: number } => r.rate != null,
+  );
+  if (ok.length < Math.min(12, points)) return null;
+
+  const series = buildIndexedSeries(
+    ok.map((r) => r.iso),
+    ok.map((r) => r.rate),
+  );
+  if (!series) return null;
+
+  return { ...series, source: 'fawazahmed0' };
+}
+
 export interface DepreciationResult {
   /** Depreciation percentage. Negative = currency weakened vs benchmark. */
   '1yr': number | null;

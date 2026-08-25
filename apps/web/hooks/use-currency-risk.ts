@@ -39,6 +39,13 @@ interface LiveDepreciationResponse {
     '5yr': number | null;
     asOf: string;
   } | null;
+  /** Sampled ~12-month value series vs USD, indexed to 100 at the start
+      of the window (real daily data, never interpolated). Null when the
+      feed has no series for this currency. */
+  series?: {
+    dates: string[];
+    values: number[];
+  } | null;
   source: string;
   note?: string;
 }
@@ -85,6 +92,8 @@ export interface UseCurrencyRiskReturn {
   dataAsOf: string;
   /** Whether the 1yr figure is from live data or the curated static dataset. */
   isLive1yr: boolean;
+  /** Sampled ~12-month value series vs USD (indexed to 100), or null. */
+  liveSeries: { dates: string[]; values: number[] } | null;
 }
 
 export function useCurrencyRisk(): UseCurrencyRiskReturn {
@@ -159,6 +168,7 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
   const liveDepreciation1yr = liveDep?.depreciation?.['1yr'] ?? null;
   const isLive1yr = liveDepreciation1yr != null;
   const dataAsOf = liveDep?.depreciation?.asOf ?? CURRENCY_RISK_DATA_AS_OF;
+  const liveSeries = liveDep?.series ?? null;
 
   const primaryDepreciation = riskData
     ? riskData.depreciation.vsUSD['5yr']
@@ -221,5 +231,6 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     liveDepreciation1yr,
     dataAsOf,
     isLive1yr,
+    liveSeries,
   };
 }
