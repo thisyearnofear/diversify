@@ -351,19 +351,50 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .coin-float,
   .aurora-drift,
-  .lens-coin-pulse {
+  .lens-coin-pulse,
+  .coin-shine rect,
+  .lens-coin-idle {
     animation: none;
+  }
+  .lens-coin-idle {
+    transition: none;
   }
 }
 
+/* ── Specular shine band (lens-coin, hero moments) ─────────────────
+   A thin white wedge that travels left-to-right across the coin face.
+   The long total duration + short visible window means the shine
+   appears ~once every 3 s and only for ~700 ms of that — eye-catching
+   but never busy. */
+.coin-shine rect {
+  animation: coin-shine-sweep var(--shine-duration, 2.6s) ease-in-out infinite;
+  will-change: transform;
+}
+@keyframes coin-shine-sweep {
+  /* Start well off the left edge, sweep across, end off the right. The
+     0% and 100% offsets both put the band outside the coin's viewBox so
+     the loop seams are invisible. */
+  0%   { transform: rotate(20deg) translateX(0); }
+  100% { transform: rotate(20deg) translateX(120px); }
+}
+
 /* ── Lens coin motif (Phase 3 value-lens selector) ─────────────────
-   The five value-lens coins need a persistent "I'm selected" signal
-   that survives after the rotateY flip settles. A low-intensity accent
-   glow + slow pulse says "this is the one" without competing with the
-   countdown of stage copy. */
-.lens-coin-active {
+   Every coin has a soft accent-coloured underglow in its own colour so
+   it reads as a polished medallion sitting on a coloured cushion, not
+   a dim dot on the dark vault. The active state intensifies the same
+   underglow and adds a slow pulse. */
+.lens-coin-idle {
+  filter: drop-shadow(0 0 4px var(--lens-accent, #10b981))
+          drop-shadow(0 0 10px var(--lens-accent-soft, rgba(16,185,129,0.3)));
+  transition: filter 0.2s ease-out;
+}
+.lens-coin-idle:hover {
   filter: drop-shadow(0 0 6px var(--lens-accent, #10b981))
-          drop-shadow(0 0 14px var(--lens-accent-soft, rgba(16,185,129,0.4)));
+          drop-shadow(0 0 16px var(--lens-accent-soft, rgba(16,185,129,0.5)));
+}
+.lens-coin-active {
+  filter: drop-shadow(0 0 8px var(--lens-accent, #10b981))
+          drop-shadow(0 0 18px var(--lens-accent-soft, rgba(16,185,129,0.55)));
 }
 .lens-coin-pulse {
   animation: lens-coin-pulse 2.6s ease-in-out infinite;
@@ -371,13 +402,13 @@ body {
 }
 @keyframes lens-coin-pulse {
   0%, 100% {
-    filter: drop-shadow(0 0 6px var(--lens-accent, #10b981))
-            drop-shadow(0 0 14px var(--lens-accent-soft, rgba(16,185,129,0.4)));
+    filter: drop-shadow(0 0 8px var(--lens-accent, #10b981))
+            drop-shadow(0 0 18px var(--lens-accent-soft, rgba(16,185,129,0.55)));
     transform: scale(1);
   }
   50% {
-    filter: drop-shadow(0 0 10px var(--lens-accent, #10b981))
-            drop-shadow(0 0 22px var(--lens-accent-soft, rgba(16,185,129,0.55)));
+    filter: drop-shadow(0 0 12px var(--lens-accent, #10b981))
+            drop-shadow(0 0 26px var(--lens-accent-soft, rgba(16,185,129,0.7)));
     transform: scale(1.04);
   }
 }

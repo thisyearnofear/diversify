@@ -30,7 +30,14 @@ import { showTestnetUi, optIntoTestnetUi } from '../../../constants/testnet';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
 import { Coin, FloatingCoins } from '../../shared/FloatingCoins';
-import { LensCoinSelector } from '../LensCoinSelector';
+import {
+  LensCoinSelector,
+  COMBINE_VARIANT_COUNT,
+  COMBINE_PANEL_DELAY,
+  combineOriginX,
+  useLensCoinMetrics,
+} from '../LensCoinSelector';
+import type { TargetAndTransition, Transition } from 'framer-motion';
 import { PlanPreviewCard } from '../../protection-cards/PlanPreviewCard';
 
 // ── Animation variants ─────────────────────────────────────────────────
@@ -401,6 +408,12 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [selectedArchetype, setSelectedArchetype] = useState<ArchetypeId | null>(null);
     const [selectedLens, setSelectedLens] = useState<ValuesLens | null>(null);
     const [showAllApproaches, setShowAllApproaches] = useState(false);
+    // Which combine choreography the stage plays next — cycles 0→1→2 on
+    // each selection so every pick gets a different trick, not a template.
+    const [lensVariant, setLensVariant] = useState(0);
+    // Bump when returning to the coin row so the coins burst back out of
+    // the point the previous pick collapsed into.
+    const [emergeKey, setEmergeKey] = useState(0);
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
@@ -526,14 +539,99 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
       ? calculateCounterfactual(localExample, 20, 'XAU', selectedHorizon)
       : 0;
 
-    const planPreview = selectedArchetype
-      ? getPlanPreview(selectedArchetype, localExample, 20)
-      : null;
-
     // The lens currently open in the phase-3 stage (null in the coin view).
     const activeLens = selectedLens
       ? VALUES_LENSES.find((lens) => lens.id === selectedLens) ?? null
       : null;
+    const activeLensIndex = activeLens
+      ? VALUES_LENSES.findIndex((lens) => lens.id === activeLens.id)
+      : -1;
+    // The point on the stage the detail blooms out of: the chosen coin's
+    // own slot centre. Pitch comes from the same metrics hook the row
+    // uses, so the bloom can never drift from the rendered spacing.
+    const { pitch: lensPitch } = useLensCoinMetrics();
+    const bloomOrigin = combineOriginX(
+      activeLensIndex >= 0 ? activeLensIndex : (VALUES_LENSES.length - 1) / 2,
+      VALUES_LENSES.length,
+      lensPitch,
+    );
+    const panelDelay = COMBINE_PANEL_DELAY[lensVariant % COMBINE_PANEL_DELAY.length];
+
+    // Tap a coin → the row combines into it (a different variation each
+    // time) and the detail opens from the same point.
+    const handleLensSelect = (id: ValuesLens) => {
+      setLensVariant((v) => (v + 1) % COMBINE_VARIANT_COUNT);
+      setSelectedLens(id);
+    };
+
+    // Back to the row → the coins burst back out of the chosen point.
+    const handleBackToCoins = () => {
+      setSelectedLens(null);
+      setShowAllApproaches(false);
+      setEmergeKey((k) => k + 1);
+    };
+
+    // Plan preview — only when the selected archetype actually belongs
+    // to the lens panel currently open (or the "all approaches" view),
+    // so browsing another lens never shows a stale pick's plan.
+    const planPreview =
+      selectedArchetype &&
+      activeLens &&
+      (showAllApproaches || activeLens.archetypes.includes(selectedArchetype))
+        ? getPlanPreview(selectedArchetype, localExample, 20)
+        : null;
+
+    // Panel entrance — one per combine variant, timed off the hand-off
+    // the coins exported. V0: the panel is revealed by an expanding
+    // circle centred on the chosen coin (the "sprout"). V1: a soft
+    // drop-in behind the dissolving pick. V2: an eruption from it.
+    const panelEntrance: {
+      initial: TargetAndTransition;
+      animate: TargetAndTransition;
+      transition: Transition;
+    } = reduceMotion
+      ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.15 } }
+      : lensVariant === 0
+      ? {
+          initial: { opacity: 1, clipPath: `circle(0px at ${bloomOrigin} 50%)` },
+          animate: { opacity: 1, clipPath: `circle(560px at ${bloomOrigin} 50%)` },
+          transition: { duration: 0.55, delay: panelDelay, ease: [0.16, 1, 0.3, 1] },
+        }
+      : lensVariant === 1
+      ? {
+          initial: { opacity: 0, y: -14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.45, delay: panelDelay, ease: [0.16, 1, 0.3, 1] },
+        }
+      : {
+          initial: { opacity: 0, scale: 0.4 },
+          animate: { opacity: 1, scale: 1 },
+          transition: { type: 'spring', stiffness: 240, damping: 20, delay: panelDelay },
+        };
+
+    // Content turns: V1 cascades downward, V2 assembles outward from the
+    // pick, V0 needs nothing (the circle mask does the reveal).
+    const panelChildMotion = (i: number): {
+      initial: TargetAndTransition | false;
+      animate: TargetAndTransition;
+      transition: Transition;
+    } => {
+      if (reduceMotion || lensVariant === 0) {
+        return { initial: false, animate: { opacity: 1 }, transition: { duration: 0.1 } };
+      }
+      if (lensVariant === 1) {
+        return {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.4, delay: panelDelay + 0.08 * i, ease: [0.16, 1, 0.3, 1] },
+        };
+      }
+      return {
+        initial: { opacity: 0, y: 10, scale: 0.65 },
+        animate: { opacity: 1, y: 0, scale: 1 },
+        transition: { type: 'spring', stiffness: 300, damping: 22, delay: panelDelay + 0.06 * i },
+      };
+    };
 
     return (
         // Scrolling lives on the parent dialog (single scroll container).
@@ -585,7 +683,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           </div>
                           <span className="text-xs font-black text-gray-500 dark:text-gray-300 uppercase tracking-widest">DiversiFi</span>
                       </div>
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 leading-snug">
+                      <p className="text-xs font-semibold text-slate-300 leading-snug">
                         Currency protection that fits your values — never a lock-up.
                       </p>
                     </div>
@@ -619,13 +717,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   exit="exit"
                   className="w-full max-w-sm"
                 >
-                  <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
+                  <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
                     Is your money quietly{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 via-fuchsia-500 to-amber-500">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300">
                       losing value?
                     </span>
                   </motion.h2>
-                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-5">
+                  <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-5">
                     Find out in 30 seconds.
                   </motion.p>
 
@@ -827,8 +925,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                 >
                   {/* No subtitle — the card footer carries the honesty line
                       ("history, not advice.") exactly once. */}
-                  <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-4 leading-tight">
-                    Your <span className="text-amber-500 dark:text-amber-300">{riskData.flag} {riskData.code}</span> in context
+                  <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-4 leading-tight">
+                    Your <span className="text-blue-300">{riskData.flag} {riskData.code}</span> in context
                   </motion.h2>
 
                   <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-3 shadow-lg">
@@ -1014,7 +1112,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       business sub-disclosure. Tap once for context, tap again
                       for the email capture. */}
                   <motion.div variants={staggerChild} className="mb-4">
-                    <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+                    <p className="text-[11px] leading-relaxed text-slate-300">
                       DiversiFi never holds your fiat — buy stablecoins anywhere you trust, we allocate from there.
                     </p>
                     <button
@@ -1111,110 +1209,115 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   exit="exit"
                   className="w-full max-w-md"
                 >
-                  <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-gray-900 dark:text-white mb-2 leading-tight">
+                  <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
                     What do you{' '}
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-pink-500 to-violet-500">
+                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300">
                       value?
                     </span>
                   </motion.h2>
-                  <motion.p variants={staggerChild} className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                    Flick or tap a coin — your values pick the plan.
+                  <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-4">
+                    Tap a coin to see what it means — tap again to make it yours. Flick to browse.
                   </motion.p>
 
-                  {/* Stage — a flex container whose height grows with content.
-                      Coins (state A) and lens detail (state B) flow
-                      naturally; the parent's `layout` animates the height
-                      transition so nothing below (money purpose, CTA) ever
-                      jumps. ~200 px of dead space reclaimed from the old
-                      420 px fixed stage. */}
-                  <motion.div variants={staggerChild} layout className="mb-4">
-                    <AnimatePresence initial={false} mode="wait">
-                      {!selectedLens && !showAllApproaches ? (
+                  {/* Stage — a fixed-height canvas holding BOTH the coin
+                      row and the lens detail as overlapping layers. Tap a
+                      coin: the others combine into it (the choreography
+                      cycles through three variations), then the detail
+                      blooms out of the chosen coin's exact slot. Fixed
+                      height + overlapping layers — nothing below the
+                      stage ever moves. */}
+                  <motion.div variants={staggerChild} className="relative h-[300px] mb-4">
+                    {/* Coin row — the combine choreography lives inside. */}
+                    <LensCoinSelector
+                      presentation="stage"
+                      lenses={VALUES_LENSES}
+                      selected={selectedLens}
+                      onSelect={(id) => handleLensSelect(id as ValuesLens)}
+                      combineVariant={lensVariant}
+                      emergeKey={emergeKey}
+                    />
+
+                    {/* Flash ring — a radial burst of the pick's accent at
+                        the convergence point, fired just as the panel
+                        takes over. Bloom + burst variants only. */}
+                    <AnimatePresence>
+                      {activeLens && !reduceMotion && lensVariant !== 1 && (
+                        <motion.span
+                          key={`flash-${activeLens.id}-${lensVariant}`}
+                          aria-hidden="true"
+                          className="pointer-events-none absolute w-14 h-14 rounded-full z-20"
+                          style={{
+                            left: bloomOrigin,
+                            top: '50%',
+                            x: '-50%',
+                            y: '-50%',
+                            border: `2px solid ${activeLens.accent}`,
+                          }}
+                          initial={{ scale: 0.25, opacity: 0.9 }}
+                          animate={{ scale: 3.4, opacity: 0 }}
+                          transition={{ duration: 0.6, ease: 'easeOut', delay: Math.max(0, panelDelay - 0.1) }}
+                        />
+                      )}
+                    </AnimatePresence>
+
+                    {/* Lens detail — sprouts out of the chosen coin. Full
+                        width: no pinned mini-row, no dead corner. */}
+                    <AnimatePresence>
+                      {activeLens && (
                         <motion.div
-                          key="choose"
-                          layout
-                          initial={{ opacity: 0, filter: 'blur(6px)' }}
-                          animate={{ opacity: 1, filter: 'blur(0px)' }}
-                          exit={{ opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } }}
-                          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                          className="flex flex-col items-center justify-center gap-5 min-h-[200px]"
+                          key="lens-panel"
+                          initial={panelEntrance.initial}
+                          animate={panelEntrance.animate}
+                          exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
+                          transition={panelEntrance.transition}
+                          className="absolute inset-0 flex flex-col justify-center px-2 z-10"
                         >
-                          <LensCoinSelector
-                            lenses={VALUES_LENSES}
-                            selected={null}
-                            onSelect={(id) => setSelectedLens(id as ValuesLens)}
-                            coinLayoutId={reduceMotion ? undefined : (id) => `lens-coin-${id}`}
-                          />
-                          <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 px-2">
-                            Each coin is a way of thinking about money.
-                          </p>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key={showAllApproaches ? 'all-approaches' : `lens-${selectedLens}`}
-                          layout
-                          initial={{ opacity: 0, rotateX: -50, filter: 'blur(4px)' }}
-                          animate={{ opacity: 1, rotateX: 0, filter: 'blur(0px)' }}
-                          exit={{ opacity: 0, filter: 'blur(6px)', transition: { duration: 0.18 } }}
-                          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                          style={{ transformOrigin: 'top center', perspective: 800 }}
-                          className="flex flex-col"
-                        >
-                          {/* Lens header — the tapped coin lands here */}
-                          <div className="flex items-center gap-3 mb-3">
-                            {activeLens && !showAllApproaches && (
-                              <motion.div
-                                layoutId={reduceMotion ? undefined : `lens-coin-${activeLens.id}`}
-                                className="w-11 h-11 flex-shrink-0"
-                              >
-                                <Coin size={44} symbol={activeLens.glyph} color={activeLens.accent} variant="selection" />
-                              </motion.div>
-                            )}
-                            <div className="flex-1 min-w-0 text-left">
-                              <p className="text-sm font-black text-gray-900 dark:text-white">
-                                {showAllApproaches ? 'All approaches' : activeLens?.label}
+                          {/* Lens header — one compact row: what is this,
+                              plus the escape hatches. The description is a
+                              single quiet line; the strip cards carry the
+                              details. */}
+                          <motion.div {...panelChildMotion(0)} className="flex items-center justify-between gap-2 mb-2">
+                            <div className="flex items-baseline gap-2 min-w-0 text-left">
+                              <p className="text-sm font-black text-white truncate">
+                                {showAllApproaches ? 'All approaches' : activeLens.label}
                               </p>
-                              <p className="text-[11px] leading-snug text-gray-500 dark:text-gray-400">
+                              <p className="text-[11px] text-slate-400 truncate">
                                 {showAllApproaches
-                                  ? 'Every approach in one list — pick the one that reads like home.'
-                                  : activeLens?.description}
+                                  ? 'Every approach in one list.'
+                                  : activeLens.description}
                               </p>
-                              {!showAllApproaches && activeLens && (
+                            </div>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                              {!showAllApproaches && (
                                 <button
                                   type="button"
                                   onClick={() => setShowAllApproaches(true)}
-                                  className="mt-0.5 text-[10px] font-bold text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
+                                  className="min-h-[44px] px-1 text-[11px] font-bold text-slate-400 hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
                                 >
-                                  See all 8 →
+                                  All 8 →
                                 </button>
                               )}
+                              <button
+                                type="button"
+                                onClick={handleBackToCoins}
+                                className="min-h-[44px] px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+                              >
+                                ← Coins
+                              </button>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => { setSelectedLens(null); setShowAllApproaches(false); }}
-                              className="flex-shrink-0 min-h-[44px] px-2 rounded-lg text-[11px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
-                            >
-                              ← Coins
-                            </button>
-                          </div>
+                          </motion.div>
 
-                          {/* Archetype strip — compact cards, one row. The
-                              "See all" chip was a third affordance for the
-                              same list (tap a coin, tap a card, tap See all);
-                              once a lens is selected the implicit promise is
-                              "these 2 fit, pick one". The "All approaches"
-                              view is reached via a separate tap on the lens
-                              header's description if a user really wants it. */}
-                          <ArchetypeStrip
-                            ids={showAllApproaches ? ARCHETYPE_ORDER : activeLens?.archetypes ?? []}
-                            activeId={selectedArchetype}
-                            onSelect={handleArchetypeSelect}
-                          />
+                          {/* Archetype strip — the user's actual choice. */}
+                          <motion.div {...panelChildMotion(1)}>
+                            <ArchetypeStrip
+                              ids={showAllApproaches ? ARCHETYPE_ORDER : activeLens.archetypes}
+                              activeId={selectedArchetype}
+                              onSelect={handleArchetypeSelect}
+                            />
+                          </motion.div>
 
-                          {/* Plan preview — the numeric payoff, or a quiet prompt.
-                              Caps at a fixed max-height so a long plan doesn't
-                              push the CTA off-screen; the card itself scrolls. */}
-                          <div className="mt-3 max-h-[260px] overflow-y-auto scrollbar-hide">
+                          {/* Plan preview — the numeric payoff, or a quiet prompt. */}
+                          <motion.div {...panelChildMotion(2)} className="mt-2.5">
                             <AnimatePresence mode="wait" initial={false}>
                               {planPreview ? (
                                 <motion.div
@@ -1223,7 +1326,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                                   animate={{ opacity: 1, y: 0 }}
                                   exit={{ opacity: 0, transition: { duration: 0.12 } }}
                                   transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-                                  className="overflow-y-auto scrollbar-hide"
                                 >
                                   <PlanPreviewCard preview={planPreview} currencyPrefix={localPrefix} />
                                 </motion.div>
@@ -1233,14 +1335,31 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                                   initial={{ opacity: 0 }}
                                   animate={{ opacity: 1 }}
                                   exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                                  className="m-auto px-4 text-xs text-gray-400 dark:text-gray-500 text-center"
+                                  className="px-2 text-[11px] text-slate-400 text-center"
                                 >
                                   Tap an approach to preview its plan.
                                 </motion.p>
                               )}
                             </AnimatePresence>
-                          </div>
+                          </motion.div>
                         </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    {/* The "Each coin is a way of thinking about money" caption
+                        — only visible at the coin row, hidden when the lens
+                        detail is showing. */}
+                    <AnimatePresence>
+                      {!activeLens && (
+                        <motion.p
+                          key="coin-caption"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1, transition: { delay: 0.2 } }}
+                          exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                          className="absolute bottom-2 left-0 right-0 text-center text-xs leading-relaxed text-slate-300 px-2"
+                        >
+                          Each coin is a way of thinking about money.
+                        </motion.p>
                       )}
                     </AnimatePresence>
                   </motion.div>

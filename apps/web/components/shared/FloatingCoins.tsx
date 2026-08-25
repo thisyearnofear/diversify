@@ -41,6 +41,11 @@ export interface CoinProps {
   /** Assigns a visual job to the coin; compact roles deliberately remove
    * ornamental detail so hierarchy stays clear in dense UI. */
   variant?: 'ambient' | 'progress' | 'asset' | 'selection';
+  /** Animate a specular shine band across the coin face. Off by default
+   *  so the ambient drift field stays calm; on for interactive moments. */
+  shine?: boolean;
+  /** Shine loop period in seconds. */
+  shineDuration?: number;
 }
 
 export function Coin({
@@ -50,8 +55,14 @@ export function Coin({
   className = '',
   style,
   variant = 'selection',
+  /** Animate the specular shine band across the coin face. Off by default
+   *  so the ambient drift field stays calm; on for interactive/hero moments. */
+  shine = false,
+  /** Shine loop period in seconds. */
+  shineDuration = 2.6,
 }: CoinProps) {
   const gradId = useId();
+  const shineId = useId();
   const light = mix(color, '#ffffff', 0.55);
   const dark = mix(color, '#000000', 0.35);
   const ink = mix(color, '#000000', 0.55);
@@ -74,6 +85,22 @@ export function Coin({
           <stop offset="55%" stopColor={color} />
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
+        {shine && !ambient && (
+          <>
+            {/* Specular shine band — a thin white wedge that travels left-to-right
+                across the coin. The clip-path keeps it inside the coin's circle. */}
+            <linearGradient id={shineId} x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+              <stop offset="45%" stopColor="#ffffff" stopOpacity="0" />
+              <stop offset="50%" stopColor="#ffffff" stopOpacity="0.85" />
+              <stop offset="55%" stopColor="#ffffff" stopOpacity="0" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            </linearGradient>
+            <clipPath id={`${shineId}-clip`}>
+              <circle cx="32" cy="32" r={compact ? 27 : 30} />
+            </clipPath>
+          </>
+        )}
       </defs>
       {/* Ambient coins keep the gradient + inner ring so they read as
           minted medallions, not as disabled UI tokens. Only the gloss
@@ -111,6 +138,21 @@ export function Coin({
       >
         {symbol}
       </text>
+      {/* Specular shine band — clipped to the coin circle, animated via CSS.
+          The `<g>` carries the clip; the inner `<rect>` carries the gradient +
+          animation. width=20 keeps the band thin. */}
+      {shine && !ambient && (
+        <g clipPath={`url(#${shineId}-clip)`} className="coin-shine" style={{ ['--shine-duration' as string]: `${shineDuration}s` } as React.CSSProperties}>
+          <rect
+            x="-30"
+            y="0"
+            width="20"
+            height="64"
+            fill={`url(#${shineId})`}
+            transform="rotate(20 32 32)"
+          />
+        </g>
+      )}
     </svg>
   );
 }

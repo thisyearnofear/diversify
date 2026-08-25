@@ -246,7 +246,6 @@ export function GuardianMobileWizard({
       {/* Strategy coins — same control as onboarding's lens coins */}
       <LensCoinSelector
         ariaLabel="Strategies"
-        wrap
         lenses={STRATEGIES.map((s) => ({
           id: s.id,
           label: s.name,
