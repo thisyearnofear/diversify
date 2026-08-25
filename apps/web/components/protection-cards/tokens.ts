@@ -62,7 +62,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     kicker: 'Protection Plan · Africapitalism',
     philosophy:
       'Keep wealth in African economies. Every cUSD, cEUR, KESm stays close to home.',
-    allocation: ['cUSD', 'cEUR', 'KESm', 'COPm'],
+    allocation: ['KESm', 'GHSm', 'ZARm', 'cUSD', 'cEUR', 'PAXG'],
     accent: '#d97706',
     accentSoft: '#fbbf24',
     // Savannah sunrise — deep umber → amber → gold.
@@ -74,7 +74,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     kicker: 'Protection Plan · Buen Vivir',
     philosophy:
       'Balance material wealth with community and the natural world.',
-    allocation: ['COPm', 'BRZ', 'USDC', 'Community fund'],
+    allocation: ['COPm', 'cREAL', 'cUSD', 'PAXG'],
     accent: '#0d9488',
     accentSoft: '#5eead4',
     // Andean highlands — deep forest → emerald → jade.
@@ -86,7 +86,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     kicker: 'Protection Plan · Pan-Caribbean',
     philosophy:
       'Weather every storm. USD-pegged savings against imported inflation, gold against food shocks.',
-    allocation: ['USDC', 'cUSD', 'USDY', 'PAXG'],
+    allocation: ['USDC', 'cUSD', 'PAXG', 'USDY'],
     accent: '#06b6d4',
     accentSoft: '#a5f3fc',
     // Caribbean shallows — deep sea → tropical turquoise → coral sand.
@@ -97,7 +97,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'Confucian',
     kicker: 'Protection Plan · Confucian',
     philosophy: 'Long-term stability. Low volatility. Patience as a strategy.',
-    allocation: ['USDC', 'cUSD', 'RWA Treasuries', 'Bonds'],
+    allocation: ['USDC', 'cUSD', 'USDC (HashKey)', 'PAXG'],
     accent: '#b91c1c',
     accentSoft: '#fca5a5',
     // Imperial seal — deep cinnabar → vermilion → coral.
@@ -108,7 +108,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'Gotong Royong',
     kicker: 'Protection Plan · Gotong Royong',
     philosophy: 'Community-first. Shared risk. We rise together.',
-    allocation: ['cUSD', 'IDRT', 'PHPT', 'Community pool'],
+    allocation: ['PHPm', 'USDC', 'cUSD', 'PAXG'],
     accent: '#ea580c',
     accentSoft: '#fdba74',
     // Indonesian sunset — plum → magenta → pink → coral.
@@ -120,7 +120,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     kicker: 'Protection Plan · Islamic Finance',
     philosophy:
       'Sharia-compliant. No interest-bearing assets. Ethical by design.',
-    allocation: ['USDC (Sharia)', 'Sukuk', 'Halal RWA'],
+    allocation: ['USDC', 'cUSD', 'PAXG'],
     accent: '#059669',
     accentSoft: '#a7f3d0',
     // Alhambra mosaic — deep emerald → teal → turquoise.
@@ -132,7 +132,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     kicker: 'Protection Plan · Global',
     philosophy:
       'Geographic diversification across all regions. Maximum spread.',
-    allocation: ['USDC', 'cUSD', 'BRZ', 'IDRT', 'Multi-region'],
+    allocation: ['USDC', 'cUSD', 'cEUR', 'PHPm', 'COPm', 'cREAL'],
     accent: '#0284c7',
     accentSoft: '#7dd3fc',
     // Earth from space — deep ocean → sky → cyan.

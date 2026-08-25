@@ -38,13 +38,8 @@ export const STRATEGY_ALLOCATIONS: Record<string, AllocationSlice[]> = {
     { token: 'PHPm', region: 'Philippines', percent: 30 },
     { token: 'USDY', region: 'Yield (Arbitrum)', percent: 20 },
   ],
-  islamic: [
-    { token: 'PAXG', region: 'Global', percent: 50 },
-    { token: 'cUSD', region: 'US', percent: 30 },
-    { token: 'cEUR', region: 'EU', percent: 20 },
-  ],
   global: [
-    { token: 'cUSD', region: 'US', percent: 25 },
+    { token: 'USDC', region: 'Global', percent: 25 },
     { token: 'cEUR', region: 'EU', percent: 20 },
     { token: 'KESm', region: 'Kenya', percent: 20 },
     { token: 'cREAL', region: 'Brazil', percent: 15 },
@@ -60,6 +55,11 @@ export const STRATEGY_ALLOCATIONS: Record<string, AllocationSlice[]> = {
     { token: 'USDC', region: 'Global', percent: 60 },
     { token: 'cEUR', region: 'EU', percent: 20 },
     { token: 'cUSD', region: 'US', percent: 20 },
+  ],
+  islamic: [
+    { token: 'PAXG', region: 'Global', percent: 50 },
+    { token: 'cUSD', region: 'US', percent: 30 },
+    { token: 'USDC', region: 'US', percent: 20 },
   ],
 };
 

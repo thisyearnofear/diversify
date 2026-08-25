@@ -164,8 +164,8 @@ export class StrategyService {
                     targetAllocations: [
                         { region: 'Commodities', min: 20, ideal: 40, max: 60 },
                     ],
-                    excludeAssets: ['USDY', 'SYRUPUSDC', 'Interest-bearing', 'GOLD', 'SILVER', 'OIL', 'COPPER'], // Filter out interest-bearing AND Hyperliquid perps (speculation, no underlying ownership)
-                    prioritizeAssets: ['PAXG', 'Asset-backed'], // PAXG is physical gold — Sharia-compliant; Hyperliquid perps are not
+                    excludeAssets: ['USDY', 'SYRUPUSDC'], // Filter out interest-bearing yield tokens (Riba)
+                    prioritizeAssets: ['PAXG', 'USDC', 'cUSD', 'EURm', 'Asset-backed'], // PAXG is physical gold — Sharia-compliant; stablecoins held (not yielding) are fine
                     scoringWeights: {
                         regionalConcentration: 0.2,
                         globalDiversification: 0.3,
