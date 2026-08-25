@@ -176,8 +176,30 @@ rsync -az --delete --no-owner --no-group \
     --exclude='instrument.js' \
     --exclude='required-env.js' \
     --exclude='required-env.json' \
+    --exclude='node_modules/' \
+    --exclude='packages/' \
     "$STANDALONE_SERVER"/ \
     "$REMOTE:$RUNTIME_DIR/" 2>&1 | tail -5
+
+# Monorepo standalone hoists node_modules (+ traced workspace packages) to
+# the standalone ROOT, one level above server's cwd. With
+# outputFileTracingRoot at the repo root, server.js lands at
+# standalone/apps/web/server.js but resolves `require('next')` from
+# standalone/node_modules — so without this step the rsync above (--delete)
+# wipes the server's node_modules and the app crash-loops on
+# "Cannot find module 'next'". (2026-08-25 incident.)
+if [ -d "$WEB_NEXT/standalone/node_modules" ]; then
+    info "Syncing standalone node_modules (hoisted trace deps)..."
+    rsync -az --delete --no-owner --no-group \
+        "$WEB_NEXT/standalone/node_modules/" \
+        "$REMOTE:$RUNTIME_DIR/node_modules/" 2>&1 | tail -3
+fi
+if [ -d "$WEB_NEXT/standalone/packages" ]; then
+    info "Syncing standalone packages/ (traced workspace packages)..."
+    rsync -az --delete --no-owner --no-group \
+        "$WEB_NEXT/standalone/packages/" \
+        "$REMOTE:$RUNTIME_DIR/packages/" 2>&1 | tail -3
+fi
 
 # Static assets live inside .next/static/ which standalone doesn't include
 info "Syncing static assets..."

@@ -91,9 +91,10 @@ export default async function handler(
   }
 
   if (
-    typeof email !== 'string' ||
-    (email.length > 0 && email.length > 254) ||
-    (email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    email !== undefined &&
+    (typeof email !== 'string' ||
+      email.length > 254 ||
+      (email.length > 0 && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))
   ) {
     return res.status(200).json({ success: false, error: 'Invalid email.' });
   }
