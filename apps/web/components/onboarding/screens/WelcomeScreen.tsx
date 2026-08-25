@@ -417,7 +417,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
     const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
-    const [showBusinessContext, setShowBusinessContext] = useState(false);
+    const [showBusinessContextOpen, setShowBusinessContextOpen] = useState(false);
     const [openEventKey, setOpenEventKey] = useState<string | null>(null);
     const [waitlistEmail, setWaitlistEmail] = useState('');
     const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
@@ -1118,18 +1118,18 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                     <button
                       type="button"
                       onClick={() => {
-                        const opening = !showBusinessContext;
-                        setShowBusinessContext(opening);
+                        const opening = !showBusinessContextOpen;
+                        setShowBusinessContextOpen(opening);
                         if (opening) {
                           trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
                         }
                       }}
                       className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
                     >
-                      {showBusinessContext ? '− Hide business context' : '+ How this can affect a business'}
+                      {showBusinessContextOpen ? '− Hide business context' : '+ How this can affect a business'}
                     </button>
                     <AnimatePresence initial={false}>
-                      {showBusinessContext && (
+                      {showBusinessContextOpen && (
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: 'auto' }}
@@ -1210,13 +1210,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                   className="w-full max-w-md"
                 >
                   <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
-                    What do you{' '}
+                    How will you protect your{' '}
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300">
-                      value?
+                      savings?
                     </span>
                   </motion.h2>
                   <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-4">
-                    Tap a coin to see what it means — tap again to make it yours. Flick to browse.
+                    Tap a coin to see what it means — tap again to make it yours. Flick left or right to browse.
                   </motion.p>
 
                   {/* Stage — a fixed-height canvas holding BOTH the coin
@@ -1346,9 +1346,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       )}
                     </AnimatePresence>
 
-                    {/* The "Each coin is a way of thinking about money" caption
-                        — only visible at the coin row, hidden when the lens
-                        detail is showing. */}
+                    {/* Caption — names the next action, not a philosophy
+                        lecture. Hidden when the lens detail is showing. */}
                     <AnimatePresence>
                       {!activeLens && (
                         <motion.p
@@ -1356,9 +1355,9 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1, transition: { delay: 0.2 } }}
                           exit={{ opacity: 0, transition: { duration: 0.1 } }}
-                          className="absolute bottom-2 left-0 right-0 text-center text-xs leading-relaxed text-slate-300 px-2"
+                          className="absolute bottom-2 left-0 right-0 text-center text-[11px] leading-snug text-slate-400 px-2"
                         >
-                          Each coin is a way of thinking about money.
+                          Tap a coin to see the plan, or ← Back to risk data.
                         </motion.p>
                       )}
                     </AnimatePresence>
@@ -1393,6 +1392,79 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                       ))}
                     </div>
                   </motion.div>
+
+                  {/* SME graduation hint — surfacing the wedge when the visitor
+                      has just built their first trust signal (a coin pick). The
+                      business context is a toggle because the retail user isn't
+                      a business yet — but the personal/business boundary is thin
+                      for anyone in a volatile-currency economy. */}
+                  {selectedArchetype && moneyPurpose !== 'everyday_buffer' && (
+                    <motion.div
+                      variants={staggerChild}
+                      className="mb-3 rounded-xl border overflow-hidden bg-gray-50 dark:bg-slate-800/50"
+                      style={{ borderColor: '#10b98133' }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setShowBusinessContextOpen(!showBusinessContextOpen)}
+                        className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+                      >
+                        <span className="text-[11px] font-bold text-gray-700 dark:text-slate-300">
+                          How this affects a business
+                        </span>
+                        <span className={`text-xs text-gray-400 transition-transform duration-200 ${showBusinessContextOpen ? 'rotate-180' : ''}`}>
+                          ▾
+                        </span>
+                      </button>
+                      <AnimatePresence initial={false}>
+                        {showBusinessContextOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="px-3 pb-3 pt-0">
+                              <p className="text-[11px] leading-relaxed text-gray-600 dark:text-slate-400 mb-2">
+                                The same protection philosophy applies to{' '}
+                                <strong className="text-gray-800 dark:text-white">
+                                  business working capital
+                                </strong>
+                                . If you run a business, we can protect your
+                                purchase cycles &mdash; not just idle savings.
+                              </p>
+                              {waitlistStatus === 'success' ? (
+                                <p className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                                  ✓ You&apos;re on the list. We&apos;ll reach out soon.
+                                </p>
+                              ) : waitlistStatus === 'error' ? (
+                                <p className="text-[11px] text-rose-500 mb-2">{waitlistError}</p>
+                              ) : (
+                                <div className="flex gap-1.5">
+                                  <input
+                                    type="email"
+                                    placeholder="your@email.com"
+                                    value={waitlistEmail}
+                                    onChange={(e) => setWaitlistEmail(e.target.value)}
+                                    className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900/60 px-2 py-1.5 text-[11px] text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-emerald-400/60"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={handleJoinWaitlist}
+                                    disabled={waitlistStatus === 'submitting' || !waitlistEmail}
+                                    className="px-3 py-1.5 rounded-lg bg-emerald-500 text-[11px] font-bold text-white disabled:opacity-50 active:scale-[0.97] transition-transform"
+                                  >
+                                    Join
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
+                  )}
 
                   {/* Actions — archetype-aware when a philosophy is selected */}
                   <motion.div variants={staggerChild} className="space-y-2">

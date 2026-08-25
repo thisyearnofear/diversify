@@ -499,18 +499,25 @@ function LensCoinButton({
           />
         </motion.span>
       </span>
-      {/* One-word label — the fix for mystery-meat coins. Fades out the
-          instant the combine starts so only coins fly. */}
-      <motion.span
-        animate={{ opacity: combining ? 0 : 1 }}
-        transition={{ duration: 0.15 }}
-        className={`mt-1 text-[10px] font-bold leading-none tracking-tight truncate max-w-full ${
+      {/* Label row: one-word practical label (always) + one-line
+          translation of the philosophy's practical meaning. */}
+      <div
+        className={`mt-1 text-center leading-tight truncate max-w-full ${
           isActive || peeked ? '' : 'text-gray-500 dark:text-slate-500'
         }`}
         style={isActive || peeked ? { color: lens.accent } : undefined}
       >
-        {shortLabel}
-      </motion.span>
+        <span className="text-[10px] font-bold block truncate">{shortLabel}</span>
+        <span className="text-[9px] block truncate opacity-80">
+          {lens.description ? truncate(lens.description, 60) : ''}
+        </span>
+      </div>
     </motion.button>
   );
+}
+
+function truncate(text: string, maxLen: number): string {
+  if (text.length <= maxLen) return text;
+  const cutoff = text.slice(0, maxLen).lastIndexOf(' ');
+  return (cutoff > 0 ? text.slice(0, cutoff) : text.slice(0, maxLen - 1)) + '…';
 }
