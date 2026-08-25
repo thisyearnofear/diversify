@@ -9,6 +9,8 @@ import type { UserExperienceMode } from "@/context/app/types";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { useStrategy } from "@/context/app/StrategyContext";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -53,10 +55,22 @@ export function ProtectionPlanCard({
     completeEditing, setUserGoal, setRiskTolerance, setTimeHorizon,
   } = useProtectionProfile();
 
+  const { financialStrategy } = useStrategy();
+  const archetype = useMemo(
+    () => ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'],
+    [financialStrategy],
+  );
+
   if (isBeginner) {
     return (
       <Card padding="p-0" className="overflow-hidden shadow-[0_20px_50px_-24px_rgba(79,70,229,0.45)] border border-indigo-200/40 dark:border-indigo-900/40">
-        <div className="bg-gradient-to-br from-indigo-600 via-indigo-600 to-purple-700 p-6 text-white relative overflow-hidden">
+        <div
+          className="p-6 text-white relative overflow-hidden"
+          style={{
+            background: `linear-gradient(135deg, ${archetype.surface.start} 0%, ${archetype.surface.mid} 50%, ${archetype.surface.end} 100%)`,
+            boxShadow: `0 20px 50px -24px ${archetype.accent}60`,
+          }}
+        >
           <div className="absolute top-0 right-0 w-36 h-36 bg-white/10 rounded-full blur-3xl" />
           <div className="flex justify-between items-center mb-6">
             <div>

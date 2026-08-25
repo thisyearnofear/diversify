@@ -29,6 +29,8 @@ import { motion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { NETWORKS } from "../../config";
+import { useStrategy } from "@/context/app/StrategyContext";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 // Deep leaf import — NOT the barrel — keeps the agent-status stack out of
 // first-load and avoids the no-restricted-imports lint warning.
 import { GUARDIAN_TIER_STATE_LABELS, GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -137,6 +139,11 @@ export function GuardianStatusChip({
   className = '',
 }: GuardianStatusChipProps) {
   const { address, guardianState, copy, isActive, lastActivity } = useGuardianTierSnapshot();
+  const { financialStrategy } = useStrategy();
+  const archetype = useMemo(
+    () => ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'],
+    [financialStrategy],
+  );
 
   if (!address) return null;
 
@@ -164,11 +171,13 @@ export function GuardianStatusChip({
 
   return (
     <div
-      className={`rounded-2xl border p-4 ${
-        isActive
-          ? 'border-emerald-200 dark:border-emerald-800 bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20'
-          : 'border-indigo-200 dark:border-indigo-800 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/20 dark:to-purple-950/20'
-      } ${className}`}
+      className={`rounded-2xl border p-4 ${className}`}
+      style={{
+        borderColor: `${archetype.accent}4d`,
+        background: isActive
+          ? `linear-gradient(135deg, ${archetype.accent}0c 0%, ${archetype.accent}14 100%)`
+          : `linear-gradient(135deg, ${archetype.accent}06 0%, ${archetype.accent}10 100%)`,
+      }}
       role="status"
       aria-label={`Guardian: ${copy.headline}`}
     >
@@ -183,7 +192,13 @@ export function GuardianStatusChip({
             <h3 className="text-sm font-black text-gray-900 dark:text-white">
               {copy.headline}
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-white/70 dark:bg-gray-800/70 text-gray-600 dark:text-gray-300">
+            <span
+              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+              style={{
+                background: `${archetype.accent}18`,
+                color: archetype.accent,
+              }}
+            >
               {PROTECTION_STATE_LABELS[deriveProtectionLifecycleState(guardianState)]}
             </span>
           </div>
@@ -191,7 +206,10 @@ export function GuardianStatusChip({
             {copy.description}
           </p>
           {isActive && lastActivity && (
-            <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 mt-1.5">
+            <p
+              className="text-[10px] font-semibold mt-1.5"
+              style={{ color: archetype.accent }}
+            >
               Last action {timeAgo(lastActivity.timestamp)}
             </p>
           )}
@@ -201,11 +219,16 @@ export function GuardianStatusChip({
         <button
           type="button"
           onClick={handleCta}
-          className={`mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors ${
-            isActive
-              ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-              : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-          }`}
+          className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors text-white"
+          style={{
+            background: archetype.accent,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.opacity = '0.85';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.opacity = '1';
+          }}
         >
           {copy.cta}
         </button>

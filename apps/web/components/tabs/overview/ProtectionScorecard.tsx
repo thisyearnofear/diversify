@@ -236,7 +236,12 @@ export function ProtectionScorecard({
   return (
     <section id="protection-scorecard" data-home-section="protection-scorecard" className="scroll-mt-20">
       <Card padding="p-0" className="overflow-hidden">
-        <div className="bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900/40 dark:to-blue-900/20 p-5">
+        <div
+          className="p-5"
+          style={{
+            background: `${framing.accent}08`,
+          }}
+        >
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className="text-xl">{framing.icon}</span>
@@ -266,7 +271,8 @@ export function ProtectionScorecard({
             <button
               type="button"
               onClick={() => setShowMethodology((v) => !v)}
-              className="text-[10px] font-bold text-blue-600 dark:text-blue-400"
+              className="text-[10px] font-bold"
+              style={{ color: framing.accent }}
             >
               {showMethodology ? 'Hide methodology' : 'How scores work'}
             </button>
