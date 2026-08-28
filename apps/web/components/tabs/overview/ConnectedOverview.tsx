@@ -43,6 +43,7 @@ import EmergingMarketsTracker from "../../enterprise-fx/EmergingMarketsTracker";
 import PortfolioRiskWidget from "../../enterprise-fx/PortfolioRiskWidget";
 import RiskMetrics from "../../enterprise-fx/RiskMetrics";
 import TradeIntelligence from "../../enterprise-fx/TradeIntelligence";
+import CaribbeanFxNetCard from "../../business/CaribbeanFxNetCard";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 
 interface ConnectedOverviewProps {
@@ -765,6 +766,7 @@ export function ConnectedOverview({
                 <PortfolioRiskWidget />
                 <RiskMetrics />
                 <TradeIntelligence items={macroSignals} selectedAsset="FX" />
+                <CaribbeanFxNetCard />
               </div>
             )}
           </HomeSection>

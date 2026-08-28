@@ -33,9 +33,10 @@ The strategic design in §1–8 below is now implemented. What shipped:
 
 ### What remains
 
-- **Priority 5a**: `CaribbeanFxNetCard` UI component (the chat drawer's `open_fx_netting_review` hand-off currently lands on the Overview FX Corridor section until this card ships).
+- **Priority 5a (done, first release)**: `CaribbeanFxNetCard` UI component — two-phase card (intent form → match review) in the Overview FX Corridor / business section. Reuses the pre-existing `useFxNetting` hook (read-only matching via `POST /api/fx-netting/match`); wallet-signed intent creation is available via `POST /api/fx-netting/intent` for the hosted-pool path. The chat drawer's `open_fx_netting_review` hand-off now lands on this card. Honest fallback when no counterparty pool is hosted yet ("your intent stays open for the next cycle").
 - **Priority 5b (done)**: Guardian `FX_MATCH` recommendation type — `open_fx_netting_review` action on `GuardianRecommendationAction` + `buildFxNettingContract()` producer (`recommendation-contract.ts`); handled in the chat drawer's exhaustive switch; on-chain settlement already uses the `FX_MATCH` action.
 - **Priority 6 (done)**: `isCaribbeanRailProfile` routing helper in `types/strategy.ts` (mirrors `isApacRailProfile`)
+- **Next work to make it live**: a hosted intent pool (persisted intents across users, so `match` runs against real counterparties rather than an empty demo pool), plus settlement execution from the net obligations.
 
 ---
 
