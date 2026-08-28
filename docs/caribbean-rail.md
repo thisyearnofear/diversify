@@ -31,10 +31,11 @@ The strategic design in §1–8 below is now implemented. What shipped:
 | Net settlement across multiple participants | ✅ `computeNetObligations` nets all pairwise flows to single cUSD transfers |
 | Clear path to institutional integration | ✅ On-chain RecommendationLedger anchor per match (Celo) + 0G evidence trail; wallet-authenticated API with rate limiting |
 
-### What remains (Priorities 5–6)
+### What remains
 
-- **Priority 5**: `CaribbeanFxNetCard` UI component + Guardian `FX_MATCH` recommendation type
-- **Priority 6**: `isCaribbeanRailProfile` routing helper in `types/strategy.ts` (mirrors `isApacRailProfile`)
+- **Priority 5a**: `CaribbeanFxNetCard` UI component (the chat drawer's `open_fx_netting_review` hand-off currently lands on the Overview FX Corridor section until this card ships).
+- **Priority 5b (done)**: Guardian `FX_MATCH` recommendation type — `open_fx_netting_review` action on `GuardianRecommendationAction` + `buildFxNettingContract()` producer (`recommendation-contract.ts`); handled in the chat drawer's exhaustive switch; on-chain settlement already uses the `FX_MATCH` action.
+- **Priority 6 (done)**: `isCaribbeanRailProfile` routing helper in `types/strategy.ts` (mirrors `isApacRailProfile`)
 
 ---
 

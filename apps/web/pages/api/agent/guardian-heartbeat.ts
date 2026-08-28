@@ -14,6 +14,7 @@
  *   2. Generate an advisory recommendation via the AI service
  *   3. Record on the chain-aware primary ledger (Celo for savings, Arbitrum for yield)
  *      — plus an APAC-cohort savings advisory on HashKey when the rail is configured
+ *      — plus a Caribbean-cohort savings advisory on Celo (cohort-labelled receipt)
  *   4. Mirror to 0G mainnet as evidence anchor
  *
  * Called by server-side cron every 30 minutes on Hetzner.
@@ -148,13 +149,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const rec = pickRecommendation(snapshot);
 
     // 2. Record on the primary chain (Celo for savings tokens, Arbitrum for
-    // yield) and — when the HashKey ledger is configured — the APAC-cohort
-    // savings advisory (Confucian / Gotong Royong) in parallel. The two
-    // records target different chains, so the signer's nonces are
-    // independent and neither wait blocks the other. The APAC advisory is
-    // routed via the same chain-aware logic as user recommendations — the
-    // routingContext sends this HOLD stance to the HashKey ledger, keeping
-    // the APAC savings home continuously attested (docs/apac-rail.md).
+    // yield) and — when the regional ledgers are configured — the APAC-cohort
+    // (HashKey) and Caribbean-cohort (Celo) savings advisories in parallel.
+    // The records target different chains/contexts, so the signer's nonces
+    // are independent and neither wait blocks the other. Each advisory is
+    // routed via the same chain-aware logic as user recommendations and
+    // self-describes its cohort in the on-chain reasoning, so the global
+    // proof feed answers "why am I seeing this chain?" honestly
+    // (docs/apac-rail.md, docs/caribbean-rail.md).
     const apacPromise = process.env.HASHKEY_LEDGER_CONTRACT
       ? recommendationLedgerService.recordRecommendation({
           user: GUARDIAN_AGENT_ADDRESS,
@@ -167,6 +169,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           routingContext: { philosophy: 'confucian', region: 'Asia' },
         }).catch((err: any) => {
           console.warn(`[guardian-heartbeat] APAC rail advisory failed: ${err.message}`);
+          return null;
+        })
+      : Promise.resolve(null);
+
+    // Caribbean cohort (Pan-Caribbean philosophy): routes to Celo via
+    // chain-aware routing — the Caribbean rail has no native chain, it
+    // settles savings on Celo (USD-pegged stables). Kept as its own
+    // cohort-labelled receipt so the proof feed shows a live Caribbean
+    // pulse alongside the APAC one (docs/caribbean-rail.md).
+    const caribbeanPromise = process.env.CELO_MAINNET_LEDGER_CONTRACT
+      ? recommendationLedgerService.recordRecommendation({
+          user: GUARDIAN_AGENT_ADDRESS,
+          action: 'ADVISORY_HEARTBEAT',
+          targetToken: 'cUSD',
+          reasoning: `Caribbean savings advisory (Pan-Caribbean cohort): hold USD-pegged stablecoin core on Celo. ${rec.reasoning}`,
+          evidenceCid: '',
+          servingModel: 'guardian-heartbeat',
+          confidence: Math.round(rec.confidence * 10000),
+          routingContext: { philosophy: 'pan_caribbean', region: 'Caribbean' },
+        }).catch((err: any) => {
+          console.warn(`[guardian-heartbeat] Caribbean rail advisory failed: ${err.message}`);
           return null;
         })
       : Promise.resolve(null);
@@ -196,7 +219,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return null;
     });
 
-    const [mirrorResult, apacResult] = await Promise.all([mirrorPromise, apacPromise]);
+    const [mirrorResult, apacResult, caribbeanResult] = await Promise.all([
+      mirrorPromise,
+      apacPromise,
+      caribbeanPromise,
+    ]);
 
     return res.status(200).json({
       success: true,
@@ -225,6 +252,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         chainId: apacResult.chainId,
         txHash: apacResult.status === 'failed' ? undefined : apacResult.txHash,
         explorerUrl: apacResult.status === 'failed' ? undefined : (apacResult as any).explorerUrl,
+      } : null,
+      caribbeanRail: caribbeanResult ? {
+        status: caribbeanResult.status,
+        chainId: caribbeanResult.chainId,
+        txHash: caribbeanResult.status === 'failed' ? undefined : caribbeanResult.txHash,
+        explorerUrl: caribbeanResult.status === 'failed' ? undefined : (caribbeanResult as any).explorerUrl,
       } : null,
       marketSnapshot: {
         inflation: snapshot.worldBank.current_inflation,

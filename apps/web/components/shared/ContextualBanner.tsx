@@ -20,6 +20,7 @@ import { Card, PrimaryButton, SecondaryButton } from "./TabComponents";
 import { useColdStart } from "@/hooks/use-cold-start";
 import type { TabId } from "@/constants/tabs";
 import { ApacRailHonestyBanner } from "@/components/shared/ApacRailHonestyBanner";
+import { CaribbeanRailHonestyBanner } from "@/components/shared/CaribbeanRailHonestyBanner";
 import { NetworkOptimizedOnramp } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
@@ -30,6 +31,7 @@ export interface ContextualBannerProps {
     | "goal-drift"
     | "daily-claim"
     | "apac-rail"
+    | "caribbean-rail"
     | "fx-corridor-hint"
     | "fx-drag-warning"
     | "family-savings"
@@ -131,6 +133,7 @@ export function ContextualBanner({
         />
       )}
       {kind === "apac-rail" && <ApacRailHonestyBanner variant="home" />}
+      {kind === "caribbean-rail" && <CaribbeanRailHonestyBanner variant="home" />}
       {kind === "fx-corridor-hint" && (
         <FxCorridorHintVariant onAction={() => onDismissFxCorridorHint?.()} />
       )}

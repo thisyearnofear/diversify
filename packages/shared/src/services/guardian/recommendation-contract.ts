@@ -56,6 +56,18 @@ export interface CycleProtectionContractInput {
   cycleId?: string;
 }
 
+export interface FxNettingContractInput {
+  /** Display-friendly currency pair, e.g. "BBD/JMD". */
+  pair: string;
+  /** Currency amounts are in the pair's base (sell) currency. */
+  matchedAmount?: number;
+  savingsUsd?: number;
+  unmatchedCount?: number;
+  reason?: string;
+  guardianBounds?: string;
+  provenance?: DataProvenance;
+}
+
 export function buildPortfolioSwapContract(
   input: PortfolioSwapContractInput,
 ): GuardianRecommendationContract {
@@ -175,6 +187,54 @@ export function buildCycleProtectionContract(
       // synthetic key used previously did not match any cycle in the
       // list, so the drawer navigated generically to the Protect tab.
       cycleId: input.cycleId ?? `${input.localCurrency}-${input.targetCurrency}-${input.paymentDate}`,
+    },
+  };
+}
+
+/**
+ * Build the Guardian recommendation contract for an FX netting opportunity.
+ * Mirrors buildYieldAlertContract: a typed `open_fx_netting_review` action so
+ * the chat drawer can hand the review off to the FX matching surface without a
+ * handwritten navigation string (docs/caribbean-rail.md — CARICOM FX netting).
+ *
+ * On-chain, the settled match is already recorded with the `FX_MATCH` action by
+ * the match API's anchor step — this contract is the *user-facing* proposal to
+ * enter/review the matching pool, distinct from that settlement anchor.
+ */
+export function buildFxNettingContract(
+  input: FxNettingContractInput,
+): GuardianRecommendationContract {
+  const pair = input.pair || 'regional pair';
+  const savingsLine =
+    input.savingsUsd != null && input.savingsUsd > 0
+      ? `Estimated ~$${input.savingsUsd.toFixed(0)} saved vs the corridor.`
+      : 'Matching at mid-market removes the USD bridge and corridor spread.';
+  const amountLine =
+    input.matchedAmount != null ? ` ${input.matchedAmount.toLocaleString()} matched.` : '';
+  const unmatchedLine =
+    input.unmatchedCount != null && input.unmatchedCount > 0
+      ? ` ${input.unmatchedCount} intent${input.unmatchedCount === 1 ? '' : 's'} still open for the next cycle.`
+      : '';
+
+  return {
+    lifecycleState: 'proposed',
+    whatChanged: `A currency match is available for ${pair}.${amountLine}`,
+    whyItMatters:
+      'Regional buyers and sellers can net directly — no need to pay the USD-corridor spread on both legs.',
+    proposal: `Review the matched ${pair} window and enter the matching pool to settle at mid-market.`,
+    guardianBounds:
+      input.guardianBounds ??
+      'Guardian proposes only — FX matching stays under your approval, never auto-executed.',
+    costsAndRisks: `${savingsLine} Matching is subject to counterparty availability and rate movement.${unmatchedLine}`,
+    proofTrail: 'On approval: FX_MATCH ledger entry + settlement transaction on the region-canonical chain.',
+    provenance: input.provenance,
+    action: {
+      type: 'open_fx_netting_review',
+      pair,
+      matchedAmount: input.matchedAmount,
+      savingsUsd: input.savingsUsd,
+      unmatchedCount: input.unmatchedCount,
+      reason: input.reason,
     },
   };
 }

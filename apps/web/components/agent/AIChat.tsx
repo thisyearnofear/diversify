@@ -787,6 +787,17 @@ export default function AIChat() {
                               );
                               closeReview();
                               return;
+                            case 'open_fx_netting_review':
+                              // FX netting is surfaced in the FX Corridor /
+                              // business section on the Overview (Home) tab —
+                              // the future CaribbeanFxNetCard will live there.
+                              // Until that card lands, this is a best-effort
+                              // hand-off so the recommendation is never a
+                              // dead-end. The pair is carried on the action for
+                              // the future surface.
+                              setActiveTab('overview');
+                              closeReview();
+                              return;
                             case 'claim_ubi':
                               // Daily claim is ready — drop into the
                               // existing GoodDollar flow (closes the drawer

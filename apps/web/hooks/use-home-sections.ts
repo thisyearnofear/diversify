@@ -27,6 +27,7 @@ import { useStreakRewards } from "./use-streak-rewards";
 // Deep leaf import — NOT the barrel — keeps the agent-tier stack out of first-load.
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
+import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { useAdaptiveContext } from "../context/app/AdaptiveContext";
 
 export type HomeMode = "beginner" | "standard" | "advanced";
@@ -36,6 +37,7 @@ export type ContextualBannerKind =
   | "demo"            // Demo mode is on
   | "goal-drift"      // Profile complete but goal is misaligned
   | "apac-rail" // APAC philosophy + Asia region — live or coming-soon copy
+  | "caribbean-rail" // Pan-Caribbean philosophy + Caribbean region — lives on Celo
   | "fx-corridor-hint" // SME-graduated user → discover the FX Corridor section
   | "daily-claim"     // GoodDollar reward ready
   | "fx-drag-warning" // Importer: FX drag is eating margins
@@ -138,6 +140,7 @@ const COLD_START_PRIORITY = 100;
 const DEMO_PRIORITY = 80;
 const GOAL_DRIFT_PRIORITY = 60;
 const APAC_RAIL_PRIORITY = 55;
+const CARIBBEAN_RAIL_PRIORITY = 54; // sibling of apac-rail — only one applies per profile
 const FX_CORRIDOR_HINT_PRIORITY = 50; // below apac-rail, above daily-claim
 const DAILY_CLAIM_PRIORITY = 40;
 
@@ -236,6 +239,16 @@ export function useHomeSections({
     ) {
       banner = "apac-rail";
       bannerPriority = APAC_RAIL_PRIORITY;
+    }
+    // Caribbean rail: Pan-Caribbean philosophy + Caribbean region settle on the
+    // always-on Celo home rail. Exclusive with APAC (a user is one philosophy),
+    // so this sits at the same precedence with its own priority value.
+    if (
+      needsCaribbeanRailMessaging(profileConfig.philosophy, effectiveRegion) &&
+      bannerPriority < CARIBBEAN_RAIL_PRIORITY
+    ) {
+      banner = "caribbean-rail";
+      bannerPriority = CARIBBEAN_RAIL_PRIORITY;
     }
     // FX Corridor hint: SME-graduated users (`moneyPurpose ===
     // 'upcoming_payment'`) who haven't yet dismissed the hint get a

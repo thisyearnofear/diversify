@@ -17,6 +17,8 @@ import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/t
 import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
 import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
+import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBanner";
+import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useUserRegion } from "@/hooks/use-user-region";
 
@@ -50,6 +52,10 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
   const archetypeId = strategyToArchetype(financialStrategy);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
   const showApacBanner = needsApacRailMessaging(
+    financialStrategy ?? profileConfig.philosophy,
+    profileConfig.userRegion ?? detectedRegion,
+  );
+  const showCaribbeanBanner = needsCaribbeanRailMessaging(
     financialStrategy ?? profileConfig.philosophy,
     profileConfig.userRegion ?? detectedRegion,
   );
@@ -102,6 +108,12 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
       {showApacBanner && (
         <div className="mb-4">
           <ApacRailHonestyBanner />
+        </div>
+      )}
+
+      {showCaribbeanBanner && (
+        <div className="mb-4">
+          <CaribbeanRailHonestyBanner />
         </div>
       )}
 

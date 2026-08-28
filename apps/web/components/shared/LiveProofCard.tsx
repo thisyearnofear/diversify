@@ -273,10 +273,14 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
             className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-white/40 dark:bg-gray-900/40 p-3"
             data-testid="live-proof-ticker"
         >
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-2">
+            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-1">
                 Recent on-chain activity
             </h4>
-            <ul className="space-y-1.5" aria-live="polite" aria-atomic="true">
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mb-2">
+                Live Guardian receipts from our rails — Arbitrum (yield), Celo (savings, incl. Caribbean) and
+                HashKey (APAC rail). Every decision is verifiable on-chain.
+            </p>
+            <ul className="space-y-0.5" aria-live="polite" aria-atomic="true">
                 {recent.map((rec) => {
                     const txUrl = getProofTxUrl(
                         data?.contractExplorers,
@@ -284,10 +288,16 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                         rec.chainId,
                         rec.settlementTxHash,
                     );
+                    // Rows without a settlement tx (heartbeat advisory receipts)
+                    // still verify — link them to the chain's ledger contract so
+                    // every row is independently checkable by the user.
+                    const verifyUrl =
+                        txUrl ??
+                        (rec.chainId != null ? data?.contractExplorers?.[rec.chainId] : undefined);
                     const badge = rec.chainId != null ? LEDGER_CHAIN_BADGES[rec.chainId] : undefined;
                     const row = (
                         <>
-                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
                             {rec.chainId != null && (
                                 <span
                                     className={`text-[10px] font-bold uppercase tracking-wider shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${badge?.color ?? 'bg-emerald-100 text-emerald-700 border-emerald-200'} ${badge?.darkColor ?? 'dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'}`}
@@ -296,9 +306,6 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                                     <span>{getLedgerProofLabel(rec.chainId)}</span>
                                 </span>
                             )}
-                            <span className="font-mono text-emerald-600 dark:text-emerald-400">
-                                #{rec.id}
-                            </span>
                             <span className="font-bold">
                                 {humanizeAction(rec.action)}
                             </span>
@@ -307,29 +314,53 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                                     → {rec.targetToken}
                                 </span>
                             )}
+                            {rec.timestamp > 0 && (
+                                <span className="text-gray-400 dark:text-gray-500 shrink-0">
+                                    · {timeAgo(new Date(rec.timestamp * 1000).toISOString())}
+                                </span>
+                            )}
                             <span
-                                className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums"
+                                className="ml-auto text-emerald-600/60 dark:text-emerald-400/60 font-bold tabular-nums shrink-0"
                                 title={`Guardian confidence in this decision: ${Math.round(rec.confidence * 100)}%`}
                             >
                                 {Math.round(rec.confidence * 100)}% conf.
                             </span>
-                            {txUrl && <span aria-hidden="true" className="text-emerald-600/60 dark:text-emerald-400/60">↗</span>}
+                            {verifyUrl && (
+                                <span
+                                    aria-hidden="true"
+                                    className="text-emerald-600/60 dark:text-emerald-400/60 shrink-0"
+                                >
+                                    ↗
+                                </span>
+                            )}
                         </>
                     );
                     return (
                         <li key={`${rec.chainId ?? 0}-${rec.id}`} className="text-[11px] text-emerald-900 dark:text-emerald-100">
-                            {txUrl ? (
+                            {verifyUrl ? (
                                 <a
-                                    href={txUrl}
+                                    href={verifyUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    title="View this receipt on the block explorer"
-                                    className="flex items-center gap-2 hover:underline"
+                                    title={
+                                        txUrl
+                                            ? 'View this receipt on the block explorer'
+                                            : 'View the ledger contract on the block explorer'
+                                    }
+                                    className="flex items-center gap-2 min-h-[36px] py-1 rounded-md hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-500"
                                 >
                                     {row}
                                 </a>
                             ) : (
-                                <span className="flex items-center gap-2">{row}</span>
+                                <span className="flex items-center gap-2 min-h-[36px] py-1">{row}</span>
+                            )}
+                            {rec.reasoning && (
+                                <p
+                                    className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug line-clamp-1 pl-3.5 pb-1"
+                                    title={rec.reasoning}
+                                >
+                                    {rec.reasoning}
+                                </p>
                             )}
                         </li>
                     );

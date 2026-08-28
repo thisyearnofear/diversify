@@ -90,7 +90,7 @@ export function GuardianStateScrollytelling({
                     ? 'border-indigo-300 dark:border-indigo-600 bg-white dark:bg-indigo-950/30 shadow-sm'
                     : isPast
                       ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20'
-                      : 'border-gray-200 dark:border-gray-700 opacity-60'
+                      : 'border-gray-200 dark:border-gray-700 opacity-70'
                 }`}
               >
                 <div className="text-lg mb-1" aria-hidden="true">
@@ -99,11 +99,15 @@ export function GuardianStateScrollytelling({
                 <div className="text-[10px] font-black uppercase tracking-wider text-gray-700 dark:text-gray-200">
                   {step.label}
                 </div>
-                {isCurrent && (
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                    {step.description}
-                  </p>
-                )}
+                <p
+                  className={`text-[11px] mt-1 leading-snug ${
+                    isCurrent
+                      ? 'text-gray-600 dark:text-gray-300'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}
+                >
+                  {step.description}
+                </p>
               </div>
             );
           })}
@@ -148,14 +152,14 @@ export function GuardianStateScrollytelling({
                 </div>
 
                 <div className="flex-1 min-w-0 pt-0.5">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span
-                      className={`text-xs font-black uppercase tracking-wider ${
+                      className={`text-xs font-black tracking-wide ${
                         isCurrent
                           ? 'text-indigo-700 dark:text-indigo-300'
                           : isPast
                             ? 'text-emerald-700 dark:text-emerald-300'
-                            : 'text-gray-400 dark:text-gray-500'
+                            : 'text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       {GUARDIAN_TIER_STATE_LABELS[step.state]}
@@ -167,10 +171,12 @@ export function GuardianStateScrollytelling({
                     )}
                   </div>
                   <p
-                    className={`text-xs mt-0.5 leading-relaxed ${
-                      isCurrent || isPast
-                        ? 'text-gray-600 dark:text-gray-300'
-                        : 'text-gray-400 dark:text-gray-500'
+                    className={`text-[13px] mt-1 leading-relaxed ${
+                      isCurrent
+                        ? 'text-gray-700 dark:text-gray-200'
+                        : isPast
+                          ? 'text-gray-600 dark:text-gray-300'
+                          : 'text-gray-500 dark:text-gray-400'
                     }`}
                   >
                     {step.description}

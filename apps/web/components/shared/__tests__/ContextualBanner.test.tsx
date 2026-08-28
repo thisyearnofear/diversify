@@ -116,6 +116,14 @@ describe("ContextualBanner", () => {
     expect(screen.getByText(/1234/)).toBeInTheDocument();
   });
 
+  it("renders the caribbean-rail variant", () => {
+    render(<ContextualBanner {...baseProps} kind="caribbean-rail" />);
+    expect(
+      screen.getByText(/Caribbean savings rail live on Celo/),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Verify savings ledger .* on Celo explorer/)).toBeInTheDocument();
+  });
+
   it("renders the goal-drift variant with the message", () => {
     render(
       <ContextualBanner

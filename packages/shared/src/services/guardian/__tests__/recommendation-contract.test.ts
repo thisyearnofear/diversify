@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildCycleProtectionContract,
+  buildFxNettingContract,
   buildPortfolioSwapContract,
   buildYieldAlertContract,
   daysUntilPaymentDate,
@@ -66,6 +67,40 @@ describe('recommendation-contract builders', () => {
     } else {
       throw new Error('expected open_yield_review action');
     }
+  });
+
+  it('builds an FX netting review contract with the open_fx_netting_review action', () => {
+    const c = buildFxNettingContract({
+      pair: 'BBD/JMD',
+      matchedAmount: 12000,
+      savingsUsd: 320,
+      unmatchedCount: 2,
+    });
+    expect(c.lifecycleState).toBe('proposed');
+    expect(c.whatChanged).toContain('BBD/JMD');
+    expect(c.action?.type).toBe('open_fx_netting_review');
+    if (c.action?.type === 'open_fx_netting_review') {
+      expect(c.action.pair).toBe('BBD/JMD');
+      expect(c.action.matchedAmount).toBe(12000);
+      expect(c.action.savingsUsd).toBe(320);
+      expect(c.action.unmatchedCount).toBe(2);
+      // Critically: FX netting is not a swap — no fromToken/amount/toToken.
+      expect('fromToken' in c.action).toBe(false);
+      expect('toToken' in c.action).toBe(false);
+    }
+  });
+
+  it('defaults the pair label and omits optional metrics when absent', () => {
+    const c = buildFxNettingContract({ pair: '' });
+    expect(c.action?.type).toBe('open_fx_netting_review');
+    if (c.action?.type === 'open_fx_netting_review') {
+      expect(c.action.pair).toBe('regional pair');
+      expect(c.action.matchedAmount).toBeUndefined();
+      expect(c.action.savingsUsd).toBeUndefined();
+      expect(c.action.unmatchedCount).toBeUndefined();
+    }
+    // Right-side copy reflects the generic (non-savings) explanation.
+    expect(c.costsAndRisks).toContain('removes the USD bridge');
   });
 
   it('proposes cycle protection within 14 days when monitoring on', () => {

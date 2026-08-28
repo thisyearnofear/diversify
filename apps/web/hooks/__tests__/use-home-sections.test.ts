@@ -182,6 +182,34 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("apac-rail");
     });
 
+    it("shows caribbean-rail for Pan-Caribbean + Caribbean when no higher-priority banner applies", () => {
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          philosophy: "pan_caribbean",
+          userRegion: "Caribbean",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).toBe("caribbean-rail");
+    });
+
+    it("does not show caribbean-rail for Pan-Caribbean outside the Caribbean region", () => {
+      // Pan-Caribbean philosophy from the wrong region does NOT win the banner —
+      // it routes on the shared profile predicate like the ledger does.
+      mockUseProtectionProfile.mockReturnValue({
+        config: {
+          userGoal: "exploring",
+          philosophy: "pan_caribbean",
+          userRegion: "Africa",
+        },
+        isComplete: true,
+      });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.banner).not.toBe("caribbean-rail");
+    });
+
     it("shows fx-corridor-hint when moneyPurpose is upcoming_payment and not dismissed", () => {
       mockUseProtectionProfile.mockReturnValue({
         config: {

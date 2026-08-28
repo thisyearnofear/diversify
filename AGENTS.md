@@ -100,7 +100,8 @@ Fifth grant track: Future Caribbean Global AI Buildathon (Finance, Payments & MS
 - **FX matching engine**: `packages/shared/src/services/fx-netting/` — pure-function matching + net-settlement engine (`matchIntents`, `computeNetObligations`, `runNetting`, `buildSettlementPlan`). Currency-agnostic: matches opposing currency needs directly at mid-market (BBD↔JMD, GHS↔NGN, XOF↔XAF — any pair, no USD bridge), nets obligations to single cUSD transfers, anchors each match to the region-canonical chain (Africa/Caribbean/LatAm → Celo, APAC → HashKey via region detection from the currency pair)
 - **API routes**: `POST /api/fx-netting/match` (matching + settlement + ledger anchor), `POST /api/fx-netting/intent` (wallet-authenticated intent creation)
 - **912 tests pass** (26 in fx-netting: Caribbean + African currency pairs). TypeScript + ESLint clean
-- **Remaining**: `CaribbeanFxNetCard` UI component + Guardian `FX_MATCH` recommendation type + `isCaribbeanRailProfile` routing helper + Caribbean user/partner evidence (LOI)
+- **Rail parity (home/Shield + ledger + heartbeat, later)** — `getLedgerChainForAction` routes Pan-Caribbean savings to Celo (via shared `isCaribbeanRailProfile`); `constants/caribbean-rail.ts` + `CaribbeanRailHonestyBanner` surface an always-live (Celo home-rail) banner on Home/Shield; the Guardian heartbeat records a Caribbean-cohort advisory on Celo. APAC (HashKey, separate chain) and Caribbean (Celo) are now symmetric in routing, proof-feed, banner, and heartbeat treatment.
+- **Remaining**: `CaribbeanFxNetCard` UI component + Guardian `FX_MATCH` recommendation type + Caribbean user/partner evidence (LOI)
 
 **North star + growth, integrations, yield engine (2026-07-11/12):**
 

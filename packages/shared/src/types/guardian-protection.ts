@@ -129,6 +129,22 @@ export type GuardianRecommendationAction =
     }
   | {
       /**
+       * FX netting opportunity (CARICOM / regional match): opposing currency
+       * intents matched at mid-market, settling without a USD bridge. The user
+       * should review the matched pair + savings, then decide whether to enter
+       * the matching pool. `pair` is the display-friendly "BBD/JMD" key; the
+       * numeric fields are informational so the review surface can show the
+       * magnitude without re-resolving anything.
+       */
+      type: 'open_fx_netting_review';
+      pair: string;
+      matchedAmount?: number;
+      savingsUsd?: number;
+      unmatchedCount?: number;
+      reason?: string;
+    }
+  | {
+      /**
        * Daily UBI claim is ready. Carries no extra params — the underlying
        * GoodDollar flow already knows the user's wallet and network.
        */
