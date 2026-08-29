@@ -23,8 +23,8 @@
 | `/api/agent/business/cycle-monitor` | POST | Standalone cycle-aware proposal tick (same logic as guardian-loop inline step); enqueues without overwriting unrelated pending recommendations |
 | `/api/agent/fx-cycle-report` | POST | Free in-app FX drag scenario: current mid-market rate + historical stress context (USD targets only). Not a forecast or locked quote. |
 | `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
-| `/api/fx-netting/intent` | POST | Wallet-authenticated FX intent creation for the CARICOM FX matching engine. Validates + normalizes a single intent (sellCurrency, sellAmount, buyCurrency). `participantId` derived from signed message. |
-| `/api/fx-netting/match` | POST | CARICOM FX matching + net settlement. Accepts `{ intents: FxIntent[] }`, matches opposing currency needs at live mid-market rates (no USD bridge), nets obligations to cUSD transfers, anchors each match to the RecommendationLedger on Celo. Returns matches + savings + settlement plan. |
+| `/api/fx-netting/intent` | POST/GET | Wallet-authenticated FX intent creation for the hosted CARICOM FX pool. POST validates + normalizes + **persists** an intent (sellCurrency, sellAmount, buyCurrency, buyAmountMin?, deadline?) — `participantId` derived from the signed message, never the body. GET lists the caller's own pool intents. |
+| `/api/fx-netting/match` | POST | CARICOM FX matching + net settlement **against the hosted intent pool**. Body `{ intents?: FxIntent[] }` (optional — supplied intents are upserted into the pool first), then the full open pool is loaded and matched at live mid-market rates (no USD bridge); outcomes persist (remainingSell decrements, `open → partially_matched → matched`, matchId audit). Nets obligations to cUSD transfers, anchors each match to the RecommendationLedger on the region-canonical chain (Celo; APAC → HashKey). Returns matches + savings + settlement plan + `poolSize`. |
 
 ## AI Providers
 
