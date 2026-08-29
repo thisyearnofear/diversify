@@ -33,6 +33,8 @@ export interface FxNettingResult {
   unmatchedCount: number;
   rateSourceNote: string;
   rateDate: string | null;
+  /** Size of the open pool the server matched against (hosted pool). */
+  poolSize?: number;
 }
 
 export interface FxNettingInput {
@@ -100,6 +102,7 @@ export function useFxNetting(userAddress: string | null) {
           unmatchedCount: json.unmatchedIntents?.length ?? 0,
           rateSourceNote: json.rateSourceNote ?? '',
           rateDate: json.rateDate ?? null,
+          poolSize: json.poolSize,
         });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to match FX intents');

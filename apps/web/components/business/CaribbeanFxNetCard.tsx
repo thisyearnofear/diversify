@@ -187,6 +187,9 @@ export function CaribbeanFxNetCard() {
                 {data && data.rateSourceNote
                   ? `Mid-market via ${data.rateSourceNote}.`
                   : "Matching against the live mid-market."}{" "}
+                {typeof data?.poolSize === 'number' && data.poolSize > 0
+                  ? `Matched against ${data.poolSize} open intent${data.poolSize === 1 ? '' : 's'} in the pool. `
+                  : ""}
                 Every match is anchored on-chain to the region-canonical ledger.
               </footer>
             </>

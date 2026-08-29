@@ -1,23 +1,32 @@
 /**
- * POST /api/fx-netting/match — Multi-region FX matching + net settlement.
+ * POST /api/fx-netting/match — Multi-region FX matching + net settlement
+ * against the HOSTED intent pool.
  *
- * Accepts a set of open FX intents, runs the matching engine at live
- * mid-market rates, and returns matches + net obligations + savings +
- * the settlement plan. Anchors each match to the RecommendationLedger
- * on the matched currency pair's region-canonical chain (Celo for
- * Africa/Caribbean/LatAm, HashKey for APAC) — fire-and-forget, same
- * pattern as the x402-gateway FX Protection Insight anchor.
+ * Any intents supplied in the body (e.g. the card's just-submitted intent)
+ * are upserted into the pool first; the run then loads the full open pool,
+ * matches at live mid-market rates, and PERSISTS the outcomes (remainingSell
+ * decrements, status advances, matchId audit trail) — so an intent posted
+ * today can be matched by a counterparty tomorrow.
  *
- * Originally built for the Caribbean (CARICOM) track, now generalized
- * to any region: BBD↔JMD, GHS↔NGN, XOF↔XAF, PHP↔BRL, etc.
+ * Anchors each match to the RecommendationLedger on the matched currency
+ * pair's region-canonical chain (Celo for Africa/Caribbean/LatAm, HashKey
+ * for APAC) — fire-and-forget, same pattern as the x402-gateway FX
+ * Protection Insight anchor.
  *
- * Body: { intents: FxIntent[] }
+ * Body: { intents?: FxIntent[] }  (optional — an empty body matches the pool as-is)
  * Response: { matches, netObligations, unmatchedIntents, settlementPlan,
- *             totalMatchedUsd, totalSavingsUsd, rateSourceNote, rateDate }
+ *             totalMatchedUsd, totalSavingsUsd, rateSourceNote, rateDate, poolSize }
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
+import connectDB from '@/lib/mongodb';
+import { FxIntentRecord } from '@/models/FxIntentRecord';
+import {
+    loadOpenPool,
+    upsertPoolIntent,
+    persistMatchOutcomes,
+} from '@/lib/fx-intent-pool';
 import {
     runNetting,
 } from '@diversifi/shared/src/services/fx-netting/matching-engine';
@@ -38,6 +47,8 @@ interface MatchResponse {
     totalSavingsUsd: number;
     rateSourceNote: string;
     rateDate: string | null;
+    /** Size of the open pool this run matched against. */
+    poolSize: number;
 }
 
 export default async function handler(
@@ -56,31 +67,42 @@ export default async function handler(
 
     try {
         const body = req.body as { intents?: FxIntent[] };
-        const intents = body?.intents;
-        if (!Array.isArray(intents) || intents.length === 0) {
-            return res.status(400).json({ error: 'At least one intent is required' });
-        }
+        const bodyIntents = Array.isArray(body?.intents) ? body.intents : [];
 
-        // Validate intent structure
-        for (const intent of intents) {
+        await connectDB();
+
+        // Hosted pool: any intents supplied in the body (e.g. the card's
+        // just-submitted intent) are upserted first, then the FULL open pool
+        // is loaded — so a match run fills both the caller's intent and any
+        // counterparty intents posted earlier. Idempotent per participant+pair
+        // (see upsertPoolIntent), so card retries don't pile up duplicates.
+        for (const intent of bodyIntents) {
             if (!intent.participantId || !intent.sellCurrency || !intent.buyCurrency || !intent.sellAmount) {
                 return res.status(400).json({ error: 'Each intent needs participantId, sellCurrency, buyCurrency, sellAmount' });
             }
             if (intent.sellCurrency === intent.buyCurrency) {
                 return res.status(400).json({ error: 'sellCurrency and buyCurrency must differ' });
             }
+            await upsertPoolIntent(FxIntentRecord, intent);
         }
+
+        const now = Date.now();
+        const pool = await loadOpenPool(FxIntentRecord, now);
 
         // Fetch live mid-market rates
         const rateProvider = await buildLiveRateProvider();
 
-        // Run the matching + netting pipeline
+        // Run the matching + netting pipeline against the hosted pool
         const result = runNetting(
-            intents,
+            pool,
             rateProvider.midRate,
             'cUSD',
-            Date.now(),
+            now,
         );
+
+        // Persist match outcomes: remainingSell decrements, status advances
+        // (matched / partially_matched), matchId audit trail per intent.
+        await persistMatchOutcomes(FxIntentRecord, result.matches);
 
         // Build the settlement plan (ledger anchors + transfers + residuals)
         const settlementPlan = buildSettlementPlan(result);
@@ -126,6 +148,7 @@ export default async function handler(
             totalSavingsUsd: result.totalSavingsUsd,
             rateSourceNote: rateProvider.sourceNote,
             rateDate: rateProvider.date,
+            poolSize: pool.length,
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : 'FX netting failed';

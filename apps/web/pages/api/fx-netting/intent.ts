@@ -1,21 +1,27 @@
 /**
- * POST /api/fx-netting/intent — validate and normalize an FX intent.
+ * POST /api/fx-netting/intent — validate, normalize, and PERSIST an FX intent
+ * into the hosted pool.
  *
  * Wallet-authenticated: the participantId is derived from the signed
  * message, never trusted from the body (same pattern as
  * /api/agent/business/cycles).
  *
- * Body: { sellCurrency, sellAmount, buyCurrency, buyAmountMin?, deadline? }
- * Response: { intent: FxIntent }
+ * GET — list the caller's own pool intents (wallet-signed).
  *
- * The normalized intent can then be submitted to POST /api/fx-netting/match
- * alongside other participants' intents. Works for any currency pair
- * (BBD↔JMD, GHS↔NGN, XOF↔XAF, etc.) — the matching engine is currency-agnostic.
+ * Body: { sellCurrency, sellAmount, buyCurrency, buyAmountMin?, deadline? }
+ * Response POST: { intent: FxIntent, pooled: true }
+ * Response GET:  { intents: FxIntentRecord[] }
+ *
+ * Persisted intents are what make matching real: POST /api/fx-netting/match
+ * runs against this pool, so an intent posted today can be matched by a
+ * counterparty tomorrow.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
+import connectDB from '@/lib/mongodb';
+import { FxIntentRecord } from '@/models/FxIntentRecord';
 import { createIntent } from '@diversifi/shared/src/services/fx-netting/matching-engine';
 import type { FxIntent } from '@diversifi/shared/src/services/fx-netting/intent';
 
@@ -25,16 +31,13 @@ const RATE_WINDOW_MS = 60_000;
 interface IntentResponse {
     ok: true;
     intent: FxIntent;
+    pooled: boolean;
 }
 
 export default async function handler(
     req: NextApiRequest,
-    res: NextApiResponse<IntentResponse | { error: string }>,
+    res: NextApiResponse<IntentResponse | { intents: unknown[] } | { error: string }>,
 ) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
-    }
-
     const { allowed, retryAfterSec } = rateLimit(`fxintent:${getClientIp(req)}`, RATE_LIMIT, RATE_WINDOW_MS);
     if (!allowed) {
         res.setHeader('Retry-After', String(retryAfterSec));
@@ -44,6 +47,25 @@ export default async function handler(
     const userAddress = requireWalletAuth(req);
     if (!userAddress) {
         return res.status(401).json({ error: 'Wallet signature required (x-wallet-auth-message / x-wallet-auth-signature headers)' });
+    }
+
+    // GET — the caller's own pool intents (all statuses, newest first).
+    if (req.method === 'GET') {
+        try {
+            await connectDB();
+            const intents = await FxIntentRecord.find({ participantId: userAddress })
+                .sort({ createdAt: -1 })
+                .limit(50)
+                .lean();
+            return res.status(200).json({ intents });
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Failed to load intents';
+            return res.status(500).json({ error: message });
+        }
+    }
+
+    if (req.method !== 'POST') {
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
@@ -77,7 +99,22 @@ export default async function handler(
             body.deadline ?? 0,
         );
 
-        return res.status(200).json({ ok: true, intent });
+        // Persist into the hosted pool — this is what lets a counterparty
+        // match against it in a LATER run (the whole point of the pool).
+        await connectDB();
+        await FxIntentRecord.create({
+            intentId: intent.intentId,
+            participantId: intent.participantId,
+            sellCurrency: intent.sellCurrency,
+            sellAmount: intent.sellAmount,
+            buyCurrency: intent.buyCurrency,
+            buyAmountMin: intent.buyAmountMin,
+            deadline: intent.deadline,
+            remainingSell: intent.remainingSell,
+            status: 'open',
+        });
+
+        return res.status(200).json({ ok: true, intent, pooled: true });
     } catch (err) {
         const message = err instanceof Error ? err.message : 'Intent creation failed';
         return res.status(400).json({ error: message });
