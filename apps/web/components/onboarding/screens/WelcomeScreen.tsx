@@ -276,9 +276,12 @@ function ArchetypeStrip({
   activeId: ArchetypeId | null;
   onSelect: (id: ArchetypeId) => void;
 }) {
+  // Short lists (a lens shows 1-3 archetypes) centre instead of hugging the
+  // left edge — scrolling is only needed for the "All 8" view.
+  const centerWhenShort = ids.length <= 2 ? 'justify-center' : '';
   return (
     <div
-      className="flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1"
+      className={`flex gap-2 overflow-x-auto scrollbar-hide -mx-1 px-1 py-1 ${centerWhenShort}`}
       role="radiogroup"
       aria-label="Approaches"
     >
@@ -1351,22 +1354,26 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           transition={panelEntrance.transition}
                           className="absolute inset-0 flex flex-col justify-center px-2 z-10"
                         >
-                          {/* Lens header — one compact row: what is this,
-                              plus the escape hatches. The description is a
-                              single quiet line; the strip cards carry the
-                              details. */}
-                          <motion.div {...panelChildMotion(0)} className="flex items-center justify-between gap-2 mb-2">
-                            <div className="flex items-baseline gap-2 min-w-0 text-left">
+                          {/* Lens detail sits on a SOLID panel — the coin row
+                              stays mounted behind it for the bloom
+                              choreography, but nothing shows through
+                              (solid-ground rule: glass loses to the backdrop). */}
+                          <div className="rounded-3xl bg-slate-900 ring-1 ring-white/10 shadow-xl p-3">
+                          {/* Lens header — stacked: label on its own line,
+                              description under it (both were truncate-clipped
+                              when sharing one row). Escape hatches stay right. */}
+                          <motion.div {...panelChildMotion(0)} className="flex items-start justify-between gap-2 mb-2">
+                            <div className="min-w-0 text-left">
                               <p className="text-sm font-black text-white truncate">
                                 {showAllApproaches ? 'All approaches' : activeLens.label}
                               </p>
-                              <p className="text-[11px] text-slate-400 truncate">
+                              <p className="text-[11px] text-slate-400 truncate mt-0.5">
                                 {showAllApproaches
                                   ? 'Every approach in one list.'
                                   : activeLens.description}
                               </p>
                             </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
+                            <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
                               {!showAllApproaches && (
                                 <button
                                   type="button"
@@ -1421,6 +1428,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                               )}
                             </AnimatePresence>
                           </motion.div>
+                          </div>
                         </motion.div>
                       )}
                     </AnimatePresence>
