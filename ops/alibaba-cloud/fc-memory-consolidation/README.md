@@ -107,5 +107,5 @@ The Guardian cron on Hetzner calls this FC function via HTTP when
 the local consolidation path (Cognee + DashScope direct call). This keeps
 Alibaba Cloud as an accelerator, not a dependency.
 
-See `docs/alibaba-cloud-deployment.md` in the repo root for the full
+See `docs/ops.md` in the repo root for the full
 architecture documentation.

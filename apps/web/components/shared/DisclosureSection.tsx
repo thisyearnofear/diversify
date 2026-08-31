@@ -33,6 +33,8 @@ interface DisclosureSectionProps {
   icon?: string;
   /** Default open (use sparingly — Tier 2 is closed by default). */
   defaultOpen?: boolean;
+  /** Render as a row inside a shared parent card (no per-row chrome). */
+  grouped?: boolean;
   /** Called on toggle with the resulting open state (after tracking). */
   onToggle?: (open: boolean) => void;
   children: React.ReactNode;
@@ -45,6 +47,7 @@ export default function DisclosureSection({
   summary,
   icon,
   defaultOpen = false,
+  grouped = false,
   onToggle,
   children,
   className = '',
@@ -65,6 +68,17 @@ export default function DisclosureSection({
     });
   }, [id, onToggle, tracked]);
 
+  const buttonClasses = grouped
+    ? `w-full min-h-[44px] flex items-center gap-3 px-4 py-3 text-left rounded-xl
+       transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/40
+       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+       focus-visible:outline-blue-400`
+    : `w-full min-h-[44px] flex items-center gap-3 rounded-2xl px-4 py-3 text-left
+       bg-white dark:bg-gray-800 border border-gray-200/70 dark:border-white/[0.06]
+       shadow-sm transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/70
+       focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2
+       focus-visible:outline-blue-400`;
+
   return (
     <section className={className} aria-label={title}>
       <button
@@ -72,11 +86,7 @@ export default function DisclosureSection({
         onClick={handleToggle}
         aria-expanded={open}
         aria-controls={`${id}-panel`}
-        className="w-full min-h-[44px] flex items-center gap-3 rounded-2xl px-4 py-3 text-left
-                   bg-white/[0.04] dark:bg-white/[0.04] border border-white/10
-                   transition-colors hover:bg-white/[0.07] focus-visible:outline
-                   focus-visible:outline-2 focus-visible:outline-offset-2
-                   focus-visible:outline-blue-400"
+        className={buttonClasses}
       >
         {icon && (
           <span aria-hidden="true" className="text-lg shrink-0">
@@ -103,7 +113,7 @@ export default function DisclosureSection({
         </span>
       </button>
       {open && (
-        <div id={`${id}-panel`} className="mt-2">
+        <div id={`${id}-panel`} className={grouped ? 'mt-1 px-4 pb-4' : 'mt-2'}>
           {children}
         </div>
       )}

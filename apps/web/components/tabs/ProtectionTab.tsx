@@ -18,9 +18,13 @@ import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { useToast } from "@/components/ui/Toast";
 import EmptyState from "@/components/ui/EmptyState";
+import { trackFunnelEvent } from "@/lib/analytics";
 
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanCard } from "./protect/ProtectionPlanCard";
+import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
+import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import { ProtectionJourney } from "./protect/ProtectionJourney";
 import type { TokenBalance } from "@/hooks/use-multichain-balances";
@@ -143,6 +147,14 @@ export default function ProtectionTab({
   const { riskData, primaryDepreciation } = useCurrencyRisk();
   const [dismissedInlineRec, setDismissedInlineRec] = useState(false);
 
+  // Marquee focus state — the plan ring's selection lives here so the rest
+  // of the tab (optimization insight, Guardian prompt) can react to it.
+  const [focusedToken, setFocusedToken] = useState<string | null>(null);
+  const handleMarqueeSelect = useCallback((token: string | null) => {
+    setFocusedToken(token);
+    if (token) trackFunnelEvent('marquee_select', { token, source: 'shield_ring' });
+  }, []);
+
   // Shield section priority — persona-aware ordering of shield tab sections.
   // The adaptiveConfig.content.shieldSections array defines the priority order;
   // sections appear earlier if they're listed first in that array.
@@ -164,6 +176,16 @@ export default function ProtectionTab({
   );
 
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
+
+  // The marquee renders only when the strategy resolves to real allocations —
+  // the plan-card demotion follows the same predicate, so the plan is never
+  // buried without the ring taking over its job.
+  const planRingVisible = useMemo(() => {
+    const key = (selectedStrategy || financialStrategy) as string | null;
+    if (!key) return false;
+    const archetypeId = strategyToArchetype(key);
+    return archetypeId ? getArchetypeAllocations(archetypeId).length > 0 : false;
+  }, [selectedStrategy, financialStrategy]);
   const { showToast } = useToast();
 
   const [showAssetModal, setShowAssetModal] = useState<string | null>(null);
@@ -178,6 +200,18 @@ export default function ProtectionTab({
   // Use the pre-calculated live portfolio analysis from the portfolio prop
   const liveAnalysis = activePortfolio;
   const topOpportunity = rebalancingOpportunities?.[0];
+
+  // Focus-aware routing: when the marquee has a slice selected, insights
+  // speak about the opportunity involving that token; otherwise the
+  // top-priority opportunity stands.
+  const activeOpportunity = useMemo(() => {
+    if (!focusedToken || !rebalancingOpportunities?.length) return topOpportunity;
+    return (
+      rebalancingOpportunities.find(
+        (o) => o.fromToken === focusedToken || o.toToken === focusedToken,
+      ) ?? topOpportunity
+    );
+  }, [focusedToken, rebalancingOpportunities, topOpportunity]);
 
   // ============================================================================
   // HANDLERS
@@ -444,6 +478,18 @@ export default function ProtectionTab({
           aria-hidden="true"
         />
       )}
+      {/* Plan ring — the tab's one expressive object (Tier 1 marquee).
+          Interactive allocation vs holdings; everything else orbits it. */}
+      {planRingVisible && (
+        <ProtectionPlanRing
+          strategyKey={(selectedStrategy || financialStrategy) as string}
+          portfolio={activePortfolio as MultichainPortfolio}
+          selectedToken={focusedToken}
+          onSelectToken={handleMarqueeSelect}
+          onReviewSwap={(toToken) => openProtectionFlow(toToken)}
+        />
+      )}
+
       {/* Protection Journey — connects the user's philosophy to Guardian
           execution and offers a clear next action. Replaces the generic
           Strategy Alignment Bar with philosophy-aware guidance. */}
@@ -464,28 +510,29 @@ export default function ProtectionTab({
           Each section has an `id` that maps to shieldSectionOrder.
           Sections render in persona-priority order, not document order. */}
       {(() => {
-        // Build ordered sections array
+        // Ordered sections — tier 1 renders as expressive standalone blocks
+        // (persona priority order preserved); tier 2 collapses into ONE
+        // divided card so the tab reads as a list, not a stack of cards.
         const sections = [
-          { id: 'savings-loop', order: getSectionSortKey('savings-loop', 0), render: !isBeginner && displayTotalValue > 0 && adaptiveConfig.content.showYield },
-          { id: 'plan-gallery', order: getSectionSortKey('plan-gallery', 1), render: !hasChosenPlan },
-          { id: 'plan-card', order: getSectionSortKey('plan-card', 2), render: true },
-          { id: 'guardian-chip', order: getSectionSortKey('guardian-chip', 3), render: Boolean(address) && !isGuardianStatusLoading && !showMobileWizard },
-          { id: 'payment-cycle', order: getSectionSortKey('payment-cycle', 4), render: config.moneyPurpose === 'upcoming_payment' },
-          { id: 'shield-rec', order: getSectionSortKey('shield-rec', 5), render: displayTotalValue > 0 && !dismissedInlineRec && (riskData || topOpportunity) },
-          { id: 'primary-insight', order: getSectionSortKey('primary-insight', 6), render: displayTotalValue === 0 && address },
-          { id: 'optimization-insight', order: getSectionSortKey('optimization-insight', 7), render: Boolean(liveAnalysis) && Boolean(topOpportunity) && displayTotalValue > 0 },
-          { id: 'ai-analysis', order: getSectionSortKey('ai-analysis', 8), render: true },
-          { id: 'rwa-assets', order: getSectionSortKey('rwa-assets', 9), render: !isBeginner },
-          { id: 'robinhood-rwa', order: getSectionSortKey('robinhood-rwa', 10), render: !isBeginner },
-          { id: 'best-yield', order: getSectionSortKey('best-yield', 11), render: !isBeginner && adaptiveConfig.content.showYield },
-          { id: 'caribbean-fx', order: getSectionSortKey('caribbean-fx', 12), render: financialStrategy === 'pan_caribbean' && !isBeginner && adaptiveConfig.content.showYield },
-          { id: 'yield-discovery', order: getSectionSortKey('yield-discovery', 13), render: !isBeginner && adaptiveConfig.content.showYield },
+          { id: 'savings-loop', tier: 2, order: getSectionSortKey('savings-loop', 0), render: !isBeginner && displayTotalValue > 0 && adaptiveConfig.content.showYield },
+          { id: 'plan-gallery', tier: 1, order: getSectionSortKey('plan-gallery', 1), render: !hasChosenPlan },
+          { id: 'plan-card', tier: planRingVisible && !isBeginner ? 2 : 1, order: getSectionSortKey('plan-card', 2), render: true },
+          { id: 'guardian-chip', tier: 1, order: getSectionSortKey('guardian-chip', 3), render: Boolean(address) && !isGuardianStatusLoading && !showMobileWizard },
+          { id: 'payment-cycle', tier: 2, order: getSectionSortKey('payment-cycle', 4), render: config.moneyPurpose === 'upcoming_payment' },
+          { id: 'shield-rec', tier: 1, order: getSectionSortKey('shield-rec', 5), render: displayTotalValue > 0 && !dismissedInlineRec && (riskData || topOpportunity) },
+          { id: 'primary-insight', tier: 1, order: getSectionSortKey('primary-insight', 6), render: displayTotalValue === 0 && address },
+          { id: 'optimization-insight', tier: 2, order: getSectionSortKey('optimization-insight', 7), render: Boolean(liveAnalysis) && Boolean(topOpportunity) && displayTotalValue > 0 },
+          { id: 'ai-analysis', tier: 2, order: getSectionSortKey('ai-analysis', 8), render: true },
+          { id: 'rwa-assets', tier: 2, order: getSectionSortKey('rwa-assets', 9), render: !isBeginner },
+          { id: 'robinhood-rwa', tier: 2, order: getSectionSortKey('robinhood-rwa', 10), render: !isBeginner },
+          { id: 'best-yield', tier: 2, order: getSectionSortKey('best-yield', 11), render: !isBeginner && adaptiveConfig.content.showYield },
+          { id: 'caribbean-fx', tier: 2, order: getSectionSortKey('caribbean-fx', 12), render: financialStrategy === 'pan_caribbean' && !isBeginner && adaptiveConfig.content.showYield },
+          { id: 'yield-discovery', tier: 2, order: getSectionSortKey('yield-discovery', 13), render: !isBeginner && adaptiveConfig.content.showYield },
+          { id: 'chain-distribution', tier: 2, order: getSectionSortKey('chain-distribution', 14), render: !isBeginner && displayTotalValue > 0 },
+          { id: 'plan-adjustments', tier: 2, order: getSectionSortKey('plan-adjustments', 15), render: !isBeginner && displayTotalValue > 0 },
         ];
-        return sections
-          .filter(s => s.render)
-          .sort((a, b) => a.order - b.order)
-          .map(s => s.id)
-          .map(sectionId => {
+
+        const renderSection = (sectionId: string, grouped: boolean) => {
             switch (sectionId) {
               case 'savings-loop':
                 return (
@@ -495,6 +542,7 @@ export default function ProtectionTab({
                     title="Savings loop"
                     summary="Claim G$, build your streak, protect on repeat"
                     icon="🔁"
+                    grouped={grouped}
                   >
                     <Suspense fallback={<LazySectionSkeleton />}>
                       <SavingsLoopCard />
@@ -507,18 +555,32 @@ export default function ProtectionTab({
                     <ProtectionPlanGallery mobile />
                   </div>
                 );
-              case 'plan-card':
-                return (
+              case 'plan-card': {
+                const planCard = (
                   <ProtectionPlanCard
-                    key={sectionId}
                     experienceMode={experienceMode}
                     address={address}
                     portfolio={activePortfolio as MultichainPortfolio}
                     userRegion={userRegion}
                     isComplete={isComplete}
                     currentGoalLabel={currentGoalLabel}
+                    embedded={grouped}
                   />
                 );
+                if (!grouped) return <React.Fragment key={sectionId}>{planCard}</React.Fragment>;
+                return (
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-plan-profile"
+                    title="Protection score & profile"
+                    summary={`${protectionScore}% protection — ${currentGoalLabel && currentGoalLabel !== 'Not set' ? currentGoalLabel : 'set your goal'}`}
+                    icon="🧭"
+                    grouped
+                  >
+                    {planCard}
+                  </DisclosureSection>
+                );
+              }
               case 'guardian-chip':
                 return (
                   <React.Fragment key={sectionId}>
@@ -543,6 +605,7 @@ export default function ProtectionTab({
                     title="Upcoming payment plan"
                     summary="Protect funds timed to your payment date"
                     icon="📅"
+                    grouped={grouped}
                   >
                     <PaymentCycleReport
                       defaultLocalCurrency={riskData?.code}
@@ -557,13 +620,13 @@ export default function ProtectionTab({
                     portfolio={activePortfolio as MultichainPortfolio}
                     riskData={riskData}
                     primaryDepreciationPct={primaryDepreciation}
-                    topOpportunity={topOpportunity}
+                    topOpportunity={activeOpportunity}
                     onReview={() => {
-                      if (topOpportunity?.toToken) {
+                      if (activeOpportunity?.toToken) {
                         openProtectionFlow(
-                          topOpportunity.toToken,
-                          topOpportunity.fromToken,
-                          topOpportunity.suggestedAmount?.toFixed(2),
+                          activeOpportunity.toToken,
+                          activeOpportunity.fromToken,
+                          activeOpportunity.suggestedAmount?.toFixed(2),
                         );
                       } else {
                         setActiveTab?.("exchange");
@@ -612,47 +675,48 @@ export default function ProtectionTab({
                     key={sectionId}
                     id="shield-optimization-insight"
                     title="Plan optimization available"
-                    summary={topOpportunity?.annualSavings ? `Up to $${topOpportunity.annualSavings.toFixed(0)}/yr — review ${topOpportunity.fromToken} → ${topOpportunity.toToken}` : `Review ${topOpportunity.fromToken} → ${topOpportunity.toToken}`}
+                    summary={`${focusedToken && (activeOpportunity.fromToken === focusedToken || activeOpportunity.toToken === focusedToken) ? `${focusedToken}: ` : ''}${activeOpportunity?.annualSavings ? `up to $${activeOpportunity.annualSavings.toFixed(0)}/yr — review ${activeOpportunity.fromToken} → ${activeOpportunity.toToken}` : `Review ${activeOpportunity.fromToken} → ${activeOpportunity.toToken}`}`}
                     icon="⚡"
+                    grouped={grouped}
                   >
                     <OptimizationInsight
                     key={sectionId}
                     icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
                     title={
                       config.userGoal === 'geographic_diversification'
-                        ? `Expand ${topOpportunity.toRegion} Presence`
+                        ? `Expand ${activeOpportunity.toRegion} Presence`
                         : config.userGoal === 'rwa_access'
-                        ? `Add ${topOpportunity.toToken} to Your Plan`
+                        ? `Add ${activeOpportunity.toToken} to Your Plan`
                         : config.userGoal === 'inflation_protection'
-                        ? `Reduce ${topOpportunity.fromRegion} Inflation Exposure`
+                        ? `Reduce ${activeOpportunity.fromRegion} Inflation Exposure`
                         : `Improve Your Protection Plan`
                     }
                     description={
                       config.userGoal === 'geographic_diversification'
-                        ? `Adding ${topOpportunity.toToken} gives you exposure to ${topOpportunity.toRegion} economy. Your current ${topOpportunity.fromToken} is mainly ${topOpportunity.fromRegion}-focused.`
+                        ? `Adding ${activeOpportunity.toToken} gives you exposure to ${activeOpportunity.toRegion} economy. Your current ${activeOpportunity.fromToken} is mainly ${activeOpportunity.fromRegion}-focused.`
                         : config.userGoal === 'rwa_access'
-                        ? `${topOpportunity.toToken} provides ${topOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${topOpportunity.fromToken} can't match.`
-                        : `Your ${topOpportunity.fromToken} holdings face ${Math.round(topOpportunity.fromInflation)}% inflation. Swapping to ${topOpportunity.toToken} preserves purchasing power.`
+                        ? `${activeOpportunity.toToken} provides ${activeOpportunity.toToken === 'PAXG' ? 'gold-backed' : 'yield-bearing'} exposure that ${activeOpportunity.fromToken} can't match.`
+                        : `Your ${activeOpportunity.fromToken} holdings face ${Math.round(activeOpportunity.fromInflation)}% inflation. Swapping to ${activeOpportunity.toToken} preserves purchasing power.`
                     }
-                    fromToken={topOpportunity.fromToken}
-                    toToken={topOpportunity.toToken}
-                    fromInflation={topOpportunity.fromInflation}
-                    toInflation={topOpportunity.toInflation}
-                    impact={`Save $${topOpportunity.annualSavings.toFixed(2)}/year`}
-                    variant={topOpportunity.priority === "HIGH" ? "urgent" : "default"}
+                    fromToken={activeOpportunity.fromToken}
+                    toToken={activeOpportunity.toToken}
+                    fromInflation={activeOpportunity.fromInflation}
+                    toInflation={activeOpportunity.toInflation}
+                    impact={`Save $${activeOpportunity.annualSavings.toFixed(2)}/year`}
+                    variant={activeOpportunity.priority === "HIGH" ? "urgent" : "default"}
                     action={{
-                      label: `Review ${topOpportunity.fromToken} → ${topOpportunity.toToken} in Protect`,
+                      label: `Review ${activeOpportunity.fromToken} → ${activeOpportunity.toToken} in Protect`,
                       onClick: () =>
                         openProtectionFlow(
-                          topOpportunity.toToken,
-                          topOpportunity.fromToken,
-                          topOpportunity.suggestedAmount.toFixed(2),
+                          activeOpportunity.toToken,
+                          activeOpportunity.fromToken,
+                          activeOpportunity.suggestedAmount.toFixed(2),
                         ),
                     }}
                     secondaryOptions={
                       liveAnalysis.rebalancingOpportunities
                         .filter((opp) => {
-                          if (opp.fromToken === topOpportunity.fromToken && opp.toToken === topOpportunity.toToken) return false;
+                          if (opp.fromToken === activeOpportunity.fromToken && opp.toToken === activeOpportunity.toToken) return false;
                           if (config.userGoal === 'geographic_diversification') {
                             return opp.toRegion !== 'Global' && opp.fromRegion !== opp.toRegion;
                           }
@@ -680,6 +744,7 @@ export default function ProtectionTab({
                     title="Ask Guardian about my plan"
                     summary="A plan review across your holdings, currency exposure and goals"
                     icon="🤖"
+                    grouped={grouped}
                   >
                     <InsightCard
                       icon="🤖"
@@ -690,7 +755,8 @@ export default function ProtectionTab({
                         label: "Ask Guardian about my plan",
                         onClick: () => {
                           const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
-                          askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
+                          const focusClause = focusedToken ? ` I'm currently focused on my ${focusedToken} position — address it specifically.` : '';
+                          askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.${focusClause}`);
                         },
                       }}
                     />
@@ -704,6 +770,7 @@ export default function ProtectionTab({
                     title="Real-world assets"
                     summary="Tokenized stocks, gold and T-bills you can hold"
                     icon="🏛️"
+                    grouped={grouped}
                   >
                     <RwaAssetCards
                       chains={chains}
@@ -723,6 +790,7 @@ export default function ProtectionTab({
                     title="Robinhood Chain stocks"
                     summary="Tokenized equities + USDG on Robinhood Chain"
                     icon="📈"
+                    grouped={grouped}
                   >
                     <RobinhoodRwaCard
                       onLearnMore={() => {
@@ -741,9 +809,10 @@ export default function ProtectionTab({
                     title="Best yield for your wallet"
                     summary="Personalized vault picks, ranked by risk rating"
                     icon="🏆"
+                    grouped={grouped}
                   >
                     <Suspense fallback={<LazySectionSkeleton />}>
-                      <BestYieldCard userAddress={address} className="mb-4" />
+                      <BestYieldCard userAddress={address} className={grouped ? '' : 'mb-4'} />
                     </Suspense>
                   </DisclosureSection>
                 );
@@ -755,6 +824,7 @@ export default function ProtectionTab({
                     title="Caribbean FX netting"
                     summary="Match BBD↔JMD needs directly, settle only the net"
                     icon="🔄"
+                    grouped={grouped}
                   >
                     <Suspense fallback={<LazySectionSkeleton />}>
                       <CaribbeanFxNetCard userAddress={address} />
@@ -769,6 +839,7 @@ export default function ProtectionTab({
                     title="Yield opportunities"
                     summary="Low-to-medium risk vaults ranked for your plan"
                     icon="🌱"
+                    grouped={grouped}
                   >
                     <Suspense fallback={<LazySectionSkeleton />}>
                       <YieldDiscoverySection
@@ -787,88 +858,103 @@ export default function ProtectionTab({
                     </Suspense>
                   </DisclosureSection>
                 );
+              case 'chain-distribution':
+                return (
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-chain-distribution"
+                    title="Chain distribution"
+                    summary={`${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""} holding your funds`}
+                    icon="🔗"
+                    grouped={grouped}
+                  >
+                    <MultichainPortfolioBreakdown
+                      regionData={displayRegionData.map((r) => ({
+                        region: r.region,
+                        value: r.value,
+                        color: r.color,
+                      }))}
+                      totalValue={displayTotalValue}
+                      chainBreakdown={chains.map((c) => ({
+                        chainId: c.chainId,
+                        chainName: c.chainName,
+                        totalValue: c.totalValue,
+                        tokenCount: c.tokenCount,
+                      }))}
+                    />
+                  </DisclosureSection>
+                );
+              case 'plan-adjustments':
+                return (
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-plan-adjustments"
+                    title="Plan adjustments"
+                    summary="Guardian-suggested rebalances toward your target plan"
+                    icon="🎯"
+                    grouped={grouped}
+                  >
+                    <PortfolioRecommendations
+                      currentAllocations={Object.fromEntries(
+                        displayRegionData.map((r) => [r.region, (r.usdValue ?? r.value) / (displayTotalValue || 1)])
+                      )}
+                      onSelectStrategy={(strategy) => {
+                        const recommended = StrategyService.getRecommendedAssets(strategy as any);
+                        const toToken = recommended[0] || 'KESm';
+                        const fromToken = recommended.includes('USDm') ? 'USDC' : 'USDm';
+
+                        // Compute suggested swap amount from target allocation gap
+                        const strategyConfig = StrategyService.getConfig(strategy as any);
+                        const primaryTarget = strategyConfig.targetAllocations[0];
+                        let swapAmount: string | undefined;
+                        if (primaryTarget && displayTotalValue > 0) {
+                          const currentRegion = displayRegionData.find(
+                            (r) => r.region === primaryTarget.region
+                          );
+                          const currentPct = currentRegion
+                            ? ((currentRegion.usdValue ?? currentRegion.value) / displayTotalValue) * 100
+                            : 0;
+                          const gapPct = Math.max(0, primaryTarget.ideal - currentPct);
+                          const gapUsd = (gapPct / 100) * displayTotalValue;
+                          if (gapUsd > 1) swapAmount = gapUsd.toFixed(2);
+                        }
+
+                        setActiveTab?.("exchange");
+                        navigateToSwap({
+                          fromToken,
+                          toToken,
+                          amount: swapAmount,
+                          reason: `Review ${strategy} plan adjustments toward ${toToken}`,
+                        });
+                      }}
+                    />
+                  </DisclosureSection>
+                );
               default:
                 return null;
             }
-          });
+        };
+
+        const ordered = sections
+          .filter(s => s.render)
+          .sort((a, b) => a.order - b.order);
+        const tier1 = ordered.filter(s => s.tier === 1);
+        const tier2 = ordered.filter(s => s.tier === 2);
+
+        return (
+          <React.Fragment key="shield-sections">
+            {tier1.map(s => renderSection(s.id, false))}
+            {tier2.length > 0 && (
+              <Card
+                padding="p-0"
+                className="overflow-hidden divide-y divide-gray-200/70 dark:divide-white/[0.06]"
+              >
+                {tier2.map(s => renderSection(s.id, true))}
+              </Card>
+            )}
+          </React.Fragment>
+        );
       })()}
-
-      {/* =====================================================================
-          DASHBOARD CARDS (Replaced Collapsible Sections)
-          ===================================================================== */}
-
-      {/* REMOVED: Strategy Metrics and Zakat Calculator - tied to financial strategy which didn't add value */}
-
-      {/* Chain Distribution — Tier 2 disclosure (Wave 9) */}
-      {!isBeginner && displayTotalValue > 0 && (
-        <DisclosureSection
-          id="shield-chain-distribution"
-          title="Chain distribution"
-          summary={`${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""} holding your funds`}
-          icon="🔗"
-        >
-          <MultichainPortfolioBreakdown
-            regionData={displayRegionData.map((r) => ({
-              region: r.region,
-              value: r.value,
-              color: r.color,
-            }))}
-            totalValue={displayTotalValue}
-            chainBreakdown={chains.map((c) => ({
-              chainId: c.chainId,
-              chainName: c.chainName,
-              totalValue: c.totalValue,
-              tokenCount: c.tokenCount,
-            }))}
-          />
-        </DisclosureSection>
-      )}
-
-
-      {/* Portfolio Strategy Recommendations — Tier 2 disclosure (Wave 9) */}
-      {!isBeginner && displayTotalValue > 0 && (
-        <DisclosureSection
-          id="shield-plan-adjustments"
-          title="Plan adjustments"
-          summary="Guardian-suggested rebalances toward your target plan"
-          icon="🎯"
-        >
-        <PortfolioRecommendations
-          currentAllocations={Object.fromEntries(
-            displayRegionData.map((r) => [r.region, (r.usdValue ?? r.value) / (displayTotalValue || 1)])
-          )}
-          onSelectStrategy={(strategy) => {
-            const recommended = StrategyService.getRecommendedAssets(strategy as any);
-            const toToken = recommended[0] || 'KESm';
-            const fromToken = recommended.includes('USDm') ? 'USDC' : 'USDm';
-
-            // Compute suggested swap amount from target allocation gap
-            const config = StrategyService.getConfig(strategy as any);
-            const primaryTarget = config.targetAllocations[0];
-            let swapAmount: string | undefined;
-            if (primaryTarget && displayTotalValue > 0) {
-              const currentRegion = displayRegionData.find(
-                (r) => r.region === primaryTarget.region
-              );
-              const currentPct = currentRegion
-                ? ((currentRegion.usdValue ?? currentRegion.value) / displayTotalValue) * 100
-                : 0;
-              const gapPct = Math.max(0, primaryTarget.ideal - currentPct);
-              const gapUsd = (gapPct / 100) * displayTotalValue;
-              if (gapUsd > 1) swapAmount = gapUsd.toFixed(2);
-            }
-
-            setActiveTab?.("exchange");
-            navigateToSwap({
-              fromToken,
-              toToken,
-              amount: swapAmount,
-              reason: `Review ${strategy} plan adjustments toward ${toToken}`,
-            });
-          }}
-        />
-        </DisclosureSection>
-      )}
 
       {/* REMOVED: Goal-Based Strategies - consolidated to Learn tab with interactive RealWorldUseCases */}
 

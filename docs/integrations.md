@@ -90,7 +90,7 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 ### Security
 - `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only)
 - `FIRECRAWL_WEBHOOK_SECRET` authenticates incoming Firecrawl webhooks
-- User's permission bounds are always enforced (daily limit, allowed tokens, expiry). **Enforcement is app-layer**, not on-chain, on the production Celo/Mento path — see `docs/guardian-enforcement-model.md`.
+- User's permission bounds are always enforced (daily limit, allowed tokens, expiry). **Enforcement is app-layer**, not on-chain, on the production Celo/Mento path — see `docs/guardian.md`.
 - `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution
 - **ERC-7715 permission integrity:** `/api/vault/permission` POST verifies the EIP-712 typed-data signature against the user's wallet on the server (`ERC7715Service.verifySignedPermission`). Requests with a missing, malformed, or non-recovering signature are rejected with `400` before any permission is persisted. The `signature: 'unsigned'` fallback has been removed.
 
@@ -106,7 +106,7 @@ mainnet without code changes.
 (HashKey Settlement Protocol)** — the buyer's wallet signs an EIP-712 mandate
 and broadcasts the USDC transfer itself, rather than the gateway's usual
 agent-side `settleOnChain` fire-and-forget tx. See
-[`hsp-fx-protection.md`](./hsp-fx-protection.md) for the full flow and the
+[`strategy.md`](./strategy.md) § HSP Settlement & FX Protection Insight for the full flow and the
 `fx_protection` source it powers.
 
 | Component | Responsibility |
@@ -288,7 +288,7 @@ The following files are git-ignored and must be configured from `.example` templ
 - `deploy-env-to-server.sh` — Environment sync
 - `nginx.conf` — Reverse proxy config
 
-The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not gitignored) — see [`scripts/README.md`](../../scripts/README.md) for details.
+The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not gitignored) — see [`scripts/README.md`](../scripts/README.md) for details.
 
 ## Rate Limits & Caching Strategy
 

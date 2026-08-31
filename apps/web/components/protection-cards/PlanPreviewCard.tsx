@@ -36,11 +36,8 @@ export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' 
 
   return (
     <div
-      className={`rounded-xl border px-3 py-2.5 text-left ${className}`}
-      style={{
-        borderColor: `${archetype.accent}66`,
-        background: `linear-gradient(135deg, ${archetype.surface.start}1e 0%, ${archetype.surface.mid}2a 100%)`,
-      }}
+      className={`rounded-xl border px-3 py-2.5 text-left bg-white dark:bg-slate-900 shadow-sm ${className}`}
+      style={{ borderColor: `${archetype.accent}59` }}
     >
       {preview.slices.length > 0 ? (
         <>
@@ -54,7 +51,7 @@ export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' 
             {visible.map((slice) => (
               <span
                 key={slice.token}
-                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-bold text-gray-900 dark:text-white bg-white/60 dark:bg-white/[0.08]"
+                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.08]"
                 style={{ borderColor: `${archetype.accent}4d` }}
               >
                 <TokenIcon symbol={slice.token} size={16} />

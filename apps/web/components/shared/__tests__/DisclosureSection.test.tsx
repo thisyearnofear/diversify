@@ -58,4 +58,30 @@ describe('DisclosureSection — Wave 9 progressive disclosure', () => {
     expect(screen.getByRole('button', { name: /Open by default/ })).toHaveAttribute('aria-expanded', 'true');
     expect(trackFunnelEvent).not.toHaveBeenCalled();
   });
+
+  it('grouped rows keep expand semantics but drop standalone-card chrome', () => {
+    render(
+      <DisclosureSection id="test-d" title="Grouped row" summary="Inside a shared card" grouped>
+        <div>GROUPED-CONTENT</div>
+      </DisclosureSection>,
+    );
+
+    const button = screen.getByRole('button', { name: /Grouped row/ });
+    // No standalone surface: the parent card supplies background + dividers.
+    expect(button.className).not.toContain('bg-white');
+    expect(button.className).not.toContain('border');
+    fireEvent.click(button);
+    expect(screen.getByText('GROUPED-CONTENT')).toBeInTheDocument();
+    expect(trackFunnelEvent).toHaveBeenCalledWith('section_expand', { section: 'test-d' });
+  });
+
+  it('standalone rows keep the solid card surface', () => {
+    render(
+      <DisclosureSection id="test-e" title="Standalone row" summary="Own card">
+        <div>CONTENT</div>
+      </DisclosureSection>,
+    );
+    const button = screen.getByRole('button', { name: /Standalone row/ });
+    expect(button.className).toContain('bg-white');
+  });
 });

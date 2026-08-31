@@ -46,6 +46,23 @@ export interface RiskEvent {
   impact: string;
 }
 
+/**
+ * A staple people actually price risk in. Lets the moment translate an
+ * abstract percent into something tangible ("≈ 51 fewer bags of rice")
+ * for markets where numbers are read in goods, not percentage points.
+ * Optional and market-specific: only populated where the staple and its
+ * price are well understood; everywhere else it stays null (honest — we
+ * never invent a staple).
+ */
+export interface GoodsAnchor {
+  /** The staple good, e.g. "rice". */
+  name: string;
+  /** Display unit, pluralised, e.g. "bags of rice", "2kg bags of maize flour". */
+  unit: string;
+  /** Approximate current price per unit, in the local currency. */
+  price: number;
+}
+
 export interface CurrencyRiskEntry {
   code: string;
   countryName: string;
@@ -58,6 +75,9 @@ export interface CurrencyRiskEntry {
     vsEUR: { '1yr': number; '3yr': number; '5yr': number };
     vsXAU: { '1yr': number; '3yr': number; '5yr': number };
   };
+  /** Optional staple for goods-based risk framing. Omit to keep the moment
+      currency-only (no fabricated staple). */
+  goodsAnchor?: GoodsAnchor;
   riskEvents: RiskEvent[];
 }
 
@@ -141,6 +161,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsEUR: { '1yr': -38, '3yr': -53, '5yr': -58 },
       vsXAU: { '1yr': -50, '3yr': -65, '5yr': -72 },
     },
+    goodsAnchor: { name: 'rice', unit: 'bags of rice', price: 80_000 },
     riskEvents: [
       { year: 2023, event: 'Tinubu unification', impact: 'Naira devalued 40% as new president floated the currency' },
       { year: 2024, event: 'Multiple FX windows', impact: 'Continued gap between official and parallel market rates' },
@@ -157,6 +178,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsEUR: { '1yr': -3, '3yr': -42, '5yr': -61 },
       vsXAU: { '1yr': -20, '3yr': -58, '5yr': -73 },
     },
+    goodsAnchor: { name: 'rice', unit: 'bags of rice', price: 350 },
     riskEvents: [
       { year: 2022, event: 'Cedi crisis', impact: 'GHS lost 50% vs USD as inflation hit 54% — worst performer globally' },
       { year: 2022, event: 'Domestic debt exchange', impact: 'Debt restructuring wiped out bondholders while cedi continued sliding' },
@@ -205,6 +227,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsEUR: { '1yr': -6, '3yr': -20, '5yr': -25 },
       vsXAU: { '1yr': -22, '3yr': -42, '5yr': -50 },
     },
+    goodsAnchor: { name: 'maize flour', unit: '2kg bags of maize flour', price: 220 },
     riskEvents: [
       { year: 2022, event: 'General Election', impact: 'KES dropped 6.8% in the 3 months around the election cycle' },
       { year: 2023, event: 'Eurobond maturity pressure', impact: 'KES hit record low as $2B Eurobond repayment loomed' },
@@ -645,6 +668,11 @@ export const EXAMPLE_SAVINGS_LOCAL: Record<string, number> = {
   VND: 250_000_000,
   MXN: 200_000,
   UGX: 35_000_000,
+  // Pegged / benchmark currencies — example savings in the peg unit so the
+  // consequence reads in the visitor's own money, not a foreign $10,000.
+  BBD: 20_000,
+  XCD: 27_000,
+  TTD: 67_000,
   GBP: 7_500,
   EUR: 8_500,
   USD: 10_000,

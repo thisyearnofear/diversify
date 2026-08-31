@@ -36,6 +36,10 @@ let mockProfileConfig: {
   philosophy: string | null;
 } = { userGoal: null, moneyPurpose: null, philosophy: null };
 let mockProfileComplete = false;
+// Default null → ConnectedOverview renders the legacy hero (what the
+// regression tests below assert). Set to a moment to exercise the
+// currency-moment hero + dial-focus seeding.
+let mockMoment: import("@/lib/narrative/currency-moment").NarrativeMoment | null = null;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Hook + context mocks
@@ -84,6 +88,23 @@ vi.mock("@/hooks/use-macro-signals", () => ({
 
 vi.mock("@/hooks/use-currency-risk", () => ({
   useCurrencyRisk: () => ({ currencyCode: "USD" }),
+}));
+
+// The Home opening artifact hook — driven by mockMoment so tests can choose
+// between the legacy hero (null) and the currency-moment hero (a moment).
+vi.mock("@/hooks/use-currency-moment", () => ({
+  useCurrencyMoment: () => ({
+    moment: mockMoment,
+    isLoading: false,
+    benchmark: "USD",
+    setBenchmark: vi.fn(),
+    horizon: "1yr",
+    setHorizon: vi.fn(),
+    savingsAmount: 10000,
+    setSavingsAmount: vi.fn(),
+    benchmarks: ["USD", "EUR", "XAU"],
+    horizons: ["1yr", "3yr", "5yr"],
+  }),
 }));
 
 vi.mock("@/hooks/use-advisor", () => ({
@@ -196,6 +217,18 @@ vi.mock("@/components/enterprise-fx/EmergingMarketsTracker", () => ({ default: (
 vi.mock("@/components/enterprise-fx/PortfolioRiskWidget", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/RiskMetrics", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
+vi.mock("../CurrencyMomentCard", () => ({
+  CurrencyMomentCard: ({ moment }: { moment: { delta: number; currencyCode: string } }) => (
+    <div data-testid="currency-moment-card">
+      {moment.delta}% {moment.currencyCode}
+    </div>
+  ),
+}));
+vi.mock("../HomeExposureDial", () => ({
+  HomeExposureDial: ({ selectedRegion }: { selectedRegion: string | null }) => (
+    <div data-testid="exposure-dial" data-selected={selectedRegion ?? "none"} />
+  ),
+}));
 
 // ──────────────────────────────────────────────────────────────────────────
 // Import the component under test AFTER all mocks
@@ -261,6 +294,7 @@ describe("ConnectedOverview — diversificationTips ordering regression", () => 
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
+    mockMoment = null;
   });
 
   it("renders without throwing when the profile is incomplete (the exact crash path: falls through to `tips = diversificationTips`)", () => {
@@ -315,5 +349,66 @@ describe("ConnectedOverview — diversificationTips ordering regression", () => 
 
     // Standard (non-beginner) mode shows total value in the hero.
     expect(screen.getByTestId("hero-value-value")).toHaveTextContent("$4200");
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Currency-moment hero + dial focus seeding
+// ──────────────────────────────────────────────────────────────────────────
+
+const GHANA_MOMENT: import("@/lib/narrative/currency-moment").NarrativeMoment = {
+  currencyCode: "GHS",
+  countryName: "Ghana",
+  iso2: "GH",
+  flag: "🇬🇭",
+  benchmark: "USD",
+  benchmarkLabel: "US Dollar",
+  horizon: "1yr",
+  delta: -18,
+  savingsAmount: 100000,
+  personalImpact: 18000,
+  retainedRatio: 0.82,
+  state: "review",
+  isLive: false,
+  dataAsOf: "2025-07-01",
+  goods: null,
+};
+
+describe("ConnectedOverview — currency-moment hero", () => {
+  afterEach(() => {
+    cleanup();
+    mockExperienceMode = "standard";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+  });
+
+  it("replaces the legacy hero with the currency moment when one is detected", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+
+    expect(screen.getByTestId("currency-moment-card")).toHaveTextContent("-18% GHS");
+    expect(screen.queryByTestId("hero-value")).not.toBeInTheDocument();
+  });
+
+  it("seeds the exposure dial focus from the story's region when the user holds it", () => {
+    mockMoment = GHANA_MOMENT;
+    // buildPortfolio's default regionData includes Africa → Ghana (GH) seeds it.
+    renderOverview();
+
+    expect(screen.getByTestId("exposure-dial")).toHaveAttribute("data-selected", "Africa");
+  });
+
+  it("does not seed the dial when the story's region is not in the holdings", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview({
+      // Only Global holdings — the Ghana story maps to Africa, which is absent.
+      activePortfolio: buildPortfolio({
+        regionData: [{ region: "Global", value: 1000, color: "#000", usdValue: 1000 }],
+      }),
+    });
+
+    expect(screen.getByTestId("exposure-dial")).toHaveAttribute("data-selected", "none");
   });
 });

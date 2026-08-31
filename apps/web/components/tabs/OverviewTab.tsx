@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { useInflationData } from "@/hooks/use-inflation-data";
 import { useDemoMode } from "../../context/app/DemoModeContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NotConnectedState } from "./overview/NotConnectedState";
@@ -46,7 +45,6 @@ export default function OverviewTab({
   currencyPerformanceData,
 }: OverviewTabProps) {
   const { address, isConnecting, chainId } = useWalletContext();
-  const { inflationData } = useInflationData();
   const { demoMode, disableDemoMode, enableDemoMode } = useDemoMode();
 
   const isDemo = demoMode.isActive;
@@ -96,8 +94,6 @@ export default function OverviewTab({
   if (!address && !isConnecting && !isDemo) {
     return (
       <NotConnectedState
-        userRegion={userRegion}
-        regionalInflation={inflationData[userRegion]?.avgRate || 15.4}
         onEnableDemo={enableDemoMode}
       />
     );

@@ -20,6 +20,8 @@ interface Props {
   userRegion: Region;
   isComplete: boolean;
   currentGoalLabel: string;
+  /** Render without Card chrome — used when demoted inside a disclosure. */
+  embedded?: boolean;
 }
 
 export function ProtectionPlanCard({
@@ -28,6 +30,7 @@ export function ProtectionPlanCard({
   userRegion,
   isComplete,
   currentGoalLabel,
+  embedded = false,
 }: Props) {
   const isBeginner = experienceMode === "beginner";
   const { totalValue, chainCount, regionData, isLoading: isMultichainLoading, isStale } = portfolio;
@@ -103,6 +106,39 @@ export function ProtectionPlanCard({
       </Card>
     );
   }
+  const dashboard = (
+    <ProtectionDashboard
+      title="Protection Plan"
+      subtitle={isComplete ? "Your protection profile is ready" : "Set your protection profile"}
+      icon={<GuardianMascot size={28} mood="protective" />}
+      totalValue={`$${displayTotalValue?.toFixed(0) ?? "0"}`}
+      chainCount={displayChainCount}
+      score={protectionScore}
+      strategy={config?.userGoal || "global"}
+      factors={[
+        { label: "Portfolio Coverage", value: Math.round(portfolio?.tokenCount > 0 ? 95 : 50), status: portfolio?.tokenCount > 0 ? `${portfolio.tokenCount} tokens` : "No data", icon: "💰", description: "How many distinct tokens you hold. More tokens = less concentration risk. 95% when you hold at least one token. Source: live on-chain balance queries across your connected wallets." },
+        { label: "Chain Diversification", value: Math.round(displayChainCount > 1 ? 90 : 60), status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`, icon: "🔗", description: "Spread across multiple blockchains reduces single-chain risk. 90% when you hold assets on 2+ chains, 60% for a single chain. Source: RPC balance checks on Celo, Arbitrum, Base, and Ethereum." },
+        { label: "Regional Diversification", value: Math.round(currentRegions.length > 2 ? 90 : 70), status: `${currentRegions.length} regions`, icon: "🌍", description: "Exposure to multiple economic regions hedges against local downturns. 90% for 3+ regions, 70% otherwise. Source: token metadata regions mapped from your on-chain holdings." },
+        { label: "Inflation Risk", value: Math.round(Math.max(0, 100 - (portfolio?.weightedInflationRisk ?? 0) * 10)), status: `${Math.round(portfolio?.weightedInflationRisk ?? 0)}% weighted`, icon: "🛡️", description: "Measures purchasing power loss from inflation. Each token's regional inflation rate is weighted by its share of your portfolio. Source: live inflation data service + your wallet holdings." },
+      ]}
+      isLoading={isMultichainLoading} isStale={isStale}
+    >
+      <div className="mt-2">
+        <ProfileWizard
+          mode={profileMode} currentStep={currentStep} config={config}
+          currentGoalIcon={currentGoalIcon} currentGoalLabel={currentGoalLabel}
+          currentRiskLabel={currentRiskLabel} currentTimeHorizonLabel={currentTimeHorizonLabel}
+          onSetUserGoal={setUserGoal} onSetRiskTolerance={setRiskTolerance}
+          onSetTimeHorizon={setTimeHorizon} onNextStep={nextStep}
+          onSkipToEnd={skipToEnd} onCompleteEditing={completeEditing}
+          onStartEditing={startEditing} onBack={prevStep}
+        />
+      </div>
+    </ProtectionDashboard>
+  );
+
+  if (embedded) return dashboard;
+
   return (
     <Card
       aiPrompt={() => `Review my protection plan: $${displayTotalValue?.toFixed(0) ?? "0"} across ${displayChainCount} chains. Goal: ${currentGoalLabel}. Region: ${userRegion}. What should I know?`}
@@ -114,34 +150,7 @@ export function ProtectionPlanCard({
         "Am I diversified enough?",
       ]}
     >
-      <ProtectionDashboard
-        title="Protection Plan"
-        subtitle={isComplete ? "Your protection profile is ready" : "Set your protection profile"}
-        icon={<GuardianMascot size={28} mood="protective" />}
-        totalValue={`$${displayTotalValue?.toFixed(0) ?? "0"}`}
-        chainCount={displayChainCount}
-        score={protectionScore}
-        strategy={config?.userGoal || "global"}
-        factors={[
-          { label: "Portfolio Coverage", value: Math.round(portfolio?.tokenCount > 0 ? 95 : 50), status: portfolio?.tokenCount > 0 ? `${portfolio.tokenCount} tokens` : "No data", icon: "💰", description: "How many distinct tokens you hold. More tokens = less concentration risk. 95% when you hold at least one token. Source: live on-chain balance queries across your connected wallets." },
-          { label: "Chain Diversification", value: Math.round(displayChainCount > 1 ? 90 : 60), status: `${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}`, icon: "🔗", description: "Spread across multiple blockchains reduces single-chain risk. 90% when you hold assets on 2+ chains, 60% for a single chain. Source: RPC balance checks on Celo, Arbitrum, Base, and Ethereum." },
-          { label: "Regional Diversification", value: Math.round(currentRegions.length > 2 ? 90 : 70), status: `${currentRegions.length} regions`, icon: "🌍", description: "Exposure to multiple economic regions hedges against local downturns. 90% for 3+ regions, 70% otherwise. Source: token metadata regions mapped from your on-chain holdings." },
-          { label: "Inflation Risk", value: Math.round(Math.max(0, 100 - (portfolio?.weightedInflationRisk ?? 0) * 10)), status: `${Math.round(portfolio?.weightedInflationRisk ?? 0)}% weighted`, icon: "🛡️", description: "Measures purchasing power loss from inflation. Each token's regional inflation rate is weighted by its share of your portfolio. Source: live inflation data service + your wallet holdings." },
-        ]}
-        isLoading={isMultichainLoading} isStale={isStale}
-      >
-        <div className="mt-2">
-          <ProfileWizard
-            mode={profileMode} currentStep={currentStep} config={config}
-            currentGoalIcon={currentGoalIcon} currentGoalLabel={currentGoalLabel}
-            currentRiskLabel={currentRiskLabel} currentTimeHorizonLabel={currentTimeHorizonLabel}
-            onSetUserGoal={setUserGoal} onSetRiskTolerance={setRiskTolerance}
-            onSetTimeHorizon={setTimeHorizon} onNextStep={nextStep}
-            onSkipToEnd={skipToEnd} onCompleteEditing={completeEditing}
-            onStartEditing={startEditing} onBack={prevStep}
-          />
-        </div>
-      </ProtectionDashboard>
+      {dashboard}
     </Card>
   );
 }

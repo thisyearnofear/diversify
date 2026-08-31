@@ -1,7 +1,7 @@
 /**
  * BusinessPromptCard — retail→business graduation prompt.
  *
- * Non-prescriptive framing per `docs/sme-fx-strategy.md` §7: never
+ * Non-prescriptive framing per `docs/strategy.md` §7: never
  * "you should switch to USD", always "you might be running cyclical
  * FX exposure — want to see what that looks like?".
  *

@@ -160,6 +160,7 @@ export default function AgentTab({
             isMiniPay={isMiniPay}
             isFarcaster={isFarcaster}
             showActivityFeed={true}
+            showMarquee
             onNavigateToAgent={handleViewTimeline}
             onNavigateToFund={onNavigateToFund}
           />

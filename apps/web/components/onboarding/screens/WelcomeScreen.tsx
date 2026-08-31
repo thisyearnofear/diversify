@@ -720,7 +720,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
                               <span className="text-white text-xs font-black">D</span>
                           </div>
-                          <span className="text-xs font-black text-gray-500 dark:text-gray-300 uppercase tracking-widest">DiversiFi</span>
+                          <span className="text-xs font-black text-white uppercase tracking-widest">DiversiFi</span>
                       </div>
                       <p className="text-xs font-semibold text-slate-300 leading-snug">
                         Currency protection that fits your values — never a lock-up.
@@ -737,7 +737,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, chai
                           <div className="w-6 h-6 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
                               <span className="text-white text-sm font-black">D</span>
                           </div>
-                          <span className="text-sm font-black text-gray-400 uppercase tracking-widest">DiversiFi</span>
+                          <span className="text-sm font-black text-white uppercase tracking-widest">DiversiFi</span>
                       </div>
                   </div>
                 )}

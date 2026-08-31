@@ -19,4 +19,4 @@ Server endpoints for the DiversiFi Guardian, advisor chat, x402 gateway, and rel
 
 Shared helpers in this folder are prefixed with `_` (e.g. `_guardian-event-bus.ts`).
 
-Auth, rate limits, and env tables: [`docs/integrations.md`](../../../../docs/integrations.md). Enforcement model: [`docs/guardian-enforcement-model.md`](../../../../docs/guardian-enforcement-model.md).
+Auth, rate limits, and env tables: [`docs/integrations.md`](../../../../docs/integrations.md). Enforcement model: [`docs/guardian.md`](../../../../docs/guardian.md).

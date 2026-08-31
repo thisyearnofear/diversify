@@ -16,7 +16,7 @@ cp .env.example .env.local   # minimum: NEXT_PUBLIC_PRIVY_APP_ID, PRIVY_APP_SECR
 pnpm dev                     # http://localhost:3042
 ```
 
-Requires Node ≥22.11 and pnpm. Setup details, env tables, and test drive: [`docs/README.md`](./docs/README.md). How to contribute: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+Requires Node ≥22.11 and pnpm. Setup details, env tables, and test drive: [`docs/setup.md`](./docs/setup.md). Docs index: [`docs/README.md`](./docs/README.md). How to contribute: [`CONTRIBUTING.md`](./CONTRIBUTING.md).
 
 ---
 
@@ -53,10 +53,10 @@ The **Guardian** routes capital across Celo/Mento (local stables), Arbitrum (liq
 | Architecture, AI providers, settlement | [`docs/architecture.md`](./docs/architecture.md) |
 | APIs, env vars, external agents | [`docs/integrations.md`](./docs/integrations.md) |
 | Roadmap & grant tracks | [`docs/roadmap.md`](./docs/roadmap.md) |
-| APAC rail (HashKey) | [`docs/apac-rail.md`](./docs/apac-rail.md) |
-| Caribbean rail | [`docs/caribbean-rail.md`](./docs/caribbean-rail.md) |
-| SME FX north star | [`docs/sme-fx-strategy.md`](./docs/sme-fx-strategy.md) |
-| Guardian enforcement | [`docs/guardian-enforcement-model.md`](./docs/guardian-enforcement-model.md) |
+| APAC rail (HashKey) | [`docs/rails.md`](./docs/rails.md) |
+| Caribbean rail | [`docs/rails.md`](./docs/rails.md) |
+| SME FX north star | [`docs/strategy.md`](./docs/strategy.md) |
+| Guardian enforcement | [`docs/guardian.md`](./docs/guardian.md) |
 | Mainnet deployment proofs | [`docs/architecture.md`](./docs/architecture.md) · ledgers at `0x3BCf…369C` on Celo, Arbitrum, and 0G |
 
 ---

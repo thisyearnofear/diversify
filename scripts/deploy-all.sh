@@ -77,7 +77,7 @@ if [[ "$RPC_NAME" == http* ]]; then
   echo ""
 fi
 
-# ── HashKey mainnet: APAC rail is ledger-only (docs/apac-rail.md v1) ────────
+# ── HashKey mainnet: APAC rail is ledger-only (docs/rails.md v1) ────────
 if [[ "$RPC_NAME" == "hashkey" ]]; then
   echo "═══ Deploying RecommendationLedger to HashKey mainnet (APAC rail) ═══════"
   echo "  Gas token is HSK — the deployer wallet must hold HSK on chain 177."

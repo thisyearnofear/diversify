@@ -19,7 +19,7 @@ Utility scripts for development, testing, and deployment. Paths below are relati
 
 Quantifies what FX movement, bank spread, and fees cost an import business
 across its purchase cycles vs converting proceeds to USD-pegged value on
-arrival. The Phase 0 validation instrument from `docs/sme-fx-strategy.md`.
+arrival. The Phase 0 validation instrument from `docs/strategy.md`.
 Input format documented in the script header; sample:
 `scripts/fx-drag/sample-cycles.kenya-textbooks.json`. Historical mid-market
 rates are fetched once and cached in `scripts/fx-drag/.rate-cache.json`

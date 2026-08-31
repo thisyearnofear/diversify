@@ -14,7 +14,7 @@
  */
 
 import { useState, useEffect, useMemo } from 'react';
-import { useUserRegion } from './use-user-region';
+import { useUserRegion, type Region } from './use-user-region';
 import {
   getCurrencyRisk,
   CURRENCY_RISK_DATA_AS_OF,
@@ -59,6 +59,8 @@ export interface UseCurrencyRiskReturn {
   countryCode: string | null;
   /** The detected country name. */
   countryName: string | null;
+  /** Geographic region (Africa / Asia / Europe / LatAm / USA) from detection. */
+  region: Region | null;
   /** The detected currency code (e.g., 'KES'), or null if not in dataset. */
   currencyCode: string | null;
   /** A manual override for the country code (set during onboarding). */
@@ -97,8 +99,12 @@ export interface UseCurrencyRiskReturn {
 }
 
 export function useCurrencyRisk(): UseCurrencyRiskReturn {
-  const { countryCode: detectedCountry, countryName: detectedCountryName, isLoading: regionLoading } =
-    useUserRegion();
+  const {
+    countryCode: detectedCountry,
+    countryName: detectedCountryName,
+    isLoading: regionLoading,
+    region: detectedRegion,
+  } = useUserRegion();
   const [overrideCountryCode, setOverrideCountryCode] = useState<string | null>(null);
 
   // Use override if set, otherwise use detected country
@@ -219,6 +225,7 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     isLoading: regionLoading,
     countryCode: effectiveCountryCode,
     countryName,
+    region: detectedRegion ?? null,
     currencyCode,
     overrideCountryCode,
     setCountryOverride,

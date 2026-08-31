@@ -22,7 +22,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - `pnpm test-x402`: Verifies the gateway challenge/response loop.
 - `pnpm test-x402-comprehensive`: Validates the full research-payment-settlement cycle.
 - `pnpm validate-agent`: Checks configuration integrity.
-- `pnpm register-erc8004`: Mints the DiversiFi Guardian agent identity NFT on the ERC-8004 Identity Registry (see `docs/agent-identity.md`).
+- `pnpm register-erc8004`: Mints the DiversiFi Guardian agent identity NFT on the ERC-8004 Identity Registry (see `docs/guardian.md`).
 - `pnpm register-agent`: Registers on the Celo AgentScan registry.
 
 ## Coding Style & Naming Conventions
@@ -32,7 +32,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **AI Routing**: Use `AIService` from `@diversifi/shared` for all LLM interactions. It handles multi-provider failover (Venice/Gemini/AI·ML API/NVIDIA/Featherless/0G/Modal) and automatic 0G anchoring.
 - **Verifiable AI**: Every high-impact recommendation must be anchored to 0G Storage via `zeroGStorageService` and recorded on-chain via `recommendationLedgerService`.
 - **Agent Memory**: Use `cogneeMemoryService` from `@diversifi/shared` for cross-session persistent context (Cognee).
-- **Autonomous Execution**: The Guardian loop (`/api/agent/guardian-loop`) runs server-side via cron, auto-executing within user-signed ERC-7715-style permission bounds. The bounds are enforced in application code (see `docs/guardian-enforcement-model.md`); true on-chain ERC-7710 enforcement is a deferred architecture workstream.
+- **Autonomous Execution**: The Guardian loop (`/api/agent/guardian-loop`) runs server-side via cron, auto-executing within user-signed ERC-7715-style permission bounds. The bounds are enforced in application code (see `docs/guardian.md`); true on-chain ERC-7710 enforcement is a deferred architecture workstream.
 
 ## Commit & Pull Request Guidelines
 - **Conventional Commits**: Use `feat:`, `fix:`, `refactor:`, `docs:`, etc.
@@ -97,10 +97,10 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - 962 tests passing.
 
 **APAC rail — HashKey Chain (2026-07-10, code shipped):**
-Fourth grant track: HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track, submission deadline **July 11 23:59 GMT+8**). The APAC rail from `docs/apac-rail.md` is implemented against HashKey mainnet (chain 177): ledger registry + explorer, `getLedgerChainForAction` routing (`isApacRailProfile` in `types/strategy.ts`), heartbeat APAC leg, multi-chain proof feed (Arbitrum + Celo + HashKey), config-aware `apac-rail` banner, guardian-loop `routingContext`, deploy/seed tooling. **Deployment gated on HSK gas** — runbook in `docs/apac-rail.md`. Alignment: HashKey holds APAC savings core; Arbitrum stays yield engine.
+Fourth grant track: HashKey Chain Horizon Hackathon (DoraHacks `hskchainjapan`, AI track, submission deadline **July 11 23:59 GMT+8**). The APAC rail from `docs/rails.md` is implemented against HashKey mainnet (chain 177): ledger registry + explorer, `getLedgerChainForAction` routing (`isApacRailProfile` in `types/strategy.ts`), heartbeat APAC leg, multi-chain proof feed (Arbitrum + Celo + HashKey), config-aware `apac-rail` banner, guardian-loop `routingContext`, deploy/seed tooling. **Deployment gated on HSK gas** — runbook in `docs/rails.md`. Alignment: HashKey holds APAC savings core; Arbitrum stays yield engine.
 
 **Caribbean rail — Future Caribbean buildathon (2026-08-04, code shipped):**
-Fifth grant track: Future Caribbean Global AI Buildathon (Finance, Payments & MSME Capital track). The Caribbean rail from `docs/caribbean-rail.md` is the third regional rail alongside Africa (Celo) and APAC (HashKey) — global reach preserved, Caribbean added. What shipped:
+Fifth grant track: Future Caribbean Global AI Buildathon (Finance, Payments & MSME Capital track). The Caribbean rail from `docs/rails.md` is the third regional rail alongside Africa (Celo) and APAC (HashKey) — global reach preserved, Caribbean added. What shipped:
 - **Pan-Caribbean archetype**: `pan_caribbean` FinancialStrategy (AI prompt with imported inflation, BBD/XCD pegs, hurricane disaster-mode, diaspora corridors; plan preview cUSD 50% / PAXG 30% / cEUR 20%; selectable in onboarding under "Local prosperity" values lens)
 - **Caribbean currency-risk data**: 5 entries in `constants/currency-risk.ts` (HTG, JMD, TTD, BBD, XCD) — Jamaica is the evidence country (7.1% food inflation, Hurricane Beryl). Visitors from JM/BB/TT/HT now get the first-run "aha" risk moment. Dataset: 23 → 28 currencies
 - **Caribbean FX-drag region**: `'caribbean'` in `FxRegion` + 7 currency codes in `packages/shared/src/services/fx-drag/regions.ts`; `FX_ANCHOR_CHAIN_BY_REGION.caribbean = 42220` (Celo) in `x402-gateway.ts`
@@ -116,15 +116,15 @@ Fifth grant track: Future Caribbean Global AI Buildathon (Finance, Payments & MS
 
 **North star + growth, integrations, yield engine (2026-07-11/12):**
 
-*Strategy — SME FX north star.* A real Ghanaian-importer conversation crystallized the long-term market: DiversiFi as the **FX-risk intelligence + autonomous protection layer** on top of Africa's crowded stablecoin rails, with the retail savings app as **top-of-funnel** into an importer/exporter business tier. Authoritative doc: `docs/sme-fx-strategy.md` (roadmap Track 4). Concierge tool shipped: `npx tsx scripts/fx-drag-report.ts <cycles.json>` quantifies a trader's FX drag (timing + spread + fees) vs converting on arrival, real historical rates.
+*Strategy — SME FX north star.* A real Ghanaian-importer conversation crystallized the long-term market: DiversiFi as the **FX-risk intelligence + autonomous protection layer** on top of Africa's crowded stablecoin rails, with the retail savings app as **top-of-funnel** into an importer/exporter business tier. Authoritative doc: `docs/strategy.md` (roadmap Track 4). Concierge tool shipped: `npx tsx scripts/fx-drag-report.ts <cycles.json>` quantifies a trader's FX drag (timing + spread + fees) vs converting on arrival, real historical rates.
 
-*Legitimacy + performance.* Trader-persona browser audit → fixed the cold-start path (the two CRITICALs: `undefined` hero copy, unreadable plan preview; region-detection stored ISO2 where a region was expected; **CSP `connect-src` was blocking `ipapi.co`, silently killing geolocation in prod**; local-currency risk-moment copy so KES/GHS visitors see their own money). First-party funnel analytics (`lib/analytics.ts`, `/api/analytics/event`, `models/FunnelEvent.ts` — anonymous, DNT, 90-day TTL). **Bundle: first-load JS 4.24 MB → 0.90 MB gz** by deep-importing around the CommonJS `@diversifi/shared` barrel (all 7 heavy libs — openai/gemini/ethers×2/lifi/circle/web3 — out of `_app`); a `no-restricted-imports` lint guard keeps it out. Dependency-leverage audit: `docs/architecture.md` § Dependency Architecture Audit.
+*Legitimacy + performance.* Trader-persona browser audit → fixed the cold-start path (the two CRITICALs: `undefined` hero copy, unreadable plan preview; region-detection stored ISO2 where a region was expected; **CSP `connect-src` was blocking `ipapi.co`, silently killing geolocation in prod**; local-currency risk-moment copy so KES/GHS visitors see their own money). First-party funnel analytics (`lib/analytics.ts`, `/api/analytics/event`, `models/FunnelEvent.ts` — anonymous, DNT, 90-day TTL). **Bundle: first-load JS 4.24 MB → 0.90 MB gz** by deep-importing around the CommonJS `@diversifi/shared` barrel (all 7 heavy libs — openai/gemini/ethers×2/lifi/circle/web3 — out of `_app`); a `no-restricted-imports` lint guard keeps it out. Dependency-leverage audit: `docs/architecture-notes.md` § Dependency Architecture Audit (routed to internal during the doc consolidation).
 
 *Voice (live).* Was dead 3 ways (missing `/api/agent/{speak,transcribe}` routes, ElevenLabs mock, dead fallback-orchestrator routing that also broke chat `preferredProvider`). Now real end-to-end on **ElevenLabs alone** (TTS + Scribe STT — no OpenAI needed; verified round-trip in prod). Feature flags gate on providers that actually work.
 
 *Free web search (live).* `TINYFISH_API_KEY` → `tinyfish-search.service.ts` + `/api/agent/web-search` (web/news/research). Free-first: it covers the paid marketplace search/news services.
 
-*Circle Agent Stack (explored + foundation).* `docs/architecture.md` § Circle Agent Stack & Marketplace. Key finding: Agent Wallets' wallet-layer **policy engine is human-OTP (CLI)**; Developer-Controlled Wallets are programmatic but app-layer — so per-user wallet-layer policy doesn't scale. `CircleSmartAccountProvider` registered + selectable (was orphaned); `circle-agent-policy.ts` maps guardian bounds → Circle policy spec. Marketplace resale explored — **free-first gate** (`circle-marketplace.ts::shouldPayFor`) killed most of it as free-covered.
+*Circle Agent Stack (explored + foundation).* `docs/architecture-notes.md` § Circle Agent Stack & Marketplace (routed to internal during the doc consolidation). Key finding: Agent Wallets' wallet-layer **policy engine is human-OTP (CLI)**; Developer-Controlled Wallets are programmatic but app-layer — so per-user wallet-layer policy doesn't scale. `CircleSmartAccountProvider` registered + selectable (was orphaned); `circle-agent-policy.ts` maps guardian bounds → Circle policy spec. Marketplace resale explored — **free-first gate** (`circle-marketplace.ts::shouldPayFor`) killed most of it as free-covered.
 
 *Yield engine — the Arbitrum upgrade (`docs/roadmap.md` § Yield Engine Strategy).* From a hardcoded 3-token menu → a best-yield engine:
 - **vaults.fyi** (`VAULTS_FYI_API_KEY`, live): per-wallet best-deposit recommendations across 1,000+ risk-rated vaults, prepended in `yield-advisor.service.ts`. Free-first: raw APY stays free (LI.FI Earn + DefiLlama); we pay only for the personalized layer.

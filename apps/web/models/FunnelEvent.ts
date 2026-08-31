@@ -44,6 +44,10 @@ export const FUNNEL_EVENTS = [
   // Wave 9 progressive disclosure — which collapsed sections users expand.
   // Coarse: section id only. A section nobody expands is a deletion candidate.
   'section_expand',
+  // Marquee artifacts — which slice/state a user selects on the tab's one
+  // expressive object (shield_ring / home_dial / agent_budget). Selections
+  // nobody acts on tell us the marquee is decoration, not a control.
+  'marquee_select',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

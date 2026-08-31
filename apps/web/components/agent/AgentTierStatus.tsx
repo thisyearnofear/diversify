@@ -36,6 +36,7 @@ import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/t
 import { GUARDIAN_TIER_STATE_LABELS, GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import AgentFuelGauge from "./AgentFuelGauge";
 import AdvisorMetrics from "./AdvisorMetrics";
+import { GuardianMarquee } from "./GuardianMarquee";
 import GuardianWDKStatus from "./GuardianWDKStatus";
 import { GuardianMobileWizard } from "./GuardianMobileWizard";
 import { ActivityFeed } from "./ActivityFeed";
@@ -239,6 +240,9 @@ export const AgentTierStatus: React.FC<{
   isMiniPay?: boolean;
   isFarcaster?: boolean;
   showActivityFeed?: boolean;
+  /** Render the Guardian marquee (mascot + budget dial) from the state this
+      component already owns — the Agent tab's Tier-1 surface. */
+  showMarquee?: boolean;
   onNavigateToAgent?: () => void;
   onAdvisorClick?: () => void;
   /** Send the user to wherever they top up / swap. Usually navigates to the
@@ -250,6 +254,7 @@ export const AgentTierStatus: React.FC<{
   isMiniPay,
   isFarcaster: _isFarcaster,
   showActivityFeed = false,
+  showMarquee = false,
   onNavigateToAgent,
   onAdvisorClick,
   onNavigateToFund,
@@ -656,6 +661,25 @@ export const AgentTierStatus: React.FC<{
 
   return (
     <div className="space-y-4">
+      {/* The Agent tab's marquee — the Guardian itself, fed by the state
+          this component already owns (no second set of polling hooks). */}
+      {showMarquee && (
+        <GuardianMarquee
+          guardianState={guardianState}
+          hasValidPermission={hasValidPermission}
+          sessionInfo={sessionInfo}
+          dailyLimit={dailyLimit}
+          onOpenJournal={() => {
+            setExpandedTier("guardian");
+            setGuardianTab("journal");
+          }}
+          onSetup={() => {
+            setExpandedTier("guardian");
+            setGuardianTab("setup");
+          }}
+        />
+      )}
+
       {/* Performance Summary (only when showActivityFeed is true) */}
       {showActivityFeed && metrics.totalActions > 0 && (
         <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-2xl p-4 border border-blue-100 dark:border-blue-800">
