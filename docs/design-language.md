@@ -32,6 +32,14 @@ behind a disclosure.
 content). Scroll depth between insight and action is where users leave;
 every element between the aha and the action is a chance to stop.
 
+**Surfaces are solid.** Translucency is for accents and badges — never for
+the ground that text sits on. A card body is `bg-white dark:bg-gray-900`
+(or a *high*-alpha hero gradient); accent color arrives via borders, top
+edges, and small state pills. A 3–8% alpha wash over a patterned or
+gradient backdrop is glass, and glass loses to the pattern every time —
+the text disappears first. If decoration and readability compete,
+readability wins and the decoration drops to quiet.
+
 ## 2. One object gets the color
 
 Expressiveness is a budget, spent in one place. The dark slate risk card

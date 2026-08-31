@@ -11,6 +11,7 @@ import type { Region } from "@/hooks/use-user-region";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { GuardianMascot } from "@/components/shared/GuardianMascot";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -79,8 +80,8 @@ export function ProtectionPlanCard({
                 {isComplete ? "Ready" : "Three quick steps"}
               </p>
             </div>
-            <div className="bg-white/20 backdrop-blur-md p-3 rounded-2xl border border-white/30 shadow-sm">
-              <span className="text-2xl">🤖</span>
+            <div className="bg-white/20 backdrop-blur-md p-2 rounded-2xl border border-white/30 shadow-sm">
+              <GuardianMascot size={44} mood={isComplete ? 'happy' : 'neutral'} />
             </div>
           </div>
           <div className="text-center relative z-10">
@@ -116,7 +117,7 @@ export function ProtectionPlanCard({
       <ProtectionDashboard
         title="Protection Plan"
         subtitle={isComplete ? "Your protection profile is ready" : "Set your protection profile"}
-        icon={<span>🤖</span>}
+        icon={<GuardianMascot size={28} mood="protective" />}
         totalValue={`$${displayTotalValue?.toFixed(0) ?? "0"}`}
         chainCount={displayChainCount}
         score={protectionScore}
