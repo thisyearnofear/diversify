@@ -264,9 +264,7 @@ function DemoVariant({
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-white">Preview Mode Active</h3>
               <p className="text-xs text-blue-100 truncate">
-                {demoValue
-                  ? `Sample portfolio • $${demoValue.toFixed(0)} on display`
-                  : "Exploring with sample data"}
+                {demoValue ? `$${demoValue.toFixed(0)} sample portfolio` : "Sample data"}
               </p>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWalletContext } from './WalletProvider';
@@ -63,7 +63,18 @@ export default function WalletButton({
   const { showToast } = useToast();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showChainSelector, setShowChainSelector] = useState(false);
-  const prevAddressRef = React.useRef<string | null>(null);
+  const [dropUp, setDropUp] = useState(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const prevAddressRef = useRef<string | null>(null);
+
+  // Viewport-aware placement: the menu is tall (~450px with the chain
+  // selector + fiat ramp). When the button sits low on screen, opening
+  // downward pushed it below the fold — flip it up instead.
+  useEffect(() => {
+    if (!showDropdown || !wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setDropUp(rect.bottom + 460 > window.innerHeight && rect.top > 460);
+  }, [showDropdown]);
 
   useEffect(() => {
     if (address && !prevAddressRef.current) {
@@ -196,7 +207,7 @@ export default function WalletButton({
     const displayIcon = privyEmail ? '📧' : '🔗';
 
     return (
-      <div className="relative">
+      <div className="relative" ref={wrapperRef}>
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
@@ -219,9 +230,14 @@ export default function WalletButton({
           </svg>
         </motion.button>
 
-        {/* Dropdown Menu */}
+        {/* Dropdown Menu — flips up near the viewport bottom, capped height
+            with internal scroll so the tail is always reachable. */}
         {showDropdown && (
-          <div className="absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)] bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+          <div
+            className={`absolute right-0 w-64 max-w-[calc(100vw-2rem)] max-h-[min(70vh,32rem)] overflow-y-auto bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 ${
+              dropUp ? 'bottom-full mb-2' : 'top-full mt-2'
+            }`}
+          >
             <div className="py-1">
               {/* Network Status with Chain Selector */}
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
