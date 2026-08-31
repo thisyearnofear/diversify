@@ -608,7 +608,14 @@ export default function ProtectionTab({
                 );
               case 'optimization-insight':
                 return (
-                  <OptimizationInsight
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-optimization-insight"
+                    title="Plan optimization available"
+                    summary={topOpportunity?.annualSavings ? `Up to $${topOpportunity.annualSavings.toFixed(0)}/yr — review ${topOpportunity.fromToken} → ${topOpportunity.toToken}` : `Review ${topOpportunity.fromToken} → ${topOpportunity.toToken}`}
+                    icon="⚡"
+                  >
+                    <OptimizationInsight
                     key={sectionId}
                     icon={config.userGoal === 'geographic_diversification' ? '🌍' : config.userGoal === 'rwa_access' ? '🥇' : config.userGoal === 'inflation_protection' ? '🛡️' : '⚡'}
                     title={
@@ -663,23 +670,31 @@ export default function ProtectionTab({
                         }))
                     }
                   />
+                  </DisclosureSection>
                 );
               case 'ai-analysis':
                 return (
-                  <InsightCard
+                  <DisclosureSection
                     key={sectionId}
+                    id="shield-ask-guardian"
+                    title="Ask Guardian about my plan"
+                    summary="A plan review across your holdings, currency exposure and goals"
                     icon="🤖"
-                    title="Protection Plan Review"
-                    description="Ask Guardian to review your holdings, currency exposure, and protection plan."
-                    variant="default"
-                    action={{
-                      label: "Ask Guardian about my plan",
-                      onClick: () => {
-                        const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
-                        askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
-                      },
-                    }}
-                  />
+                  >
+                    <InsightCard
+                      icon="🤖"
+                      title="Protection Plan Review"
+                      description="Ask Guardian to review your holdings, currency exposure, and protection plan."
+                      variant="default"
+                      action={{
+                        label: "Ask Guardian about my plan",
+                        onClick: () => {
+                          const effectiveGoal = currentGoalLabel && currentGoalLabel !== "Not set" ? currentGoalLabel : "diversification";
+                          askAdvisor(`Review my protection plan for a portfolio of $${displayTotalValue.toFixed(0)} across ${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""}. My goal is ${effectiveGoal}. I'm in the ${userRegion} region.`);
+                        },
+                      }}
+                    />
+                  </DisclosureSection>
                 );
               case 'rwa-assets':
                 return (

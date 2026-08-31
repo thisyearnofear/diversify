@@ -86,12 +86,36 @@ export function GuardianRecommendationCard({
       )}
 
       <div className="space-y-2.5">
-        <ContractRow label="What changed?" value={contract.whatChanged} />
-        <ContractRow label="Why it matters to you" value={contract.whyItMatters} />
+        {/* Tier 1 — what the user must see to decide: the proposal + bounds.
+            The remaining four contract rows are context/legalese and live
+            behind one Details disclosure so the card reads at a glance
+            (Wave 9: numbers carry their own meaning, prose collapses). */}
         <ContractRow label="Guardian proposes" value={contract.proposal} />
         <ContractRow label="What Guardian can do" value={contract.guardianBounds} />
-        <ContractRow label="Costs & risks" value={contract.costsAndRisks} />
-        <ContractRow label="Proof you'll receive" value={contract.proofTrail} />
+
+        {(contract.whatChanged || contract.whyItMatters || contract.costsAndRisks || contract.proofTrail) && (
+          <details className="group rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40">
+            <summary className="min-h-11 flex items-center px-3 cursor-pointer list-none select-none">
+              <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 flex-1">
+                Why this proposal — context, risks, proof
+              </span>
+              <span
+                aria-hidden="true"
+                className="text-gray-400 transition-transform duration-200 motion-reduce:transition-none group-open:rotate-180"
+              >
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </summary>
+            <div className="px-3 pb-3 pt-1 space-y-2.5 border-t border-gray-100 dark:border-gray-800">
+              <ContractRow label="What changed?" value={contract.whatChanged} />
+              <ContractRow label="Why it matters to you" value={contract.whyItMatters} />
+              <ContractRow label="Costs & risks" value={contract.costsAndRisks} />
+              <ContractRow label="Proof you'll receive" value={contract.proofTrail} />
+            </div>
+          </details>
+        )}
       </div>
 
       {(onReview || onAskWhy || onDismiss) && (

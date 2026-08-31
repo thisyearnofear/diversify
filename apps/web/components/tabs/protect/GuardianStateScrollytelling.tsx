@@ -74,7 +74,7 @@ export function GuardianStateScrollytelling({
     const currentIndex = facing === 'active' ? 1 : 0;
 
     return (
-      <div className="rounded-2xl border border-indigo-100 dark:border-indigo-900/40 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 dark:from-indigo-950/10 dark:to-purple-950/10 p-4">
+      <div className="rounded-2xl border border-indigo-200 dark:border-indigo-900/60 bg-white dark:bg-gray-900 p-4 shadow-sm">
         <h3 className="text-xs font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-3">
           Auto-Saver Status
         </h3>

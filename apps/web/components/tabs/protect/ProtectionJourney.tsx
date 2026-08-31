@@ -87,10 +87,9 @@ export function ProtectionJourney({
 
   return (
     <div
-      className="rounded-2xl border p-4"
+      className="rounded-2xl border p-4 bg-white dark:bg-gray-900 shadow-sm"
       style={{
-        borderColor: `${archetype.accent}33`,
-        background: `linear-gradient(135deg, ${archetype.accent}08 0%, ${archetype.accent}12 100%)`,
+        borderColor: `${archetype.accent}55`,
       }}
       role="status"
       aria-label={`Protection journey: ${archetype.name}`}
