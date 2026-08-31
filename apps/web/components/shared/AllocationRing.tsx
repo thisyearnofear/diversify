@@ -115,7 +115,7 @@ export default function AllocationRing({
               tabIndex={interactive ? 0 : undefined}
               aria-label={`${slice.label ?? slice.id}: ${Math.round(slice.percent)}%${interactive ? ' — tap for details' : ''}`}
               aria-pressed={interactive ? isSelected : undefined}
-              className={interactive ? 'cursor-pointer focus-visible:outline-none' : undefined}
+              className={interactive ? 'cursor-pointer outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500' : undefined}
               onClick={interactive ? () => handleSelect(slice.id) : undefined}
               onKeyDown={
                 interactive

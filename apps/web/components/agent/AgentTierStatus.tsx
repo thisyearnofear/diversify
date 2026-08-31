@@ -183,7 +183,6 @@ export function GuardianStatusChip({
         <GuardianMascot
           size={56}
           mood={isActive ? 'happy' : 'neutral'}
-          gaze="pointer"
           className="shrink-0"
         />
         <div className="flex-1 min-w-0">

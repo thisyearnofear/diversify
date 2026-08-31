@@ -95,6 +95,7 @@ vi.mock("@/hooks/use-currency-risk", () => ({
 vi.mock("@/hooks/use-currency-moment", () => ({
   useCurrencyMoment: () => ({
     moment: mockMoment,
+    inflationMoment: null,
     isLoading: false,
     benchmark: "USD",
     setBenchmark: vi.fn(),
@@ -104,6 +105,9 @@ vi.mock("@/hooks/use-currency-moment", () => ({
     setSavingsAmount: vi.fn(),
     benchmarks: ["USD", "EUR", "XAU"],
     horizons: ["1yr", "3yr", "5yr"],
+    onChangeCountry: vi.fn(),
+    countryCode: mockMoment?.iso2 ?? null,
+    frame: null,
   }),
 }));
 
@@ -173,7 +177,9 @@ vi.mock("@/hooks/use-home-sections", () => ({
 
 vi.mock("@/components/wallet/WalletButton", () => ({ default: () => null }));
 vi.mock("@/components/portfolio/CurrencyPerformanceChart", () => ({ default: () => null }));
-vi.mock("@/components/portfolio/ProtectionAnalysis", () => ({ default: () => null }));
+vi.mock("@/components/portfolio/ProtectionAnalysis", () => ({
+  default: () => <div data-testid="protection-analysis" />,
+}));
 vi.mock("@/components/inflation/InflationProtectionInfo", () => ({ default: () => null }));
 vi.mock("@/components/trade/DiversificationHealthCard", () => ({ default: () => null, DiversificationHealthCard: () => null }));
 vi.mock("@/components/rewards/StreakRewardsCard", () => ({
@@ -217,6 +223,9 @@ vi.mock("@/components/enterprise-fx/EmergingMarketsTracker", () => ({ default: (
 vi.mock("@/components/enterprise-fx/PortfolioRiskWidget", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/RiskMetrics", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
+vi.mock("../InflationMomentCard", () => ({
+  InflationMomentCard: () => <div data-testid="inflation-moment-card" />,
+}));
 vi.mock("../CurrencyMomentCard", () => ({
   CurrencyMomentCard: ({ moment }: { moment: { delta: number; currencyCode: string } }) => (
     <div data-testid="currency-moment-card">
@@ -392,23 +401,37 @@ describe("ConnectedOverview — currency-moment hero", () => {
     expect(screen.queryByTestId("hero-value")).not.toBeInTheDocument();
   });
 
-  it("seeds the exposure dial focus from the story's region when the user holds it", () => {
+  it("shows the exposure dial without a pre-selected region (one CTA in the first viewport)", () => {
     mockMoment = GHANA_MOMENT;
-    // buildPortfolio's default regionData includes Africa → Ghana (GH) seeds it.
     renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toHaveAttribute("data-selected", "Africa");
+    expect(screen.getByTestId("exposure-dial")).toHaveAttribute("data-selected", "none");
   });
 
-  it("does not seed the dial when the story's region is not in the holdings", () => {
+  it("demotes the protection-mix analysis when the exposure dial is the holdings object", () => {
     mockMoment = GHANA_MOMENT;
-    renderOverview({
-      // Only Global holdings — the Ghana story maps to Africa, which is absent.
-      activePortfolio: buildPortfolio({
-        regionData: [{ region: "Global", value: 1000, color: "#000", usdValue: 1000 }],
-      }),
-    });
+    renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toHaveAttribute("data-selected", "none");
+    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.queryByTestId("protection-analysis")).not.toBeInTheDocument();
+  });
+
+  it("still shows the dial under the legacy hero (holdings object is independent of the moment)", () => {
+    mockMoment = null;
+    renderOverview();
+
+    expect(screen.getByTestId("hero-value")).toBeInTheDocument();
+    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.queryByTestId("protection-analysis")).not.toBeInTheDocument();
+  });
+
+  it("keeps the beginner protection mix — that mode has no dial", () => {
+    mockExperienceMode = "beginner";
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner" };
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+
+    expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
+    expect(screen.getByText("Your Protection Mix")).toBeInTheDocument();
   });
 });

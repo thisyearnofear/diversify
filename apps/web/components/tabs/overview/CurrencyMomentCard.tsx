@@ -174,7 +174,7 @@ export function CurrencyMomentCard({
               haptics.tap();
               onSelectHorizon(h);
             }}
-            className={`min-h-[36px] px-3 rounded-full text-xs font-bold transition-colors ${
+            className={`min-h-[44px] min-w-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
               moment.horizon === h
                 ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -198,8 +198,8 @@ export function CurrencyMomentCard({
                   haptics.tap();
                   onSelectBenchmark(b);
                 }}
-                className={`rounded-full transition-shadow ${
-                  selected ? 'ring-2 ring-offset-1 ring-gray-900 dark:ring-white dark:ring-offset-gray-900' : 'opacity-70 hover:opacity-100'
+                className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                  selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
                 }`}
               >
                 <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
@@ -214,7 +214,7 @@ export function CurrencyMomentCard({
         <button
           type="button"
           onClick={onProtect}
-          className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+          className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           Protect this
         </button>

@@ -34,12 +34,8 @@ const MOOD_BY_STATE: Record<GuardianTierState, 'happy' | 'neutral' | 'thinking' 
   idle: 'neutral',
 };
 
-const STATE_CHIP: Record<GuardianTierState, string> = {
-  monitoring: 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-  funded: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300',
-  authorized: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-  idle: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-};
+const STATE_CHIP =
+  'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300';
 
 function timeAgo(ts: number) {
   const seconds = Math.max(0, Math.floor((Date.now() - ts) / 1000));
@@ -98,7 +94,6 @@ export function GuardianMarquee({
         <GuardianMascot
           size={88}
           mood={MOOD_BY_STATE[guardianState]}
-          gaze="pointer"
           className="shrink-0"
         />
         <div className="flex-1 min-w-0">
@@ -107,7 +102,7 @@ export function GuardianMarquee({
               {copy.headline}
             </h3>
             <span
-              className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${STATE_CHIP[guardianState]}`}
+              className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${STATE_CHIP}`}
             >
               {guardianState}
             </span>
@@ -215,7 +210,7 @@ export function GuardianMarquee({
       <button
         type="button"
         onClick={active ? onOpenJournal : onSetup}
-        className="mt-3 min-h-[44px] w-full rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold px-4 transition-colors"
+        className="mt-3 min-h-[44px] w-full rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-sm font-bold px-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-400"
       >
         {active ? 'Open the Guardian journal' : copy.cta}
       </button>

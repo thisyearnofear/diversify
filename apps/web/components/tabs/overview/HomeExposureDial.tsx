@@ -49,7 +49,10 @@ export function HomeExposureDial({
 
   return (
     <div>
-      <div className="flex justify-center">
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        Where your savings sit
+      </h3>
+      <div className="flex justify-center mt-2">
         <AllocationRing
           slices={slices}
           selectedId={selectedRegion}
@@ -93,8 +96,8 @@ export function HomeExposureDial({
               type="button"
               onClick={() => toggle(r.region)}
               aria-pressed={isSelected}
-              className={`w-full flex items-center gap-3 py-2.5 text-left rounded-lg transition-colors ${
-                isSelected ? 'bg-white/70 dark:bg-gray-700/40' : 'hover:bg-white/60 dark:hover:bg-gray-700/30'
+              className={`w-full min-h-[44px] flex items-center gap-3 py-2.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
             >
               <span
@@ -117,7 +120,7 @@ export function HomeExposureDial({
 
       {/* Selected-region detail — the one CTA lives here */}
       {selected && (
-        <div className="mt-3 rounded-xl bg-white/85 dark:bg-gray-900/85 border border-gray-200/70 dark:border-white/[0.08] p-3 text-left backdrop-blur-sm">
+        <div className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 text-left">
           <p className="text-xs text-gray-700 dark:text-gray-200 mb-2">
             {selectedPct >= 50 ? (
               <>
@@ -136,24 +139,22 @@ export function HomeExposureDial({
               </>
             )}
           </p>
-          <div className="flex flex-col gap-1.5">
+          <button
+            type="button"
+            onClick={() => onProtect(selected.region)}
+            className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          >
+            Strengthen {selected.region} coverage in Shield
+          </button>
+          {onAskGuardian && (
             <button
               type="button"
-              onClick={() => onProtect(selected.region)}
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+              onClick={() => onAskGuardian(selected.region)}
+              className="mt-1 min-h-[44px] w-full rounded-xl text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
             >
-              Strengthen {selected.region} coverage in Shield
+              Ask Guardian about my {selected.region} exposure
             </button>
-            {onAskGuardian && (
-              <button
-                type="button"
-                onClick={() => onAskGuardian(selected.region)}
-                className="min-h-[44px] w-full rounded-xl text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-              >
-                Ask Guardian about my {selected.region} exposure →
-              </button>
-            )}
-          </div>
+          )}
         </div>
       )}
     </div>

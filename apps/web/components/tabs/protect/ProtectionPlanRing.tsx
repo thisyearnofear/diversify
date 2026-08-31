@@ -95,8 +95,8 @@ export function ProtectionPlanRing({
 
   return (
     <Card className="border border-gray-200/70 dark:border-white/[0.06]">
-      <div className="flex items-center justify-between gap-2 mb-1">
-        <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
         </h3>
         <span
@@ -106,9 +106,6 @@ export function ProtectionPlanRing({
           {archetype.name}
         </span>
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Tap a slice to see where you stand against the plan.
-      </p>
 
       <div className="flex justify-center">
         <AllocationRing
@@ -153,7 +150,7 @@ export function ProtectionPlanRing({
               type="button"
               onClick={() => onSelectToken(selectedToken === a.token ? null : a.token)}
               aria-pressed={isSelected}
-              className={`w-full flex items-center gap-3 py-2.5 text-left rounded-lg transition-colors ${
+              className={`w-full min-h-[44px] flex items-center gap-3 py-2.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
             >
@@ -185,7 +182,7 @@ export function ProtectionPlanRing({
 
       {/* Selected-slice detail — the one CTA lives here */}
       {selected && (
-        <div className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-700/30 p-3">
+        <div className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
           <p className="text-xs text-gray-700 dark:text-gray-200 mb-2">
             {gapPct > 2 ? (
               <>

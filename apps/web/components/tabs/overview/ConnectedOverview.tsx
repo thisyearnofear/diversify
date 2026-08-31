@@ -46,7 +46,6 @@ import DisclosureSection from "../../shared/DisclosureSection";
 import { HomeExposureDial } from "./HomeExposureDial";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
-import { assetRegionForCountry } from "@/lib/narrative/currency-moment";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
@@ -112,9 +111,10 @@ export function ConnectedOverview({
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
   // ── Home marquee focus state ────────────────────────────────────────
-  // The exposure dial owns selection; ConnectedOverview holds the state
-  // so future spokes can subscribe. First selection of a region fires a
-  // coarse `marquee_select` funnel event (source: home_dial).
+  // Selection is user-initiated only. Auto-seeding a region opened a
+  // second Shield CTA under the moment's "Protect this" — two buttons,
+  // same destination. The dial still shows every region; tapping one
+  // is the reveal. First selection fires a coarse `marquee_select`.
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
   const handleDialSelect = React.useCallback((region: string | null) => {
     setFocusedRegion(region);
@@ -166,23 +166,6 @@ export function ConnectedOverview({
     regionData,
     diversificationTips,
   } = activePortfolio;
-
-  // ── Seed the dial's focus from the visitor's currency story ─────────
-  // The moment's country maps to an asset region; when that region exists
-  // in the user's holdings, open the dial on it so the story and the
-  // portfolio land on the same place. Runs once, never overrides a manual
-  // selection (focusedRegion already set), and skips regions the user has
-  // no holdings in.
-  const dialSeededRef = useRef(false);
-  useEffect(() => {
-    if (dialSeededRef.current) return;
-    if (!moment || focusedRegion !== null || regionData.length === 0) return;
-    const target = assetRegionForCountry(moment.iso2);
-    if (target && regionData.some((r) => r.region === target)) {
-      dialSeededRef.current = true;
-      setFocusedRegion(target);
-    }
-  }, [moment, focusedRegion, regionData]);
 
   // ── Build the full tip list (used by the Smart Tips accordion section) ─
   // Defined BEFORE `useHomeSections` is called so the IA hook can accept
@@ -294,10 +277,11 @@ export function ConnectedOverview({
   } = useGraduationSignal(address);
 
   const hasHoldings = totalValue > 0;
+  const hasMomentHero = Boolean(moment || inflationMoment);
 
-  // The Home marquee: the regional exposure dial replaces the static
-  // hero number for non-beginner users with holdings. Beginner mode keeps
-  // the protection-score hero — the score is that mode's expressive object.
+  // The Home marquee: the regional exposure dial is the holdings object
+  // for non-beginner users. It replaces Protection Mix (one-in-one-out) —
+  // same regional story, one surface. Beginner mode keeps the pie.
   const showExposureDial =
     !home.isBeginner && hasHoldings && regionData.length > 0;
 
@@ -404,14 +388,9 @@ export function ConnectedOverview({
       />
 
       {/* ── 2. HERO ─────────────────────────────────────────────────────
-          id="home-hero" so HomeNav can scroll to the top of the page.
-
-          The personal currency moment is the opening artifact — one delta,
-          one personal consequence, one action. It replaces the generic
-          score/total hero (one-in-one-out). The exposure dial renders below
-          it in standard/advanced modes with holdings, its focus already
-          seeded from the visitor's story. Falls back to the legacy hero only
-          when no moment is detected. */}
+          Opening artifact: currency moment (or honest inflation fallback,
+          or the legacy score/total). Holdings geography sits under it as
+          a quiet second beat — never a second coloured hero. */}
       <section
         id="home-hero"
         data-home-section="home-hero"
@@ -434,115 +413,109 @@ export function ConnectedOverview({
               onChangeCountry={onChangeCountry}
               frame={frame}
             />
-
-            {/* The exposure dial — the story's next step, focused on the
-                visitor's region. Standard/advanced with holdings only. */}
-            {showExposureDial && (
-              <Card
-                padding="p-0"
-                className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-900 dark:to-indigo-900/10 border border-blue-100/80 dark:border-blue-900/60"
-              >
-                <div className="relative z-10 p-6 sm:p-7">
-                  <HomeExposureDial
-                    regionData={regionData}
-                    totalValue={totalValue}
-                    selectedRegion={focusedRegion}
-                    onSelectRegion={handleDialSelect}
-                    onProtect={() => setActiveTab("protect")}
-                    onAskGuardian={(region) =>
-                      askAdvisor(
-                        `How exposed am I to ${region}? Review my ${region} holdings and tell me whether that concentration fits my goal.`,
-                      )
-                    }
-                  />
-                </div>
-              </Card>
-            )}
-
-            {/* Beginner "Next Best Move" stays under the moment. */}
-            {home.isBeginner && home.primaryTip && hasHoldings && (
-              <div className="p-3 rounded-2xl bg-white/85 dark:bg-gray-900/85 border border-blue-100 dark:border-blue-900 text-left shadow-sm backdrop-blur-sm">
-                <div className="text-[10px] font-semibold uppercase tracking-wide text-blue-600 dark:text-blue-400 mb-1">
-                  Next Best Move
-                </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {home.primaryTip}
-                </p>
-              </div>
-            )}
           </>
         ) : inflationMoment ? (
           <InflationMomentCard
             moment={inflationMoment}
             onAmountChange={setSavingsAmount}
             onChangeCountry={onChangeCountry}
+            onProtect={() => setActiveTab("protect")}
           />
         ) : (
-          <Card
-            padding="p-0"
-            className="text-center relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-blue-900/10 dark:via-gray-900 dark:to-indigo-900/10 border border-blue-100/80 dark:border-blue-900/60 shadow-[0_20px_50px_-20px_rgba(37,99,235,0.25)]"
-          >
-            <div className="relative z-10 p-6 sm:p-7">
-              <div
-                id="home-hero-title"
-                className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 dark:bg-gray-900/80 border border-blue-100 dark:border-blue-900 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400 shadow-sm"
-              >
-                <span className="size-1.5 rounded-full bg-blue-500" />
-                {home.isBeginner
-                  ? "Home Overview"
-                  : adaptiveConfig.content.hero.icon && `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
-              </div>
-              <HeroValue
-                value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-                label={home.isBeginner ? "Protection Score" : "Total Value"}
-              />
-              <div
-                className={`mt-3 text-sm font-bold px-4 py-1.5 rounded-full inline-block shadow-sm ${
-                  diversificationScore >= 80
-                    ? "bg-green-100 text-green-800"
-                    : diversificationScore >= 60
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-red-100 text-red-800"
-                }`}
-              >
-                {diversificationRating}
-              </div>
-              <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center items-center">
-                {(() => {
-                  const ctaLabel = home.isBeginner
-                    ? (hasHoldings ? "Review Your Shield" : "Set Up Your Plan")
-                    : adaptiveConfig.content.hero.ctaLabel;
-                  const ctaTab = home.isBeginner
-                    ? (hasHoldings ? "exchange" : "protect")
-                    : (adaptiveConfig.content.hero.ctaTab as TabId | null);
-                  if (!ctaLabel) return null;
-                  return (
-                    <button
-                      onClick={() => setActiveTab(ctaTab ?? (hasHoldings ? "exchange" : "protect"))}
-                      className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 hover:translate-y-[-1px]"
-                    >
-                      {ctaLabel}
-                    </button>
-                  );
-                })()}
-              </div>
+          <Card className="text-center">
+            <div
+              id="home-hero-title"
+              className="mb-3 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
+            >
+              {home.isBeginner
+                ? "Home Overview"
+                : adaptiveConfig.content.hero.icon && `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
             </div>
-            <div className="absolute top-[-20%] right-[-10%] w-40 h-40 bg-blue-500/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-[-25%] left-[-10%] w-48 h-48 bg-indigo-500/8 rounded-full blur-3xl" />
+            <HeroValue
+              value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+              label={home.isBeginner ? "Protection Score" : "Total Value"}
+            />
+            <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
+              {diversificationRating}
+            </p>
+            <div className="mt-5 flex flex-col sm:flex-row gap-2 justify-center items-center">
+              {(() => {
+                const ctaLabel = home.isBeginner
+                  ? (hasHoldings ? "Review Your Shield" : "Set Up Your Plan")
+                  : adaptiveConfig.content.hero.ctaLabel;
+                const ctaTab = home.isBeginner
+                  ? (hasHoldings ? "exchange" : "protect")
+                  : (adaptiveConfig.content.hero.ctaTab as TabId | null);
+                if (!ctaLabel) return null;
+                return (
+                  <button
+                    onClick={() => setActiveTab(ctaTab ?? (hasHoldings ? "exchange" : "protect"))}
+                    className="min-h-[44px] px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+                  >
+                    {ctaLabel}
+                  </button>
+                );
+              })()}
+            </div>
           </Card>
+        )}
+
+        {/* Holdings geography — quiet card, one job the opening artifact
+            doesn't name. Standard/advanced with holdings only. */}
+        {showExposureDial && (
+          <Card>
+            <HomeExposureDial
+              regionData={regionData}
+              totalValue={totalValue}
+              selectedRegion={focusedRegion}
+              onSelectRegion={handleDialSelect}
+              onProtect={() => setActiveTab("protect")}
+              onAskGuardian={(region) =>
+                askAdvisor(
+                  `How exposed am I to ${region}? Review my ${region} holdings and tell me whether that concentration fits my goal.`,
+                )
+              }
+            />
+          </Card>
+        )}
+
+        {home.isBeginner && home.primaryTip && hasHoldings && (
+          <div className="p-3 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-left shadow-sm">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+              Next Best Move
+            </div>
+            <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+              {home.primaryTip}
+            </p>
+          </div>
         )}
       </section>
 
       {/* ── 2.5. PROTECTION SCORECARD (philosophy-aware) ──────────────
-          Shows how the user's chosen philosophy is performing relative
-          to their currency risk. Only renders when the user has holdings
-          and a currency risk entry exists. */}
+          When the moment is the opening artifact, this is the same
+          "where you stand" job in more dimensions — demote it (one-in-
+          one-out). Legacy hero (no moment) keeps it always-open. */}
       {home.showProtectionScorecard && hasHoldings && (
-        <ProtectionScorecard
-          portfolio={portfolio}
-          activePortfolio={activePortfolio}
-          setActiveTab={setActiveTab}
-        />
+        hasMomentHero ? (
+          <DisclosureSection
+            id="home-protection-standing"
+            title="Protection standing"
+            summary="Currency exposure, plan alignment, Guardian readiness"
+            icon="🛡️"
+          >
+            <ProtectionScorecard
+              portfolio={portfolio}
+              activePortfolio={activePortfolio}
+              setActiveTab={setActiveTab}
+            />
+          </DisclosureSection>
+        ) : (
+          <ProtectionScorecard
+            portfolio={portfolio}
+            activePortfolio={activePortfolio}
+            setActiveTab={setActiveTab}
+          />
+        )
       )}
 
       {/*
@@ -639,9 +612,11 @@ export function ConnectedOverview({
         />
       )}
 
-      {/* ── 3. PROTECTION MIX (always-open in holdings; default-open is
-          the first thing a user sees below the hero) ─────────────── */}
-      {home.showProtectionMix && (
+      {/* ── 3. PROTECTION MIX ─────────────────────────────────────────
+          One-in-one-out: the exposure dial already is the regional mix
+          for standard/advanced with holdings. Beginners (no dial) keep
+          the pie. Deep analysis stays as its own collapsed section. */}
+      {home.showProtectionMix && !showExposureDial && (
         <section
           id="protection-mix"
           data-home-section="protection-mix"
@@ -654,14 +629,14 @@ export function ConnectedOverview({
                 <h3 id="protection-mix-title" className="text-sm font-bold text-gray-900 dark:text-white">
                   Your Protection Mix
                 </h3>
-                <span className="text-xs font-bold text-blue-600">{regionData.length} Regions</span>
+                <span className="text-xs font-bold text-gray-500">{regionData.length} Regions</span>
               </div>
               <SimplePieChart data={regionData} />
               <div className="mt-4 flex flex-wrap justify-center gap-2 mb-6">
                 {regionData.map((r) => (
                   <div
                     key={r.region}
-                    className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full shadow-sm"
+                    className="flex items-center gap-1 bg-gray-50 dark:bg-gray-900 px-2 py-1 rounded-full"
                   >
                     <span
                       className="w-1.5 h-1.5 rounded-full"
@@ -676,10 +651,10 @@ export function ConnectedOverview({
               <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
                 <div className="flex flex-col gap-2">
                   <button
-                    onClick={() => setActiveTab(home.isBeginner ? "protect" : "exchange")}
-                    className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30"
+                    onClick={() => setActiveTab("protect")}
+                    className="w-full min-h-[44px] rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
                   >
-                    {home.isBeginner ? "Start Protecting" : "Improve My Protection"}
+                    Start Protecting
                   </button>
                   <button
                     onClick={() => {
@@ -687,58 +662,57 @@ export function ConnectedOverview({
                       setShowAssetDetails(newVal);
                       trackAssetDetailsToggle(newVal);
                     }}
-                    className="w-full flex items-center justify-between py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-blue-500 transition-colors"
+                    className="w-full min-h-[44px] flex items-center justify-between py-2 text-xs font-semibold uppercase tracking-wide text-gray-400 hover:text-blue-500 transition-colors"
                   >
                     <span>{showAssetDetails ? "Hide" : "View"} Asset Details</span>
                     <span>{showAssetDetails ? "↑" : "↓"}</span>
                   </button>
                 </div>
                 {showAssetDetails && (
-                  <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="mt-4">
                     <AssetInventory tokens={activePortfolio.allTokens || []} />
                   </div>
                 )}
               </div>
             </Section>
           ) : (
-            <>
-              <ProtectionAnalysis
-                regionData={regionData}
-                totalValue={totalValue}
-                goalScores={portfolio.goalScores}
-                diversificationScore={diversificationScore}
-                diversificationRating={diversificationRating}
-                onOptimize={() => setActiveTab("protect")}
-                onSwap={() => setActiveTab("exchange")}
-                chainId={chainId}
-                onNetworkChange={refreshChainId ? handleRefresh : undefined}
-                refreshBalances={refreshBalances}
-                yieldSummary={portfolio}
-              />
-              <DisclosureSection
-                id="home-deep-analysis"
-                title="Deep analysis"
-                summary="Risk, concentration and portfolio health breakdowns"
-                icon="🔬"
-                className="mt-2"
-              >
-                <DiversificationHealthCard
-                  analysis={activePortfolio}
-                  isLoading={activePortfolio.isLoading}
-                  onTakeAction={(opp) =>
-                    navigateToSwap({
-                      fromToken: opp.fromToken,
-                      toToken: opp.toToken,
-                      amount: String(opp.suggestedAmount),
-                      reason: `Rebalance ${opp.fromRegion} → ${opp.toRegion}`,
-                    })
-                  }
-                  className="mt-4"
-                />
-              </DisclosureSection>
-            </>
+            <ProtectionAnalysis
+              regionData={regionData}
+              totalValue={totalValue}
+              goalScores={portfolio.goalScores}
+              diversificationScore={diversificationScore}
+              diversificationRating={diversificationRating}
+              onOptimize={() => setActiveTab("protect")}
+              onSwap={() => setActiveTab("exchange")}
+              chainId={chainId}
+              onNetworkChange={refreshChainId ? handleRefresh : undefined}
+              refreshBalances={refreshBalances}
+              yieldSummary={portfolio}
+            />
           )}
         </section>
+      )}
+
+      {!home.isBeginner && hasHoldings && (
+        <DisclosureSection
+          id="home-deep-analysis"
+          title="Deep analysis"
+          summary="Risk, concentration and portfolio health breakdowns"
+          icon="🔬"
+        >
+          <DiversificationHealthCard
+            analysis={activePortfolio}
+            isLoading={activePortfolio.isLoading}
+            onTakeAction={(opp) =>
+              navigateToSwap({
+                fromToken: opp.fromToken,
+                toToken: opp.toToken,
+                amount: String(opp.suggestedAmount),
+                reason: `Rebalance ${opp.fromRegion} → ${opp.toRegion}`,
+              })
+            }
+          />
+        </DisclosureSection>
       )}
 
       {/*

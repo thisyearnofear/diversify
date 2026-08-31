@@ -20,6 +20,8 @@ import { CountryOverrideSelect } from './CountryOverrideSelect';
 interface Props {
   moment: InflationMoment;
   onAmountChange: (amount: number) => void;
+  /** The one action. Omitted and the CTA disappears (0px). */
+  onProtect?: () => void;
   /** Change the country whose savings this is about (diaspora override). */
   onChangeCountry?: (code: string) => void;
   className?: string;
@@ -30,6 +32,7 @@ const GOLD = { glyph: 'Au', color: '#f59e0b' };
 export function InflationMomentCard({
   moment,
   onAmountChange,
+  onProtect,
   onChangeCountry,
   className = '',
 }: Props) {
@@ -90,11 +93,15 @@ export function InflationMomentCard({
         a year to inflation.
       </p>
 
-      {/* Quiet honesty — why this is the shape it is. Never prescriptive. */}
-      <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
-        Even a flat currency loses buying power when prices rise — gold has
-        outpaced every fiat over time.
-      </p>
+      {onProtect && (
+        <button
+          type="button"
+          onClick={onProtect}
+          className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+        >
+          Protect this
+        </button>
+      )}
 
       {/* Quiet provenance — data honesty stays, but it whispers */}
       <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">

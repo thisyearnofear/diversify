@@ -551,7 +551,7 @@ export default function ProtectionTab({
                 );
               case 'plan-gallery':
                 return (
-                  <div key={sectionId} className="rounded-2xl bg-white/[0.02] backdrop-blur-sm py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
+                  <div key={sectionId}>
                     <ProtectionPlanGallery mobile />
                   </div>
                 );
