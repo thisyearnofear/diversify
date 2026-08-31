@@ -255,7 +255,7 @@ function DemoVariant({
 }: {
   isDemo: boolean;
   demoValue?: number;
-  address?: string;
+  address?: string | null;
   onDisableDemo?: () => void;
 }) {
   return (

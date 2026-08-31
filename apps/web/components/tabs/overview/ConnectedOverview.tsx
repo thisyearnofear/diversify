@@ -230,7 +230,7 @@ export function ConnectedOverview({
           </h3>
           <SimplePieChart
             data={regionData.map((r) => ({
-              name: r.region,
+              region: r.region,
               value: r.value,
               color: r.color,
             }))}
