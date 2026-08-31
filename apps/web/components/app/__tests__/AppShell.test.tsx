@@ -126,6 +126,17 @@ vi.mock("@/components/shared/GuardianMascot", () => ({
 
 import AppShell from "../AppShell";
 import { useAppShell } from "@/hooks/use-app-shell";
+import { ProtectionProfileProvider } from "@/hooks/use-protection-profile";
+
+/** AppShell reads the philosophy via ProtectionProfileProvider (present in
+ *  the real app tree above AppShell) — wrap it in the test harness too. */
+function renderShell() {
+  return render(
+    <ProtectionProfileProvider>
+      <AppShell />
+    </ProtectionProfileProvider>,
+  );
+}
 
 const mockUseAppShell = useAppShell as ReturnType<typeof vi.fn>;
 
@@ -194,13 +205,13 @@ describe("AppShell testnet banner", () => {
   });
 
   it("hides testnet banner without explicit opt-in in production", () => {
-    render(<AppShell />);
+    renderShell();
     expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument();
   });
 
   it("shows testnet banner when user opted into testnet UI", () => {
     localStorage.setItem("diversifi-testnet-opt-in", "true");
-    render(<AppShell />);
+    renderShell();
     expect(screen.getByText(/Testnet/i)).toBeInTheDocument();
   });
 });
@@ -218,13 +229,13 @@ describe("AppShell AI Chat FAB", () => {
   it("renders the Guardian FAB in beginner mode", () => {
     mockUseAppShell.mockReturnValue({ ...baseShellState, experienceMode: "beginner" });
 
-    render(<AppShell />);
+    renderShell();
 
     expect(screen.getByLabelText("Ask Guardian — ask about your protection")).toBeInTheDocument();
   });
 
   it("renders the Guardian FAB button", () => {
-    render(<AppShell />);
+    renderShell();
 
     expect(screen.getByLabelText("Ask Guardian — ask about your protection")).toBeInTheDocument();
   });
@@ -233,7 +244,7 @@ describe("AppShell AI Chat FAB", () => {
     const openAdvisor = vi.fn();
     mockUseAppShell.mockReturnValue({ ...baseShellState, openAdvisor });
 
-    render(<AppShell />);
+    renderShell();
 
     fireEvent.click(screen.getByLabelText("Ask Guardian — ask about your protection"));
     expect(openAdvisor).toHaveBeenCalled();
@@ -242,7 +253,7 @@ describe("AppShell AI Chat FAB", () => {
   it("shows unread count badge when unreadCount > 0", () => {
     mockUseAppShell.mockReturnValue({ ...baseShellState, unreadCount: 5 });
 
-    render(<AppShell />);
+    renderShell();
 
     expect(screen.getByText("5")).toBeInTheDocument();
   });
@@ -250,7 +261,7 @@ describe("AppShell AI Chat FAB", () => {
   it("shows 9+ badge for counts over 9", () => {
     mockUseAppShell.mockReturnValue({ ...baseShellState, unreadCount: 15 });
 
-    render(<AppShell />);
+    renderShell();
 
     expect(screen.getByText("9+")).toBeInTheDocument();
   });
@@ -258,13 +269,13 @@ describe("AppShell AI Chat FAB", () => {
   it("does not show badge when unreadCount is 0", () => {
     mockUseAppShell.mockReturnValue({ ...baseShellState, unreadCount: 0 });
 
-    render(<AppShell />);
+    renderShell();
 
     expect(screen.queryByText("0")).not.toBeInTheDocument();
   });
 
   it("renders the Guardian mascot in the FAB", () => {
-    render(<AppShell />);
+    renderShell();
 
     const button = screen.getByLabelText("Ask Guardian — ask about your protection");
     expect(button.querySelector('[data-testid="guardian-mascot"]')).toBeTruthy();

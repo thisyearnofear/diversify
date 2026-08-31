@@ -15,9 +15,38 @@ import TabNavigation from "@/components/ui/TabNavigation";
 import { WalletTutorial } from "@/components/wallet/WalletTutorial";
 import AppHeader from "@/components/app/AppHeader";
 import { TabDiscoveryProvider } from "@/hooks/use-tab-discovery";
+import { useStrategy } from "@/context/app/StrategyContext";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 
 import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
+
+/**
+ * AppBackdrop — the post-onboarding continuation of onboarding's ambience.
+ *
+ * Onboarding bathes the screen in philosophy-tinted radial light; the app
+ * shell then dropped to a flat gray-100/gray-900 and the identity vanished.
+ * This restores it, statically: two ultra-quiet radial washes tinted by the
+ * user's chosen archetype accent (warm amber counterpoint, same pairing the
+ * welcome screen uses). No animation — the motion budget stays spent on the
+ * one expressive object per screen, and §5 retires ambient loops. On
+ * desktop the wide margins around the max-w-md column are where this
+ * actually lives; on mobile it reads as a subtle top glow behind the header.
+ */
+function AppBackdrop({ accent }: { accent: string }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="fixed inset-0 -z-10 pointer-events-none"
+      style={{
+        background: [
+          `radial-gradient(90% 55% at 50% 0%, ${accent}14 0%, transparent 70%)`,
+          `radial-gradient(70% 40% at 50% 100%, rgba(251,191,36,0.06) 0%, transparent 70%)`,
+        ].join(', '),
+      }}
+    />
+  );
+}
 
 export default function AppShell() {
   return (
@@ -41,8 +70,13 @@ function AppShellInner() {
 
   const showTestnetBanner = shouldShowTestnetBanner(walletChainId);
 
+  // Philosophy accent for the ambient backdrop (static, §5-compliant).
+  const { financialStrategy } = useStrategy();
+  const archetype = ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'];
+
   return (
     <div className="max-w-md mx-auto">
+      <AppBackdrop accent={archetype.accent} />
       <FloatingControls
         openAdvisor={openAdvisor}
         unreadCount={unreadCount}
