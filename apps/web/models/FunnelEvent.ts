@@ -37,6 +37,8 @@ export const FUNNEL_EVENTS = [
   'graduation_prompt_clicked',
   // Caribbean FX netting — coarse engagement signal (which pair was requested)
   'fx_netting_match_requested',
+  // FX netting settlement — debtor tapped "send cUSD obligation"
+  'fx_netting_settle_requested',
   // Missing country feedback — user requests a country not in the dataset
   'country_request_requested',
 ] as const;

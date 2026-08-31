@@ -107,6 +107,53 @@ export default async function handler(
         // Build the settlement plan (ledger anchors + transfers + residuals)
         const settlementPlan = buildSettlementPlan(result);
 
+        // Persist durable settlement records for the net obligations so the
+        // debtor can execute the cUSD transfer later (POST /api/fx-netting/settle
+        // verifies it on-chain and advances both sides to `settled`). The
+        // intent ids each obligation collapses are the matched intents of
+        // its source matches (deduped).
+        const settlementChainId = settlementPlan.transfers[0]?.chainId ?? 42220;
+        const obligations = settlementPlan.transfers.map((t) => ({
+            fromParticipant: t.fromParticipant,
+            toParticipant: t.toParticipant,
+            settlementCurrency: t.settlementCurrency,
+            netAmount: t.netAmount,
+            chainId: settlementChainId,
+            sourceMatchIds: t.sourceMatchIds,
+        }));
+        if (obligations.length > 0) {
+            const matchIntentIndex = new Map<string, string[]>();
+            for (const t of settlementPlan.transfers) {
+                const ids = new Set<string>();
+                for (const matchId of t.sourceMatchIds) {
+                    const m = result.matches.find((x) => x.matchId === matchId);
+                    if (!m) continue;
+                    ids.add(m.intentA.intentId);
+                    ids.add(m.intentB.intentId);
+                }
+                matchIntentIndex.set(
+                    `${t.fromParticipant}>${t.toParticipant}`,
+                    [...ids],
+                );
+            }
+            const { buildSettlementRecords } = await import(
+                '@diversifi/shared/src/services/fx-netting/settlement-execution'
+            );
+            const { persistSettlements } = await import('@/lib/fx-intent-pool');
+            const { FxSettlementRecord } = await import('@/models/FxSettlementRecord');
+            const records = buildSettlementRecords(obligations, {
+                chainId: settlementChainId,
+                settlementCurrency: 'cUSD',
+                now,
+            }).map((r) => ({
+                ...r,
+                intentIds: matchIntentIndex.get(
+                    `${r.fromParticipant}>${r.toParticipant}`,
+                ) ?? [],
+            }));
+            await persistSettlements(FxSettlementRecord, records);
+        }
+
         // Anchor each match to the RecommendationLedger (fire-and-forget).
         // Same pattern as the x402-gateway FX Protection Insight anchor
         // (pages/api/agent/x402-gateway.ts:650-678) — best-effort, never blocks.

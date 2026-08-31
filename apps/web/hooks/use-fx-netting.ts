@@ -1,20 +1,29 @@
 /**
- * useFxNetting — CARICOM FX matching hook for the Protect/enterprise-fx surface.
+ * useFxNetting — CARICOM FX matching + settlement hook.
  *
- * Follows the use-best-yield.ts pattern: fetches server-side (the API route
- * handles live rate fetching + matching + ledger anchoring), returns typed
- * results. Deep leaf import for fetchWithTimeout keeps the ethers/AI stack
- * out of first-load.
+ * Matching is read-only (POST /api/fx-netting/match). Settlement execution
+ * is zero-custody: the net debtor's browser sends the cUSD transfer via the
+ * connected wallet (ProviderFactoryService signer on Celo), then submits the
+ * tx hash to POST /api/fx-netting/settle, which verifies it on-chain before
+ * advancing both sides' intents to `settled`.
  *
- * The hook is intentionally read-only for matching (POST /api/fx-netting/match
- * with a set of intents). Intent creation (POST /api/fx-netting/intent) is
- * wallet-authenticated and handled separately by the component.
+ * Deep leaf import for fetchWithTimeout keeps the ethers/AI stack out of
+ * first-load. ProviderFactoryService is imported lazily inside settle() for
+ * the same reason.
  */
 
 import { useCallback, useState } from 'react';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 
 const FX_NETTING_TIMEOUT_MS = 10_000;
+
+/** cUSD on Celo mainnet (packages/shared/src/config/celo-tokens.ts). */
+const CUSD_ADDRESS = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
+const CUSD_DECIMALS = 18;
+
+const ERC20_ABI = [
+  'function transfer(address to, uint256 amount) returns (bool)',
+] as const;
 
 export interface FxNettingMatch {
   matchId: string;
@@ -35,6 +44,23 @@ export interface FxNettingResult {
   rateDate: string | null;
   /** Size of the open pool the server matched against (hosted pool). */
   poolSize?: number;
+}
+
+export interface FxSettlement {
+  settlementId: string;
+  fromParticipant: string;
+  toParticipant: string;
+  settlementCurrency: string;
+  netAmount: number;
+  chainId: number;
+  status: string;
+  txHash?: string;
+  settledAt?: number;
+}
+
+export interface FxSettleResult {
+  settlement: FxSettlement;
+  intentsSettled: number;
 }
 
 export interface FxNettingInput {
@@ -59,10 +85,17 @@ function toIntentPayload(input: FxNettingInput, participantId: string) {
   };
 }
 
-export function useFxNetting(userAddress: string | null) {
+export function useFxNetting(
+  userAddress: string | null,
+  /** Wallet personal_sign — from useWalletContext; needed for the wallet-authed settle endpoints. */
+  signMessage?: (message: string) => Promise<string>,
+) {
   const [data, setData] = useState<FxNettingResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [settlements, setSettlements] = useState<FxSettlement[] | null>(null);
+  const [isSettling, setIsSettling] = useState(false);
+  const [settleError, setSettleError] = useState<string | null>(null);
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
   const match = useCallback(
@@ -113,5 +146,162 @@ export function useFxNetting(userAddress: string | null) {
     [userAddress, apiBase],
   );
 
-  return { data, isLoading, error, match };
+  /** Load the caller's settlements (debtor worklist + creditor inbox). */
+  const refreshSettlements = useCallback(async () => {
+    if (!userAddress) {
+      setSettlements(null);
+      return;
+    }
+    try {
+      const { getWalletAuthHeaders } = await import('@/lib/wallet-auth');
+      const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
+      if (!authHeaders) {
+        setSettlements(null);
+        return;
+      }
+      const res = await fetchWithTimeout(
+        `${apiBase}/api/fx-netting/settle`,
+        { method: 'GET', headers: authHeaders },
+        FX_NETTING_TIMEOUT_MS,
+      );
+      if (!res.ok) {
+        setSettlements(null);
+        return;
+      }
+      const json = await res.json();
+      setSettlements(json.settlements ?? []);
+    } catch {
+      setSettlements(null);
+    }
+  }, [userAddress, signMessage, apiBase]);
+
+  /**
+   * Execute a pending settlement as the net debtor (zero-custody):
+   *   1. switch the wallet to Celo mainnet
+   *   2. send cUSD transfer(to = creditor, amount = netAmount) from the
+   *      user's own wallet
+   *   3. submit the tx hash to /api/fx-netting/settle for on-chain
+   *      verification + intent advancement + FX_SETTLE ledger anchor
+   */
+  const settle = useCallback(
+    async (settlement: FxSettlement): Promise<FxSettleResult | null> => {
+      if (!userAddress) {
+        setSettleError('Connect your wallet to settle');
+        return null;
+      }
+      setIsSettling(true);
+      setSettleError(null);
+      try {
+        // Lazily pull the signer stack — keeps ethers out of first-load.
+        const { ethers } = await import('ethers');
+        const { ProviderFactoryService } = await import(
+          '@diversifi/shared/src/services/swap/provider-factory.service'
+        );
+
+        const signer = await ProviderFactoryService.getSigner();
+        const signerAddress = (await signer.getAddress()).toLowerCase();
+        if (signerAddress !== userAddress.toLowerCase()) {
+          throw new Error('Connected wallet must be the settlement debtor');
+        }
+        if (signerAddress !== settlement.fromParticipant.toLowerCase()) {
+          throw new Error('This wallet is not the debtor for this settlement');
+        }
+
+        // Ensure we're on the settlement chain (Celo). The wallet may prompt;
+        // a user rejection surfaces as an error to retry.
+        const currentChain = await ProviderFactoryService.getCurrentChainId();
+        if (currentChain !== settlement.chainId) {
+          const { getAddChainParameter, toHexChainId } = await import(
+            '@diversifi/shared/src/modules/wallet/core/chains'
+          );
+          const { getWalletProvider } = await import(
+            '@diversifi/shared/src/modules/wallet/core/provider-registry'
+          );
+          const rawProvider = await getWalletProvider();
+          if (!rawProvider) throw new Error('Wallet provider unavailable');
+          const request = (rawProvider as unknown as {
+            request: (a: unknown) => Promise<unknown>;
+          }).request.bind(rawProvider);
+          try {
+            await request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: toHexChainId(settlement.chainId) }],
+            });
+          } catch {
+            // Chain not added yet — add it, then switch.
+            await request({
+              method: 'wallet_addEthereumChain',
+              params: [getAddChainParameter(settlement.chainId)],
+            });
+            await request({
+              method: 'wallet_switchEthereumChain',
+              params: [{ chainId: toHexChainId(settlement.chainId) }],
+            });
+          }
+          // The Web3Provider cache holds the pre-switch instance; clear it
+          // so the signer below binds to the post-switch provider.
+          ProviderFactoryService.clearWeb3Cache();
+        }
+
+        // cUSD transfer from the user's own wallet — the zero-custody leg.
+        const cusd = new ethers.Contract(
+          CUSD_ADDRESS,
+          ERC20_ABI,
+          signer,
+        );
+        const amount = settlement.netAmount.toFixed(6);
+        const amountRaw = ethers.utils.parseUnits(amount, CUSD_DECIMALS);
+        const tx = await cusd.transfer(settlement.toParticipant, amountRaw, {
+          gasLimit: 100_000,
+        });
+        const receipt = await tx.wait(1);
+
+        // Submit for server-side on-chain verification + ledger anchor.
+        const { getWalletAuthHeaders } = await import('@/lib/wallet-auth');
+        const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
+        if (!authHeaders) throw new Error('Wallet signature required to confirm settlement');
+
+        const res = await fetchWithTimeout(
+          `${apiBase}/api/fx-netting/settle`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeaders },
+            body: JSON.stringify({
+              settlementId: settlement.settlementId,
+              txHash: receipt.transactionHash,
+            }),
+          },
+          FX_NETTING_TIMEOUT_MS,
+        );
+        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json.error ?? `fx-netting settle ${res.status}`);
+        }
+        const result: FxSettleResult = {
+          settlement: json.settlement,
+          intentsSettled: json.intentsSettled ?? 0,
+        };
+        void refreshSettlements();
+        return result;
+      } catch (e) {
+        setSettleError(e instanceof Error ? e.message : 'Failed to settle');
+        return null;
+      } finally {
+        setIsSettling(false);
+      }
+    },
+    [userAddress, signMessage, apiBase, refreshSettlements],
+  );
+
+  return {
+    data,
+    isLoading,
+    error,
+    match,
+    settlements,
+    refreshSettlements,
+    settle,
+    isSettling,
+    settleError,
+  };
 }

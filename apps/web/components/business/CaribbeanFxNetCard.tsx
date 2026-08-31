@@ -1,31 +1,58 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { useFxNetting } from "../../hooks/use-fx-netting";
+import { useFxNetting, type FxSettlement } from "../../hooks/use-fx-netting";
+import { trackFunnelEvent } from "@/lib/analytics";
 
 /**
  * CaribbeanFxNetCard — the FX Corridor card for the Future Caribbean track.
- * Two-phase, one job per phase (docs/design-language.md):
+ * Three phases, one job per phase (docs/design-language.md):
  *   1. INTENT — state "I need to sell X for Y".
  *   2. MATCH REVIEW — netting at mid-market: matched, saved, unmatched, anchor.
+ *   3. SETTLE (when the caller is a net debtor) — send the cUSD obligation
+ *      from your own wallet; the server verifies the transfer on-chain and
+ *      advances both sides to settled.
  * Honest fallback when no counterparty pool is hosted yet.
  */
 export function CaribbeanFxNetCard() {
-  const { address } = useWalletContext();
-  const { data, isLoading, error, match } = useFxNetting(address ?? null);
+  const { address, signMessage } = useWalletContext();
+  const {
+    data, isLoading, error, match,
+    settlements, refreshSettlements, settle, isSettling, settleError,
+  } = useFxNetting(address ?? null, signMessage);
 
   const [sellCurrency, setSellCurrency] = React.useState("JMD");
   const [sellAmount, setSellAmount] = React.useState("");
   const [buyCurrency, setBuyCurrency] = React.useState("BBD");
   const [matched, setMatched] = React.useState(false);
 
+  React.useEffect(() => {
+    void refreshSettlements();
+  }, [refreshSettlements]);
+
   const sellAmountNum = sellAmount ? Number(sellAmount) : 0;
   const canMatch = sellAmountNum > 0 && sellCurrency !== buyCurrency;
+
+  /** Settlements where the connected wallet is the net debtor (worklist). */
+  const myDebts: FxSettlement[] = (settlements ?? []).filter(
+    (s) =>
+      s.status === 'pending' &&
+      s.fromParticipant.toLowerCase() === (address ?? '').toLowerCase(),
+  );
+  /** Settlements owed TO the caller, settled ones included (receipts). */
+  const myReceipts: FxSettlement[] = (settlements ?? []).filter(
+    (s) => s.toParticipant.toLowerCase() === (address ?? '').toLowerCase(),
+  );
 
   const handleSubmit = () => {
     if (!canMatch) return;
     setMatched(true);
     void match({ sellCurrency, sellAmount: sellAmountNum, buyCurrency }, []);
+  };
+
+  const handleSettle = (s: FxSettlement) => {
+    trackFunnelEvent('fx_netting_settle_requested');
+    void settle(s);
   };
 
   return (
@@ -192,11 +219,102 @@ export function CaribbeanFxNetCard() {
                   : ""}
                 Every match is anchored on-chain to the region-canonical ledger.
               </footer>
+
+              <SettlementSection
+                myDebts={myDebts}
+                myReceipts={myReceipts}
+                isSettling={isSettling}
+                settleError={settleError}
+                onSettle={handleSettle}
+              />
             </>
           )}
         </div>
       )}
     </motion.section>
+  );
+}
+
+/**
+ * Settlement phase — the caller's net obligations (debtor worklist) and
+ * incoming receipts. One job: "you owe X → send it from your wallet".
+ * Hidden entirely when there's nothing to show (no fake states).
+ */
+function SettlementSection({
+  myDebts,
+  myReceipts,
+  isSettling,
+  settleError,
+  onSettle,
+}: {
+  myDebts: FxSettlement[];
+  myReceipts: FxSettlement[];
+  isSettling: boolean;
+  settleError: string | null;
+  onSettle: (s: FxSettlement) => void;
+}) {
+  if (myDebts.length === 0 && myReceipts.length === 0) return null;
+
+  return (
+    <div className="mt-4 space-y-2" data-testid="fx-settlement-section">
+      {myDebts.map((s) => (
+        <div
+          key={s.settlementId}
+          className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 p-3"
+        >
+          <p className="text-xs font-bold text-amber-900 dark:text-amber-100">
+            You owe {s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+            {s.settlementCurrency} to {s.toParticipant.slice(0, 6)}…{s.toParticipant.slice(-4)}
+          </p>
+          <p className="text-[10px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+            Sent from your wallet on Celo — the transfer is verified on-chain
+            before the match is marked settled.
+          </p>
+          <button
+            type="button"
+            onClick={() => onSettle(s)}
+            disabled={isSettling}
+            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+          >
+            {isSettling ? "Sending…" : `Send ${s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${s.settlementCurrency}`}
+          </button>
+        </div>
+      ))}
+      {settleError && (
+        <p className="text-[11px] text-red-500" data-testid="fx-settle-error">{settleError}</p>
+      )}
+      {myReceipts.map((s) => (
+        <div
+          key={s.settlementId}
+          className="rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3 text-xs text-teal-800 dark:text-teal-200"
+        >
+          {s.status === 'settled' ? (
+            <>
+              Received {s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+              {s.settlementCurrency} from {s.fromParticipant.slice(0, 6)}…{s.fromParticipant.slice(-4)} —{" "}
+              {s.txHash ? (
+                <a
+                  href={`https://celoscan.io/tx/${s.txHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-bold"
+                >
+                  verified on-chain
+                </a>
+              ) : (
+                'settled'
+              )}
+            </>
+          ) : (
+            <>
+              Awaiting {s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
+              {s.settlementCurrency} from {s.fromParticipant.slice(0, 6)}…{s.fromParticipant.slice(-4)} —
+              they send it from their wallet.
+            </>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 

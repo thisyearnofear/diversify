@@ -3,6 +3,8 @@ import {
   loadOpenPool,
   upsertPoolIntent,
   persistMatchOutcomes,
+  persistSettlements,
+  applySettledOutcome,
   DUST_THRESHOLD,
 } from '../fx-intent-pool';
 
@@ -233,5 +235,137 @@ describe('fx-intent-pool — hosted intent pool logic', () => {
 
     expect(created).toHaveLength(2);
     expect(created.every((d) => d.status === 'matched')).toBe(true);
+  });
+});
+
+// ─── Settlement persistence (net obligation → verified cUSD transfer) ────
+
+interface FakeSettlement {
+  settlementId: string;
+  fromParticipant: string;
+  toParticipant: string;
+  settlementCurrency: string;
+  netAmount: number;
+  chainId: number;
+  sourceMatchIds: string[];
+  intentIds: string[];
+  status: string;
+  txHash?: string;
+  settledAt?: number;
+  failureReason?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  save: () => Promise<void>;
+}
+
+function makeSettlementDoc(overrides: Partial<FakeSettlement> = {}): FakeSettlement {
+  return {
+    settlementId: 's1',
+    fromParticipant: '0xaaaa',
+    toParticipant: '0xbbbb',
+    settlementCurrency: 'CUSD',
+    netAmount: 152.5,
+    chainId: 42220,
+    sourceMatchIds: ['m1'],
+    intentIds: ['A', 'B'],
+    status: 'pending',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    save: vi.fn(async () => {}),
+    ...overrides,
+  };
+}
+
+function makeSettlementModel(settlements: FakeSettlement[]) {
+  return {
+    find: (filter: Record<string, unknown>) => ({
+      lean: async () => settlements.filter(() => true), // not exercised by these tests
+    }),
+    findOne: (filter: Record<string, unknown>) => ({
+      exec: async () =>
+        settlements.find((s) => s.settlementId === filter.settlementId) ?? null,
+    }),
+    create: async (doc: Record<string, unknown>) => {
+      const s = makeSettlementDoc(doc as Partial<FakeSettlement>);
+      settlements.push(s);
+      return s;
+    },
+  };
+}
+
+describe('fx-intent-pool — settlement persistence', () => {
+  let intents: FakeDoc[];
+  let createdIntents: FakeDoc[];
+  let settlements: FakeSettlement[];
+
+  beforeEach(() => {
+    intents = [];
+    createdIntents = [];
+    settlements = [];
+  });
+
+  it('persistSettlements inserts a pending record with normalized case', async () => {
+    const model = makeSettlementModel(settlements);
+    const touched = await persistSettlements(model, [
+      {
+        settlementId: 's_new',
+        fromParticipant: '0xAAAA',
+        toParticipant: '0xBBBB',
+        settlementCurrency: 'cUSD',
+        netAmount: 42,
+        chainId: 42220,
+        sourceMatchIds: ['m1'],
+        intentIds: ['A'],
+      },
+    ]);
+
+    expect(touched).toBe(1);
+    expect(settlements).toHaveLength(1);
+    expect(settlements[0].fromParticipant).toBe('0xaaaa');
+    expect(settlements[0].toParticipant).toBe('0xbbbb');
+    expect(settlements[0].settlementCurrency).toBe('CUSD');
+    expect(settlements[0].status).toBe('pending');
+  });
+
+  it('persistSettlements refreshes idempotently and never reopens a settled record', async () => {
+    const settled = makeSettlementDoc({ settlementId: 's_done', status: 'settled', txHash: '0x1' });
+    settlements = [settled];
+
+    const model = makeSettlementModel(settlements);
+    await persistSettlements(model, [
+      {
+        settlementId: 's_done',
+        fromParticipant: '0xaaaa',
+        toParticipant: '0xbbbb',
+        settlementCurrency: 'CUSD',
+        netAmount: 999,
+        chainId: 42220,
+        sourceMatchIds: [],
+        intentIds: [],
+      },
+    ]);
+
+    expect(settlements).toHaveLength(1); // no duplicate
+    expect(settled.status).toBe('settled'); // not reopened
+    expect(settled.netAmount).toBe(152.5); // not overwritten
+  });
+
+  it('applySettledOutcome advances matched intents to settled and skips ineligible ones', async () => {
+    const a = makeDoc({ intentId: 'A', status: 'matched', remainingSell: 0 });
+    const b = makeDoc({ intentId: 'B', status: 'open' });
+    const c = makeDoc({ intentId: 'C', status: 'settled' });
+    intents = [a, b, c];
+
+    const advanced = await applySettledOutcome(
+      makeModel(intents, createdIntents),
+      { settlementId: 's1', intentIds: ['A', 'B', 'C', 'MISSING'] },
+      '0xtx',
+      NOW,
+    );
+
+    expect(advanced).toBe(2); // A + B; C already settled, MISSING absent
+    expect(a.status).toBe('settled');
+    expect(b.status).toBe('settled');
+    expect(c.status).toBe('settled');
   });
 });

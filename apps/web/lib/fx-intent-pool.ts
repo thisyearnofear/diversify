@@ -17,6 +17,9 @@ export const DUST_THRESHOLD = 0.005;
 /** Statuses eligible for matching. */
 const MATCHABLE_STATUSES = ['open', 'partially_matched'] as const;
 
+/** Statuses that can still be advanced to `settled` by a settlement execution. */
+const SETTLEABLE_STATUSES = ['open', 'matched', 'partially_matched'] as const;
+
 /**
  * Minimal structural view of the persisted intent — everything the pool
  * helpers touch. Deliberately NOT the full mongoose Document: the helpers
@@ -182,4 +185,96 @@ export async function persistMatchOutcomes(
   }
 
   return touched;
+}
+
+// ─── Settlement execution (net obligation → verified cUSD transfer) ─────
+
+/**
+ * Minimal structural view of a persisted settlement — everything the
+ * settlement helpers touch (see models/FxSettlementRecord.ts for the full
+ * mongoose document).
+ */
+export interface SettlementDoc {
+  settlementId: string;
+  fromParticipant: string;
+  toParticipant: string;
+  settlementCurrency: string;
+  netAmount: number;
+  chainId: number;
+  sourceMatchIds: string[];
+  intentIds: string[];
+  status: string;
+  txHash?: string;
+  settledAt?: number;
+  failureReason?: string;
+  createdAt: Date | string | number;
+  save: () => Promise<unknown>;
+}
+
+/** Minimal structural model seam for settlement persistence. */
+export interface SettlementModel {
+  find: (filter: Record<string, unknown>) => { lean: () => Promise<SettlementDoc[]> };
+  findOne: (filter: Record<string, unknown>) => { exec: () => Promise<SettlementDoc | null> };
+  create: (doc: Record<string, unknown>) => Promise<SettlementDoc>;
+}
+
+/**
+ * Persist new pending settlements from a match run. Idempotent per
+ * settlementId — a re-run of the same match (or a card retry) refreshes
+ * the pending record instead of duplicating it. Already-settled records
+ * are never touched.
+ */
+export async function persistSettlements(
+  model: SettlementModel,
+  settlements: Array<Omit<SettlementDoc, 'save' | 'createdAt' | 'status'> & { status?: string; createdAt?: Date | string | number }>,
+): Promise<number> {
+  let touched = 0;
+  for (const s of settlements) {
+    const existing = await model.findOne({ settlementId: s.settlementId }).exec();
+    if (existing) {
+      if (existing.status === 'settled') continue; // never reopen a settled record
+      existing.intentIds = s.intentIds ?? [];
+      existing.netAmount = s.netAmount;
+      await existing.save();
+      touched += 1;
+      continue;
+    }
+    await model.create({
+      settlementId: s.settlementId,
+      fromParticipant: String(s.fromParticipant).toLowerCase(),
+      toParticipant: String(s.toParticipant).toLowerCase(),
+      settlementCurrency: String(s.settlementCurrency).toUpperCase(),
+      netAmount: s.netAmount,
+      chainId: s.chainId,
+      sourceMatchIds: s.sourceMatchIds ?? [],
+      intentIds: s.intentIds ?? [],
+      status: 'pending',
+    });
+    touched += 1;
+  }
+  return touched;
+}
+
+/**
+ * Mark a settlement settled and advance both sides' matched intents to
+ * `settled`. Intents not in a settleable status are skipped (they may have
+ * been re-matched with new volume, or already settled) — the settlement
+ * record itself is still the audit ground truth.
+ */
+export async function applySettledOutcome(
+  intentModel: PoolModel,
+  settlement: Pick<SettlementDoc, 'settlementId' | 'intentIds'>,
+  txHash: string,
+  now: number,
+): Promise<number> {
+  let advanced = 0;
+  for (const intentId of settlement.intentIds ?? []) {
+    const record = await intentModel.findOne({ intentId }).exec();
+    if (!record) continue;
+    if (!(SETTLEABLE_STATUSES as readonly string[]).includes(record.status)) continue;
+    record.status = 'settled';
+    await record.save();
+    advanced += 1;
+  }
+  return advanced;
 }

@@ -287,14 +287,14 @@ export interface LedgerRoutingContext {
  * Yield rotations (SWAP to USDY etc.) stay on Arbitrum — the regional rail
  * holds the trust-sensitive core, it is not another yield chain.
  */
-const SAVINGS_ACTIONS = new Set(['HOLD', 'SAVE', 'PROTECT', 'ADVISORY_HEARTBEAT', 'FX_MATCH']);
+const SAVINGS_ACTIONS = new Set(['HOLD', 'SAVE', 'PROTECT', 'ADVISORY_HEARTBEAT', 'FX_MATCH', 'FX_SETTLE']);
 
 /**
  * Determine the correct ledger chain for a given action based on the
  * target token. The ledger of record follows the money:
  * - Celo savings tokens (cUSD, cREAL, KESm, etc.) → Celo mainnet
  * - APAC-profile savings/hold actions → HashKey mainnet (when configured)
- * - Caribbean-profile savings/hold/FX_MATCH actions → Celo mainnet
+ * - Caribbean-profile savings/hold/FX_MATCH/FX_SETTLE actions → Celo mainnet
  * - Yield/RWA tokens (USDY, PAXG, USDC, etc.) → Arbitrum mainnet
  * - HOLD or unspecified → default chain (Arbitrum mainnet if configured,
  *   else Arbitrum Sepolia for backward compat)

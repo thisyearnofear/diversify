@@ -13,13 +13,15 @@
 
 import React, { useState } from 'react';
 import { Card } from '../shared/TabComponents';
+import { useWalletContext } from '../wallet/WalletProvider';
 import { useFxNetting } from '../../hooks/use-fx-netting';
 import { trackFunnelEvent } from '@/lib/analytics';
 
 const CARIBBEAN_CURRENCIES = ['BBD', 'JMD', 'TTD', 'XCD', 'HTG', 'GYD', 'DOP'];
 
 export function CaribbeanFxNetCard({ userAddress }: { userAddress: string | null }) {
-  const { data, isLoading, error, match } = useFxNetting(userAddress);
+  const { signMessage } = useWalletContext();
+  const { data, isLoading, error, match } = useFxNetting(userAddress, signMessage);
   const [sellCurrency, setSellCurrency] = useState('BBD');
   const [sellAmount, setSellAmount] = useState('10000');
   const [buyCurrency, setBuyCurrency] = useState('JMD');

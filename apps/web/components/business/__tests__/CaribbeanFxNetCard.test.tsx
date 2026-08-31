@@ -6,12 +6,15 @@ import CaribbeanFxNetCard from '../CaribbeanFxNetCard';
 // Mock the wallet + netting hook so the card renders/isolation-testable
 // without a connection or network.
 const mockMatch = vi.fn();
+const mockRefreshSettlements = vi.fn(async () => {});
 vi.mock('../../../hooks/use-fx-netting', () => ({
   useFxNetting: () => ({
     data: null,
     isLoading: false,
     error: null,
     match: mockMatch,
+    settlements: null,
+    refreshSettlements: mockRefreshSettlements,
   }),
 }));
 vi.mock('../../../components/wallet/WalletProvider', () => ({
@@ -21,7 +24,10 @@ vi.mock('../../../components/wallet/WalletProvider', () => ({
 afterEach(cleanup);
 
 describe('CaribbeanFxNetCard — smoke + phase flips', () => {
-  beforeEach(() => mockMatch.mockReset());
+  beforeEach(() => {
+    mockMatch.mockReset();
+    mockRefreshSettlements.mockClear();
+  });
 
   it('renders the intent phase by default with JMD/BBD defaults', () => {
     render(<CaribbeanFxNetCard />);
