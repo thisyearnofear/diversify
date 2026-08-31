@@ -15,6 +15,7 @@ function obligation(overrides: Partial<NetObligation> = {}): NetObligation {
     toParticipant: '0xCREDITOR',
     settlementCurrency: 'cUSD',
     netAmount: 152.5,
+    chainId: 42220,
     sourceMatchIds: ['fxmatch_1', 'fxmatch_2'],
     ...overrides,
   };
