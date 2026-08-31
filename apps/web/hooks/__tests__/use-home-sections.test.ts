@@ -391,8 +391,15 @@ describe("useHomeSections", () => {
     });
   });
 
-  describe("section visibility", () => {
-    it("adds the FX Corridor business section when moneyPurpose is upcoming_payment", () => {
+  describe("instrument visibility", () => {
+    it("shows the dial for standard users with holdings, not a section catalog", () => {
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.showDial).toBe(true);
+      expect(result.current.showZakat).toBe(false);
+      expect(result.current.isPaymentCycle).toBe(false);
+    });
+
+    it("morphs toward Exchange when moneyPurpose is upcoming_payment", () => {
       mockUseProtectionProfile.mockReturnValue({
         config: {
           userGoal: "exploring",
@@ -401,105 +408,29 @@ describe("useHomeSections", () => {
         isComplete: true,
       });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      const businessSection = result.current.sections.find(
-        (s) => s.id === "business",
-      );
-      expect(businessSection).toBeDefined();
-      expect(businessSection?.title).toBe("FX Corridor");
-      expect(businessSection?.defaultOpen).toBe(true);
-      expect(result.current.showBusinessDashboard).toBe(true);
+      expect(result.current.isPaymentCycle).toBe(true);
     });
 
-    it("does not add the FX Corridor business section in beginner mode even with moneyPurpose set", () => {
-      // The business section is gated on moneyPurpose only; beginner mode
-      // is a separate concern (the user can still be a beginner importer).
-      // The hook adds the section regardless of experienceMode — the JSX
-      // is responsible for the beginner collapse.
+    it("hides the dial in beginner mode", () => {
       mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
+      const { result } = renderHook(() => useHomeSections(baseArgs()));
+      expect(result.current.showDial).toBe(false);
+    });
+
+    it("shows zakat in the inspector for Islamic philosophy with holdings", () => {
       mockUseProtectionProfile.mockReturnValue({
-        config: {
-          userGoal: "exploring",
-          moneyPurpose: "upcoming_payment",
-        },
+        config: { userGoal: "exploring", philosophy: "islamic" },
         isComplete: true,
       });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      const businessSection = result.current.sections.find(
-        (s) => s.id === "business",
-      );
-      expect(businessSection).toBeDefined();
-      expect(result.current.showBusinessDashboard).toBe(true);
+      expect(result.current.showZakat).toBe(true);
     });
 
-    it("filters the smart-tips section entirely when tipsCount is 0 (0px-when-empty)", () => {
-      // Density-first pass: when the caller reports 0 tips, the
-      // smart-tips HomeSection disappears entirely (no empty-state
-      // message, no 1-line header) so the user gets the screen space
-      // back. Default behaviour (tipsCount undefined) preserves the
-      // old behaviour.
-      const { result } = renderHook(() =>
-        useHomeSections({ ...baseArgs(), tipsCount: 0 }),
-      );
-      const smartTips = result.current.sections.find(
-        (s) => s.id === "smart-tips",
-      );
-      expect(smartTips).toBeUndefined();
-      // The other sections are still present
-      expect(result.current.sections.length).toBeGreaterThan(0);
-    });
-
-    it("shows the smart-tips section when tipsCount is positive", () => {
-      const { result } = renderHook(() =>
-        useHomeSections({ ...baseArgs(), tipsCount: 3 }),
-      );
-      const smartTips = result.current.sections.find(
-        (s) => s.id === "smart-tips",
-      );
-      expect(smartTips).toBeDefined();
-      expect(smartTips?.title).toBe("Smart Tips");
-    });
-
-    it("shows the smart-tips section when tipsCount is undefined (backward-compat default)", () => {
-      // Older callers that don't pass tipsCount should still see the
-      // smart-tips section — the density filter is opt-in.
-      const { result } = renderHook(() => useHomeSections(baseArgs()));
-      const smartTips = result.current.sections.find(
-        (s) => s.id === "smart-tips",
-      );
-      expect(smartTips).toBeDefined();
-    });
-
-    it("hides insight sections in beginner mode", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
-      const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.showMarketIntel).toBe(false);
-      expect(result.current.showSmartTips).toBe(false);
-      expect(result.current.showRewards).toBe(false);
-      expect(result.current.sections).toEqual([]);
-    });
-
-    it("shows market intel, smart tips, rewards in standard mode with holdings", () => {
-      const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.showMarketIntel).toBe(true);
-      expect(result.current.showSmartTips).toBe(true);
-      expect(result.current.showRewards).toBe(true);
-      expect(result.current.sections.length).toBe(3);
-    });
-
-    it("adds the agent section in advanced mode", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "advanced" });
-      const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.showAgentCommandCenter).toBe(true);
-      expect(result.current.sections.some((s) => s.id === "agent")).toBe(true);
-    });
-
-    it("hides all insight sections when there are no holdings", () => {
+    it("hides the dial when there are no holdings", () => {
       const { result } = renderHook(() =>
         useHomeSections({ ...baseArgs(), portfolio: basePortfolio({ totalValue: 0 }) as any }),
       );
-      expect(result.current.showMarketIntel).toBe(false);
-      expect(result.current.showSmartTips).toBe(false);
-      expect(result.current.showRewards).toBe(false);
+      expect(result.current.showDial).toBe(false);
     });
   });
 

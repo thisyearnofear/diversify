@@ -18,7 +18,6 @@ const baseProps = {
   totalValue: 1000,
   selectedRegion: null,
   onSelectRegion: () => {},
-  onProtect: () => {},
 };
 
 afterEach(() => {
@@ -60,39 +59,24 @@ describe('HomeExposureDial — Home tab marquee', () => {
     expect(onSelectRegion).toHaveBeenLastCalledWith(null);
   });
 
-  it('shows the selected region detail with protect and Guardian CTAs', () => {
-    const onProtect = vi.fn();
-    const onAskGuardian = vi.fn();
+  it('shows the selected region in the ring center, not a sibling CTA card', () => {
     render(
-      <HomeExposureDial
-        {...baseProps}
-        selectedRegion="Kenya"
-        onProtect={onProtect}
-        onAskGuardian={onAskGuardian}
-      />,
+      <HomeExposureDial {...baseProps} selectedRegion="Kenya" />,
     );
 
     expect(screen.getByText('50% of savings')).toBeInTheDocument();
-    expect(screen.getByText(/More than half your savings sit in/)).toBeInTheDocument();
-
-    fireEvent.click(
-      screen.getByRole('button', { name: /Strengthen Kenya coverage in Shield/ }),
-    );
-    expect(onProtect).toHaveBeenCalledWith('Kenya');
-
-    fireEvent.click(
-      screen.getByRole('button', { name: /Ask Guardian about my Kenya exposure/ }),
-    );
-    expect(onAskGuardian).toHaveBeenCalledWith('Kenya');
+    expect(
+      screen.queryByRole('button', { name: /Strengthen Kenya coverage in Shield/ }),
+    ).not.toBeInTheDocument();
   });
 
-  it('flags concentration for 30%+ regions and light exposure below', () => {
+  it('does not embed inspector copy in the dial', () => {
     const { rerender } = render(
       <HomeExposureDial {...baseProps} selectedRegion="US" />,
     );
-    expect(screen.getByText(/meaningful exposure worth watching/)).toBeInTheDocument();
+    expect(screen.queryByText(/meaningful exposure worth watching/)).not.toBeInTheDocument();
 
     rerender(<HomeExposureDial {...baseProps} selectedRegion="EU" />);
-    expect(screen.getByText(/A light/)).toBeInTheDocument();
+    expect(screen.queryByText(/A light/)).not.toBeInTheDocument();
   });
 });

@@ -484,6 +484,7 @@ export function useMultichainBalances(
       } finally {
         if (fetchId === fetchIdRef.current) {
           setIsLoading(false);
+          setLastUpdated((prev) => prev ?? Date.now());
         }
       }
     },
@@ -493,6 +494,8 @@ export function useMultichainBalances(
   // Auto-fetch on mount and when address changes
   useEffect(() => {
     if (address) {
+      setChainBalances({});
+      setLastUpdated(null);
       fetchAllBalances();
     } else {
       setChainBalances({});

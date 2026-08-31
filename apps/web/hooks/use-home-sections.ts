@@ -6,14 +6,14 @@
  * scattered through ~660 lines of JSX. That made it hard to reason about what
  * the user would see in each mode, and impossible to test the IA in isolation.
  *
- * The hook returns a single `HomeSections` object that describes:
+ * The hook returns a single object that describes:
  *   - which contextual banner (if any) is currently the most important one
- *   - which deep sections to show, in what order, and which is default-open
+ *   - whether the holdings dial / zakat inspector / payment-cycle morph apply
  *   - the hero variant (compact vs. detailed)
- *   - the level of insight depth (minimal / standard / full)
+ *   - the primary tip (one line)
  *
- * `ConnectedOverview` consumes this and renders the right UI for each descriptor.
- * Adding a new mode (e.g. "sharia-compliant") or a new section is a one-line change.
+ * `ConnectedOverview` consumes this. Adding a new card section is out of
+ * contract — persona morphs the object or the inspector instead.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -99,30 +99,15 @@ export interface HomeSections {
   /** Hero card variant. */
   heroVariant: "compact" | "detailed";
 
-  /** Ordered list of deep sections to render after the hero. */
-  sections: HomeSectionDescriptor[];
-
-  /** Convenience booleans for the JSX. */
-  showProtectionMix: boolean;
-  showRegionSelector: boolean;
-  showTwoChainsBanner: boolean;
-  showAgentCommandCenter: boolean;
-  showRewards: boolean;
-  showMarketIntel: boolean;
-  showSmartTips: boolean;
-  showInsightAccordion: boolean;
-  showProtectionScorecard: boolean;
-  showGuardianChip: boolean;
-  showStrategyMetrics: boolean;
+  /** Holdings dial is the object for non-beginners with funds. */
+  showDial: boolean;
+  /** Zakat line belongs in the region inspector for Islamic philosophy. */
   showZakat: boolean;
-  showRegionalInsights: boolean;
-  showBusinessDashboard: boolean;
+  /** Upcoming payment morphs Home toward Exchange, not a corridor accordion. */
+  isPaymentCycle: boolean;
 
   /** The "next best move" tip for the hero. */
   primaryTip: string | null;
-
-  /** Default open section id, used by the in-page nav highlight. */
-  primarySectionId: string;
 
   /**
    * Dismiss the FX Corridor hint banner + persist the dismissal in
@@ -149,7 +134,7 @@ export function useHomeSections({
   isDemo,
   userRegion,
   chainId,
-  tipsCount,
+  tipsCount: _tipsCount,
 }: UseHomeSectionsInput): HomeSections {
   const { experienceMode } = useExperience();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
@@ -277,117 +262,16 @@ export function useHomeSections({
       bannerPriority = ADAPTIVE_BANNER_PRIORITY;
     }
 
-    // ── 2. Determine which deep sections to show ─────────────────────────
-    // Default-open is intentionally restricted: in beginner mode only the
-    // Protection Mix is open by default. Power users get two open sections.
-    const sections: HomeSectionDescriptor[] = [];
-
-    if (hasHoldings && !isBeginner) {
-      sections.push({
-        id: "market-intel",
-        title: "Guardian Pulse",
-        icon: "🌍",
-        teaser: "Live macro signals, regional risk, and verifiable audit trail.",
-        defaultOpen: isAdvanced,
-      });
-    }
-
-    if (hasHoldings && !isBeginner) {
-      // Density-first pass: filter the smart-tips section entirely when
-      // the caller reports 0 tips. The section disappears (0px) instead
-      // of showing an empty-state message inside a 1-line header.
-      if (tipsCount === undefined || tipsCount > 0) {
-        sections.push({
-          id: "smart-tips",
-          title: "Smart Tips",
-          icon: "💡",
-          teaser: "Personalised actions from your goal and the current market regime.",
-          defaultOpen: false,
-        });
-      }
-    }
-
-    if (hasHoldings && !isBeginner) {
-      sections.push({
-        id: "rewards",
-        title: "Celo Welcome Bonus",
-        icon: "💚",
-        teaser: "Claim free G$ daily on Celo — a bonus for active savers.",
-        defaultOpen: false,
-      });
-    }
-
-    if (isAdvanced) {
-      sections.push({
-        id: "agent",
-        title: "Agent Command Center",
-        icon: "🤖",
-        teaser: "Proactive Guardian status, latest activity, and automation controls.",
-        defaultOpen: isAdvanced,
-      });
-    }
-
-    // Business / FX-corridor section: SME-graduated users see the 4
-    // staged enterprise-fx components here (CorridorMonitor, WorkingCapitalRisk,
-    // CorridorMetrics, MacroIntelligence). defaultOpen because this is
-    // the primary surface for the SME audience -- if they're here, they
-    // came for this.
-    // Uses the direct condition (not the `showBusinessDashboard` flag
-    // declared further down) to avoid a use-before-declaration error.
-    if (profileConfig.moneyPurpose === "upcoming_payment") {
-      sections.push({
-        id: "business",
-        title: "FX Corridor",
-        icon: "🌍",
-        teaser:
-          "Working capital tools for cyclical FX exposure and settlement timing.",
-        defaultOpen: true,
-      });
-    }
-
-    // ── 3. Hero variant ───────────────────────────────────────────────────
-    // Beginner → compact (one number, one sentence, one CTA).
-    // Standard / Advanced → detailed (score + breakdown in same card).
+    // Instrument layout: no section catalog. Persona morphs the object
+    // (payment cycle → Exchange) or the inspector (zakat). Tips are one line.
     const heroVariant: "compact" | "detailed" = isBeginner
       ? "compact"
       : "detailed";
 
-    // ── 4. Determine which supporting bits the JSX needs ────────────────
-    const showProtectionMix = hasHoldings;
-    const showRegionSelector = !isBeginner;
-    const showTwoChainsBanner = !isBeginner && !isDemo; // skip in demo
-    const showAgentCommandCenter = isAdvanced;
-    const showRewards = hasHoldings && !isBeginner;
-    const showMarketIntel = hasHoldings && !isBeginner;
-    const showSmartTips = hasHoldings && !isBeginner;
-    // Insights accordion is just the deep sections wrapped together.
-    const showInsightAccordion = sections.length > 0;
-    // Protection Scorecard: show when the user has holdings (needs portfolio data
-    // to be meaningful). Renders the philosophy-aware protection summary.
-    const showProtectionScorecard = hasHoldings;
-    const showGuardianChip = hasHoldings && isBeginner;
-    // StrategyMetrics: philosophy-aligned breakdown (Pan-African exposure,
-    // Sharia compliance, etc.). Requires a chosen philosophy + portfolio.
-    const showStrategyMetrics = hasHoldings && profileConfig.philosophy !== null;
-    // Zakat calculator: Islamic Finance philosophy is the natural home for the
-    // 2.5% nisab obligation. Gated on the strategy key (`islamic`, not the
-    // `islamic_finance` archetype id).
+    const showDial = hasHoldings && !isBeginner;
     const showZakat = hasHoldings && profileConfig.philosophy === "islamic";
-    // RegionalRecommendations: geo-specific token allocations + currency
-    // hedging rationale. Hidden in beginner mode (overloads the page).
-    const showRegionalInsights = hasHoldings && !isBeginner;
-    // Business dashboard: SME-graduated users (`moneyPurpose ===
-    // 'upcoming_payment'`) see the FX-corridor section with the 4
-    // staged enterprise-fx components. Reuses the live signal that
-    // already gates `PaymentCycleReport` -- no new toggle needed.
-    // Per docs/sme-fx-strategy.md §4, this is the retail-to-business
-    // graduation moment; the section is the visible hand-off.
-    const showBusinessDashboard = profileConfig.moneyPurpose === "upcoming_payment";
+    const isPaymentCycle = profileConfig.moneyPurpose === "upcoming_payment";
 
-    // ── 5. Primary tip (next best move) ──────────────────────────────────
-    // Mirrors the legacy buildTips() but is just a single line for the hero.
-    // The full tip list still lives in `buildTips` and is shown inside the
-    // Smart Tips section.
     let primaryTip: string | null = null;
     if (hasHoldings && portfolio) {
       const gs = portfolio.goalScores;
@@ -429,29 +313,12 @@ export function useHomeSections({
       isBeginner,
       isStandard,
       isAdvanced,
-
       banner,
       heroVariant,
-      sections,
-
-      showProtectionMix,
-      showRegionSelector,
-      showTwoChainsBanner,
-      showAgentCommandCenter,
-      showRewards,
-      showMarketIntel,
-      showSmartTips,
-      showInsightAccordion,
-      showProtectionScorecard,
-      showGuardianChip,
-      showStrategyMetrics,
+      showDial,
       showZakat,
-      showRegionalInsights,
-      showBusinessDashboard,
-
+      isPaymentCycle,
       primaryTip,
-      primarySectionId: "protection-mix",
-
       dismissFxCorridorHint,
     };
   }, [
@@ -468,7 +335,7 @@ export function useHomeSections({
     coldStart?.headline,
     userRegion,
     fxHintDismissed,
-    tipsCount,
+    adaptiveConfig.content.contextualBanner,
     dismissFxCorridorHint,
   ]);
 }

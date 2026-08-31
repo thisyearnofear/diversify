@@ -21,7 +21,6 @@ import { useColdStart } from "@/hooks/use-cold-start";
 import type { TabId } from "@/constants/tabs";
 import { ApacRailHonestyBanner } from "@/components/shared/ApacRailHonestyBanner";
 import { CaribbeanRailHonestyBanner } from "@/components/shared/CaribbeanRailHonestyBanner";
-import { useWalletContext } from "@/components/wallet/WalletProvider";
 import { NetworkOptimizedOnramp } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
@@ -117,6 +116,7 @@ export function ContextualBanner({
         <DemoVariant
           isDemo={isDemo}
           demoValue={demoValue}
+          address={address}
           onDisableDemo={onDisableDemo}
         />
       )}
@@ -250,15 +250,14 @@ function ColdStartVariant({
 function DemoVariant({
   isDemo,
   demoValue,
+  address,
   onDisableDemo,
 }: {
   isDemo: boolean;
   demoValue?: number;
+  address?: string;
   onDisableDemo?: () => void;
 }) {
-  // When a real wallet is connected, say WHY they're seeing sample data —
-  // "Preview Mode Active" alone read like the wallet hadn't connected.
-  const { address } = useWalletContext();
   return (
     <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
@@ -269,7 +268,7 @@ function DemoVariant({
               <h3 className="text-sm font-bold text-white">Preview Mode Active</h3>
               <p className="text-xs text-blue-100 truncate">
                 {address
-                  ? "Sample data — no holdings detected on your wallet yet"
+                  ? "Sample portfolio — add funds on Celo or Arbitrum to see yours"
                   : demoValue
                     ? `$${demoValue.toFixed(0)} sample portfolio`
                     : "Sample data"}

@@ -110,10 +110,25 @@ describe("ContextualBanner", () => {
         kind="demo"
         isDemo={true}
         demoValue={1234}
+        address={undefined}
       />,
     );
     expect(screen.getByText("Preview Mode Active")).toBeInTheDocument();
     expect(screen.getByText(/1234/)).toBeInTheDocument();
+  });
+
+  it("explains sample portfolio when a wallet is connected during opt-in demo", () => {
+    render(
+      <ContextualBanner
+        {...baseProps}
+        kind="demo"
+        isDemo={true}
+        address="0xabc"
+      />,
+    );
+    expect(
+      screen.getByText(/Sample portfolio — add funds on Celo or Arbitrum/),
+    ).toBeInTheDocument();
   });
 
   it("renders the caribbean-rail variant", () => {

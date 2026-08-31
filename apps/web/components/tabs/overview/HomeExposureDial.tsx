@@ -16,8 +16,6 @@ interface Props {
   totalValue: number;
   selectedRegion: string | null;
   onSelectRegion: (region: string | null) => void;
-  onProtect: (region: string) => void;
-  onAskGuardian?: (region: string) => void;
 }
 
 export function HomeExposureDial({
@@ -25,8 +23,6 @@ export function HomeExposureDial({
   totalValue,
   selectedRegion,
   onSelectRegion,
-  onProtect,
-  onAskGuardian,
 }: Props) {
   const slices: RingSlice[] = useMemo(
     () =>
@@ -117,46 +113,6 @@ export function HomeExposureDial({
           );
         })}
       </div>
-
-      {/* Selected-region detail — the one CTA lives here */}
-      {selected && (
-        <div className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 text-left">
-          <p className="text-xs text-gray-700 dark:text-gray-200 mb-2">
-            {selectedPct >= 50 ? (
-              <>
-                More than half your savings sit in <strong>{selected.region}</strong> —
-                one region&apos;s currency risk carries most of your plan.
-              </>
-            ) : selectedPct >= 30 ? (
-              <>
-                <strong>{Math.round(selectedPct)}%</strong> of your savings sit in{' '}
-                <strong>{selected.region}</strong> — meaningful exposure worth watching.
-              </>
-            ) : (
-              <>
-                A light <strong>{Math.round(selectedPct)}%</strong> of your savings sit in{' '}
-                <strong>{selected.region}</strong>.
-              </>
-            )}
-          </p>
-          <button
-            type="button"
-            onClick={() => onProtect(selected.region)}
-            className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-          >
-            Strengthen {selected.region} coverage in Shield
-          </button>
-          {onAskGuardian && (
-            <button
-              type="button"
-              onClick={() => onAskGuardian(selected.region)}
-              className="mt-1 min-h-[44px] w-full rounded-xl text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-            >
-              Ask Guardian about my {selected.region} exposure
-            </button>
-          )}
-        </div>
-      )}
     </div>
   );
 }

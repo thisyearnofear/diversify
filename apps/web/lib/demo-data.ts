@@ -4,6 +4,7 @@
  */
 
 import type { Region } from "@/hooks/use-user-region";
+import { calculateProjections } from "@diversifi/shared/src/utils/portfolio-analysis";
 
 export const DEMO_PORTFOLIO = {
     totalValue: 1000,
@@ -199,11 +200,10 @@ export const DEMO_PORTFOLIO = {
         positions: [],
     },
 
-    projections: {
-        oneMonth: { optimistic: 1050, pessimistic: 950, expected: 1000 },
-        threeMonth: { optimistic: 1150, pessimistic: 850, expected: 1000 },
-        oneYear: { optimistic: 1500, pessimistic: 500, expected: 1000 },
-    },
+    // Must match PortfolioAnalysis.projections — the Shield plan ring
+    // reads currentPath.purchasingPowerLost. The old oneMonth/oneYear
+    // shape was truthy but had no currentPath, which crashed demo mode.
+    projections: calculateProjections(4.2, 2.0, 1000, 3),
 
     isLoading: false,
     isStale: false,

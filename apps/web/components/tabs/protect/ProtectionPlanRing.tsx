@@ -2,9 +2,8 @@
  * ProtectionPlanRing — the Shield tab's Tier-1 marquee.
  *
  * The tab's one expressive object: the user's plan as an interactive ring.
- * Tap a slice (or its legend row) to see target vs held for that token and
- * jump straight into the review swap. The footer surfaces the purchasing-power
- * projections the portfolio engine already computed but never visualized.
+ * Tap a slice (or its legend row) to select it — the tab inspector
+ * owns the CTA. The footer surfaces purchasing-power projections.
  *
  * Design language: the ring is the one object that gets color; everything
  * around it is quiet. Motion reveals the reallocation, never loops.
@@ -24,8 +23,6 @@ interface Props {
   /** Controlled selection — the tab's focus state lives in ProtectionTab. */
   selectedToken: string | null;
   onSelectToken: (token: string | null) => void;
-  /** Jump into the exchange with a pre-filled protection move. */
-  onReviewSwap: (toToken: string) => void;
 }
 
 const TOKEN_COLORS: Record<string, string> = {
@@ -45,7 +42,6 @@ export function ProtectionPlanRing({
   portfolio,
   selectedToken,
   onSelectToken,
-  onReviewSwap,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -80,16 +76,13 @@ export function ProtectionPlanRing({
   }));
 
   const selected = allocations.find((a) => a.token === selectedToken) ?? null;
-  const selectedHeld = selected ? heldPctByToken.get(selected.token) ?? 0 : 0;
-  const gapPct = selected ? selected.percent - selectedHeld : 0;
 
   const projections = portfolio?.projections;
-  const showProjections = Boolean(
-    totalValue > 0 &&
-      projections &&
-      (projections.currentPath.purchasingPowerLost > 0 ||
-        projections.optimizedPath.purchasingPowerPreserved > 0),
-  );
+  const purchasingPowerLost = projections?.currentPath?.purchasingPowerLost ?? 0;
+  const purchasingPowerPreserved =
+    projections?.optimizedPath?.purchasingPowerPreserved ?? 0;
+  const showProjections =
+    totalValue > 0 && (purchasingPowerLost > 0 || purchasingPowerPreserved > 0);
 
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
@@ -180,45 +173,16 @@ export function ProtectionPlanRing({
         })}
       </div>
 
-      {/* Selected-slice detail — the one CTA lives here */}
-      {selected && (
-        <div className="mt-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
-          <p className="text-xs text-gray-700 dark:text-gray-200 mb-2">
-            {gapPct > 2 ? (
-              <>
-                You hold <strong>{selectedHeld.toFixed(0)}%</strong> — the plan calls for{' '}
-                <strong>{selected.percent}%</strong>. Closing the gap adds{' '}
-                {selected.token} protection to your portfolio.
-              </>
-            ) : (
-              <>
-                You hold <strong>{selectedHeld.toFixed(0)}%</strong> of a{' '}
-                <strong>{selected.percent}%</strong> target — this slice is on plan.
-              </>
-            )}
-          </p>
-          {gapPct > 2 && totalValue > 0 && (
-            <button
-              type="button"
-              onClick={() => onReviewSwap(selected.token)}
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
-            >
-              Review move to {selected.token} (~{fmt((gapPct / 100) * totalValue)})
-            </button>
-          )}
-        </div>
-      )}
-
       {/* Purchasing-power projection — the dark data, finally visible */}
-      {showProjections && projections && (
+      {showProjections && (
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
           3-year path: inflation takes{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
-            {fmt(projections.currentPath.purchasingPowerLost)}
+            {fmt(purchasingPowerLost)}
           </strong>{' '}
           on the current mix; the optimized plan preserves{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
-            {fmt(projections.optimizedPath.purchasingPowerPreserved)}
+            {fmt(purchasingPowerPreserved)}
           </strong>
           .
         </p>

@@ -142,25 +142,10 @@ const defaultHomeSections: HomeSections = {
   isAdvanced: false,
   banner: null,
   heroVariant: "detailed",
-  sections: [
-    { id: "smart-tips", title: "Smart Tips", defaultOpen: false },
-  ],
-  showProtectionMix: true,
-  showRegionSelector: false,
-  showTwoChainsBanner: false,
-  showAgentCommandCenter: false,
-  showRewards: false,
-  showMarketIntel: false,
-  showSmartTips: true,
-  showInsightAccordion: true,
-  showProtectionScorecard: false,
-  showGuardianChip: false,
-  showStrategyMetrics: false,
+  showDial: true,
   showZakat: false,
-  showRegionalInsights: false,
-  showBusinessDashboard: false,
+  isPaymentCycle: false,
   primaryTip: null,
-  primarySectionId: "protection-mix",
   dismissFxCorridorHint: vi.fn(),
 };
 
@@ -345,7 +330,7 @@ describe("ConnectedOverview — diversificationTips ordering regression", () => 
     mockExperienceMode = "beginner";
     mockProfileComplete = true;
     mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: null };
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner" };
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
 
     expect(() => renderOverview()).not.toThrow();
   });
@@ -427,7 +412,7 @@ describe("ConnectedOverview — currency-moment hero", () => {
 
   it("keeps the beginner protection mix — that mode has no dial", () => {
     mockExperienceMode = "beginner";
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner" };
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
     mockMoment = GHANA_MOMENT;
     renderOverview();
 

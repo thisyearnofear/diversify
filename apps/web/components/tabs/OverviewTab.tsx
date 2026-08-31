@@ -1,13 +1,13 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
-import { useWalletContext } from "../wallet/WalletProvider";
-import { useDemoMode } from "../../context/app/DemoModeContext";
+import { useWalletContext } from "@/components/wallet/WalletProvider";
+import { useDemoMode } from "@/context/app/DemoModeContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
-import { NotConnectedState } from "./overview/NotConnectedState";
-import { ConnectingState } from "./overview/ConnectingState";
-import { ConnectedOverview } from "./overview/ConnectedOverview";
-import OverviewSkeleton from "../ui/skeletons/OverviewSkeleton";
+import { NotConnectedState } from "@/components/tabs/overview/NotConnectedState";
+import { ConnectingState } from "@/components/tabs/overview/ConnectingState";
+import { ConnectedOverview } from "@/components/tabs/overview/ConnectedOverview";
+import OverviewSkeleton from "@/components/ui/skeletons/OverviewSkeleton";
 
 interface OverviewTabProps {
   portfolio: MultichainPortfolio;
@@ -49,45 +49,25 @@ export default function OverviewTab({
 
   const isDemo = demoMode.isActive;
   const hasHoldings = (portfolio?.totalValue ?? 0) > 0;
+  // A fetch has completed for this address. `isLoading` starts false, so
+  // treating "not loading" as "empty" auto-previewed connected wallets
+  // before Celo/Arbitrum balances arrived.
+  const balancesSettled =
+    portfolio?.lastUpdated != null && !portfolio?.isLoading;
 
-  // Cold start: when a wallet is connected but has no holdings on supported chains,
-  // auto-enable demo mode so the user immediately sees what protection looks like.
-  // They can exit via the "Exit Demo" button in the demo banner.
-  // Waits for balances to actually load — firing on the initial empty render
-  // put connected users into "Preview Mode" before their real portfolio arrived.
-  const autoEnabledRef = useRef(false);
-  useEffect(() => {
-    if (
-      address &&
-      !isConnecting &&
-      !portfolio?.isLoading &&
-      !hasHoldings &&
-      !demoMode.isActive &&
-      !autoEnabledRef.current
-    ) {
-      autoEnabledRef.current = true;
-      enableDemoMode();
-    }
-  }, [address, isConnecting, portfolio?.isLoading, hasHoldings, demoMode.isActive, enableDemoMode]);
-
-  // Real holdings arrived (or loaded late) — demo must never hide a real
-  // portfolio. Exit demo automatically when the wallet has funds.
+  // Demo is opt-in (unconnected "try sample data"). Never auto-enable it
+  // for a connected wallet — empty connected wallets get the cold-start
+  // (add funds), not a fake $1,000 portfolio. If they opted in and then
+  // real holdings arrive, drop demo so it never hides their money.
   useEffect(() => {
     if (demoMode.isActive && hasHoldings) {
       disableDemoMode();
     }
   }, [demoMode.isActive, hasHoldings, disableDemoMode]);
 
-  // If user explicitly disabled demo, don't auto-re-enable in this session.
-  useEffect(() => {
-    if (!demoMode.isActive) {
-      autoEnabledRef.current = false;
-    }
-  }, [demoMode.isActive]);
+  const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
 
-  const activePortfolio = isDemo || (!hasHoldings && address && !isConnecting) ? DEMO_PORTFOLIO : portfolio;
-
-  if (isLoading && address) {
+  if (address && (isLoading || !balancesSettled)) {
     return <OverviewSkeleton />;
   }
 

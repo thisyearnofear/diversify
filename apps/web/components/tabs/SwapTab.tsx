@@ -5,7 +5,6 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
-import { motion } from "framer-motion";
 import SwapInterface from "../swap/SwapInterface";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
@@ -32,16 +31,10 @@ import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
-import { StreakRewardsSection } from "../rewards/StreakRewardsCard";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
-import { MobileCollapsible } from "../ui/MobileCollapsible";
 import { useMobile } from "../../hooks/use-mobile";
-import { useInView } from "../../hooks/use-in-view";
 import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
-import YieldDiscoverySection from "../earn/YieldDiscoverySection";
-import YieldBridgePrompt from "../swap/YieldBridgePrompt";
-import SwapInsightsPanel from "../swap/SwapInsightsPanel";
 import { SocialContactPicker } from "../swap/SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
 import ErrorBoundary from "../ui/ErrorBoundary";
@@ -81,10 +74,6 @@ export default function SwapTab({
   const isBeginner = experienceMode === "beginner";
   const isDemo = demoMode.isActive;
   const isMobile = useMobile();
-
-  // Lazy loading refs for below-the-fold sections
-  const insightsInViewRef = useInView<HTMLDivElement>({ rootMargin: '100px', triggerOnce: true });
-  const yieldInViewRef = useInView<HTMLDivElement>({ rootMargin: '100px', triggerOnce: true });
 
   const {
     swap: performSwap,
@@ -229,7 +218,6 @@ export default function SwapTab({
 
   const handleClaimG = flow.handleClaim;
 
-  const isArbitrum = ChainDetectionService.isArbitrum(walletChainId ?? null);
   const activeNetworkName = useMemo(() => {
     const activeChainId = walletChainId ?? preferredChainId;
     return (
@@ -619,13 +607,7 @@ export default function SwapTab({
                 ]}
               >
                 <div className="flex items-center gap-3 mb-4">
-                  <motion.div
-                    animate={{ scale: [1, 1.1, 1] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="text-3xl"
-                  >
-                    💰
-                  </motion.div>
+                  <span className="text-3xl">💰</span>
                   <div>
                     <h3 className="font-bold text-green-900 dark:text-green-100 text-lg">
                       Get Started
@@ -645,18 +627,6 @@ export default function SwapTab({
                 </div>
               </Card>
             )}
-
-            {/* GoodDollar UBI Streak — collapsible on mobile */}
-            <ErrorBoundary moduleName="Streak Rewards">
-              <MobileCollapsible 
-                title="Daily Rewards" 
-                icon="🔥" 
-                className="mb-4"
-                defaultCollapsedOnMobile={true}
-              >
-                <StreakRewardsSection />
-              </MobileCollapsible>
-            </ErrorBoundary>
 
             {showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
@@ -806,63 +776,6 @@ export default function SwapTab({
           </>
         )}
       </Card>
-
-      {/* Yield opportunities — dynamic from LI.FI Earn. In MiniPay, these show Arbitrum/Base vaults, so skip */}
-      {!isMiniPay && !isArbitrum && address && (
-        <div ref={yieldInViewRef.ref}>
-          {yieldInViewRef.inView ? (
-            <div id="yield-opportunities">
-              <MobileCollapsible 
-                title="Yield Opportunities" 
-                icon="📈" 
-                defaultCollapsedOnMobile={true}
-              >
-                <YieldDiscoverySection
-                  chainId={walletChainId || preferredChainId}
-                  description="Ranked vaults with route context so you can review the destination before selecting token amount."
-                  actionLabel="Review in Swap"
-                  onSelectVault={(vault) => {
-                    if (swapInterfaceRef.current?.setTokens) {
-                      swapInterfaceRef.current.setTokens(
-                        vault.asset.symbol,
-                        `lifi-earn:${vault.id}`,
-                        "",
-                        walletChainId || preferredChainId,
-                        vault.chainId
-                      );
-                    }
-                  }}
-                />
-              </MobileCollapsible>
-            </div>
-          ) : (
-            <Skeleton className="h-24 w-full" variant="rect" />
-          )}
-        </div>
-      )}
-
-      {/* Advanced: Regional Hedge & Action Guidance (collapsible on mobile, lazy-loaded). Skip in MiniPay */}
-      {!isMiniPay && !isArbitrum && address && !isBeginner && (
-        <div ref={insightsInViewRef.ref}>
-          {insightsInViewRef.inView ? (
-            <MobileCollapsible 
-              title="Market Insights" 
-              icon="📊" 
-              defaultCollapsedOnMobile={true}
-            >
-              <SwapInsightsPanel
-                userRegion={userRegion}
-                inflationData={inflationData}
-              />
-            </MobileCollapsible>
-          ) : (
-            <div className="space-y-4">
-              <Skeleton className="h-32 w-full" variant="rect" />
-              <Skeleton className="h-48 w-full" variant="rect" />
-            </div>
-          )}
-        </div>
-      )}
 
       {/* Success Celebration Modal — passes user goal and live goal score for personalised display */}
       {celebrationData && (

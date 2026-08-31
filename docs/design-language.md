@@ -91,7 +91,7 @@ When you need a new control, first check whether an existing motif can
 carry it. Inventing a new control idiom costs the user learning you
 already paid for once.
 
-## 5. Motion does work; surfaces disclose in tiers
+## 5. Motion does work; tabs are instruments
 
 Animation budget goes to motion that *reveals, selects, or confirms* —
 not to ambient freshness.
@@ -105,17 +105,31 @@ the bundle):
 - **Rubber-band tilt**: `useTransform(x, v => clamp(v * 0.02))` —
   rotation proportional to drag displacement. The object argues back.
 - **Origami fold** (`rotateX` from `transformOrigin: top`): the reveal
-  IS the transition — no fade-through-a-middle-state.
+  IS the transition — no fade-through-a-middle-state. `InspectorSheet`
+  uses this when a selection opens.
 - **Blur-swap** (`phaseVariants`/`staggerChild` in onboarding): content
   swaps through a 6px blur, never a y-jump.
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
 
-Progressive disclosure is three tiers, never more:
+Each tab is an **instrument**, not a feed of cards:
 
-1. **Visible** — the numbers, the counterfactual, the single CTA.
-2. **One tap** — "What this means for your money" (how protection works,
-   business context), event chip detail.
-3. **Next phase** — full selection surfaces.
+1. **Object** — the thing you manipulate (risk moment, exposure dial,
+   plan ring, swap ticket, Guardian ledger). First viewport. This is
+   the one object that gets the color (§2).
+2. **Inspector** — opens from a selection (`InspectorSheet`). Empty
+   selection means the sheet is closed, not a stack of closed rows.
+3. **One CTA** — attached to the inspector or the object's current
+   shape. A second button with the same destination is a bug.
+4. **Morph** — the same screen changes shape with user state and
+   persona (no plan → picker; empty → fund; gap → rebalance; aligned →
+   quiet). Persona retargets the object; it does not reorder a module
+   list. Leftover jobs go to Ask Guardian, not a basement of features.
+
+`DisclosureSection` is not IA. Accordion rows are a density tactic.
+Disclosure is allowed only for **trust footnotes** (data source, method).
+
+Review test: *does this block change the object, the inspector, or the
+one CTA?* If not, it leaves the tab.
 
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see
@@ -152,7 +166,10 @@ truthfully somewhere verifiable.
 - [ ] CTA in or near first viewport on mobile (~600px content above it).
 - [ ] Each text block names a job that no other block names.
 - [ ] One expressive object; everything else quiet.
-- [ ] Controls reuse an existing motif (coin, segmented control, disclosure).
+- [ ] Controls reuse an existing motif (coin, segmented control, ring).
+- [ ] Name the object, what selection opens, the one CTA, and which
+      persona morphs the object. A new `*Card` or `DisclosureSection`
+      as a tab sibling is out of contract.
 - [ ] Motion reveals/selects/confirms; no ambient decoration.
 - [ ] Reduced-motion path verified.
 - [ ] Disclaimers/honesty copy appear exactly once, in plain words.
@@ -253,6 +270,9 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `Coin`, `FloatingCoins` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif, ambient field |
 | `GuardianMascot` | `apps/web/components/shared/GuardianMascot.tsx` | digital shield mascot, mood + gaze system |
 | `LensCoinSelector` | `apps/web/components/onboarding/LensCoinSelector.tsx` | flickable selection row |
+| `InstrumentShell` | `apps/web/components/shared/InstrumentShell.tsx` | tab layout: object + inspector + status |
+| `InspectorSheet` | `apps/web/components/shared/InspectorSheet.tsx` | selection-bound fold/sheet; closed when idle |
+| `AllocationRing` | `apps/web/components/shared/AllocationRing.tsx` | plan ring, exposure dial |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` | real token logos w/ coin fallback |

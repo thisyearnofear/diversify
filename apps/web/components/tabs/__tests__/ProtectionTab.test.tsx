@@ -1,8 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup } from "@testing-library/react";
+import { render, screen, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
+let mockFinancialStrategy: string | null = null;
+let mockGuardianState = "idle";
 const mockAdvisor = vi.fn();
 vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAdvisor }),
@@ -97,13 +99,6 @@ vi.mock("@/hooks/use-agent-status", () => ({
   useAgentStatus: () => ({ isLoading: false }),
 }));
 
-vi.mock("@/components/agent/AgentTierStatus", () => ({
-  GuardianStatusChip: () =>
-    React.createElement("div", { "data-testid": "guardian-status-chip" }),
-  useGuardianTierSnapshotFrom: () => ({ guardianState: "idle" }),
-  AgentTierStatus: () => null,
-}));
-
 const mockNavigateToSwap = vi.fn();
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({ navigateToSwap: mockNavigateToSwap }),
@@ -111,13 +106,50 @@ vi.mock("@/context/app/NavigationContext", () => ({
 
 vi.mock("@/context/app/StrategyContext", () => ({
   useStrategy: () => ({
-    financialStrategy: null,
+    financialStrategy: mockFinancialStrategy,
     setFinancialStrategy: vi.fn(),
   }),
 }));
 
+vi.mock("@/components/agent/AgentTierStatus", () => ({
+  GuardianStatusChip: () =>
+    React.createElement("div", { "data-testid": "guardian-status-chip" }),
+  useGuardianTierSnapshotFrom: () => ({ guardianState: mockGuardianState }),
+  AgentTierStatus: () => null,
+}));
+
+vi.mock("@/hooks/use-vault", () => ({
+  useVault: () => ({
+    vault: null,
+    refresh: vi.fn(),
+    createVault: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/use-session-key", () => ({
+  useSessionKey: () => ({
+    requestPermission: vi.fn(),
+    signedPermission: null,
+    sessionInfo: null,
+    deriveGuardianState: vi.fn(),
+  }),
+}));
+
+vi.mock("@/hooks/use-currency-risk", () => ({
+  useCurrencyRisk: () => ({ riskData: null, primaryDepreciation: 0 }),
+}));
+
+vi.mock("@/components/tabs/protect/ProtectionPlanRing", () => ({
+  ProtectionPlanRing: () =>
+    React.createElement("div", { "data-testid": "protection-plan-ring" }),
+}));
+
 vi.mock("@/context/app/DemoModeContext", () => ({
-  useDemoMode: () => ({ demoMode: { isActive: false } }),
+  useDemoMode: () => ({
+    demoMode: { isActive: false },
+    enableDemoMode: vi.fn(),
+    disableDemoMode: vi.fn(),
+  }),
 }));
 
 vi.mock("@/context/app/ExperienceContext", () => ({
@@ -276,9 +308,11 @@ const MOCK_PORTFOLIO = {
   tokenCount: 5,
 } as any;
 
-describe("ProtectionTab Confetti", () => {
+describe("ProtectionTab — instrument shapes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockFinancialStrategy = null;
+    mockGuardianState = "idle";
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
       chainId: null,
@@ -289,10 +323,67 @@ describe("ProtectionTab Confetti", () => {
     cleanup();
   });
 
-  it("renders without connected wallet", () => {
-    render(
-      <ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />,
-    );
+  it("renders the unconnected shell when there is no wallet", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     expect(document.body).toBeTruthy();
+    expect(screen.queryByTestId("shield-picker")).not.toBeInTheDocument();
+  });
+
+  it("shows the plan picker when connected with no philosophy", () => {
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-gallery")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("yield-discovery")).not.toBeInTheDocument();
+  });
+
+  it("shows the fund CTA when a plan exists but the wallet is empty", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
+    expect(screen.getByTestId("deposit-hub")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-picker")).not.toBeInTheDocument();
+  });
+
+  it("shows the ring, not a feature catalog, when holdings exist", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("shield-ring")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-picker")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("yield-discovery")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("rwa-cards")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("portfolio-recommendations")).not.toBeInTheDocument();
+  });
+
+  it("is quiet when aligned and Guardian is monitoring", () => {
+    mockFinancialStrategy = "africapitalism";
+    mockGuardianState = "monitoring";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(
+      <ProtectionTab
+        userRegion="USA"
+        portfolio={{
+          ...MOCK_PORTFOLIO,
+          diversificationScore: 95,
+          weightedInflationRisk: 0,
+        }}
+      />,
+    );
+    expect(screen.getByTestId("shield-quiet")).toBeInTheDocument();
   });
 });
