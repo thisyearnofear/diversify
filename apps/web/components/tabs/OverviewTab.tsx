@@ -55,11 +55,14 @@ export default function OverviewTab({
   // Cold start: when a wallet is connected but has no holdings on supported chains,
   // auto-enable demo mode so the user immediately sees what protection looks like.
   // They can exit via the "Exit Demo" button in the demo banner.
+  // Waits for balances to actually load — firing on the initial empty render
+  // put connected users into "Preview Mode" before their real portfolio arrived.
   const autoEnabledRef = useRef(false);
   useEffect(() => {
     if (
       address &&
       !isConnecting &&
+      !portfolio?.isLoading &&
       !hasHoldings &&
       !demoMode.isActive &&
       !autoEnabledRef.current
@@ -67,7 +70,15 @@ export default function OverviewTab({
       autoEnabledRef.current = true;
       enableDemoMode();
     }
-  }, [address, isConnecting, hasHoldings, demoMode.isActive, enableDemoMode]);
+  }, [address, isConnecting, portfolio?.isLoading, hasHoldings, demoMode.isActive, enableDemoMode]);
+
+  // Real holdings arrived (or loaded late) — demo must never hide a real
+  // portfolio. Exit demo automatically when the wallet has funds.
+  useEffect(() => {
+    if (demoMode.isActive && hasHoldings) {
+      disableDemoMode();
+    }
+  }, [demoMode.isActive, hasHoldings, disableDemoMode]);
 
   // If user explicitly disabled demo, don't auto-re-enable in this session.
   useEffect(() => {

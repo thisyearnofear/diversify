@@ -21,6 +21,7 @@ import { useColdStart } from "@/hooks/use-cold-start";
 import type { TabId } from "@/constants/tabs";
 import { ApacRailHonestyBanner } from "@/components/shared/ApacRailHonestyBanner";
 import { CaribbeanRailHonestyBanner } from "@/components/shared/CaribbeanRailHonestyBanner";
+import { useWalletContext } from "@/components/wallet/WalletProvider";
 import { NetworkOptimizedOnramp } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
@@ -255,6 +256,9 @@ function DemoVariant({
   demoValue?: number;
   onDisableDemo?: () => void;
 }) {
+  // When a real wallet is connected, say WHY they're seeing sample data —
+  // "Preview Mode Active" alone read like the wallet hadn't connected.
+  const { address } = useWalletContext();
   return (
     <Card padding="p-0" className="overflow-hidden border-2 border-blue-500 dark:border-blue-600">
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4">
@@ -264,7 +268,11 @@ function DemoVariant({
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-white">Preview Mode Active</h3>
               <p className="text-xs text-blue-100 truncate">
-                {demoValue ? `$${demoValue.toFixed(0)} sample portfolio` : "Sample data"}
+                {address
+                  ? "Sample data — no holdings detected on your wallet yet"
+                  : demoValue
+                    ? `$${demoValue.toFixed(0)} sample portfolio`
+                    : "Sample data"}
               </p>
             </div>
           </div>

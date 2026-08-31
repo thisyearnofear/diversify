@@ -107,16 +107,19 @@ export function useGraduationSignal(
     setIsLoading(true);
     setError(null);
     try {
-      // Cached auth only — never prompt for a signature here. If no
-      // cached proof exists, the endpoint will reject with 401 and
-      // we treat the user as 'no signal data'.
+      // Cached auth only — never prompt for a signature here. With no cached
+      // proof there is nothing to send — skip the fetch entirely instead of
+      // burning a round-trip on a guaranteed 401.
       const proof = getCachedWalletAuth(address);
-      const headers: Record<string, string> = proof
-        ? {
-            "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
-            "X-Wallet-Auth-Signature": proof.signature,
-          }
-        : {};
+      if (!proof) {
+        setData(null);
+        setIsLoading(false);
+        return;
+      }
+      const headers: Record<string, string> = {
+        "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
+        "X-Wallet-Auth-Signature": proof.signature,
+      };
 
       const res = await fetchWithTimeout(
         API_PATH,
