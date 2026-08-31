@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
+import { GuardianMascot } from "../shared/GuardianMascot";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { usePrivy } from "@privy-io/react-auth";
 import { useVoiceEnabled } from "../ui/VoiceButton";
@@ -318,8 +319,9 @@ export default function AutomationSettings({
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
       <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight">
-          🤖 Protection Settings
+        <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight flex items-center justify-center gap-2">
+          <GuardianMascot size={28} mood="protective" />
+          Protection Settings
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Monitor and control your AI wealth protection agents

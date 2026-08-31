@@ -452,7 +452,7 @@ function ConfidenceFactors({ analysis }: { analysis: PortfolioAnalysis }) {
             label: 'Model Confidence',
             value: analysis.diversificationScore > 50 ? 0.85 : 0.75,
             status: analysis.diversificationScore > 50 ? 'High' : 'Medium',
-            icon: '🤖'
+            icon: '🎯'
         },
     ];
 

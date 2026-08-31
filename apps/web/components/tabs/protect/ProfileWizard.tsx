@@ -1,8 +1,59 @@
 import React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { StepCard, QuickSelect } from "../../shared/TabComponents";
+import { Coin } from "../../shared/FloatingCoins";
 import { USER_GOALS, RISK_LEVELS, TIME_HORIZONS } from "@/hooks/use-protection-profile";
 import type { UserGoal, ProfileMode } from "@/hooks/use-protection-profile";
+
+/**
+ * CoinFlipSteps — the CoinSteps motif doing work inside the product.
+ *
+ * Three coins, one per wizard step: the current step's coin is bright and
+ * face-up, completed coins have flipped to their settled face, upcoming
+ * coins sit dimmed. The flip spring is the same rotateY family as
+ * LensCoinSelector's minting animation — the onboarding signature
+ * interaction reconnected to the plan wizard (Wave 10 brand continuity).
+ * Disabled under prefers-reduced-motion (coins just change state).
+ */
+function CoinFlipSteps({ current, total }: { current: number; total: number }) {
+    const reduceMotion = useReducedMotion();
+    return (
+        <div
+            className="flex items-center justify-center gap-3 mb-3"
+            role="img"
+            aria-label={`Step ${current + 1} of ${total}`}
+        >
+            {Array.from({ length: total }, (_, i) => {
+                const isComplete = i < current;
+                const isCurrent = i === current;
+                return (
+                    <motion.div
+                        key={i}
+                        animate={
+                            isComplete && !reduceMotion
+                                ? { rotateY: 360, scale: 1 }
+                                : { rotateY: 0, scale: isCurrent ? 1.1 : 1 }
+                        }
+                        transition={
+                            isComplete && !reduceMotion
+                                ? { type: 'spring', stiffness: 260, damping: 18 }
+                                : { type: 'spring', stiffness: 320, damping: 24 }
+                        }
+                        style={{ transformStyle: 'preserve-3d' }}
+                        className={isComplete || isCurrent ? '' : 'opacity-40'}
+                    >
+                        <Coin
+                            size={28}
+                            symbol={String(i + 1)}
+                            variant="progress"
+                            shine={isCurrent}
+                        />
+                    </motion.div>
+                );
+            })}
+        </div>
+    );
+}
 
 interface ProfileWizardProps {
     mode: ProfileMode;
@@ -56,6 +107,7 @@ export default function ProfileWizard({
                         exit={{ opacity: 0, x: -20 }}
                         transition={{ duration: 0.3, ease: "easeInOut" }}
                     >
+                        <CoinFlipSteps current={currentStep} total={3} />
                         {currentStep === 0 && (
                             <StepCard
                                 step={1}
