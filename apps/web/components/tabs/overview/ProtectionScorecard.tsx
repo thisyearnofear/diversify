@@ -237,9 +237,9 @@ export function ProtectionScorecard({
     <section id="protection-scorecard" data-home-section="protection-scorecard" className="scroll-mt-20">
       <Card padding="p-0" className="overflow-hidden">
         <div
-          className="p-5"
+          className="p-5 bg-white dark:bg-gray-900"
           style={{
-            background: `${framing.accent}08`,
+            borderTop: `3px solid ${framing.accent}`,
           }}
         >
           <div className="flex items-center justify-between mb-4">

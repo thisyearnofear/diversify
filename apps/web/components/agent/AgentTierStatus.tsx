@@ -171,12 +171,9 @@ export function GuardianStatusChip({
 
   return (
     <div
-      className={`rounded-2xl border p-4 ${className}`}
+      className={`rounded-2xl border p-4 bg-white dark:bg-gray-900 shadow-sm ${className}`}
       style={{
         borderColor: `${archetype.accent}4d`,
-        background: isActive
-          ? `linear-gradient(135deg, ${archetype.accent}0c 0%, ${archetype.accent}14 100%)`
-          : `linear-gradient(135deg, ${archetype.accent}06 0%, ${archetype.accent}10 100%)`,
       }}
       role="status"
       aria-label={`Guardian: ${copy.headline}`}
