@@ -108,17 +108,18 @@ export default async function handler(
         const settlementPlan = buildSettlementPlan(result);
 
         // Persist durable settlement records for the net obligations so the
-        // debtor can execute the cUSD transfer later (POST /api/fx-netting/settle
+        // debtor can execute the transfer later (POST /api/fx-netting/settle
         // verifies it on-chain and advances both sides to `settled`). The
         // intent ids each obligation collapses are the matched intents of
-        // its source matches (deduped).
-        const settlementChainId = settlementPlan.transfers[0]?.chainId ?? 42220;
+        // its source matches (deduped). Chain + currency are per-obligation —
+        // the engine's region-canonical routing (APAC → HashKey/USDT,
+        // Africa/Caribbean/LatAm → Celo/cUSD) — never a global constant.
         const obligations = settlementPlan.transfers.map((t) => ({
             fromParticipant: t.fromParticipant,
             toParticipant: t.toParticipant,
             settlementCurrency: t.settlementCurrency,
             netAmount: t.netAmount,
-            chainId: settlementChainId,
+            chainId: t.chainId,
             sourceMatchIds: t.sourceMatchIds,
         }));
         if (obligations.length > 0) {
@@ -142,8 +143,6 @@ export default async function handler(
             const { persistSettlements } = await import('@/lib/fx-intent-pool');
             const { FxSettlementRecord } = await import('@/models/FxSettlementRecord');
             const records = buildSettlementRecords(obligations, {
-                chainId: settlementChainId,
-                settlementCurrency: 'cUSD',
                 now,
             }).map((r) => ({
                 ...r,

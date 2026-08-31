@@ -44,6 +44,7 @@ import {
   isSettlementDebtor,
 } from '@diversifi/shared/src/services/fx-netting/settlement-execution';
 import { CELO_TOKEN_ADDRESSES } from '@diversifi/shared/src/config/celo-tokens';
+import { HASHKEY_TOKENS } from '@diversifi/shared/src/config';
 
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;
@@ -71,16 +72,45 @@ interface SettleResponse {
 
 /** RPC for a settlement chain id — one env key per rail, no silent fallbacks. */
 function getRpcUrl(chainId: number): string {
-  const rpc =
-    (chainId === 42220 && process.env.CELO_RPC_URL) ||
-    process.env.NEXT_PUBLIC_CELO_RPC ||
-    'https://forno.celo.org';
-  if (chainId !== 42220) {
-    // Region-agnostic guard: never verify a settlement against the wrong
-    // rail. New rails (e.g. HashKey 177) add an explicit branch + env key.
-    throw new Error(`No RPC configured for settlement chain ${chainId}`);
+  switch (chainId) {
+    case 42220: // Celo — Africa/Caribbean/LatAm
+      return (
+        process.env.CELO_RPC_URL ||
+        process.env.NEXT_PUBLIC_CELO_RPC ||
+        'https://forno.celo.org'
+      );
+    case 177: // HashKey — APAC rail (verified on-chain: chainId 0xb1)
+      return process.env.HASHKEY_RPC_URL || 'https://mainnet.hsk.xyz';
+    default:
+      // Region-agnostic guard: never verify a settlement against the wrong
+      // rail. New rails add an explicit branch + env key here first.
+      throw new Error(`No RPC configured for settlement chain ${chainId}`);
   }
-  return rpc;
+}
+
+/**
+ * Token metadata for the settlement currency on the settlement chain.
+ * Region-agnostic: keyed by chain + currency symbol, resolved from the
+ * verified on-chain token configs (never guessed per request).
+ *   - Celo 42220: cUSD (Mento) via CELO_TOKEN_ADDRESSES
+ *   - HashKey 177: USDT (canonical stablecoin, 6 decimals — no native USDC)
+ *   - Arbitrum 42161: USDC
+ */
+function resolveSettlementToken(
+  chainId: number,
+  currency: string
+): { address: string; decimals: number } | null {
+  if (chainId === 42220) {
+    const meta = CELO_TOKEN_ADDRESSES[currency];
+    return meta ? { address: meta.address, decimals: meta.decimals } : null;
+  }
+  if (chainId === 177) {
+    // HASHKEY_TOKENS.USDT = canonical USDT; HASHKEY_TOKENS.USDC = bridged
+    // USDC.e. Both 6 decimals, verified on-chain. Env-overridable.
+    const address = HASHKEY_TOKENS[currency as keyof typeof HASHKEY_TOKENS];
+    return address ? { address, decimals: 6 } : null;
+  }
+  return null;
 }
 
 interface ParsedTransferLog {
@@ -205,8 +235,9 @@ export default async function handler(
     }
 
     // Token metadata for the settlement currency on the settlement chain.
-    const tokenMeta =
-      CELO_TOKEN_ADDRESSES[doc.settlementCurrency] ?? null;
+    // Celo → Mento cUSD; HashKey → canonical USDT (verified on-chain, 6
+    // decimals — HashKey has no native USDC, only bridged USDC.e).
+    const tokenMeta = resolveSettlementToken(doc.chainId, doc.settlementCurrency);
     if (!tokenMeta) {
       return res.status(400).json({
         error: `Unsupported settlement currency ${doc.settlementCurrency} — no on-chain token configured`,

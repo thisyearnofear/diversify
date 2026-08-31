@@ -17,6 +17,11 @@
 
 import type { NettingResult, FxMatch, NetObligation, FxIntent } from './intent';
 import { fxRegionForCurrency, type FxRegion } from '../fx-drag/regions';
+import {
+    canonicalChainForRegion,
+    matchRegionOf,
+    regionLabel,
+} from './settlement-rails';
 
 /** Ledger-anchor params for a single match — mirrors recordRecommendation's args. */
 export interface MatchAnchorParams {
@@ -118,51 +123,10 @@ export function buildSettlementPlan(
     };
 }
 
-/** Region label for anchor reasoning (human-readable). */
-function regionLabel(region: FxRegion): string {
-    switch (region) {
-        case 'africa': return 'Africa';
-        case 'caribbean': return 'Caribbean (CARICOM)';
-        case 'asia': return 'APAC';
-        case 'latam': return 'LatAm';
-        default: return 'cross-region';
-    }
-}
-
-/** Canonical anchor chain for a region (mirrors FX_ANCHOR_CHAIN_BY_REGION in x402-gateway). */
-function anchorChainForRegion(region: FxRegion): number | undefined {
-    switch (region) {
-        case 'asia': return 177;       // HashKey — APAC rail
-        case 'africa': return 42220;   // Celo — Africa / EM savings ledger
-        case 'latam': return 42220;    // Celo — LatAm shares the EM ledger
-        case 'caribbean': return 42220; // Celo — Caribbean rail
-        default: return undefined;      // default routing (Arbitrum)
-    }
-}
-
-/**
- * Detect the dominant region for a match — the region of the sell currency.
- * If both currencies are in the same region, that's unambiguous. If they
- * differ (cross-region match), we use the sell currency's region and label
- * it "cross-region" in the reasoning.
- */
-function matchRegion(match: FxMatch): { region: FxRegion; label: string } {
-    const sellRegion = fxRegionForCurrency(match.intentA.sellCurrency);
-    const buyRegion = fxRegionForCurrency(match.intentA.buyCurrency);
-    if (sellRegion === buyRegion && sellRegion !== 'other') {
-        return { region: sellRegion, label: regionLabel(sellRegion) };
-    }
-    // Cross-region match — use sell currency's region for chain routing
-    if (sellRegion !== 'other') {
-        return { region: sellRegion, label: `cross-region (${regionLabel(sellRegion)}→${regionLabel(buyRegion)})` };
-    }
-    return { region: 'other', label: regionLabel('other') };
-}
-
 function matchToAnchor(m: FxMatch, config: SettlementConfig): MatchAnchorParams {
     const a = m.intentA;
-    const { region, label } = matchRegion(m);
-    const anchorChain = anchorChainForRegion(region) ?? config.anchorChainId;
+    const { region, label } = matchRegionOf(m);
+    const anchorChain = canonicalChainForRegion(region) ?? config.anchorChainId;
     return {
         user: a.participantId,
         action: 'FX_MATCH',
@@ -181,7 +145,7 @@ function obligationToTransfer(ob: NetObligation, config: SettlementConfig): Sett
         toParticipant: ob.toParticipant,
         settlementCurrency: ob.settlementCurrency,
         netAmount: ob.netAmount,
-        chainId: config.settlementChainId,
+        chainId: ob.chainId ?? config.settlementChainId,
         sourceMatchIds: ob.sourceMatchIds,
     };
 }

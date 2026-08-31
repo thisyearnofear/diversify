@@ -82,10 +82,16 @@ export interface FxMatch {
 export interface NetObligation {
   fromParticipant: string;
   toParticipant: string;
-  /** Settlement currency (e.g. 'cUSD', 'USDC'). */
+  /** Settlement currency (e.g. 'cUSD', 'USDC', 'USDT'). */
   settlementCurrency: string;
   /** Net amount in settlement currency, major units. */
   netAmount: number;
+  /**
+   * Region-canonical settlement chain the obligation settles on
+   * (settlement-rails.ts — Celo for Africa/Caribbean/LatAm, HashKey for APAC).
+   * Matches that settle on different chains are NEVER netted together.
+   */
+  chainId: number;
   /** The matches that collapsed into this net obligation (for audit). */
   sourceMatchIds: string[];
 }

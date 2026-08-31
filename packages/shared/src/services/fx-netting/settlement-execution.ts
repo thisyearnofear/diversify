@@ -74,8 +74,10 @@ export const AMOUNT_EPSILON = 5e-7;
 export function buildSettlementRecords(
     obligations: readonly NetObligation[],
     options: {
-        chainId: number;
-        settlementCurrency: string;
+        /** Fallback when an obligation doesn't carry its own chain. */
+        chainId?: number;
+        /** Fallback when an obligation doesn't carry its own currency. */
+        settlementCurrency?: string;
         now: number;
         /** Id factory — deterministic in tests, ULID-ish in the route. */
         newId?: (index: number) => string;
@@ -86,13 +88,20 @@ export function buildSettlementRecords(
 
     obligations.forEach((ob, i) => {
         if (!(ob.netAmount > 0)) return;
+        const chainId = ob.chainId ?? options.chainId;
+        const settlementCurrency = ob.settlementCurrency ?? options.settlementCurrency;
+        if (!chainId || !settlementCurrency) {
+            throw new Error(
+                `Net obligation ${i} is missing chainId/settlementCurrency — pass them on the obligation or via options`,
+            );
+        }
         records.push({
             settlementId: newId(i),
             fromParticipant: ob.fromParticipant,
             toParticipant: ob.toParticipant,
-            settlementCurrency: options.settlementCurrency,
+            settlementCurrency,
             netAmount: ob.netAmount,
-            chainId: options.chainId,
+            chainId,
             sourceMatchIds: [...ob.sourceMatchIds],
             intentIds: [],
             createdAt: options.now,

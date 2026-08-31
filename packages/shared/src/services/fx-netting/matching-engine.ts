@@ -28,6 +28,12 @@ import {
     type CurrencyCode,
     DEFAULT_CORRIDOR_COST_BPS,
 } from './intent';
+import {
+    canonicalChainForRegion,
+    settlementCurrencyForChain,
+    matchRegionOf,
+    DEFAULT_SETTLEMENT_CHAIN_ID,
+} from './settlement-rails';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
@@ -165,7 +171,8 @@ function nextMatchId(): string {
 
 /**
  * Collapse all pairwise matches into net obligations per participant pair,
- * denominated in the settlement currency (cUSD/USDC). This is the track's
+ * denominated in the region-canonical settlement currency (cUSD on Celo,
+ * USDT on HashKey — settlement-rails.ts). This is the track's
  * "Net Settlement Layer": "Aggregates transactions across multiple parties;
  * settles only net obligations between institutions; reduces capital
  * requirements and liquidity strain."
@@ -173,10 +180,41 @@ function nextMatchId(): string {
  * For each match, we compute what each participant owes the other in the
  * settlement currency, then net the two directions — only the net debtor
  * pays the net creditor.
+ *
+ * Matches are grouped by their region-canonical settlement chain BEFORE
+ * netting: an APAC pair nets in USDT on HashKey, an African/Caribbean pair
+ * nets in cUSD on Celo. A participant pair whose matched flows span rails
+ * gets one obligation per chain — flows on different chains are never
+ * netted together (that would ask someone to pre-fund the wrong rail).
  */
 export function computeNetObligations(
     matches: readonly FxMatch[],
     settlementCurrency: string,
+    midRate: MidRateFn,
+): NetObligation[] {
+    // Group matches by settlement chain, then net within each group.
+    const byChain = new Map<number, FxMatch[]>();
+    for (const m of matches) {
+        const { region } = matchRegionOf(m);
+        const chainId =
+            canonicalChainForRegion(region) ?? DEFAULT_SETTLEMENT_CHAIN_ID;
+        const group = byChain.get(chainId);
+        if (group) group.push(m);
+        else byChain.set(chainId, [m]);
+    }
+
+    const obligations: NetObligation[] = [];
+    for (const [chainId, chainMatches] of byChain) {
+        const currency = settlementCurrencyForChain(chainId) ?? settlementCurrency;
+        obligations.push(...netMatchesOnChain(chainMatches, currency, chainId, midRate));
+    }
+    return obligations;
+}
+
+function netMatchesOnChain(
+    matches: readonly FxMatch[],
+    settlementCurrency: string,
+    chainId: number,
     midRate: MidRateFn,
 ): NetObligation[] {
     // Accumulate gross obligations: who owes whom, in settlement currency.
@@ -205,6 +243,7 @@ export function computeNetObligations(
             toParticipant: val.amount > 0 ? to : from,
             settlementCurrency,
             netAmount: Math.abs(val.amount),
+            chainId,
             sourceMatchIds: val.matchIds,
         });
     }
@@ -219,11 +258,16 @@ function addObligation(
     netFlow: number,
     matchId: string,
 ): void {
-    const key = `${a}>${b}`;
-    const existing = ledger.get(key) ?? { amount: 0, matchIds: [] };
-    existing.amount += netFlow;
+    // Canonical pair key (lowercased, ordered) so A→B and B→A flows NET
+    // against each other — the whole point of the net settlement layer.
+    const ordered =
+        a.toLowerCase() <= b.toLowerCase()
+            ? { key: `${a}>${b}`, flow: netFlow }
+            : { key: `${b}>${a}`, flow: -netFlow };
+    const existing = ledger.get(ordered.key) ?? { amount: 0, matchIds: [] };
+    existing.amount += ordered.flow;
     existing.matchIds.push(matchId);
-    ledger.set(key, existing);
+    ledger.set(ordered.key, existing);
 }
 
 // ─── Full pipeline ───────────────────────────────────────────────────────
