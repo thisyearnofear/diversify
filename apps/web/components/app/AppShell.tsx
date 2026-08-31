@@ -11,7 +11,7 @@
 import { AppShellProvider, useAppShellContext } from "@/context/app/AppShellContext";
 import { NETWORKS } from "@/config";
 import { shouldShowTestnetBanner } from "@/constants/testnet";
-import TabNavigation from "@/components/ui/TabNavigation";
+import TabNavigation, { DesktopRail } from "@/components/ui/TabNavigation";
 import { WalletTutorial } from "@/components/wallet/WalletTutorial";
 import AppHeader from "@/components/app/AppHeader";
 import { TabDiscoveryProvider } from "@/hooks/use-tab-discovery";
@@ -75,7 +75,13 @@ function AppShellInner() {
   const archetype = ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'];
 
   return (
-    <div className="max-w-md mx-auto">
+    <div className="lg:pl-20">
+      <DesktopRail
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        experienceMode={experienceMode}
+      />
+      <div className="max-w-md mx-auto lg:max-w-2xl">
       <AppBackdrop accent={archetype.accent} />
       <FloatingControls
         openAdvisor={openAdvisor}
@@ -148,6 +154,7 @@ function AppShellInner() {
         onConnect={connectWallet}
         isMiniPay={isMiniPay}
       />
+      </div>
     </div>
   );
 }

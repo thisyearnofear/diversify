@@ -130,12 +130,13 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
 
   return (
     <>
-      <TabNavHint activeTab={activeTab} />
-      <div
-        role="tablist"
-        aria-label="Main navigation"
-        className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
-      >
+      <div className="lg:hidden">
+        <TabNavHint activeTab={activeTab} />
+        <div
+          role="tablist"
+          aria-label="Main navigation"
+          className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
+        >
         <div className="max-w-md mx-auto flex">
         {adaptiveOrder.map((tab, index) => {
           const badgeCount = badges[tab.id];
@@ -196,7 +197,80 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
           );
         })}
       </div>
-    </div>
+      </div>
+      </div>
     </>
+  );
+}
+
+/**
+ * DesktopRail — the lg+ sibling of the bottom tab bar. Same tabs, same
+ * adaptive visibility/order/labels, same badges — a vertical rail so the
+ * desktop shell is a two-pane layout (rail + content) instead of a phone
+ * column in decorated margins. Solid surface per the design language.
+ */
+export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
+  const mode = experienceMode ?? 'intermediate';
+  const visibleTabIds = getVisibleTabIds(mode);
+  const visibleTabs = TABS.filter((t) => visibleTabIds.includes(t.id));
+  const { config: adaptiveConfig } = useAdaptiveContext();
+  const tabLabels = useMemo(
+    () => adaptiveConfig?.tabLabels ?? {},
+    [adaptiveConfig],
+  );
+
+  const adaptiveOrder = useMemo(() => {
+    const order = adaptiveConfig?.content?.tabOrder;
+    if (!order || order.length === 0) return visibleTabs;
+    return [...visibleTabs].sort((a, b) => {
+      const ai = order.indexOf(a.id);
+      const bi = order.indexOf(b.id);
+      if (ai === -1 && bi === -1) return visibleTabs.indexOf(a) - visibleTabs.indexOf(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }, [adaptiveConfig?.content?.tabOrder, visibleTabs]);
+
+  return (
+    <nav
+      aria-label="Main navigation"
+      className="hidden lg:flex fixed left-0 top-0 h-full w-20 z-50 flex-col items-center py-6 gap-1
+                 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700"
+    >
+      {adaptiveOrder.map((tab) => {
+        const badgeCount = badges[tab.id];
+        const hasBadge = badgeCount !== undefined && badgeCount > 0;
+        const isActive = activeTab === tab.id;
+        const label = tabLabels[tab.id] ?? tab.label;
+
+        return (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={isActive}
+            onClick={() => {
+              haptics.tap();
+              setActiveTab(tab.id);
+            }}
+            className={`relative w-16 min-h-[64px] py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors ${
+              isActive
+                ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
+                : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+            }`}
+          >
+            {hasBadge && (
+              <span className="absolute top-1 right-2 bg-orange-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+                {badgeCount > 99 ? "99+" : badgeCount}
+              </span>
+            )}
+            <div className="[&>svg]:size-6">{tab.icon}</div>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight px-0.5">
+              {label}
+            </span>
+          </button>
+        );
+      })}
+    </nav>
   );
 }

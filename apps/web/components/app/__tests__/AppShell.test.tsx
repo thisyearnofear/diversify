@@ -47,6 +47,8 @@ vi.mock("@/components/app/AppHeader", () => ({
 vi.mock("@/components/ui/TabNavigation", () => ({
   default: () =>
     React.createElement("div", { "data-testid": "tab-navigation" }),
+  DesktopRail: () =>
+    React.createElement("div", { "data-testid": "desktop-rail" }),
 }));
 
 vi.mock("@/components/ui/ErrorBoundary", () => ({
