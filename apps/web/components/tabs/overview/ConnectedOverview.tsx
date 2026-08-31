@@ -45,6 +45,7 @@ import RiskMetrics from "../../enterprise-fx/RiskMetrics";
 import TradeIntelligence from "../../enterprise-fx/TradeIntelligence";
 import CaribbeanFxNetCard from "../../business/CaribbeanFxNetCard";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
+import DisclosureSection from "../../shared/DisclosureSection";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -468,38 +469,59 @@ export function ConnectedOverview({
         chains + tokens shape StrategyMetrics expects.
       */}
       {home.showStrategyMetrics && hasHoldings && (
-        <StrategyMetrics
-          portfolioData={{
-            regions: regionData.reduce<Record<string, number>>(
-              (acc, r) => {
-                acc[r.region] = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
-                return acc;
-              },
-              {},
-            ),
-            chains: Array.isArray((activePortfolio as { chains?: unknown }).chains)
-              ? ((activePortfolio as { chains: unknown[] }).chains
-                  .map((c) => (typeof c === "string" ? c : (c as { name?: string })?.name))
-                  .filter((c): c is string => typeof c === "string"))
-              : [],
-            tokens: (activePortfolio.allTokens ?? []).map((t) => ({
-              symbol: t.symbol,
-              balance: t.balance,
-              value: t.value,
-            })),
-          }}
-        />
+        <DisclosureSection
+          id="home-philosophy-alignment"
+          title="Philosophy alignment"
+          summary="How your holdings align with your values lens"
+          icon="🧭"
+        >
+          <StrategyMetrics
+            portfolioData={{
+              regions: regionData.reduce<Record<string, number>>(
+                (acc, r) => {
+                  acc[r.region] = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
+                  return acc;
+                },
+                {},
+              ),
+              chains: Array.isArray((activePortfolio as { chains?: unknown }).chains)
+                ? ((activePortfolio as { chains: unknown[] }).chains
+                    .map((c) => (typeof c === "string" ? c : (c as { name?: string })?.name))
+                    .filter((c): c is string => typeof c === "string"))
+                : [],
+              tokens: (activePortfolio.allTokens ?? []).map((t) => ({
+                symbol: t.symbol,
+                balance: t.balance,
+                value: t.value,
+              })),
+            }}
+          />
+        </DisclosureSection>
       )}
 
       {home.showZakat && hasHoldings && (
-        <ZakatCalculator totalPortfolioValue={totalValue} />
+        <DisclosureSection
+          id="home-zakat"
+          title="Zakat calculator"
+          summary="2.5% nisab obligation on your current holdings"
+          icon="🕌"
+        >
+          <ZakatCalculator totalPortfolioValue={totalValue} />
+        </DisclosureSection>
       )}
 
       {profileConfig.moneyPurpose === 'upcoming_payment' && (
-        <PaymentCycleReport
-          defaultLocalCurrency={currencyCode ?? undefined}
-          onAskGuardian={(prompt) => askAdvisor(prompt)}
-        />
+        <DisclosureSection
+          id="home-payment-cycle"
+          title="Upcoming payment plan"
+          summary="Protect funds timed to your payment date"
+          icon="📅"
+        >
+          <PaymentCycleReport
+            defaultLocalCurrency={currencyCode ?? undefined}
+            onAskGuardian={(prompt) => askAdvisor(prompt)}
+          />
+        </DisclosureSection>
       )}
 
       {/* ── GRADUATION PROMPT (Phase 4) ───────────────────────────────
@@ -614,19 +636,27 @@ export function ConnectedOverview({
                 refreshBalances={refreshBalances}
                 yieldSummary={portfolio}
               />
-              <DiversificationHealthCard
-                analysis={activePortfolio}
-                isLoading={activePortfolio.isLoading}
-                onTakeAction={(opp) =>
-                  navigateToSwap({
-                    fromToken: opp.fromToken,
-                    toToken: opp.toToken,
-                    amount: String(opp.suggestedAmount),
-                    reason: `Rebalance ${opp.fromRegion} → ${opp.toRegion}`,
-                  })
-                }
-                className="mt-4"
-              />
+              <DisclosureSection
+                id="home-deep-analysis"
+                title="Deep analysis"
+                summary="Risk, concentration and portfolio health breakdowns"
+                icon="🔬"
+                className="mt-2"
+              >
+                <DiversificationHealthCard
+                  analysis={activePortfolio}
+                  isLoading={activePortfolio.isLoading}
+                  onTakeAction={(opp) =>
+                    navigateToSwap({
+                      fromToken: opp.fromToken,
+                      toToken: opp.toToken,
+                      amount: String(opp.suggestedAmount),
+                      reason: `Rebalance ${opp.fromRegion} → ${opp.toRegion}`,
+                    })
+                  }
+                  className="mt-4"
+                />
+              </DisclosureSection>
             </>
           )}
         </section>
@@ -646,31 +676,45 @@ export function ConnectedOverview({
           data-home-section="regional-insights"
           className="scroll-mt-20"
         >
-          <RegionalRecommendations
-            userRegion={userRegion}
-            currentAllocations={regionData.reduce<Record<string, number>>(
-              (acc, r) => {
-                acc[r.region] = totalValue > 0 ? r.value / totalValue : 0;
-                return acc;
-              },
-              {},
-            )}
-            onSelectToken={(token) =>
-              navigateToSwap({ fromToken: token, reason: `Add ${token} exposure` })
-            }
-          />
+          <DisclosureSection
+            id="home-regional-insights"
+            title="Regional insights"
+            summary="How your allocation compares to your region's pattern"
+            icon="🌍"
+          >
+            <RegionalRecommendations
+              userRegion={userRegion}
+              currentAllocations={regionData.reduce<Record<string, number>>(
+                (acc, r) => {
+                  acc[r.region] = totalValue > 0 ? r.value / totalValue : 0;
+                  return acc;
+                },
+                {},
+              )}
+              onSelectToken={(token) =>
+                navigateToSwap({ fromToken: token, reason: `Add ${token} exposure` })
+              }
+            />
+          </DisclosureSection>
         </section>
       )}
 
       {!home.isBeginner && hasHoldings && (
         <section id="inflation-protection" data-home-section="inflation-protection" className="scroll-mt-20">
-          <InflationProtectionInfo
-            homeRegion={userRegion}
-            currentRegions={regionData
-              .filter((r) => REGIONS.includes(r.region as any))
-              .map((r) => r.region as Region)}
-            onChangeHomeRegion={setUserRegion}
-          />
+          <DisclosureSection
+            id="home-inflation-protection"
+            title="Inflation protection"
+            summary="How your home currency's inflation shapes the plan"
+            icon="🛡️"
+          >
+            <InflationProtectionInfo
+              homeRegion={userRegion}
+              currentRegions={regionData
+                .filter((r) => REGIONS.includes(r.region as any))
+                .map((r) => r.region as Region)}
+              onChangeHomeRegion={setUserRegion}
+            />
+          </DisclosureSection>
         </section>
       )}
 

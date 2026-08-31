@@ -45,6 +45,7 @@ import { useVault } from "@/hooks/use-vault";
 import { useSessionKey } from "@/hooks/use-session-key";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
+import DisclosureSection from "../shared/DisclosureSection";
 
 // Lazy-load heavy sub-sections that fire network requests on mount.
 // These are below-the-fold and shouldn't block the initial render.
@@ -488,9 +489,17 @@ export default function ProtectionTab({
             switch (sectionId) {
               case 'savings-loop':
                 return (
-                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
-                    <SavingsLoopCard />
-                  </Suspense>
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-savings-loop"
+                    title="Savings loop"
+                    summary="Claim G$, build your streak, protect on repeat"
+                    icon="🔁"
+                  >
+                    <Suspense fallback={<LazySectionSkeleton />}>
+                      <SavingsLoopCard />
+                    </Suspense>
+                  </DisclosureSection>
                 );
               case 'plan-gallery':
                 return (
@@ -528,11 +537,18 @@ export default function ProtectionTab({
                 );
               case 'payment-cycle':
                 return (
-                  <PaymentCycleReport
+                  <DisclosureSection
                     key={sectionId}
-                    defaultLocalCurrency={riskData?.code}
-                    onAskGuardian={(prompt) => askAdvisor(prompt)}
-                  />
+                    id="shield-payment-cycle"
+                    title="Upcoming payment plan"
+                    summary="Protect funds timed to your payment date"
+                    icon="📅"
+                  >
+                    <PaymentCycleReport
+                      defaultLocalCurrency={riskData?.code}
+                      onAskGuardian={(prompt) => askAdvisor(prompt)}
+                    />
+                  </DisclosureSection>
                 );
               case 'shield-rec':
                 return (
@@ -667,56 +683,94 @@ export default function ProtectionTab({
                 );
               case 'rwa-assets':
                 return (
-                  <RwaAssetCards
+                  <DisclosureSection
                     key={sectionId}
-                    chains={chains}
-                    userGoal={config.userGoal}
-                    chainId={chainId}
-                    onSwap={openProtectionFlow}
-                    onShowModal={setShowAssetModal}
-                    experienceMode={experienceMode}
-                  />
+                    id="shield-rwa-assets"
+                    title="Real-world assets"
+                    summary="Tokenized stocks, gold and T-bills you can hold"
+                    icon="🏛️"
+                  >
+                    <RwaAssetCards
+                      chains={chains}
+                      userGoal={config.userGoal}
+                      chainId={chainId}
+                      onSwap={openProtectionFlow}
+                      onShowModal={setShowAssetModal}
+                      experienceMode={experienceMode}
+                    />
+                  </DisclosureSection>
                 );
               case 'robinhood-rwa':
                 return (
-                  <RobinhoodRwaCard
+                  <DisclosureSection
                     key={sectionId}
-                    onLearnMore={() => {
-                      askAdvisor(
-                        "How can I use Robinhood Chain tokenized stocks and USDG to protect my savings against local currency depreciation?"
-                      );
-                    }}
-                  />
-                );
-              case 'best-yield':
-                return (
-                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
-                    <BestYieldCard userAddress={address} className="mb-4" />
-                  </Suspense>
-                );
-              case 'caribbean-fx':
-                return (
-                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
-                    <CaribbeanFxNetCard userAddress={address} />
-                  </Suspense>
-                );
-              case 'yield-discovery':
-                return (
-                  <Suspense key={sectionId} fallback={<LazySectionSkeleton />}>
-                    <YieldDiscoverySection
-                      chainId={chainId ?? undefined}
-                      title="Protection Yield Opportunities"
-                      description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
-                      actionLabel="Review in Protect"
-                      onSelectVault={(vault) => {
-                        openProtectionFlow(
-                          `lifi-earn:${vault.id}`,
-                          vault.asset.symbol,
-                          ""
+                    id="shield-robinhood-rwa"
+                    title="Robinhood Chain stocks"
+                    summary="Tokenized equities + USDG on Robinhood Chain"
+                    icon="📈"
+                  >
+                    <RobinhoodRwaCard
+                      onLearnMore={() => {
+                        askAdvisor(
+                          "How can I use Robinhood Chain tokenized stocks and USDG to protect my savings against local currency depreciation?"
                         );
                       }}
                     />
-                  </Suspense>
+                  </DisclosureSection>
+                );
+              case 'best-yield':
+                return (
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-best-yield"
+                    title="Best yield for your wallet"
+                    summary="Personalized vault picks, ranked by risk rating"
+                    icon="🏆"
+                  >
+                    <Suspense fallback={<LazySectionSkeleton />}>
+                      <BestYieldCard userAddress={address} className="mb-4" />
+                    </Suspense>
+                  </DisclosureSection>
+                );
+              case 'caribbean-fx':
+                return (
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-caribbean-fx"
+                    title="Caribbean FX netting"
+                    summary="Match BBD↔JMD needs directly, settle only the net"
+                    icon="🔄"
+                  >
+                    <Suspense fallback={<LazySectionSkeleton />}>
+                      <CaribbeanFxNetCard userAddress={address} />
+                    </Suspense>
+                  </DisclosureSection>
+                );
+              case 'yield-discovery':
+                return (
+                  <DisclosureSection
+                    key={sectionId}
+                    id="shield-yield-discovery"
+                    title="Yield opportunities"
+                    summary="Low-to-medium risk vaults ranked for your plan"
+                    icon="🌱"
+                  >
+                    <Suspense fallback={<LazySectionSkeleton />}>
+                      <YieldDiscoverySection
+                        chainId={chainId ?? undefined}
+                        title="Protection Yield Opportunities"
+                        description="Low-to-medium risk vaults ranked for protection plans. Review the route, confirm the amount, and then deposit through LI.FI."
+                        actionLabel="Review in Protect"
+                        onSelectVault={(vault) => {
+                          openProtectionFlow(
+                            `lifi-earn:${vault.id}`,
+                            vault.asset.symbol,
+                            ""
+                          );
+                        }}
+                      />
+                    </Suspense>
+                  </DisclosureSection>
                 );
               default:
                 return null;
@@ -730,16 +784,14 @@ export default function ProtectionTab({
 
       {/* REMOVED: Strategy Metrics and Zakat Calculator - tied to financial strategy which didn't add value */}
 
-      {/* Chain Distribution - Non-beginner only */}
+      {/* Chain Distribution — Tier 2 disclosure (Wave 9) */}
       {!isBeginner && displayTotalValue > 0 && (
-        <Section>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <div className="size-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-lg">🔗</div>
-              <h3 className="text-sm font-bold text-gray-900 dark:text-white">Chain Distribution</h3>
-            </div>
-            <span className="text-xs font-bold text-gray-500">{displayChainCount} Chain{displayChainCount !== 1 ? "s" : ""}</span>
-          </div>
+        <DisclosureSection
+          id="shield-chain-distribution"
+          title="Chain distribution"
+          summary={`${displayChainCount} chain${displayChainCount !== 1 ? "s" : ""} holding your funds`}
+          icon="🔗"
+        >
           <MultichainPortfolioBreakdown
             regionData={displayRegionData.map((r) => ({
               region: r.region,
@@ -754,12 +806,18 @@ export default function ProtectionTab({
               tokenCount: c.tokenCount,
             }))}
           />
-        </Section>
+        </DisclosureSection>
       )}
 
 
-      {/* Portfolio Strategy Recommendations - Non-beginner only */}
+      {/* Portfolio Strategy Recommendations — Tier 2 disclosure (Wave 9) */}
       {!isBeginner && displayTotalValue > 0 && (
+        <DisclosureSection
+          id="shield-plan-adjustments"
+          title="Plan adjustments"
+          summary="Guardian-suggested rebalances toward your target plan"
+          icon="🎯"
+        >
         <PortfolioRecommendations
           currentAllocations={Object.fromEntries(
             displayRegionData.map((r) => [r.region, (r.usdValue ?? r.value) / (displayTotalValue || 1)])
@@ -794,6 +852,7 @@ export default function ProtectionTab({
             });
           }}
         />
+        </DisclosureSection>
       )}
 
       {/* REMOVED: Goal-Based Strategies - consolidated to Learn tab with interactive RealWorldUseCases */}

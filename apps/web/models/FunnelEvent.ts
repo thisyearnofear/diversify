@@ -41,6 +41,9 @@ export const FUNNEL_EVENTS = [
   'fx_netting_settle_requested',
   // Missing country feedback — user requests a country not in the dataset
   'country_request_requested',
+  // Wave 9 progressive disclosure — which collapsed sections users expand.
+  // Coarse: section id only. A section nobody expands is a deletion candidate.
+  'section_expand',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 
