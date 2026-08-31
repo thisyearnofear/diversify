@@ -28,14 +28,12 @@ import { HomeNav } from "../../shared/HomeNav";
 import { MoreOptions } from "../../shared/MoreOptions";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useMacroSignals } from "@/hooks/use-macro-signals";
-import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
 import { BusinessPromptCard } from "@/components/business/BusinessPromptCard";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { ProtectionScorecard } from "./ProtectionScorecard";
-import { PaymentCycleReport } from "../protect/PaymentCycleReport";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import StrategyMetrics from "../../portfolio/StrategyMetrics";
 import RegionalRecommendations from "../../regional/RegionalRecommendations";
@@ -104,7 +102,6 @@ export function ConnectedOverview({
   const hasTrackedRegimeTip = useRef(false);
   const { isMiniPay } = useWalletContext();
   const { openAdvisor, askAdvisor } = useAdvisor();
-  const { currencyCode } = useCurrencyRisk();
   const { navigateToSwap } = useNavigation();
   const [showAssetDetails, setShowAssetDetails] = React.useState(false);
 
@@ -510,19 +507,9 @@ export function ConnectedOverview({
         </DisclosureSection>
       )}
 
-      {profileConfig.moneyPurpose === 'upcoming_payment' && (
-        <DisclosureSection
-          id="home-payment-cycle"
-          title="Upcoming payment plan"
-          summary="Protect funds timed to your payment date"
-          icon="📅"
-        >
-          <PaymentCycleReport
-            defaultLocalCurrency={currencyCode ?? undefined}
-            onAskGuardian={(prompt) => askAdvisor(prompt)}
-          />
-        </DisclosureSection>
-      )}
+      {/* NOTE (Wave 9 anti-duplication): PaymentCycleReport has ONE home — the
+          Shield tab. It rendered on both tabs before; the Home copy was
+          removed so no text block names a job another block already names. */}
 
       {/* ── GRADUATION PROMPT (Phase 4) ───────────────────────────────
           Detected trader pattern surfaces here. Density-aware: 0px when

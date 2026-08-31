@@ -93,7 +93,7 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - `components/shared/DisclosureSection.tsx`: the Tier-2 primitive — one-line summary row (title + key fact + chevron, ≥44px target, aria-expanded, reduced-motion aware). Children render ONLY when expanded, so closed sections cost neither vertical space nor their network requests. First expand fires a coarse `section_expand` funnel event (allowlisted in `FunnelEvent.ts`) — a section nobody expands is a deletion candidate, not furniture.
 - Shield (ProtectionTab): Tier 1 = ProtectionJourney + PlanCard/Gallery + Guardian chip/rec. Tier 2 (now collapsed): SavingsLoop, PaymentCycleReport, RWA cards, Robinhood card, BestYield, CaribbeanFxNetCard, YieldDiscovery, ChainDistribution, PortfolioRecommendations.
 - Home (ConnectedOverview): Tier 1 = HeroValue + ProtectionScorecard + ProtectionAnalysis. Tier 2 (now collapsed): StrategyMetrics (Philosophy alignment), ZakatCalculator, PaymentCycleReport, Deep analysis (DiversificationHealth), RegionalRecommendations, InflationProtectionInfo. The InsightAccordion (HomeSection) already covered the rest.
-- Rule going forward (one-in-one-out): a new section must note what it replaces or demotes. Anti-duplication (PaymentCycleReport on 2 tabs) is the next candidate.
+- Rule going forward (one-in-one-out): a new section must note what it replaces or demotes. Anti-duplication done: PaymentCycleReport now lives only on Shield (was on both tabs); Home carries a pointer comment.
 - 962 tests passing.
 
 **APAC rail — HashKey Chain (2026-07-10, code shipped):**
