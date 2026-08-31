@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useRouter } from "next/router";
 import {
   useStreakRewards,
@@ -7,6 +7,7 @@ import {
 } from "../../hooks/use-streak-rewards";
 import { NETWORKS } from "../../config";
 import Scrim from "../shared/Scrim";
+import { Coin } from "../shared/FloatingCoins";
 import { haptics } from "../../lib/haptics";
 
 interface SwapSuccessCelebrationProps {
@@ -49,6 +50,7 @@ export default function SwapSuccessCelebration({
   const [confettiPieces, setConfettiPieces] = useState<
     Array<{ id: number; x: number; color: string; delay: number }>
   >([]);
+  const reduceMotion = useReducedMotion();
 
   // ENHANCEMENT: Track GoodDollar claim progress
   const { canClaim, isEligible, estimatedReward } = useStreakRewards();
@@ -85,25 +87,28 @@ export default function SwapSuccessCelebration({
           onClick={onClose}
         >
           <Scrim intensity="heavy" />
-          {/* Confetti */}
-          {confettiPieces.map((piece) => (
-            <motion.div
-              key={piece.id}
-              initial={{ y: -20, x: `${piece.x}vw`, opacity: 1, rotate: 0 }}
-              animate={{
-                y: "100vh",
-                rotate: 360,
-                opacity: 0,
-              }}
-              transition={{
-                duration: 2,
-                delay: piece.delay,
-                ease: "easeIn",
-              }}
-              className="absolute size-3 rounded-full"
-              style={{ backgroundColor: piece.color }}
-            />
-          ))}
+          {/* Coin rain — brand coins, not generic dots (reduced-motion: none) */}
+          {!reduceMotion &&
+            confettiPieces.map((piece) => (
+              <motion.div
+                key={piece.id}
+                initial={{ y: -20, x: `${piece.x}vw`, opacity: 1, rotateY: 0 }}
+                animate={{
+                  y: "100vh",
+                  rotateY: 360,
+                  opacity: 0,
+                }}
+                transition={{
+                  duration: 2,
+                  delay: piece.delay,
+                  ease: "easeIn",
+                }}
+                className="absolute"
+                style={{ transformStyle: 'preserve-3d' }}
+              >
+                <Coin size={14 + (piece.id % 3) * 6} color={piece.color} variant="ambient" />
+              </motion.div>
+            ))}
 
           {/* Modal */}
           <motion.div
@@ -114,14 +119,16 @@ export default function SwapSuccessCelebration({
             className="relative bg-gradient-to-br from-white via-emerald-50 to-blue-50 dark:from-gray-900 dark:via-emerald-900/20 dark:to-blue-900/20 rounded-3xl shadow-2xl p-8 max-w-md w-full border-2 border-emerald-200 dark:border-emerald-800"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Success Icon */}
+            {/* Minted coin — the destination token, flipping into existence.
+                Same mint idiom as ClaimCelebration and the wizard's coin steps. */}
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", damping: 10 }}
-              className="mx-auto size-20 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-5xl mb-6 shadow-xl"
+              initial={reduceMotion ? { scale: 0 } : { scale: 0, rotateY: -180 }}
+              animate={{ scale: 1, rotateY: 0 }}
+              transition={{ delay: 0.2, type: "spring", damping: 12, stiffness: 200 }}
+              className="mx-auto mb-6 w-fit"
+              style={{ transformStyle: 'preserve-3d' }}
             >
-              🎉
+              <Coin size={80} symbol={toToken} color="#10b981" shine />
             </motion.div>
 
             {/* Title */}
