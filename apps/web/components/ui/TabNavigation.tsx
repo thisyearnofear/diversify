@@ -1,5 +1,5 @@
-import React, { useCallback, useRef, useMemo } from "react";
-import { motion } from "framer-motion";
+import React, { useCallback, useRef, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
 import { getVisibleTabIds } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
@@ -7,6 +7,7 @@ import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { haptics } from "@/lib/haptics";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
+import { spring } from "@/lib/motion-tokens";
 
 interface TabItem {
   id: TabId;
@@ -219,6 +220,15 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
     [adaptiveConfig],
   );
 
+  // Sylva's dock: hover magnifies the tab under the pointer, neighbors lean
+  // in proportionally, and a spring settles everything back on leave.
+  // Pointer-proximity on desktop only — the mouse is the dock's instrument;
+  // touch/keyboard get the flat rail. Reduced motion: flat rail, no spring.
+  const reducedMotion = useReducedMotion();
+  const canDock = !reducedMotion && typeof window !== 'undefined' && window.matchMedia?.('(hover: hover) and (pointer: fine)').matches;
+  const railRef = useRef<HTMLElement | null>(null);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
+
   const adaptiveOrder = useMemo(() => {
     const order = adaptiveConfig?.content?.tabOrder;
     if (!order || order.length === 0) return visibleTabs;
@@ -234,26 +244,42 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
 
   return (
     <nav
+      ref={railRef}
       aria-label="Main navigation"
       className="hidden lg:flex fixed left-0 top-0 h-full w-20 z-50 flex-col items-center py-6 gap-1
                  bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700"
+      onMouseLeave={() => setHoverIndex(null)}
     >
-      {adaptiveOrder.map((tab) => {
+      {adaptiveOrder.map((tab, index) => {
         const badgeCount = badges[tab.id];
         const hasBadge = badgeCount !== undefined && badgeCount > 0;
         const isActive = activeTab === tab.id;
         const label = tabLabels[tab.id] ?? tab.label;
 
+        const hovering = hoverIndex === index;
         return (
-          <button
+          <motion.button
             key={tab.id}
             role="tab"
             aria-selected={isActive}
+            onMouseEnter={canDock ? () => setHoverIndex(index) : undefined}
+            onFocus={canDock ? () => setHoverIndex(index) : undefined}
+            onBlur={canDock ? () => setHoverIndex((cur) => (cur === index ? null : cur)) : undefined}
+            animate={
+              !canDock
+                ? undefined
+                : hovering
+                  ? { scale: 1.18, y: -4 }
+                  : hoverIndex !== null
+                    ? { scale: 1.05, y: 0 }
+                    : { scale: 1, y: 0 }
+            }
+            transition={spring}
             onClick={() => {
               haptics.tap();
               setActiveTab(tab.id);
             }}
-            className={`relative w-16 min-h-[64px] py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors ${
+            className={`relative w-16 min-h-[64px] py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors origin-bottom ${
               isActive
                 ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
                 : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
@@ -268,7 +294,7 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
             <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight px-0.5">
               {label}
             </span>
-          </button>
+          </motion.button>
         );
       })}
     </nav>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { MotionConfig } from 'framer-motion';
 import { NavigationProvider } from './NavigationContext';
 import { ThemeProvider } from './ThemeContext';
 import { ExperienceProvider } from './ExperienceContext';
@@ -24,6 +25,12 @@ import { AgentChatProvider } from './AgentChatContext';
  *   instead of once per consumer (AgentTierStatus, useAgentChat, SwapTab, etc.)
  * - AgentChatProvider shares isChatting/thinkingStep state across
  *   components without a module-level pub-sub.
+ *
+ * MotionConfig is the global reduced-motion backstop: any framer-motion
+ * animation not explicitly gated still respects prefers-reduced-motion
+ * (transform/layout animations become instant). Component-level
+ * useReducedMotion gates remain the primary discipline for SVG/CSS
+ * effects that MotionConfig cannot cover.
  */
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +42,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
               <WalletProvider>
                 <DemoModeProvider>
                   <PortfolioProvider>
-                    <AgentChatProvider>{children}</AgentChatProvider>
+                    <AgentChatProvider>
+                      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                    </AgentChatProvider>
                   </PortfolioProvider>
                 </DemoModeProvider>
               </WalletProvider>

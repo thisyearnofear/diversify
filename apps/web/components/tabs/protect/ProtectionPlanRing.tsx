@@ -9,8 +9,11 @@
  * around it is quiet. Motion reveals the reallocation, never loops.
  */
 import React, { useMemo } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
 import { TokenIcon } from '@/components/shared/TokenIcon';
+import { useCountUp } from '@/hooks/use-count-up';
+import { springPop } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { getArchetypeAllocations } from '@/components/protection-cards/plan-preview';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
@@ -79,6 +82,14 @@ export function ProtectionPlanRing({
   const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
   const selectedSymbol = selectedLive?.id ?? selected?.token ?? null;
 
+  // The center number lands with a count-up; when a slice is selected the
+  // count re-runs to the held percent (Skills "number-details").
+  const reducedMotion = useReducedMotion();
+  const centerNumber = selectedLive ? selectedLive.percent : totalValue;
+  const centerFormatted = useCountUp(centerNumber, {
+    format: (n) => (selectedLive ? `${Math.round(n)}%` : `$${Math.round(n).toLocaleString()}`),
+  });
+
   const projections = portfolio?.projections;
   const purchasingPowerLost = projections?.currentPath?.purchasingPowerLost ?? 0;
   const purchasingPowerPreserved =
@@ -94,12 +105,17 @@ export function ProtectionPlanRing({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
         </h3>
-        <span
-          className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+        {/* Plan switch confirmation — one pop on archetype change, never a loop. */}
+        <motion.span
+          key={archetype.id}
+          className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
           style={{ background: `${archetype.accent}18`, color: archetype.accent }}
+          initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={springPop}
         >
           {archetype.name}
-        </span>
+        </motion.span>
       </div>
 
       <div className="flex justify-center">
@@ -117,14 +133,14 @@ export function ProtectionPlanRing({
                 {selectedSymbol}
               </span>
               <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                {selectedLive?.percent.toFixed(0) ?? 0}%
+                <motion.span>{centerFormatted}</motion.span>
               </span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400">in wallet</span>
             </>
           ) : (
             <>
               <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                {fmt(totalValue)}
+                <motion.span>{centerFormatted}</motion.span>
               </span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400">
                 {portfolio?.chainCount ?? 0} chain{(portfolio?.chainCount ?? 0) !== 1 ? 's' : ''} · tap a slice

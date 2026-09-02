@@ -25,7 +25,7 @@ import { useExperience } from "../../context/app/ExperienceContext";
 import { useSessionKey, type GuardianLoopResult } from "../../hooks/use-session-key";
 import { useVault } from "../../hooks/use-vault";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { agentEventBus } from "../../hooks/agent-event-bus";
 import { AUTONOMOUS_FEATURES } from "../../config/features";
 import { NETWORKS } from "../../config";
@@ -257,6 +257,7 @@ export const AgentTierStatus: React.FC<{
   onAdvisorClick,
   onNavigateToFund,
 }) => {
+  const reducedMotion = useReducedMotion();
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { activities, addActivity } = useAgentActivities();
   const { config } = useAgentConfig();
@@ -726,7 +727,7 @@ export const AgentTierStatus: React.FC<{
       >
         {/* Tier 1: The Advisor */}
         <motion.div
-          whileHover={{ scale: 1.02 }}
+          whileHover={reducedMotion ? undefined : { scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-blue-100 dark:border-blue-900 shadow-sm relative overflow-hidden cursor-pointer"
           onClick={() => {
             setExpandedTier(expandedTier === "advisor" ? null : "advisor");
@@ -799,7 +800,7 @@ export const AgentTierStatus: React.FC<{
 
         {/* Tier 3: The Guardian */}
         <motion.div
-          whileHover={{ scale: 1.02 }}
+          whileHover={reducedMotion ? undefined : { scale: 1.02 }}
           className="bg-white dark:bg-gray-900 p-4 rounded-2xl border-2 border-purple-100 dark:border-purple-900 shadow-sm relative cursor-pointer"
           onClick={() => {
             setExpandedTier(expandedTier === "guardian" ? null : "guardian");

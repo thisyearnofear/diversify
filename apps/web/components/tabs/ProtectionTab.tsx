@@ -25,7 +25,7 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
-import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
@@ -254,30 +254,16 @@ export default function ProtectionTab({
     return `shields-pattern--${normalized}`;
   }, [strategyKey]);
 
+  // Single source of truth: the pattern layer tints with the archetype's
+  // own accent token — the same color the ring badge and plan cards use
+  // (Sylva's "one palette, derived facets" discipline). Only strategies
+  // with no archetype mapping (halo, taco) keep explicit values.
   const patternColor = useMemo(() => {
-    switch (strategyKey) {
-      case "africapitalism":
-        return "#d97706";
-      case "buen_vivir":
-        return "#0d9488";
-      case "pan_caribbean":
-        return "#06b6d4";
-      case "confucian":
-        return "#b91c1c";
-      case "gotong_royong":
-        return "#ea580c";
-      case "islamic":
-        return "#059669";
-      case "halo":
-        return "#7c3aed";
-      case "taco":
-        return "#0284c7";
-      case "global_diversification":
-      case "global":
-        return "#0284c7";
-      default:
-        return "#64748b";
-    }
+    const archetypeId = strategyToArchetype(strategyKey);
+    if (archetypeId) return ARCHETYPES[archetypeId].accent;
+    if (strategyKey === "halo") return "#7c3aed";
+    if (strategyKey === "taco") return "#0284c7";
+    return "#64748b";
   }, [strategyKey]);
 
   const shape = deriveShieldShape({

@@ -9,6 +9,8 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { YearPoint } from "@/lib/learn/protection-calculator";
+import { useCountUp } from "@/hooks/use-count-up";
+import { springPop } from "@/lib/motion-tokens";
 
 interface ProtectionCalculatorProps {
   amount: number;
@@ -42,6 +44,11 @@ export function ProtectionCalculator({
   const reducedMotion = useReducedMotion();
   const point = series[selectedYear] ?? series[series.length - 1];
   const preserved = Math.max(0, (point?.protected ?? 0) - (point?.cash ?? 0));
+  // The one colored number on the tab counts to its value on load and
+  // re-counts on year selection (Skills "number-details").
+  const preservedFormatted = useCountUp(preserved, {
+    format: (n) => `${currencyCode} ${Math.round(n).toLocaleString()}`,
+  });
   const mixWord = mixLabel.toLowerCase() === "gold" ? "gold" : `your ${mixLabel} mix`;
   const maxBar = Math.max(
     1,
@@ -82,7 +89,7 @@ export function ProtectionCalculator({
           className="text-4xl font-black tabular-nums leading-none"
           style={{ color: ACCENT }}
         >
-          {currencyCode} {fmt(preserved)}
+          <motion.span>{preservedFormatted}</motion.span>
         </p>
         <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 leading-snug">
           {selectedYear === 0
@@ -115,14 +122,17 @@ export function ProtectionCalculator({
               className="flex-1 min-h-[44px] flex flex-col items-center justify-end gap-1"
             >
               <div className="relative w-full max-w-[28px] h-20 mx-auto">
-                <div
+                <motion.div
                   className={`absolute bottom-0 left-0 right-0 rounded-t-md ${
                     selected ? "bg-blue-600" : "bg-blue-200 dark:bg-blue-800"
                   }`}
                   style={{
                     height: `${Math.max(protH, 4)}%`,
+                    transformOrigin: "bottom",
                     transition: reducedMotion ? undefined : "height 0.35s ease",
                   }}
+                  animate={selected && !reducedMotion ? { scaleY: [1, 1.04, 1] } : { scaleY: 1 }}
+                  transition={springPop}
                 />
                 <div
                   className="absolute bottom-0 left-0 right-0 rounded-t-md bg-gray-300 dark:bg-gray-600 opacity-80"

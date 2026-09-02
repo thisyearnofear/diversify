@@ -48,9 +48,9 @@ afterEach(() => {
 });
 
 describe('CurrencyMomentCard — Home opening artifact', () => {
-  it('shows the delta as the headline and the personal consequence underneath', () => {
+  it('shows the delta as the headline and the personal consequence underneath', async () => {
     render(<CurrencyMomentCard {...baseProps} />);
-    expect(screen.getByText('−18%')).toBeInTheDocument();
+    expect(await screen.findByText('−18%')).toBeInTheDocument();
     expect(screen.getByText(/buying power · 1Y vs US Dollar/)).toBeInTheDocument();
     expect(screen.getByText(/now buys/)).toBeInTheDocument();
     expect(screen.getByText('GHS 1,800')).toBeInTheDocument();

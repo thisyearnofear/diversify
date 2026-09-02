@@ -9,7 +9,10 @@
  * rest of the page can subscribe.
  */
 import React, { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
+import { useCountUp } from '@/hooks/use-count-up';
+import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 
 interface Props {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -39,6 +42,14 @@ export function HomeExposureDial({
   const selectedPct =
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
 
+  // The center number lands with a count-up (Skills "number-details") and
+  // the dial leans toward the pointer (Sylva's responsive scene).
+  const centerValue = selected ? selected.value : totalValue;
+  const animatedCenter = useCountUp(centerValue, {
+    format: (n) => `$${Math.round(n).toLocaleString()}`,
+  });
+  const tilt = usePointerTilt(true);
+
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const toggle = (region: string) =>
     onSelectRegion(selectedRegion === region ? null : region);
@@ -49,6 +60,10 @@ export function HomeExposureDial({
         Where your savings sit
       </h3>
       <div className="flex justify-center mt-2">
+        <motion.div
+          style={{ ...tilt.style, transformPerspective: 900 }}
+          {...tilt.props}
+        >
         <AllocationRing
           slices={slices}
           selectedId={selectedRegion}
@@ -62,7 +77,7 @@ export function HomeExposureDial({
                 {selected.region}
               </span>
               <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                {fmt(selected.value)}
+                <motion.span>{animatedCenter}</motion.span>
               </span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400">
                 {Math.round(selectedPct)}% of savings
@@ -71,7 +86,7 @@ export function HomeExposureDial({
           ) : (
             <>
               <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                {fmt(totalValue)}
+                <motion.span>{animatedCenter}</motion.span>
               </span>
               <span className="text-[11px] text-gray-500 dark:text-gray-400">
                 {regionData.length} region{regionData.length !== 1 ? 's' : ''} · tap a slice
@@ -79,6 +94,7 @@ export function HomeExposureDial({
             </>
           )}
         </AllocationRing>
+        </motion.div>
       </div>
 
       {/* Legend — the same selection surface as the dial, in list form */}

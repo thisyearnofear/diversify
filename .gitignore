@@ -17,6 +17,9 @@ build
 # misc
 .DS_Store
 
+# Stray screenshot captures at the repo root (e.g. test.png, --full-page)
+/*.png
+
 # TypeScript incremental build cache
 *.tsbuildinfo
 *.pem

@@ -9,8 +9,8 @@
  * adaptive experience: different personas see different information
  * architecture in the same shell.
  */
-import { type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { TabId } from "@/constants/tabs";
 
@@ -54,18 +54,82 @@ const InfoTab = dynamic(() => import("@/components/tabs/InfoTab"), {
 interface TabPaneProps {
   id: string;
   children: ReactNode;
+  /** Which edge the content enters from — set by the swipe/tab direction. */
+  direction: 1 | -1;
 }
 
-const tabTransition = {
-  initial: { opacity: 0, y: 8 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
-  transition: { duration: 0.18, ease: "easeOut" as const },
-};
-
-function TabPane({ id, children }: TabPaneProps) {
+function TabPane({ id, children, direction }: TabPaneProps) {
+  const reducedMotion = useReducedMotion();
   return (
-    <motion.div key={id} {...tabTransition}>
+    <motion.div
+      key={id}
+      initial={
+        reducedMotion
+          ? { opacity: 0 }
+          : { opacity: 0, x: 24 * direction, y: 0 }
+      }
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      exit={
+        reducedMotion
+          ? { opacity: 0 }
+          : { opacity: 0, x: -24 * direction, y: 0 }
+      }
+      transition={{ duration: 0.18, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/**
+ * KeepMountedPane — a pane that never unmounts.
+ *
+ * Maxima's layout trick, adapted: heavy content lives on while hidden, so
+ * returning to the tab is instant (no refetch, no skeleton, no count-up
+ * replay — the state you left is the state you find). Used for the Home
+ * pane only: it is the app's landing object, the most expensive to mount
+ * (wallet fan-out, geolocation, the moment hero), and the one where
+ * re-entry cost is most visible.
+ *
+ * Hidden, not gone: `visibility: hidden` keeps it out of the a11y tree and
+ * unfocusable (opacity alone would leave phantom focus targets) while
+ * framer animates opacity for the re-entry. With `popLayout`, the hidden
+ * pane is removed from layout flow so it never pushes the active tab down.
+ */
+function KeepMountedPane({
+  id,
+  children,
+  active,
+  reducedMotion,
+}: {
+  id: string;
+  children: ReactNode;
+  active: boolean;
+  reducedMotion: boolean;
+}) {
+  const direction = active ? 1 : -1;
+  return (
+    <motion.div
+      key={id}
+      initial={
+        reducedMotion
+          ? { opacity: 0 }
+          : { opacity: 0, x: 24 * direction }
+      }
+      animate={{
+        opacity: active ? 1 : 0,
+        x: 0,
+        // visibility lands in the a11y tree too: hidden panes are invisible
+        // AND unfocusable (unlike opacity alone, which leaves phantom
+        // focus targets). framer animates the crossfade, visibility gates
+        // interaction the moment the fade completes.
+        visibility: active ? "visible" : "hidden",
+      }}
+      transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{ pointerEvents: active ? "auto" : "none" }}
+      data-keep-mounted={id}
+      aria-hidden={!active}
+    >
       {children}
     </motion.div>
   );
@@ -86,7 +150,6 @@ export default function TabContentRouter() {
 
   // Determine Guardian mode — cycle-aware for importers, savings for savers
   const guardianMode = adaptiveConfig?.guardianMode ?? "savings";
-
   // Adaptive tab order — importers see Shield first, savers see Overview
   // This is the foundation of the adaptive UX: different personas see
   // different information architecture, not just different labels.
@@ -96,6 +159,53 @@ export default function TabContentRouter() {
   const tabOrder = rawOrder
     .map((id: string) => id as TabId)
     .filter((id: TabId) => validIds.has(id));
+
+  // Direction-aware transitions: content enters from the side you swiped
+  // toward (or the side the new tab sits on in tab order). Maxima's carousel
+  // rotates toward the arrow — same vocabulary, translate instead of rotate.
+  const prevTabRef = useRef(activeTab);
+  const [direction, setDirection] = useState<1 | -1>(1);
+  useEffect(() => {
+    if (prevTabRef.current === activeTab) return;
+    const prevIdx = tabOrder.indexOf(prevTabRef.current);
+    const nextIdx = tabOrder.indexOf(activeTab);
+    if (prevIdx !== -1 && nextIdx !== -1) setDirection(nextIdx > prevIdx ? 1 : -1);
+    prevTabRef.current = activeTab;
+    // tabOrder is derived config; identity changes don't alter direction math
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+
+  // Keep-mounted Home — the one pane that never unmounts. Kill switch:
+  // NEXT_PUBLIC_KEEP_MOUNTED_HOME=false reverts without a code change.
+  // Disabled under test (NODE_ENV=test) so suites exercise the classic
+  // unmount path and framer stubs never see popLayout.
+  const reducedMotion = useReducedMotion();
+  const RENDER_OVERVIEW_ALWAYS =
+    process.env.NEXT_PUBLIC_KEEP_MOUNTED_HOME !== "false" &&
+    process.env.NODE_ENV !== "test";
+
+  const overviewContent = (
+    <PullToRefresh onRefresh={refresh}>
+      <div className="p-4 space-y-4">
+        <ErrorBoundary moduleName="Streak Widget">
+          <GuardianStreakWidget />
+        </ErrorBoundary>
+        <ErrorBoundary moduleName="Overview Dashboard">
+          <OverviewTab
+            portfolio={multichainPortfolio}
+            isLoading={isMultichainLoading}
+            isRegionLoading={isRegionLoading}
+            userRegion={userRegion}
+            setUserRegion={setUserRegion}
+            REGIONS={REGIONS}
+            setActiveTab={setActiveTab}
+            refreshBalances={refresh}
+            currencyPerformanceData={currencyPerformanceData}
+          />
+        </ErrorBoundary>
+      </div>
+    </PullToRefresh>
+  );
 
   return (
     <motion.div
@@ -121,34 +231,25 @@ export default function TabContentRouter() {
         }
       }}
     >
-      <AnimatePresence mode="wait">
-        {activeTab === "overview" && (
-          <TabPane id="overview">
-            <PullToRefresh onRefresh={refresh}>
-              <div className="p-4 space-y-4">
-                <ErrorBoundary moduleName="Streak Widget">
-                  <GuardianStreakWidget />
-                </ErrorBoundary>
-                <ErrorBoundary moduleName="Overview Dashboard">
-                  <OverviewTab
-                    portfolio={multichainPortfolio}
-                    isLoading={isMultichainLoading}
-                    isRegionLoading={isRegionLoading}
-                    userRegion={userRegion}
-                    setUserRegion={setUserRegion}
-                    REGIONS={REGIONS}
-                    setActiveTab={setActiveTab}
-                    refreshBalances={refresh}
-                    currencyPerformanceData={currencyPerformanceData}
-                  />
-                </ErrorBoundary>
-              </div>
-            </PullToRefresh>
-          </TabPane>
+      <AnimatePresence mode={RENDER_OVERVIEW_ALWAYS ? "popLayout" : "wait"}>
+        {RENDER_OVERVIEW_ALWAYS ? (
+          <KeepMountedPane
+            id="overview"
+            active={activeTab === "overview"}
+            reducedMotion={Boolean(reducedMotion)}
+          >
+            {overviewContent}
+          </KeepMountedPane>
+        ) : (
+          activeTab === "overview" && (
+            <TabPane id="overview" direction={direction}>
+              {overviewContent}
+            </TabPane>
+          )
         )}
 
         {activeTab === "protect" && (
-          <TabPane id="protect">
+          <TabPane id="protect" direction={direction}>
             <ErrorBoundary>
               <ProtectionTab
                 userRegion={userRegion}
@@ -162,7 +263,7 @@ export default function TabContentRouter() {
         )}
 
         {activeTab === "exchange" && (
-          <TabPane id="exchange">
+          <TabPane id="exchange" direction={direction}>
             <ErrorBoundary>
               <ExchangeTab
                 userRegion={userRegion}
@@ -177,7 +278,7 @@ export default function TabContentRouter() {
         )}
 
         {activeTab === "agent" && (
-          <TabPane id="agent">
+          <TabPane id="agent" direction={direction}>
             <ErrorBoundary>
               <AgentTab
                 isMiniPay={isMiniPay}
@@ -191,7 +292,7 @@ export default function TabContentRouter() {
         )}
 
         {activeTab === "info" && (
-          <TabPane id="info">
+          <TabPane id="info" direction={direction}>
             <ErrorBoundary>
               <InfoTab
                 userRegion={userRegion}

@@ -15,7 +15,7 @@
  * pointer-events-none + aria-hidden.
  */
 
-import React, { useId } from 'react';
+import React, { useEffect, useId, useState } from 'react';
 
 /** Linear-interpolate two hex colors. t=0 → a, t=1 → b. */
 function mix(hexA: string, hexB: string, t: number): string {
@@ -210,12 +210,21 @@ export interface FloatingCoinsProps {
 
 export function FloatingCoins({ variant = 'panel', accent = null, className = '' }: FloatingCoinsProps) {
   const specs = variant === 'backdrop' ? BACKDROP_COINS : PANEL_COINS;
+  // Pause the ambient drift while the page is backgrounded — decorative
+  // loops never burn battery invisibly (Skills "optimize-web-animations").
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    const onVisibility = () => setHidden(document.visibilityState === 'hidden');
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, []);
   return (
     <div
       className={`floating-coins floating-coins--${variant} absolute inset-0 overflow-hidden pointer-events-none ${className}`}
       data-coin-field={variant}
       data-testid={`coin-field-${variant}`}
       aria-hidden="true"
+      style={hidden ? { visibility: 'hidden' } : undefined}
     >
       {specs.map((c, i) => (
         <div

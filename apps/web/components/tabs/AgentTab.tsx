@@ -12,7 +12,6 @@ import { useExperience } from "../../context/app/ExperienceContext";
 import { useAdvisor } from "../../hooks/use-advisor";
 import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
-import { Skeleton } from "../shared/TabComponents";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import { GUARDIAN_CONTROL_TITLE } from "@/constants/guardian-copy";
 import { UnconnectedStateShell } from "../shared/UnconnectedStateShell";
@@ -20,6 +19,7 @@ import type { HowItWorksStep } from "../shared/UnconnectedStateShell";
 import WalletButton from "../wallet/WalletButton";
 import { useDemoMode } from "../../context/app/DemoModeContext";
 import { InstrumentShell } from "../shared/InstrumentShell";
+import { InstrumentWait } from "../shared/InstrumentWait";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 
@@ -148,16 +148,11 @@ export default function AgentTab({
       </div>
       <ErrorBoundary moduleName="Guardian Status">
         {isStatusLoading ? (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 space-y-4">
-            <div className="flex items-center gap-3">
-              <Skeleton className="w-12 h-12" variant="circle" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" variant="text" />
-                <Skeleton className="h-3 w-24" variant="text" />
-              </div>
-            </div>
-            <Skeleton className="h-20 w-full" variant="rect" />
-          </div>
+          <InstrumentWait
+            label="Reading Guardian state"
+            symbol="G"
+            color="#7c3aed"
+          />
         ) : (
           <AgentTierStatus
             isMiniPay={isMiniPay}

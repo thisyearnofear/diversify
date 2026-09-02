@@ -16,7 +16,7 @@ import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { CaribbeanFxNetCard } from "@/components/business/CaribbeanFxNetCard";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
-import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
+import RouteSchematic from "../swap/RouteSchematic";
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -106,6 +106,14 @@ export default function ExchangeTab({
     );
   }
 
+  const freshnessPortfolio = portfolio ?? sharedPortfolio;
+  const freshness = freshnessPortfolio
+    ? {
+        ...freshnessPortfolio,
+        isLoading: freshnessPortfolio.isLoading || Boolean(isBalancesLoading),
+      }
+    : undefined;
+
   return (
     <InstrumentShell
       object={
@@ -135,18 +143,17 @@ export default function ExchangeTab({
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Review the selected pair, available balance, route, and settlement chain before confirming.
           </p>
+          {swapPrefill?.fromToken && swapPrefill?.toToken ? (
+            <RouteSchematic
+              fromToken={swapPrefill.fromToken}
+              toToken={swapPrefill.toToken}
+              caption={userRegion}
+            />
+          ) : null}
         </InspectorSheet>
       }
-      status={(portfolio ?? sharedPortfolio) ? (
-        <DataFreshnessIndicator
-          lastUpdated={(portfolio ?? sharedPortfolio)!.lastUpdated}
-          isStale={(portfolio ?? sharedPortfolio)!.isStale}
-          hasEstimates={(portfolio ?? sharedPortfolio)!.hasEstimates}
-          isLoading={(portfolio ?? sharedPortfolio)!.isLoading || Boolean(isBalancesLoading)}
-          error={(portfolio ?? sharedPortfolio)!.errors?.[0] ?? null}
-          onRefresh={refreshBalances}
-        />
-      ) : undefined}
+      portfolio={freshness}
+      onRefresh={refreshBalances}
     />
   );
 }

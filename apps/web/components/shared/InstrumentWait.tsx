@@ -10,6 +10,7 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Coin } from "./FloatingCoins";
+import { spring } from "@/lib/motion-tokens";
 
 interface InstrumentWaitProps {
   /** The job this wait is doing — not "Loading…". */
@@ -38,11 +39,7 @@ export function InstrumentWait({
       <motion.div
         initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={
-          reducedMotion
-            ? { duration: 0 }
-            : { type: "spring", stiffness: 280, damping: 28 }
-        }
+        transition={reducedMotion ? { duration: 0 } : spring}
       >
         <Coin
           size={84}

@@ -26,9 +26,10 @@ afterEach(() => {
 });
 
 describe('HomeExposureDial — Home tab marquee', () => {
-  it('shows the total in the center and every region in the legend', () => {
+  it('shows the total in the center and every region in the legend', async () => {
     render(<HomeExposureDial {...baseProps} />);
-    expect(screen.getByText('$1,000')).toBeInTheDocument();
+    // Center number counts up (Skills "number-details") — await the settle.
+    expect(await screen.findByText('$1,000')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Kenya.*\$500/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /US.*\$300/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /EU.*\$200/ })).toBeInTheDocument();

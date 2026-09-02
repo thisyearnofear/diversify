@@ -13,6 +13,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '@/components/shared/FloatingCoins';
+import { TrustFootnote } from '@/components/shared/TrustFootnote';
 import type { InflationMoment } from '@/lib/narrative/currency-moment';
 import { CountryOverrideSelect } from './CountryOverrideSelect';
 
@@ -102,11 +103,13 @@ export function InflationMomentCard({
         </button>
       )}
 
-      {/* Quiet provenance — data honesty stays, but it whispers */}
-      <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">
-        {moment.isLive && <><span className="text-emerald-500 font-bold">●</span><span> live ·</span></>}
+      {/* Quiet provenance — data honesty stays, but it whispers. The
+          progressive-blur TrustFootnote keeps the first clause readable and
+          expands on hover/tap — never a hide. */}
+      <TrustFootnote className="mt-2">
+        {moment.isLive && <><span className="text-emerald-500 font-bold">●</span><span> live · </span></>}
         as of {moment.dataAsOf} · regional inflation, not advice
-      </p>
+      </TrustFootnote>
 
       {/* Whose savings — diaspora override. Detection is location, risk is
           personal; lets an expat re-point the moment at their home country. */}

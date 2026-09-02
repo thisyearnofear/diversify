@@ -8,6 +8,7 @@
 
 import React, { useRef } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { spring } from "@/lib/motion-tokens";
 
 interface InspectorSheetProps {
   /** Selection key. Null/undefined closes the sheet. */
@@ -56,11 +57,7 @@ export function InspectorSheet({
           initial={variants.initial}
           animate={variants.animate}
           exit={variants.exit}
-          transition={
-            reducedMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 280, damping: 28 }
-          }
+          transition={reducedMotion ? { duration: 0 } : spring}
         >
           <div
             className="w-full flex justify-center pt-2 cursor-grab active:cursor-grabbing"

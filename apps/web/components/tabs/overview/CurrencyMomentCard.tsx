@@ -12,6 +12,9 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '@/components/shared/FloatingCoins';
+import { TrustFootnote } from '@/components/shared/TrustFootnote';
+import { useCountUp } from '@/hooks/use-count-up';
+import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import {
   BENCHMARKS,
@@ -55,6 +58,21 @@ const BENCHMARK_COIN: Record<Benchmark, { glyph: string; color: string }> = {
  */
 const MOMENT_ACCENT = '#6366f1';
 
+/**
+ * DeltaNumber — the moment's one colored number, counted up (Skills
+ * "number-details"). Keyed remounts restart the count on selection.
+ */
+function DeltaNumber({ delta, accent }: { delta: number; accent: string }) {
+  const value = useCountUp(Math.abs(delta), {
+    format: (n) => `${delta > 0 ? '+' : '−'}${Math.round(Math.abs(n))}%`,
+  });
+  return (
+    <div className="text-4xl font-black tabular-nums" style={{ color: accent }}>
+      <motion.span>{value}</motion.span>
+    </div>
+  );
+}
+
 export function CurrencyMomentCard({
   moment,
   benchmarks,
@@ -68,6 +86,9 @@ export function CurrencyMomentCard({
   frame,
 }: Props) {
   const reducedMotion = useReducedMotion();
+  // The stage leans toward the cursor — Sylva's pointer-responsive scene,
+  // damped through a spring. Dead under reduced motion.
+  const tilt = usePointerTilt(!reducedMotion);
   // Philosophy-aware accent once a philosophy is chosen; neutral otherwise.
   const accent = frame?.accent ?? MOMENT_ACCENT;
   const reframe = frame?.reframe(moment.currencyCode) ?? null;
@@ -82,8 +103,12 @@ export function CurrencyMomentCard({
       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
         <span aria-hidden="true">{moment.flag}</span> {moment.countryName} · {moment.currencyCode}
       </p>
-      {/* The stage — local coin vs benchmark coin */}
-      <div className="flex items-center justify-center gap-5">
+      {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
+      <motion.div
+        className="flex items-center justify-center gap-5"
+        style={{ ...tilt.style, transformPerspective: 900 }}
+        {...tilt.props}
+      >
         <motion.div
           animate={{ scale: reducedMotion ? 1 : localScale }}
           transition={{ type: 'spring', stiffness: 120, damping: 20 }}
@@ -97,7 +122,7 @@ export function CurrencyMomentCard({
         <div className="shrink-0">
           <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
         </div>
-      </div>
+      </motion.div>
 
       {/* The number that carries the meaning */}
       <motion.div
@@ -107,9 +132,7 @@ export function CurrencyMomentCard({
         transition={{ duration: 0.25 }}
         className="mt-3"
       >
-        <div className="text-4xl font-black tabular-nums" style={{ color: accent }}>
-          {moment.delta > 0 ? '+' : '−'}{Math.abs(moment.delta).toFixed(0)}%
-        </div>
+        <DeltaNumber delta={moment.delta} accent={accent} />
         <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
           buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
         </div>
@@ -219,13 +242,15 @@ export function CurrencyMomentCard({
         </button>
       )}
 
-      {/* Quiet provenance — data honesty stays, but it whispers */}
-      <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500">
+      {/* Quiet provenance — data honesty stays, but it whispers. The
+          progressive-blur TrustFootnote keeps the first clause readable and
+          expands on hover/tap — never a hide. */}
+      <TrustFootnote className="mt-2">
         {moment.isLive && moment.horizon === '1yr' && moment.benchmark === 'USD' ? (
-          <><span className="text-emerald-500 font-bold">●</span><span> live 1Y ·</span></>
+          <><span className="text-emerald-500 font-bold">●</span><span> live 1Y · </span></>
         ) : null}
         as of {moment.dataAsOf} · curated FX, not advice
-      </p>
+      </TrustFootnote>
 
       {/* Whose savings — diaspora override. Detection is location, risk is
           personal; lets a London-dwelling Ghanaian re-point the moment at
