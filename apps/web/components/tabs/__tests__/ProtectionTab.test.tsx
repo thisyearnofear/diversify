@@ -201,14 +201,6 @@ vi.mock("@/components/earn/YieldDiscoverySection", () => ({
     React.createElement("div", { "data-testid": "yield-discovery" }),
 }));
 
-vi.mock("@/components/onramp/DepositHub", () => ({
-  default: ({ compact }: { compact?: boolean }) =>
-    React.createElement("div", {
-      "data-testid": "deposit-hub",
-      "data-compact": compact,
-    }),
-}));
-
 vi.mock("@/components/tabs/protect/RwaAssetCards", () => ({
   default: () => React.createElement("div", { "data-testid": "rwa-cards" }),
 }));
@@ -341,15 +333,18 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByTestId("yield-discovery")).not.toBeInTheDocument();
   });
 
-  it("shows the fund CTA when a plan exists but the wallet is empty", () => {
+  it("nudges the wallet when a plan exists but the wallet is empty", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
-    expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
-    expect(screen.getByTestId("deposit-hub")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-fund")).toHaveTextContent(
+      "Add funds from your wallet",
+    );
+    expect(screen.queryByText("Copy address to add funds")).not.toBeInTheDocument();
+    expect(screen.queryByText("Instant Access")).not.toBeInTheDocument();
     expect(screen.queryByTestId("shield-picker")).not.toBeInTheDocument();
   });
 

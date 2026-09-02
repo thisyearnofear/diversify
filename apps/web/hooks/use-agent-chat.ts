@@ -16,6 +16,7 @@ import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
 import { trackFunnelEvent } from "../lib/analytics";
+import { buildWalletPortfolioView } from "../lib/wallet-portfolio-view";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -408,18 +409,23 @@ export function useAgentChat({
       let pendingAssistant: { id: string; timestamp: Date } | null = null;
 
       try {
+        const walletView = buildWalletPortfolioView(portfolio);
         const portfolioSnapshot =
-          address && (portfolio.totalValue > 0 || portfolio.allTokens.length > 0)
+          address && walletView.holdings.length > 0
             ? {
-                totalValue: portfolio.totalValue,
+                totalValue: walletView.totalUsd,
                 chainCount: portfolio.chainCount,
-                tokenCount: portfolio.allTokens.length,
-                holdings: portfolio.allTokens.slice(0, 8).map((token) => ({
-                  symbol: token.symbol,
-                  value: token.value,
-                  chainName: token.chainName,
-                  region: token.region,
+                tokenCount: walletView.holdings.length,
+                holdings: walletView.holdings.slice(0, 8).map((holding) => ({
+                  symbol: holding.symbol,
+                  value: holding.valueUsd,
+                  percent: holding.percent,
+                  chainName: holding.balances[0]?.chainName,
+                  region: holding.balances[0]?.region,
                 })),
+                freshness: walletView.freshness,
+                hasEstimates: walletView.hasEstimates,
+                gaps: walletView.gaps.slice(0, 8),
                 chains: portfolio.chains.map((chain) => ({
                   chainId: chain.chainId,
                   chainName: chain.chainName,
@@ -729,6 +735,10 @@ export function useAgentChat({
       generateSpeech,
       portfolio.allTokens,
       portfolio.chainCount,
+      portfolio.errors,
+      portfolio.isLoading,
+      portfolio.isStale,
+      portfolio.hasEstimates,
       portfolio.chains,
       portfolio.totalValue,
       creditsStatus,

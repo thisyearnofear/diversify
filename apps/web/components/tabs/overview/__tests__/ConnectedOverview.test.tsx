@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup, screen, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { createEmptyAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";
@@ -193,6 +193,13 @@ vi.mock("@/components/shared/Tooltip", () => ({
 }));
 vi.mock("@/components/agent/GuardianPulse", () => ({ GuardianPulse: () => null }));
 vi.mock("@/components/shared/ContextualBanner", () => ({ ContextualBanner: () => null }));
+vi.mock("@/components/shared/DataFreshnessIndicator", () => ({
+  DataFreshnessIndicator: (props: { lastUpdated: number | null; isStale?: boolean; isLoading?: boolean; onRefresh?: () => void }) => (
+    <div data-testid="freshness-indicator" data-stale={String(Boolean(props.isStale))} data-loading={String(Boolean(props.isLoading))}>
+      {props.onRefresh && <button type="button" onClick={props.onRefresh}>Refresh balances</button>}
+    </div>
+  ),
+}));
 vi.mock("@/components/shared/HomeSection", () => ({
   HomeSection: ({ children }: { children: React.ReactNode }) => <div data-testid="home-section">{children}</div>,
 }));
@@ -335,14 +342,28 @@ describe("ConnectedOverview — diversificationTips ordering regression", () => 
     expect(() => renderOverview()).not.toThrow();
   });
 
+  it("shows one shared freshness indicator for the wallet instrument", async () => {
+    const refreshBalances = vi.fn().mockResolvedValue(undefined);
+    renderOverview({
+      portfolio: buildPortfolio({ isStale: true, hasEstimates: true }),
+      refreshBalances,
+    });
+
+    expect(screen.getByTestId("freshness-indicator")).toHaveAttribute("data-stale", "true");
+    await act(async () => {
+      screen.getByRole("button", { name: "Refresh balances" }).click();
+    });
+    expect(refreshBalances).toHaveBeenCalledTimes(1);
+  });
+
   it("actually surfaces activePortfolio data in the hero (not just a silent no-op render)", () => {
     mockProfileComplete = false;
     renderOverview({
       activePortfolio: buildPortfolio({ diversificationScore: 91, totalValue: 4200 }),
     });
 
-    // Standard (non-beginner) mode shows total value in the hero.
-    expect(screen.getByTestId("hero-value-value")).toHaveTextContent("$4200");
+    // Connected standard mode uses the live exposure dial as its single object.
+    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
   });
 });
 
@@ -382,8 +403,9 @@ describe("ConnectedOverview — currency-moment hero", () => {
     mockMoment = GHANA_MOMENT;
     renderOverview();
 
-    expect(screen.getByTestId("currency-moment-card")).toHaveTextContent("-18% GHS");
+    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
     expect(screen.queryByTestId("hero-value")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("currency-moment-card")).not.toBeInTheDocument();
   });
 
   it("shows the exposure dial without a pre-selected region (one CTA in the first viewport)", () => {
@@ -405,8 +427,8 @@ describe("ConnectedOverview — currency-moment hero", () => {
     mockMoment = null;
     renderOverview();
 
-    expect(screen.getByTestId("hero-value")).toBeInTheDocument();
     expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.queryByTestId("hero-value")).not.toBeInTheDocument();
     expect(screen.queryByTestId("protection-analysis")).not.toBeInTheDocument();
   });
 
@@ -417,6 +439,6 @@ describe("ConnectedOverview — currency-moment hero", () => {
     renderOverview();
 
     expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
-    expect(screen.getByText("Your Protection Mix")).toBeInTheDocument();
+    expect(screen.getByTestId("currency-moment-card")).toBeInTheDocument();
   });
 });

@@ -114,8 +114,8 @@ the bundle):
 Each tab is an **instrument**, not a feed of cards:
 
 1. **Object** — the thing you manipulate (risk moment, exposure dial,
-   plan ring, swap ticket, Guardian ledger). First viewport. This is
-   the one object that gets the color (§2).
+   plan ring, swap ticket, Guardian ledger, wealth-protection calculator).
+   First viewport. This is the one object that gets the color (§2).
 2. **Inspector** — opens from a selection (`InspectorSheet`). Empty
    selection means the sheet is closed, not a stack of closed rows.
 3. **One CTA** — attached to the inspector or the object's current
@@ -134,6 +134,16 @@ one CTA?* If not, it leaves the tab.
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see
 `LensCoinSelector`).
+
+**Waiting is still an instrument.** Gray card skeletons fake a layout
+that isn't there yet — they look like furniture, not a pause. While the
+object is settling, keep the same first-viewport grammar: one `Coin`
+gets the colour, one line names the job ("Reading your wallet"). Motion
+is a spring reveal plus a **single** shine (`shine="once"`), never an
+infinite pulse or bob. Primitive: `InstrumentWait`. Reduced-motion: a
+static coin and the same copy. Inline number placeholders (HeroValue's
+bar so "$0 loading" ≠ "$0 empty") stay as quiet bars — a coin there
+would compete with the object.
 
 ## 6. Numbers carry their own meaning
 

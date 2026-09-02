@@ -2,10 +2,11 @@
  * ProviderTree — Composes the provider hierarchy for _app.tsx.
  *
  * Keeps the App component focused on layout, not provider nesting.
+ * WalletProvider lives inside AppProviders (it must sit above
+ * PortfolioProvider and AIConversationProvider — context only flows down).
  */
 import { type ReactNode } from "react";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
-import { WalletProvider } from "@/components/wallet/WalletProvider";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AppProviders } from "@/context/app/AppProviders";
 import { AdaptiveProvider } from "@/context/app/AdaptiveContext";
@@ -25,21 +26,19 @@ export default function ProviderTree({ children }: ProviderTreeProps) {
     <ErrorBoundary>
       <PrivyProvider>
         <AppProviders>
-          <WalletProvider>
-            <AdaptiveProvider>
-              <AIConversationProvider>
-                <ToastProvider>
-                  <StreakRewardsProvider>
-                    <ProofFeedProvider>
-                      <ClaimFlowProvider>
-                        <ProtectionAmbient>{children}</ProtectionAmbient>
-                      </ClaimFlowProvider>
-                    </ProofFeedProvider>
-                  </StreakRewardsProvider>
-                </ToastProvider>
-              </AIConversationProvider>
-            </AdaptiveProvider>
-          </WalletProvider>
+          <AdaptiveProvider>
+            <AIConversationProvider>
+              <ToastProvider>
+                <StreakRewardsProvider>
+                  <ProofFeedProvider>
+                    <ClaimFlowProvider>
+                      <ProtectionAmbient>{children}</ProtectionAmbient>
+                    </ClaimFlowProvider>
+                  </ProofFeedProvider>
+                </StreakRewardsProvider>
+              </ToastProvider>
+            </AIConversationProvider>
+          </AdaptiveProvider>
         </AppProviders>
       </PrivyProvider>
     </ErrorBoundary>

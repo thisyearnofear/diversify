@@ -35,7 +35,6 @@ interface OverviewTabProps {
 
 export default function OverviewTab({
   portfolio,
-  isLoading,
   userRegion,
   setUserRegion,
   REGIONS,
@@ -51,9 +50,11 @@ export default function OverviewTab({
   const hasHoldings = (portfolio?.totalValue ?? 0) > 0;
   // A fetch has completed for this address. `isLoading` starts false, so
   // treating "not loading" as "empty" auto-previewed connected wallets
-  // before Celo/Arbitrum balances arrived.
-  const balancesSettled =
-    portfolio?.lastUpdated != null && !portfolio?.isLoading;
+  // before Celo/Arbitrum balances arrived. Stay on the wait until that
+  // snapshot exists — do not time out into an empty Home (that hid real
+  // coins when prices hung). A later refresh can keep isLoading true;
+  // lastUpdated is enough to show the coins we already have.
+  const balancesSettled = portfolio?.lastUpdated != null;
 
   // Demo is opt-in (unconnected "try sample data"). Never auto-enable it
   // for a connected wallet — empty connected wallets get the cold-start
@@ -67,7 +68,7 @@ export default function OverviewTab({
 
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
 
-  if (address && (isLoading || !balancesSettled)) {
+  if (address && !balancesSettled) {
     return <OverviewSkeleton />;
   }
 

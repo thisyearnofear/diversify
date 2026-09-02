@@ -9,6 +9,7 @@
 import { unifiedCache, CacheCategory } from './unified-cache-service';
 import { circuitBreakerManager } from './circuit-breaker-service';
 import { EXCHANGE_RATES } from '../config';
+import { fetchWithTimeout } from './promise-utils';
 
 // Points to the AI backend — mirrors the constant in hooks/use-diversifi-ai.ts
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
@@ -304,7 +305,11 @@ export const TokenPriceService = {
 
     for (const base of bases) {
       try {
-        const response = await fetch(`${base}/api/prices/token?${query.toString()}`);
+        const response = await fetchWithTimeout(
+          `${base}/api/prices/token?${query.toString()}`,
+          {},
+          6000,
+        );
         if (!response.ok) continue;
         const data = await response.json();
         if (!data?.success) continue;

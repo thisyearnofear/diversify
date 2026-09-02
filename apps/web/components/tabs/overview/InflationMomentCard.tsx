@@ -12,7 +12,6 @@
  */
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Card } from '../../shared/TabComponents';
 import { Coin } from '@/components/shared/FloatingCoins';
 import type { InflationMoment } from '@/lib/narrative/currency-moment';
 import { CountryOverrideSelect } from './CountryOverrideSelect';
@@ -40,7 +39,7 @@ export function InflationMomentCard({
   const fmt = (n: number) => Math.round(n).toLocaleString();
 
   return (
-    <Card className={`text-center ${className}`}>
+    <div className={`text-center ${className}`}>
       {/* Whose story this is — the visitor's own country */}
       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
         {moment.flag && (
@@ -118,6 +117,6 @@ export function InflationMomentCard({
           onChange={onChangeCountry}
         />
       )}
-    </Card>
+    </div>
   );
 }

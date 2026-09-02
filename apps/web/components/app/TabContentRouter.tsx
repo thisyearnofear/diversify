@@ -26,27 +26,27 @@ import { TabSkeleton } from "@/components/ui/Skeleton";
 
 const OverviewTab = dynamic(() => import("@/components/tabs/OverviewTab"), {
   ssr: false,
-  loading: () => <TabSkeleton rows={3} />,
+  loading: () => <TabSkeleton label="Opening Home" />,
 });
 
 const ProtectionTab = dynamic(() => import("@/components/tabs/ProtectionTab"), {
   ssr: false,
-  loading: () => <TabSkeleton rows={3} />,
+  loading: () => <TabSkeleton label="Opening Shield" />,
 });
 
 const ExchangeTab = dynamic(() => import("@/components/tabs/ExchangeTab"), {
   ssr: false,
-  loading: () => <TabSkeleton rows={3} />,
+  loading: () => <TabSkeleton label="Opening Exchange" />,
 });
 
 const AgentTab = dynamic(() => import("@/components/tabs/AgentTab"), {
   ssr: false,
-  loading: () => <TabSkeleton rows={3} />,
+  loading: () => <TabSkeleton label="Opening Guardian" />,
 });
 
 const InfoTab = dynamic(() => import("@/components/tabs/InfoTab"), {
   ssr: false,
-  loading: () => <TabSkeleton rows={2} />,
+  loading: () => <TabSkeleton label="Opening Learn" />,
 });
 
 // ── TabPane + transition ──
@@ -78,7 +78,7 @@ export default function TabContentRouter() {
     activeTab, setActiveTab, trackTabChange,
     multichainPortfolio, isMultichainLoading, refresh,
     isRegionLoading, userRegion, setUserRegion, REGIONS,
-    inflationData, currencyPerformanceData, availableTokens,
+    inflationData, currencyPerformanceData,
     walletChainId, isMiniPay, isFarcaster,
   } = useAppShellContext();
   const { recordSwipe, recordTabVisit } = useTabDiscovery();
@@ -155,6 +155,7 @@ export default function TabContentRouter() {
                 portfolio={multichainPortfolio}
                 isLoading={isMultichainLoading}
                 setActiveTab={setActiveTab}
+                refreshBalances={refresh}
               />
             </ErrorBoundary>
           </TabPane>
@@ -182,6 +183,7 @@ export default function TabContentRouter() {
                 isMiniPay={isMiniPay}
                 isFarcaster={isFarcaster}
                 portfolio={multichainPortfolio}
+                refreshBalances={refresh}
                 onNavigateToFund={() => setActiveTab("exchange")}
               />
             </ErrorBoundary>
@@ -191,7 +193,12 @@ export default function TabContentRouter() {
         {activeTab === "info" && (
           <TabPane id="info">
             <ErrorBoundary>
-              <InfoTab availableTokens={availableTokens} userRegion={userRegion} isLoading={isMultichainLoading} />
+              <InfoTab
+                userRegion={userRegion}
+                isLoading={isMultichainLoading}
+                setActiveTab={setActiveTab}
+                refreshBalances={refresh}
+              />
             </ErrorBoundary>
           </TabPane>
         )}

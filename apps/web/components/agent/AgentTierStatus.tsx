@@ -244,9 +244,8 @@ export const AgentTierStatus: React.FC<{
   showMarquee?: boolean;
   onNavigateToAgent?: () => void;
   onAdvisorClick?: () => void;
-  /** Send the user to wherever they top up / swap. Usually navigates to the
-   *  Exchange tab which already hosts DepositHub + SwapInterface. When the
-   *  prop is omitted (defensive) the nudges silently hide instead of
+  /** Send the user to Exchange (the swap ticket). Funding itself lives
+   *  on the wallet menu. When omitted, fund nudges hide instead of
    *  rendering dead buttons. */
   onNavigateToFund?: () => void;
 }> = ({

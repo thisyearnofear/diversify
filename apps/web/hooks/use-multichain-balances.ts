@@ -28,6 +28,7 @@ import {
 } from "@diversifi/shared/src/utils/portfolio-analysis";
 import { useInflationData } from "./use-inflation-data";
 import { useMacroData } from "./use-macro-data";
+import { withTimeout } from "@diversifi/shared/src/utils/promise-utils";
 
 // ============================================================================
 // TYPES
@@ -42,6 +43,8 @@ export interface TokenBalance {
   region: AssetRegion;
   chainId: number;
   chainName: string;
+  /** USD quote used a saved rate, not a live price. */
+  quotedWithEstimate?: boolean;
 }
 
 export interface ChainBalance {
@@ -52,6 +55,7 @@ export interface ChainBalance {
   balances: TokenBalance[];
   isLoading: boolean;
   error: string | null;
+  hasEstimates?: boolean;
 }
 
 export interface MultichainPortfolio extends PortfolioAnalysis {
@@ -78,6 +82,8 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
   >;
   isLoading: boolean;
   isStale: boolean;
+  /** At least one held token is still quoted with a saved rate. */
+  hasEstimates?: boolean;
   errors: string[];
   lastUpdated: number | null;
 }
@@ -116,6 +122,57 @@ function normalizeRegion(region: string): AssetRegion {
 
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes (increased from 2 minutes)
 const STALE_TTL = 60 * 1000; // 60 seconds for stale check (increased from 30s)
+const RPC_FETCH_MS = 10_000;
+const PRICE_FETCH_MS = 6_000;
+
+type HeldToken = {
+  symbol: string;
+  metadata: (typeof TOKEN_METADATA)[string];
+  tokenAddress: string;
+  rawBalance: string;
+  formattedBalance: string;
+  numericBalance: number;
+  fallbackRate: number;
+};
+
+export function assembleTokenBalances(
+  held: HeldToken[],
+  rates: number[],
+  chain: { chainId: number; name: string },
+  estimated: boolean | boolean[] = false,
+): { balances: TokenBalance[]; totalValue: number; hasEstimates: boolean } {
+  const balances: TokenBalance[] = [];
+  let totalValue = 0;
+  held.forEach((token, index) => {
+    const rate = rates[index] ?? token.fallbackRate;
+    const value = token.numericBalance * rate;
+    if (value < 0.01) return;
+    const quotedWithEstimate = Array.isArray(estimated)
+      ? Boolean(estimated[index])
+      : estimated;
+    balances.push({
+      symbol: token.symbol,
+      name: token.metadata.name || token.symbol,
+      balance: token.rawBalance,
+      formattedBalance: token.formattedBalance.slice(0, 10),
+      value,
+      region: normalizeRegion(token.metadata.region || "Global"),
+      chainId: chain.chainId,
+      chainName: chain.name,
+      quotedWithEstimate,
+    });
+    totalValue += value;
+  });
+  return {
+    balances,
+    totalValue,
+    hasEstimates: balances.some((b) => b.quotedWithEstimate),
+  };
+}
+
+export function shouldCacheChainBalance(result: ChainBalance): boolean {
+  return result.error == null;
+}
 
 // ============================================================================
 // CACHE HELPERS
@@ -141,6 +198,13 @@ function getCachedBalance(address: string, chainId: number): CacheEntry | null {
 
     // Return null if expired
     if (age > CACHE_TTL) {
+      localStorage.removeItem(key);
+      return null;
+    }
+
+    // A timed-out fetch used to cache an empty chain with an error.
+    // Serving that hid real holdings until TTL expired.
+    if (entry.data?.error) {
       localStorage.removeItem(key);
       return null;
     }
@@ -179,16 +243,60 @@ function clearAllCachedBalances(address: string): void {
 // BALANCE FETCHING
 // ============================================================================
 
-async function fetchChainBalances(
+function fallbackRateFor(symbol: string): number {
+  return (
+    EXCHANGE_RATES[symbol] ||
+    EXCHANGE_RATES[symbol.toUpperCase()] ||
+    EXCHANGE_RATES[symbol.toLowerCase()] ||
+    1
+  );
+}
+
+function emptyChain(
+  chain: (typeof PRODUCTION_CHAINS)[number],
+  error: string | null,
+): ChainBalance {
+  return {
+    chainId: chain.chainId,
+    chainName: chain.name,
+    totalValue: 0,
+    tokenCount: 0,
+    balances: [],
+    isLoading: false,
+    error,
+    hasEstimates: false,
+  };
+}
+
+function toChainBalance(
+  chain: (typeof PRODUCTION_CHAINS)[number],
+  held: HeldToken[],
+  rates: number[],
+  estimated: boolean | boolean[] = false,
+  error: string | null = null,
+): ChainBalance {
+  const { balances, totalValue, hasEstimates } = assembleTokenBalances(
+    held,
+    rates,
+    chain,
+    estimated,
+  );
+  return {
+    chainId: chain.chainId,
+    chainName: chain.name,
+    totalValue,
+    tokenCount: balances.length,
+    balances,
+    isLoading: false,
+    error,
+    hasEstimates,
+  };
+}
+
+async function fetchHeldTokens(
   address: string,
   chain: (typeof PRODUCTION_CHAINS)[number],
-): Promise<ChainBalance> {
-  // Bound each underlying RPC call so a hung upstream can't leave the UI in
-  // a permanent "Loading..." state. ethers v5 honours `timeout` on the
-  // ConnectionInfo: it applies to every individual request made on this
-  // provider (e.g. multicall .call(), balance reads). Passing `network` as
-  // the second arg skips the default `eth_chainId` auto-detect round-trip
-  // (~200ms) on every fresh provider instance — we already know the chain.
+): Promise<HeldToken[]> {
   const provider = new ethers.providers.JsonRpcProvider(
     {
       url: chain.rpcUrl,
@@ -200,18 +308,7 @@ async function fetchChainBalances(
     },
   );
   const tokensToFetch = NETWORK_TOKENS[chain.chainId] || [];
-
-  if (tokensToFetch.length === 0) {
-    return {
-      chainId: chain.chainId,
-      chainName: chain.name,
-      totalValue: 0,
-      tokenCount: 0,
-      balances: [],
-      isLoading: false,
-      error: null,
-    };
-  }
+  if (tokensToFetch.length === 0) return [];
 
   const calls: ContractCall[] = [];
   const tokenInfoList: Array<{
@@ -223,7 +320,6 @@ async function fetchChainBalances(
   for (const symbol of tokensToFetch) {
     const tokenList = getTokenAddresses(chain.chainId);
     const tokenAddress = tokenList[symbol as keyof typeof tokenList];
-
     if (!tokenAddress) continue;
 
     calls.push({
@@ -243,98 +339,133 @@ async function fetchChainBalances(
     tokenInfoList.push({ symbol, metadata, tokenAddress });
   }
 
-  try {
-    // Dynamic import keeps ethers (multicall's dep) out of first-load.
-    const { executeMulticall } = await import("@diversifi/shared/src/utils/multicall");
-    const results = await executeMulticall(provider, calls, chain.chainId);
+  const { executeMulticall } = await import("@diversifi/shared/src/utils/multicall");
+  const results = await executeMulticall(provider, calls, chain.chainId);
 
-    const balances: TokenBalance[] = [];
-    let totalValue = 0;
-
-    // Fetch live prices for all tokens in parallel
-    const pricePromises = tokenInfoList.map(
-      async ({ symbol, tokenAddress }) => {
-        try {
-          const { TokenPriceService } = await import("@diversifi/shared/src/utils/api-services");
-          const priceResult = await TokenPriceService.getTokenUsdPrice({
-            chainId: chain.chainId,
-            address: tokenAddress,
-            symbol: symbol,
-          });
-
-          // Fallback to hardcoded rate if live price unavailable
-          const fallbackRate =
-            EXCHANGE_RATES[symbol] ||
-            EXCHANGE_RATES[symbol.toUpperCase()] ||
-            EXCHANGE_RATES[symbol.toLowerCase()] ||
-            1;
-
-          return priceResult?.price ?? fallbackRate;
-        } catch (error) {
-          console.warn(
-            `[Multichain] Failed to fetch price for ${symbol}:`,
-            error,
-          );
-          return (
-            EXCHANGE_RATES[symbol] ||
-            EXCHANGE_RATES[symbol.toUpperCase()] ||
-            EXCHANGE_RATES[symbol.toLowerCase()] ||
-            1
-          );
-        }
-      },
-    );
-
-    const exchangeRates = await Promise.all(pricePromises);
-
-    results.forEach((balance, index) => {
-      if (!balance) return;
-
-      const { symbol, metadata } = tokenInfoList[index];
-      const exchangeRate = exchangeRates[index];
-      const decimals = metadata.decimals || 18;
-      const formattedBalance = ethers.utils.formatUnits(balance, decimals);
-      const numericBalance = parseFloat(formattedBalance);
-      const value = numericBalance * exchangeRate;
-
-      // Only include tokens with meaningful balance (> $0.01)
-      if (value < 0.01) return;
-
-      balances.push({
+  return results.flatMap((balance, index) => {
+    if (!balance) return [];
+    const { symbol, metadata, tokenAddress } = tokenInfoList[index];
+    const decimals = metadata.decimals || 18;
+    const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+    const numericBalance = parseFloat(formattedBalance);
+    if (!(numericBalance > 0)) return [];
+    return [
+      {
         symbol,
-        name: metadata.name || symbol,
-        balance: balance.toString(),
-        formattedBalance: formattedBalance.slice(0, 10), // Limit precision
-        value,
-        region: normalizeRegion(metadata.region || "Global"),
-        chainId: chain.chainId,
-        chainName: chain.name,
-      });
+        metadata,
+        tokenAddress,
+        rawBalance: balance.toString(),
+        formattedBalance,
+        numericBalance,
+        fallbackRate: fallbackRateFor(symbol),
+      },
+    ];
+  });
+}
 
-      totalValue += value;
-    });
+async function ratesForHeld(
+  held: HeldToken[],
+  chainId: number,
+): Promise<Array<{ rate: number; estimated: boolean }>> {
+  return Promise.all(
+    held.map(async (token) => {
+      try {
+        const { TokenPriceService } = await import(
+          "@diversifi/shared/src/utils/api-services"
+        );
+        const priceResult = await withTimeout(
+          TokenPriceService.getTokenUsdPrice({
+            chainId,
+            address: token.tokenAddress,
+            symbol: token.symbol,
+          }),
+          PRICE_FETCH_MS,
+          `${token.symbol} price timed out`,
+        );
+        if (priceResult?.price != null) {
+          return { rate: priceResult.price, estimated: false };
+        }
+        return { rate: token.fallbackRate, estimated: true };
+      } catch (error) {
+        console.warn(`[Multichain] Failed to fetch price for ${token.symbol}:`, error);
+        return { rate: token.fallbackRate, estimated: true };
+      }
+    }),
+  );
+}
 
+async function fetchChainRpc(
+  address: string,
+  chain: (typeof PRODUCTION_CHAINS)[number],
+): Promise<{ chain: ChainBalance; held: HeldToken[] }> {
+  try {
+    const held = await withTimeout(
+      fetchHeldTokens(address, chain),
+      RPC_FETCH_MS,
+      `${chain.name} RPC timed out`,
+    );
     return {
-      chainId: chain.chainId,
-      chainName: chain.name,
-      totalValue,
-      tokenCount: balances.length,
-      balances,
-      isLoading: false,
-      error: null,
+      held,
+      chain: toChainBalance(
+        chain,
+        held,
+        held.map((token) => token.fallbackRate),
+        true,
+      ),
     };
   } catch (error) {
     console.error(`[Multichain] Failed to fetch ${chain.name}:`, error);
     return {
-      chainId: chain.chainId,
-      chainName: chain.name,
-      totalValue: 0,
-      tokenCount: 0,
-      balances: [],
-      isLoading: false,
-      error: error instanceof Error ? error.message : "Unknown error",
+      held: [],
+      chain: emptyChain(
+        chain,
+        error instanceof Error ? error.message : "Unknown error",
+      ),
     };
   }
+}
+
+async function refineChainPrices(
+  chain: (typeof PRODUCTION_CHAINS)[number],
+  held: HeldToken[],
+  current: ChainBalance,
+): Promise<ChainBalance> {
+  if (held.length === 0 || current.error) return current;
+  const quoted = await ratesForHeld(held, chain.chainId);
+  return toChainBalance(
+    chain,
+    held,
+    quoted.map((q) => q.rate),
+    quoted.map((q) => q.estimated),
+  );
+}
+
+function heldFromChainBalance(
+  chain: (typeof PRODUCTION_CHAINS)[number],
+  current: ChainBalance,
+): HeldToken[] {
+  const tokenList = getTokenAddresses(chain.chainId);
+  return current.balances.flatMap((balance) => {
+    const tokenAddress = tokenList[balance.symbol as keyof typeof tokenList];
+    if (!tokenAddress) return [];
+    const numericBalance = parseFloat(balance.formattedBalance);
+    if (!(numericBalance > 0)) return [];
+    const metadata = TOKEN_METADATA[balance.symbol] || {
+      name: balance.name || balance.symbol,
+      region: balance.region,
+    };
+    return [
+      {
+        symbol: balance.symbol,
+        metadata,
+        tokenAddress,
+        rawBalance: balance.balance,
+        formattedBalance: balance.formattedBalance,
+        numericBalance,
+        fallbackRate: fallbackRateFor(balance.symbol),
+      },
+    ];
+  });
 }
 
 // ============================================================================
@@ -419,6 +550,7 @@ export function useMultichainBalances(
       regionData,
       isLoading,
       isStale,
+      hasEstimates: activeChains.some((c) => c.hasEstimates),
       errors,
       lastUpdated,
     };
@@ -455,30 +587,61 @@ export function useMultichainBalances(
           chainsToFetch.push(chain);
         }
 
-        // Update with cached data immediately
+        // Cached RPC results are enough to leave the wait. Prices refine later.
         if (Object.keys(cachedResults).length > 0) {
           setChainBalances((prev) => ({ ...prev, ...cachedResults }));
+          setLastUpdated(Date.now());
         }
 
-        // Fetch remaining chains in parallel
-        if (chainsToFetch.length > 0) {
-          const results = await Promise.all(
-            chainsToFetch.map((chain) => fetchChainBalances(address, chain)),
-          );
-
-          // Check if this fetch is still relevant
+        const refineCached = PRODUCTION_CHAINS.filter(
+          (chain) => cachedResults[chain.chainId]?.hasEstimates,
+        ).map(async (chain) => {
+          const current = cachedResults[chain.chainId];
+          const held = heldFromChainBalance(chain, current);
+          if (held.length === 0) return;
+          const priced = await refineChainPrices(chain, held, current);
           if (fetchId !== fetchIdRef.current) return;
+          setChainBalances((prev) => ({ ...prev, [priced.chainId]: priced }));
+          if (shouldCacheChainBalance(priced)) {
+            setCachedBalance(address, priced.chainId, priced);
+          }
+        });
 
-          const newBalances: Record<number, ChainBalance> = {};
-          results.forEach((result) => {
-            newBalances[result.chainId] = result;
-            setCachedBalance(address, result.chainId, result);
-          });
+        if (chainsToFetch.length > 0) {
+          await Promise.all(
+            chainsToFetch.map(async (chain) => {
+              const { chain: rpcResult, held } = await fetchChainRpc(
+                address,
+                chain,
+              );
+              if (fetchId !== fetchIdRef.current) return;
 
-          setChainBalances((prev) => ({ ...prev, ...newBalances }));
+              setChainBalances((prev) => ({
+                ...prev,
+                [rpcResult.chainId]: rpcResult,
+              }));
+              if (shouldCacheChainBalance(rpcResult)) {
+                setCachedBalance(address, rpcResult.chainId, rpcResult);
+              }
+              setLastUpdated(Date.now());
+
+              if (held.length === 0) return;
+              const priced = await refineChainPrices(chain, held, rpcResult);
+              if (fetchId !== fetchIdRef.current) return;
+              setChainBalances((prev) => ({
+                ...prev,
+                [priced.chainId]: priced,
+              }));
+              if (shouldCacheChainBalance(priced)) {
+                setCachedBalance(address, priced.chainId, priced);
+              }
+            }),
+          );
         }
 
-        setLastUpdated(Date.now());
+        if (fetchId === fetchIdRef.current) {
+          setLastUpdated((prev) => prev ?? Date.now());
+        }
       } catch (error) {
         console.error("[Multichain] Fetch error:", error);
       } finally {

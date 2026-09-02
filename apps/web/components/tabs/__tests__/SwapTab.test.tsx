@@ -122,6 +122,7 @@ vi.mock("@/context/app/DemoModeContext", () => ({
 }));
 
 vi.mock("@/context/app/PortfolioContext", () => ({
+  usePortfolio: () => null,
   useSharedMultichainBalances: () => ({
     chains: [],
     goalScores: { hedge: 0, diversify: 0, rwa: 0 },
@@ -264,10 +265,6 @@ vi.mock("@/components/ui/MobileCollapsible", () => ({
 
 vi.mock("@/components/ui/ErrorBoundary", () => ({
   default: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-vi.mock("@/components/onramp/DepositHub", () => ({
-  default: () => null,
 }));
 
 vi.mock("@/components/shared/TabComponents", () => ({

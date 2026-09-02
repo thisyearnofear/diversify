@@ -15,6 +15,12 @@ describe('Coin visual roles', () => {
     expect(container.querySelectorAll('circle').length).toBeGreaterThan(1);
   });
 
+  it('plays a single shine sweep when shine is "once"', () => {
+    const { container } = render(<Coin shine="once" />);
+    expect(container.querySelector(".coin-shine-once")).toBeInTheDocument();
+    expect(container.querySelector(".coin-shine")).not.toBeInTheDocument();
+  });
+
   it('marks ambient fields with their semantic role', () => {
     render(<FloatingCoins variant="panel" />);
     expect(screen.getByTestId('coin-field-panel')).toBeInTheDocument();

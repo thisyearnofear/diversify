@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { InstrumentWait } from "../shared/InstrumentWait";
 
 // ── Primitive building blocks ──────────────────────────────────────────────
 
@@ -66,23 +67,9 @@ export function SkeletonCard({ className = "", children }: SkeletonCardProps) {
 
 // ── Composite skeletons ────────────────────────────────────────────────────
 
-/** Full-page loading skeleton for tab content. */
-export function TabSkeleton({ rows = 3 }: { rows?: number }) {
-  return (
-    <div className="animate-pulse space-y-4 pt-4" aria-label="Loading">
-      {Array.from({ length: rows }).map((_, i) => {
-      const heightClass = i === 0 ? "h-10" : i === 1 ? "h-8" : "h-40";
-      const radiusClass = i === 2 ? "rounded-2xl" : "rounded-xl";
-      const widthClass = i === 1 ? "w-3/4" : "w-full";
-      return (
-        <div
-          key={i}
-          className={`${heightClass} ${radiusClass} ${widthClass} bg-gray-100 dark:bg-gray-800`}
-        />
-      );
-    })}
-    </div>
-  );
+/** Full-page wait for code-split tab shells. One coin, not a card stack. */
+export function TabSkeleton({ label = "Opening" }: { label?: string }) {
+  return <InstrumentWait label={label} />;
 }
 
 /** Inline loading spinner for buttons / small areas. */

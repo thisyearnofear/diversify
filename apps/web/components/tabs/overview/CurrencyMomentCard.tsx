@@ -11,7 +11,6 @@
  */
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Card } from '../../shared/TabComponents';
 import { Coin } from '@/components/shared/FloatingCoins';
 import { haptics } from '@/lib/haptics';
 import {
@@ -78,7 +77,7 @@ export function CurrencyMomentCard({
   const fmt = (n: number) => Math.round(n).toLocaleString();
 
   return (
-    <Card className={`text-center ${className}`}>
+    <div className={`text-center ${className}`}>
       {/* Whose story this is — the visitor's own currency */}
       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
         <span aria-hidden="true">{moment.flag}</span> {moment.countryName} · {moment.currencyCode}
@@ -238,6 +237,6 @@ export function CurrencyMomentCard({
           onChange={onChangeCountry}
         />
       )}
-    </Card>
+    </div>
   );
 }

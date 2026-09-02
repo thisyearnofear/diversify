@@ -6,6 +6,8 @@ import { useToast } from '../ui/Toast';
 import { SmartBuyCryptoButton, SmartSellCryptoButton } from '../onramp';
 import { WALLET_FEATURES } from '../../config/features';
 import { NETWORKS, isTestnetChain } from '../../config';
+import { usePortfolio } from '@/context/app/PortfolioContext';
+import { walletNeedsFunds } from '@/lib/wallet/wallet-nudge';
 
 // FarCaster Mini App supported chains (as of 2025)
 // Source: https://github.com/farcasterxyz/miniapps/discussions/240
@@ -66,6 +68,11 @@ export default function WalletButton({
   const [dropUp, setDropUp] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const prevAddressRef = useRef<string | null>(null);
+  const portfolio = usePortfolio();
+  const needsFunds = walletNeedsFunds({
+    lastUpdated: portfolio?.lastUpdated,
+    totalValue: portfolio?.totalValue ?? 0,
+  });
 
   // Viewport-aware placement: the menu is tall (~450px with the chain
   // selector + fiat ramp). When the button sits low on screen, opening
@@ -212,13 +219,29 @@ export default function WalletButton({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowDropdown(!showDropdown)}
-          className={`flex items-center space-x-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm min-w-[48px] min-h-[48px] px-4 py-3 rounded-full text-gray-900 dark:text-white shadow-sm border border-gray-200 dark:border-gray-700 hover:border-blue-300 hover:shadow-md transition-all duration-200 ${className}`}
-          aria-label="Wallet menu"
+          className={`flex items-center space-x-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm min-w-[48px] min-h-[48px] px-4 py-3 rounded-full text-gray-900 dark:text-white shadow-sm border ${
+            needsFunds
+              ? "border-amber-300 dark:border-amber-700"
+              : "border-gray-200 dark:border-gray-700"
+          } hover:border-blue-300 hover:shadow-md transition-colors ${className}`}
+          aria-label={needsFunds ? "Wallet menu — add funds" : "Wallet menu"}
           aria-expanded={showDropdown}
           aria-haspopup="true"
         >
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+          <div
+            className={`w-2 h-2 rounded-full ${
+              needsFunds ? "bg-amber-500" : "bg-green-500 animate-pulse"
+            }`}
+          />
           <span className="text-sm font-medium">{displayIcon} {displayText}</span>
+          {needsFunds && (
+            <span
+              data-testid="wallet-add-funds"
+              className="text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+            >
+              Add funds
+            </span>
+          )}
           <svg
             xmlns="http://www.w3.org/2000/svg"
             className={`h-4 w-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
@@ -282,7 +305,9 @@ export default function WalletButton({
 
               {/* Fiat On/Off Ramp - Mt Pelerin */}
               <div className="px-3 py-2 border-b border-gray-100 dark:border-gray-700">
-                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Fiat Ramp</p>
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">
+                  {needsFunds ? "Add funds" : "Fiat Ramp"}
+                </p>
                 <div className="space-y-1">
                   <SmartBuyCryptoButton compact className="rounded-lg" />
                   <SmartSellCryptoButton compact className="rounded-lg" />

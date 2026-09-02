@@ -353,6 +353,7 @@ body {
   .aurora-drift,
   .lens-coin-pulse,
   .coin-shine rect,
+  .coin-shine-once rect,
   .lens-coin-idle {
     animation: none;
   }
@@ -368,6 +369,10 @@ body {
    but never busy. */
 .coin-shine rect {
   animation: coin-shine-sweep var(--shine-duration, 2.6s) ease-in-out infinite;
+  will-change: transform;
+}
+.coin-shine-once rect {
+  animation: coin-shine-sweep var(--shine-duration, 1.8s) ease-out 1;
   will-change: transform;
 }
 @keyframes coin-shine-sweep {

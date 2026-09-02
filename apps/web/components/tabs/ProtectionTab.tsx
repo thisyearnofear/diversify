@@ -28,7 +28,6 @@ import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
 import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
 import { deriveShieldShape } from "./protect/shield-shape";
-import DepositHub from "../onramp/DepositHub";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
 import { PaymentCycleReport } from "./protect/PaymentCycleReport";
@@ -40,6 +39,8 @@ import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { TokenIcon } from "../shared/TokenIcon";
+import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
+import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -47,6 +48,7 @@ interface ProtectionTabProps {
   isLoading?: boolean;
   onSelectStrategy?: (strategy: string) => void;
   setActiveTab?: (tab: import("@/constants/tabs").TabId) => void;
+  refreshBalances?: () => Promise<void>;
 }
 
 export default function ProtectionTab({
@@ -54,15 +56,16 @@ export default function ProtectionTab({
   portfolio,
   isLoading,
   setActiveTab,
+  refreshBalances,
 }: ProtectionTabProps) {
-  const { address, chainId } = useWalletContext();
+  const { address, chainId, isMiniPay } = useWalletContext();
   const { navigateToSwap } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { askAdvisor } = useAdvisor();
   const isDemo = demoMode.isActive;
 
-  const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
+  const activePortfolio = (isDemo ? DEMO_PORTFOLIO : portfolio) as MultichainPortfolio;
 
   const [showMobileWizard, setShowMobileWizard] = useState(false);
   const { financialStrategy } = useStrategy();
@@ -82,6 +85,13 @@ export default function ProtectionTab({
   const { showToast } = useToast();
 
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
+  const previousAddress = useRef(address);
+  useEffect(() => {
+    if (previousAddress.current !== address) {
+      setFocusedToken(null);
+      previousAddress.current = address;
+    }
+  }, [address]);
   const handleMarqueeSelect = useCallback((token: string | null) => {
     setFocusedToken(token);
     if (token) trackFunnelEvent("marquee_select", { token, source: "shield_ring" });
@@ -277,14 +287,16 @@ export default function ProtectionTab({
     guardianMonitoring: guardianState === "monitoring",
   });
 
+  const walletView = useMemo(
+    () => buildWalletPortfolioView(activePortfolio, allocations),
+    [activePortfolio, allocations],
+  );
   const selectedAlloc = allocations.find((a) => a.token === focusedToken) ?? null;
-  const selectedHeld = selectedAlloc
-    ? heldPctByToken.get(selectedAlloc.token) ?? 0
-    : 0;
+  const selectedHeld = focusedToken ? heldPctByToken.get(focusedToken) ?? 0 : 0;
   const gapPct = selectedAlloc ? selectedAlloc.percent - selectedHeld : 0;
   const isPaymentCycle = config.moneyPurpose === "upcoming_payment";
 
-  if (isLoading && address && !isDemo) {
+  if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) {
     return <ProtectionSkeleton />;
   }
 
@@ -319,14 +331,6 @@ export default function ProtectionTab({
           />
         </div>
       )}
-      {shape === "fund" && (
-        <div className="mt-4" data-testid="shield-fund">
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
-            Add funds to put this plan to work.
-          </p>
-          <DepositHub compact />
-        </div>
-      )}
     </>
   );
 
@@ -336,31 +340,26 @@ export default function ProtectionTab({
       onClose={() => setFocusedToken(null)}
       title={focusedToken ?? "Slice"}
     >
-      {selectedAlloc && (
+      {focusedToken && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <TokenIcon symbol={selectedAlloc.token} size={22} />
+            <TokenIcon symbol={focusedToken} size={22} />
             <p className="text-sm text-gray-700 dark:text-gray-200">
-              {gapPct > 2 ? (
-                <>
-                  You hold <strong>{selectedHeld.toFixed(0)}%</strong> — the plan
-                  calls for <strong>{selectedAlloc.percent}%</strong>.
-                </>
+              You hold <strong>{selectedHeld.toFixed(0)}%</strong> of your wallet in{" "}
+              <strong>{focusedToken}</strong>
+              {selectedAlloc ? (
+                gapPct > 2 ? <> — the plan calls for <strong>{selectedAlloc.percent}%</strong>.</> : <> — this is near the <strong>{selectedAlloc.percent}%</strong> plan target.</>
               ) : (
-                <>
-                  You hold <strong>{selectedHeld.toFixed(0)}%</strong> of a{" "}
-                  <strong>{selectedAlloc.percent}%</strong> target — this slice is
-                  on plan.
-                </>
+                <> — this token is not part of the current plan.</>
               )}
             </p>
           </div>
-          {riskData && gapPct > 2 && (
+          {riskData && selectedAlloc && gapPct > 2 && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {riskData.code} exposure is the risk this slice is meant to offset.
             </p>
           )}
-          {gapPct > 2 && totalValue > 0 && (
+          {selectedAlloc && gapPct > 2 && totalValue > 0 && canSafelyExecute(walletView.freshness) && (
             <button
               type="button"
               onClick={() => openProtectionFlow(selectedAlloc.token)}
@@ -370,18 +369,23 @@ export default function ProtectionTab({
               {fmt((gapPct / 100) * totalValue)})
             </button>
           )}
+          {selectedAlloc && gapPct > 2 && !canSafelyExecute(walletView.freshness) && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Refresh wallet data before reviewing an executable protection move.
+            </p>
+          )}
           <button
             type="button"
             onClick={() =>
               askAdvisor(
-                `I'm focused on my ${selectedAlloc.token} slice (${selectedHeld.toFixed(0)}% held vs ${selectedAlloc.percent}% target). How should I correct this for my ${currentGoalLabel} plan in ${userRegion}?`,
+                `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${currentGoalLabel} plan in ${userRegion}?`,
               )
             }
             className="min-h-[44px] w-full rounded-xl text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             Ask Guardian about this slice
           </button>
-          {isPaymentCycle && (
+          {isPaymentCycle && selectedAlloc && (
             <PaymentCycleReport
               defaultLocalCurrency={riskData?.code}
               onAskGuardian={(prompt) => askAdvisor(prompt)}
@@ -393,17 +397,28 @@ export default function ProtectionTab({
   );
 
   const status = (
-    <div className="flex items-center justify-between gap-3 text-xs text-gray-500 dark:text-gray-400">
+    <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+      <DataFreshnessIndicator
+        lastUpdated={activePortfolio.lastUpdated}
+        isStale={activePortfolio.isStale}
+        hasEstimates={activePortfolio.hasEstimates}
+        isLoading={activePortfolio.isLoading || Boolean(isLoading)}
+        error={activePortfolio.errors?.[0] ?? null}
+        onRefresh={refreshBalances}
+      />
+      <div className="flex items-center justify-between gap-3">
       {shape === "quiet" ? (
         <p data-testid="shield-quiet">Plan aligned. Guardian is monitoring.</p>
       ) : guardianState === "monitoring" ? (
         <p>Guardian is monitoring this plan.</p>
       ) : (
-        <p>
+        <p data-testid={shape === "fund" ? "shield-fund" : undefined}>
           {shape === "gap"
             ? "Tap a slice to close the gap."
             : shape === "fund"
-              ? "Fund the plan, then Guardian can watch it."
+              ? isMiniPay
+                ? "Add cash with + in MiniPay."
+                : "Add funds from your wallet — buy or copy your address."
               : "Pick the philosophy the ring will follow."}
         </p>
       )}
@@ -422,6 +437,7 @@ export default function ProtectionTab({
           {guardianState === "monitoring" ? "Guardian activity" : "Set up Guardian"}
         </button>
       )}
+      </div>
     </div>
   );
 

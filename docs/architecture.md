@@ -4,6 +4,12 @@
 
 > **Enforcement model (important):** the user-signed permission is cryptographic *consent*, verified server-side. Its spending bounds are currently enforced in **application code**, not on-chain — execution on Celo/Mento runs through a server-custodied smart account. True on-chain enforcement (ERC-7710 redemption) is the residual gap. See [`docs/guardian.md`](./guardian.md).
 
+## Connected-wallet enrichment (2026-09-01)
+
+The connected wallet is the source of truth for actual holdings; protection philosophy and strategy allocations represent user intent. `apps/web/lib/wallet-portfolio-view.ts` provides shared pure selectors for aggregating balances across supported chains, calculating live token percentages, comparing holdings with plan targets, and classifying freshness (`loading`, `empty`, `ready`, `stale`, `partial`).
+
+The shared view is consumed by Shield, Overview, Exchange, Agent, and Learn. Shield renders live holdings in its allocation ring while showing plan targets as comparison data. Exchange prioritizes held tokens without changing tradeability rules. Agent sends wallet percentages, gaps, and freshness to the advisor. Learn initializes its editable calculator from the live wallet value. Demo/example values remain isolated from connected-wallet data. Focused regression tests and TypeScript checks are clean.
+
 ## Recent Hardening (2026-06)
 
 This document reflects the post-hardening state. The headline changes since the initial 8.4/10 review:

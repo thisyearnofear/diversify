@@ -42,8 +42,9 @@ export interface CoinProps {
    * ornamental detail so hierarchy stays clear in dense UI. */
   variant?: 'ambient' | 'progress' | 'asset' | 'selection';
   /** Animate a specular shine band across the coin face. Off by default
-   *  so the ambient drift field stays calm; on for interactive moments. */
-  shine?: boolean;
+   *  so the ambient drift field stays calm; `true` loops (hero moments);
+   *  `"once"` is a single reveal sweep (waiting states). */
+  shine?: boolean | "once";
   /** Shine loop period in seconds. */
   shineDuration?: number;
 }
@@ -63,6 +64,8 @@ export function Coin({
 }: CoinProps) {
   const gradId = useId();
   const shineId = useId();
+  const shineOn = Boolean(shine);
+  const shineOnce = shine === "once";
   const light = mix(color, '#ffffff', 0.55);
   const dark = mix(color, '#000000', 0.35);
   const ink = mix(color, '#000000', 0.55);
@@ -85,7 +88,7 @@ export function Coin({
           <stop offset="55%" stopColor={color} />
           <stop offset="100%" stopColor={dark} />
         </radialGradient>
-        {shine && !ambient && (
+        {shineOn && !ambient && (
           <>
             {/* Specular shine band — a thin white wedge that travels left-to-right
                 across the coin. The clip-path keeps it inside the coin's circle. */}
@@ -141,8 +144,8 @@ export function Coin({
       {/* Specular shine band — clipped to the coin circle, animated via CSS.
           The `<g>` carries the clip; the inner `<rect>` carries the gradient +
           animation. width=20 keeps the band thin. */}
-      {shine && !ambient && (
-        <g clipPath={`url(#${shineId}-clip)`} className="coin-shine" style={{ ['--shine-duration' as string]: `${shineDuration}s` } as React.CSSProperties}>
+      {shineOn && !ambient && (
+        <g clipPath={`url(#${shineId}-clip)`} className={shineOnce ? "coin-shine-once" : "coin-shine"} style={{ ['--shine-duration' as string]: `${shineDuration}s` } as React.CSSProperties}>
           <rect
             x="-30"
             y="0"

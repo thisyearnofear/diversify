@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import SwapTab from "./SwapTab";
 import { useNavigation } from "@/context/app/NavigationContext";
+import { usePortfolio } from "@/context/app/PortfolioContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import WalletButton from "../wallet/WalletButton";
@@ -14,6 +15,8 @@ import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { CaribbeanFxNetCard } from "@/components/business/CaribbeanFxNetCard";
 import { InstrumentShell } from "../shared/InstrumentShell";
+import { InspectorSheet } from "../shared/InspectorSheet";
+import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -25,21 +28,9 @@ interface ExchangeTabProps {
 }
 
 const HOW_IT_WORKS: HowItWorksStep[] = [
-  {
-    icon: "💱",
-    title: "Compare Rates",
-    text: "See live exchange rates across supported stablecoins and networks.",
-  },
-  {
-    icon: "🛡️",
-    title: "Choose Safer Assets",
-    text: "Pick currencies with lower inflation rates than your local currency.",
-  },
-  {
-    icon: "✅",
-    title: "Execute the Swap",
-    text: "Connect your wallet and confirm the swap in one transaction.",
-  },
+  { icon: "💱", title: "Compare Rates", text: "See live exchange rates across supported stablecoins and networks." },
+  { icon: "🛡️", title: "Choose Safer Assets", text: "Pick currencies with lower inflation rates than your local currency." },
+  { icon: "✅", title: "Execute the Swap", text: "Connect your wallet and confirm the swap in one transaction." },
 ];
 
 export default function ExchangeTab({
@@ -48,6 +39,7 @@ export default function ExchangeTab({
   refreshBalances,
   refreshChainId,
   isBalancesLoading,
+  portfolio,
 }: ExchangeTabProps) {
   const { address } = useWalletContext();
   const { enableDemoMode } = useDemoMode();
@@ -55,26 +47,30 @@ export default function ExchangeTab({
   const { setSwapPrefill, swapPrefill } = useNavigation();
   const { financialStrategy } = useStrategy();
   const { config } = useProtectionProfile();
+  const sharedPortfolio = usePortfolio();
+  const previousAddress = useRef(address);
+  const [focusedSwap, setFocusedSwap] = useState(false);
+
+  useEffect(() => {
+    if (previousAddress.current !== address) {
+      setFocusedSwap(false);
+      previousAddress.current = address;
+    }
+  }, [address]);
 
   const morphNetting =
-    (financialStrategy === "pan_caribbean" ||
-      config.moneyPurpose === "upcoming_payment") &&
+    (financialStrategy === "pan_caribbean" || config.moneyPurpose === "upcoming_payment") &&
     !swapPrefill;
 
   useEffect(() => {
     if (!router.isReady) return;
-    const params = router.query;
-    const from = params.from as string | undefined;
-    const to = params.to as string | undefined;
-    const amount = params.amount as string | undefined;
-    const reason = params.reason as string | undefined;
-
+    const { from, to, amount, reason } = router.query;
     if (from || to || amount) {
       setSwapPrefill({
-        fromToken: from || undefined,
-        toToken: to || undefined,
-        amount: amount || undefined,
-        reason: reason || undefined,
+        fromToken: from as string | undefined,
+        toToken: to as string | undefined,
+        amount: amount as string | undefined,
+        reason: reason as string | undefined,
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -82,20 +78,14 @@ export default function ExchangeTab({
 
   if (!address) {
     const heroCard = (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5">
-        <h2 className="text-lg font-black text-gray-900 dark:text-white">
-          Protect your savings
-        </h2>
+      <div className="text-gray-900 dark:text-white">
+        <h2 className="text-lg font-black">Protect your savings</h2>
         <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 max-w-md leading-relaxed">
-          Use stablecoin swaps to reduce inflation exposure and move toward your
-          protection plan.
+          Use stablecoin swaps to reduce inflation exposure and move toward your protection plan.
         </p>
-        <div className="mt-4">
-          <WalletButton variant="primary" className="w-full" />
-        </div>
+        <div className="mt-4"><WalletButton variant="primary" className="w-full" /></div>
       </div>
     );
-
     return (
       <UnconnectedStateShell
         heroCard={heroCard}
@@ -110,16 +100,8 @@ export default function ExchangeTab({
   if (morphNetting) {
     return (
       <InstrumentShell
-        object={
-          <div data-testid="exchange-netting">
-            <CaribbeanFxNetCard />
-          </div>
-        }
-        status={
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Token swaps from Shield still open the ticket when you review a move.
-          </p>
-        }
+        object={<div data-testid="exchange-netting"><CaribbeanFxNetCard /></div>}
+        status={<p className="text-xs text-gray-500 dark:text-gray-400">Token swaps from Shield still open the ticket when you review a move.</p>}
       />
     );
   }
@@ -127,14 +109,44 @@ export default function ExchangeTab({
   return (
     <InstrumentShell
       object={
-        <SwapTab
-          userRegion={userRegion}
-          inflationData={inflationData}
-          refreshBalances={refreshBalances}
-          refreshChainId={refreshChainId}
-          isBalancesLoading={isBalancesLoading}
-        />
+        <div data-testid="exchange-swap-object" className="w-full">
+          <SwapTab
+            userRegion={userRegion}
+            inflationData={inflationData}
+            refreshBalances={refreshBalances}
+            refreshChainId={refreshChainId}
+            isBalancesLoading={isBalancesLoading}
+          />
+          <button
+            type="button"
+            onClick={() => setFocusedSwap(true)}
+            className="mt-2 min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          >
+            Inspect route and settlement
+          </button>
+        </div>
       }
+      inspector={
+        <InspectorSheet
+          selectedId={focusedSwap ? "swap" : null}
+          onClose={() => setFocusedSwap(false)}
+          title="Swap details"
+        >
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            Review the selected pair, available balance, route, and settlement chain before confirming.
+          </p>
+        </InspectorSheet>
+      }
+      status={(portfolio ?? sharedPortfolio) ? (
+        <DataFreshnessIndicator
+          lastUpdated={(portfolio ?? sharedPortfolio)!.lastUpdated}
+          isStale={(portfolio ?? sharedPortfolio)!.isStale}
+          hasEstimates={(portfolio ?? sharedPortfolio)!.hasEstimates}
+          isLoading={(portfolio ?? sharedPortfolio)!.isLoading || Boolean(isBalancesLoading)}
+          error={(portfolio ?? sharedPortfolio)!.errors?.[0] ?? null}
+          onRefresh={refreshBalances}
+        />
+      ) : undefined}
     />
   );
 }

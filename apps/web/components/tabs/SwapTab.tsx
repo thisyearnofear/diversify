@@ -25,7 +25,7 @@ import {
   filterTradeableTokens,
 } from "../../hooks/use-tradeable-tokens";
 import ChainBalancesHeader from "../swap/ChainBalancesHeader";
-import { useSharedMultichainBalances } from "../../context/app/PortfolioContext";
+import { usePortfolio, useSharedMultichainBalances } from "../../context/app/PortfolioContext";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
@@ -38,7 +38,7 @@ import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import { SocialContactPicker } from "../swap/SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
 import ErrorBoundary from "../ui/ErrorBoundary";
-import DepositHub from "../onramp/DepositHub";
+import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -133,12 +133,50 @@ export default function SwapTab({
   }>(null);
 
   // Get multichain balances for the header (also provides goalScores for celebration modal)
+  const sharedPortfolio = usePortfolio();
   const {
     chains,
+    allTokens,
     goalScores,
     isLoading: isMultichainLoading,
+    isStale: isMultichainStale,
+    errors: multichainErrors,
+    hasEstimates: multichainHasEstimates,
     refresh: refreshMultichain,
   } = useSharedMultichainBalances(address);
+  const walletView = useMemo(
+    () => buildWalletPortfolioView(
+      sharedPortfolio ?? ({
+        ...({} as any),
+        chains,
+        isLoading: isMultichainLoading || Boolean(isBalancesLoading),
+        isStale: isMultichainStale,
+        errors: multichainErrors,
+        hasEstimates: multichainHasEstimates,
+      } as any),
+    ),
+    [
+      chains,
+      isMultichainLoading,
+      isBalancesLoading,
+      isMultichainStale,
+      multichainErrors,
+      multichainHasEstimates,
+      sharedPortfolio,
+    ],
+  );
+  const walletSymbols = useMemo(
+    () => new Set((walletView.holdings ?? []).map((token) => token.symbol)),
+    [walletView.holdings],
+  );
+  const previousAddress = useRef(address);
+  useEffect(() => {
+    if (previousAddress.current !== address) {
+      setSearchQuery("");
+      setAutoSwitchNotice(null);
+      previousAddress.current = address;
+    }
+  }, [address]);
 
   // Helper to refresh balances with retries
   const refreshWithRetries = useCallback(
@@ -180,7 +218,11 @@ export default function SwapTab({
         ),
     );
 
-    const combined = [...filtered, ...essentials];
+    const combined = [...filtered, ...essentials].sort((a, b) => {
+      const aHeld = walletSymbols.has(a.symbol);
+      const bHeld = walletSymbols.has(b.symbol);
+      return Number(bHeld) - Number(aHeld);
+    });
 
     // Strategy-aware ordering: bubble recommended assets to top
     const recommended = StrategyService.getRecommendedAssets(getPersistedStrategy());
@@ -196,7 +238,7 @@ export default function SwapTab({
     }
 
     return combined;
-  }, [networkTokens, tradeableSymbols]);
+  }, [networkTokens, tradeableSymbols, walletSymbols]);
 
   const filteredTokens = useMemo(() => {
     if (!searchQuery) return tradeableTokens;
@@ -217,14 +259,6 @@ export default function SwapTab({
   }, []);
 
   const handleClaimG = flow.handleClaim;
-
-  const activeNetworkName = useMemo(() => {
-    const activeChainId = walletChainId ?? preferredChainId;
-    return (
-      Object.values(NETWORKS).find((network) => network.chainId === activeChainId)
-        ?.name ?? "this chain"
-    );
-  }, [walletChainId, preferredChainId]);
 
   const targetRegion = profileConfig.userRegion;
 
@@ -386,6 +420,10 @@ export default function SwapTab({
     recipientAddress?: string,
     phoneNumber?: string,
   ) => {
+    if (address && !isDemo && !canSafelyExecute(walletView.freshness)) {
+      setSwapStatus("Wallet data is still updating — refresh before swapping.");
+      return { success: false, error: "Wallet data is not ready" };
+    }
     setSwapStatus("Initiating swap...");
     setSwapStep("approving");
 
@@ -465,17 +503,12 @@ export default function SwapTab({
     }));
   }, [chains, walletChainId]);
 
-  // Zero balance detection for onramp prompt
-  const hasZeroBalance = useMemo(() => {
-    return chains.every(c => c.totalValue === 0);
-  }, [chains]);
-
   // Add bottom padding on mobile beginner mode to account for sticky CTA
   const containerPadding = isMobile && isBeginner ? "pb-24" : "";
 
   return (
     <div className={`space-y-4 ${containerPadding}`}>
-      <Card>
+      <div>
         {/* DEMO MODE BANNER */}
         {isDemo && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
@@ -593,41 +626,6 @@ export default function SwapTab({
           <>
             <ExperienceModeNotification />
 
-            {/* Zero Balance Onramp - Show before swap interface */}
-            {hasZeroBalance && (
-              <Card
-                className="mb-4 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-2 border-green-200 dark:border-green-800"
-                aiPrompt={() => `I have zero balance on ${activeNetworkName}. How do I add funds to start protecting my savings? What's the best onramp option for me in ${userRegion}?`}
-                aiQuickQuestions={[
-                  "What's the fastest way to add funds?",
-                  "Which onramp should I use for my region?",
-                  "How much should I deposit to start?",
-                  "Are there any fees I should know about?",
-                  "Can I use a credit card?"
-                ]}
-              >
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-3xl">💰</span>
-                  <div>
-                    <h3 className="font-bold text-green-900 dark:text-green-100 text-lg">
-                      Get Started
-                    </h3>
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      Add funds to start protecting your savings
-                    </p>
-                  </div>
-                </div>
-                
-                <DepositHub compact={true} />
-                
-                <div className="mt-4 p-3 bg-white/50 dark:bg-black/20 rounded-lg">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    💡 <strong>Tip:</strong> Start with $10-20 to test the platform, then add more once you&apos;re comfortable.
-                  </p>
-                </div>
-              </Card>
-            )}
-
             {showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
                 <p className="text-xs font-bold text-blue-800 dark:text-blue-200">
@@ -687,27 +685,7 @@ export default function SwapTab({
                   <Skeleton className="h-14 w-full" variant="rect" />
                 </div>
               ) : (
-                <Card
-                  padding="p-0"
-                  aiPrompt={() => {
-                    // Dynamic prompt based on swap state
-                    const selectedTokens = swapInterfaceRef.current?.getSelectedTokens();
-                    const fromToken = selectedTokens?.fromToken;
-                    const toToken = selectedTokens?.toToken;
-                    if (!fromToken || !toToken) {
-                      return "Help me understand how to use the swap interface to protect my savings";
-                    }
-                    return `I'm about to swap ${fromToken} to ${toToken}. Is this a good move for my protection plan?`;
-                  }}
-                  aiQuickQuestions={[
-                    "What's the inflation difference between these tokens?",
-                    "Will this improve my diversification?",
-                    "Are there better alternatives?",
-                    "What are the risks of this swap?",
-                    "How does this align with my goal?",
-                    "⚡ Browse Yield Vaults"
-                  ]}
-                >
+                <div className="relative">
                   <SwapInterface
                     ref={swapInterfaceRef}
                     availableTokens={filteredTokens}
@@ -719,7 +697,7 @@ export default function SwapTab({
                     chainId={walletChainId}
                     enableCrossChain={true}
                   />
-                </Card>
+                </div>
               )}
             </ErrorBoundary>
 
@@ -775,7 +753,7 @@ export default function SwapTab({
             />
           </>
         )}
-      </Card>
+      </div>
 
       {/* Success Celebration Modal — passes user goal and live goal score for personalised display */}
       {celebrationData && (

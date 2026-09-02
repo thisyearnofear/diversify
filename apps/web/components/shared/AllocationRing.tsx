@@ -127,7 +127,16 @@ export default function AllocationRing({
                     }
                   : undefined
               }
-              initial={reducedMotion ? false : { strokeDasharray: `0 ${circumference}`, rotate: startDeg }}
+              initial={
+                reducedMotion
+                  ? false
+                  : {
+                      strokeDasharray: `0 ${circumference}`,
+                      rotate: startDeg,
+                      strokeWidth: thickness,
+                      opacity: 1,
+                    }
+              }
               animate={{
                 strokeDasharray: `${len} ${circumference - len}`,
                 strokeWidth: isSelected ? thickness + 6 : thickness,

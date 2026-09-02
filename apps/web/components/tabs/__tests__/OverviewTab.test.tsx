@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
@@ -76,6 +76,7 @@ describe("OverviewTab — connected wallet vs preview", () => {
 
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
   });
 
   it("does not auto-enable demo while balances have not settled", () => {
@@ -124,6 +125,38 @@ describe("OverviewTab — connected wallet vs preview", () => {
     await waitFor(() => {
       expect(mockDisableDemo).toHaveBeenCalled();
     });
+  });
+
+  it("stays on the wait until a balance snapshot exists — never times out into empty Home", async () => {
+    vi.useFakeTimers();
+    render(
+      <OverviewTab
+        {...baseProps}
+        portfolio={emptyPortfolio({ lastUpdated: null, isLoading: true, totalValue: 0 })}
+        isLoading
+      />,
+    );
+    expect(screen.getByTestId("overview-skeleton")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12_000);
+    });
+
+    expect(screen.getByTestId("overview-skeleton")).toBeInTheDocument();
+    expect(screen.queryByTestId("connected-overview")).not.toBeInTheDocument();
+    expect(mockEnableDemo).not.toHaveBeenCalled();
+  });
+
+  it("shows Home during a refresh once a snapshot already exists", () => {
+    render(
+      <OverviewTab
+        {...baseProps}
+        portfolio={emptyPortfolio({ lastUpdated: Date.now(), isLoading: true, totalValue: 40 })}
+        isLoading
+      />,
+    );
+    expect(screen.getByTestId("connected-overview")).toBeInTheDocument();
+    expect(screen.queryByTestId("overview-skeleton")).not.toBeInTheDocument();
   });
 
   it("shows the unconnected state when there is no wallet and demo is off", () => {

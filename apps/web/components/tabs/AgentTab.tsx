@@ -3,7 +3,7 @@
  * Swaps belong on Shield / Exchange. Conversation lives in Ask Guardian.
  */
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { AgentTierStatus } from "../agent/AgentTierStatus";
 import AutomationSettings from "../agent/AutomationSettings";
 import { useAgentStatus } from "../../hooks/use-agent-status";
@@ -21,11 +21,13 @@ import WalletButton from "../wallet/WalletButton";
 import { useDemoMode } from "../../context/app/DemoModeContext";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
+import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 
 interface AgentTabProps {
   isMiniPay?: boolean;
   isFarcaster?: boolean;
   portfolio?: MultichainPortfolio;
+  refreshBalances?: () => Promise<void>;
   onNavigateToFund?: () => void;
 }
 
@@ -50,7 +52,9 @@ const HOW_IT_WORKS: HowItWorksStep[] = [
 export default function AgentTab({
   isMiniPay,
   isFarcaster,
+  portfolio,
   onNavigateToFund,
+  refreshBalances,
 }: AgentTabProps) {
   const { address } = useWalletContext();
   const { enableDemoMode } = useDemoMode();
@@ -65,6 +69,14 @@ export default function AgentTab({
   const { askAdvisor } = useAdvisor();
   const [boundsOpen, setBoundsOpen] = useState(false);
   const [dismissError, setDismissError] = useState(false);
+  const previousAddress = React.useRef(address);
+  useEffect(() => {
+    if (previousAddress.current !== address) {
+      setBoundsOpen(false);
+      setDismissError(false);
+      previousAddress.current = address;
+    }
+  }, [address]);
 
   const handleViewTimeline = useCallback(() => {
     askAdvisor(
@@ -177,7 +189,18 @@ export default function AgentTab({
         </InspectorSheet>
       }
       status={
-        <div className="flex items-center justify-between gap-3">
+        <div className="space-y-2">
+          {portfolio && (
+            <DataFreshnessIndicator
+              lastUpdated={portfolio.lastUpdated}
+              isStale={portfolio.isStale}
+              hasEstimates={portfolio.hasEstimates}
+              isLoading={portfolio.isLoading}
+              error={portfolio.errors?.[0] ?? null}
+              onRefresh={refreshBalances}
+            />
+          )}
+          <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Ask Guardian for the timeline. Swaps live on Shield and Exchange.
           </p>
@@ -190,6 +213,7 @@ export default function AgentTab({
               Change limits
             </button>
           )}
+          </div>
         </div>
       }
     />

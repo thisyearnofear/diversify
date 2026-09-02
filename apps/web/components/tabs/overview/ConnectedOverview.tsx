@@ -8,7 +8,6 @@ import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
 import { Card, DataError, HeroValue } from "../../shared/TabComponents";
-import SimplePieChart from "../../portfolio/SimplePieChart";
 import { ContextualBanner } from "../../shared/ContextualBanner";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
@@ -23,6 +22,8 @@ import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { InspectorSheet } from "../../shared/InspectorSheet";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
+import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
+import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -109,6 +110,8 @@ export function ConnectedOverview({
     totalValue,
     regionData,
   } = activePortfolio;
+  const walletView = buildWalletPortfolioView(portfolio);
+  const liveTotalValue = isDemo ? totalValue : walletView.totalUsd;
 
   const home = useHomeSections({
     portfolio,
@@ -141,103 +144,89 @@ export function ConnectedOverview({
 
   const chainErrors = activePortfolio.errors ?? [];
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  const handleRefresh = React.useCallback(async () => {
+    await refreshBalances?.();
+  }, [refreshBalances]);
 
-  const object = (
-    <section id="home-hero" aria-labelledby="home-hero-title" className="space-y-4">
-      {moment ? (
-        <>
-          <h2 id="home-hero-title" className="sr-only">
-            Your currency this year
-          </h2>
-          <CurrencyMomentCard
-            moment={moment}
-            benchmarks={benchmarks}
-            horizons={horizons}
-            onSelectBenchmark={handleMomentBenchmark}
-            onSelectHorizon={handleMomentHorizon}
-            onAmountChange={setSavingsAmount}
-            onProtect={() => setActiveTab("protect")}
-            onChangeCountry={onChangeCountry}
-            frame={frame}
-          />
-        </>
-      ) : inflationMoment ? (
-        <InflationMomentCard
-          moment={inflationMoment}
-          onAmountChange={setSavingsAmount}
-          onChangeCountry={onChangeCountry}
-          onProtect={() => setActiveTab("protect")}
-        />
-      ) : (
-        <Card className="text-center">
-          <div
-            id="home-hero-title"
-            className="mb-3 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
-          >
-            {home.isBeginner
-              ? "Home Overview"
-              : adaptiveConfig.content.hero.icon &&
-                `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
-          </div>
-          <HeroValue
-            value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-            label={home.isBeginner ? "Protection Score" : "Total Value"}
-          />
-          <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
-            {diversificationRating}
-          </p>
-          {(() => {
-            const ctaLabel = home.isBeginner
-              ? hasHoldings
-                ? "Review Your Shield"
-                : "Set Up Your Plan"
-              : adaptiveConfig.content.hero.ctaLabel;
-            const ctaTab = home.isBeginner
-              ? hasHoldings
-                ? "exchange"
-                : "protect"
-              : (adaptiveConfig.content.hero.ctaTab as TabId | null);
-            if (!ctaLabel) return null;
-            return (
-              <div className="mt-5">
-                <button
-                  onClick={() =>
-                    setActiveTab(ctaTab ?? (hasHoldings ? "exchange" : "protect"))
-                  }
-                  className="min-h-[44px] px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
-                >
-                  {ctaLabel}
-                </button>
-              </div>
-            );
-          })()}
-        </Card>
-      )}
-
-      {showExposureDial && (
-        <HomeExposureDial
-          regionData={regionData}
-          totalValue={totalValue}
-          selectedRegion={focusedRegion}
-          onSelectRegion={handleDialSelect}
-        />
-      )}
-
-      {home.isBeginner && hasHoldings && regionData.length > 0 && (
-        <div>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
-            Your Protection Mix
-          </h3>
-          <SimplePieChart
-            data={regionData.map((r) => ({
-              region: r.region,
-              value: r.value,
-              color: r.color,
-            }))}
-          />
-        </div>
-      )}
+  // A connected wallet gets one primary object: the live exposure dial. The
+  // currency moment remains the fallback instrument when regional holdings are
+  // unavailable, rather than competing with the wallet object in the first
+  // viewport.
+  const object = showExposureDial ? (
+    <HomeExposureDial
+      regionData={regionData}
+      totalValue={totalValue}
+      selectedRegion={focusedRegion}
+      onSelectRegion={handleDialSelect}
+    />
+  ) : moment ? (
+    <section id="home-hero" aria-labelledby="home-hero-title">
+      <h2 id="home-hero-title" className="sr-only">
+        Your currency this year
+      </h2>
+      <CurrencyMomentCard
+        moment={moment}
+        benchmarks={benchmarks}
+        horizons={horizons}
+        onSelectBenchmark={handleMomentBenchmark}
+        onSelectHorizon={handleMomentHorizon}
+        onAmountChange={setSavingsAmount}
+        onProtect={() => setActiveTab("protect")}
+        onChangeCountry={onChangeCountry}
+        frame={frame}
+      />
     </section>
+  ) : inflationMoment ? (
+    <InflationMomentCard
+      moment={inflationMoment}
+      onAmountChange={setSavingsAmount}
+      onChangeCountry={onChangeCountry}
+      onProtect={() => setActiveTab("protect")}
+    />
+  ) : (
+    <Card className="text-center">
+      <div
+        id="home-hero-title"
+        className="mb-3 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
+      >
+        {home.isBeginner
+          ? "Home Overview"
+          : adaptiveConfig.content.hero.icon &&
+            `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
+      </div>
+      <HeroValue
+        value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+        label={home.isBeginner ? "Protection Score" : "Total Value"}
+      />
+      <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
+        {diversificationRating}
+      </p>
+      {(() => {
+        const ctaLabel = home.isBeginner
+          ? hasHoldings
+            ? "Review Your Shield"
+            : "Set Up Your Plan"
+          : adaptiveConfig.content.hero.ctaLabel;
+        const ctaTab = home.isBeginner
+          ? hasHoldings
+            ? "exchange"
+            : "protect"
+          : (adaptiveConfig.content.hero.ctaTab as TabId | null);
+        if (!ctaLabel) return null;
+        return (
+          <div className="mt-5">
+            <button
+              onClick={() =>
+                setActiveTab(ctaTab ?? (hasHoldings ? "exchange" : "protect"))
+              }
+              className="min-h-[44px] px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+            >
+              {ctaLabel}
+            </button>
+          </div>
+        );
+      })()}
+    </Card>
   );
 
   const inspector = (
@@ -294,6 +283,22 @@ export function ConnectedOverview({
 
   const status = (
     <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3">
+        <DataFreshnessIndicator
+          lastUpdated={portfolio.lastUpdated}
+          isStale={portfolio.isStale}
+          hasEstimates={portfolio.hasEstimates}
+          isLoading={portfolio.isLoading}
+          error={chainErrors.length > 0 ? chainErrors[0] : null}
+          onRefresh={refreshBalances ? handleRefresh : undefined}
+        />
+      </div>
+      {showExposureDial && moment && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {moment.currencyCode} buying power is {moment.delta < 0 ? "down" : moment.delta > 0 ? "up" : "flat"}{" "}
+          {Math.abs(moment.delta).toFixed(0)}% vs {moment.benchmarkLabel} over {moment.horizon}.
+        </p>
+      )}
       {home.primaryTip && hasHoldings && (
         <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
       )}
@@ -321,7 +326,7 @@ export function ConnectedOverview({
       <ContextualBanner
         kind={home.banner}
         isDemo={isDemo}
-        demoValue={hasHoldings ? totalValue : undefined}
+        demoValue={hasHoldings ? liveTotalValue : undefined}
         goalDriftMessage={goalDriftMessage}
         goalDriftActionLabel="Rebalance"
         dailyClaimText={

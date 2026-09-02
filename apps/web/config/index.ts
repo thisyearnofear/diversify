@@ -257,6 +257,7 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     'G$': { name: 'GoodDollar', region: REGIONS.GLOBAL, decimals: 18, apy: null, isInflationHedge: false },
 
     // Global Stablecoins (no yield, low inflation exposure)
+    CELO: { name: 'Celo', region: REGIONS.AFRICA, decimals: 18 },
     USDT: { name: 'Tether USD', region: REGIONS.USA, decimals: 6 },
     USDC: { name: 'USD Coin', region: REGIONS.GLOBAL, decimals: 6 },
     EURC: { name: 'Euro Coin', region: REGIONS.EUROPE, decimals: 6 },
@@ -332,7 +333,7 @@ export function getTokenRegion(symbol: string): RegionValue {
 
 // Single Source of Truth for Network Assets
 export const NETWORK_TOKENS: Record<number, string[]> = {
-    [NETWORKS.CELO_MAINNET.chainId]: ['USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
+    [NETWORKS.CELO_MAINNET.chainId]: ['CELO', 'USDm', 'EURm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm', 'XOFm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'CHFm', 'JPYm', 'NGNm', 'G$', 'USDT'],
     [NETWORKS.CELO_SEPOLIA.chainId]: ['USDm', 'EURm', 'BRLm', 'XOFm', 'KESm', 'PHPm', 'COPm', 'GHSm', 'GBPm', 'ZARm', 'CADm', 'AUDm', 'G$', 'USDT', 'CELO', 'WAKANDA', 'DAKAR', 'SHADOW', 'KUBERA', 'SANTA', 'SHADALOO', 'MISHIMA', 'ARASAKA', 'SURA'],
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'MXNB', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARBITRUM_SEPOLIA.chainId]: ['USDC'],
@@ -375,6 +376,7 @@ export const EXCHANGE_RATES: Record<string, number> = {
     JPYm: 0.0067,
     NGNm: 0.00061,
     'G$': 0.0002, // ~$0.0002 per G$ (GoodDollar UBI token, market rate varies)
+    CELO: 0.35,
     USDT: 1,
     USDC: 1,
     EURC: 1.08,

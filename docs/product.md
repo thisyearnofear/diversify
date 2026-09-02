@@ -1,6 +1,8 @@
 # Product
 
-> **What ships today (2026-08-24):** A retail savings app that detects a visitor's local currency and shows its depreciation against USD, EUR, and gold using live FX rates. A landing-page FX drag calculator (Phase 0) — no signup, no wallet, no onboarding. Signal detection + adaptive tab labels (Phase 1) wired into the app shell. Users choose a values-based philosophy, then protect savings via stablecoin allocation, gold-backed tokens, and yield vaults on Celo/Arbitrum — with every Guardian decision recorded on-chain. The SME business FX layer (importer archetype, per-cycle drag reports, cycle-aware autonomous execution) is the north star described below — a concierge CLI tool validates the math, but the in-app experience is not yet shipped.
+> **What ships today (2026-09-01):** The connected-wallet experience now uses one shared portfolio data model across Overview, Shield, Exchange, Agent, and Learn: live multi-chain holdings are aggregated by token, separated from protection-plan targets, exposed as reusable wallet/plan gap selectors, and annotated with freshness (`ready`, `stale`, `partial`, etc.). Shield's ring reflects actual wallet holdings; Agent recommendations receive holdings, percentages, gaps, and data freshness; Learn seeds its calculator from wallet value while retaining editable what-if scenarios. Focused regression coverage and TypeScript checks are clean.
+>
+> **What shipped previously (2026-08-24):** A retail savings app that detects a visitor's local currency and shows its depreciation against USD, EUR, and gold using live FX rates. A landing-page FX drag calculator (Phase 0) — no signup, no wallet, no onboarding. Signal detection + adaptive tab labels (Phase 1) wired into the app shell. Users choose a values-based philosophy, then protect savings via stablecoin allocation, gold-backed tokens, and yield vaults on Celo/Arbitrum — with every Guardian decision recorded on-chain. The SME business FX layer (importer archetype, per-cycle drag reports, cycle-aware autonomous execution) is the north star described below — a concierge CLI tool validates the math, but the in-app experience is not yet shipped.
 
 > **Adaptive experience (2026-08-24):** DiversiFi is shifting from one-size-fits-all to signal-based adaptive experience. The same backend serves all personas; the frontend is a configuration. See [`docs/product.md`](./product.md) for the full architecture — signals, routing, and landing page calculator.
 
@@ -204,7 +206,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | **Protect** | Choose plan, view allocation, deposit — with compact Guardian status before connect |
 | **Exchange** | Swap stablecoins across regions and chains |
 | **Pilot** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
-| **Learn** | Inflation education, strategy guides, glossary |
+| **Learn** | Wealth-protection calculator (cash vs your mix over time) |
 
 **Simple mode** (beginner): Shield → Home → Learn only. Exchange and Advisor remain reachable via **More options** on Home. **Standard/Advanced** modes restore the full tab bar.
 

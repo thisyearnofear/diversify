@@ -27,6 +27,8 @@ import { TrustFlow } from "./TrustFlow";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { GUARDIAN_DRAWER_SUBTITLE } from "@/constants/guardian-copy";
 import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
+import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
+import { useSharedMultichainBalances } from "@/context/app/PortfolioContext";
 
 const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
   ssr: false,
@@ -402,6 +404,8 @@ export default function AIChat() {
   const { claimReward } = useCredits();
   const { setActiveTab, navigateToSwap, setFocusedCycleId, setFocusedYieldKey } = useNavigation();
   const { address } = useWalletContext();
+  const portfolio = useSharedMultichainBalances(address);
+  const walletView = buildWalletPortfolioView(portfolio);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef<number | null>(null);
   const [inputValue, setInputValue] = React.useState("");
@@ -623,6 +627,12 @@ export default function AIChat() {
               onClick={() => setDrawerOpen(false)}
             />
           </div>
+
+        {address && walletView.freshness !== "ready" && walletView.freshness !== "empty" && (
+          <p className="px-6 py-2 text-[11px] text-amber-700 dark:text-amber-300" role="status">
+            Guardian is working with {walletView.freshness === "stale" ? "stale" : "partial"} wallet data. Refresh balances before acting.
+          </p>
+        )}
 
         {/* Freemium Status Banner */}
         <FreemiumPanel onGoodDollarClaim={handleClaimFromChat} />

@@ -9,12 +9,12 @@
  * around it is quiet. Motion reveals the reallocation, never loops.
  */
 import React, { useMemo } from 'react';
-import { Card } from '../../shared/TabComponents';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { getArchetypeAllocations } from '@/components/protection-cards/plan-preview';
-import type { MultichainPortfolio, TokenBalance } from '@/hooks/use-multichain-balances';
+import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
+import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 
 interface Props {
   /** Effective strategy key (selected strategy overrides onboarding philosophy). */
@@ -50,32 +50,34 @@ export function ProtectionPlanRing({
     [archetypeId],
   );
 
-  const totalValue = portfolio?.totalValue ?? 0;
+  const walletView = useMemo(
+    () => buildWalletPortfolioView(portfolio, allocations),
+    [portfolio, allocations],
+  );
+  const totalValue = walletView.totalUsd;
+  const heldPctByToken = new Map(
+    walletView.holdings.map((holding) => [holding.symbol, holding.percent]),
+  );
 
-  const heldPctByToken = useMemo(() => {
-    const map = new Map<string, number>();
-    if (!portfolio || totalValue <= 0) return map;
-    const balances = (portfolio.chains ?? []).flatMap((c) => c.balances as TokenBalance[]);
-    for (const b of balances) {
-      if (b.value > 0) {
-        map.set(b.symbol, (map.get(b.symbol) ?? 0) + (b.value / totalValue) * 100);
-      }
-    }
-    return map;
-  }, [portfolio, totalValue]);
+  // The ring must represent the wallet's live holdings. Plan percentages remain
+  // visible in the legend/inspector so users can compare reality with intent.
+  const slices: RingSlice[] = useMemo(() => {
+    if (!archetype) return [];
+    return walletView.holdings.map((holding, i) => ({
+      id: holding.symbol,
+      label: `${holding.symbol} — wallet holding`,
+      percent: holding.percent,
+      color:
+        TOKEN_COLORS[holding.symbol] ??
+        (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : '#64748b'),
+    }));
+  }, [archetype, walletView.holdings]);
 
-  if (!archetype || allocations.length === 0) return null;
-
-  const slices: RingSlice[] = allocations.map((a, i) => ({
-    id: a.token,
-    label: `${a.token} — ${a.region}`,
-    percent: a.percent,
-    color:
-      TOKEN_COLORS[a.token] ??
-      (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : '#64748b'),
-  }));
+  if (!archetype || allocations.length === 0 || slices.length === 0) return null;
 
   const selected = allocations.find((a) => a.token === selectedToken) ?? null;
+  const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
+  const selectedSymbol = selectedLive?.id ?? selected?.token ?? null;
 
   const projections = portfolio?.projections;
   const purchasingPowerLost = projections?.currentPath?.purchasingPowerLost ?? 0;
@@ -87,7 +89,7 @@ export function ProtectionPlanRing({
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   return (
-    <Card className="border border-gray-200/70 dark:border-white/[0.06]">
+    <div className="w-full">
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
@@ -108,16 +110,16 @@ export function ProtectionPlanRing({
           size={200}
           thickness={24}
         >
-          {selected ? (
+          {selected || selectedLive ? (
             <>
               <span className="flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white">
-                <TokenIcon symbol={selected.token} size={18} />
-                {selected.token}
+                <TokenIcon symbol={selectedSymbol!} size={18} />
+                {selectedSymbol}
               </span>
               <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                {selected.percent}%
+                {selectedLive?.percent.toFixed(0) ?? 0}%
               </span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">plan target</span>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">in wallet</span>
             </>
           ) : (
             <>
@@ -134,7 +136,12 @@ export function ProtectionPlanRing({
 
       {/* Legend — the same selection surface as the ring, in list form */}
       <div className="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
-        {allocations.map((a) => {
+        {slices.map((slice) => {
+          const a = allocations.find((allocation) => allocation.token === slice.id) ?? {
+            token: slice.id,
+            region: 'Wallet holding',
+            percent: 0,
+          };
           const held = heldPctByToken.get(a.token) ?? 0;
           const isSelected = selectedToken === a.token;
           return (
@@ -157,7 +164,7 @@ export function ProtectionPlanRing({
                 </span>
               </span>
               <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">
-                {a.percent}%
+                {a.percent > 0 ? `${a.percent}% plan` : 'not in plan'}
               </span>
               <span
                 className={`text-[11px] font-bold tabular-nums w-20 text-right ${
@@ -166,7 +173,7 @@ export function ProtectionPlanRing({
                     : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
-                {held >= a.percent - 2 ? `✓ ${held.toFixed(0)}% held` : `${held.toFixed(0)}% held`}
+                {held.toFixed(0)}% held
               </span>
             </button>
           );
@@ -187,6 +194,5 @@ export function ProtectionPlanRing({
           .
         </p>
       )}
-    </Card>
-  );
+    </div>  );
 }
