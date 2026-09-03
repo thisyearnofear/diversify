@@ -26,10 +26,14 @@ export const LEDGER_CHAIN_BADGES: Record<number, { icon: string; color: string; 
 const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661]);
 
 /**
- * Savings/yield mainnet rails merged into the global proof feed when no
- * user or explicit chainId is requested (Arbitrum yield, Celo EM, HashKey APAC, Robinhood RWA).
+ * Mainnet ledger chains merged into the global proof feed when no user or
+ * explicit chainId is requested: Arbitrum (yield), Celo (savings/EM),
+ * Robinhood (RWA), HashKey (APAC), 0G (evidence anchor — its rows are the
+ * mirrored receipts judges verify on chainscan.0g.ai). Chains without a
+ * configured contract drop out automatically (see configuredProofFeedChains
+ * in the ledger API route).
  */
-export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 4663, 177] as const;
+export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 4663, 177, 16661] as const;
 
 export interface ProofFeedRecommendationBase {
   id: number;

@@ -20,6 +20,7 @@
 
 import { ethers } from 'ethers6';
 import { isApacRailProfile, isCaribbeanRailProfile } from '../types/strategy';
+import { fetchWithTimeout } from '../utils/promise-utils';
 
 // ============================================================================
 // TYPES
@@ -741,6 +742,111 @@ export async function getTotalRecommendations(chainId?: number): Promise<number>
     }
 }
 
+// ============================================================================
+// EXPLORER SOURCE VERIFICATION
+// ============================================================================
+
+/**
+ * Result of verifying a ledger tx against its chain's RPC — the
+ * authoritative source. The 0G explorers (chainscan.0g.ai) expose no
+ * reliable public REST API, so "is this evidence link real?" is answered
+ * from the chain itself: if a receipt exists, the explorer will index it;
+ * if not, the link is dead no matter what the explorer returns over HTTP.
+ */
+export interface LedgerTxVerification {
+    txHash: string;
+    chainId: number;
+    explorerUrl: string;
+    /** True when the RPC returned a receipt for this hash. */
+    found: boolean;
+    /** 1 = success, 0 = reverted, null = not found. */
+    status: number | null;
+    blockNumber: number | null;
+    to: string | null;
+    /** True when the tx's `to` is the configured ledger contract. Null when no contract is configured. */
+    isLedgerContract: boolean | null;
+}
+
+type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
+
+/**
+ * Verify a ledger transaction against the chain's RPC (source of truth,
+ * not the explorer). Used by the proof feed so "Verified on 0G" reflects
+ * on-chain reality instead of explorer availability, and so judges get a
+ * programmatic check that doesn't depend on chainscan having an API.
+ *
+ * `fetchImpl` is a DI seam for tests (mirrors the fx-intent-pool pattern).
+ */
+export async function verifyLedgerTx(
+    txHash: string,
+    chainId?: number,
+    fetchImpl: FetchLike = fetch,
+): Promise<LedgerTxVerification> {
+    const resolvedChainId = chainId ?? getDefaultLedgerChainId();
+    const config = resolveLedgerConfig(resolvedChainId);
+    const explorerUrl = buildLedgerExplorerUrl(txHash, resolvedChainId);
+    const base: LedgerTxVerification = {
+        txHash,
+        chainId: resolvedChainId,
+        explorerUrl,
+        found: false,
+        status: null,
+        blockNumber: null,
+        to: null,
+        isLedgerContract: null,
+    };
+
+    if (!config || !txHash || !/^0x[0-9a-fA-F]{64}$/.test(txHash)) {
+        return base;
+    }
+
+    try {
+        const res = await fetchWithTimeout(
+            config.rpcUrl,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: 1,
+                    method: 'eth_getTransactionReceipt',
+                    params: [txHash],
+                }),
+            },
+            8000,
+            fetchImpl as typeof fetch,
+        );
+        if (!res.ok) return base;
+
+        const json: { result?: Record<string, unknown> | null } = await res.json();
+        const receipt = json.result;
+        if (!receipt || typeof receipt !== 'object') return base;
+
+        const statusHex = typeof receipt.status === 'string' ? receipt.status : null;
+        const blockHex = typeof receipt.blockNumber === 'string' ? receipt.blockNumber : null;
+        const to = typeof receipt.to === 'string' ? receipt.to : null;
+
+        return {
+            txHash,
+            chainId: resolvedChainId,
+            explorerUrl,
+            found: true,
+            status: statusHex === null ? null : parseInt(statusHex, 16),
+            blockNumber: blockHex === null ? null : parseInt(blockHex, 16),
+            to,
+            isLedgerContract: config.contractAddress
+                ? !!to && to.toLowerCase() === config.contractAddress.toLowerCase()
+                : null,
+        };
+    } catch (error: any) {
+        console.warn(
+            `[RecommendationLedger] verifyLedgerTx failed on chain ${resolvedChainId}:`,
+            error?.message ?? error,
+        );
+        return base;
+    }
+}
+
 export const recommendationLedgerService = {
     recordRecommendation,
     mirrorRecommendationToZeroG,
@@ -756,6 +862,7 @@ export const recommendationLedgerService = {
     listSupportedLedgerChains,
     buildLedgerExplorerUrl,
     computeReasoningHash,
+    verifyLedgerTx,
 };
 
 export default recommendationLedgerService;

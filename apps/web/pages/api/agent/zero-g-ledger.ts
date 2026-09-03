@@ -16,6 +16,7 @@ import {
   getLedgerContractAddress,
   getDefaultLedgerChainId,
   buildLedgerExplorerUrl,
+  verifyLedgerTx,
   type LedgerRecommendation,
 } from '@diversifi/shared';
 import {
@@ -55,11 +56,13 @@ function configuredProofFeedChains(): number[] {
 async function fetchRecentGlobal(
   chainId: number,
   limit: number,
+  stats: {
+    totalRecommendations: number;
+  },
 ): Promise<LedgerRecommendation[]> {
   const contractAddress = getLedgerContractAddress(chainId);
   if (!contractAddress) return [];
 
-  const stats = await recommendationLedgerService.getLedgerStats(chainId);
   if (stats.totalRecommendations <= 0) return [];
 
   const total = stats.totalRecommendations;
@@ -94,7 +97,7 @@ async function fetchSingleChainFeed(
     );
     recent = result.recommendations.map((rec) => ({ ...rec, chainId }));
   } else if (contractAddress && stats.totalRecommendations > 0) {
-    recent = (await fetchRecentGlobal(chainId, limit)).map((rec) => ({
+    recent = (await fetchRecentGlobal(chainId, limit, stats)).map((rec) => ({
       ...rec,
       chainId,
     }));
@@ -125,10 +128,10 @@ async function fetchMultiChainProofFeed(limit: number): Promise<LedgerResponse> 
   const perChain = await Promise.all(
     chainIds.map(async (chainId) => {
       try {
-        const [stats, recent] = await Promise.all([
-          recommendationLedgerService.getLedgerStats(chainId),
-          fetchRecentGlobal(chainId, limit),
-        ]);
+        // Stats must come first: fetchRecentGlobal derives the id window
+        // from totalRecommendations, so this was never actually parallel.
+        const stats = await recommendationLedgerService.getLedgerStats(chainId);
+        const recent = await fetchRecentGlobal(chainId, limit, stats);
         return { chainId, stats, recent };
       } catch (err: any) {
         console.warn(`[0G Ledger API] Chain ${chainId} feed failed:`, err?.message ?? err);
@@ -231,10 +234,28 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { user, limit: limitParam, offset: offsetParam, chainId: chainIdParam } = req.query;
+  const { user, limit: limitParam, offset: offsetParam, chainId: chainIdParam, verify } = req.query;
   const limit = Math.min(50, parseInt(String(limitParam || '10'), 10));
   const offset = parseInt(String(offsetParam || '0'), 10);
   const explicitChainId = chainIdParam ? parseInt(String(chainIdParam), 10) : undefined;
+
+  // Explorer source verification: is this tx real, per the chain's RPC
+  // (authoritative) — not per the explorer, which for 0G exposes no
+  // reliable public API. Returns the receipt facts + the explorer link so
+  // judges and the proof feed can show "verified" backed by chain data.
+  if (typeof verify === 'string' && verify) {
+    const verification = await verifyLedgerTx(verify, explicitChainId);
+    return res.status(200).json({
+      ...verification,
+      // "verified" requires the receipt to be addressed to the configured
+      // ledger contract on that chain (isLedgerContract is null when no
+      // contract is configured, so unconfigured chains can never verify).
+      verified:
+        verification.found &&
+        verification.status === 1 &&
+        verification.isLedgerContract === true,
+    });
+  }
   const userAddress =
     user && typeof user === 'string' && user.startsWith('0x') ? user : undefined;
 
