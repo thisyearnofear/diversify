@@ -221,9 +221,13 @@ vi.mock("@/components/earn/YieldDiscoverySection", () => ({
     React.createElement("div", { "data-testid": "yield-discovery" }),
 }));
 
-vi.mock("@/components/tabs/protect/RwaAssetCards", () => ({
-  default: () => React.createElement("div", { "data-testid": "rwa-cards" }),
-}));
+vi.mock("@/components/tabs/protect/RwaAssetCards", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/components/tabs/protect/RwaAssetCards")>();
+  return {
+    ...actual,
+    default: () => React.createElement("div", { "data-testid": "rwa-cards" }),
+  };
+});
 
 vi.mock("@/components/tabs/protect/OptimizationInsight", () => ({
   default: () =>

@@ -41,6 +41,33 @@ describe('AllocationRing — shared plan ring primitive', () => {
     expect(haptics.tap).toHaveBeenCalledTimes(2);
   });
 
+  it('dims unselected slices and draws a ghost arc to the target', () => {
+    const onSelect = vi.fn();
+    render(
+      <AllocationRing
+        slices={SLICES}
+        selectedId="cUSD"
+        onSelect={onSelect}
+        ghost={{ id: 'cUSD', extraPercent: 20 }}
+      />,
+    );
+    const ghost = screen.getByTestId('ring-ghost');
+    expect(ghost).toHaveAttribute('data-ghost-kind', 'grow');
+    expect(screen.getByRole('button', { name: /PAXG: 30%/ })).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  it('marks a trimming ghost when extraPercent is negative', () => {
+    render(
+      <AllocationRing
+        slices={SLICES}
+        selectedId="cUSD"
+        onSelect={() => {}}
+        ghost={{ id: 'cUSD', extraPercent: -15 }}
+      />,
+    );
+    expect(screen.getByTestId('ring-ghost')).toHaveAttribute('data-ghost-kind', 'trim');
+  });
+
   it('marks the selected slice and renders center content', () => {
     render(
       <AllocationRing slices={SLICES} selectedId="PAXG" onSelect={() => {}}>

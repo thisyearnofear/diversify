@@ -55,6 +55,7 @@ import { TokenIcon } from "../shared/TokenIcon";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 import StatusBadge from "../shared/StatusBadge";
+import { rwaLegFor } from "./protect/RwaAssetCards";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -490,6 +491,15 @@ export default function ProtectionTab({
                 : "Your holding is near the plan target."
               : "This wallet holding is outside the current protection plan."}
           </p>
+          {(() => {
+            const rwa = rwaLegFor(focusedToken);
+            if (!rwa) return null;
+            return (
+              <p data-testid="rwa-leg" className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                {rwa.label} — {rwa.description}
+              </p>
+            );
+          })()}
           {riskData && selectedAlloc && gapPct > 2 && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {riskData.code} exposure is the risk this slice is meant to offset.

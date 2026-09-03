@@ -23,6 +23,7 @@ import { InspectorSheet } from "../../shared/InspectorSheet";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
+import { FALLBACK_INFLATION_DATA } from "@/constants/inflation";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -124,6 +125,37 @@ export function ConnectedOverview({
   const selectedPct =
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
 
+  const tokensByRegion = React.useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const holding of walletView.holdings) {
+      for (const balance of holding.balances) {
+        const list = map[balance.region] ?? [];
+        if (!list.includes(holding.symbol)) list.push(holding.symbol);
+        map[balance.region] = list;
+      }
+    }
+    return map;
+  }, [walletView.holdings]);
+
+  const inflationByRegion = React.useMemo(() => {
+    const map: Record<string, number | null> = {};
+    for (const row of regionData) {
+      const entry = FALLBACK_INFLATION_DATA[row.region];
+      map[row.region] =
+        typeof entry?.avgRate === "number"
+          ? entry.avgRate
+          : row.region === "Commodities"
+            ? 0
+            : null;
+    }
+    return map;
+  }, [regionData]);
+
+  const selectedRiskHint =
+    focusedRegion && moment && focusedRegion === userRegion
+      ? `${moment.delta < 0 ? "−" : moment.delta > 0 ? "+" : ""}${Math.abs(moment.delta).toFixed(0)}% vs ${moment.benchmarkLabel}`
+      : null;
+
   const chainErrors = activePortfolio.errors ?? [];
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const handleRefresh = React.useCallback(async () => {
@@ -140,6 +172,9 @@ export function ConnectedOverview({
       selectedRegion={focusedRegion}
       onSelectRegion={handleDialSelect}
       watermark={isDemo ? "Sample data" : undefined}
+      tokensByRegion={tokensByRegion}
+      inflationByRegion={inflationByRegion}
+      selectedRiskHint={selectedRiskHint}
     />
   ) : moment ? (
     <section id="home-hero" aria-labelledby="home-hero-title">

@@ -59,6 +59,19 @@ describe('HomeExposureDial — Home tab marquee', () => {
     expect(onSelectRegion).toHaveBeenLastCalledWith(null);
   });
 
+  it('overlays inflation on the selected hole, not a sibling card', async () => {
+    render(
+      <HomeExposureDial
+        {...baseProps}
+        selectedRegion="Kenya"
+        inflationByRegion={{ Kenya: 12.5 }}
+        tokensByRegion={{ Kenya: ['KESm', 'cUSD'] }}
+      />,
+    );
+    expect(await screen.findByText('12.5% inflation')).toBeInTheDocument();
+    expect(screen.queryByText('of savings')).not.toBeInTheDocument();
+  });
+
   it('shows the selected region in the ring center, not a sibling CTA card', async () => {
     render(
       <HomeExposureDial {...baseProps} selectedRegion="Kenya" />,

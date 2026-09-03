@@ -60,6 +60,11 @@ const RWA_ASSETS = [
     },
 ];
 
+export function rwaLegFor(symbol: string) {
+  const token = symbol.toUpperCase();
+  return RWA_ASSETS.find((asset) => asset.symbol.toUpperCase() === token) ?? null;
+}
+
 interface RwaAssetCardsProps {
     chains: Array<{ balances: Array<{ symbol: string }> }>;
     userGoal: UserGoal | null;

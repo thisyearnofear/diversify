@@ -92,7 +92,20 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(DEMO_PORTFOLIO.projections.currentPath.purchasingPowerLost).toBeGreaterThan(0);
   });
 
-  it('puts alignment in the idle hole, not a portfolio total', async () => {
+  it('draws a trim ghost when the selected slice is over the plan', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken="cUSD"
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    expect(screen.getByTestId('ring-ghost')).toHaveAttribute('data-ghost-kind', 'trim');
+  });
+
+  it('does not draw a ghost when idle', async () => {
     render(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -103,6 +116,7 @@ describe('ProtectionPlanRing — projections shape', () => {
       />,
     );
     expect(await screen.findByText('72%')).toBeInTheDocument();
+    expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
     expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
   });
 

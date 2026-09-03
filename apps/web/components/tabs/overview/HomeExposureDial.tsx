@@ -13,6 +13,7 @@ import { motion } from 'framer-motion';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
 import { useCountUp } from '@/hooks/use-count-up';
 import { usePointerTilt } from '@/hooks/use-pointer-tilt';
+import { TokenIcon } from '@/components/shared/TokenIcon';
 
 interface Props {
   regionData: Array<{ region: string; value: number; color: string }>;
@@ -21,6 +22,12 @@ interface Props {
   onSelectRegion: (region: string | null) => void;
   /** Quiet sample-data mark. Does not compete with the hole number. */
   watermark?: string;
+  /** Tokens sitting in each region — chips in the hole when that slice is selected. */
+  tokensByRegion?: Record<string, string[]>;
+  /** Regional inflation overlay for the selected hole. */
+  inflationByRegion?: Record<string, number | null>;
+  /** Visitor-currency risk line when the selected region is theirs. */
+  selectedRiskHint?: string | null;
 }
 
 export function HomeExposureDial({
@@ -29,6 +36,9 @@ export function HomeExposureDial({
   selectedRegion,
   onSelectRegion,
   watermark,
+  tokensByRegion,
+  inflationByRegion,
+  selectedRiskHint,
 }: Props) {
   const slices: RingSlice[] = useMemo(
     () =>
@@ -56,6 +66,12 @@ export function HomeExposureDial({
     totalValue > 0 && largest ? (largest.value / totalValue) * 100 : 0;
   const holePct = selected ? selectedPct : idlePct;
   const holeRegion = selected?.region ?? largest?.region ?? "";
+  const selectedTokens = selected ? tokensByRegion?.[selected.region] ?? [] : [];
+  const selectedInflation = selected ? inflationByRegion?.[selected.region] : undefined;
+  const selectedHint = selected
+    ? selectedRiskHint
+      ?? (typeof selectedInflation === "number" ? `${selectedInflation.toFixed(1)}% inflation` : "of savings")
+    : "largest region · tap a slice";
 
   const animatedHole = useCountUp(holePct, {
     format: (n) => `${Math.round(n)}%`,
@@ -96,8 +112,15 @@ export function HomeExposureDial({
               {holeRegion}
             </span>
             <span className="text-[11px] text-gray-500 dark:text-gray-400">
-              {selected ? "of savings" : "largest region · tap a slice"}
+              {selectedHint}
             </span>
+            {selectedTokens.length > 0 && (
+              <span className="flex items-center justify-center gap-0.5 mt-0.5">
+                {selectedTokens.slice(0, 4).map((symbol) => (
+                  <TokenIcon key={symbol} symbol={symbol} size={14} />
+                ))}
+              </span>
+            )}
           </>
         </AllocationRing>
         </motion.div>

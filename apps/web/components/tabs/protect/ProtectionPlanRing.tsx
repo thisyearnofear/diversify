@@ -20,6 +20,7 @@ import { getArchetypeAllocations } from '@/components/protection-cards/plan-prev
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
+import { rwaLegFor } from './RwaAssetCards';
 
 interface Props {
   /** Effective strategy key (selected strategy overrides onboarding philosophy). */
@@ -69,15 +70,17 @@ export function ProtectionPlanRing({
         color:
           TOKEN_COLORS[holding.symbol] ??
           (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
+        hatch: Boolean(rwaLegFor(holding.symbol)),
       }));
     }
     return allocations.map((a, i) => ({
       id: a.token,
       label: `${a.token} — plan`,
       percent: a.percent,
-      color:
-        TOKEN_COLORS[a.token] ??
-        (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
+        color:
+          TOKEN_COLORS[a.token] ??
+          (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
+        hatch: Boolean(rwaLegFor(a.token)),
     }));
   }, [archetype, walletView.holdings, allocations]);
 
@@ -168,6 +171,11 @@ export function ProtectionPlanRing({
           slices={slices}
           selectedId={selectedToken}
           onSelect={(id) => onSelectToken(selectedToken === id ? null : id)}
+          ghost={
+            selected && !empty && !onTarget && Math.abs(gapPts) > 2
+              ? { id: selected.token, extraPercent: gapPts }
+              : null
+          }
           size={200}
           thickness={24}
         >
