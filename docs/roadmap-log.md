@@ -130,10 +130,10 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 | `scripts/DeployCelo.s.sol` | (new) Deploy script for `RecommendationLedger` on Celo mainnet. Mirrors `DeployArbitrum.s.sol`. | +90 | ORGANIZED |
 | `scripts/deploy-all.sh` | Add `celo_mainnet` and `zero_g_mainnet` targets. | +30 | ORGANIZED |
 | `packages/shared/src/services/recommendation-ledger.service.ts` (+ `pages/api/agent/zero-g-ledger.ts`) | Explorer **source verification**: `verifyLedgerTx(txHash, chainId)` answers "is this evidence link real?" from the chain's RPC (authoritative receipt) instead of the 0G explorer, which exposes no reliable public API. Exposed at `GET /api/agent/zero-g-ledger?verify=<txHash>`; 0G mainnet (16661) added to `PROOF_FEED_CHAIN_IDS` so evidence-mirror rows surface in the live proof feed with chainscan links. **Done** — 7 vitest cases. | +110 | DRY, CLEAN |
-| `packages/shared/src/services/agentic-id.service.ts` | (new) Server-side service that mints/burns/transfers Agentic IDs. Mirrors the `recommendationLedgerService` shape (chain-aware registry, on-chain + 0G Storage). 1 file, ~200 lines, 4 methods. | +200 | MODULAR, DRY |
+| `packages/shared/src/services/agentic-id.service.ts` | (new) Backend-only service for minting and resolving Agentic IDs. Supports manual/demo mint to satisfy the 0G Bridge Wave 3 gate. No consumer-facing flow; transfer/burn logic deferred until a B2B use case is validated. Mirrors `recommendationLedgerService` shape. 1 file, ~120 lines, 2 methods (`mintAgenticId`, `getAgenticId`). | +120 | MODULAR, DRY |
 | `packages/shared/src/index.ts` | Re-export `agenticIdService`. | +1 | CLEAN |
-| `pages/api/agent/agentic-id.ts` | (new) GET/POST endpoint for the Agentic ID. | +50 | ORGANIZED |
-| `packages/shared/src/services/__tests__/agentic-id.service.test.ts` | (new) 6 tests: mint, transfer, ownership, agentURI resolution, pause, 0G Storage pointer. | +80 | MODULAR |
+| `pages/api/agent/agentic-id.ts` | (new) Internal GET/POST endpoint for the Agentic ID. `POST` is intended for admin/demo minting in Wave 3; no consumer UI calls it. | +50 | ORGANIZED |
+| `packages/shared/src/services/__tests__/agentic-id.service.test.ts` | (new) 4 tests: mint, get by owner, agentURI resolution, 0G Storage pointer. Transfer/pause tests deferred. | +50 | MODULAR |
 | `packages/shared/src/services/__tests__/recommendation-ledger.service.test.ts` | Update tests to expect chain-aware routing: savings → Celo, yield → Arbitrum, evidence → 0G. | +15 | DRY |
 | `docs/architecture.md` | Update the architecture diagram to show chain-aware ledger (Celo + Arbitrum as ledgers of record, 0G as evidence layer). | +10 | CLEAN |
 
@@ -147,12 +147,14 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 - ~~Celoscan link to a real savings ledger tx is in the README.~~ **Done** — tx `0xea1b169a…`
 - ~~Arbiscan link to a real yield ledger tx is in the README.~~ **Done** — tx `0x2a034aad…`
 - ~~Guardian loop records a recommendation on all three chains end-to-end.~~ **Done.** Guardian heartbeat cron runs every 2 hours, recording on Celo/Arbitrum primary + 0G evidence mirror. Guardian loop runs every 5 min for auto-execution within user permission bounds.
-- Agentic ID is minted for at least 1 test user; the on-chain ID points to a 0G Storage CID. *(Contract + deploy script shipped and tested; mint pending 0G mainnet deployment.)*
+- Agentic ID is minted for at least 1 test user via admin/demo flow; the on-chain ID points to a 0G Storage CID. *(Contract + deploy script shipped and tested; no consumer-facing mint UI in Wave 3. Mint pending 0G mainnet deployment.)*
 - ~~Explorer source verification so proof links are backed by chain data.~~ **Done** — `verifyLedgerTx` + `?verify=` + 0G rows in the proof feed.
 - Demo video updated to show the chain-aware flow.
 - X post with mainnet proof.
 
 **Submission artifact (Wave 3):** mainnet contract address + 0G Explorer link + updated demo video.
+
+> **Agentic ID product scope (2026-09-03):** The Agentic ID is an infrastructure/0G Bridge deliverable and a future B2B trust primitive, not a consumer feature. Wave 3 closes the "minted ≥1 user" gate via an admin/demo mint. No consumer-facing mint UI is built in Wave 3 or Wave 4. Consumer surfacing is deferred until it directly supports an enterprise "verify my Guardian" workflow.
 
 ---
 
@@ -167,8 +169,8 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 | `components/tabs/AgentTab.tsx` (or the dashboard component) | Add a "Chain-Aware Ledger Activity" widget: live tx count per chain (Celo savings, Arbitrum yield, 0G evidence anchor), gas spent, evidence CIDs created this week, # of users with a minted Agentic ID. Reads from `/api/agent/zero-g-ledger?chainId=<0G mainnet>` and the Celo/Arbitrum ledger endpoints. | +60 | PERFORMANT, CLEAN |
 | `pages/api/agent/zero-g-stats.ts` | (new) Aggregated stats endpoint: `totalRecommendations`, `totalUsers`, `totalAgenticIds`, `last7DaysActivity`. Uses the existing `recommendationLedgerService` and `agenticIdService`. | +80 | DRY, MODULAR |
 | `pages/api/agent/zero-g-ledger.ts` | Add a `?stats=true` flag that returns the aggregated shape from `zero-g-stats` (or merge the endpoints via query param to keep the surface small — DRY). | +15 | DRY |
-| `packages/shared/src/services/agentic-id.service.ts` | Add a `transfer(to)` method that updates 0G Storage pointers on transfer. The Agentic ID is the user's Guardian, so a transfer is a real event. | +30 | MODULAR, CLEAN |
-| `hooks/use-proactive-agent.ts` | On session start, check whether the user has an Agentic ID; if not, show a 1-tap "Mint your Guardian ID" call-to-action. | +25 | CLEAN, MODULAR |
+| `packages/shared/src/services/agentic-id.service.ts` | Add a `getTokenOfOwner(address)` resolver for the contract's `tokenOf` view. Transfer logic stays at the contract layer; no user-facing transfer flow. | +15 | MODULAR, CLEAN |
+| `hooks/use-proactive-agent.ts` | ~~On session start, show a 1-tap "Mint your Guardian ID" CTA.~~ **Deferred** — no consumer mint flow; Agentic ID is an infrastructure/0G Bridge deliverable in Wave 4. | +0 | PREVENT BLOAT |
 | `pages/api/agent/_advisor-core.ts` | When recommending an action, surface "This recommendation will be recorded on [Celo/Arbitrum] as Guardian #N, with evidence anchored to 0G" — a small UX hint that drives home the chain-aware verifiability story. | +10 | CLEAN |
 | `lib/marketing/0g-bridge-week-N.md` | (new) Weekly traction recap. Not a code file; lives next to `docs/` as `docs/internal/0g-bridge-week-N.md`. | +60 each | ORGANIZED |
 
