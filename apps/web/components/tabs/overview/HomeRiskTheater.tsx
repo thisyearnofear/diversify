@@ -12,7 +12,7 @@
  * holdings.
  */
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { InflationMomentCard } from "./InflationMomentCard";
@@ -58,6 +58,7 @@ export function HomeRiskTheater({
   isDemo,
 }: HomeRiskTheaterProps) {
   const reducedMotion = useReducedMotion();
+  const [flipped, setFlipped] = useState(false);
   const hasHoldings = totalValue > 0 && regionData.length > 0;
 
   const largest = useMemo(
@@ -180,17 +181,84 @@ export function HomeRiskTheater({
         {isDemo && !hasHoldings && (
           <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
         )}
-        <CurrencyMomentCard
-          moment={moment}
-          benchmarks={benchmarks}
-          horizons={horizons}
-          onSelectBenchmark={onSelectBenchmark}
-          onSelectHorizon={onSelectHorizon}
-          onAmountChange={onAmountChange}
-          onProtect={onProtect}
-          onChangeCountry={onChangeCountry}
-          frame={frame}
-        />
+        {/* Tap the local coin to flip between the currency stage and a fanned holdings stack — same flick/flip motif as LensCoinSelector */}
+        <div
+          role="button"
+          tabIndex={hasHoldings ? 0 : -1}
+          aria-label={hasHoldings ? (flipped ? "Show currency stage" : "Show holdings stack") : undefined}
+          aria-pressed={hasHoldings ? flipped : undefined}
+          onClick={() => {
+            if (!hasHoldings) return;
+            haptics.tap();
+            setFlipped((v) => !v);
+          }}
+          onKeyDown={(e) => {
+            if (!hasHoldings) return;
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              haptics.tap();
+              setFlipped((v) => !v);
+            }
+          }}
+          className={hasHoldings ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400 rounded-2xl" : undefined}
+        >
+          <motion.div
+            animate={reducedMotion ? undefined : { rotateY: flipped ? 180 : 0 }}
+            transition={{ type: "spring", stiffness: 420, damping: 28 }}
+            style={{ transformStyle: "preserve-3d", perspective: 900 }}
+          >
+            <motion.div
+              style={{ backfaceVisibility: "hidden" }}
+              animate={{ opacity: flipped ? 0 : 1 }}
+              transition={{ duration: 0.15 }}
+            >
+              <CurrencyMomentCard
+                moment={moment}
+                benchmarks={benchmarks}
+                horizons={horizons}
+                onSelectBenchmark={onSelectBenchmark}
+                onSelectHorizon={onSelectHorizon}
+                onAmountChange={onAmountChange}
+                onProtect={onProtect}
+                onChangeCountry={onChangeCountry}
+                frame={frame}
+              />
+            </motion.div>
+            {hasHoldings && (
+              <motion.div
+                className="absolute inset-0"
+                style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                animate={{ opacity: flipped ? 1 : 0 }}
+                transition={{ duration: 0.15, delay: flipped ? 0.08 : 0 }}
+                aria-hidden={!flipped}
+              >
+                <div className="h-full flex flex-col items-center justify-center gap-3 py-4 text-center">
+                  <div className="flex -space-x-2">
+                    {regionData.slice(0, 4).map((r) => (
+                      <div
+                        key={r.region}
+                        className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-sm"
+                        style={{ backgroundColor: r.color }}
+                        title={`${r.region} ${Math.round((r.value / totalValue) * 100)}%`}
+                      >
+                        {r.region.slice(0, 2).toUpperCase()}
+                      </div>
+                    ))}
+                    {regionData.length > 4 && (
+                      <div className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-[10px] font-black">+{regionData.length - 4}</div>
+                    )}
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 dark:text-white">Your holdings — {fmt(totalValue)}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 px-4 leading-relaxed">Fanned by region · tap to flip back to the currency stage</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">Tap any chip below for details — Shield can rebalance this</p>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+        {hasHoldings && !flipped && (
+          <p className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">Tap the coin to see holdings</p>
+        )}
         {holdingsStrip}
       </section>
     );

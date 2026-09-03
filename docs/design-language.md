@@ -152,11 +152,11 @@ A tab change that fails any of these is the old stack. Do not ship it.
    `SavingsLoopCard` may donate numbers and copy. They may not return as
    sections.
 
-Simple dock: Shield / Home / Exchange. Learn is absorbed onto Shield’s
-picker (and optionally Home amount-inspect). Home is always the Risk
-Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
-the one expressive object; holdings are a quiet strip (stacked bar + chips)
-beneath it, never a second `AllocationRing`. Shield alone owns the
+Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
+picker (and optionally Home amount-inspect) — not a peer tab until Advanced.
+Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
+the one expressive object; tap the coin to flip to a fanned holdings stack (same flick/flip motif as `LensCoinSelector`);
+holdings are also a quiet strip (stacked bar + chips) beneath it, never a second `AllocationRing`. Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring.
 

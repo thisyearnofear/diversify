@@ -6,14 +6,19 @@ describe('TAB_VISIBILITY', () => {
     expect(TAB_VISIBILITY.beginner).toEqual(['protect', 'overview', 'exchange']);
   });
 
-  it('shows all tabs in intermediate and advanced modes', () => {
+  it('shows intermediate without peer Learn and advanced with all tabs', () => {
     expect(getVisibleTabIds('intermediate')).toEqual([
+      'protect',
+      'overview',
+      'exchange',
+      'agent',
+    ]);
+    expect(getVisibleTabIds('advanced')).toEqual([
       'protect',
       'overview',
       'exchange',
       'agent',
       'info',
     ]);
-    expect(getVisibleTabIds('advanced')).toHaveLength(5);
   });
 });

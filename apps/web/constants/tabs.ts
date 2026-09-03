@@ -11,10 +11,13 @@ export type TabId = (typeof TAB_IDS)[number];
  * Which tabs appear in each experience mode.
  * Simple dock (design-language §5): beginner = Shield / Home / Exchange.
  * Learn is absorbed onto Shield's picker — do not put it back in Simple.
+ * Intermediate now also loses the peer Learn tab — the calculator lives as
+ * the Shield empty-wallet inspector + optional Home amount-inspect, not as a
+ * standalone instrument competing for the dock.
  */
 export const TAB_VISIBILITY: Record<UserExperienceMode, readonly TabId[]> = {
   beginner: ['protect', 'overview', 'exchange'],
-  intermediate: TAB_IDS,
+  intermediate: ['protect', 'overview', 'exchange', 'agent'],
   advanced: TAB_IDS,
 };
 
