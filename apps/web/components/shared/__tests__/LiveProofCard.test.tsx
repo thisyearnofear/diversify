@@ -10,7 +10,7 @@
 
 import React, { type ReactNode } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 import {
@@ -80,8 +80,24 @@ function CtxWrap({
 }
 
 describe('LiveProofCard', () => {
-    beforeEach(() => vi.clearAllMocks());
-    afterEach(() => cleanup());
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                (url: string) =>
+                    url.includes('verify=')
+                        ? Promise.resolve(
+                              new Response(JSON.stringify({ verified: true }), { status: 200 }),
+                          )
+                        : Promise.reject(new Error('unexpected fetch')),
+            ),
+        );
+    });
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+    });
 
     it('renders a skeleton while loading with no data', () => {
         const { container } = render(
@@ -143,8 +159,24 @@ describe('LiveProofCard', () => {
 });
 
 describe('LiveProofTicker', () => {
-    beforeEach(() => vi.clearAllMocks());
-    afterEach(() => cleanup());
+    beforeEach(() => {
+        vi.clearAllMocks();
+        vi.stubGlobal(
+            'fetch',
+            vi.fn(
+                (url: string) =>
+                    url.includes('verify=')
+                        ? Promise.resolve(
+                              new Response(JSON.stringify({ verified: true }), { status: 200 }),
+                          )
+                        : Promise.reject(new Error('unexpected fetch')),
+            ),
+        );
+    });
+    afterEach(() => {
+        cleanup();
+        vi.unstubAllGlobals();
+    });
 
     it('renders a skeleton while loading with no data', () => {
         const { container } = render(
@@ -179,5 +211,28 @@ describe('LiveProofTicker', () => {
         expect(ticker.textContent).toContain('cEUR');
         expect(ticker.textContent).toContain('82% conf.');
         expect(ticker.textContent).toContain('71% conf.');
+    });
+
+    it('shows the chain-checked ✓ badge once the RPC confirms the receipt', async () => {
+        // Module-level cache isolation: SAMPLE rows must not collide with
+        // hashes used by use-verify-tx.test.ts (same file order isn't
+        // guaranteed across workers).
+        const data: ProofFeedData = {
+            ...SAMPLE_DATA,
+            recent: SAMPLE_DATA.recent.map((rec, i) => ({
+                ...rec,
+                chainId: 16661,
+                settlementTxHash: '0x' + String(10 + i).repeat(2).padEnd(4, 'a') + 'e'.repeat(60),
+            })),
+        };
+        render(
+            <CtxWrap value={{ isLoading: false, data }}>
+                <LiveProofTicker limit={2} />
+            </CtxWrap>,
+        );
+        await waitFor(() => {
+            expect(screen.getByTestId('tx-verified-16661-247')).toBeInTheDocument();
+            expect(screen.getByTestId('tx-verified-16661-246')).toBeInTheDocument();
+        });
     });
 });

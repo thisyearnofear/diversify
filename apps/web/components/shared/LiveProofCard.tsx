@@ -26,6 +26,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed';
+import { useVerifiedTxs } from '@/hooks/use-verify-tx';
 import StatusBadge from './StatusBadge';
 import {
   getLedgerProofTitle,
@@ -253,6 +254,13 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
     const { data, isLoading } = useProofFeed();
     const prefersReducedMotion = useReducedMotion();
     const recent: LedgerRecommendation[] = (data?.recent ?? []).slice(0, limit);
+    const verified = useVerifiedTxs(
+        recent.map((rec) => ({
+            key: `${rec.chainId ?? 0}-${rec.id}`,
+            txHash: rec.settlementTxHash,
+            chainId: rec.chainId,
+        })),
+    );
 
     if (isLoading && !data) {
         return (
@@ -281,7 +289,8 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
             </h4>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mb-2">
                 Live Guardian receipts from our rails — Arbitrum (yield), Celo (savings, incl. Caribbean) and
-                HashKey (APAC rail). Every decision is verifiable on-chain.
+                HashKey (APAC rail). A <span className="font-bold text-emerald-600 dark:text-emerald-400">✓</span> means
+                the chain&apos;s RPC confirmed the receipt against the ledger contract.
             </p>
             <ul className="space-y-0.5" aria-live="polite" aria-atomic="true">
                 {recent.map((rec) => {
@@ -315,6 +324,15 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                             {rec.targetToken && (
                                 <span className="text-emerald-700 dark:text-emerald-300">
                                     → {rec.targetToken}
+                                </span>
+                            )}
+                            {verified[`${rec.chainId ?? 0}-${rec.id}`] === 'verified' && (
+                                <span
+                                    className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0"
+                                    title={`Chain-checked: the ${getLedgerProofLabel(rec.chainId)} RPC confirms this receipt is addressed to the ledger contract`}
+                                    data-testid={`tx-verified-${rec.chainId ?? 0}-${rec.id}`}
+                                >
+                                    ✓
                                 </span>
                             )}
                             {rec.timestamp > 0 && (
