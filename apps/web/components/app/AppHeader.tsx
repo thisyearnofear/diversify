@@ -158,11 +158,9 @@ export default function AppHeader({
         </div>
         )}
 
-        {!isBeginner && (
-          <div className="hidden sm:block">
-            <ChainPill />
-          </div>
-        )}
+        <div className="hidden sm:block">
+          <ChainPill />
+        </div>
 
         {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
       </div>

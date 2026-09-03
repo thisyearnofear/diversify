@@ -353,6 +353,11 @@ const SwapInterface = forwardRef<
               onAskAI={() => askAdvisor(`What's the best strategy for swapping to ${toToken}?`)}
             />
           )}
+          {isCrossChainRoute && onInspectQuote && (
+            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+              Quote includes bridge fee · <button type="button" onClick={() => onInspectQuote(fromToken, toToken)} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">tap to see route</button>
+            </p>
+          )}
 
           {/* Slippage — advanced only, compact */}
           {shouldShowAdvancedFeatures() && (

@@ -205,7 +205,7 @@ export const GuardianJournalTab: React.FC<{
           {hiddenCount > 0 && (
             <button
               type="button"
-              onClick={() => setShowAll((v) => !v)}
+              onClick={() => { const { haptics } = require("@/lib/haptics"); haptics.tap(); setShowAll((v) => !v); }}
               data-testid="journal-show-all"
               className="w-full py-2.5 text-xs font-bold text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-800 transition-colors"
             >

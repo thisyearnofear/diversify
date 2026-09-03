@@ -15,6 +15,7 @@ import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRi
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { useCountUp } from '@/hooks/use-count-up';
 import { usePointerTilt } from '@/hooks/use-pointer-tilt';
+import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { getArchetypeAllocations } from '@/components/protection-cards/plan-preview';
@@ -311,7 +312,7 @@ export function ProtectionPlanRing({
           <motion.button
             key="__other__"
             type="button"
-            onClick={() => setShowDust(true)}
+            onClick={() => { haptics.tap(); setShowDust(true); }}
             initial={reducedMotion ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: primary.length * STAGGER_STEP_S }}
@@ -338,7 +339,7 @@ export function ProtectionPlanRing({
             >
               <button
                 type="button"
-                onClick={() => setShowDust(false)}
+                onClick={() => { haptics.tap(); setShowDust(false); }}
                 className="w-full min-h-[44px] py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 Show less

@@ -92,10 +92,10 @@ describe('AppHeader mobile layout', () => {
     expect(dot).toBeNull();
   });
 
-  it('hides mode toggle, voice button, and chain pill in beginner mode', () => {
+  it('hides mode toggle and voice button in beginner mode, but keeps chain pill', () => {
     render(<AppHeader {...baseProps} experienceMode="beginner" address="0xabc" />);
 
-    expect(screen.queryByTestId('chain-pill')).not.toBeInTheDocument();
+    expect(screen.getByTestId('chain-pill')).toBeInTheDocument();
     expect(screen.queryByTestId('voice-button')).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/Switch to Standard mode/i)).not.toBeInTheDocument();
     expect(screen.getByTestId('wallet-button')).toBeInTheDocument();

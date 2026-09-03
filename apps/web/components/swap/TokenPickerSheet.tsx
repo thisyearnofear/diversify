@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
 import Scrim from "../shared/Scrim";
+import { haptics } from "@/lib/haptics";
 
 export interface TokenPickerItem {
   symbol: string;
@@ -262,7 +263,7 @@ export default function TokenPickerSheet({
               {!hasQuery && hiddenCount > 0 && (
                 <button
                   type="button"
-                  onClick={() => setShowAll(true)}
+                  onClick={() => { haptics.tap(); setShowAll(true); }}
                   data-testid="token-picker-show-all"
                   className="w-full mt-2 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/[0.06] transition-colors"
                 >
@@ -272,7 +273,7 @@ export default function TokenPickerSheet({
               {!hasQuery && showAll && hiddenCount === 0 && sorted.length > 6 && (
                 <button
                   type="button"
-                  onClick={() => setShowAll(false)}
+                  onClick={() => { haptics.tap(); setShowAll(false); }}
                   className="w-full mt-2 py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
                 >
                   Show less

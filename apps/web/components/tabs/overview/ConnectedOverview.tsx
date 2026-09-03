@@ -19,6 +19,7 @@ import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { InspectorSheet } from "../../shared/InspectorSheet";
+import { InstrumentWait } from "../../shared/InstrumentWait";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
@@ -131,7 +132,11 @@ export function ConnectedOverview({
 
   // The coin stage is always the hero. Holdings never swap it out — they
   // add a quiet strip beneath it. One object, one color, one CTA.
-  const object = moment || inflationMoment ? (
+  // While the wallet fan-out settles, keep the instrument grammar (coin + job line), not a skeleton.
+  const isWaitingForWallet = portfolio.isLoading && !moment && !inflationMoment && !activePortfolio.lastUpdated;
+  const object = isWaitingForWallet ? (
+    <InstrumentWait label="Reading your wallet" symbol="$" />
+  ) : moment || inflationMoment ? (
     <HomeRiskTheater
       moment={moment}
       inflationMoment={inflationMoment}
