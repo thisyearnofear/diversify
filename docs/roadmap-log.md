@@ -125,10 +125,11 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 | `packages/shared/src/services/ai/fallback/fallback-orchestrator.ts` | Route high-confidence decisions (`confidence > 0.8`) through the 0G Compute Direct provider; low-confidence decisions stay on the Router API path. | +20 | PERFORMANT |
 | `packages/shared-0g/src/services/persistence-service.ts` | Add a `snapshotGuardianState` method that writes the full Guardian state to 0G mainnet DA once per Guardian loop cycle (not on every decision). Reads are unchanged. | +25 | PERFORMANT, MODULAR |
 | `pages/api/agent/guardian-loop.ts` | After the recommendation record, fire a `snapshotGuardianState` to 0G DA. Awaited, not fire-and-forget — DA is a state checkpoint, not a receipt. | +8 | PERFORMANT |
-| `contracts/AgenticID.sol` | (new) Minimal ERC-7857 wrapper: `mint(user, agentURI)` with `agentURI` pointing to the encrypted evidence bundle in 0G Storage. Ownable, single contract, no on-chain AI. The actual Guardian is an off-chain service; the on-chain ID is a transferable pointer. | +120 | MODULAR, CLEAN |
-| `scripts/DeployAgenticID.s.sol` | (new) Deploy script for `AgenticID.sol` to 0G mainnet. | +60 | ORGANIZED |
+| `contracts/AgenticID.sol` | (new) Minimal ERC-721 Guardian identity with 7857-inspired pointer semantics (not a complete ERC-7857 implementation): `mint(to, agentURI, encryptedURI)` with the URIs pointing at the agent doc + encrypted evidence bundle in 0G Storage. Ownable2Step, single contract, no on-chain AI. The actual Guardian is an off-chain service; the on-chain ID is a transferable pointer (721 transfers emit 7857-style `AgentTransferred`; `updateAgent` re-points as the bundle grows). **Done** — 16 Foundry tests pass. Deployment to 0G mainnet pending gas. | +190 | MODULAR, CLEAN |
+| `scripts/DeployAgenticID.s.sol` | (new) Deploy script for `AgenticID.sol` to 0G mainnet (`--rpc-url zero_g_mainnet`). **Done.** | +30 | ORGANIZED |
 | `scripts/DeployCelo.s.sol` | (new) Deploy script for `RecommendationLedger` on Celo mainnet. Mirrors `DeployArbitrum.s.sol`. | +90 | ORGANIZED |
 | `scripts/deploy-all.sh` | Add `celo_mainnet` and `zero_g_mainnet` targets. | +30 | ORGANIZED |
+| `packages/shared/src/services/recommendation-ledger.service.ts` (+ `pages/api/agent/zero-g-ledger.ts`) | Explorer **source verification**: `verifyLedgerTx(txHash, chainId)` answers "is this evidence link real?" from the chain's RPC (authoritative receipt) instead of the 0G explorer, which exposes no reliable public API. Exposed at `GET /api/agent/zero-g-ledger?verify=<txHash>`; 0G mainnet (16661) added to `PROOF_FEED_CHAIN_IDS` so evidence-mirror rows surface in the live proof feed with chainscan links. **Done** — 7 vitest cases. | +110 | DRY, CLEAN |
 | `packages/shared/src/services/agentic-id.service.ts` | (new) Server-side service that mints/burns/transfers Agentic IDs. Mirrors the `recommendationLedgerService` shape (chain-aware registry, on-chain + 0G Storage). 1 file, ~200 lines, 4 methods. | +200 | MODULAR, DRY |
 | `packages/shared/src/index.ts` | Re-export `agenticIdService`. | +1 | CLEAN |
 | `pages/api/agent/agentic-id.ts` | (new) GET/POST endpoint for the Agentic ID. | +50 | ORGANIZED |
@@ -146,7 +147,8 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 - ~~Celoscan link to a real savings ledger tx is in the README.~~ **Done** — tx `0xea1b169a…`
 - ~~Arbiscan link to a real yield ledger tx is in the README.~~ **Done** — tx `0x2a034aad…`
 - ~~Guardian loop records a recommendation on all three chains end-to-end.~~ **Done.** Guardian heartbeat cron runs every 2 hours, recording on Celo/Arbitrum primary + 0G evidence mirror. Guardian loop runs every 5 min for auto-execution within user permission bounds.
-- Agentic ID is minted for at least 1 test user; the on-chain ID points to a 0G Storage CID.
+- Agentic ID is minted for at least 1 test user; the on-chain ID points to a 0G Storage CID. *(Contract + deploy script shipped and tested; mint pending 0G mainnet deployment.)*
+- ~~Explorer source verification so proof links are backed by chain data.~~ **Done** — `verifyLedgerTx` + `?verify=` + 0G rows in the proof feed.
 - Demo video updated to show the chain-aware flow.
 - X post with mainnet proof.
 

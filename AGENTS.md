@@ -67,7 +67,8 @@ Key new files:
 - All 554 tests pass
 - Guardian heartbeat cron runs every 2 hours on Hetzner — records advisory recommendations on Celo/Arbitrum primary + 0G mainnet evidence mirror
 - Guardian loop cron runs every 5 min — auto-executes within user permission bounds, mirrors to 0G
-- **Remaining:** 0G explorer source verification (custom API), demo video, X post with mainnet proof
+- **0G explorer source verification (done 2026-09-03):** `verifyLedgerTx` answers "is this evidence link real?" from the chain's RPC (authoritative receipt), exposed at `GET /api/agent/zero-g-ledger?verify=<txHash>`; 0G mainnet joined `PROOF_FEED_CHAIN_IDS` so evidence rows surface in the live proof feed. `contracts/AgenticID.sol` (ERC-7857 Guardian identity, + deploy script + 16 Foundry tests) is code-complete — deployment to 0G mainnet pending gas.
+- **Remaining:** Agentic ID mainnet deployment, demo video, X post with mainnet proof
 
 **Onboarding UI/UX pass (2026-07-10):**
 The stablecoin "coin motif" is now the onboarding design language. Reusable pieces live in shared components — prefer them over one-off decorations:
