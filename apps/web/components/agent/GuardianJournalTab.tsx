@@ -6,7 +6,8 @@
  * with 0G anchoring status chips.
  */
 
-import React from "react";
+import React, { useState } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 export type GuardianProofEvent = {
   id: string;
@@ -44,11 +45,17 @@ export const GuardianJournalTab: React.FC<{
   onNavigateToFund,
   onPreview,
 }) => {
+  const reducedMotion = useReducedMotion();
+  const [showAll, setShowAll] = useState(false);
+  const DISPLAY_COUNT = 3;
+  const displayed = showAll ? events : events.slice(0, DISPLAY_COUNT);
+  const hiddenCount = Math.max(0, events.length - DISPLAY_COUNT);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 uppercase tracking-wide">Activity</h4>
-        <span className="text-xs text-gray-400 italic">Newest first</span>
+        <span className="text-xs text-gray-400 italic">Newest first{hiddenCount > 0 && !showAll ? ` · ${events.length} total` : ""}</span>
       </div>
 
       <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
@@ -91,12 +98,18 @@ export const GuardianJournalTab: React.FC<{
             )}
           </div>
         ) : (
-          events.map((event, index) => {
+          <>
+          {displayed.map((event, index) => {
             const anchor = event.txHash
               ? anchorByTxHash.get(event.txHash.toLowerCase())
               : undefined;
             return (
-              <div key={event.id} className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
+              <motion.div
+                key={event.id}
+                initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.18, delay: Math.min(index * 0.05, 0.15) }}
+                className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
                 <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
                   {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
                 </div>
@@ -186,9 +199,20 @@ export const GuardianJournalTab: React.FC<{
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
-          })
+          })}
+          {hiddenCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowAll((v) => !v)}
+              data-testid="journal-show-all"
+              className="w-full py-2.5 text-xs font-bold text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-800 transition-colors"
+            >
+              {showAll ? "Show less" : `Show ${hiddenCount} more`}
+            </button>
+          )}
+          </>
         )}
       </div>
     </div>

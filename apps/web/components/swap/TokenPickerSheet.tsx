@@ -92,6 +92,31 @@ export default function TokenPickerSheet({
     [filtered],
   );
 
+  // Progressive disclosure: searchable list is powerful but 0-state shows
+  // 20+ tokens. Show held + recommended first, tuck the rest behind
+  // "Show N more" — selection still rewrites the ticket, search still
+  // covers all tokens. Resets when sheet opens.
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => {
+    if (isOpen) setShowAll(false);
+  }, [isOpen]);
+  const hasQuery = query.trim().length > 0;
+  const displayed = useMemo(() => {
+    if (hasQuery || showAll) return sorted;
+    const held = sorted.filter((i) => (i.balanceValue || 0) > 0);
+    const rec = sorted.filter((i) => (i.balanceValue || 0) === 0 && i.badge);
+    const top = [...held, ...rec].slice(0, 6);
+    // Ensure selected token is always visible even if it is dust.
+    if (!top.some((i) => i.symbol === selectedToken)) {
+      const sel = sorted.find((i) => i.symbol === selectedToken);
+      if (sel) top.push(sel);
+    }
+    // Deduplicate
+    const seen = new Set<string>();
+    return top.filter((i) => (seen.has(i.symbol) ? false : (seen.add(i.symbol), true)));
+  }, [sorted, hasQuery, showAll, selectedToken]);
+  const hiddenCount = sorted.length - displayed.length;
+
   const formatBalance = (balanceStr?: string) => {
     const num = Number.parseFloat(balanceStr || "0");
     if (num === 0) return "0.00";
@@ -162,14 +187,17 @@ export default function TokenPickerSheet({
                   No tokens match &ldquo;{query}&rdquo;
                 </p>
               )}
-              {sorted.map((item) => {
+              {displayed.map((item, idx) => {
                 const isSelected = item.symbol === selectedToken;
                 const hasBalance = (item.balanceValue || 0) > 0;
                 return (
-                  <button
+                  <motion.button
                     key={item.symbol}
                     type="button"
                     disabled={!item.compliant}
+                    initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.18, delay: Math.min(idx * 0.03, 0.18) }}
                     onClick={() => {
                       onSelect(item.symbol);
                       onClose();
@@ -219,7 +247,7 @@ export default function TokenPickerSheet({
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
                         </svg>
                       )}
-                      {hasBalance && (
+                       {hasBalance && (
                         <>
                           <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
                             {formatBalance(item.balance)}
@@ -228,9 +256,28 @@ export default function TokenPickerSheet({
                         </>
                       )}
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
+              {!hasQuery && hiddenCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAll(true)}
+                  data-testid="token-picker-show-all"
+                  className="w-full mt-2 py-2.5 text-xs font-bold text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] rounded-xl border border-gray-200 dark:border-white/[0.06] transition-colors"
+                >
+                  Show {hiddenCount} more tokens
+                </button>
+              )}
+              {!hasQuery && showAll && hiddenCount === 0 && sorted.length > 6 && (
+                <button
+                  type="button"
+                  onClick={() => setShowAll(false)}
+                  className="w-full mt-2 py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                >
+                  Show less
+                </button>
+              )}
             </div>
           </motion.div>
         </div>
