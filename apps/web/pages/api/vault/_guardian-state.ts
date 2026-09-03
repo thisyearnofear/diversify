@@ -104,6 +104,16 @@ export interface GuardianStateRecord {
    * Pruned to a 4× cooldown window on every write.
    */
   alertCooldowns?: Record<string, number>;
+  /**
+   * Last 0G DA (verifiable state) snapshot for this user. Captured once
+   * per Guardian cycle and stored in 0G Storage. The CID is the content
+   * address of the full Guardian state at the time of the snapshot.
+   */
+  latestDaSnapshot?: {
+    cid?: string;
+    error?: string;
+    anchoredAt: string;
+  };
 }
 
 /**
@@ -127,6 +137,7 @@ const STATE_FIELDS: Array<keyof GuardianStateRecord> = [
   'latestAnchor',
   'latestAnchors',
   'alertCooldowns',
+  'latestDaSnapshot',
 ];
 
 /**

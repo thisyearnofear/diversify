@@ -11,6 +11,7 @@ import {
   TranscriptionResult
 } from '../types';
 import { BaseAIProvider } from '../providers/base-ai-provider';
+import { shouldUseZeroGDirectCompute } from '../zero-g-direct';
 
 export class FallbackOrchestrator {
   private providers: BaseAIProvider[] = [];
@@ -60,17 +61,43 @@ export class FallbackOrchestrator {
   }
 
   /**
-   * Execute chat completion with fallback chain
+   * Execute chat completion with fallback chain.
+   *
+   * High-confidence calls (confidence > 0.8, or useDirectCompute) try 0G
+   * Compute Direct first. Direct is fail-closed: a TEE miss or timeout
+   * falls through to the Router-order chain, including 0G Router last.
    */
   async executeChatCompletion(
     options: ChatCompletionOptions,
     preferredProvider?: "venice" | "gemini" | "dashscope" | "auto"
   ): Promise<ChatCompletionResult> {
-    // Determine provider order based on preference and JSON requirement
+    const wantDirect = shouldUseZeroGDirectCompute(options);
+    if (wantDirect) {
+      const zeroG = this.providers.find(
+        (provider) => provider.getName() === 'zeroG' && provider.isAvailable(),
+      );
+      if (zeroG) {
+        try {
+          await zeroG.initialize();
+          return await zeroG.generateChatCompletion({
+            ...options,
+            useDirectCompute: true,
+          });
+        } catch (error: unknown) {
+          const message = error instanceof Error ? error.message : String(error);
+          console.warn(
+            `[Fallback Orchestrator] 0G Compute Direct failed, falling through to Router chain:`,
+            message,
+          );
+        }
+      }
+    }
+
     const orderedProviders = this.getProviderOrderForChat(options, preferredProvider);
+    const routerOptions = { ...options, useDirectCompute: false };
 
     return await this.executeWithFallback(
-      (provider) => provider.generateChatCompletion(options),
+      (provider) => provider.generateChatCompletion(routerOptions),
       'chat completion',
       orderedProviders
     );

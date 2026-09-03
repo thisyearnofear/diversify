@@ -46,6 +46,16 @@ export interface ChatCompletionOptions {
    * records are attributed to the actual user instead of 'unknown'.
    */
   user?: string;
+  /**
+   * 0–1. When strictly greater than 0.8, the fallback orchestrator tries
+   * 0G Compute Direct (TEE-verified inference) before the rest of the chain.
+   */
+  confidence?: number;
+  /**
+   * Force 0G Compute Direct (Router `verify_tee: true`) even without a
+   * confidence score. The orchestrator also sets this when the gate fires.
+   */
+  useDirectCompute?: boolean;
 }
 
 /**
@@ -61,6 +71,8 @@ export interface ChatCompletionResult {
   webInsights?: Record<string, unknown> | null;
   sources?: string[];
   timestamp?: string;
+  /** True only when 0G Router reported `x_0g_trace.tee_verified === true`. */
+  teeVerified?: boolean;
 }
 
 /** Events emitted by a provider while producing a chat completion. */

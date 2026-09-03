@@ -43,6 +43,7 @@ import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
+import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -591,6 +592,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             capturedAt: new Date().toISOString(),
           };
           await persistAnchorRecord(userAddress, newAnchor);
+
+          // Per-cycle 0G DA snapshot of the full Guardian state.
+          // Awaited so the checkpoint result is recorded, not fire-and-forget.
+          try {
+            const currentState = await getGuardianState(userAddress);
+            if (currentState) {
+              const { cid } = await zeroGPersistenceService.snapshotGuardianState(
+                userAddress,
+                currentState as unknown as Record<string, unknown>,
+              );
+              await updateGuardianState(userAddress, {
+                latestDaSnapshot: { cid, anchoredAt: new Date().toISOString() },
+              });
+            }
+          } catch (snapshotErr: any) {
+            console.warn(
+              `[guardian-loop] DA snapshot failed for ${userAddress}:`,
+              snapshotErr.message,
+            );
+            await updateGuardianState(userAddress, {
+              latestDaSnapshot: { error: snapshotErr.message, anchoredAt: new Date().toISOString() },
+            }).catch(() => {});
+          }
 
           if (txHash) {
             guardianEventBus.publish({

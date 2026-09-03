@@ -114,6 +114,12 @@ describe('GuardianRecommendationService (post-sunset)', () => {
 
       // Post-sunset prompt must have been sent
       expect(capturedPrompt).not.toMatch(/synth/i);
+      expect(mockChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          confidence: 0.85,
+          responseFormat: { type: 'json_object' },
+        }),
+      );
 
       expect(recommendation).toMatchObject({
         action: 'HOLD',

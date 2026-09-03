@@ -54,7 +54,9 @@ Provide a JSON response with:
     const prompt = this.buildPrompt(context);
     const aiResponse = await AIService.chat({
       messages: [{ role: 'system', content: prompt }],
-      responseFormat: { type: 'json_object' }
+      responseFormat: { type: 'json_object' },
+      // Guardian recs are high-impact: take 0G Compute Direct (TEE) first.
+      confidence: 0.85,
     });
 
     return parseRecommendation(aiResponse.data);

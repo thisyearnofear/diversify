@@ -284,7 +284,7 @@ Every AI recommendation traces through the full 0G pipeline:
 | **0G Serving** | Decentralized inference via 0G Router (part of AI fallback chain) |
 | **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID. The CID is referenced by the chain-aware ledger entry. |
 | **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
-| **0G Compute Direct** | Optional TEE-verified inference for high-impact Guardian decisions |
+| **0G Compute Direct** | TEE-verified inference for high-impact Guardian decisions (`confidence > 0.8`). Uses the 0G Router `verify_tee: true` extension — fail-closed, 15s timeout — then falls through to the normal Router chain. |
 
 **Chain-aware ledger (the ledger of record follows the money):**
 

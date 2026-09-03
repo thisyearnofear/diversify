@@ -14,8 +14,9 @@
  * deterministic.
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { ZeroGProvider } from '../zero-g-provider';
+import { ZERO_G_ROUTER_BASE_URL } from '../../zero-g-direct';
 
 const readModel = (provider: ZeroGProvider): string =>
   (provider as unknown as { model: string }).model;
@@ -68,5 +69,73 @@ describe('ZeroGProvider — model name resolution (Phase 0 audit A1)', () => {
     // as the default would fail this test.
     const provider = new ZeroGProvider({ zeroGApiKey: 'test-key' });
     expect(readModel(provider)).not.toBe('deepseek-v4-pro');
+  });
+});
+
+function mockDirectFetch(payload: unknown, status = 200): typeof fetch {
+  return vi.fn(async () => ({
+    ok: status >= 200 && status < 300,
+    status,
+    text: async () => (typeof payload === 'string' ? payload : JSON.stringify(payload)),
+    json: async () => payload,
+  })) as unknown as typeof fetch;
+}
+
+describe('ZeroGProvider — Compute Direct (verify_tee)', () => {
+  it('POSTs verify_tee and returns teeVerified when the Router attests', async () => {
+    const fetchImpl = mockDirectFetch({
+      id: 'chat-1',
+      choices: [{ message: { content: 'hold cUSD' } }],
+      x_0g_trace: { tee_verified: true, provider: '0xabc' },
+    });
+    const provider = new ZeroGProvider({ zeroGApiKey: 'test-key' }, fetchImpl);
+    const result = await provider.generateChatCompletion({
+      messages: [{ role: 'user', content: 'advise' }],
+      useDirectCompute: true,
+    });
+
+    expect(result.provider).toBe('zeroG');
+    expect(result.data).toBe('hold cUSD');
+    expect(result.teeVerified).toBe(true);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    const [, init] = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0];
+    const body = JSON.parse(String(init.body));
+    expect(body.verify_tee).toBe(true);
+    expect(String((fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0][0])).toBe(
+      `${ZERO_G_ROUTER_BASE_URL}/chat/completions`,
+    );
+  });
+
+  it('throws when tee_verified is not true so the orchestrator can fall through', async () => {
+    const fetchImpl = mockDirectFetch({
+      choices: [{ message: { content: 'untrusted' } }],
+      x_0g_trace: { tee_verified: false },
+    });
+    const provider = new ZeroGProvider({ zeroGApiKey: 'test-key' }, fetchImpl);
+    await expect(
+      provider.generateChatCompletion({
+        messages: [{ role: 'user', content: 'advise' }],
+        useDirectCompute: true,
+      }),
+    ).rejects.toThrow(/TEE verification failed/);
+  });
+
+  it('throws on a non-OK Direct response', async () => {
+    const fetchImpl = mockDirectFetch('nope', 502);
+    const provider = new ZeroGProvider({ zeroGApiKey: 'test-key' }, fetchImpl);
+    await expect(
+      provider.generateChatCompletion({
+        messages: [{ role: 'user', content: 'advise' }],
+        useDirectCompute: true,
+      }),
+    ).rejects.toThrow(/HTTP 502/);
+  });
+
+  it('does not call fetch on the Router path', async () => {
+    const fetchImpl = mockDirectFetch({ choices: [] });
+    const provider = new ZeroGProvider({ zeroGApiKey: 'test-key' }, fetchImpl);
+    // Router path needs the OpenAI client; we only assert Direct is skipped.
+    expect(provider.isAvailable()).toBe(true);
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

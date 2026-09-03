@@ -293,6 +293,42 @@ export class ZeroGPersistenceService {
             throw error;
         }
     }
+
+    /**
+     * Snapshot the full Guardian state to 0G once per Guardian cycle.
+     *
+     * This is a verifiable DA checkpoint: the state is serialized, uploaded
+     * to 0G Storage, and the returned CID is registered under a stable
+     * per-user prefix. The snapshot is awaited so the loop can record the
+     * result (success or failure) on the user's Guardian state — it is not
+     * fire-and-forget.
+     *
+     * @param userAddress — user whose state is being snapshotted
+     * @param state — full Guardian state record at the time of the snapshot
+     * @returns the content-addressed CID and a gateway URL
+     */
+    async snapshotGuardianState(
+        userAddress: string,
+        state: Record<string, unknown>,
+    ): Promise<{ cid: string; url: string }> {
+        const result = await zeroGStorageService.uploadEvidence(
+            state,
+            {
+                agent: userAddress.toLowerCase(),
+                source: 'guardian-loop',
+                timestamp: Date.now(),
+            },
+        );
+
+        const prefix = `${LATEST_STATE_PREFIX}guardian-snapshot:${userAddress.toLowerCase()}`;
+        zeroGStorageService.registerContent(prefix, result.cid);
+
+        console.log(
+            `[0G Persistence] Guardian state snapshot anchored for ${userAddress}: ${result.cid.slice(0, 16)}…`,
+        );
+
+        return { cid: result.cid, url: result.url };
+    }
 }
 
 export const zeroGPersistenceService = new ZeroGPersistenceService();
