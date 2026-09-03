@@ -10,7 +10,7 @@
  * (Kept its historical name to avoid import churn across the app.)
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useProtectionProfile, deriveProfileFromPhilosophy } from '@/hooks/use-protection-profile';
 import { useStrategy } from '@/context/app/StrategyContext';
@@ -60,6 +60,19 @@ export default function StrategyModal({
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [isOpen, onClose]);
+
+    // A11y: the onboarding IS the screen, so announce that state — give the
+    // document an onboarding title and move focus into the screen container.
+    const screenRef = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        if (!isOpen) return;
+        const prevTitle = document.title;
+        document.title = 'DiversiFi — Set up your protection';
+        screenRef.current?.focus();
+        return () => {
+            document.title = prevTitle;
+        };
+    }, [isOpen]);
 
     const finish = useCallback((region?: string | null) => {
         const profileUpdates = deriveProfileFromPhilosophy(financialStrategy, region ?? null);
@@ -125,8 +138,14 @@ export default function StrategyModal({
                     {/* The screen itself is the scroll container. Centering of
                         short phases happens via WelcomeScreen's my-auto wrapper
                         (see the scroll rule there — never justify-center an
-                        overflowing flex container). */}
-                    <div className="absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar">
+                        overflowing flex container). Focusable so the open
+                        effect can move focus into the screen. */}
+                    <div
+                        ref={screenRef}
+                        tabIndex={-1}
+                        aria-live="polite"
+                        className="absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar focus:outline-none"
+                    >
                         <div className="flex min-h-full flex-col">
                             <WelcomeScreen
                                 onContinue={() => { /* WelcomeScreen drives its own phase */ }}

@@ -581,11 +581,15 @@ export default function AIChat() {
           exit={{ y: "100%" }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="relative z-[50] isolate bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
+          role="dialog"
+          aria-modal="false"
+          aria-label="Ask Guardian"
         >
           {/* Drag Handle — pointer-capture drag-to-dismiss */}
           <div
             className="w-full flex justify-center py-3 cursor-grab active:cursor-grabbing"
             style={{ touchAction: 'none' }}
+            aria-hidden="true"
             onPointerDown={(e) => {
               // Capture the pointer so pointerup always reaches us even if
               // the cursor leaves the handle strip. Without this, a desktop
@@ -666,6 +670,7 @@ export default function AIChat() {
               onClick={() => setShowSettings(true)}
               className="text-[10px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-wider transition-colors"
               title="AI model settings"
+              aria-label="AI model settings"
             >
               ⚙️
             </button>
