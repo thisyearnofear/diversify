@@ -12,7 +12,6 @@ import { ContextualBanner } from "../../shared/ContextualBanner";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
-import { useProtectionProfile } from "../../../hooks/use-protection-profile";
 import { HomeExposureDial } from "./HomeExposureDial";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
@@ -66,7 +65,6 @@ export function ConnectedOverview({
   onEnableDemo,
 }: ConnectedOverviewProps) {
   const { config: adaptiveConfig } = useAdaptiveContext();
-  const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
   const { askAdvisor } = useAdvisor();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
 
@@ -126,22 +124,6 @@ export function ConnectedOverview({
   const selectedPct =
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
 
-  const goalDriftMessage = React.useMemo(() => {
-    if (!profileComplete || !profileConfig.userGoal) return undefined;
-    const goal = profileConfig.userGoal;
-    const gs = activePortfolio.goalScores;
-    if (goal === "inflation_protection" && gs.hedge < 60) {
-      return `Hedge score ${Math.round(gs.hedge)}% — below your 60% goal.`;
-    }
-    if (goal === "geographic_diversification" && gs.diversify < 60) {
-      return `Diversification ${Math.round(gs.diversify)}% — below your 60% goal.`;
-    }
-    if (goal === "rwa_access" && gs.rwa === 0) {
-      return "No real-world assets yet — your RWA goal isn't being met.";
-    }
-    return undefined;
-  }, [profileComplete, profileConfig.userGoal, activePortfolio.goalScores]);
-
   const chainErrors = activePortfolio.errors ?? [];
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
   const handleRefresh = React.useCallback(async () => {
@@ -149,21 +131,24 @@ export function ConnectedOverview({
   }, [refreshBalances]);
 
   // A connected wallet gets one primary object: the live exposure dial. The
-  // currency moment remains the fallback instrument when regional holdings are
-  // unavailable, rather than competing with the wallet object in the first
-  // viewport.
+  // currency moment remains the fallback instrument when the wallet is empty
+  // or regional holdings are unavailable — never stacked above the dial.
   const object = showExposureDial ? (
     <HomeExposureDial
       regionData={regionData}
       totalValue={totalValue}
       selectedRegion={focusedRegion}
       onSelectRegion={handleDialSelect}
+      watermark={isDemo ? "Sample data" : undefined}
     />
   ) : moment ? (
     <section id="home-hero" aria-labelledby="home-hero-title">
       <h2 id="home-hero-title" className="sr-only">
         Your currency this year
       </h2>
+      {isDemo && (
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
+      )}
       <CurrencyMomentCard
         moment={moment}
         benchmarks={benchmarks}
@@ -271,9 +256,9 @@ export function ConnectedOverview({
                 `How exposed am I to ${selected.region}? Review my ${selected.region} holdings and tell me whether that concentration fits my goal.`,
               )
             }
-            className="min-h-[44px] w-full rounded-xl text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
-            Ask Guardian about my {selected.region} exposure
+            Ask Guardian about this region
           </button>
           {home.showZakat && <ZakatCalculator totalPortfolioValue={totalValue} />}
         </div>
@@ -311,6 +296,22 @@ export function ConnectedOverview({
           Payment-cycle tools live on Exchange
         </button>
       )}
+      <ContextualBanner
+        placement="status"
+        kind={home.banner}
+        isDemo={isDemo}
+        demoValue={hasHoldings ? liveTotalValue : undefined}
+        userRegion={userRegion}
+        chainId={chainId}
+        address={address}
+        setActiveTab={setActiveTab}
+        onDisableDemo={onDisableDemo}
+        onEnableDemo={onEnableDemo}
+        onDismissFxCorridorHint={() => {
+          home.dismissFxCorridorHint();
+          setActiveTab("exchange");
+        }}
+      />
     </div>
   );
 
@@ -323,28 +324,6 @@ export function ConnectedOverview({
           ))}
         </div>
       )}
-      <ContextualBanner
-        kind={home.banner}
-        isDemo={isDemo}
-        demoValue={hasHoldings ? liveTotalValue : undefined}
-        goalDriftMessage={goalDriftMessage}
-        goalDriftActionLabel="Rebalance"
-        dailyClaimText={
-          portfolio.goalScores && home.banner === "daily-claim"
-            ? "Tap to claim — keeps your streak alive"
-            : undefined
-        }
-        userRegion={userRegion}
-        chainId={chainId}
-        address={address}
-        setActiveTab={setActiveTab}
-        onDisableDemo={onDisableDemo}
-        onEnableDemo={onEnableDemo}
-        onDismissFxCorridorHint={() => {
-          home.dismissFxCorridorHint();
-          setActiveTab("exchange");
-        }}
-      />
       <InstrumentShell object={object} inspector={inspector} status={status} />
     </div>
   );

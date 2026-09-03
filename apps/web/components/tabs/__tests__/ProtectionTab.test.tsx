@@ -1,11 +1,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
 let mockFinancialStrategy: string | null = null;
 let mockGuardianState = "idle";
 const mockAdvisor = vi.fn();
+const mockSetFinancialStrategy = vi.fn();
 vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAdvisor }),
 }));
@@ -49,6 +50,7 @@ vi.mock("@/hooks/use-streak-rewards", () => ({
     canClaim: false,
     isWhitelisted: false,
     estimatedReward: "0",
+    recordActivity: vi.fn().mockResolvedValue(undefined),
   }),
 }));
 
@@ -107,7 +109,7 @@ vi.mock("@/context/app/NavigationContext", () => ({
 vi.mock("@/context/app/StrategyContext", () => ({
   useStrategy: () => ({
     financialStrategy: mockFinancialStrategy,
-    setFinancialStrategy: vi.fn(),
+    setFinancialStrategy: mockSetFinancialStrategy,
   }),
 }));
 
@@ -183,8 +185,26 @@ vi.mock("../../shared/GuardianMascot", () => ({
 }));
 
 vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
-  ProtectionPlanGallery: () =>
-    React.createElement("div", { "data-testid": "protection-plan-gallery" }),
+  ProtectionPlanGallery: ({
+    onInspect,
+  }: {
+    onInspect?: (id: string) => void;
+  }) =>
+    React.createElement(
+      "div",
+      { "data-testid": "protection-plan-gallery" },
+      onInspect
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "inspect-africapitalism",
+              onClick: () => onInspect("africapitalism"),
+            },
+            "Inspect Africapitalism",
+          )
+        : null,
+    ),
 }));
 
 vi.mock("@/components/tabs/protect/ProfileWizard", () => ({
@@ -331,6 +351,25 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("protection-plan-gallery")).toBeInTheDocument();
     expect(screen.queryByTestId("shield-ring")).not.toBeInTheDocument();
     expect(screen.queryByTestId("yield-discovery")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+  });
+
+  it("inspects a plan then commits with Use this plan", () => {
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("inspect-africapitalism"));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByTestId("protection-calculator")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Use this plan" }));
+    expect(mockSetFinancialStrategy).toHaveBeenCalledWith("africapitalism");
   });
 
   it("nudges the wallet when a plan exists but the wallet is empty", () => {
@@ -340,11 +379,9 @@ describe("ProtectionTab — instrument shapes", () => {
       chainId: 42220,
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
-    expect(screen.getByTestId("shield-fund")).toHaveTextContent(
-      "Add funds from your wallet",
-    );
-    expect(screen.queryByText("Copy address to add funds")).not.toBeInTheDocument();
-    expect(screen.queryByText("Instant Access")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shield-ring")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy address" })).toBeInTheDocument();
     expect(screen.queryByTestId("shield-picker")).not.toBeInTheDocument();
   });
 

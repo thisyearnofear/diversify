@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { deriveYieldFocusKey, type BestYieldRecommendation } from '../use-best-yield';
+import { deriveYieldFocusKey, yieldHintForDestination, type BestYieldRecommendation } from '../use-best-yield';
 
 /**
  * deriveYieldFocusKey — collision regression-bait.
@@ -172,5 +172,35 @@ describe('deriveYieldFocusKey', () => {
     // won't match and the row highlight silently breaks.
     expect(deriveYieldFocusKey({ chain: 'Arbitrum', symbol: 'USDC' })).toBe('Arbitrum:USDC');
     expect(deriveYieldFocusKey({ chain: 'Base', symbol: 'USDC' })).toBe('Base:USDC');
+  });
+});
+
+describe('yieldHintForDestination', () => {
+  it('annotates a matching destination with APY and venue', () => {
+    expect(
+      yieldHintForDestination(
+        [
+          {
+            id: '1',
+            type: 'opportunity',
+            title: 'Aave USDC',
+            description: '',
+            symbol: 'USDC',
+            apy: 6.2,
+            protocol: 'Aave',
+          },
+        ],
+        'usdc',
+      ),
+    ).toBe('6.2% APY on Aave');
+  });
+
+  it('returns null when the destination has no yield row', () => {
+    expect(
+      yieldHintForDestination(
+        [{ id: '1', type: 'opportunity', title: 'x', description: '', symbol: 'GM', apy: 12 }],
+        'USDC',
+      ),
+    ).toBeNull();
   });
 });

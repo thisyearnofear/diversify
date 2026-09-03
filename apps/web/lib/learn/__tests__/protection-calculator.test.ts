@@ -4,6 +4,7 @@ import {
   inflationForToken,
   localInflationRate,
   mixForPhilosophy,
+  mixLabelFor,
   projectMix,
   projectPurchasingPower,
   seriesFor,
@@ -50,6 +51,18 @@ describe("mixForPhilosophy", () => {
       { token: "cUSD", percent: 25 },
       { token: "cEUR", percent: 15 },
     ]);
+  });
+});
+
+describe("mixLabelFor", () => {
+  it("names gold when there is no philosophy", () => {
+    expect(mixLabelFor(null, GOLD_MIX)).toBe("Gold");
+  });
+
+  it("uses the strategy name for a named mix", () => {
+    expect(
+      mixLabelFor("africapitalism", mixForPhilosophy("africapitalism"), "Africapitalism"),
+    ).toBe("Africapitalism");
   });
 });
 

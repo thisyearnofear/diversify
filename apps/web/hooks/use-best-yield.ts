@@ -78,6 +78,30 @@ export function deriveYieldFocusKey(rec: Pick<BestYieldRecommendation, 'chain' |
   return `${rec.chain ?? ''}:${rec.symbol ?? ''}`;
 }
 
+/**
+ * Quiet quote annotation when the swap destination matches a yield row.
+ * Returns null when nothing matches — never invents an APY.
+ */
+export function yieldHintForDestination(
+  recs: BestYieldRecommendation[] | undefined,
+  toToken: string,
+): string | null {
+  if (!recs?.length || !toToken) return null;
+  const token = toToken.toUpperCase();
+  const match = recs.find((r) => (r.symbol ?? '').toUpperCase() === token);
+  if (!match) return null;
+  const apy =
+    typeof match.apy === 'number'
+      ? match.apy
+      : typeof match.metadata?.apy === 'number'
+        ? match.metadata.apy
+        : null;
+  if (apy == null) return null;
+  const venue = match.protocol ?? (typeof match.metadata?.venue === 'string' ? match.metadata.venue : null);
+  const pct = `${apy.toFixed(1)}% APY`;
+  return venue ? `${pct} on ${venue}` : pct;
+}
+
 export interface BestYieldResult {
   recommendations: BestYieldRecommendation[];
   tier: 'free' | 'saver' | 'committed';

@@ -65,6 +65,13 @@ export interface ContextualBannerProps {
    * Navigates to the target tab defined in content.hero.ctaTab.
    */
   onHeroAction?: () => void;
+  /**
+   * hero: first-viewport card (legacy). status: quiet footnote under the
+   * instrument. Home uses status so banners never sit above the object.
+   * cold-start / goal-drift / daily-claim are other surfaces' jobs — status
+   * renders nothing for those kinds.
+   */
+  placement?: "hero" | "status";
 }
 
 /**
@@ -87,6 +94,7 @@ export function ContextualBanner({
   onEnableDemo,
   onDismissFxCorridorHint,
   onHeroAction,
+  placement = "hero",
 }: ContextualBannerProps) {
   // Cold-start needs the coldStart hook for the contextual copy.
   // We always call the hook (Rules of Hooks) but only render the cold-start
@@ -94,6 +102,19 @@ export function ContextualBanner({
   const coldStart = useColdStart(chainId);
 
   if (!kind) return null;
+
+  if (placement === "status") {
+    return (
+      <ContextualBannerStatus
+        kind={kind}
+        isDemo={isDemo}
+        demoValue={demoValue}
+        address={address}
+        onDisableDemo={onDisableDemo}
+        onDismissFxCorridorHint={onDismissFxCorridorHint}
+      />
+    );
+  }
 
   return (
     <motion.div
@@ -483,4 +504,82 @@ function CurrencyRiskVariant() {
       </div>
     </Card>
   );
+}
+
+const STATUS_LINE =
+  "text-xs text-gray-500 dark:text-gray-400 leading-relaxed";
+
+/** Quiet footnotes for the instrument status slot. Never a first-viewport card. */
+function ContextualBannerStatus({
+  kind,
+  isDemo,
+  demoValue,
+  address,
+  onDisableDemo,
+  onDismissFxCorridorHint,
+}: {
+  kind: NonNullable<ContextualBannerProps["kind"]>;
+  isDemo: boolean;
+  demoValue?: number;
+  address?: string | null;
+  onDisableDemo?: () => void;
+  onDismissFxCorridorHint?: () => void;
+}) {
+  if (kind === "cold-start" || kind === "goal-drift" || kind === "daily-claim" || kind === "cycle-alert") {
+    return null;
+  }
+
+  if (kind === "demo") {
+    const sample = address
+      ? "Sample portfolio — add funds on Celo or Arbitrum to see yours"
+      : demoValue
+        ? `$${Math.round(demoValue)} sample portfolio`
+        : "Sample data";
+    return (
+      <div className="flex items-center justify-between gap-3">
+        <p className={STATUS_LINE}>{isDemo ? sample : "Sample data"}</p>
+        {onDisableDemo && (
+          <button
+            type="button"
+            onClick={onDisableDemo}
+            className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+          >
+            Exit demo
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  if (kind === "apac-rail") {
+    return <ApacRailHonestyBanner variant="compact" />;
+  }
+  if (kind === "caribbean-rail") {
+    return <CaribbeanRailHonestyBanner variant="compact" />;
+  }
+
+  if (kind === "fx-corridor-hint") {
+    return (
+      <button
+        type="button"
+        onClick={() => onDismissFxCorridorHint?.()}
+        className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
+        data-testid="fx-corridor-hint"
+      >
+        Review FX matching on Exchange
+      </button>
+    );
+  }
+
+  if (kind === "fx-drag-warning") {
+    return <p className={STATUS_LINE}>FX drag is eating your margins — Ask Guardian for the cost breakdown.</p>;
+  }
+  if (kind === "family-savings") {
+    return <p className={STATUS_LINE}>Your savings could protect your family back home too.</p>;
+  }
+  if (kind === "currency-risk") {
+    return <p className={STATUS_LINE}>Even strong currencies lose purchasing power.</p>;
+  }
+
+  return null;
 }

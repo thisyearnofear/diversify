@@ -46,6 +46,10 @@ interface SwapTabProps {
   refreshBalances?: () => Promise<void>;
   refreshChainId?: () => Promise<number | null>;
   isBalancesLoading?: boolean;
+  /** Strip tab chrome so Exchange can own the instrument layout. */
+  instrument?: boolean;
+  onInspectQuote?: (fromToken: string, toToken: string) => void;
+  quoteInspected?: boolean;
 }
 
 export default function SwapTab({
@@ -54,6 +58,9 @@ export default function SwapTab({
   refreshBalances,
   refreshChainId,
   isBalancesLoading,
+  instrument = false,
+  onInspectQuote,
+  quoteInspected = false,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
@@ -504,13 +511,14 @@ export default function SwapTab({
   }, [chains, walletChainId]);
 
   // Add bottom padding on mobile beginner mode to account for sticky CTA
-  const containerPadding = isMobile && isBeginner ? "pb-24" : "";
+  const containerPadding = !instrument && isMobile && isBeginner ? "pb-24" : "";
+  const showChrome = !instrument;
 
   return (
     <div className={`space-y-4 ${containerPadding}`}>
       <div>
         {/* DEMO MODE BANNER */}
-        {isDemo && (
+        {showChrome && isDemo && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -530,7 +538,7 @@ export default function SwapTab({
         )}
 
         {/* Hide complex header for beginners */}
-        {!isBeginner && (
+        {showChrome && !isBeginner && (
           <TabHeader
             title="Action Hub"
             chainId={walletChainId}
@@ -541,7 +549,7 @@ export default function SwapTab({
         )}
 
         {/* Beginner: Simple title + compact NetworkSwitcher (consistent with advanced mode) */}
-        {isBeginner && (
+        {showChrome && isBeginner && (
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -562,7 +570,7 @@ export default function SwapTab({
         )}
 
         {/* Hide chain balances header for beginners */}
-        {address && !isBeginner && (
+        {showChrome && address && !isBeginner && (
           isMultichainLoading ? (
             <div className="flex gap-2 py-2">
               <Skeleton className="flex-1 h-16" variant="rect" />
@@ -580,7 +588,7 @@ export default function SwapTab({
         )}
 
         {/* Hide search for beginners */}
-        {!isBeginner && (
+        {showChrome && !isBeginner && (
           <div className="mb-4">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -624,9 +632,9 @@ export default function SwapTab({
           />
         ) : (
           <>
-            <ExperienceModeNotification />
+            {showChrome && <ExperienceModeNotification />}
 
-            {showAiRecommendation && (
+            {showChrome && showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
                 <p className="text-xs font-bold text-blue-800 dark:text-blue-200">
                   🧠 AI: {aiRecommendationReason}
@@ -661,14 +669,15 @@ export default function SwapTab({
               </div>
             )}
 
-            {/* Goal banner — delegated to GoalAlignmentBanner */}
-            <GoalAlignmentBanner
-              userGoal={profileConfig.userGoal}
-              riskTolerance={profileConfig.riskTolerance}
-              timeHorizon={profileConfig.timeHorizon}
-              profileComplete={profileComplete}
-              suppressedByAI={showAiRecommendation}
-            />
+            {showChrome && (
+              <GoalAlignmentBanner
+                userGoal={profileConfig.userGoal}
+                riskTolerance={profileConfig.riskTolerance}
+                timeHorizon={profileConfig.timeHorizon}
+                profileComplete={profileComplete}
+                suppressedByAI={showAiRecommendation}
+              />
+            )}
 
             <ErrorBoundary moduleName="Swap Interface">
               {isTradeableLoading ? (
@@ -696,13 +705,16 @@ export default function SwapTab({
                     title=""
                     chainId={walletChainId}
                     enableCrossChain={true}
+                    instrument={instrument}
+                    onInspectQuote={onInspectQuote}
+                    quoteInspected={quoteInspected}
                   />
                 </div>
               )}
             </ErrorBoundary>
 
             {/* Social Contact Picker - Send to phone/email (hidden on mobile beginner) */}
-            {!isBeginner && address && !isMobile && (
+            {showChrome && !isBeginner && address && !isMobile && (
               <div className="mt-4">
                 <button
                   onClick={() => setShowSocialPicker(!showSocialPicker)}

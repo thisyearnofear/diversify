@@ -6,9 +6,9 @@
  * browser. One definition, three real surfaces: app card, share image,
  * Figma component.
  *
- * Each card is clickable — selecting it sets the user's
- * `financialStrategy` via the existing `StrategyContext` so the rest
- * of the app picks it up immediately.
+ * Each card is clickable. Without `onInspect`, selecting it sets the user's
+ * `financialStrategy` immediately. With `onInspect`, tap focuses the card
+ * and the parent inspector commits via "Use this plan".
  */
 
 import React, { useRef } from 'react';
@@ -46,9 +46,17 @@ const STRATEGY_ID: Record<ArchetypeId, FinancialStrategy> = {
 interface Props {
   /** When true, render a single horizontal scrollable row (mobile). When false, a wrapped grid. */
   mobile?: boolean;
+  /** Focused (not yet committed) plan — ring only, no ACTIVE overlay. */
+  selectedId?: FinancialStrategy | null;
+  /** When set, tap inspects instead of committing the philosophy. */
+  onInspect?: (id: FinancialStrategy) => void;
 }
 
-export function ProtectionPlanGallery({ mobile = true }: Props) {
+export function ProtectionPlanGallery({
+  mobile = true,
+  selectedId = null,
+  onInspect,
+}: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const ambient = useAmbientOrigin();
@@ -86,11 +94,13 @@ export function ProtectionPlanGallery({ mobile = true }: Props) {
           const archetype = ARCHETYPES[id];
           const strategyId = STRATEGY_ID[id];
           const isActive = financialStrategy === strategyId;
+          const isInspecting = selectedId === strategyId;
 
           return (
             <button
               key={id}
               type="button"
+              data-testid={`plan-card-${strategyId}`}
               onClick={(e) => {
                 // Report tap origin to the ambient layer so the
                 // archetype's surface blooms from this card's
@@ -100,32 +110,42 @@ export function ProtectionPlanGallery({ mobile = true }: Props) {
                   rect.left + rect.width / 2,
                   rect.top + rect.height / 2,
                 );
+                if (onInspect) {
+                  onInspect(strategyId);
+                  return;
+                }
                 setFinancialStrategy(strategyId);
                 // Record protection plan selection to the streak system —
                 // this awards the "first-protection-plan" achievement and
                 // contributes to the "savings-loop-master" achievement.
                 if (address && chainId) {
-                  recordActivity({
-                    action: 'protection',
-                    chainId,
-                    networkType: NETWORKS.CELO_MAINNET.chainId === chainId ? 'mainnet' : 'testnet',
-                  }).catch(() => {});
+                  void Promise.resolve(
+                    recordActivity({
+                      action: 'protection',
+                      chainId,
+                      networkType: NETWORKS.CELO_MAINNET.chainId === chainId ? 'mainnet' : 'testnet',
+                    }),
+                  ).catch(() => {});
                 }
               }}
               className={
                 'group relative shrink-0 snap-start rounded-3xl overflow-hidden transition-transform duration-200 active:scale-[0.98] ' +
-                (isActive
+                (isActive || isInspecting
                   ? 'ring-4 ring-offset-2 ring-offset-slate-900'
                   : 'hover:scale-[1.02]')
               }
               style={{
                 width: renderedW,
                 height: renderedH,
-                // Per-archetype focus ring when active.
-                ...(isActive ? { boxShadow: `0 0 0 4px ${archetype.accent}` } : {}),
+                // Per-archetype focus ring when active or inspecting.
+                ...(isActive || isInspecting ? { boxShadow: `0 0 0 4px ${archetype.accent}` } : {}),
               }}
               aria-pressed={isActive}
-              aria-label={`Select ${archetype.name} protection plan`}
+              aria-label={
+                onInspect
+                  ? `Inspect ${archetype.name} protection plan`
+                  : `Select ${archetype.name} protection plan`
+              }
             >
               {/* Scaled JSX surface — same component that drives the Figma library. */}
               <div

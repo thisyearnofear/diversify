@@ -16,7 +16,7 @@ import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useAdvisor } from "@/hooks/use-advisor";
-import { useFinancialStrategies } from "@/hooks/useFinancialStrategies";
+import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { useToast } from "@/components/ui/Toast";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -36,6 +36,18 @@ import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useVault } from "@/hooks/use-vault";
 import { useSessionKey } from "@/hooks/use-session-key";
+import { useStreakRewards } from "@/hooks/use-streak-rewards";
+import type { FinancialStrategy } from "@/context/app/types";
+import { exampleSavingsFor } from "@/constants/currency-risk";
+import { FALLBACK_INFLATION_DATA } from "@/constants/inflation";
+import {
+  localInflationRate,
+  mixForPhilosophy,
+  mixLabelFor,
+  seriesFor,
+  type InflationRates,
+} from "@/lib/learn/protection-calculator";
+import { ProtectionCalculator } from "../inflation/ProtectionCalculator";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
@@ -70,7 +82,8 @@ export default function ProtectionTab({
   const activePortfolio = (isDemo ? DEMO_PORTFOLIO : portfolio) as MultichainPortfolio;
 
   const [showMobileWizard, setShowMobileWizard] = useState(false);
-  const { financialStrategy } = useStrategy();
+  const { financialStrategy, setFinancialStrategy } = useStrategy();
+  const { recordActivity } = useStreakRewards();
   const vault = useVault();
   const { requestPermission, signedPermission, sessionInfo, deriveGuardianState } =
     useSessionKey();
@@ -87,10 +100,14 @@ export default function ProtectionTab({
   const { showToast } = useToast();
 
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
+  const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
+  const [learnYear, setLearnYear] = useState(5);
+  const [learnAmountOverride, setLearnAmountOverride] = useState<number | null>(null);
   const previousAddress = useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
       setFocusedToken(null);
+      setFocusedPhilosophy(null);
       previousAddress.current = address;
     }
   }, [address]);
@@ -281,6 +298,55 @@ export default function ProtectionTab({
   const gapPct = selectedAlloc ? selectedAlloc.percent - selectedHeld : 0;
   const isPaymentCycle = config.moneyPurpose === "upcoming_payment";
 
+  const learnMix = useMemo(
+    () => mixForPhilosophy(focusedPhilosophy),
+    [focusedPhilosophy],
+  );
+  const learnMixLabel = mixLabelFor(
+    focusedPhilosophy,
+    learnMix,
+    STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name,
+  );
+  const learnRates: InflationRates = useMemo(() => {
+    const byRegion: Record<string, number> = {};
+    for (const [region, entry] of Object.entries(FALLBACK_INFLATION_DATA)) {
+      byRegion[region] = entry.avgRate;
+    }
+    const local = localInflationRate(userRegion, byRegion);
+    return {
+      local,
+      usd: byRegion.USA ?? 4.1,
+      eur: byRegion.Europe ?? 6.8,
+      africa: byRegion.Africa ?? local,
+      latam: byRegion.LatAm ?? local,
+      asia: byRegion.Asia ?? local,
+      europe: byRegion.Europe ?? 6.8,
+    };
+  }, [userRegion]);
+  const currencyCode = riskData?.code ?? "USD";
+  const learnAmount =
+    learnAmountOverride ??
+    (totalValue > 0 ? Math.max(1, Math.round(totalValue)) : exampleSavingsFor(currencyCode));
+  const learnSeries = useMemo(
+    () => seriesFor(learnAmount, learnMix, learnRates, 5),
+    [learnAmount, learnMix, learnRates],
+  );
+
+  const commitFocusedPlan = useCallback(() => {
+    if (!focusedPhilosophy) return;
+    setFinancialStrategy(focusedPhilosophy);
+    setFocusedPhilosophy(null);
+    if (address && chainId) {
+      void Promise.resolve(
+        recordActivity({
+          action: "protection",
+          chainId,
+          networkType: NETWORKS.CELO_MAINNET.chainId === chainId ? "mainnet" : "testnet",
+        }),
+      ).catch(() => {});
+    }
+  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy]);
+
   if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) {
     return <ProtectionSkeleton />;
   }
@@ -303,7 +369,17 @@ export default function ProtectionTab({
           <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
             Choose a protection philosophy
           </p>
-          <ProtectionPlanGallery mobile />
+          <ProtectionPlanGallery
+            mobile
+            selectedId={focusedPhilosophy}
+            onInspect={(id) => {
+              setFocusedPhilosophy((prev) => (prev === id ? null : id));
+              trackFunnelEvent("marquee_select", {
+                strategy: id,
+                source: "shield_picker",
+              });
+            }}
+          />
         </div>
       )}
       {planRingVisible && shape !== "picker" && (
@@ -313,7 +389,34 @@ export default function ProtectionTab({
             portfolio={activePortfolio as MultichainPortfolio}
             selectedToken={focusedToken}
             onSelectToken={handleMarqueeSelect}
+            alignmentScore={strategyAlignmentScore}
+            empty={shape === "fund"}
           />
+          {shape === "fund" && (
+            <div data-testid="shield-fund" className="mt-3 space-y-2">
+              {isMiniPay ? (
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Add cash with + in MiniPay.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!address) return;
+                    try {
+                      await navigator.clipboard.writeText(address);
+                      showToast("Address copied", "success");
+                    } catch {
+                      showToast("Could not copy address", "error");
+                    }
+                  }}
+                  className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+                >
+                  Copy address
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </>
@@ -321,11 +424,46 @@ export default function ProtectionTab({
 
   const inspector = (
     <InspectorSheet
-      selectedId={focusedToken}
-      onClose={() => setFocusedToken(null)}
-      title={focusedToken ?? "Slice"}
+      selectedId={shape === "picker" ? focusedPhilosophy : focusedToken}
+      onClose={() => {
+        setFocusedToken(null);
+        setFocusedPhilosophy(null);
+      }}
+      title={
+        shape === "picker"
+          ? (STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "Plan")
+          : (focusedToken ?? "Slice")
+      }
     >
-      {focusedToken && (
+      {shape === "picker" && focusedPhilosophy && (
+        <div className="space-y-3">
+          <ProtectionCalculator
+            amount={learnAmount}
+            onAmountChange={setLearnAmountOverride}
+            amountLabel={totalValue > 0 ? "Wallet value (editable)" : "Your savings amount"}
+            currencyCode={currencyCode}
+            series={learnSeries}
+            selectedYear={learnYear}
+            years={5}
+            mixLabel={learnMixLabel}
+            onSelectYear={setLearnYear}
+            onProtect={commitFocusedPlan}
+            ctaLabel="Use this plan"
+          />
+          <button
+            type="button"
+            onClick={() =>
+              askAdvisor(
+                `I'm considering the ${STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? focusedPhilosophy} protection plan. How does this mix protect ${currencyCode} savings over ${learnYear} years?`,
+              )
+            }
+            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          >
+            Ask Guardian about this plan
+          </button>
+        </div>
+      )}
+      {shape !== "picker" && focusedToken && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <TokenIcon symbol={focusedToken} size={22} />
@@ -379,7 +517,7 @@ export default function ProtectionTab({
                 `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${currentGoalLabel} plan in ${userRegion}?`,
               )
             }
-            className="min-h-[44px] w-full rounded-xl text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             Ask Guardian about this slice
           </button>
@@ -421,14 +559,12 @@ export default function ProtectionTab({
       ) : guardianState === "monitoring" ? (
         <p>Guardian is monitoring this plan.</p>
       ) : (
-        <p data-testid={shape === "fund" ? "shield-fund" : undefined}>
+        <p>
           {shape === "gap"
             ? "Tap a slice to close the gap."
             : shape === "fund"
-              ? isMiniPay
-                ? "Add cash with + in MiniPay."
-                : "Add funds from your wallet — buy or copy your address."
-              : "Pick the philosophy the ring will follow."}
+              ? "Fund this plan to start protection."
+              : "Choose your protection philosophy."}
         </p>
       )}
       {address && (

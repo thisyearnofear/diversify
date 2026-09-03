@@ -99,7 +99,7 @@ export interface HomeSections {
   /** Hero card variant. */
   heroVariant: "compact" | "detailed";
 
-  /** Holdings dial is the object for non-beginners with funds. */
+  /** Holdings dial is the object whenever the wallet has funds. */
   showDial: boolean;
   /** Zakat line belongs in the region inspector for Islamic philosophy. */
   showZakat: boolean;
@@ -268,7 +268,7 @@ export function useHomeSections({
       ? "compact"
       : "detailed";
 
-    const showDial = hasHoldings && !isBeginner;
+    const showDial = hasHoldings;
     const showZakat = hasHoldings && profileConfig.philosophy === "islamic";
     const isPaymentCycle = profileConfig.moneyPurpose === "upcoming_payment";
 

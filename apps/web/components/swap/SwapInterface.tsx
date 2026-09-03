@@ -16,6 +16,7 @@ import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useMobile } from "@/hooks/use-mobile";
 import { useAdvisor } from "@/hooks/use-advisor";
+import { useBestYield, yieldHintForDestination } from "@/hooks/use-best-yield";
 
 interface Token {
   symbol: string;
@@ -43,6 +44,11 @@ interface SwapInterfaceProps {
   chainId?: number | null;
   enableCrossChain?: boolean;
   zapMode?: boolean;
+  onInspectQuote?: (fromToken: string, toToken: string) => void;
+  quoteInspected?: boolean;
+  /** When set, hides ticket chrome so Exchange can own the instrument. */
+  instrument?: boolean;
+  yieldHint?: string | null;
   contractCall?: {
       toContractAddress: string;
       toContractCallData: string;
@@ -76,6 +82,10 @@ const SwapInterface = forwardRef<
     chainId,
     enableCrossChain = false,
     zapMode = false,
+    onInspectQuote,
+    quoteInspected = false,
+    instrument = false,
+    yieldHint = null,
     contractCall,
   },
   ref,
@@ -132,6 +142,10 @@ const SwapInterface = forwardRef<
     preferredFromRegion,
     preferredToRegion,
   });
+
+  const { data: yieldData } = useBestYield(address ?? null);
+  const resolvedYieldHint =
+    yieldHint ?? yieldHintForDestination(yieldData?.recommendations, toToken);
 
   const availableBalance = Number.parseFloat(tokenBalances[fromToken]?.formattedBalance || "0");
   const parsedAmount = Number.parseFloat(amount || "0");
@@ -192,24 +206,16 @@ const SwapInterface = forwardRef<
         </div>
       )}
       <div className="relative">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-3">
-          <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
-            {isBeginner ? "Protect Savings" : title}
-          </h3>
-          {shouldShowIntermediateFeatures() && inflationDataSource === "api" && (
-            <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
-              Live Data
-            </span>
-          )}
-        </div>
-
-        {/* One banner slot — pick the most relevant per state */}
-        {isBeginner && (
-          <div className="mb-3 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
-            <p className="text-xs font-semibold text-blue-900 dark:text-blue-100">
-              Choose what you have and what to move into.
-            </p>
+        {!instrument && (
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
+              {title}
+            </h3>
+            {shouldShowIntermediateFeatures() && inflationDataSource === "api" && (
+              <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
+                Live Data
+              </span>
+            )}
           </div>
         )}
 
@@ -331,6 +337,11 @@ const SwapInterface = forwardRef<
             slippageTolerance={slippageTolerance}
             isCrossChain={isCrossChainRoute}
             mounted={mounted}
+            onInspect={
+              onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+            }
+            inspected={quoteInspected}
+            yieldHint={resolvedYieldHint}
           />
 
           {/* Unified inflation differentiator — one line, one moment */}

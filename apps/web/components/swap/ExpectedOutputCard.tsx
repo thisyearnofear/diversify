@@ -12,6 +12,11 @@ interface ExpectedOutputCardProps {
   slippageTolerance?: number;
   isCrossChain?: boolean;
   mounted: boolean;
+  /** When set, quote tap opens the tab inspector instead of expanding inline. */
+  onInspect?: () => void;
+  inspected?: boolean;
+  /** Quiet APY annotation when the destination has a yield path. */
+  yieldHint?: string | null;
 }
 
 /**
@@ -29,9 +34,13 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
   slippageTolerance,
   isCrossChain = false,
   mounted,
+  onInspect,
+  inspected = false,
+  yieldHint,
 }) => {
   const [expanded, setExpanded] = React.useState(false);
   const reducedMotion = useReducedMotion();
+  const open = onInspect ? inspected : expanded;
 
   const parsedAmount = Number.parseFloat(amount);
   const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
@@ -49,8 +58,9 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
       {/* Compact quote row */}
       <button
         type="button"
-        onClick={() => setExpanded((e) => !e)}
-        aria-expanded={expanded}
+        data-testid="quote-row"
+        onClick={() => (onInspect ? onInspect() : setExpanded((e) => !e))}
+        aria-expanded={open}
         className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
       >
         <div className="flex items-center gap-2 min-w-0">
@@ -82,6 +92,7 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
             <span className="text-xs text-gray-400 dark:text-gray-500">
               · {typeof slippageTolerance === "number" ? `${slippageTolerance}%` : "Auto"}
               {isCrossChain && " · bridge"}
+              {yieldHint ? ` · ${yieldHint}` : ""}
             </span>
           )}
         </div>
@@ -93,7 +104,7 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
             </span>
           )}
           <motion.svg
-            animate={{ rotate: expanded ? 180 : 0 }}
+            animate={{ rotate: open ? 180 : 0 }}
             transition={{ duration: 0.2 }}
             className="w-3.5 h-3.5 text-gray-400 shrink-0"
             fill="none"
@@ -105,9 +116,9 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
         </div>
       </button>
 
-      {/* Expandable detail */}
+      {/* Inline expand only when the tab has no inspector. */}
       <AnimatePresence initial={false}>
-        {expanded && hasOutput && (
+        {!onInspect && expanded && hasOutput && (
           <motion.div
             initial={reducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
             animate={reducedMotion ? { opacity: 1 } : { height: "auto", opacity: 1 }}

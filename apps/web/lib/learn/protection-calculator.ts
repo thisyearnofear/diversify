@@ -96,6 +96,16 @@ export function mixForPhilosophy(philosophy: string | null | undefined): MixSlic
   return GOLD_MIX;
 }
 
+export function mixLabelFor(
+  philosophy: string | null | undefined,
+  mix: MixSlice[],
+  strategyName?: string | null,
+): string {
+  const goldOnly = mix.length === 1 && mix[0].token === "PAXG" && mix[0].percent === 100;
+  if (goldOnly || !philosophy) return "Gold";
+  return strategyName?.trim() || "Your mix";
+}
+
 /** Regional inflation lookup. Caribbean has no dedicated series — imported inflation tracks LatAm, then USA. */
 export function localInflationRate(
   region: string,

@@ -80,11 +80,12 @@ vi.mock("@/components/ui/Skeleton", () => ({
 
 import TabContentRouter from "../TabContentRouter";
 
-function makeContext(activeTab: string) {
+function makeContext(activeTab: string, extras: Record<string, unknown> = {}) {
   return {
     activeTab,
     setActiveTab: vi.fn(),
     trackTabChange: vi.fn(),
+    experienceMode: "advanced",
     multichainPortfolio: null,
     isMultichainLoading: false,
     refresh: vi.fn(),
@@ -97,6 +98,7 @@ function makeContext(activeTab: string) {
     walletChainId: null,
     isMiniPay: false,
     isFarcaster: false,
+    ...extras,
   };
 }
 
@@ -171,5 +173,26 @@ describe("TabContentRouter — keep-mounted Home", () => {
     rerender(<TabContentRouter />);
     expect(screen.getByTestId("info-tab")).toBeInTheDocument();
     expect(screen.queryByTestId("overview-tab")).not.toBeInTheDocument();
+  });
+});
+
+describe("TabContentRouter — Simple dock swipe order", () => {
+  it("clips swipe order and bounces a hidden Learn tab back onto the dock", () => {
+    const setActiveTab = vi.fn();
+    m.ctx.value = makeContext("info", {
+      experienceMode: "beginner",
+      setActiveTab,
+    });
+    render(<TabContentRouter />);
+    expect(setActiveTab).toHaveBeenCalledWith("overview");
+    expect(screen.queryByTestId("info-tab")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("agent-tab")).not.toBeInTheDocument();
+  });
+
+  it("still renders Exchange in beginner mode", () => {
+    m.ctx.value = makeContext("exchange", { experienceMode: "beginner" });
+    render(<TabContentRouter />);
+    expect(screen.getByTestId("exchange-tab")).toBeInTheDocument();
+    expect(screen.queryByTestId("info-tab")).not.toBeInTheDocument();
   });
 });

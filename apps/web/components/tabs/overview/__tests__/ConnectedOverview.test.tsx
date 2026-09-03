@@ -432,11 +432,23 @@ describe("ConnectedOverview — currency-moment hero", () => {
     expect(screen.queryByTestId("protection-analysis")).not.toBeInTheDocument();
   });
 
-  it("keeps the beginner protection mix — that mode has no dial", () => {
+  it("shows the dial for beginners with holdings — that mode is no longer gated", () => {
     mockExperienceMode = "beginner";
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: true };
     mockMoment = GHANA_MOMENT;
     renderOverview();
+
+    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.queryByTestId("currency-moment-card")).not.toBeInTheDocument();
+  });
+
+  it("shows the currency moment when the wallet is empty", () => {
+    mockHomeSections = { ...defaultHomeSections, showDial: false };
+    mockMoment = GHANA_MOMENT;
+    renderOverview({
+      portfolio: buildPortfolio({ totalValue: 0, regionData: [] }),
+      activePortfolio: buildPortfolio({ totalValue: 0, regionData: [] }),
+    });
 
     expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
     expect(screen.getByTestId("currency-moment-card")).toBeInTheDocument();

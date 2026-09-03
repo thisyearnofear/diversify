@@ -91,4 +91,50 @@ describe('ProtectionPlanRing — projections shape', () => {
     ).not.toThrow();
     expect(DEMO_PORTFOLIO.projections.currentPath.purchasingPowerLost).toBeGreaterThan(0);
   });
+
+  it('puts alignment in the idle hole, not a portfolio total', async () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    expect(await screen.findByText('72%')).toBeInTheDocument();
+    expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
+  });
+
+  it('puts the gap in the hole when a slice is selected', async () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken="cUSD"
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    expect(await screen.findByText('pts over')).toBeInTheDocument();
+  });
+
+  it('shows Add funds in the hole when the wallet is empty', () => {
+    const empty = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 0,
+      tokens: [],
+      chains: [],
+    } as unknown as MultichainPortfolio;
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={empty}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        empty
+      />,
+    );
+    expect(screen.getByText('Add funds')).toBeInTheDocument();
+  });
 });

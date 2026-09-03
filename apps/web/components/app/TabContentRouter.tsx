@@ -9,10 +9,11 @@
  * adaptive experience: different personas see different information
  * architecture in the same shell.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import type { TabId } from "@/constants/tabs";
+import { getVisibleTabIds } from "@/constants/tabs";
 
 import { useAppShellContext } from "@/context/app/AppShellContext";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
@@ -150,7 +151,7 @@ function KeepMountedPane({
   );
 }
 
-// ── Component ──
+const DEFAULT_TAB_ORDER: TabId[] = ["overview", "protect", "exchange", "agent", "info"];
 
 export default function TabContentRouter() {
   const {
@@ -159,21 +160,29 @@ export default function TabContentRouter() {
     isRegionLoading, userRegion, setUserRegion, REGIONS,
     inflationData, currencyPerformanceData,
     walletChainId, isMiniPay, isFarcaster,
+    experienceMode,
   } = useAppShellContext();
   const { recordSwipe, recordTabVisit } = useTabDiscovery();
   const { config: adaptiveConfig } = useAdaptiveContext();
 
   // Determine Guardian mode — cycle-aware for importers, savings for savers
   const guardianMode = adaptiveConfig?.guardianMode ?? "savings";
-  // Adaptive tab order — importers see Shield first, savers see Overview
-  // This is the foundation of the adaptive UX: different personas see
-  // different information architecture, not just different labels.
-  const defaultOrder: TabId[] = ["overview", "protect", "exchange", "agent", "info"];
-  const rawOrder = adaptiveConfig?.content?.tabOrder ?? defaultOrder;
-  const validIds = new Set(defaultOrder);
-  const tabOrder = rawOrder
-    .map((id: string) => id as TabId)
-    .filter((id: TabId) => validIds.has(id));
+  // Adaptive tab order — importers see Shield first, savers see Overview.
+  // Swipe order is then clipped to the tabs actually in this mode's dock
+  // so beginners cannot swipe onto Learn or Guardian.
+  const tabOrder = useMemo(() => {
+    const visible = new Set(getVisibleTabIds(experienceMode));
+    const rawOrder = adaptiveConfig?.content?.tabOrder ?? DEFAULT_TAB_ORDER;
+    const validIds = new Set(DEFAULT_TAB_ORDER);
+    return rawOrder
+      .map((id: string) => id as TabId)
+      .filter((id: TabId) => validIds.has(id) && visible.has(id));
+  }, [adaptiveConfig, experienceMode]);
+
+  useEffect(() => {
+    if (tabOrder.length === 0 || tabOrder.includes(activeTab)) return;
+    setActiveTab(tabOrder[0]);
+  }, [activeTab, setActiveTab, tabOrder]);
 
   // Direction-aware transitions: content enters from the side you swiped
   // toward (or the side the new tab sits on in tab order). Maxima's carousel
@@ -296,7 +305,7 @@ export default function TabContentRouter() {
           </TabPane>
         )}
 
-        {activeTab === "agent" && (
+        {activeTab === "agent" && tabOrder.includes("agent") && (
           <TabPane key="agent" id="agent" direction={direction}>
             <ErrorBoundary>
               <AgentTab
@@ -310,7 +319,7 @@ export default function TabContentRouter() {
           </TabPane>
         )}
 
-        {activeTab === "info" && (
+        {activeTab === "info" && tabOrder.includes("info") && (
           <TabPane key="info" id="info" direction={direction}>
             <ErrorBoundary>
               <InfoTab

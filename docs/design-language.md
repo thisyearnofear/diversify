@@ -131,6 +131,33 @@ Disclosure is allowed only for **trust footnotes** (data source, method).
 Review test: *does this block change the object, the inspector, or the
 one CTA?* If not, it leaves the tab.
 
+### Instrument utility rails (fail = revert)
+
+A tab change that fails any of these is the old stack. Do not ship it.
+
+1. **One job per tab.** Home sees. Shield decides. Exchange acts. Learn is
+   not a peer tab in Simple mode.
+2. **Selection rewrites the artefact.** If a tap only opens a paragraph,
+   it does not ship.
+3. **One CTA, on a tab that is in the dock.** `navigateToSwap` into a
+   hidden Exchange tab is a bug.
+4. **Persona morphs the object, it does not add a module.** Caribbean
+   netting stays an Exchange shape. Yield annotates the quote. RWA is a
+   ring token. Payment cycle is a Shield inspector body.
+5. **Nothing sits above the object** except a real error. Banners,
+   scorecards, honesty strips, and “next step” journeys are object /
+   status / footnote — or they leave.
+6. **No restored cards.** `ProtectionScorecard`, `ProtectionJourney`,
+   `BestYieldCard`, `RwaAssetCards`, `OptimizationInsight`,
+   `SavingsLoopCard` may donate numbers and copy. They may not return as
+   sections.
+
+Simple dock: Shield / Home / Exchange. Learn is absorbed onto Shield’s
+picker (and optionally Home amount-inspect). Home dial is holdings-gated,
+not mode-gated. Shield and Home share `AllocationRing` but not a hole
+number: Home hole = concentration; Shield hole = gap when a slice is
+selected.
+
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see
 `LensCoinSelector`).

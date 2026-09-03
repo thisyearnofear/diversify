@@ -20,6 +20,7 @@ import {
   inflationForToken,
   localInflationRate,
   mixForPhilosophy,
+  mixLabelFor,
   seriesFor,
   type InflationRates,
 } from "@/lib/learn/protection-calculator";
@@ -53,15 +54,6 @@ function rateMap(
     if (typeof entry?.avgRate === "number") map[region] = entry.avgRate;
   }
   return map;
-}
-
-function mixLabelFor(
-  philosophy: string | null,
-  mix: { token: string; percent: number }[],
-): string {
-  const goldOnly = mix.length === 1 && mix[0].token === "PAXG" && mix[0].percent === 100;
-  if (goldOnly || !philosophy) return "Gold";
-  return STRATEGIES.find((s) => s.id === philosophy)?.name ?? "Your mix";
 }
 
 function sourceLine(dataSource: string, year: string): string {
@@ -102,7 +94,11 @@ export default function InfoTab({ userRegion, isLoading, setActiveTab, refreshBa
 
   const philosophy = config.philosophy ?? null;
   const mix = useMemo(() => mixForPhilosophy(philosophy), [philosophy]);
-  const mixLabel = mixLabelFor(philosophy, mix);
+  const mixLabel = mixLabelFor(
+    philosophy,
+    mix,
+    STRATEGIES.find((s) => s.id === philosophy)?.name,
+  );
 
   const rates: InflationRates = useMemo(() => {
     const byRegion = rateMap(inflationData);

@@ -49,11 +49,14 @@ export default function ExchangeTab({
   const { config } = useProtectionProfile();
   const sharedPortfolio = usePortfolio();
   const previousAddress = useRef(address);
-  const [focusedSwap, setFocusedSwap] = useState(false);
+  const [inspectedPair, setInspectedPair] = useState<{
+    fromToken: string;
+    toToken: string;
+  } | null>(null);
 
   useEffect(() => {
     if (previousAddress.current !== address) {
-      setFocusedSwap(false);
+      setInspectedPair(null);
       previousAddress.current = address;
     }
   }, [address]);
@@ -124,29 +127,24 @@ export default function ExchangeTab({
             refreshBalances={refreshBalances}
             refreshChainId={refreshChainId}
             isBalancesLoading={isBalancesLoading}
+            instrument
+            onInspectQuote={(fromToken, toToken) =>
+              setInspectedPair({ fromToken, toToken })
+            }
+            quoteInspected={Boolean(inspectedPair)}
           />
-          <button
-            type="button"
-            onClick={() => setFocusedSwap(true)}
-            className="mt-2 min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-          >
-            Inspect route and settlement
-          </button>
         </div>
       }
       inspector={
         <InspectorSheet
-          selectedId={focusedSwap ? "swap" : null}
-          onClose={() => setFocusedSwap(false)}
-          title="Swap details"
+          selectedId={inspectedPair ? `${inspectedPair.fromToken}-${inspectedPair.toToken}` : null}
+          onClose={() => setInspectedPair(null)}
+          title="Route and settlement"
         >
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Review the selected pair, available balance, route, and settlement chain before confirming.
-          </p>
-          {swapPrefill?.fromToken && swapPrefill?.toToken ? (
+          {inspectedPair ? (
             <RouteSchematic
-              fromToken={swapPrefill.fromToken}
-              toToken={swapPrefill.toToken}
+              fromToken={inspectedPair.fromToken}
+              toToken={inspectedPair.toToken}
               caption={userRegion}
             />
           ) : null}

@@ -2,8 +2,9 @@
  * ProtectionPlanRing — the Shield tab's Tier-1 marquee.
  *
  * The tab's one expressive object: the user's plan as an interactive ring.
- * Tap a slice (or its legend row) to select it — the tab inspector
- * owns the CTA. The footer surfaces purchasing-power projections.
+ * Idle hole is alignment; selected hole is the gap vs target. An empty
+ * wallet still shows the plan as the object, with "Add funds" in the hole.
+ * The tab inspector owns the CTA.
  *
  * Design language: the ring is the one object that gets color; everything
  * around it is quiet. Motion reveals the reallocation, never loops.
@@ -27,6 +28,10 @@ interface Props {
   /** Controlled selection — the tab's focus state lives in ProtectionTab. */
   selectedToken: string | null;
   onSelectToken: (token: string | null) => void;
+  /** Plan alignment 0–100. Idle hole. */
+  alignmentScore?: number;
+  /** Empty-wallet morph — hole says Add funds; slices are the plan. */
+  empty?: boolean;
 }
 
 export function ProtectionPlanRing({
@@ -34,6 +39,8 @@ export function ProtectionPlanRing({
   portfolio,
   selectedToken,
   onSelectToken,
+  alignmentScore = 0,
+  empty = false,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -51,32 +58,44 @@ export function ProtectionPlanRing({
     walletView.holdings.map((holding) => [holding.symbol, holding.percent]),
   );
 
-  // The ring must represent the wallet's live holdings. Plan percentages remain
-  // visible in the legend/inspector so users can compare reality with intent.
+  // Funded: ring is live holdings. Empty: ring is the plan waiting for funds.
   const slices: RingSlice[] = useMemo(() => {
     if (!archetype) return [];
-    return walletView.holdings.map((holding, i) => ({
-      id: holding.symbol,
-      label: `${holding.symbol} — wallet holding`,
-      percent: holding.percent,
+    if (walletView.holdings.length > 0) {
+      return walletView.holdings.map((holding, i) => ({
+        id: holding.symbol,
+        label: `${holding.symbol} — wallet holding`,
+        percent: holding.percent,
+        color:
+          TOKEN_COLORS[holding.symbol] ??
+          (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
+      }));
+    }
+    return allocations.map((a, i) => ({
+      id: a.token,
+      label: `${a.token} — plan`,
+      percent: a.percent,
       color:
-        TOKEN_COLORS[holding.symbol] ??
+        TOKEN_COLORS[a.token] ??
         (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
     }));
-  }, [archetype, walletView.holdings]);
+  }, [archetype, walletView.holdings, allocations]);
 
   if (!archetype || allocations.length === 0 || slices.length === 0) return null;
 
   const selected = allocations.find((a) => a.token === selectedToken) ?? null;
   const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
   const selectedSymbol = selectedLive?.id ?? selected?.token ?? null;
+  const selectedHeld = selectedToken ? heldPctByToken.get(selectedToken) ?? 0 : 0;
+  const gapPts = selected ? selected.percent - selectedHeld : 0;
+  const onTarget = Boolean(selected) && Math.abs(gapPts) <= 2;
 
-  // The center number lands with a count-up; when a slice is selected the
-  // count re-runs to the held percent (Skills "number-details").
   const reducedMotion = useReducedMotion();
-  const centerNumber = selectedLive ? selectedLive.percent : totalValue;
-  const centerFormatted = useCountUp(centerNumber, {
-    format: (n) => (selectedLive ? `${Math.round(n)}%` : `$${Math.round(n).toLocaleString()}`),
+  const alignmentFormatted = useCountUp(alignmentScore, {
+    format: (n) => `${Math.round(n)}%`,
+  });
+  const gapFormatted = useCountUp(Math.abs(gapPts), {
+    format: (n) => `${Math.round(n)}`,
   });
 
   const projections = portfolio?.projections;
@@ -88,13 +107,50 @@ export function ProtectionPlanRing({
 
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
+  const hole = (() => {
+    if (empty) {
+      return {
+        number: null as React.ReactNode,
+        label: "Add funds",
+        hint: archetype.name,
+      };
+    }
+    if (selected || selectedLive) {
+      if (!selected) {
+        return {
+          number: `${Math.round(selectedHeld)}%`,
+          label: selectedSymbol,
+          hint: "outside plan",
+        };
+      }
+      if (onTarget) {
+        return {
+          number: null as React.ReactNode,
+          label: "On target",
+          hint: selectedSymbol,
+        };
+      }
+      return {
+        number: (
+          <motion.span>{gapFormatted}</motion.span>
+        ),
+        label: gapPts > 0 ? "pts light" : "pts over",
+        hint: selectedSymbol,
+      };
+    }
+    return {
+      number: <motion.span>{alignmentFormatted}</motion.span>,
+      label: archetype.name,
+      hint: "aligned · tap a slice",
+    };
+  })();
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
         </h3>
-        {/* Plan switch confirmation — one pop on archetype change, never a loop. */}
         <motion.span
           key={archetype.id}
           className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
@@ -115,31 +171,22 @@ export function ProtectionPlanRing({
           size={200}
           thickness={24}
         >
-          {selected || selectedLive ? (
-            <>
-              <span className="flex items-center gap-1.5 text-sm font-bold text-gray-900 dark:text-white">
-                <TokenIcon symbol={selectedSymbol!} size={18} />
-                {selectedSymbol}
-              </span>
+          <>
+            {hole.number != null && (
               <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                <motion.span>{centerFormatted}</motion.span>
+                {typeof hole.number === "string" ? hole.number : hole.number}
               </span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">in wallet</span>
-            </>
-          ) : (
-            <>
-              <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                <motion.span>{centerFormatted}</motion.span>
-              </span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                {portfolio?.chainCount ?? 0} chain{(portfolio?.chainCount ?? 0) !== 1 ? 's' : ''} · tap a slice
-              </span>
-            </>
-          )}
+            )}
+            <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
+              {hole.label}
+            </span>
+            <span className="text-[11px] text-gray-500 dark:text-gray-400">
+              {hole.hint}
+            </span>
+          </>
         </AllocationRing>
       </div>
 
-      {/* Legend — the same selection surface as the ring, in list form */}
       <div className="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
         {slices.map((slice) => {
           const a = allocations.find((allocation) => allocation.token === slice.id) ?? {
@@ -185,7 +232,6 @@ export function ProtectionPlanRing({
         })}
       </div>
 
-      {/* Purchasing-power projection — the dark data, finally visible */}
       {showProjections && (
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
           3-year path: inflation takes{' '}

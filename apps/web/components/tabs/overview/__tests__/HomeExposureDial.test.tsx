@@ -26,14 +26,13 @@ afterEach(() => {
 });
 
 describe('HomeExposureDial — Home tab marquee', () => {
-  it('shows the total in the center and every region in the legend', async () => {
+  it('shows concentration in the center, not a portfolio total', async () => {
     render(<HomeExposureDial {...baseProps} />);
-    // Center number counts up (Skills "number-details") — await the settle.
-    expect(await screen.findByText('$1,000')).toBeInTheDocument();
+    expect(await screen.findByText('largest region · tap a slice')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Kenya.*\$500/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /US.*\$300/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /EU.*\$200/ })).toBeInTheDocument();
-    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
   });
 
   it('selects a region on tap and deselects on a second tap', () => {
@@ -60,12 +59,12 @@ describe('HomeExposureDial — Home tab marquee', () => {
     expect(onSelectRegion).toHaveBeenLastCalledWith(null);
   });
 
-  it('shows the selected region in the ring center, not a sibling CTA card', () => {
+  it('shows the selected region in the ring center, not a sibling CTA card', async () => {
     render(
       <HomeExposureDial {...baseProps} selectedRegion="Kenya" />,
     );
 
-    expect(screen.getByText('50% of savings')).toBeInTheDocument();
+    expect(await screen.findByText('of savings')).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /Strengthen Kenya coverage in Shield/ }),
     ).not.toBeInTheDocument();

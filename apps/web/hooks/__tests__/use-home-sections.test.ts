@@ -411,10 +411,10 @@ describe("useHomeSections", () => {
       expect(result.current.isPaymentCycle).toBe(true);
     });
 
-    it("hides the dial in beginner mode", () => {
+    it("shows the dial for beginners with holdings", () => {
       mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.showDial).toBe(false);
+      expect(result.current.showDial).toBe(true);
     });
 
     it("shows zakat in the inspector for Islamic philosophy with holdings", () => {

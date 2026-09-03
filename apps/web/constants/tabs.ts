@@ -7,9 +7,13 @@ import type { UserExperienceMode } from '@/context/app/types';
 export const TAB_IDS = ["protect", "overview", "exchange", "agent", "info"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
-/** Which tabs appear in each experience mode. */
+/**
+ * Which tabs appear in each experience mode.
+ * Simple dock (design-language §5): beginner = Shield / Home / Exchange.
+ * Learn is absorbed onto Shield's picker — do not put it back in Simple.
+ */
 export const TAB_VISIBILITY: Record<UserExperienceMode, readonly TabId[]> = {
-  beginner: ['protect', 'overview', 'info'],
+  beginner: ['protect', 'overview', 'exchange'],
   intermediate: TAB_IDS,
   advanced: TAB_IDS,
 };

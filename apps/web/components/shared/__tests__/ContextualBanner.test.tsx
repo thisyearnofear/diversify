@@ -185,4 +185,19 @@ describe("ContextualBanner", () => {
     // Container is a single top-level motion.div
     expect(container.children.length).toBe(1);
   });
+
+  it("status placement hides first-viewport jobs (cold-start, goal-drift, claim)", () => {
+    const { container } = render(
+      <ContextualBanner {...baseProps} kind="cold-start" placement="status" />,
+    );
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText("Add funds to start")).not.toBeInTheDocument();
+  });
+
+  it("status placement renders rails as a footnote, not a card", () => {
+    render(
+      <ContextualBanner {...baseProps} kind="caribbean-rail" placement="status" />,
+    );
+    expect(screen.queryByTestId("mock-card")).not.toBeInTheDocument();
+  });
 });
