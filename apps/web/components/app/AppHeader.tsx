@@ -62,7 +62,11 @@ export default function AppHeader({
     <div className="flex items-center justify-between gap-3 mb-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 sm:gap-2">
-        <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-slate-900 dark:bg-slate-900 shadow-sm flex-shrink-0" aria-hidden="true">
+        <div
+          className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-slate-900 dark:bg-slate-900 shadow-sm flex-shrink-0 group/logo"
+          title="Portable Guardian · portable across wallets — AgenticID #1 on 0G (0x6815…33D60, 0G Storage root)"
+          aria-label="Portable Guardian · AgenticID #1 on 0G"
+        >
           <GuardianMascot size={32} mood="neutral" />
         </div>
         <div className="flex items-center gap-1.5 min-w-0">

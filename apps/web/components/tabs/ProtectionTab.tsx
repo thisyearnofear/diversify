@@ -55,6 +55,7 @@ import { TokenIcon } from "../shared/TokenIcon";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 import StatusBadge from "../shared/StatusBadge";
+import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { rwaLegFor } from "./protect/RwaAssetCards";
 
 interface ProtectionTabProps {
@@ -556,6 +557,7 @@ export default function ProtectionTab({
         ) : (
           <StatusBadge label="Choose a plan" tone="neutral" compact />
         )}
+        <VerifiedEvidence className="ml-auto" />
       </div>
       <DataFreshnessIndicator
         lastUpdated={activePortfolio.lastUpdated}

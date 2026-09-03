@@ -22,6 +22,7 @@ import { InspectorSheet } from "../../shared/InspectorSheet";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
+import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -257,6 +258,7 @@ export function ConnectedOverview({
           error={chainErrors.length > 0 ? chainErrors[0] : null}
           onRefresh={refreshBalances ? handleRefresh : undefined}
         />
+        <VerifiedEvidence />
       </div>
       {home.primaryTip && hasHoldings && (
         <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>

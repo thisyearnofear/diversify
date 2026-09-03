@@ -23,6 +23,7 @@ import { InstrumentShell } from "../shared/InstrumentShell";
 import { InstrumentWait } from "../shared/InstrumentWait";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
+import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -196,6 +197,7 @@ export default function AgentTab({
               onRefresh={refreshBalances}
             />
           )}
+          <VerifiedEvidence />
           <div className="flex items-center justify-between gap-3">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Ask Guardian for the timeline. Swaps live on Shield and Exchange.
