@@ -153,10 +153,12 @@ A tab change that fails any of these is the old stack. Do not ship it.
    sections.
 
 Simple dock: Shield / Home / Exchange. Learn is absorbed onto Shield’s
-picker (and optionally Home amount-inspect). Home dial is holdings-gated,
-not mode-gated. Shield and Home share `AllocationRing` but not a hole
-number: Home hole = concentration; Shield hole = gap when a slice is
-selected.
+picker (and optionally Home amount-inspect). Home is always the Risk
+Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
+the one expressive object; holdings are a quiet strip (stacked bar + chips)
+beneath it, never a second `AllocationRing`. Shield alone owns the
+`AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
+RWA). Home never renders a ring.
 
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see

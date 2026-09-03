@@ -230,6 +230,28 @@ vi.mock("../HomeExposureDial", () => ({
     <div data-testid="exposure-dial" data-selected={selectedRegion ?? "none"} />
   ),
 }));
+vi.mock("../HomeRiskTheater", () => ({
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null }) => {
+    if (moment) {
+      return (
+        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0}>
+          <div data-testid="currency-moment-card" />
+          {Array.isArray(regionData) && regionData.length > 0 && (
+            <div data-testid="holdings-strip" />
+          )}
+        </div>
+      );
+    }
+    if (inflationMoment) {
+      return (
+        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"}>
+          <div data-testid="inflation-moment-card" />
+        </div>
+      );
+    }
+    return <div data-testid="home-risk-theater-empty" />;
+  },
+}));
 
 // ──────────────────────────────────────────────────────────────────────────
 // Import the component under test AFTER all mocks
@@ -358,12 +380,12 @@ describe("ConnectedOverview — diversificationTips ordering regression", () => 
 
   it("actually surfaces activePortfolio data in the hero (not just a silent no-op render)", () => {
     mockProfileComplete = false;
+    // With no currency moment, legacy hero renders (holdings alone don't force theater)
     renderOverview({
       activePortfolio: buildPortfolio({ diversificationScore: 91, totalValue: 4200 }),
     });
 
-    // Connected standard mode uses the live exposure dial as its single object.
-    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.getByTestId("hero-value")).toBeInTheDocument();
   });
 });
 
@@ -399,50 +421,54 @@ describe("ConnectedOverview — currency-moment hero", () => {
     mockMoment = null;
   });
 
-  it("replaces the legacy hero with the currency moment when one is detected", () => {
+  it("replaces the legacy hero with the Risk Theater when a currency moment is detected", () => {
     mockMoment = GHANA_MOMENT;
     renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.getByTestId("home-risk-theater")).toBeInTheDocument();
+    expect(screen.getByTestId("currency-moment-card")).toBeInTheDocument();
     expect(screen.queryByTestId("hero-value")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("currency-moment-card")).not.toBeInTheDocument();
+    // Theater owns coins; dial is not a hero — strip is the holdings affordance
+    expect(screen.getByTestId("holdings-strip")).toBeInTheDocument();
+    expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
   });
 
-  it("shows the exposure dial without a pre-selected region (one CTA in the first viewport)", () => {
+  it("shows holdings strip as quiet bar with no pre-selected region", () => {
     mockMoment = GHANA_MOMENT;
     renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toHaveAttribute("data-selected", "none");
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-focused", "none");
+    expect(screen.getByTestId("holdings-strip")).toBeInTheDocument();
   });
 
-  it("demotes the protection-mix analysis when the exposure dial is the holdings object", () => {
+  it("demotes the protection-mix analysis when Risk Theater is the holdings object", () => {
     mockMoment = GHANA_MOMENT;
     renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
+    expect(screen.getByTestId("home-risk-theater")).toBeInTheDocument();
     expect(screen.queryByTestId("protection-analysis")).not.toBeInTheDocument();
   });
 
-  it("still shows the dial under the legacy hero (holdings object is independent of the moment)", () => {
+  it("shows the legacy hero when no currency moment is detected (holdings alone don't force theater)", () => {
     mockMoment = null;
     renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
-    expect(screen.queryByTestId("hero-value")).not.toBeInTheDocument();
+    expect(screen.getByTestId("hero-value")).toBeInTheDocument();
+    expect(screen.queryByTestId("home-risk-theater")).not.toBeInTheDocument();
     expect(screen.queryByTestId("protection-analysis")).not.toBeInTheDocument();
   });
 
-  it("shows the dial for beginners with holdings — that mode is no longer gated", () => {
+  it("shows Risk Theater for beginners with holdings — coin stage is universal", () => {
     mockExperienceMode = "beginner";
     mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: true };
     mockMoment = GHANA_MOMENT;
     renderOverview();
 
-    expect(screen.getByTestId("exposure-dial")).toBeInTheDocument();
-    expect(screen.queryByTestId("currency-moment-card")).not.toBeInTheDocument();
+    expect(screen.getByTestId("home-risk-theater")).toBeInTheDocument();
+    expect(screen.getByTestId("currency-moment-card")).toBeInTheDocument();
   });
 
-  it("shows the currency moment when the wallet is empty", () => {
+  it("shows Risk Theater without holdings strip when the wallet is empty", () => {
     mockHomeSections = { ...defaultHomeSections, showDial: false };
     mockMoment = GHANA_MOMENT;
     renderOverview({
@@ -450,7 +476,9 @@ describe("ConnectedOverview — currency-moment hero", () => {
       activePortfolio: buildPortfolio({ totalValue: 0, regionData: [] }),
     });
 
-    expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
+    expect(screen.getByTestId("home-risk-theater")).toBeInTheDocument();
     expect(screen.getByTestId("currency-moment-card")).toBeInTheDocument();
+    expect(screen.queryByTestId("holdings-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
   });
 });

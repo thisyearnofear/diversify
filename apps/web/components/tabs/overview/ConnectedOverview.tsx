@@ -1,6 +1,7 @@
 /**
- * Home — instrument: currency moment + holdings dial.
- * Region tap opens InspectorSheet. No feature catalog.
+ * Home — instrument: Risk Theater (coin motif, always on).
+ * The coin stage is the one expressive object; holdings are a quiet
+ * strip beneath it, never a second ring. Region tap opens InspectorSheet.
  */
 
 import React, { useCallback } from "react";
@@ -12,18 +13,15 @@ import { ContextualBanner } from "../../shared/ContextualBanner";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
-import { HomeExposureDial } from "./HomeExposureDial";
+import { HomeRiskTheater } from "./HomeRiskTheater";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
-import { CurrencyMomentCard } from "./CurrencyMomentCard";
-import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { InspectorSheet } from "../../shared/InspectorSheet";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
-import { FALLBACK_INFLATION_DATA } from "@/constants/inflation";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -72,7 +70,7 @@ export function ConnectedOverview({
   const handleDialSelect = useCallback((region: string | null) => {
     setFocusedRegion(region);
     if (region) {
-      trackFunnelEvent("marquee_select", { region, source: "home_dial" });
+      trackFunnelEvent("marquee_select", { region, source: "home_theater" });
     }
   }, []);
 
@@ -120,41 +118,9 @@ export function ConnectedOverview({
   });
 
   const hasHoldings = totalValue > 0;
-  const showExposureDial = home.showDial && regionData.length > 0;
   const selected = regionData.find((r) => r.region === focusedRegion) ?? null;
   const selectedPct =
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
-
-  const tokensByRegion = React.useMemo(() => {
-    const map: Record<string, string[]> = {};
-    for (const holding of walletView.holdings) {
-      for (const balance of holding.balances) {
-        const list = map[balance.region] ?? [];
-        if (!list.includes(holding.symbol)) list.push(holding.symbol);
-        map[balance.region] = list;
-      }
-    }
-    return map;
-  }, [walletView.holdings]);
-
-  const inflationByRegion = React.useMemo(() => {
-    const map: Record<string, number | null> = {};
-    for (const row of regionData) {
-      const entry = FALLBACK_INFLATION_DATA[row.region];
-      map[row.region] =
-        typeof entry?.avgRate === "number"
-          ? entry.avgRate
-          : row.region === "Commodities"
-            ? 0
-            : null;
-    }
-    return map;
-  }, [regionData]);
-
-  const selectedRiskHint =
-    focusedRegion && moment && focusedRegion === userRegion
-      ? `${moment.delta < 0 ? "−" : moment.delta > 0 ? "+" : ""}${Math.abs(moment.delta).toFixed(0)}% vs ${moment.benchmarkLabel}`
-      : null;
 
   const chainErrors = activePortfolio.errors ?? [];
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
@@ -162,46 +128,25 @@ export function ConnectedOverview({
     await refreshBalances?.();
   }, [refreshBalances]);
 
-  // A connected wallet gets one primary object: the live exposure dial. The
-  // currency moment remains the fallback instrument when the wallet is empty
-  // or regional holdings are unavailable — never stacked above the dial.
-  const object = showExposureDial ? (
-    <HomeExposureDial
+  // The coin stage is always the hero. Holdings never swap it out — they
+  // add a quiet strip beneath it. One object, one color, one CTA.
+  const object = moment || inflationMoment ? (
+    <HomeRiskTheater
+      moment={moment}
+      inflationMoment={inflationMoment}
+      benchmarks={benchmarks}
+      horizons={horizons}
+      onSelectBenchmark={handleMomentBenchmark}
+      onSelectHorizon={handleMomentHorizon}
+      onAmountChange={setSavingsAmount}
+      onProtect={() => setActiveTab("protect")}
+      onChangeCountry={onChangeCountry}
+      frame={frame}
       regionData={regionData}
       totalValue={totalValue}
-      selectedRegion={focusedRegion}
+      focusedRegion={focusedRegion}
       onSelectRegion={handleDialSelect}
-      watermark={isDemo ? "Sample data" : undefined}
-      tokensByRegion={tokensByRegion}
-      inflationByRegion={inflationByRegion}
-      selectedRiskHint={selectedRiskHint}
-    />
-  ) : moment ? (
-    <section id="home-hero" aria-labelledby="home-hero-title">
-      <h2 id="home-hero-title" className="sr-only">
-        Your currency this year
-      </h2>
-      {isDemo && (
-        <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
-      )}
-      <CurrencyMomentCard
-        moment={moment}
-        benchmarks={benchmarks}
-        horizons={horizons}
-        onSelectBenchmark={handleMomentBenchmark}
-        onSelectHorizon={handleMomentHorizon}
-        onAmountChange={setSavingsAmount}
-        onProtect={() => setActiveTab("protect")}
-        onChangeCountry={onChangeCountry}
-        frame={frame}
-      />
-    </section>
-  ) : inflationMoment ? (
-    <InflationMomentCard
-      moment={inflationMoment}
-      onAmountChange={setSavingsAmount}
-      onChangeCountry={onChangeCountry}
-      onProtect={() => setActiveTab("protect")}
+      isDemo={isDemo}
     />
   ) : (
     <Card className="text-center">
@@ -313,12 +258,6 @@ export function ConnectedOverview({
           onRefresh={refreshBalances ? handleRefresh : undefined}
         />
       </div>
-      {showExposureDial && moment && (
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          {moment.currencyCode} buying power is {moment.delta < 0 ? "down" : moment.delta > 0 ? "up" : "flat"}{" "}
-          {Math.abs(moment.delta).toFixed(0)}% vs {moment.benchmarkLabel} over {moment.horizon}.
-        </p>
-      )}
       {home.primaryTip && hasHoldings && (
         <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
       )}
