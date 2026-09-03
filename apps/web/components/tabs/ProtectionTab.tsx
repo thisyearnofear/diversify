@@ -484,12 +484,13 @@ export default function ProtectionTab({
               </div>
             </div>
           </div>
+          {/* One sentence carries gap + plan vs held — numbers do the explaining (§6), badges stay quiet */}
           <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
             {selectedAlloc
               ? gapPct > 2
-                ? `The plan is ${gapPct.toFixed(0)} points above your current holding.`
-                : "Your holding is near the plan target."
-              : "This wallet holding is outside the current protection plan."}
+                ? `You're ${gapPct.toFixed(0)} points light — plan ${selectedAlloc.percent}%, you hold ${selectedHeld.toFixed(0)}%${riskData ? ` · ${riskData.code} is the risk this offsets` : ""}.`
+                : `On target — you hold ${selectedHeld.toFixed(0)}% vs ${selectedAlloc.percent}% plan.`
+              : `Outside the plan — you hold ${selectedHeld.toFixed(0)}% in a token the plan doesn't use.`}
           </p>
           {(() => {
             const rwa = rwaLegFor(focusedToken);
@@ -500,11 +501,6 @@ export default function ProtectionTab({
               </p>
             );
           })()}
-          {riskData && selectedAlloc && gapPct > 2 && (
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              {riskData.code} exposure is the risk this slice is meant to offset.
-            </p>
-          )}
           {selectedAlloc && gapPct > 2 && totalValue > 0 && canSafelyExecute(walletView.freshness) && (
             <button
               type="button"
