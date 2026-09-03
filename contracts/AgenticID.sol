@@ -20,6 +20,7 @@ import "@openzeppelin/contracts/access/Ownable2Step.sol";
  *     mints one Guardian ID per user
  *   - `tokenUri(tokenId)` — 7857 API-metadata pointer (public agent doc)
  *   - `encryptedTokenUri(tokenId)` — encrypted evidence bundle pointer
+ *   - `tokenOf(owner)` — the token ID held by an address (0 if none)
  *   - `updateAgent(tokenId, agentURI, encryptedURI)` — re-point as the
  *     evidence bundle grows (token owner or contract owner)
  *   - standard 721 transfers — the ID is transferable (AgentTransferred)
@@ -33,8 +34,8 @@ contract AgenticID is ERC721, Ownable2Step {
     // EVENTS
     // ====================================================================
 
-    event AgentMinted(uint256 indexed tokenId, address indexed to, string agentURI);
-    event AgentUpdated(uint256 indexed tokenId, string agentURI, uint8 updateType);
+    event AgentMinted(uint256 indexed tokenId, address indexed to, string agentURI, string encryptedURI);
+    event AgentUpdated(uint256 indexed tokenId, string agentURI, string encryptedURI, uint8 updateType);
     event AgentTransferred(uint256 indexed tokenId, address indexed from, address indexed to);
 
     // ====================================================================
@@ -45,6 +46,7 @@ contract AgenticID is ERC721, Ownable2Step {
     error EmptyAgentURI();
     error NotTokenOwnerOrContractOwner(address caller);
     error InvalidAgentId(uint256 tokenId);
+    error AlreadyHasAgentId(address to);
 
     // ====================================================================
     // STATE
@@ -62,6 +64,9 @@ contract AgenticID is ERC721, Ownable2Step {
     /// @notice Original agent this was cloned from (address(0) = original).
     mapping(uint256 => address) public clonedFrom;
 
+    /// @notice Token ID owned by each address (0 = none).
+    mapping(address => uint256) public tokenOf;
+
     /// @notice 7857 update type for a full-pointer refresh.
     uint8 private constant UPDATE_TYPE_FULL = 0;
 
@@ -77,6 +82,7 @@ contract AgenticID is ERC721, Ownable2Step {
 
     /**
      * @notice Mint a Guardian Agentic ID for a user (backend service only).
+     * One ID per user.
      * @param to The user who owns this Guardian
      * @param agentURI 0G Storage pointer to the public agent metadata
      * @param encryptedURI 0G Storage pointer to the encrypted evidence bundle
@@ -88,14 +94,16 @@ contract AgenticID is ERC721, Ownable2Step {
     {
         if (to == address(0)) revert ZeroAddress();
         if (bytes(agentURI).length == 0) revert EmptyAgentURI();
+        if (tokenOf[to] != 0) revert AlreadyHasAgentId(to);
 
         uint256 tokenId = ++totalAgents;
         _safeMint(to, tokenId);
         agentURIs[tokenId] = agentURI;
         encryptedURIs[tokenId] = encryptedURI;
         clonedFrom[tokenId] = address(0);
+        tokenOf[to] = tokenId;
 
-        emit AgentMinted(tokenId, to, agentURI);
+        emit AgentMinted(tokenId, to, agentURI, encryptedURI);
         return tokenId;
     }
 
@@ -116,7 +124,7 @@ contract AgenticID is ERC721, Ownable2Step {
         agentURIs[tokenId] = agentURI;
         encryptedURIs[tokenId] = encryptedURI;
 
-        emit AgentUpdated(tokenId, agentURI, UPDATE_TYPE_FULL);
+        emit AgentUpdated(tokenId, agentURI, encryptedURI, UPDATE_TYPE_FULL);
     }
 
     /**
@@ -147,7 +155,8 @@ contract AgenticID is ERC721, Ownable2Step {
 
     /**
      * @dev Emit the 7857 transfer event alongside the 721 Transfer. Mints
-     * (from = 0) are covered by AgentMinted and don't re-emit.
+     * (from = 0) are covered by AgentMinted and don't re-emit. Enforce one
+     * ID per owner on transfers.
      */
     function _update(address to, uint256 tokenId, address auth)
         internal
@@ -156,6 +165,9 @@ contract AgenticID is ERC721, Ownable2Step {
     {
         address from = super._update(to, tokenId, auth);
         if (from != address(0) && to != from) {
+            if (to != address(0) && tokenOf[to] != 0) revert AlreadyHasAgentId(to);
+            tokenOf[from] = 0;
+            tokenOf[to] = tokenId;
             emit AgentTransferred(tokenId, from, to);
         }
         return from;

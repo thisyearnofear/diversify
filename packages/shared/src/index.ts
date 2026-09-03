@@ -136,6 +136,20 @@ export {
   type RecommendationAnchorMeta,
 } from './services/recommendation-ledger.service';
 export {
+  getAgenticIdService,
+  AgenticIdService,
+  resolveAgenticIdConfig,
+  setAgenticIdContractAddress,
+  getAgenticIdContractAddress,
+  resetAgenticIdConfig,
+  cidFromUrl,
+  buildExplorerUrl,
+  type AgenticIdConfig,
+  type AgenticIdInfo,
+  type AgenticIdBundle,
+  type AgenticIdMintResult,
+} from './services/agentic-id.service';
+export {
   validateApiKey,
   type EnterpriseKey,
 } from './services/enterprise-auth.service';
