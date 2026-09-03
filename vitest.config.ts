@@ -37,6 +37,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'apps/web'),
+      '@privy-io/react-auth': path.resolve(__dirname, 'vitest.privy-stub.ts'),
     },
   },
 });
