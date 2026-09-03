@@ -23,6 +23,12 @@ vi.mock('@/components/wallet/FarcasterWalletButton', () => ({
 vi.mock('../ChainPill', () => ({
   ChainPill: () => <div data-testid="chain-pill" />,
 }));
+vi.mock('@/components/shared/GuardianMascot', () => ({
+  GuardianMascot: () => <div data-testid="guardian-mascot" />,
+}));
+vi.mock('@/components/shared/StreakNavBadge', () => ({
+  StreakNavBadge: () => null,
+}));
 
 const baseProps = {
   experienceMode: 'intermediate' as const,
@@ -61,13 +67,10 @@ describe('AppHeader mobile layout', () => {
   it('keeps the logo and the status dot at every screen size', () => {
     const { container } = render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={true} />);
 
-    // The 'D' in the logo square — has white text + blue background, distinct
-    // from any other "D" that might appear in the wordmark.
-    const logoSquare = container.querySelector('div.bg-blue-600');
-    expect(logoSquare).toBeTruthy();
-    expect(logoSquare!.className).not.toContain('hidden');
-    const logoD = within(logoSquare as HTMLElement).getByText('D');
-    expect(logoD).toBeInTheDocument();
+    // The Guardian mark replaces the former blue "D" square — compact shield.
+    const logoMark = screen.getByTestId('guardian-mascot');
+    expect(logoMark).toBeInTheDocument();
+    expect(logoMark.closest('div')!.className).not.toContain('hidden');
 
     // The status dot
     const dot = container.querySelector('div.w-2.h-2.rounded-full');

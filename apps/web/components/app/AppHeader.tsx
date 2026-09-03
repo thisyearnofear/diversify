@@ -8,6 +8,8 @@ import VoiceButton from "@/components/ui/VoiceButton";
 import WalletButton from "@/components/wallet/WalletButton";
 import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
 import { ChainPill } from "./ChainPill";
+import { GuardianMascot } from "@/components/shared/GuardianMascot";
+import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
 
 const MODE_ICON: Record<UserExperienceMode, string> = {
   beginner: "🌱",
@@ -60,8 +62,8 @@ export default function AppHeader({
     <div className="flex items-center justify-between gap-3 mb-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 sm:gap-2">
-        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0">
-          <span className="text-white text-base font-black">D</span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-slate-900 dark:bg-slate-900 shadow-sm flex-shrink-0" aria-hidden="true">
+          <GuardianMascot size={32} mood="neutral" />
         </div>
         <div className="flex items-center gap-1.5 min-w-0">
           {/* Keep the mark alone on very narrow screens; show the compact
@@ -69,6 +71,10 @@ export default function AppHeader({
           <h1 className="hidden min-[400px]:inline text-xs sm:text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
             DiversiFi
           </h1>
+          {/* Compact streak signal beside the wordmark — replaces the former full-bleed card at top of Home */}
+          <div className="hidden min-[400px]:inline-flex">
+            <StreakNavBadge variant="header" />
+          </div>
           {address && (
             <div className="flex items-center gap-1 flex-shrink-0">
               <div
@@ -84,8 +90,12 @@ export default function AppHeader({
         </div>
       </div>
 
-      {/* Right: Controls */}
+        {/* Right: Controls */}
       <div className="flex items-center gap-1 sm:gap-2">
+        {/* Compact streak on narrow screens — header's hidden wordmark leaves room; show badge here instead */}
+        <div className="min-[400px]:hidden">
+          <StreakNavBadge variant="header" />
+        </div>
         {!isBeginner && (
         <>
         {/* Mode toggle — one tooltip, calm affordance */}

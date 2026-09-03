@@ -63,6 +63,14 @@ vi.mock("../TabNavHint", () => ({
   TabNavHint: () => React.createElement("div", null),
 }));
 
+vi.mock("@/components/shared/StreakNavBadge", () => ({
+  StreakNavBadge: () => React.createElement("div", { "data-testid": "streak-nav-badge-mock" }),
+}));
+
+vi.mock("@/hooks/use-streak-rewards", () => ({
+  useStreakRewards: () => ({ streak: null, canClaim: false, isLoading: false }),
+}));
+
 import { DesktopRail } from "../TabNavigation";
 
 function matchMedia(matches: boolean) {

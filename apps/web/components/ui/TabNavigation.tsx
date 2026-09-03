@@ -8,6 +8,7 @@ import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { haptics } from "@/lib/haptics";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { spring } from "@/lib/motion-tokens";
+import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
 
 interface TabItem {
   id: TabId;
@@ -249,6 +250,9 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
                  bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-700"
       onMouseLeave={() => setHoverIndex(null)}
     >
+      <div className="w-full flex justify-center pb-3 mb-2 border-b border-gray-100 dark:border-white/5">
+        <StreakNavBadge variant="rail" />
+      </div>
       {adaptiveOrder.map((tab, index) => {
         const badgeCount = badges[tab.id];
         const hasBadge = badgeCount !== undefined && badgeCount > 0;

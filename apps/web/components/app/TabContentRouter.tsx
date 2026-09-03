@@ -20,7 +20,6 @@ import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
-import { GuardianStreakWidget } from "@/components/agent/GuardianStreakWidget";
 import { TabSkeleton } from "@/components/ui/Skeleton";
 
 // ── Dynamic tab imports ──
@@ -210,10 +209,7 @@ export default function TabContentRouter() {
 
   const overviewContent = (
     <PullToRefresh onRefresh={refresh}>
-      <div className="p-4 space-y-4">
-        <ErrorBoundary moduleName="Streak Widget">
-          <GuardianStreakWidget />
-        </ErrorBoundary>
+      <div className="p-4">
         <ErrorBoundary moduleName="Overview Dashboard">
           <OverviewTab
             portfolio={multichainPortfolio}
