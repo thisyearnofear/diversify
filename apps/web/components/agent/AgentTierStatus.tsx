@@ -46,6 +46,7 @@ import { GuardianJournalTab, type GuardianProofEvent } from "./GuardianJournalTa
 import { GuardianProofTab } from "./GuardianProofTab";
 import { useWDKAgent } from "../../hooks/use-wdk-agent";
 import { useSharedMultichainBalances } from "../../context/app/PortfolioContext";
+import StatusBadge from "@/components/shared/StatusBadge";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -190,15 +191,11 @@ export function GuardianStatusChip({
             <h3 className="text-sm font-black text-gray-900 dark:text-white">
               {copy.headline}
             </h3>
-            <span
-              className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
-              style={{
-                background: `${archetype.accent}18`,
-                color: archetype.accent,
-              }}
-            >
-              {PROTECTION_STATE_LABELS[deriveProtectionLifecycleState(guardianState)]}
-            </span>
+            <StatusBadge
+              label={PROTECTION_STATE_LABELS[deriveProtectionLifecycleState(guardianState)]}
+              tone={isActive ? 'ready' : guardianState === 'authorized' ? 'info' : 'warning'}
+              compact
+            />
           </div>
           <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5 leading-relaxed">
             {copy.description}

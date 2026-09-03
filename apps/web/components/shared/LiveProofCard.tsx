@@ -26,6 +26,7 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed';
+import StatusBadge from './StatusBadge';
 import {
   getLedgerProofTitle,
   getLedgerFreshnessLabel,
@@ -194,9 +195,11 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                         <h3 className="text-sm font-black text-emerald-900 dark:text-emerald-100">
                             {proofTitle}
                         </h3>
-                        <p className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                            {freshnessLabel}
-                        </p>
+                        <StatusBadge
+                            label={freshnessLabel}
+                            tone={isStale ? 'warning' : 'ready'}
+                            compact
+                        />
                     </div>
                 </div>
                 {stats && (
@@ -270,7 +273,7 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
 
     return (
         <div
-            className="rounded-xl border border-emerald-100 dark:border-emerald-900/40 bg-white/40 dark:bg-gray-900/40 p-3"
+            className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-900 p-3"
             data-testid="live-proof-ticker"
         >
             <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-1">

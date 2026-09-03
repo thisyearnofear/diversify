@@ -60,7 +60,7 @@ export function MoreOptions({
     <section
       id={id}
       data-home-section={id}
-      className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 scroll-mt-20"
+      className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 scroll-mt-20"
     >
       <button
         onClick={() => setIsOpen(!isOpen)}

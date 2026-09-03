@@ -160,10 +160,9 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
               }}
               onKeyDown={(e) => handleKeyDown(e, index)}
               whileTap={{ scale: 0.9 }}
-              className={`flex-1 min-w-0 py-2 px-1 min-h-[64px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${
-                isActive
-                  ? "text-blue-600 dark:text-blue-400"
-                  : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
+              className={`flex-1 min-w-0 py-2 px-1 min-h-[64px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${                  isActive
+                    ? "text-blue-600 dark:text-blue-400"
+                    : "text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
               }`}
             >
               {/* Active indicator — bottom line */}
@@ -191,7 +190,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
                   </motion.span>
                 )}
               </motion.div>
-              <span className={`text-xs sm:text-xs font-bold uppercase tracking-wider mt-0.5 ${isActive ? "opacity-100" : "opacity-60"}`}>
+              <span className="text-xs sm:text-xs font-bold uppercase tracking-wider mt-0.5">
                 {label}
               </span>
             </motion.button>
@@ -282,7 +281,7 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
             className={`relative w-16 min-h-[64px] py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 transition-colors origin-bottom ${
               isActive
                 ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20"
-                : "text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                : "text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800/60"
             }`}
           >
             {hasBadge && (

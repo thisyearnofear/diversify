@@ -4,13 +4,9 @@ import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
 
 /**
- * Regression test for the mobile-header squeeze. As of 2026-06 we hide
- * the "DiversiFi" wordmark and the "Verified" badge below the 'sm'
- * breakpoint (≥640px) so the right-side controls (mode toggle, voice,
- * wallet) get the room they need on a phone.
- *
- * The 'D' logo and the status dot remain visible at every size — they
- * convey the brand and the verified state in a single character each.
+ * Regression tests for the responsive header hierarchy. The mark remains
+ * visible at every size, while the compact wordmark and Verified badge are
+ * hidden on very narrow screens to preserve room for wallet controls.
  */
 
 vi.mock('@/components/ui/VoiceButton', () => ({
@@ -41,13 +37,13 @@ afterEach(() => {
 });
 
 describe('AppHeader mobile layout', () => {
-  it('hides the "DiversiFi" wordmark below the sm breakpoint', () => {
+  it('hides the "DiversiFi" wordmark only on very narrow screens', () => {
     render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={true} />);
 
     const wordmark = screen.getByRole('heading', { name: /DiversiFi/i });
     expect(wordmark).toBeInTheDocument();
     expect(wordmark.className).toContain('hidden');
-    expect(wordmark.className).toContain('sm:inline');
+    expect(wordmark.className).toContain('min-[400px]:inline');
   });
 
   it('hides the "Verified" badge below the sm breakpoint', () => {
@@ -74,7 +70,7 @@ describe('AppHeader mobile layout', () => {
     expect(logoD).toBeInTheDocument();
 
     // The status dot
-    const dot = container.querySelector('div.w-1\\.5.h-1\\.5.rounded-full');
+    const dot = container.querySelector('div.w-2.h-2.rounded-full');
     expect(dot).toBeTruthy();
     expect((dot as HTMLElement).className).not.toContain('hidden');
   });
@@ -89,7 +85,7 @@ describe('AppHeader mobile layout', () => {
   it('does not render any status indicator for users without a wallet', () => {
     const { container } = render(<AppHeader {...baseProps} address={null} />);
 
-    const dot = container.querySelector('div.w-1\\.5.h-1\\.5.rounded-full');
+    const dot = container.querySelector('div.w-2.h-2.rounded-full');
     expect(dot).toBeNull();
   });
 

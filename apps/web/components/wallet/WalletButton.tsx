@@ -8,6 +8,7 @@ import { WALLET_FEATURES } from '../../config/features';
 import { NETWORKS, isTestnetChain } from '../../config';
 import { usePortfolio } from '@/context/app/PortfolioContext';
 import { walletNeedsFunds } from '@/lib/wallet/wallet-nudge';
+import StatusBadge from '@/components/shared/StatusBadge';
 
 // FarCaster Mini App supported chains (as of 2025)
 // Source: https://github.com/farcasterxyz/miniapps/discussions/240
@@ -219,7 +220,7 @@ export default function WalletButton({
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => setShowDropdown(!showDropdown)}
-          className={`flex items-center space-x-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm min-w-[48px] min-h-[48px] px-4 py-3 rounded-full text-gray-900 dark:text-white shadow-sm border ${
+          className={`flex items-center space-x-2 bg-white dark:bg-gray-800 min-w-[48px] min-h-[48px] px-4 py-3 rounded-full text-gray-900 dark:text-white shadow-sm border ${
             needsFunds
               ? "border-amber-300 dark:border-amber-700"
               : "border-gray-200 dark:border-gray-700"
@@ -228,10 +229,10 @@ export default function WalletButton({
           aria-expanded={showDropdown}
           aria-haspopup="true"
         >
-          <div
-            className={`w-2 h-2 rounded-full ${
-              needsFunds ? "bg-amber-500" : "bg-green-500 animate-pulse"
-            }`}
+          <StatusBadge
+            label={needsFunds ? "Needs funds" : "Connected"}
+            tone={needsFunds ? "warning" : "ready"}
+            compact
           />
           <span className="text-sm font-medium">{displayIcon} {displayText}</span>
           {needsFunds && (
@@ -269,7 +270,7 @@ export default function WalletButton({
                     <div className="flex items-center justify-between mb-2">
                       <button
                         onClick={() => setShowChainSelector(true)}
-                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-[44px] py-1 rounded hover:opacity-80 transition-opacity ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-[44px] py-1 rounded hover:brightness-95 dark:hover:brightness-110 transition-[filter] ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
                       >
                         {isTestnet ? 'TESTNET' : 'MAINNET'}
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">

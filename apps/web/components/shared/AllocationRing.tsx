@@ -140,7 +140,7 @@ export default function AllocationRing({
               animate={{
                 strokeDasharray: `${len} ${circumference - len}`,
                 strokeWidth: isSelected ? thickness + 6 : thickness,
-                opacity: selectedId && !isSelected ? 0.45 : 1,
+                opacity: selectedId && !isSelected ? 0.75 : 1,
                 rotate: startDeg,
               }}
               transition={spring}

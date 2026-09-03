@@ -34,7 +34,7 @@ export default function FarcasterWalletButton() {
         {/* Connected State - Farcaster Style */}
         <button
           onClick={() => setShowDropdown(!showDropdown)}
-          className="flex items-center gap-2 bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/20 text-purple-700 dark:text-purple-300 min-h-[40px] px-3 py-1.5 rounded-full transition-colors duration-200 font-bold shadow-sm"
+          className="flex items-center gap-2 bg-white hover:bg-purple-50 dark:bg-gray-800 dark:hover:bg-purple-950/40 border border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300 min-h-[40px] px-3 py-1.5 rounded-full transition-colors duration-200 font-bold shadow-sm"
           disabled={isConnecting}
           aria-label="Farcaster wallet menu"
           aria-expanded={showDropdown}
@@ -42,7 +42,7 @@ export default function FarcasterWalletButton() {
         >
           <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
           <span className="text-xs font-mono">{formatAddress(address)}</span>
-          <svg className="w-3 h-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3 text-purple-600 dark:text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" />
           </svg>
         </button>

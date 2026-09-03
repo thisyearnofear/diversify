@@ -42,6 +42,7 @@ import { InspectorSheet } from "../shared/InspectorSheet";
 import { TokenIcon } from "../shared/TokenIcon";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
+import StatusBadge from "../shared/StatusBadge";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -328,16 +329,29 @@ export default function ProtectionTab({
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <TokenIcon symbol={focusedToken} size={22} />
-            <p className="text-sm text-gray-700 dark:text-gray-200">
-              You hold <strong>{selectedHeld.toFixed(0)}%</strong> of your wallet in{" "}
-              <strong>{focusedToken}</strong>
-              {selectedAlloc ? (
-                gapPct > 2 ? <> — the plan calls for <strong>{selectedAlloc.percent}%</strong>.</> : <> — this is near the <strong>{selectedAlloc.percent}%</strong> plan target.</>
-              ) : (
-                <> — this token is not part of the current plan.</>
-              )}
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{focusedToken} position</p>
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                <StatusBadge label={`${selectedHeld.toFixed(0)}% held`} tone="info" compact />
+                {selectedAlloc ? (
+                  <StatusBadge
+                    label={`${selectedAlloc.percent}% target`}
+                    tone={gapPct > 2 ? "warning" : "ready"}
+                    compact
+                  />
+                ) : (
+                  <StatusBadge label="Not in plan" tone="neutral" compact />
+                )}
+              </div>
+            </div>
           </div>
+          <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+            {selectedAlloc
+              ? gapPct > 2
+                ? `The plan is ${gapPct.toFixed(0)} points above your current holding.`
+                : "Your holding is near the plan target."
+              : "This wallet holding is outside the current protection plan."}
+          </p>
           {riskData && selectedAlloc && gapPct > 2 && (
             <p className="text-xs text-gray-500 dark:text-gray-400">
               {riskData.code} exposure is the risk this slice is meant to offset.
@@ -381,7 +395,18 @@ export default function ProtectionTab({
   );
 
   const status = (
-    <div className="space-y-2 text-xs text-gray-500 dark:text-gray-400">
+    <div className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
+      <div className="flex flex-wrap items-center gap-2">
+        {guardianState === "monitoring" ? (
+          <StatusBadge label="Guardian monitoring" tone="ready" compact />
+        ) : shape === "fund" ? (
+          <StatusBadge label="Wallet needs funds" tone="warning" compact />
+        ) : shape === "gap" ? (
+          <StatusBadge label="Plan needs review" tone="info" compact />
+        ) : (
+          <StatusBadge label="Choose a plan" tone="neutral" compact />
+        )}
+      </div>
       <DataFreshnessIndicator
         lastUpdated={activePortfolio.lastUpdated}
         isStale={activePortfolio.isStale}
@@ -434,7 +459,12 @@ export default function ProtectionTab({
           aria-hidden="true"
         />
       )}
-      <InstrumentShell object={object} inspector={inspector} status={status} />
+      <InstrumentShell
+        object={object}
+        inspector={inspector}
+        status={status}
+        className="rounded-2xl border border-gray-200 bg-white px-4 py-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+      />
 
       {showMobileWizard && address && (
         <GuardianMobileWizard

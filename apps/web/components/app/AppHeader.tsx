@@ -57,24 +57,22 @@ export default function AppHeader({
   const isBeginner = experienceMode === "beginner";
 
   return (
-    <div className="flex items-center justify-between mb-2 py-1">
+    <div className="flex items-center justify-between gap-3 mb-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       {/* Left: Logo */}
       <div className="flex items-center gap-2 sm:gap-2">
-        <div className="w-7 h-7 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 flex-shrink-0">
-          <span className="text-white text-sm font-black">D</span>
+        <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-md shadow-blue-500/25 flex-shrink-0">
+          <span className="text-white text-base font-black">D</span>
         </div>
         <div className="flex items-center gap-1.5 min-w-0">
-          {/* Brand name hidden on mobile (the 'D' logo + status dot already
-              convey the brand + state). The full word reappears at the
-              'sm' breakpoint (≥640px) where there's room alongside the
-              right-side controls. */}
-          <h1 className="hidden sm:inline text-sm font-black text-gray-900 dark:text-white uppercase tracking-tighter">
+          {/* Keep the mark alone on very narrow screens; show the compact
+              wordmark once there is room beside the wallet controls. */}
+          <h1 className="hidden min-[400px]:inline text-xs sm:text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
             DiversiFi
           </h1>
           {address && (
             <div className="flex items-center gap-1 flex-shrink-0">
               <div
-                className={`w-1.5 h-1.5 rounded-full ${isWhitelisted ? "bg-emerald-500" : "bg-amber-500"} animate-pulse`}
+                className={`w-2 h-2 rounded-full ring-2 ring-white dark:ring-gray-900 ${isWhitelisted ? "bg-emerald-500" : "bg-amber-500"} animate-pulse`}
               />
               {isWhitelisted && (
                 <span className="hidden sm:inline-flex items-center text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">
@@ -92,7 +90,7 @@ export default function AppHeader({
         <>
         {/* Mode toggle — one tooltip, calm affordance */}
         <div
-          className="relative"
+          className="relative hidden sm:block"
           onMouseEnter={() => setActiveHint("mode")}
           onMouseLeave={() => setActiveHint(null)}
         >
@@ -135,6 +133,7 @@ export default function AppHeader({
         )}
 
         {!isBeginner && (
+        <div className="hidden sm:block">
         <VoiceButton
           size="sm"
           variant="default"
@@ -142,9 +141,14 @@ export default function AppHeader({
           onSuggestionsChange={(open) => setActiveHint(open ? "voice" : null)}
           onTranscription={handleTranscription}
         />
+        </div>
         )}
 
-        {!isBeginner && <ChainPill />}
+        {!isBeginner && (
+          <div className="hidden sm:block">
+            <ChainPill />
+          </div>
+        )}
 
         {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
       </div>

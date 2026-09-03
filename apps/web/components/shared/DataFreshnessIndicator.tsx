@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import StatusBadge from "./StatusBadge";
 
 interface DataFreshnessIndicatorProps {
   lastUpdated: number | null;
@@ -39,10 +40,7 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   if (error) {
     return (
       <div className={`flex items-center gap-2 text-xs ${className}`}>
-        <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-        <span className="text-red-600 dark:text-red-400">
-          Error loading data
-        </span>
+        <StatusBadge label="Data unavailable" tone="error" compact />
         {onRefresh && (
           <button
             onClick={onRefresh}
@@ -58,9 +56,8 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // Loading state
   if (isLoading && !lastUpdated) {
     return (
-      <div className={`flex items-center gap-2 text-xs text-gray-400 ${className}`}>
-        <span className="w-2 h-2 rounded-full bg-gray-300 animate-pulse" />
-        <span>Loading...</span>
+      <div className={`flex items-center gap-2 text-xs ${className}`}>
+        <StatusBadge label="Reading wallet data" tone="info" compact />
       </div>
     );
   }
@@ -68,9 +65,8 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // No data yet
   if (!lastUpdated) {
     return (
-      <div className={`flex items-center gap-2 text-xs text-gray-400 ${className}`}>
-        <span className="w-2 h-2 rounded-full bg-gray-300" />
-        <span>No data</span>
+      <div className={`flex items-center gap-2 text-xs ${className}`}>
+        <StatusBadge label="No wallet data" tone="neutral" compact />
       </div>
     );
   }
@@ -79,10 +75,12 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   if (isStale || hasEstimates) {
     return (
       <div className={`flex items-center gap-2 text-xs ${className}`}>
-        <span className="w-2 h-2 rounded-full bg-amber-500" />
-        <span className="text-amber-600 dark:text-amber-400">
-          {isStale ? "Stale data" : "Includes estimates"} • {getRelativeTime(lastUpdated)}
-        </span>
+        <StatusBadge
+          label={isStale ? "Stale wallet data" : "Includes estimates"}
+          detail={getRelativeTime(lastUpdated)}
+          tone="warning"
+          compact
+        />
         {onRefresh && (
           <button
             onClick={onRefresh}
@@ -98,11 +96,12 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // Fresh data
   return (
     <div className={`flex items-center gap-2 text-xs ${className}`}>
-      <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-      <span className="text-green-600 dark:text-green-400">
-        Live • {getRelativeTime(lastUpdated)}
-        {isLoading && <span className="ml-1">(updating...)</span>}
-      </span>
+      <StatusBadge
+        label="Wallet data live"
+        detail={getRelativeTime(lastUpdated)}
+        tone="ready"
+        compact
+      />
       {onRefresh && !isLoading && (
         <button
           onClick={onRefresh}
