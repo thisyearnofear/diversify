@@ -9,6 +9,7 @@ import React, { useEffect } from 'react';
 import { NETWORKS } from "../../config";
 import { Coin } from '../shared/FloatingCoins';
 import Scrim from '../shared/Scrim';
+import { STATUS_COLORS } from "../shared/palette";
 
 interface ClaimCelebrationProps {
   amount: string;
@@ -35,7 +36,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
         <div className="text-center mb-6 relative z-10">
           <div className="flex justify-center mb-3">
             <div className="animate-in zoom-in duration-500 coin-float">
-              <Coin size={80} symbol="G$" color="#10b981" />
+              <Coin size={80} symbol="G$" color={STATUS_COLORS.good} />
             </div>
           </div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">

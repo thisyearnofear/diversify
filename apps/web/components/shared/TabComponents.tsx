@@ -5,6 +5,7 @@ import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import AskAIButton from "../ui/AskAIButton";
+import { STATUS_COLORS, STRATEGY_RING_TINTS } from "./palette";
 
 // ============================================================================
 // NEW: Progressive Disclosure Components (following Core Principles)
@@ -276,7 +277,7 @@ export const ProtectionScore = ({
   const isGood = score >= 80;
   const isOk   = score >= 60;
 
-  const ringColor  = isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
+  const ringColor  = isGood ? STATUS_COLORS.good : isOk ? STATUS_COLORS.warn : STATUS_COLORS.bad;
   const borderColor = isGood ? 'border-emerald-200' : isOk ? 'border-amber-200' : 'border-red-200';
   const bgColor     = isGood ? 'bg-emerald-50'      : isOk ? 'bg-amber-50'      : 'bg-red-50';
   const textColor   = isGood ? 'text-emerald-600'   : isOk ? 'text-amber-600'   : 'text-red-600';
@@ -402,7 +403,7 @@ export const ProtectionDashboard = ({
   const isOk = score >= 60;
   const [activeFactor, setActiveFactor] = useState<number | null>(null);
 
-  const ringColor = strategy === 'halo' ? '#fbbf24' : strategy === 'taco' ? '#22c55e' : isGood ? '#10b981' : isOk ? '#f59e0b' : '#ef4444';
+  const ringColor = strategy === 'halo' ? STRATEGY_RING_TINTS.halo : strategy === 'taco' ? STRATEGY_RING_TINTS.taco : isGood ? STATUS_COLORS.good : isOk ? STATUS_COLORS.warn : STATUS_COLORS.bad;
   const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
 
   const filled = (score / 100) * RING_C;

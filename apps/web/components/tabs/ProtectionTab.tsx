@@ -25,7 +25,8 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
-import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { QUIET_GRAY, strategyAccent } from "@/components/shared/palette";
 import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
@@ -259,11 +260,8 @@ export default function ProtectionTab({
   // (Sylva's "one palette, derived facets" discipline). Only strategies
   // with no archetype mapping (halo, taco) keep explicit values.
   const patternColor = useMemo(() => {
-    const archetypeId = strategyToArchetype(strategyKey);
-    if (archetypeId) return ARCHETYPES[archetypeId].accent;
-    if (strategyKey === "halo") return "#7c3aed";
-    if (strategyKey === "taco") return "#0284c7";
-    return "#64748b";
+    if (!strategyKey) return QUIET_GRAY;
+    return strategyAccent(strategyKey);
   }, [strategyKey]);
 
   const shape = deriveShieldShape({

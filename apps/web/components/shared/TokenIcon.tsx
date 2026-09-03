@@ -11,26 +11,14 @@
 import React, { useState } from 'react';
 import { Coin } from './FloatingCoins';
 import { TOKEN_LOGOS, tokenLogoKey } from '../../constants/token-logos';
-
-// Curated coin tints for fallback icons — warm, saturated, legible on
-// both light and dark chip backgrounds.
-const FALLBACK_TINTS = [
-  '#f59e0b', // gold
-  '#0d9488', // teal
-  '#0284c7', // sky
-  '#b91c1c', // cinnabar
-  '#ea580c', // tangerine
-  '#7c3aed', // violet
-  '#be185d', // magenta
-  '#059669', // emerald
-];
+import { COIN_TINTS } from './palette';
 
 function tintFor(label: string): string {
   let hash = 0;
   for (let i = 0; i < label.length; i++) {
     hash = (hash * 31 + label.charCodeAt(i)) | 0;
   }
-  return FALLBACK_TINTS[Math.abs(hash) % FALLBACK_TINTS.length];
+  return COIN_TINTS[Math.abs(hash) % COIN_TINTS.length];
 }
 
 export interface TokenIconProps {

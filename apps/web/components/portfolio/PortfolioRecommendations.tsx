@@ -1,11 +1,12 @@
 import React, { useState } from "react";
+import { REGION_COLORS } from "../../config";
 import { motion, AnimatePresence } from "framer-motion";
 
 
 // Define region metadata with multichain asset support
 const REGION_METADATA = {
   Africa: {
-    color: "#F56565",
+    color: REGION_COLORS.Africa,
     gradient: "from-red-500 via-red-600 to-rose-600",
     icon: "🌍",
     tokens: ["KESm", "GHSm", "XOFm", "USDm"],
@@ -15,7 +16,7 @@ const REGION_METADATA = {
     chains: ["Celo"],
   },
   LatAm: {
-    color: "#F6AD55",
+    color: REGION_COLORS.LatAm,
     gradient: "from-orange-500 via-orange-600 to-amber-600",
     icon: "🌎",
     tokens: ["BRLm", "COPm"],
@@ -25,7 +26,7 @@ const REGION_METADATA = {
     chains: ["Celo"],
   },
   Asia: {
-    color: "#9F7AEA",
+    color: REGION_COLORS.Asia,
     gradient: "from-violet-500 via-purple-600 to-indigo-600",
     icon: "🌏",
     tokens: ["PHPm"],
@@ -35,7 +36,7 @@ const REGION_METADATA = {
     chains: ["Celo"],
   },
   Europe: {
-    color: "#48BB78",
+    color: REGION_COLORS.Europe,
     gradient: "from-emerald-500 via-emerald-600 to-teal-600",
     icon: "🇪🇺",
     tokens: ["EURm", "EURC"],
@@ -45,7 +46,7 @@ const REGION_METADATA = {
     chains: ["Celo", "Arc"],
   },
   USA: {
-    color: "#4299E1",
+    color: REGION_COLORS.USA,
     gradient: "from-blue-500 via-blue-600 to-indigo-600",
     icon: "🇺🇸",
     tokens: ["USDm", "USDC"],
@@ -55,7 +56,7 @@ const REGION_METADATA = {
     chains: ["Celo", "Arc"],
   },
   Commodities: {
-    color: "#D69E2E",
+    color: REGION_COLORS.Commodities,
     gradient: "from-amber-500 via-orange-500 to-orange-600",
     icon: "🥇",
     tokens: ["PAXG"],

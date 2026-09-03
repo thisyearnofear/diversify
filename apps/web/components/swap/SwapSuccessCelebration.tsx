@@ -9,6 +9,7 @@ import { NETWORKS } from "../../config";
 import Scrim from "../shared/Scrim";
 import { Coin } from "../shared/FloatingCoins";
 import { haptics } from "../../lib/haptics";
+import { STATUS_COLORS } from "../shared/palette";
 
 interface SwapSuccessCelebrationProps {
   isVisible: boolean;
@@ -63,7 +64,7 @@ export default function SwapSuccessCelebration({
       const pieces = Array.from({ length: 30 }, (_, i) => ({
         id: i,
         x: Math.random() * 100,
-        color: ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444"][
+        color: [STATUS_COLORS.good, "#3b82f6", "#8b5cf6", STATUS_COLORS.warn, STATUS_COLORS.bad][
           Math.floor(Math.random() * 5)
         ],
         delay: Math.random() * 0.3,
@@ -128,7 +129,7 @@ export default function SwapSuccessCelebration({
               className="mx-auto mb-6 w-fit"
               style={{ transformStyle: 'preserve-3d' }}
             >
-              <Coin size={80} symbol={toToken} color="#10b981" shine />
+              <Coin size={80} symbol={toToken} color={STATUS_COLORS.good} shine />
             </motion.div>
 
             {/* Title */}

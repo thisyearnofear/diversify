@@ -11,6 +11,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { YearPoint } from "@/lib/learn/protection-calculator";
 import { useCountUp } from "@/hooks/use-count-up";
 import { springPop } from "@/lib/motion-tokens";
+import { DEFAULT_ACCENT } from "../shared/palette";
 
 interface ProtectionCalculatorProps {
   amount: number;
@@ -26,7 +27,7 @@ interface ProtectionCalculatorProps {
   ctaLabel: string;
 }
 
-const ACCENT = "#2563eb";
+const ACCENT = DEFAULT_ACCENT;
 
 export function ProtectionCalculator({
   amount,

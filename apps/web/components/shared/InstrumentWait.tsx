@@ -11,6 +11,7 @@ import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Coin } from "./FloatingCoins";
 import { spring } from "@/lib/motion-tokens";
+import { GOLD } from "./palette";
 
 interface InstrumentWaitProps {
   /** The job this wait is doing — not "Loading…". */
@@ -23,7 +24,7 @@ interface InstrumentWaitProps {
 export function InstrumentWait({
   label,
   symbol = "$",
-  color = "#f59e0b",
+  color = GOLD,
   className = "",
 }: InstrumentWaitProps) {
   const reducedMotion = useReducedMotion();

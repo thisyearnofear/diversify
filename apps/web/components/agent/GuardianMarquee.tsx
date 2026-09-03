@@ -16,6 +16,7 @@ import { trackFunnelEvent } from '@/lib/analytics';
 import type { GuardianTierState } from '@diversifi/shared/src/services/vault/guardian-tier-state';
 import { GUARDIAN_USER_COPY } from '@diversifi/shared/src/services/vault/guardian-tier-state';
 import type { GuardianSessionInfo } from '../../hooks/use-session-key';
+import { STATUS_COLORS } from "../shared/palette";
 
 interface Props {
   guardianState: GuardianTierState;

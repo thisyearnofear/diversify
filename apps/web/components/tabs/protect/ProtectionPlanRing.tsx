@@ -18,6 +18,7 @@ import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/t
 import { getArchetypeAllocations } from '@/components/protection-cards/plan-preview';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
+import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 
 interface Props {
   /** Effective strategy key (selected strategy overrides onboarding philosophy). */
@@ -27,18 +28,6 @@ interface Props {
   selectedToken: string | null;
   onSelectToken: (token: string | null) => void;
 }
-
-const TOKEN_COLORS: Record<string, string> = {
-  PAXG: '#f59e0b',
-  USDY: '#84cc16',
-  cUSD: '#0ea5e9',
-  USDC: '#2563eb',
-  cEUR: '#14b8a6',
-  cREAL: '#22c55e',
-  KESm: '#a855f7',
-  COPm: '#ec4899',
-  PHPm: '#f97316',
-};
 
 export function ProtectionPlanRing({
   strategyKey,
@@ -72,7 +61,7 @@ export function ProtectionPlanRing({
       percent: holding.percent,
       color:
         TOKEN_COLORS[holding.symbol] ??
-        (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : '#64748b'),
+        (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
     }));
   }, [archetype, walletView.holdings]);
 

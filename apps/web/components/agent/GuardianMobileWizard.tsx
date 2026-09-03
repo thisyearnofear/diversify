@@ -14,6 +14,7 @@
  */
 
 import React, { useEffect, useRef, useState } from "react";
+import { strategyAccent } from "../shared/palette";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMobile } from "@/hooks/use-mobile";
 import { LiveProofCard } from "../shared/LiveProofCard";
@@ -60,20 +61,7 @@ const STRATEGIES: Strategy[] = CANONICAL_STRATEGIES
     allocation: STRATEGY_ALLOCATIONS[s.id] ?? [],
   }));
 
-// Coin accents reuse the archetype palette where ids align (tokens.ts), with
-// choices for strategies that have no archetype: halo = bullion amber,
-// taco = neutral slate.
-const STRATEGY_ACCENT: Record<string, string> = {
-  africapitalism: "#d97706",
-  buen_vivir: "#0d9488",
-  pan_caribbean: "#06b6d4",
-  confucian: "#b91c1c",
-  gotong_royong: "#ea580c",
-  islamic: "#059669",
-  global: "#0284c7",
-  halo: "#b45309",
-  taco: "#64748b",
-};
+
 
 const TOKENS = [
   { symbol: "cUSD", region: "US" },
@@ -250,7 +238,7 @@ export function GuardianMobileWizard({
           id: s.id,
           label: s.name,
           glyph: s.icon,
-          accent: STRATEGY_ACCENT[s.id] ?? "#8b5cf6",
+          accent: strategyAccent(s.id),
         }))}
         selected={selectedStrategy}
         onSelect={setSelectedStrategy}
@@ -288,7 +276,7 @@ export function GuardianMobileWizard({
                   className="h-full rounded-full"
                   style={{
                     width: `${a.percent}%`,
-                    background: STRATEGY_ACCENT[selectedStrategyData.id] ?? "#8b5cf6",
+                    background: strategyAccent(selectedStrategyData.id),
                   }}
                 />
               </div>

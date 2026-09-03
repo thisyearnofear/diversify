@@ -4,6 +4,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from "react";
+import { ARCHETYPES } from "@/components/protection-cards/tokens";
 import { AgentTierStatus } from "../agent/AgentTierStatus";
 import AutomationSettings from "../agent/AutomationSettings";
 import { useAgentStatus } from "../../hooks/use-agent-status";
@@ -151,7 +152,7 @@ export default function AgentTab({
           <InstrumentWait
             label="Reading Guardian state"
             symbol="G"
-            color="#7c3aed"
+            color={ARCHETYPES.custom.accent}
           />
         ) : (
           <AgentTierStatus

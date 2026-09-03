@@ -11,6 +11,7 @@
  * thesis holds without inventing a currency I have no data for.
  */
 import React from 'react';
+import { BENCHMARK_COLORS } from "@/components/shared/palette";
 import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '@/components/shared/FloatingCoins';
 import { TrustFootnote } from '@/components/shared/TrustFootnote';
@@ -27,7 +28,7 @@ interface Props {
   className?: string;
 }
 
-const GOLD = { glyph: 'Au', color: '#f59e0b' };
+const GOLD = { glyph: 'Au', color: BENCHMARK_COLORS.XAU };
 
 export function InflationMomentCard({
   moment,

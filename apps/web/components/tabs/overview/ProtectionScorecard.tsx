@@ -16,6 +16,7 @@ import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { strategyAccent, TOKEN_COLORS } from "@/components/shared/palette";
 import { isApacRailLive } from "@/constants/apac-rail";
 import {
   CURRENCY_RISK_DATA_AS_OF,
@@ -54,28 +55,28 @@ function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
         whatProtectionMeans: 'keeping wealth in African economies',
         scoreLabel: 'African Wealth Retained',
         icon: '🌍',
-        accent: '#d97706',
+        accent: strategyAccent('africapitalism'),
       };
     case 'buen_vivir':
       return {
         whatProtectionMeans: 'balancing material wealth with community',
         scoreLabel: 'Regional Harmony',
         icon: '🌿',
-        accent: '#0d9488',
+        accent: strategyAccent('buen_vivir'),
       };
     case 'pan_caribbean':
       return {
         whatProtectionMeans: 'USD-pegged savings against imported inflation',
         scoreLabel: 'Imported Inflation Hedge',
         icon: '🌊',
-        accent: '#06b6d4',
+        accent: strategyAccent('pan_caribbean'),
       };
     case 'confucian':
       return {
         whatProtectionMeans: 'long-term, low-volatility stability',
         scoreLabel: 'Multi-Generational Stability',
         icon: '📜',
-        accent: '#b91c1c',
+        accent: strategyAccent('confucian'),
         ledgerNote: getApacLedgerNote(),
       };
     case 'gotong_royong':
@@ -83,7 +84,7 @@ function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
         whatProtectionMeans: 'community-first, shared risk management',
         scoreLabel: 'Community Resilience',
         icon: '🤝',
-        accent: '#ea580c',
+        accent: strategyAccent('gotong_royong'),
         ledgerNote: getApacLedgerNote(),
       };
     case 'islamic':
@@ -91,28 +92,28 @@ function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
         whatProtectionMeans: 'Sharia-compliant, interest-free holdings',
         scoreLabel: 'Sharia Compliance',
         icon: '🕌',
-        accent: '#059669',
+        accent: strategyAccent('islamic'),
       };
     case 'global':
       return {
         whatProtectionMeans: 'geographic spread across regions',
         scoreLabel: 'Global Diversification',
         icon: '🌐',
-        accent: '#0284c7',
+        accent: strategyAccent('global'),
       };
     case 'halo':
       return {
         whatProtectionMeans: 'hard-asset, low-obsolescence holdings',
         scoreLabel: 'Hard Asset Coverage',
         icon: '🥇',
-        accent: '#7c3aed',
+        accent: strategyAccent('halo'),
       };
     case 'taco':
       return {
         whatProtectionMeans: 'political and macroeconomic neutrality',
         scoreLabel: 'Political Neutrality',
         icon: '⚖️',
-        accent: '#0284c7',
+        accent: strategyAccent('taco'),
       };
     default:
       return {
@@ -291,7 +292,7 @@ export function ProtectionScorecard({
               label="Uncovered portfolio share"
               value={uncoveredPortfolioShare}
               hint="Not classified as tracked stable coverage"
-              accent="#f59e0b"
+              accent={TOKEN_COLORS.PAXG}
             />
             <DimensionBar
               label="Plan alignment"
@@ -303,7 +304,7 @@ export function ProtectionScorecard({
               label="Guardian readiness"
               value={readinessScore}
               hint={PROTECTION_STATE_LABELS[protectionState]}
-              accent="#7c3aed"
+              accent={ARCHETYPES.custom.accent}
             />
           </div>
 

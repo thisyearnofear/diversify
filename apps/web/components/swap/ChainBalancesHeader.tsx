@@ -8,6 +8,7 @@
 import React from 'react';
 import { NETWORKS } from '../../config';
 import { useWalletContext } from '../wallet/WalletProvider';
+import { CHAIN_BRAND_COLORS } from '../shared/palette';
 
 interface ChainBalance {
   chainId: number;
@@ -34,28 +35,28 @@ const CHAIN_CONFIG: Record<number, {
   [NETWORKS.CELO_MAINNET.chainId]: {
     name: 'Celo',
     icon: '🌱',
-    color: '#FCFF52',
+    color: CHAIN_BRAND_COLORS.CELO,
     bgColor: 'bg-yellow-50',
     description: 'Regional stablecoins',
   },
   [NETWORKS.ARBITRUM_ONE.chainId]: {
     name: 'Arbitrum',
     icon: '🥇',
-    color: '#D69E2E',
+    color: CHAIN_BRAND_COLORS.opBNB,
     bgColor: 'bg-amber-50',
     description: 'RWA & Yield',
   },
   [NETWORKS.BASE_MAINNET.chainId]: {
     name: 'Base',
     icon: '🔵',
-    color: '#0052FF',
+    color: CHAIN_BRAND_COLORS.base,
     bgColor: 'bg-blue-50',
     description: 'High-Yield Vaults',
   },
   [NETWORKS.ETHEREUM_MAINNET.chainId]: {
     name: 'Ethereum',
     icon: '💎',
-    color: '#627EEA',
+    color: CHAIN_BRAND_COLORS.ethereum,
     bgColor: 'bg-purple-50',
     description: 'Mainnet DeFi',
   },

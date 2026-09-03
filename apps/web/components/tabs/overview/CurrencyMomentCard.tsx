@@ -10,6 +10,7 @@
  * else is quiet. Motion reveals selection, never loops.
  */
 import React from 'react';
+import { BENCHMARK_COLORS } from "@/components/shared/palette";
 import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '@/components/shared/FloatingCoins';
 import { TrustFootnote } from '@/components/shared/TrustFootnote';
@@ -43,9 +44,9 @@ interface Props {
 }
 
 const BENCHMARK_COIN: Record<Benchmark, { glyph: string; color: string }> = {
-  USD: { glyph: '$', color: '#2563eb' },
-  EUR: { glyph: '€', color: '#14b8a6' },
-  XAU: { glyph: 'Au', color: '#f59e0b' },
+  USD: { glyph: '$', color: BENCHMARK_COLORS.USD },
+  EUR: { glyph: '€', color: BENCHMARK_COLORS.EUR },
+  XAU: { glyph: 'Au', color: BENCHMARK_COLORS.XAU },
 };
 
 /**
@@ -56,7 +57,7 @@ const BENCHMARK_COIN: Record<Benchmark, { glyph: string; color: string }> = {
  * colour is neutral, dispassionate, and identical every time. Philosophy-
  * aware colour arrives with the archetype fold (post-onboarding).
  */
-const MOMENT_ACCENT = '#6366f1';
+const MOMENT_ACCENT = BENCHMARK_COLORS.USD;
 
 /**
  * DeltaNumber — the moment's one colored number, counted up (Skills
