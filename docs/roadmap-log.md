@@ -147,7 +147,7 @@ the settlement story coherent for the Celo and Arbitrum grant tracks.
 - ~~Celoscan link to a real savings ledger tx is in the README.~~ **Done** — tx `0xea1b169a…`
 - ~~Arbiscan link to a real yield ledger tx is in the README.~~ **Done** — tx `0x2a034aad…`
 - ~~Guardian loop records a recommendation on all three chains end-to-end.~~ **Done.** Guardian heartbeat cron runs every 2 hours, recording on Celo/Arbitrum primary + 0G evidence mirror. Guardian loop runs every 5 min for auto-execution within user permission bounds.
-- Agentic ID is minted for at least 1 test user via admin/demo flow; the on-chain ID points to a 0G Storage CID. *(Contract + deploy script shipped and tested; no consumer-facing mint UI in Wave 3. Mint pending 0G mainnet deployment.)*
+- **Done.** Agentic ID is deployed at `0x68156dbFFaE56e0b3417993c3465741917A33D60` and token #1 minted on 0G mainnet via the `/api/agent/agentic-id` admin endpoint; the on-chain URI points to a 0G Storage root hash (agent tx `0x349bc2d0…c3a9d`). Backend deployed to Hetzner and the endpoint is live.
 - ~~Explorer source verification so proof links are backed by chain data.~~ **Done** — `verifyLedgerTx` + `?verify=` + 0G rows in the proof feed.
 - Demo video updated to show the chain-aware flow.
 - X post with mainnet proof.
