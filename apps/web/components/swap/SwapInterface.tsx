@@ -219,19 +219,17 @@ const SwapInterface = forwardRef<
           </div>
         )}
 
-        {/* Cross-chain panel (advanced only) */}
-        {enableCrossChain && shouldShowIntermediateFeatures() && (
+        {/* Cross-chain panel — only when a bridge route is active (not idle advanced chrome) */}
+        {enableCrossChain && shouldShowIntermediateFeatures() && isCrossChainRoute && (
           <div className="mb-3 p-2.5 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
             <div className="flex items-center gap-2 mb-2">
               <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
               </svg>
               <span className="text-xs font-medium text-blue-800 dark:text-blue-200">Cross-Chain</span>
-              {isCrossChainRoute && (
-                <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
-                  Bridge
-                </span>
-              )}
+              <span className="text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                Bridge
+              </span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <ChainSelector

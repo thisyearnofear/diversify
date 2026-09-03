@@ -528,10 +528,16 @@ export default function ProtectionTab({
             Ask Guardian about this slice
           </button>
           {isPaymentCycle && selectedAlloc && (
-            <PaymentCycleReport
-              defaultLocalCurrency={riskData?.code}
-              onAskGuardian={(prompt) => askAdvisor(prompt)}
-            />
+            <div className="pt-3 mt-3 border-t border-purple-100 dark:border-purple-900/30">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">Payment cycle</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">upcoming — not a module, just this slice</span>
+              </div>
+              <PaymentCycleReport
+                defaultLocalCurrency={riskData?.code}
+                onAskGuardian={(prompt) => askAdvisor(prompt)}
+              />
+            </div>
           )}
         </div>
       )}
