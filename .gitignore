@@ -117,3 +117,6 @@ scripts/fx-drag/.rate-cache.json
 
 # HyperFrames video output / scratch directories
 videos/
+
+# Agent scratch workspace
+.zcode/
