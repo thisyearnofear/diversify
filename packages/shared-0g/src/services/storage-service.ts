@@ -98,7 +98,7 @@ export class ZeroGStorageService {
             const indexer = new Indexer(this.indexerUrl);
 
             // Create ZgBlob from payload
-            const blob = new ZgBlob(new Uint8Array(Buffer.from(payload)) as any);
+            const blob = new ZgBlob(new Blob([Buffer.from(payload)]));
             
             // 4. Get Merkle Tree for CID (root hash)
             const [tree, treeErr] = await blob.merkleTree();
