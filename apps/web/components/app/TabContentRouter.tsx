@@ -75,6 +75,8 @@ function TabPane({ id, children, direction }: TabPaneProps) {
           : { opacity: 0, x: -24 * direction, y: 0 }
       }
       transition={{ duration: 0.18, ease: "easeOut" }}
+      role="tabpanel"
+      aria-label={id}
     >
       {children}
     </motion.div>
@@ -126,9 +128,22 @@ function KeepMountedPane({
         visibility: active ? "visible" : "hidden",
       }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      style={{ pointerEvents: active ? "auto" : "none" }}
+      style={{
+        pointerEvents: active ? "auto" : "none",
+        // Inactive: out of the layout flow entirely. popLayout only pops
+        // EXITING children — this pane never exits, so without the explicit
+        // absolute it would keep its full height in flow and push the
+        // active tab below the fold (the "blank tab" bug: the pane was in
+        // the DOM, just 700px of hidden Overview away).
+        position: active ? "relative" : "absolute",
+        top: active ? undefined : 0,
+        left: active ? undefined : 0,
+        right: active ? undefined : 0,
+      }}
       data-keep-mounted={id}
       aria-hidden={!active}
+      role="tabpanel"
+      aria-label={id}
     >
       {children}
     </motion.div>
@@ -209,7 +224,7 @@ export default function TabContentRouter() {
 
   return (
     <motion.div
-      className="pt-2 pb-20"
+      className="pt-2 pb-20 relative"
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.05}
@@ -232,8 +247,12 @@ export default function TabContentRouter() {
       }}
     >
       <AnimatePresence mode={RENDER_OVERVIEW_ALWAYS ? "popLayout" : "wait"}>
+        {/* Keys are required on every child: AnimatePresence treats its
+            children as a list, and keyless presence children all collide
+            on the empty key (React "same key" warnings on every render). */}
         {RENDER_OVERVIEW_ALWAYS ? (
           <KeepMountedPane
+            key="overview"
             id="overview"
             active={activeTab === "overview"}
             reducedMotion={Boolean(reducedMotion)}
@@ -242,14 +261,14 @@ export default function TabContentRouter() {
           </KeepMountedPane>
         ) : (
           activeTab === "overview" && (
-            <TabPane id="overview" direction={direction}>
+            <TabPane key="overview" id="overview" direction={direction}>
               {overviewContent}
             </TabPane>
           )
         )}
 
         {activeTab === "protect" && (
-          <TabPane id="protect" direction={direction}>
+          <TabPane key="protect" id="protect" direction={direction}>
             <ErrorBoundary>
               <ProtectionTab
                 userRegion={userRegion}
@@ -263,7 +282,7 @@ export default function TabContentRouter() {
         )}
 
         {activeTab === "exchange" && (
-          <TabPane id="exchange" direction={direction}>
+          <TabPane key="exchange" id="exchange" direction={direction}>
             <ErrorBoundary>
               <ExchangeTab
                 userRegion={userRegion}
@@ -278,7 +297,7 @@ export default function TabContentRouter() {
         )}
 
         {activeTab === "agent" && (
-          <TabPane id="agent" direction={direction}>
+          <TabPane key="agent" id="agent" direction={direction}>
             <ErrorBoundary>
               <AgentTab
                 isMiniPay={isMiniPay}
@@ -292,7 +311,7 @@ export default function TabContentRouter() {
         )}
 
         {activeTab === "info" && (
-          <TabPane id="info" direction={direction}>
+          <TabPane key="info" id="info" direction={direction}>
             <ErrorBoundary>
               <InfoTab
                 userRegion={userRegion}
