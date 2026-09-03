@@ -78,12 +78,12 @@ export default function AllocationRing({
   let cumulative = 0;
   const segments = slices
     .filter((s) => s.percent > 0)
-    .map((slice) => {
+    .map((slice, idx) => {
       const fraction = slice.percent / total;
       const startDeg = (cumulative / total) * 360 - 90;
       cumulative += slice.percent;
       const len = Math.max(0, fraction * circumference - GAP_PX);
-      return { slice, startDeg, len };
+      return { slice, startDeg, len, idx };
     });
 
   const handleSelect = (id: string) => {
@@ -126,7 +126,7 @@ export default function AllocationRing({
           strokeWidth={thickness - 8}
           className={`stroke-current ${trackClassName}`}
         />
-        {segments.map(({ slice, startDeg, len }) => {
+        {segments.map(({ slice, startDeg, len, idx }) => {
           const isSelected = selectedId === slice.id;
           const interactive = Boolean(onSelect);
           const stroke = slice.hatch ? `url(#hatch-${uid}-${slice.id})` : slice.color;
@@ -172,7 +172,7 @@ export default function AllocationRing({
                 opacity: selectedId && !isSelected ? 0.4 : 1,
                 rotate: startDeg,
               }}
-              transition={spring}
+              transition={reducedMotion ? { duration: 0 } : { ...springSoft, delay: idx * 0.05 }}
               style={{ transformOrigin: '50% 50%' }}
             />
           );
@@ -217,7 +217,7 @@ export default function AllocationRing({
                 strokeWidth: thickness - 4,
                 rotate: startDeg,
               }}
-              transition={spring}
+              transition={reducedMotion ? { duration: 0 } : { ...springSoft, delay: 0.22 }}
               style={{ transformOrigin: "50% 50%" }}
             />
           );

@@ -9,12 +9,13 @@
  * Design language: the ring is the one object that gets color; everything
  * around it is quiet. Motion reveals the reallocation, never loops.
  */
-import React, { useMemo } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import React, { useMemo, useState } from 'react';
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { useCountUp } from '@/hooks/use-count-up';
-import { springPop } from '@/lib/motion-tokens';
+import { usePointerTilt } from '@/hooks/use-pointer-tilt';
+import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { getArchetypeAllocations } from '@/components/protection-cards/plan-preview';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
@@ -94,12 +95,69 @@ export function ProtectionPlanRing({
   const onTarget = Boolean(selected) && Math.abs(gapPts) <= 2;
 
   const reducedMotion = useReducedMotion();
+  const tilt = usePointerTilt(!reducedMotion);
   const alignmentFormatted = useCountUp(alignmentScore, {
     format: (n) => `${Math.round(n)}%`,
   });
   const gapFormatted = useCountUp(Math.abs(gapPts), {
     format: (n) => `${Math.round(n)}`,
   });
+
+  // Progressive disclosure: dust into Other. Keeps the object scannable
+  // when a wallet holds 10+ tokens — the ring and legend never exceed
+  // 5 primary rows + one Other rewrites-artefact row (taps expand in place).
+  const [showDust, setShowDust] = useState(false);
+  const PRIMARY_ROWS = 5;
+  const DUST_THRESHOLD_PCT = 2;
+
+  // Enrich slices with plan/held meta once, then partition.
+  const enriched = useMemo(() => {
+    return slices.map((s) => {
+      const a = allocations.find((alloc) => alloc.token === s.id) ?? { token: s.id, region: 'Wallet holding', percent: 0 };
+      const held = heldPctByToken.get(a.token) ?? s.percent;
+      // Sort key: largest of plan target or actual holding — gap matters too
+      const rank = Math.max(a.percent, held);
+      return { slice: s, alloc: a, held, rank };
+    }).sort((x, y) => y.rank - x.rank);
+  }, [slices, allocations, heldPctByToken]);
+
+  const needsDisclosure = enriched.length > PRIMARY_ROWS + 1;
+  const primary = useMemo(() => {
+    if (!needsDisclosure || showDust) return enriched;
+    // Keep large positions + any selected token (so selection never hides)
+    const significant = enriched.filter((e) => e.rank >= DUST_THRESHOLD_PCT || e.slice.id === selectedToken);
+    if (significant.length >= PRIMARY_ROWS) return significant.slice(0, PRIMARY_ROWS);
+    // Not enough significant — fill to PRIMARY_ROWS from sorted order
+    const pool = enriched.filter((e) => !significant.some((s) => s.slice.id === e.slice.id));
+    return [...significant, ...pool.slice(0, PRIMARY_ROWS - significant.length)].sort((a, b) => b.rank - a.rank);
+  }, [enriched, needsDisclosure, showDust, selectedToken]);
+
+  const dust = useMemo(() => {
+    if (!needsDisclosure || showDust) return [];
+    const primaryIds = new Set(primary.map((p) => p.slice.id));
+    return enriched.filter((e) => !primaryIds.has(e.slice.id));
+  }, [enriched, primary, needsDisclosure, showDust]);
+
+  const dustTotalHeld = useMemo(() => dust.reduce((sum, d) => sum + d.held, 0), [dust]);
+  const dustTotalPlan = useMemo(() => dust.reduce((sum, d) => sum + d.alloc.percent, 0), [dust]);
+
+  // Ring slices shown: collapsed → primary + aggregated Other; expanded → all individually
+  const ringSlicesForDisplay: RingSlice[] = useMemo(() => {
+    if (!needsDisclosure || showDust) return slices;
+    if (dust.length === 0) return slices;
+    const primaryIds = new Set(primary.map((p) => p.slice.id));
+    const base = slices.filter((s) => primaryIds.has(s.id));
+    if (dustTotalHeld <= 0 && dustTotalPlan <= 0) return base;
+    return [
+      ...base,
+      {
+        id: "__other__",
+        label: `Other — ${dust.length} small positions`,
+        percent: Math.max(dustTotalHeld, dustTotalPlan, 0.5),
+        color: QUIET_GRAY,
+      },
+    ];
+  }, [slices, primary, dust, dustTotalHeld, dustTotalPlan, needsDisclosure, showDust]);
 
   const projections = portfolio?.projections;
   const purchasingPowerLost = projections?.currentPath?.purchasingPowerLost ?? 0;
@@ -167,49 +225,60 @@ export function ProtectionPlanRing({
       </div>
 
       <div className="flex justify-center">
-        <AllocationRing
-          slices={slices}
-          selectedId={selectedToken}
-          onSelect={(id) => onSelectToken(selectedToken === id ? null : id)}
-          ghost={
-            selected && !empty && !onTarget && Math.abs(gapPts) > 2
-              ? { id: selected.token, extraPercent: gapPts }
-              : null
-          }
-          size={200}
-          thickness={24}
-        >
-          <>
-            {hole.number != null && (
-              <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                {typeof hole.number === "string" ? hole.number : hole.number}
+        <motion.div style={{ ...tilt.style, transformPerspective: 900 }} {...tilt.props}>
+          <AllocationRing
+            slices={ringSlicesForDisplay}
+            selectedId={selectedToken}
+            onSelect={(id) => {
+              if (id === "__other__") {
+                setShowDust(true);
+                return;
+              }
+              onSelectToken(selectedToken === id ? null : id);
+            }}
+            ghost={
+              selected && !empty && !onTarget && Math.abs(gapPts) > 2
+                ? { id: selected.token, extraPercent: gapPts }
+                : null
+            }
+            size={200}
+            thickness={24}
+          >
+            <motion.div
+              key={selectedToken ?? `idle-${alignmentScore}`}
+              initial={reducedMotion ? false : { opacity: 0, filter: "blur(6px)", y: 4 }}
+              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="flex flex-col items-center"
+            >
+              {hole.number != null && (
+                <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
+                  {typeof hole.number === "string" ? hole.number : hole.number}
+                </span>
+              )}
+              <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
+                {hole.label}
               </span>
-            )}
-            <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
-              {hole.label}
-            </span>
-            <span className="text-[11px] text-gray-500 dark:text-gray-400">
-              {hole.hint}
-            </span>
-          </>
-        </AllocationRing>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                {hole.hint}
+              </span>
+            </motion.div>
+          </AllocationRing>
+        </motion.div>
       </div>
 
       <div className="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
-        {slices.map((slice) => {
-          const a = allocations.find((allocation) => allocation.token === slice.id) ?? {
-            token: slice.id,
-            region: 'Wallet holding',
-            percent: 0,
-          };
-          const held = heldPctByToken.get(a.token) ?? 0;
+        {(showDust ? enriched : primary).map(({ slice, alloc: a, held }, idx) => {
           const isSelected = selectedToken === a.token;
           return (
-            <button
+            <motion.button
               key={a.token}
               type="button"
               onClick={() => onSelectToken(selectedToken === a.token ? null : a.token)}
               aria-pressed={isSelected}
+              initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.22, delay: idx * STAGGER_STEP_S, ease: "easeOut" }}
               className={`w-full min-h-[44px] flex items-center gap-3 py-2.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
@@ -235,10 +304,52 @@ export function ProtectionPlanRing({
               >
                 {held.toFixed(0)}% held
               </span>
-            </button>
+            </motion.button>
           );
         })}
+        {dust.length > 0 && (
+          <motion.button
+            key="__other__"
+            type="button"
+            onClick={() => setShowDust(true)}
+            initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.22, delay: primary.length * STAGGER_STEP_S }}
+            data-testid="shield-other"
+            className="w-full min-h-[44px] flex items-center gap-3 py-2.5 text-left rounded-lg bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          >
+            <span className="w-[22px] h-[22px] rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-gray-600 dark:text-gray-300 shrink-0">+{dust.length}</span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-bold text-gray-900 dark:text-white">Other</span>
+              <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions · {dust.length > 1 ? `${dustTotalPlan.toFixed(0)}% plan` : dust[0]?.alloc.region ?? ""}</span>
+            </span>
+            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{fmt(dustTotalHeld)} held</span>
+          </motion.button>
+        )}
+        <AnimatePresence initial={false}>
+          {showDust && dust.length === 0 && needsDisclosure && (
+            <motion.div
+              key="collapse"
+              initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setShowDust(false)}
+                className="w-full min-h-[44px] py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              >
+                Show less
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
+      {showDust && dust.length === 0 && needsDisclosure && (
+        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">Expanded — all positions visible. Dust no longer aggregated in the ring.</p>
+      )}
 
       {showProjections && (
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
