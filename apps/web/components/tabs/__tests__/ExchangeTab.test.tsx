@@ -7,8 +7,10 @@ vi.mock("next/router", () => ({
   useRouter: () => ({ isReady: true, query: {} }),
 }));
 
+let mockAddress: string | null = "0xabc";
+
 vi.mock("@/components/wallet/WalletProvider", () => ({
-  useWalletContext: () => ({ address: "0xabc" }),
+  useWalletContext: () => ({ address: mockAddress }),
 }));
 
 vi.mock("@/context/app/NavigationContext", () => ({
@@ -32,8 +34,10 @@ vi.mock("@/context/app/PortfolioContext", () => ({
   usePortfolio: () => null,
 }));
 
+const mockEnableDemo = vi.fn();
+
 vi.mock("@/context/app/DemoModeContext", () => ({
-  useDemoMode: () => ({ enableDemoMode: vi.fn() }),
+  useDemoMode: () => ({ enableDemoMode: mockEnableDemo }),
 }));
 
 vi.mock("@/components/wallet/WalletButton", () => ({
@@ -88,6 +92,7 @@ describe("ExchangeTab — instrument", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAddress = "0xabc";
   });
 
   it("mounts the ticket as the object, with no extra inspect button or yield card", () => {
@@ -100,6 +105,31 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.queryByText("Inspect route and settlement")).not.toBeInTheDocument();
     expect(screen.queryByTestId("best-yield-card")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+  });
+
+  it("unconnected: the ticket is still the object — no card stack", () => {
+    mockAddress = null;
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    // The swap ticket renders as the object (SwapTab handles the
+    // walletless morph internally — its CTA becomes the connect button).
+    expect(screen.getByTestId("exchange-swap-object")).toBeInTheDocument();
+    expect(screen.getByText("instrument")).toBeInTheDocument();
+    // The old marketing stack is gone: no hero card, no how-it-works.
+    expect(screen.queryByText("Protect your savings")).not.toBeInTheDocument();
+    expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
+  });
+
+  it("unconnected: demo entry is a quiet text link in the status tier", () => {
+    mockAddress = null;
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Explore a sample plan" }));
+    expect(mockEnableDemo).toHaveBeenCalledTimes(1);
   });
 
   it("opens the route inspector from the quote tap", () => {

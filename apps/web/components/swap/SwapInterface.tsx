@@ -10,6 +10,7 @@ import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import SwapActionButton from "./SwapActionButton";
+import WalletButton from "../wallet/WalletButton";
 import { RegionalPattern } from "../regional/RegionalIconography";
 import type { Region } from "@/hooks/use-user-region";
 import { useExperience } from "@/context/app/ExperienceContext";
@@ -387,20 +388,27 @@ const SwapInterface = forwardRef<
             fromChainId={fromChainId}
           />
 
-          <SwapActionButton
-            isLoading={isLoading}
-            status={status}
-            fromToken={fromToken}
-            toToken={toToken}
-            fromTokenRegion={fromTokenRegion}
-            toTokenRegion={toTokenRegion}
-            isBeginner={isBeginner}
-            zapMode={zapMode}
-            disabled={Boolean(ctaDisabledReason)}
-            disabledReason={ctaDisabledReason}
-            onClick={() => executeSwap(onSwap, contractCall)}
-            stickyMobile={isMobile}
-          />
+          {/* Unconnected morph: the ticket stays the object and its one
+              CTA becomes the connect button (§5 — state morphs the object;
+              a disabled swap button would be a dead control). */}
+          {address ? (
+            <SwapActionButton
+              isLoading={isLoading}
+              status={status}
+              fromToken={fromToken}
+              toToken={toToken}
+              fromTokenRegion={fromTokenRegion}
+              toTokenRegion={toTokenRegion}
+              isBeginner={isBeginner}
+              zapMode={zapMode}
+              disabled={Boolean(ctaDisabledReason)}
+              disabledReason={ctaDisabledReason}
+              onClick={() => executeSwap(onSwap, contractCall)}
+              stickyMobile={isMobile}
+            />
+          ) : (
+            <WalletButton variant="primary" className="w-full" />
+          )}
         </div>
       </div>
     </div>
