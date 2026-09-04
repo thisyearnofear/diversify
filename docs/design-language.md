@@ -156,8 +156,12 @@ A tab change that fails any of these is the old stack. Do not ship it.
    ring token. Payment cycle is a Shield inspector body.
 5. **Unconnected is a morph too.** The object stays: Home's moment card
    works walletless (geo data, not wallet data), Exchange's ticket CTA
-   becomes the connect button. Never swap the object for a hero-card +
-   proof-card + how-it-works stack.
+   becomes the connect button, Shield's philosophy picker stays the object
+   (choosing a lens rewrites the ghost ring — no funds needed), and the
+   Agent tab's object is the Guardian itself (`gaze="pointer"`, the
+   sanctioned third gaze surface). Never swap the object for a hero-card +
+   proof-card + how-it-works stack. All four share one status tier:
+   `UnconnectedStatusTier` (Verified evidence line + demo text link).
 6. **Nothing sits above the object** except a real error. Banners,
    scorecards, honesty strips, and “next step” journeys are object /
    status / footnote — or they leave.
@@ -335,6 +339,7 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `AllocationRing` | `apps/web/components/shared/AllocationRing.tsx` | plan ring, exposure dial |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `MaskedReveal` | `apps/web/components/shared/MaskedReveal.tsx` | masked hero-line reveal (greeting headlines) |
+| `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` | real token logos w/ coin fallback |
 | `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |

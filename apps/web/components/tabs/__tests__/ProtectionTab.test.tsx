@@ -339,10 +339,13 @@ describe("ProtectionTab — instrument shapes", () => {
     cleanup();
   });
 
-  it("renders the unconnected shell when there is no wallet", () => {
+  it("unconnected: the philosophy picker is still the object (§5 rail 5 morph)", () => {
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     expect(document.body).toBeTruthy();
-    expect(screen.queryByTestId("shield-picker")).not.toBeInTheDocument();
+    // Rail 5: unconnected is a morph — the picker stays the object walletless
+    // and the connect CTA attaches to it. No hero-card stack.
+    expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-unconnected-object")).toBeInTheDocument();
   });
 
   it("shows the plan picker when connected with no philosophy", () => {

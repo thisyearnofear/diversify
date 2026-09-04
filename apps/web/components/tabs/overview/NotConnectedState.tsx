@@ -17,7 +17,7 @@ import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
 import { InstrumentShell } from "../../shared/InstrumentShell";
-import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
+import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 
 interface NotConnectedStateProps {
   onEnableDemo: () => void;
@@ -79,18 +79,7 @@ export function NotConnectedState({
     </div>
   );
 
-  const status = (
-    <div className="flex items-center justify-between gap-3">
-      <VerifiedEvidence />
-      <button
-        type="button"
-        onClick={onEnableDemo}
-        className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400"
-      >
-        Explore a sample plan
-      </button>
-    </div>
-  );
+  const status = <UnconnectedStatusTier onEnableDemo={onEnableDemo} />;
 
   return <InstrumentShell object={object} status={status} />;
 }
