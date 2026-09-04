@@ -1,3 +1,13 @@
+/**
+ * NotConnectedState — Home's unconnected morph.
+ *
+ * The Risk Theater object works without a wallet (it is geo + currency
+ * data, not wallet data), so unconnected Home keeps the same instrument
+ * grammar as connected Home: the moment card is the object, the connect
+ * wallet button is the one CTA attached to it, and trust/demo live in the
+ * status tier as quiet lines. No hero card, no proof card, no how-it-works
+ * stack (§5: state morphs the object; §3: the controls teach themselves).
+ */
 import React from "react";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -6,8 +16,8 @@ import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
 import { Card } from "../../shared/TabComponents";
-import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
-import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
+import { InstrumentShell } from "../../shared/InstrumentShell";
+import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 
 interface NotConnectedStateProps {
   onEnableDemo: () => void;
@@ -37,20 +47,7 @@ export function NotConnectedState({
     trackFunnelEvent("marquee_select", { horizon: h, source: "home_moment" });
   };
 
-  const HOW_IT_WORKS: HowItWorksStep[] = [
-    {
-      icon: "🪙",
-      title: "Make the story yours",
-      text: "Scrub the horizon, pick a benchmark. The number is your savings, not an index.",
-    },
-    {
-      icon: "🛡️",
-      title: "Protect on your terms",
-      text: "Hold stablecoins from any exchange, connect your wallet, choose a philosophy. The Guardian handles allocation — no lock-ups, no subscriptions.",
-    },
-  ];
-
-  const heroCard = (
+  const object = (
     <div className="space-y-3">
       {moment ? (
         <CurrencyMomentCard
@@ -77,22 +74,23 @@ export function NotConnectedState({
           </p>
         </Card>
       )}
-      <Card padding="p-4" className="text-center">
-        <WalletButton variant="primary" className="w-full" />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-          Connect a wallet to protect what matters — or open the demo below.
-        </p>
-      </Card>
+      {/* The one CTA — attached to the object, no card wrapper. */}
+      <WalletButton variant="primary" className="w-full" />
     </div>
   );
 
-  return (
-    <div className="space-y-4">
-      <UnconnectedStateShell
-        heroCard={heroCard}
-        howItWorks={HOW_IT_WORKS}
-        onEnableDemo={onEnableDemo}
-      />
+  const status = (
+    <div className="flex items-center justify-between gap-3">
+      <VerifiedEvidence />
+      <button
+        type="button"
+        onClick={onEnableDemo}
+        className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400"
+      >
+        Explore a sample plan
+      </button>
     </div>
   );
+
+  return <InstrumentShell object={object} status={status} />;
 }

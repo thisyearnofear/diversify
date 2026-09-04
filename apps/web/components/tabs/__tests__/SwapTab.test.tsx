@@ -385,19 +385,21 @@ describe("SwapTab prefill — wallet auto-switch", () => {
     expect(mockSwitchNetwork).not.toHaveBeenCalled();
   });
 
-  it("does NOT switch the wallet when the wallet is disconnected (address null, ref not populated)", () => {
-    // Disconnected wallet: no address, no chain. The SwapInterface
-    // doesn't render, so swapInterfaceRef.current is null, and the
-    // outer useEffect guard `swapInterfaceRef.current?.setTokens` is
-    // false — so the entire block (including the wallet switch) is
-    // skipped. The wallet switch cannot fire without the form being
-    // pre-filled.
+  it("does NOT switch the wallet when the wallet is disconnected (address guard)", () => {
+    // Disconnected wallet: no address, no chain. The ticket still renders
+    // (unconnected morph — the execute CTA becomes the connect button), so
+    // swapInterfaceRef IS populated and the form prefill still lands. The
+    // `address &&` guard in the auto-switch block is what keeps the wallet
+    // switch from firing for a wallet that isn't there.
     mockAddress = null;
     mockWalletChainId = null;
 
     const { rerender } = render(
       <SwapTab userRegion="USA" inflationData={{}} />,
     );
+
+    // Unconnected morph: the ticket itself renders, not a prompt card.
+    expect(screen.getByTestId("mock-swap-interface")).toBeInTheDocument();
 
     mockSwapPrefill = {
       fromToken: "cUSD",

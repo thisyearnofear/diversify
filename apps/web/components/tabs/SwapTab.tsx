@@ -13,7 +13,7 @@ import { getChainAssets, getPreferredChainIdForGoal, NETWORKS, isTestnetChain } 
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getPersistedStrategy } from "../../hooks/useFinancialStrategies";
-import { TabHeader, Card, ConnectWalletPrompt, Skeleton } from "../shared/TabComponents";
+import { TabHeader, Skeleton } from "../shared/TabComponents";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useNavigation } from "../../context/app/NavigationContext";
@@ -298,6 +298,10 @@ export default function SwapTab({
       //
       // Skip for MiniPay (Celo-only, can't switch networks).
       if (
+        // Never move a wallet that isn't connected — the ticket now
+        // renders (and populates swapInterfaceRef) in the unconnected
+        // morph too, so this guard is what keeps the switch wallet-bound.
+        address &&
         swapPrefill.fromChainId &&
         swapPrefill.fromChainId !== walletChainId &&
         switchNetwork &&
@@ -335,6 +339,7 @@ export default function SwapTab({
     setSwapPrefill,
     setAiRecommendationReason,
     setShowAiRecommendation,
+    address,
     walletChainId,
     switchNetwork,
     isMiniPay,
@@ -514,6 +519,44 @@ export default function SwapTab({
   const containerPadding = !instrument && isMobile && isBeginner ? "pb-24" : "";
   const showChrome = !instrument;
 
+  // The swap ticket — the object in both connection states. Unconnected,
+  // SwapInterface morphs its execute CTA into the connect wallet button.
+  const ticket = (
+    <ErrorBoundary moduleName="Swap Interface">
+      {isTradeableLoading ? (
+        <div className="space-y-4 py-4">
+          {/* Token selector skeleton */}
+          <div className="flex gap-3">
+            <Skeleton className="flex-1 h-12" variant="rect" />
+            <Skeleton className="w-10 h-12" variant="rect" />
+            <Skeleton className="flex-1 h-12" variant="rect" />
+          </div>
+          {/* Amount input skeleton */}
+          <Skeleton className="h-12 w-full" variant="rect" />
+          {/* Swap button skeleton */}
+          <Skeleton className="h-14 w-full" variant="rect" />
+        </div>
+      ) : (
+        <div className="relative">
+          <SwapInterface
+            ref={swapInterfaceRef}
+            availableTokens={filteredTokens}
+            address={address}
+            onSwap={handleSwap}
+            preferredFromRegion={userRegion}
+            preferredToRegion={targetRegion ?? undefined}
+            title=""
+            chainId={walletChainId}
+            enableCrossChain={true}
+            instrument={instrument}
+            onInspectQuote={onInspectQuote}
+            quoteInspected={quoteInspected}
+          />
+        </div>
+      )}
+    </ErrorBoundary>
+  );
+
   return (
     <div className={`space-y-4 ${containerPadding}`}>
       <div>
@@ -618,18 +661,9 @@ export default function SwapTab({
         )}
 
         {!address ? (
-          <ConnectWalletPrompt
-            message={
-              isDemo
-                ? "Connect your wallet to make real protection moves with live pricing."
-                : "Connect your wallet to start protecting your savings."
-            }
-            WalletButtonComponent={<WalletButton variant="inline" />}
-            userRegion={userRegion}
-            inflationData={inflationData}
-            availableTokens={filteredTokens}
-            experienceMode={experienceMode}
-          />
+          // Unconnected morph: the ticket itself is the object — no prompt
+          // card. Its execute CTA becomes the connect button (SwapInterface).
+          ticket
         ) : (
           <>
             {showChrome && <ExperienceModeNotification />}
@@ -679,39 +713,7 @@ export default function SwapTab({
               />
             )}
 
-            <ErrorBoundary moduleName="Swap Interface">
-              {isTradeableLoading ? (
-                <div className="space-y-4 py-4">
-                  {/* Token selector skeleton */}
-                  <div className="flex gap-3">
-                    <Skeleton className="flex-1 h-12" variant="rect" />
-                    <Skeleton className="w-10 h-12" variant="rect" />
-                    <Skeleton className="flex-1 h-12" variant="rect" />
-                  </div>
-                  {/* Amount input skeleton */}
-                  <Skeleton className="h-12 w-full" variant="rect" />
-                  {/* Swap button skeleton */}
-                  <Skeleton className="h-14 w-full" variant="rect" />
-                </div>
-              ) : (
-                <div className="relative">
-                  <SwapInterface
-                    ref={swapInterfaceRef}
-                    availableTokens={filteredTokens}
-                    address={address}
-                    onSwap={handleSwap}
-                    preferredFromRegion={userRegion}
-                    preferredToRegion={targetRegion ?? undefined}
-                    title=""
-                    chainId={walletChainId}
-                    enableCrossChain={true}
-                    instrument={instrument}
-                    onInspectQuote={onInspectQuote}
-                    quoteInspected={quoteInspected}
-                  />
-                </div>
-              )}
-            </ErrorBoundary>
+            {ticket}
 
             {/* Social Contact Picker - Send to phone/email (hidden on mobile beginner) */}
             {showChrome && !isBeginner && address && !isMobile && (

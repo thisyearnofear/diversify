@@ -5,9 +5,6 @@ import { useNavigation } from "@/context/app/NavigationContext";
 import { usePortfolio } from "@/context/app/PortfolioContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useDemoMode } from "@/context/app/DemoModeContext";
-import WalletButton from "../wallet/WalletButton";
-import { UnconnectedStateShell } from "../shared/UnconnectedStateShell";
-import type { HowItWorksStep } from "../shared/UnconnectedStateShell";
 import type { Region } from "@/hooks/use-user-region";
 import type { RegionalInflationData } from "@/hooks/use-inflation-data";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
@@ -17,6 +14,7 @@ import { CaribbeanFxNetCard } from "@/components/business/CaribbeanFxNetCard";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
+import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -26,12 +24,6 @@ interface ExchangeTabProps {
   isBalancesLoading?: boolean;
   portfolio?: MultichainPortfolio;
 }
-
-const HOW_IT_WORKS: HowItWorksStep[] = [
-  { icon: "💱", title: "Compare Rates", text: "See live exchange rates across supported stablecoins and networks." },
-  { icon: "🛡️", title: "Choose Safer Assets", text: "Pick currencies with lower inflation rates than your local currency." },
-  { icon: "✅", title: "Execute the Swap", text: "Connect your wallet and confirm the swap in one transaction." },
-];
 
 export default function ExchangeTab({
   userRegion,
@@ -80,22 +72,33 @@ export default function ExchangeTab({
   }, [router.isReady]);
 
   if (!address) {
-    const heroCard = (
-      <div className="text-gray-900 dark:text-white">
-        <h2 className="text-lg font-black">Protect your savings</h2>
-        <p className="text-sm text-gray-600 dark:text-gray-300 mt-2 max-w-md leading-relaxed">
-          Use stablecoin swaps to reduce inflation exposure and move toward your protection plan.
-        </p>
-        <div className="mt-4"><WalletButton variant="primary" className="w-full" /></div>
-      </div>
-    );
+    // Unconnected morph (§5): the ticket is still the object — SwapTab
+    // renders it walletless and its execute CTA becomes the connect button.
+    // No hero card, no proof card, no how-it-works stack: trust is one
+    // quiet line and demo entry is a text link in the status tier.
     return (
-      <UnconnectedStateShell
-        heroCard={heroCard}
-        showProofCard={true}
-        showDemoCta={true}
-        onEnableDemo={enableDemoMode}
-        howItWorks={HOW_IT_WORKS}
+      <InstrumentShell
+        object={
+          <div data-testid="exchange-swap-object" className="w-full">
+            <SwapTab
+              userRegion={userRegion}
+              inflationData={inflationData}
+              instrument
+            />
+          </div>
+        }
+        status={
+          <div className="flex items-center justify-between gap-3">
+            <VerifiedEvidence />
+            <button
+              type="button"
+              onClick={enableDemoMode}
+              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400"
+            >
+              Explore a sample plan
+            </button>
+          </div>
+        }
       />
     );
   }
