@@ -165,7 +165,6 @@ vi.mock("@/components/portfolio/CurrencyPerformanceChart", () => ({ default: () 
 vi.mock("@/components/portfolio/ProtectionAnalysis", () => ({
   default: () => <div data-testid="protection-analysis" />,
 }));
-vi.mock("@/components/inflation/InflationProtectionInfo", () => ({ default: () => null }));
 vi.mock("@/components/trade/DiversificationHealthCard", () => ({ default: () => null, DiversificationHealthCard: () => null }));
 vi.mock("@/components/rewards/StreakRewardsCard", () => ({
   StreakRewardsCard: () => null,
@@ -210,8 +209,6 @@ vi.mock("@/components/tabs/overview/ProtectionScorecard", () => ({ ProtectionSco
 vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({ PaymentCycleReport: () => null }));
 vi.mock("@/components/portfolio/ZakatCalculator", () => ({ default: () => null }));
 vi.mock("@/components/portfolio/StrategyMetrics", () => ({ default: () => null }));
-vi.mock("@/components/regional/RegionalRecommendations", () => ({ default: () => null }));
-vi.mock("@/components/enterprise-fx/EmergingMarketsTracker", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/PortfolioRiskWidget", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/RiskMetrics", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
