@@ -160,6 +160,11 @@ holdings are also a quiet strip (stacked bar + chips) beneath it, never a second
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring.
 
+Header: `ChainPill` is **always visible** on `sm+` — including Simple
+mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner
+rule). "See the chain without hunting" beats mode-based hiding; the
+toggle, not the pill, is the thing Simple mode hides.
+
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see
 `LensCoinSelector`).

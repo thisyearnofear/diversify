@@ -82,7 +82,7 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - **Wave 0:** Tour skip when philosophy set; beginner tabs via `TAB_VISIBILITY`; confetti removed; action-oriented tab hint (2-tab dismiss)
 - **Wave 1:** `GuardianOnboardingWizard` deleted; `GuardianStatusChip` + compact scrollytelling; beginner hides plan gallery/SavingsLoop
 - **Wave 2:** `strategyToArchetype()` DRY; `getBeginnerPrimaryTip()` plain copy; compact `LiveProofCard`; `detectGuidedTour` deleted
-- **Wave 3:** Simple mode hides header mode toggle + `ChainPill`; 3-step `GuidedTour`; APAC honesty banner; `philosophy` in `ProtectionConfig` (replaces `financialStrategy` key)
+- **Wave 3:** Simple mode hides header mode toggle; 3-step `GuidedTour`; APAC honesty banner; `philosophy` in `ProtectionConfig` (replaces `financialStrategy` key). *(ChainPill exemption reversed 2026-09-03: it's now always visible on sm+ — see design-language §5.)*
 - **Wave 4:** Testnet banner gated (`constants/testnet.ts`); `ClaimCelebration` uses `Coin` motif; ProtectionTab confetti removed; AgentTab beginner shows `GuardianStatusChip` only
 - **Wave 5:** `ProtectionProfileProvider` unifies profile + philosophy; `useStrategy()` delegates to profile; LiveProof chain-aware copy; voice hidden in Simple mode
 - **Wave 6:** `PhilosophyHeroCard` DRY for Home + Shield unconnected heroes; onboarding detect phase waits for user tap
