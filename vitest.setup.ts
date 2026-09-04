@@ -36,17 +36,11 @@ afterEach(() => {
  * a separate process). Tests that need a signer set a SYNTHETIC key
  * explicitly (see recommendation-ledger.service.test.ts), which is
  * unaffected by this scrub.
+ *
+ * Key patterns live in shared `signer-env-keys.ts` (dependency-free leaf);
+ * the tripwire test `signer-env-leak.test.ts` asserts this scrub ran by
+ * importing the same list.
  */
-const REAL_SIGNER_ENV_KEYS = [
-  'VAULT_PRIVATE_KEY',
-  'LEDGER_PRIVATE_KEY',
-  'GUARDIAN_PRIVATE_KEY',
-  'DEPLOYER_PRIVATE_KEY',
-  'MAINNET_DEPLOYER_KEY',
-] as const;
+import { scrubSignerEnvKeys } from './packages/shared/src/utils/signer-env-keys';
 
-for (const key of REAL_SIGNER_ENV_KEYS) {
-  if (process.env[key]) {
-    delete process.env[key];
-  }
-}
+scrubSignerEnvKeys();
