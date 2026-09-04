@@ -69,17 +69,10 @@ export function ProtectionPlanGallery({
 
   return (
     <section className="w-full">
-      <header className="flex items-center justify-between px-4 mb-3">
-        <div>
-          <div className="text-[10px] font-bold tracking-[0.18em] text-white/55 uppercase">
-            Protection Plans · 7 philosophies
-          </div>
-          <h3 className="text-lg font-bold text-white mt-1">
-            Pick a strategy that matches your worldview
-          </h3>
-        </div>
-      </header>
-
+      {/* No internal header/footer: the caller owns the one job line (§3 —
+          the old "Pick a strategy that matches your worldview" duplicated
+          each caller's "Choose a protection philosophy", and the footer
+          lectured about the rendering pipeline). */}
       <div
         ref={scrollerRef}
         className={
@@ -175,11 +168,6 @@ export function ProtectionPlanGallery({
             </button>
           );
         })}
-      </div>
-
-      <div className="mt-2 px-4 flex items-center gap-2 text-[11px] text-white/50">
-        <span className="size-1.5 rounded-full bg-white/40" />
-        Same JSX renders here, the Figma library, and share PNGs.
       </div>
     </section>
   );

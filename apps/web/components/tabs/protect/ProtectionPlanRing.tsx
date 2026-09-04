@@ -348,10 +348,6 @@ export function ProtectionPlanRing({
           )}
         </AnimatePresence>
       </div>
-      {showDust && dust.length === 0 && needsDisclosure && (
-        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-2">Expanded — all positions visible. Dust no longer aggregated in the ring.</p>
-      )}
-
       {showProjections && (
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
           3-year path: inflation takes{' '}

@@ -39,7 +39,7 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // Error state
   if (error) {
     return (
-      <div className={`flex items-center gap-2 text-xs ${className}`}>
+      <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
         <StatusBadge label="Data unavailable" tone="error" compact />
         {onRefresh && (
           <button
@@ -56,7 +56,7 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // Loading state
   if (isLoading && !lastUpdated) {
     return (
-      <div className={`flex items-center gap-2 text-xs ${className}`}>
+      <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
         <StatusBadge label="Reading wallet data" tone="info" compact />
       </div>
     );
@@ -65,7 +65,7 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // No data yet
   if (!lastUpdated) {
     return (
-      <div className={`flex items-center gap-2 text-xs ${className}`}>
+      <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
         <StatusBadge label="No wallet data" tone="neutral" compact />
       </div>
     );
@@ -74,7 +74,7 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   // Stale or partially estimated data — both get the honest amber marker
   if (isStale || hasEstimates) {
     return (
-      <div className={`flex items-center gap-2 text-xs ${className}`}>
+      <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
         <StatusBadge
           label={isStale ? "Stale wallet data" : "Includes estimates"}
           detail={getRelativeTime(lastUpdated)}
@@ -95,7 +95,7 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
 
   // Fresh data
   return (
-    <div className={`flex items-center gap-2 text-xs ${className}`}>
+    <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
       <StatusBadge
         label="Wallet data live"
         detail={getRelativeTime(lastUpdated)}

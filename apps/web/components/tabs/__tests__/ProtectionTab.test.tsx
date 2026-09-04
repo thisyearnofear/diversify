@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 
 let mockFinancialStrategy: string | null = null;
+let mockMoneyPurpose = "inflation_protection";
 let mockGuardianState = "idle";
 const mockAdvisor = vi.fn();
 const mockSetFinancialStrategy = vi.fn();
@@ -19,6 +20,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
       userGoal: "inflation_protection",
       riskTolerance: "medium",
       timeHorizon: "medium",
+      moneyPurpose: mockMoneyPurpose,
     },
     isComplete: false,
     currentGoalLabel: "Inflation Protection",
@@ -142,8 +144,26 @@ vi.mock("@/hooks/use-currency-risk", () => ({
 }));
 
 vi.mock("@/components/tabs/protect/ProtectionPlanRing", () => ({
-  ProtectionPlanRing: () =>
-    React.createElement("div", { "data-testid": "protection-plan-ring" }),
+  ProtectionPlanRing: ({
+    selectedToken,
+    onSelectToken,
+  }: {
+    selectedToken: string | null;
+    onSelectToken: (token: string | null) => void;
+  }) =>
+    React.createElement(
+      "div",
+      { "data-testid": "protection-plan-ring" },
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          "data-testid": "ring-select-kesm",
+          onClick: () => onSelectToken(selectedToken === "KESm" ? null : "KESm"),
+        },
+        selectedToken ? `ring:${selectedToken}` : "ring:idle",
+      ),
+    ),
 }));
 
 vi.mock("@/context/app/DemoModeContext", () => ({
@@ -328,6 +348,7 @@ describe("ProtectionTab — instrument shapes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFinancialStrategy = null;
+    mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
@@ -406,6 +427,52 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByTestId("portfolio-recommendations")).not.toBeInTheDocument();
   });
 
+  it("selection rewrites the artefact: slice tap opens the gap inspector with the one CTA (§5 rail 2)", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    // Idle: sheet closed — empty selection is a closed sheet, not closed rows.
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+
+    // Select the KESm slice: 20% held vs 60% plan → 40pts light.
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(screen.getByText(/40 points light/)).toBeInTheDocument();
+    // The one CTA: a single review action carrying the gap magnitude.
+    const review = screen.getByRole("button", { name: /Review move to KESm/ });
+    expect(review).toBeInTheDocument();
+    expect(review.textContent).toContain("~$2,000");
+    expect(screen.getAllByRole("button", { name: /Review move to/ })).toHaveLength(1);
+
+    // Tap the slice again: selection clears — the sheet unmounts, or (mid-exit
+    // fold in jsdom) is collapsed to nothing. Both are "closed" to the user.
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    const sheetAfterDeselect = screen.queryByTestId("inspector-sheet");
+    if (sheetAfterDeselect) {
+      expect(sheetAfterDeselect.style.height).toBe("0px");
+      expect(sheetAfterDeselect.style.opacity).toBe("0");
+    }
+  });
+
+  it("persona morphs the inspector: payment cycle rides the selected slice, no module meta-talk (§5 rail 4)", () => {
+    mockMoneyPurpose = "upcoming_payment";
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.getByText("Payment cycle")).toBeInTheDocument();
+    // The design-contract aside is gone (§3): the badge alone names it.
+    expect(screen.queryByText(/not a module/)).not.toBeInTheDocument();
+  });
+
   it("is quiet when aligned and Guardian is monitoring", () => {
     mockFinancialStrategy = "africapitalism";
     mockGuardianState = "monitoring";
@@ -424,5 +491,34 @@ describe("ProtectionTab — instrument shapes", () => {
       />,
     );
     expect(screen.getByTestId("shield-quiet")).toBeInTheDocument();
+  });
+
+  it("no meta-lectures: the pipeline footer and design-contract asides are gone (§3)", () => {
+    // Picker shape renders the real gallery (not the test stub) — the only
+    // way to assert its internal chrome is absent.
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.queryByText(/matches your worldview/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Same JSX renders here/)).not.toBeInTheDocument();
+    expect(screen.getByText("Choose a protection philosophy")).toBeInTheDocument();
+  });
+
+  it("freshness is the shell's DRY slot, rendered exactly once (§5 rail 6)", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(
+      <ProtectionTab
+        userRegion="USA"
+        portfolio={{ ...MOCK_PORTFOLIO, lastUpdated: Date.now() }}
+      />,
+    );
+    expect(screen.getAllByTestId("data-freshness")).toHaveLength(1);
+    expect(screen.getByText("Wallet data live")).toBeInTheDocument();
   });
 });

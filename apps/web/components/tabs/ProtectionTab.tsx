@@ -53,7 +53,6 @@ import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { TokenIcon } from "../shared/TokenIcon";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
-import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 import StatusBadge from "../shared/StatusBadge";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { rwaLegFor } from "./protect/RwaAssetCards";
@@ -532,7 +531,6 @@ export default function ProtectionTab({
             <div className="pt-3 mt-3 border-t border-purple-100 dark:border-purple-900/30">
               <div className="flex items-center gap-1.5 mb-2">
                 <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">Payment cycle</span>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">upcoming — not a module, just this slice</span>
               </div>
               <PaymentCycleReport
                 defaultLocalCurrency={riskData?.code}
@@ -559,14 +557,6 @@ export default function ProtectionTab({
         )}
         <VerifiedEvidence className="ml-auto" />
       </div>
-      <DataFreshnessIndicator
-        lastUpdated={activePortfolio.lastUpdated}
-        isStale={activePortfolio.isStale}
-        hasEstimates={activePortfolio.hasEstimates}
-        isLoading={activePortfolio.isLoading || Boolean(isLoading)}
-        error={activePortfolio.errors?.[0] ?? null}
-        onRefresh={refreshBalances}
-      />
       <div className="flex items-center justify-between gap-3">
       {shape === "quiet" ? (
         <p data-testid="shield-quiet">Plan aligned. Guardian is monitoring.</p>
@@ -613,6 +603,8 @@ export default function ProtectionTab({
         object={object}
         inspector={inspector}
         status={status}
+        portfolio={{ ...activePortfolio, isLoading: activePortfolio.isLoading || Boolean(isLoading) }}
+        onRefresh={refreshBalances}
         className="rounded-2xl border border-gray-200 bg-white px-4 py-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
       />
 
