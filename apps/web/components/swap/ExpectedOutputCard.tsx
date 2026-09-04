@@ -12,6 +12,13 @@ interface ExpectedOutputCardProps {
   slippageTolerance?: number;
   isCrossChain?: boolean;
   mounted: boolean;
+  /**
+   * Whether a quote can ever arrive for the current input. False when no
+   * wallet is connected (use-swap's getEstimate hard-returns null without a
+   * signer) — the row then renders nothing instead of a shimmer that never
+   * resolves. Default true.
+   */
+  canFetchQuote?: boolean;
   /** When set, quote tap opens the tab inspector instead of expanding inline. */
   onInspect?: () => void;
   inspected?: boolean;
@@ -34,6 +41,7 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
   slippageTolerance,
   isCrossChain = false,
   mounted,
+  canFetchQuote = true,
   onInspect,
   inspected = false,
   yieldHint,
@@ -50,8 +58,9 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
 
   const rate = hasValidAmount && hasOutput ? parsedOutput / parsedAmount : 0;
 
-  // Don't render anything until we have a valid amount
-  if (!mounted || !hasValidAmount) return null;
+  // Don't render anything until we have a valid amount — or when no quote
+  // can ever arrive (walletless), which would otherwise shimmer forever.
+  if (!mounted || !hasValidAmount || !canFetchQuote) return null;
 
   return (
     <div className="mt-1">

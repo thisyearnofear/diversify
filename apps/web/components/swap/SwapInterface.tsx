@@ -325,23 +325,27 @@ const SwapInterface = forwardRef<
             financialStrategy={financialStrategy ?? undefined}
           />
 
-          {/* Compact live quote row */}
-          <ExpectedOutputCard
-            expectedOutput={expectedOutput}
+          {/* Compact live quote row — hidden walletless: no wallet, no quote
+              can ever arrive, so showing the shimmer would read as broken. */}
+          {Boolean(address) && (
+            <ExpectedOutputCard
+              expectedOutput={expectedOutput}
             amount={amount}
             fromToken={fromToken}
             toToken={toToken}
             fromChainName={getChainName(fromChainId)}
             toChainName={getChainName(toChainId)}
-            slippageTolerance={slippageTolerance}
-            isCrossChain={isCrossChainRoute}
-            mounted={mounted}
-            onInspect={
-              onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
-            }
-            inspected={quoteInspected}
-            yieldHint={resolvedYieldHint}
-          />
+              slippageTolerance={slippageTolerance}
+              isCrossChain={isCrossChainRoute}
+              mounted={mounted}
+              canFetchQuote={Boolean(address)}
+              onInspect={
+                onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+              }
+              inspected={quoteInspected}
+              yieldHint={resolvedYieldHint}
+            />
+          )}
 
           {/* Unified inflation differentiator — one line, one moment */}
           {shouldShowIntermediateFeatures() && hasInflationBenefit && (
