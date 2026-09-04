@@ -144,10 +144,14 @@ A tab change that fails any of these is the old stack. Do not ship it.
 4. **Persona morphs the object, it does not add a module.** Caribbean
    netting stays an Exchange shape. Yield annotates the quote. RWA is a
    ring token. Payment cycle is a Shield inspector body.
-5. **Nothing sits above the object** except a real error. Banners,
+5. **Unconnected is a morph too.** The object stays: Home's moment card
+   works walletless (geo data, not wallet data), Exchange's ticket CTA
+   becomes the connect button. Never swap the object for a hero-card +
+   proof-card + how-it-works stack.
+6. **Nothing sits above the object** except a real error. Banners,
    scorecards, honesty strips, and “next step” journeys are object /
    status / footnote — or they leave.
-6. **No restored cards.** `ProtectionScorecard`, `ProtectionJourney`,
+7. **No restored cards.** `ProtectionScorecard`, `ProtectionJourney`,
    `BestYieldCard`, `RwaAssetCards`, `OptimizationInsight`,
    `SavingsLoopCard` may donate numbers and copy. They may not return as
    sections.
