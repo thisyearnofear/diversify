@@ -61,22 +61,26 @@ describe('ShellCoinField — the in-app backdrop', () => {
     const { container } = render(<ShellCoinField />);
     const sweeps = container.querySelectorAll('.coin-shine-once');
     expect(sweeps).toHaveLength(1);
-    // The sweep is delayed past the coin's settle so it crosses after landing.
-    expect((sweeps[0] as HTMLElement).style.animationDelay).toBeTruthy();
+    // The sweep waits for the coin's settle: the delay must reach the
+    // animated rect through the inherited --shine-delay custom property
+    // (animation-delay doesn't inherit; the custom property does).
+    expect(
+      (sweeps[0] as HTMLElement).style.getPropertyValue('--shine-delay'),
+    ).toBeTruthy();
   });
 });
 
 describe('Coin shine delay', () => {
-  it('applies animation-delay so the sweep can wait for the entrance', () => {
+  it('exposes the delay as --shine-delay so the rect can consume it', () => {
     const { container } = render(<Coin shine="once" shineDelay={0.9} />);
     const band = container.querySelector('.coin-shine-once') as HTMLElement;
     expect(band).toBeInTheDocument();
-    expect(band.style.animationDelay).toBe('0.9s');
+    expect(band.style.getPropertyValue('--shine-delay')).toBe('0.9s');
   });
 
   it('leaves the sweep undelayed by default', () => {
     const { container } = render(<Coin shine="once" />);
     const band = container.querySelector('.coin-shine-once') as HTMLElement;
-    expect(band.style.animationDelay).toBe('');
+    expect(band.style.getPropertyValue('--shine-delay')).toBe('');
   });
 });

@@ -20,6 +20,9 @@ export interface MaskedRevealProps {
   className?: string;
   /** Class applied to each line's inner span (typography lives here). */
   lineClassName?: string;
+  /** Element for the outer wrapper — "p" when the hero line is a paragraph
+   *  (headlines keep paragraph semantics for assistive tech). */
+  as?: "span" | "p" | "h1" | "h2" | "h3";
 }
 
 export function MaskedReveal({
@@ -27,11 +30,12 @@ export function MaskedReveal({
   delay = 0,
   className = "",
   lineClassName = "",
+  as: Tag = "span",
 }: MaskedRevealProps) {
   const reducedMotion = useReducedMotion();
 
   return (
-    <span className={`block ${className}`.trim()}>
+    <Tag className={`block ${className}`.trim()}>
       {lines.map((line, i) => (
         <span key={i} className="block overflow-hidden">
           <motion.span
@@ -44,7 +48,7 @@ export function MaskedReveal({
           </motion.span>
         </span>
       ))}
-    </span>
+    </Tag>
   );
 }
 

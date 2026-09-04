@@ -155,7 +155,7 @@ export function Coin({
           The `<g>` carries the clip; the inner `<rect>` carries the gradient +
           animation. width=20 keeps the band thin. */}
       {shineOn && !ambient && (
-        <g clipPath={`url(#${shineId}-clip)`} className={shineOnce ? "coin-shine-once" : "coin-shine"} style={{ ['--shine-duration' as string]: `${shineDuration}s`, animationDelay: shineDelay ? `${shineDelay}s` : undefined } as React.CSSProperties}>
+        <g clipPath={`url(#${shineId}-clip)`} className={shineOnce ? "coin-shine-once" : "coin-shine"} style={{ ['--shine-duration' as string]: `${shineDuration}s`, ['--shine-delay' as string]: shineDelay ? `${shineDelay}s` : undefined } as React.CSSProperties}>
           <rect
             x="-30"
             y="0"

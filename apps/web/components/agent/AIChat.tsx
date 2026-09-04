@@ -892,6 +892,7 @@ export default function AIChat() {
                       {/* Greeting hero — rises once out of the mask on mount
                           (design-language §5: motion reveals, never loops). */}
                       <MaskedReveal
+                        as="p"
                         lines={["Ask Guardian for a clear next action"]}
                         delay={0.15}
                         lineClassName="text-base font-bold text-blue-900 dark:text-blue-100"
