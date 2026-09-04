@@ -124,3 +124,4 @@ videos/
 
 # pnpm local store (created by workspace installs)
 .pnpm-store/
+.git-commit-msg.txt
