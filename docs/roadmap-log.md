@@ -4,7 +4,7 @@
 
 ### UX consolidation waves (2026-07-10)
 
-Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–9 shipped**.
+Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–11 shipped** (0–9 on 2026-07-10; 10–11 through 2026-09-04).
 
 | Wave | Focus | Status |
 |------|-------|--------|
@@ -18,8 +18,12 @@ Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–9 ship
 | **7 — Plan preview** | `getPlanPreview()` + `PlanPreviewCard` on onboarding phase 3; `PhilosophyPromptCard` DRY; shared `STRATEGY_ALLOCATIONS` | **Done** |
 | **8 — Honest price feeds** | Shared `fetchWithTimeout`; EM price failover hardened (per-provider timeouts, expired-cache-before-fabrication, no fake `+0.0%`); staleness from data timestamps + "Includes estimates" marker; EM prices API on `unifiedCache` (`realtime`); dead freshness/price hooks deleted | **Done** |
 | **9 — Chat UX overhaul** | Real SSE streaming end-to-end (Gemini `generateContentStream` + Venice `stream: true` + `chatStream()` fallback); fake thinking/source labels deleted; intent fast-path restricted to commands only (no canned marketing copy); pricing de-emphasized + failed receipts removed; mobile sheet (`dvh` + `visualViewport` + scroll lock + drag-to-dismiss + smart auto-scroll); chat analytics (`chat_send`/`chat_done`/`chat_error`); history capped (20 sent / 100 stored); dead `AIAssistant.tsx` deleted; 7 pre-existing ledger test failures fixed (env isolation) | **Done** |
+| **10 — Instrument layout** | Tabs become instruments: one manipulable object + `InspectorSheet` + one CTA; Simple dock is Shield/Home/Exchange (+ Guardian on intermediate); Home dial holdings-gated; Exchange is the swap ticket; selection rewrites the artefact (Shield ghost arc, Home region overlay); disclosure-as-IA superseded by §5 rails (fail = revert) | **Done** (backfill: 2026-08-31 → 09-03) |
+| **11 — Unconnected morphs** | All four tabs keep their object walletless (§5 rail 5, "unconnected is a morph too"): Home + Exchange (#2 — CTA becomes the connect button; walletless ticket with a network-switch guard on prefill), Shield keeps the philosophy picker (choosing a lens re-slices the ghost ring, no funds needed) and Agent makes the Guardian mascot the object (`gaze="pointer"`) (#3); shared `UnconnectedStatusTier` replaces the Home/Exchange trust duplication; −734 lines (`UnconnectedStateShell`, `PhilosophyHeroCard`, `GuardianStateScrollytelling` deleted); walletless quote shimmer hidden (`canFetchQuote`) instead of spinning forever | **Done** (2026-09-04) |
 
 **650 tests passing** after Wave 9. Key files: `hooks/use-agent-chat.ts`, `components/agent/AIChat.tsx`, `components/agent/TrustFlow.tsx`, `components/agent/ResearchCheck.tsx`, `pages/api/agent/advisor.ts`, `pages/api/agent/_advisor-core.ts`, `packages/shared/src/services/ai/ai-service.ts`, `packages/shared/src/services/ai/providers/gemini-provider.ts`, `packages/shared/src/services/ai/providers/venice-provider.ts`, `context/AIConversationContext.tsx`, `models/FunnelEvent.ts`.
+
+**1,150 tests passing** after Wave 11 (143 files). Key files: `components/shared/InstrumentShell.tsx`, `components/shared/InspectorSheet.tsx`, `components/shared/UnconnectedStatusTier.tsx`, `components/tabs/overview/NotConnectedState.tsx`, `components/tabs/overview/HomeRiskTheater.tsx`, `components/tabs/ExchangeTab.tsx`, `components/tabs/protect/ProtectionNotConnected.tsx`, `components/tabs/AgentTab.tsx`, `components/swap/SwapInterface.tsx`, `components/swap/ExpectedOutputCard.tsx`, `components/shared/GuardianMascot.tsx`.
 
 ---
 
