@@ -371,7 +371,6 @@ export default function ProtectionTab({
             Choose a protection philosophy
           </p>
           <ProtectionPlanGallery
-            mobile
             selectedId={focusedPhilosophy}
             onInspect={(id) => {
               setFocusedPhilosophy((prev) => (prev === id ? null : id));

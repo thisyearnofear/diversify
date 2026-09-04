@@ -51,7 +51,7 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
         <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
           Choose a protection philosophy
         </p>
-        <ProtectionPlanGallery mobile />
+        <ProtectionPlanGallery />
       </div>
 
       {/* The one CTA — attaches to the object, no card wrapper. */}

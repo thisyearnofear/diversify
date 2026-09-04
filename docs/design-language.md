@@ -110,6 +110,7 @@ the bundle):
 - **Blur-swap** (`phaseVariants`/`staggerChild` in onboarding): content
   swaps through a 6px blur, never a y-jump.
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
+- **Flick scroll row** (`useDragToScroll`): horizontal card rows (philosophy picker, chip strips) scroll by native touch, pointer drag with momentum on mouse/pen, and chevron buttons — the same flick grammar as `LensCoinSelector`. `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Drag-release swallows exactly one click; a new press revokes the trap.
 
 Backdrop coins obey the same budget. The app-shell field (`ShellCoinField`)
 settles once on arrival — the reveal of the post-onboarding scene — and
