@@ -110,7 +110,7 @@ the bundle):
 - **Blur-swap** (`phaseVariants`/`staggerChild` in onboarding): content
   swaps through a 6px blur, never a y-jump.
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
-- **Flick scroll row** (`useDragToScroll`): horizontal card rows (philosophy picker, chip strips) scroll by native touch, pointer drag with momentum on mouse/pen, and chevron buttons — the same flick grammar as `LensCoinSelector`. `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Drag-release swallows exactly one click; a new press revokes the trap.
+- **Flick scroll row** (`FlickScrollRow`, powered by `useDragToScroll`): the ONLY sanctioned horizontal scroll row — new rows compose the primitive instead of re-rolling `overflow-x-auto`. Native touch, pointer drag with momentum on mouse/pen, chevron buttons; `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Interactive children guard with `useDidDrag()` inside a child component (a body-level call reads the never-drag default and silently no-ops); drag-release swallows exactly one click, a new press revokes the trap. Live users: philosophy picker, Home region chips, BestYield chain toolbar, onboarding ArchetypeStrip.
 
 Backdrop coins obey the same budget. The app-shell field (`ShellCoinField`)
 settles once on arrival — the reveal of the post-onboarding scene — and
@@ -340,6 +340,7 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `AllocationRing` | `apps/web/components/shared/AllocationRing.tsx` | plan ring, exposure dial |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `MaskedReveal` | `apps/web/components/shared/MaskedReveal.tsx` | masked hero-line reveal (greeting headlines) |
+| `FlickScrollRow` | `apps/web/components/shared/FlickScrollRow.tsx` | the horizontal scroll row: drag + momentum + chevrons + edge fades |
 | `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` | real token logos w/ coin fallback |

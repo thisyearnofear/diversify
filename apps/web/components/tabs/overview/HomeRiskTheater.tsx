@@ -20,6 +20,52 @@ import type { NarrativeMoment, InflationMoment } from "@/lib/narrative/currency-
 import type { MomentFrame } from "@/lib/narrative/moment-framing";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { haptics } from "@/lib/haptics";
+import FlickScrollRow, { useDidDrag } from "@/components/shared/FlickScrollRow";
+
+interface RegionDatum {
+  region: string;
+  value: number;
+  color: string;
+}
+
+/**
+ * One region chip. A CHILD COMPONENT — useDidDrag() must be called inside
+ * the FlickScrollRow provider's tree; a hook call in the theater body
+ * would read the default (never-dragged) ref and silently no-op.
+ */
+function RegionChip({
+  region,
+  pct,
+  isSelected,
+  onSelect,
+}: {
+  region: RegionDatum;
+  pct: number;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  const didDragRef = useDidDrag();
+  return (
+    <button
+      type="button"
+      aria-pressed={isSelected}
+      onClick={() => {
+        if (didDragRef.current) return; // release after a drag is not a choice
+        haptics.tap();
+        onSelect();
+      }}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors min-h-[32px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+        isSelected
+          ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+          : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/15"
+      }`}
+    >
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: region.color }} />
+      <span className="truncate max-w-[80px]">{region.region}</span>
+      <span className="tabular-nums opacity-70">{Math.round(pct)}%</span>
+    </button>
+  );
+}
 
 interface HomeRiskTheaterProps {
   moment: NarrativeMoment | null;
@@ -119,33 +165,29 @@ export function HomeRiskTheater({
         })}
       </div>
 
-      {/* Region chips — same selection surface as bar, in row form */}
-      <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide pb-1" role="group" aria-label="Holdings by region">
+      {/* Region chips — same selection surface as bar, in row form.
+          FlickScrollRow: drag/flick when many regions overflow. */}
+      <FlickScrollRow
+        className="mt-2 gap-1.5 pb-1"
+        chevrons={false}
+        role="group"
+        aria-label="Holdings by region"
+      >
         {regionData.map((r) => {
           const pct = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
-          const isSelected = focusedRegion === r.region;
           return (
-            <button
+            <RegionChip
               key={r.region}
-              type="button"
-              aria-pressed={isSelected}
-              onClick={() => {
-                haptics.tap();
-                onSelectRegion(focusedRegion === r.region ? null : r.region);
-              }}
-              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors min-h-[32px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                isSelected
-                  ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-                  : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/15"
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-              <span className="truncate max-w-[80px]">{r.region}</span>
-              <span className="tabular-nums opacity-70">{Math.round(pct)}%</span>
-            </button>
+              region={r}
+              pct={pct}
+              isSelected={focusedRegion === r.region}
+              onSelect={() =>
+                onSelectRegion(focusedRegion === r.region ? null : r.region)
+              }
+            />
           );
         })}
-      </div>
+      </FlickScrollRow>
 
       {/* Quiet hint when a region is focused — selected region's share */}
       {focusedRegion && (

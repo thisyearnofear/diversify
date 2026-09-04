@@ -8,6 +8,7 @@ import {
 import { useSwap } from '../../hooks/use-swap';
 import { useNavigation, FOCUS_HIGHLIGHT_MS } from '@/context/app/NavigationContext';
 import { trackFunnelEvent } from '@/lib/analytics';
+import FlickScrollRow, { useDidDrag } from '@/components/shared/FlickScrollRow';
 
 const ARBITRUM = 42161;
 
@@ -81,6 +82,42 @@ interface BestYieldCardProps {
  * plus an unlock prompt for the personalized layer. The tier is resolved
  * server-side from on-chain balance, so this card just sends the address.
  */
+/**
+ * One chain chip. A CHILD COMPONENT — useDidDrag() must be called inside
+ * the FlickScrollRow provider's tree; a hook call in the card body would
+ * read the default (never-dragged) ref and silently no-op.
+ */
+function ChainChip({
+  chainId,
+  chainName,
+  isActive,
+  onToggle,
+}: {
+  chainId: number;
+  chainName: string;
+  isActive: boolean;
+  onToggle: (chainId: number, chainName: string) => void;
+}) {
+  const didDragRef = useDidDrag();
+  return (
+    <button
+      type="button"
+      aria-pressed={isActive}
+      onClick={() => {
+        if (didDragRef.current) return; // release after a drag is not a choice
+        onToggle(chainId, chainName);
+      }}
+      className={`shrink-0 min-h-[44px] px-4 rounded-full text-xs font-bold transition-colors border ${
+        isActive
+          ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
+          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
+      }`}
+    >
+      {chainName}
+    </button>
+  );
+}
+
 export function BestYieldCard({ userAddress, className = '' }: BestYieldCardProps) {
   const { data, isLoading, error } = useBestYield(userAddress);
   const { focusedYieldKey, setFocusedYieldKey, navigateToSwap } = useNavigation();
@@ -201,30 +238,21 @@ export function BestYieldCard({ userAddress, className = '' }: BestYieldCardProp
       </div>
 
       {availableChains.length > 1 && (
-        <div
+        <FlickScrollRow
           role="toolbar"
           aria-label="Filter by chain"
-          className="flex overflow-x-auto gap-2 mb-3 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          className="gap-2 mb-3 -mx-1 px-1"
         >
-          {availableChains.map(([chainId, chainName]) => {
-            const isActive = activeChainIds.has(chainId);
-            return (
-              <button
-                key={chainId}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => toggleChain(chainId, chainName)}
-                className={`shrink-0 min-h-[44px] px-4 rounded-full text-xs font-bold transition-colors border ${
-                  isActive
-                    ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900 dark:border-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
-              >
-                {chainName}
-              </button>
-            );
-          })}
-        </div>
+          {availableChains.map(([chainId, chainName]) => (
+            <ChainChip
+              key={chainId}
+              chainId={chainId}
+              chainName={chainName}
+              isActive={activeChainIds.has(chainId)}
+              onToggle={toggleChain}
+            />
+          ))}
+        </FlickScrollRow>
       )}
 
       <ul className="space-y-2" aria-label="Best yield opportunities">

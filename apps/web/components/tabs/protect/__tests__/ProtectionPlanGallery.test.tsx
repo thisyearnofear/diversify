@@ -43,9 +43,9 @@ vi.mock("@/components/protection-cards/cards", () => ({
 
 import { ProtectionPlanGallery } from "../ProtectionPlanGallery";
 
-function makeCardDraggable(gallery: HTMLElement) {
-  const track = gallery.querySelector<HTMLElement>('[data-testid="gallery-track"]');
-  if (!track) throw new Error("gallery track not found");
+function trackOf() {
+  const track = document.querySelector<HTMLElement>('[data-testid="flick-row-track"]');
+  if (!track) throw new Error("flick-row track not found");
   return track;
 }
 
@@ -90,47 +90,47 @@ describe("ProtectionPlanGallery — flick row affordances (§4/§5)", () => {
 
   it("row is the one scroll idiom: proximity snap, hidden scrollbar, no dead grid branch", () => {
     render(<ProtectionPlanGallery />);
-    const track = screen.getByTestId("gallery-track");
+    const track = screen.getByTestId("flick-row-track");
     expect(track.className).toContain("snap-proximity");
     expect(track.className).toContain("scrollbar-hide");
     expect(screen.queryByText(/Same JSX renders here/)).not.toBeInTheDocument();
   });
 
-  it("chevron pages the row and is hidden at the start edge", () => {
+  it("chevron pages the row and hides at the edges", () => {
     const scrollBy = vi.fn();
     render(<ProtectionPlanGallery />);
 
     // jsdom has no layout: scrollWidth === clientWidth → both edges "at rest",
-    // so the next chevron must NOT render until overflow exists.
-    expect(screen.queryByTestId("gallery-next")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("gallery-prev")).not.toBeInTheDocument();
+    // so neither chevron renders until overflow exists.
+    expect(screen.queryByTestId("flick-row-next")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("flick-row-prev")).not.toBeInTheDocument();
 
-    const track = screen.getByTestId("gallery-track");
+    const track = trackOf();
     // Simulate an overflowing row (as in a real viewport).
     Object.defineProperty(track, "scrollWidth", { value: 1000, configurable: true });
     Object.defineProperty(track, "clientWidth", { value: 400, configurable: true });
     track.scrollBy = scrollBy;
     fireEvent.scroll(track);
-    expect(screen.getByTestId("gallery-next")).toBeInTheDocument();
+    expect(screen.getByTestId("flick-row-next")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId("gallery-next"));
+    fireEvent.click(screen.getByTestId("flick-row-next"));
     expect(scrollBy).toHaveBeenCalledWith({ left: 276, behavior: "smooth" });
 
     // Scroll to the far end: next disappears, prev appears.
     Object.defineProperty(track, "scrollLeft", { value: 600, configurable: true });
     fireEvent.scroll(track);
-    expect(screen.queryByTestId("gallery-next")).not.toBeInTheDocument();
-    expect(screen.getByTestId("gallery-prev")).toBeInTheDocument();
+    expect(screen.queryByTestId("flick-row-next")).not.toBeInTheDocument();
+    expect(screen.getByTestId("flick-row-prev")).toBeInTheDocument();
   });
 
   it("a mouse drag does not select the card under the release point", () => {
     render(<ProtectionPlanGallery />);
-    const track = makeCardDraggable(screen.getByTestId("gallery-scroller").parentElement as HTMLElement);
+    const track = trackOf();
     const card = screen.getByRole("button", { name: /Select Africapitalism/i });
 
     fireEvent.pointerDown(track, { pointerId: 1, pointerType: "mouse", button: 0, clientX: 100 });
     fireEvent.pointerMove(track, { pointerId: 1, pointerType: "mouse", clientX: 90 });
-    fireEvent.pointerMove(track, { pointerId: 1, pointerType: "mouse", clientX: 60 }); // 40px → past dead zone
+    fireEvent.pointerMove(track, { pointerId: 1, pointerType: "mouse", clientX: 60 }); // past dead zone
     fireEvent.pointerUp(track, { pointerId: 1, pointerType: "mouse", clientX: 60 });
     // The click the browser would fire on the card after the drag:
     fireEvent.click(card);
@@ -140,7 +140,7 @@ describe("ProtectionPlanGallery — flick row affordances (§4/§5)", () => {
 
   it("a new press after a drag revokes the suppression — the next click selects", () => {
     render(<ProtectionPlanGallery />);
-    const track = makeCardDraggable(screen.getByTestId("gallery-scroller").parentElement as HTMLElement);
+    const track = trackOf();
     const card = screen.getByRole("button", { name: /Select Africapitalism/i });
 
     // Drag completes; the click the browser fires on release is swallowed.
