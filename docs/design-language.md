@@ -111,6 +111,16 @@ the bundle):
   swaps through a 6px blur, never a y-jump.
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
 
+Backdrop coins obey the same budget. The app-shell field (`ShellCoinField`)
+settles once on arrival — the reveal of the post-onboarding scene — and
+re-settles once when the philosophy accent changes (a confirmation). The
+onboarding `.coin-float` drift loop does not cross into the app: in-app,
+the motif is still life in the desktop margins, and the tab's object keeps
+the motion budget. The field's one hero coin plays a single shine sweep
+after it lands (`shine="once"` delayed past its settle — the
+`InstrumentWait` grammar), and the AIChat empty-state greeting headline
+rises once via `MaskedReveal`. One occurrence each, then still.
+
 Each tab is an **instrument**, not a feed of cards:
 
 1. **Object** — the thing you manipulate (risk moment, exposure dial,
@@ -313,13 +323,14 @@ shield's visual DNA and keeps the redesign's motion discipline.
 
 | Primitive | Path | Used for |
 |---|---|---|
-| `Coin`, `FloatingCoins` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif, ambient field |
+| `Coin`, `FloatingCoins`, `ShellCoinField` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif; drift fields (onboarding), one-shot shell backdrop (in-app) |
 | `GuardianMascot` | `apps/web/components/shared/GuardianMascot.tsx` | digital shield mascot, mood + gaze system |
 | `LensCoinSelector` | `apps/web/components/onboarding/LensCoinSelector.tsx` | flickable selection row |
 | `InstrumentShell` | `apps/web/components/shared/InstrumentShell.tsx` | tab layout: object + inspector + status |
 | `InspectorSheet` | `apps/web/components/shared/InspectorSheet.tsx` | selection-bound fold/sheet; closed when idle |
 | `AllocationRing` | `apps/web/components/shared/AllocationRing.tsx` | plan ring, exposure dial |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
+| `MaskedReveal` | `apps/web/components/shared/MaskedReveal.tsx` | masked hero-line reveal (greeting headlines) |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` | real token logos w/ coin fallback |
 | `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |

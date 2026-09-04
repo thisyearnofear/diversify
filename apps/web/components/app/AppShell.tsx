@@ -20,31 +20,40 @@ import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/t
 
 import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
+import { ShellCoinField } from "@/components/shared/FloatingCoins";
 
 /**
  * AppBackdrop — the post-onboarding continuation of onboarding's ambience.
  *
- * Onboarding bathes the screen in philosophy-tinted radial light; the app
- * shell then dropped to a flat gray-100/gray-900 and the identity vanished.
- * This restores it, statically: two ultra-quiet radial washes tinted by the
- * user's chosen archetype accent (warm amber counterpoint, same pairing the
- * welcome screen uses). No animation — the motion budget stays spent on the
- * one expressive object per screen, and §5 retires ambient loops. On
- * desktop the wide margins around the max-w-md column are where this
- * actually lives; on mobile it reads as a subtle top glow behind the header.
+ * Onboarding bathes the screen in philosophy-tinted radial light and
+ * drifting coins; the app shell then dropped to a flat gray-100/gray-900
+ * and the identity vanished. This restores it in two §5-compliant layers:
+ * static radial washes tinted by the user's chosen archetype accent (warm
+ * amber counterpoint, same pairing the welcome screen uses), plus
+ * ShellCoinField — the coin motif settling into the desktop margins ONCE
+ * on arrival, then still. No drift loop: the motion budget stays spent on
+ * the one expressive object per screen, and §5 retires ambient loops. The
+ * field re-settles once if the philosophy accent changes — a confirmation,
+ * not ambience. On mobile the full-width column covers the coins, so the
+ * wash alone carries the ambience as a subtle top glow behind the header.
  */
 function AppBackdrop({ accent }: { accent: string }) {
   return (
     <div
       aria-hidden="true"
       className="fixed inset-0 -z-10 pointer-events-none"
-      style={{
-        background: [
-          `radial-gradient(90% 55% at 50% 0%, ${accent}14 0%, transparent 70%)`,
-          `radial-gradient(70% 40% at 50% 100%, rgba(251,191,36,0.06) 0%, transparent 70%)`,
-        ].join(', '),
-      }}
-    />
+    >
+      <div
+        className="absolute inset-0"
+        style={{
+          background: [
+            `radial-gradient(90% 55% at 50% 0%, ${accent}14 0%, transparent 70%)`,
+            `radial-gradient(70% 40% at 50% 100%, rgba(251,191,36,0.06) 0%, transparent 70%)`,
+          ].join(', '),
+        }}
+      />
+      <ShellCoinField accent={accent} />
+    </div>
   );
 }
 

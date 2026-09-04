@@ -121,3 +121,6 @@ videos/
 
 # Agent scratch workspace
 .zcode/
+
+# pnpm local store (created by workspace installs)
+.pnpm-store/

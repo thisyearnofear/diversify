@@ -13,9 +13,15 @@
  * the drift animation lives in globals.css (.coin-float) and is
  * disabled under prefers-reduced-motion. Purely decorative:
  * pointer-events-none + aria-hidden.
+ *
+ * `ShellCoinField` carries the motif into the app shell (post-onboarding).
+ * It obeys design-language §5 — motion reveals/confirms, never idles — so
+ * it settles ONCE on arrival and never drifts. See its doc comment below.
  */
 
 import React, { useEffect, useId, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
 
 /** Linear-interpolate two hex colors. t=0 → a, t=1 → b. */
 function mix(hexA: string, hexB: string, t: number): string {
@@ -47,6 +53,9 @@ export interface CoinProps {
   shine?: boolean | "once";
   /** Shine loop period in seconds. */
   shineDuration?: number;
+  /** Delay before the shine sweep starts (s) — coordinates the sweep with
+   *  an entrance settle so the band crosses AFTER the coin lands. */
+  shineDelay?: number;
 }
 
 export function Coin({
@@ -61,6 +70,7 @@ export function Coin({
   shine = false,
   /** Shine loop period in seconds. */
   shineDuration = 2.6,
+  shineDelay = 0,
 }: CoinProps) {
   const gradId = useId();
   const shineId = useId();
@@ -145,7 +155,7 @@ export function Coin({
           The `<g>` carries the clip; the inner `<rect>` carries the gradient +
           animation. width=20 keeps the band thin. */}
       {shineOn && !ambient && (
-        <g clipPath={`url(#${shineId}-clip)`} className={shineOnce ? "coin-shine-once" : "coin-shine"} style={{ ['--shine-duration' as string]: `${shineDuration}s` } as React.CSSProperties}>
+        <g clipPath={`url(#${shineId}-clip)`} className={shineOnce ? "coin-shine-once" : "coin-shine"} style={{ ['--shine-duration' as string]: `${shineDuration}s`, ['--shine-delay' as string]: shineDelay ? `${shineDelay}s` : undefined } as React.CSSProperties}>
           <rect
             x="-30"
             y="0"
@@ -250,3 +260,123 @@ export function FloatingCoins({ variant = 'panel', accent = null, className = ''
     </div>
   );
 }
+
+// ── Shell field — the in-app backdrop ─────────────────────────────────
+
+interface ShellCoinSpec {
+  left: string;
+  top: string;
+  size: number;
+  symbol: string;
+  opacity: number;
+  /** Resting rotation (deg) — the scattered, minted feel without motion. */
+  rotate: number;
+  blur?: number;
+  /** The one hero coin: richer variant + a single shine sweep after it
+   *  lands (the `InstrumentWait` grammar — one sweep, never a loop). */
+  hero?: boolean;
+  /** Coins marked tinted take the `accent` color when one is provided. */
+  tinted?: boolean;
+}
+
+// Desktop-margin field for the app shell (AppBackdrop). Coins hug the
+// margins around the centered content column — where the AppBackdrop wash
+// already lives — so they never sit under text (§1 surfaces stay solid).
+// Deliberately quieter than the onboarding fields (opacity ≤ 0.36 vs
+// 0.55): in-app, the tab's object owns the color (§2) and the motif drops
+// to quiet. Blur stays within the ambient budget (≤ 3 coins, ≤ 3px).
+const SHELL_COINS: ShellCoinSpec[] = [
+  // Left margin (between the desktop rail and the content column).
+  { left: '6%', top: '14%', size: 56, symbol: '$', opacity: 0.34, rotate: -10 },
+  { left: '12%', top: '52%', size: 34, symbol: '€', opacity: 0.26, rotate: 8, tinted: true },
+  { left: '4%', top: '80%', size: 24, symbol: '¢', opacity: 0.2, rotate: -6, blur: 2 },
+  { left: '16%', top: '30%', size: 20, symbol: '¥', opacity: 0.18, rotate: 12, blur: 3 },
+  // Right margin. The largest coins may tuck behind the column edge at
+  // exactly-lg widths — that emergence from behind solid content is the
+  // intended depth cue, never a readability risk (the coins are behind).
+  { left: '89%', top: '10%', size: 44, symbol: '€', opacity: 0.3, rotate: -8 },
+  { left: '83%', top: '44%', size: 62, symbol: '$', opacity: 0.36, rotate: 10, tinted: true, hero: true },
+  { left: '92%', top: '72%', size: 28, symbol: '₱', opacity: 0.24, rotate: -12, blur: 2, tinted: true },
+  { left: '79%', top: '88%', size: 22, symbol: '£', opacity: 0.18, rotate: 6 },
+];
+
+export interface ShellCoinFieldProps {
+  /** Archetype accent — tints the marked coins to the chosen philosophy. */
+  accent?: string | null;
+  className?: string;
+}
+
+/**
+ * ShellCoinField — the post-onboarding coin backdrop for the app shell.
+ *
+ * §5-compliant ambience: the field settles ONCE on arrival (a reveal —
+ * the scene being set as onboarding hands off to the app) and re-settles
+ * once when the philosophy accent changes (a confirmation, via the key
+ * remount). It NEVER drifts: the onboarding `.coin-float` loop does not
+ * cross into the app, where the motion budget belongs to the tab's one
+ * expressive object. The 7° turn-in echoes the drift keyframes' rotation
+ * range, so the settle rhymes with onboarding without looping. The one
+ * hero coin plays a single shine sweep after it lands (`shine="once"`,
+ * delayed past its settle) — the same one-sweep grammar as
+ * `InstrumentWait`, then still.
+ *
+ * Desktop-only (`hidden lg:block`): mobile's full-width column would hide
+ * the coins under solid cards while still costing compositor time — the
+ * gradient wash is the mobile ambience. Reduced motion: the field renders
+ * static at final opacity, no settle. No infinite animation means no
+ * visibilitychange pause and zero idle compositor cost.
+ */
+export function ShellCoinField({ accent = null, className = '' }: ShellCoinFieldProps) {
+  const reducedMotion = useReducedMotion();
+  return (
+    <div
+      // Keying on the accent remounts the field when the philosophy
+      // changes, replaying the one-shot settle in the new colour.
+      key={accent ?? 'gold'}
+      className={`absolute inset-0 hidden overflow-hidden pointer-events-none lg:block ${className}`}
+      data-coin-field="shell"
+      data-testid="coin-field-shell"
+      aria-hidden="true"
+    >
+      {SHELL_COINS.map((c, i) => {
+        const settleDelay = 0.15 + i * STAGGER_STEP_S;
+        return (
+          <motion.div
+            key={i}
+            className="absolute"
+            style={{
+              left: c.left,
+              top: c.top,
+              filter: c.blur ? `blur(${c.blur}px)` : undefined,
+            }}
+            initial={
+              reducedMotion
+                ? false
+                : { opacity: 0, scale: 0.85, y: 12, rotate: c.rotate - 7 }
+            }
+            animate={{ opacity: c.opacity, scale: 1, y: 0, rotate: c.rotate }}
+            transition={
+              reducedMotion
+                ? { duration: 0 }
+                : { ...springSoft, delay: settleDelay }
+            }
+          >
+            <Coin
+              size={c.size}
+              symbol={c.symbol}
+              color={accent && c.tinted ? accent : GOLD}
+              // The hero coin takes the richer selection treatment (gloss +
+              // full ring) — this IS the hero moment the variant reserves.
+              variant={c.hero ? 'selection' : 'ambient'}
+              shine={c.hero && !reducedMotion ? 'once' : false}
+              // Sweep starts as the coin lands: settle delay + the
+              // springSoft settle (~0.6s to visually come to rest).
+              shineDelay={c.hero ? settleDelay + 0.6 : 0}
+            />
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+}
+

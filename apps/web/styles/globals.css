@@ -367,12 +367,17 @@ body {
    The long total duration + short visible window means the shine
    appears ~once every 3 s and only for ~700 ms of that — eye-catching
    but never busy. */
+/* The delay is a CSS custom property (NOT inline animationDelay on the <g>):
+   the animation runs on this rect, and `animation-delay` doesn't inherit —
+   the custom property does. Callers set --shine-delay via Coin's shineDelay. */
 .coin-shine rect {
   animation: coin-shine-sweep var(--shine-duration, 2.6s) ease-in-out infinite;
+  animation-delay: var(--shine-delay, 0s);
   will-change: transform;
 }
 .coin-shine-once rect {
   animation: coin-shine-sweep var(--shine-duration, 1.8s) ease-out 1;
+  animation-delay: var(--shine-delay, 0s);
   will-change: transform;
 }
 @keyframes coin-shine-sweep {
