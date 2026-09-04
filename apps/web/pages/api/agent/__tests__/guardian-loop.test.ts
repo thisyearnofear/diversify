@@ -92,6 +92,21 @@ vi.mock('../../../../lib/guardian/cycle-monitor-run', () => ({
   }),
 }));
 
+// The execute-success path snapshots Guardian state to 0G DA
+// (zeroGPersistenceService.snapshotGuardianState). Without this mock, a
+// leaked VAULT_PRIVATE_KEY (from .env.local) made the storage service take
+// its real-upload branch and hang the suite on the testnet indexer until
+// the 5s timeout — exactly the three execute-path tests, and only those.
+// Mocked at the persistence boundary so the handler's own snapshot/record
+// logic (cid → latestDaSnapshot) still runs.
+vi.mock('@diversifi/shared-0g/src/services/persistence-service', () => ({
+  zeroGPersistenceService: {
+    snapshotGuardianState: vi
+      .fn()
+      .mockResolvedValue({ cid: 'mock-da-cid', url: 'https://mock.0g/ipfs/mock-da-cid' }),
+  },
+}));
+
 import handler from '../guardian-loop';
 
 type ApiMock = {

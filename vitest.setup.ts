@@ -18,3 +18,35 @@ import { cleanup } from '@testing-library/react';
 afterEach(() => {
   cleanup();
 });
+
+/**
+ * Scrub real signer credentials from the test environment.
+ *
+ * Vitest auto-loads `.env.local`, which contains production signer keys
+ * (VAULT_PRIVATE_KEY, LEDGER_PRIVATE_KEY). When those leak into tests,
+ * code paths guarded by "is a signer key configured" don't take their
+ * mock-fallback branch and instead attempt REAL network I/O — e.g. the
+ * guardian-loop DA snapshot ran a genuine 0G Storage upload against the
+ * testnet indexer and hung the suite until the 5s timeout. This is the
+ * same leak class that broke recommendation-ledger.service tests before
+ * (AGENTS.md, chat-UX-overhaul section).
+ *
+ * setupFiles run inside every test worker, so this is guaranteed to apply
+ * to each test file (a globalSetup change would not be, since it runs in
+ * a separate process). Tests that need a signer set a SYNTHETIC key
+ * explicitly (see recommendation-ledger.service.test.ts), which is
+ * unaffected by this scrub.
+ */
+const REAL_SIGNER_ENV_KEYS = [
+  'VAULT_PRIVATE_KEY',
+  'LEDGER_PRIVATE_KEY',
+  'GUARDIAN_PRIVATE_KEY',
+  'DEPLOYER_PRIVATE_KEY',
+  'MAINNET_DEPLOYER_KEY',
+] as const;
+
+for (const key of REAL_SIGNER_ENV_KEYS) {
+  if (process.env[key]) {
+    delete process.env[key];
+  }
+}
