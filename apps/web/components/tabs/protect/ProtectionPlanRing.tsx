@@ -57,8 +57,10 @@ export function ProtectionPlanRing({
     [portfolio, allocations],
   );
   const totalValue = walletView.totalUsd;
-  const heldPctByToken = new Map(
-    walletView.holdings.map((holding) => [holding.symbol, holding.percent]),
+  // Memoized: it is a dependency of the enriched/primary memos below.
+  const heldPctByToken = useMemo(
+    () => new Map(walletView.holdings.map((holding) => [holding.symbol, holding.percent])),
+    [walletView.holdings],
   );
 
   // Funded: ring is live holdings. Empty: ring is the plan waiting for funds.
@@ -86,14 +88,12 @@ export function ProtectionPlanRing({
     }));
   }, [archetype, walletView.holdings, allocations]);
 
-  if (!archetype || allocations.length === 0 || slices.length === 0) return null;
-
+  // Selection derivations feed the count-up hook below — and every hook
+  // must run before the early return (rules of hooks): the ring simply
+  // renders null when there is no plan to draw.
   const selected = allocations.find((a) => a.token === selectedToken) ?? null;
-  const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
-  const selectedSymbol = selectedLive?.id ?? selected?.token ?? null;
   const selectedHeld = selectedToken ? heldPctByToken.get(selectedToken) ?? 0 : 0;
   const gapPts = selected ? selected.percent - selectedHeld : 0;
-  const onTarget = Boolean(selected) && Math.abs(gapPts) <= 2;
 
   const reducedMotion = useReducedMotion();
   const tilt = usePointerTilt(!reducedMotion);
@@ -159,6 +159,12 @@ export function ProtectionPlanRing({
       },
     ];
   }, [slices, primary, dust, dustTotalHeld, dustTotalPlan, needsDisclosure, showDust]);
+
+  if (!archetype || allocations.length === 0 || slices.length === 0) return null;
+
+  const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
+  const selectedSymbol = selectedLive?.id ?? selected?.token ?? null;
+  const onTarget = Boolean(selected) && Math.abs(gapPts) <= 2;
 
   const projections = portfolio?.projections;
   const purchasingPowerLost = projections?.currentPath?.purchasingPowerLost ?? 0;
