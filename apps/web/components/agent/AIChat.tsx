@@ -25,6 +25,7 @@ import { ResearchCheck } from "./ResearchCheck";
 import { ResearchReceipt } from "./ResearchReceipt";
 import { TrustFlow } from "./TrustFlow";
 import { GuardianMascot } from "../shared/GuardianMascot";
+import { MaskedReveal } from "../shared/MaskedReveal";
 import { GUARDIAN_DRAWER_SUBTITLE } from "@/constants/guardian-copy";
 import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
@@ -888,9 +889,13 @@ export default function AIChat() {
                     <GuardianMascot size={82} mood="happy" gaze="pointer" />
                     
                     <div className="space-y-2">
-                      <p className="text-base font-bold text-blue-900 dark:text-blue-100">
-                        Ask Guardian for a clear next action
-                      </p>
+                      {/* Greeting hero — rises once out of the mask on mount
+                          (design-language §5: motion reveals, never loops). */}
+                      <MaskedReveal
+                        lines={["Ask Guardian for a clear next action"]}
+                        delay={0.15}
+                        lineClassName="text-base font-bold text-blue-900 dark:text-blue-100"
+                      />
                       <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">
                         Start with a portfolio summary, currency risk check, or a payment-readiness plan — with verifiable evidence when it matters.
                       </p>
