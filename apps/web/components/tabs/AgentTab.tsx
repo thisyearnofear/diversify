@@ -15,15 +15,15 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import { GUARDIAN_CONTROL_TITLE } from "@/constants/guardian-copy";
-import { UnconnectedStateShell } from "../shared/UnconnectedStateShell";
-import type { HowItWorksStep } from "../shared/UnconnectedStateShell";
 import WalletButton from "../wallet/WalletButton";
 import { useDemoMode } from "../../context/app/DemoModeContext";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InstrumentWait } from "../shared/InstrumentWait";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
+import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
+import { GuardianMascot } from "../shared/GuardianMascot";
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -32,24 +32,6 @@ interface AgentTabProps {
   refreshBalances?: () => Promise<void>;
   onNavigateToFund?: () => void;
 }
-
-const HOW_IT_WORKS: HowItWorksStep[] = [
-  {
-    icon: "🛡️",
-    title: "Guardian watches",
-    text: "Guardian observes currency risk, your protection plan, and market conditions within your permission bounds.",
-  },
-  {
-    icon: "⛓",
-    title: "Evidence-backed",
-    text: "Every consequential move is anchored with on-chain receipts and verifiable evidence.",
-  },
-  {
-    icon: "⚡",
-    title: "Bounded execution",
-    text: "Auto-Saver can act within daily limits you set — or wait for your approval when outside bounds.",
-  },
-];
 
 export default function AgentTab({
   isMiniPay,
@@ -87,26 +69,30 @@ export default function AgentTab({
   }, [askAdvisor]);
 
   if (!address) {
-    const heroCard = (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-900 dark:text-white p-6 rounded-2xl">
-        <h3 className="text-xl font-black uppercase tracking-tight">Guardian</h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 leading-relaxed">
-          Guardian explains risk, proposes moves within your bounds, and proves
-          what happened.
+    // Unconnected morph (§5 rail 5): the Guardian ITSELF is the object —
+    // gaze="pointer" is the sanctioned second surface (WelcomeScreen + AIChat
+    // empty state were the first two). One sentence states the object's job;
+    // the connect CTA attaches; trust + demo live in the shared status tier.
+    const object = (
+      <div data-testid="guardian-unconnected-object" className="flex flex-col items-center text-center py-2">
+        <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
+        <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
+          Guardian
+        </h2>
+        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-[300px] leading-relaxed">
+          Explains risk, proposes moves within your bounds, and proves what
+          happened on-chain.
         </p>
-        <div className="mt-4">
-          <WalletButton variant="inline" className="w-full" />
+        <div className="mt-4 w-full">
+          <WalletButton variant="primary" className="w-full" />
         </div>
       </div>
     );
 
     return (
-      <UnconnectedStateShell
-        heroCard={heroCard}
-        showProofCard={false}
-        showDemoCta={true}
-        onEnableDemo={enableDemoMode}
-        howItWorks={HOW_IT_WORKS}
+      <InstrumentShell
+        object={object}
+        status={<UnconnectedStatusTier onEnableDemo={enableDemoMode} />}
       />
     );
   }

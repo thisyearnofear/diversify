@@ -1,56 +1,41 @@
 /**
- * ProtectionNotConnected — Shown when the user has no wallet connected.
- * Uses the shared UnconnectedStateShell for consistent layout.
+ * ProtectionNotConnected — Shield's unconnected morph.
+ *
+ * §5 rail 5 (unconnected is a morph too): the philosophy picker is Shield's
+ * object, and it works walletless — choosing a lens rewrites the ghost ring
+ * and needs no funds. So the picker STAYS the object; the connect CTA
+ * attaches to it; trust + demo live in the shared status tier. No hero
+ * card, no proof card, no how-it-works stack.
+ *
+ * Persona morphs the object (rail 4): an APAC philosophy shows the APAC
+ * honesty banner in the status tier; a Caribbean philosophy shows the
+ * Caribbean one. The live proof ticker rides along as a status-tier line.
  */
+
 import React from "react";
-import { Card, ConnectWalletPrompt } from "../../shared/TabComponents";
 import WalletButton from "../../wallet/WalletButton";
 import type { UserExperienceMode } from "@/context/app/types";
-import { WALLET_CONNECT_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
-import { LiveProofTicker } from "../../shared/LiveProofCard";
-import { UnconnectedStateShell } from "../../shared/UnconnectedStateShell";
-import type { HowItWorksStep } from "../../shared/UnconnectedStateShell";
-import { GuardianStateScrollytelling } from "./GuardianStateScrollytelling";
+import { InstrumentShell } from "../../shared/InstrumentShell";
+import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
-import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
-import { PhilosophyHeroCard } from "@/components/protection-cards/PhilosophyHeroCard";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { useUserRegion } from "@/hooks/use-user-region";
 import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
 import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBanner";
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
-import { useProtectionProfile } from "@/hooks/use-protection-profile";
-import { useUserRegion } from "@/hooks/use-user-region";
+import { LiveProofTicker } from "../../shared/LiveProofCard";
 
 interface Props {
   experienceMode: UserExperienceMode;
   onEnableDemo?: () => void;
 }
 
-const HOW_IT_WORKS: HowItWorksStep[] = [
-  {
-    icon: "📈",
-    title: "Review risk context",
-    text: "After you connect, compare portfolio information with available market and inflation data.",
-  },
-  {
-    icon: "🎯",
-    title: "Choose a values lens",
-    text: "Explore approaches that reflect your goals and relationship with money.",
-  },
-  {
-    icon: "🔄",
-    title: "Review your options",
-    text: "Consider diversification across currencies and asset types before acting.",
-  },
-];
-
-export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) {
+export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnableDemo }: Props) {
   const { financialStrategy } = useStrategy();
   const { config: profileConfig } = useProtectionProfile();
   const { region: detectedRegion } = useUserRegion();
-  const archetypeId = strategyToArchetype(financialStrategy);
-  const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
   const showApacBanner = needsApacRailMessaging(
     financialStrategy ?? profileConfig.philosophy,
     profileConfig.userRegion ?? detectedRegion,
@@ -60,66 +45,32 @@ export function ProtectionNotConnected({ experienceMode, onEnableDemo }: Props) 
     profileConfig.userRegion ?? detectedRegion,
   );
 
-  const heroCard = archetype ? (
-    <PhilosophyHeroCard
-      archetype={archetype}
-      variant="hero"
-      experienceMode={experienceMode}
-      walletMessage={WALLET_CONNECT_COPY.activatePlan(archetype.name)}
-    />
-  ) : (
-    <Card className="bg-gradient-to-br from-indigo-600 to-purple-700 text-white p-6">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="text-xl font-black uppercase tracking-tight">
-            Shield your purchasing power
-          </h3>
-          <p className="text-indigo-100 text-xs font-bold opacity-80 mt-1">
-            Explore risk context and values-led protection approaches.
-          </p>
-        </div>
-        <span className="text-3xl">🤖</span>
+  const object = (
+    <div className="space-y-4" data-testid="shield-unconnected-object">
+      <div data-testid="shield-picker">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+          Choose a protection philosophy
+        </p>
+        <ProtectionPlanGallery mobile />
       </div>
-      <ConnectWalletPrompt
-        message={WALLET_CONNECT_COPY.generic}
-        WalletButtonComponent={<WalletButton variant="inline" />}
-        experienceMode={experienceMode}
-      />
-    </Card>
+
+      {/* The one CTA — attaches to the object, no card wrapper. */}
+      <WalletButton variant="primary" className="w-full" />
+    </div>
   );
 
-  return (
-    <UnconnectedStateShell
-      heroCard={heroCard}
-      showProofCard={true}
-      proofCardSide="below"
-      proofCardVariant={experienceMode === 'beginner' ? 'compact' : 'full'}
-      showDemoCta={true}
-      onEnableDemo={onEnableDemo}
-      demoCtaSide="above"
-      howItWorks={HOW_IT_WORKS}
-    >
-      {!archetype && (
-        <div className="rounded-2xl bg-white/[0.02] backdrop-blur-sm py-5 -mx-4 sm:mx-0 sm:rounded-3xl">
-          <ProtectionPlanGallery mobile />
+  const status = (
+    <div className="space-y-2">
+      {(showApacBanner || showCaribbeanBanner) && (
+        <div className="mb-1">
+          {showApacBanner && <ApacRailHonestyBanner />}
+          {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
         </div>
       )}
-
-      {showApacBanner && (
-        <div className="mb-4">
-          <ApacRailHonestyBanner />
-        </div>
-      )}
-
-      {showCaribbeanBanner && (
-        <div className="mb-4">
-          <CaribbeanRailHonestyBanner />
-        </div>
-      )}
-
-      <GuardianStateScrollytelling />
-
       <LiveProofTicker limit={3} />
-    </UnconnectedStateShell>
+      {onEnableDemo && <UnconnectedStatusTier onEnableDemo={onEnableDemo} />}
+    </div>
   );
+
+  return <InstrumentShell object={object} status={status} />;
 }

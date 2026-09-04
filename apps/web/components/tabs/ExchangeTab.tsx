@@ -14,7 +14,7 @@ import { CaribbeanFxNetCard } from "@/components/business/CaribbeanFxNetCard";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
-import { VerifiedEvidence } from "../shared/VerifiedEvidence";
+import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -87,18 +87,7 @@ export default function ExchangeTab({
             />
           </div>
         }
-        status={
-          <div className="flex items-center justify-between gap-3">
-            <VerifiedEvidence />
-            <button
-              type="button"
-              onClick={enableDemoMode}
-              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400"
-            >
-              Explore a sample plan
-            </button>
-          </div>
-        }
+        status={<UnconnectedStatusTier onEnableDemo={enableDemoMode} />}
       />
     );
   }

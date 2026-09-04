@@ -1,0 +1,30 @@
+feat(tabs): unconnected Shield + Agent morph the instrument (Phase 2)
+
+Phase 2 of the unconnected-morphs work (design-language §5 rail 5, which
+Phase 1 landed for Home + Exchange). All four tabs now keep their object
+walletless; the hero-card/proof-card/how-it-works marketing stack is gone
+from the product.
+
+- Shield: the philosophy picker stays the object — choosing a lens rewrites
+  the ghost ring and needs no funds — with the connect CTA attached. APAC /
+  Caribbean honesty banners move to the status tier as persona morphs
+  (rail 4); the proof ticker rides along as a quiet line.
+- Agent: the Guardian ITSELF is the object (size 112, mood protective,
+  gaze="pointer" — the sanctioned third gaze surface alongside
+  WelcomeScreen and the AIChat empty state). One job sentence, connect CTA
+  attached.
+- Shared UnconnectedStatusTier extracts the VerifiedEvidence + demo-link
+  block that Home and Exchange had duplicated; all four unconnected tabs
+  now share it.
+- Deleted (-734 lines): UnconnectedStateShell (+ its test),
+  ProtectionNotConnected's shell usage, PhilosophyHeroCard (+ test, was
+  Shield-only since Phase 1 removed its Home use), and
+  GuardianStateScrollytelling (an educational how-Guardian-works card —
+  the exact genre rail 5 cuts; VerifiedEvidence + the live proof ticker
+  carry trust honestly instead).
+
+Gate: tsc clean, eslint clean, 142 files / 1145 tests green (8 new:
+Shield morph x5 incl. both persona banners, Agent morph x3).
+
+🤖 Generated with Codebuff
+Co-Authored-By: Codebuff <noreply@codebuff.com>
