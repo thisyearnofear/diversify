@@ -72,7 +72,7 @@ Key new files:
 
 **Onboarding UI/UX pass (2026-07-10):**
 The stablecoin "coin motif" is now the onboarding design language. Reusable pieces live in shared components — prefer them over one-off decorations:
-- `apps/web/components/shared/FloatingCoins.tsx`: `Coin` SVG primitive (any accent color, glyph or kawaii face) + `FloatingCoins` ambient drift field (SSR-safe deterministic layout, reduced-motion aware). Used by the StrategyModal backdrop and WelcomeScreen.
+- `apps/web/components/shared/FloatingCoins.tsx`: `Coin` SVG primitive (any accent color, glyph or kawaii face) + `FloatingCoins` ambient drift field (SSR-safe deterministic layout, reduced-motion aware) + `ShellCoinField` in-app backdrop (desktop margins; one-shot settle on arrival and on philosophy change — never the drift loop, design-language §5; the hero coin plays one shine sweep after it lands). Used by the StrategyModal backdrop, WelcomeScreen, and AppShell. `MaskedReveal` headlines the AIChat empty state (its first consumer).
 - `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts`: real token logos (Trust Wallet assets, incl. Mento regionals cUSD/cEUR/KESm/COPm) with automatic `Coin` fallback for unknown symbols — never renders a broken image. Used by all allocation chips.
 - Onboarding progress is the 3-step `CoinSteps` indicator in `WelcomeScreen.tsx`; completed steps navigate back.
 - **Scroll rule:** the StrategyModal dialog is the single scroll container. Do not add `overflow-y-auto` or `justify-center` to WelcomeScreen's root — center via the `my-auto` wrapper (justify-center on an overflowing flex container makes the top unreachable).
