@@ -36,6 +36,41 @@ export function CountryOverrideSelect({
   onChange,
   className = '',
 }: Props) {
+  // No country yet (detection failed / pending): render the curated list
+  // behind a placeholder instead of an empty-valued select that silently
+  // claims the first option is chosen.
+  if (!currentCountryCode) {
+    return (
+      <label
+        className={`mt-3 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 ${className}`}
+      >
+        <span className="font-semibold">Whose savings?</span>
+        <span aria-hidden="true">·</span>
+        <select
+          value=""
+          onChange={(e) => {
+            if (e.target.value) onChange(e.target.value);
+          }}
+          aria-label="Select the country where your savings live"
+          className="max-w-[11rem] min-h-[44px] truncate rounded-full bg-transparent px-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer"
+        >
+          <option value="" disabled>
+            Choose a country…
+          </option>
+          {[...CURRENCY_RISK_DATA]
+            .sort((a, b) => a.countryName.localeCompare(b.countryName))
+            .map(toOption)
+            .map((o) => (
+              <option key={o.iso2} value={o.iso2}>
+                {o.flag ? `${o.flag} ` : ''}
+                {o.label}
+              </option>
+            ))}
+        </select>
+      </label>
+    );
+  }
+
   const inDataset = CURRENCY_RISK_DATA.some((c) => c.iso2 === currentCountryCode);
 
   // Always surface the current country first — even when it isn't in the

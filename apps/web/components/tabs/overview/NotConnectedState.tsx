@@ -12,6 +12,7 @@ import React from "react";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
+import { CountryOverrideSelect } from "./CountryOverrideSelect";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
@@ -29,6 +30,8 @@ export function NotConnectedState({
   const {
     moment,
     inflationMoment,
+    isLoading,
+    countryCode,
     benchmarks,
     horizons,
     setBenchmark,
@@ -66,12 +69,27 @@ export function NotConnectedState({
           onAmountChange={setSavingsAmount}
           onChangeCountry={onChangeCountry}
         />
-      ) : (
+      ) : isLoading ? (
         <Card className="text-center">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            We could not detect your country yet — pick a region to see your
-            specific currency risk.
+            Detecting your region…
           </p>
+        </Card>
+      ) : (
+        // Detection failed (geo blocked, VPN, offline) — the honest fallback
+        // is an ACTIONABLE one: the same "whose savings?" control the moment
+        // cards use, so the instruction and the affordance always travel
+        // together (§5: selection rewrites the artefact).
+        <Card className="text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
+            We could not detect your country — choose where your savings live
+            to see your specific currency risk.
+          </p>
+          <CountryOverrideSelect
+            currentCountryCode={countryCode ?? ''}
+            currentCountryName=''
+            onChange={onChangeCountry}
+          />
         </Card>
       )}
       {/* The one CTA — attached to the object, no card wrapper. */}
