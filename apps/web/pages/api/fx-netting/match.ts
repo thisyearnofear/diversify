@@ -33,7 +33,7 @@ import {
 } from '@diversifi/shared/src/services/fx-netting/matching-engine';
 import { buildSettlementPlan } from '@diversifi/shared/src/services/fx-netting/settlement';
 import { buildLiveRateProvider } from '@diversifi/shared/src/services/fx-netting/rate-adapter';
-import { buildStandingIntents } from '@diversifi/shared/src/services/fx-netting/liquidity-bootstrap';
+import { buildStandingIntents, isGuardianLiquidityParticipant } from '@diversifi/shared/src/services/fx-netting/liquidity-bootstrap';
 import type { FxIntent } from '@diversifi/shared/src/services/fx-netting/intent';
 
 const RATE_LIMIT = 20;
@@ -176,7 +176,24 @@ export default async function handler(
         // Persisted pool intents (if any body intents exist) were upserted
         // above; the observer's intent is appended in-memory only so the
         // engine matches it against real pool counterparties.
-        const runPool = [...pool, ...observerIntents];
+        //
+        // Coherence rule (settlement must be fully human): Guardian standing
+        // quotes join the matching set ONLY for observer runs — a walletless
+        // judge sees the full book with Guardian liquidity live (nothing
+        // persists, so no ghost obligations). On persisted runs Guardian
+        // quotes are EXCLUDED from matching: they are book depth to price
+        // against, never a party that owes or is owed — an unfunded Guardian
+        // leg would create an on-chain obligation nobody can settle. Real
+        // users match real users; the liquidity that fills them is the
+        // user-funded LP design (Phase 2, docs/submission/future-caribbean.md).
+        const guardianIds = new Set(
+            pool.filter((i) => isGuardianLiquidityParticipant(String(i.participantId))).map((i) => String(i.participantId)),
+        );
+        const guardianQuotes = pool.filter((i) => guardianIds.has(String(i.participantId)));
+        const peerPool = pool.filter((i) => !guardianIds.has(String(i.participantId)));
+        const runPool = observerIntents.length > 0
+            ? [...peerPool, ...guardianQuotes, ...observerIntents]
+            : peerPool;
 
         // Run the matching + netting pipeline against the hosted pool
         const result = runNetting(
