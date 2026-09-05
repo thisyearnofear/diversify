@@ -29,6 +29,16 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
 import { recordGuardianRun } from '../../../lib/guardian-run-status';
+// Phase 0 (unified Guardian reasoning): the deterministic synthesizer moved
+// to @diversifi/shared so the loop, heartbeat, and marketplace agent can
+// share one reasoning floor. This module re-exports it for compatibility;
+// golden tests prove the shared output is byte-identical to the original
+// implementation (docs/guardian-reasoning-service.md §7).
+import {
+  synthesizeHeartbeatAdvisory,
+  type HeartbeatMarketSnapshot,
+  type HeartbeatRecommendation,
+} from '@diversifi/shared/src/services/guardian-reasoning';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -43,34 +53,11 @@ const GUARDIAN_LOOP_SECRET = (() => {
 
 const GUARDIAN_AGENT_ADDRESS = process.env.GUARDIAN_AGENT_ADDRESS || '0x803798fb6AC2ab3234f482350FB2aF6422b2B8f2';
 
-export interface MarketSnapshot {
-  /** live=false means the provider was unreachable this beat — never confuse
-   *  an empty/absent read with an observed market condition. */
-  defillama: {
-    live: boolean;
-    /** Live-but-empty is a legitimate read (no qualifying pools);
-     *  failure also yields empty, distinguished by `live`. */
-    pools: { protocol: string; apy: number; tvl: number }[];
-  };
-  coingecko: {
-    live: boolean;
-    bitcoin: number | null;
-    pax_gold: number | null;
-  };
-  worldBank: {
-    /** True only when the request succeeded AND a finite value was returned. */
-    live: boolean;
-    current_inflation: number | null;
-  };
-  timestamp: string;
-}
-
-export interface HeartbeatRecommendation {
-  action: string;
-  targetToken: string;
-  reasoning: string;
-  confidence: number;
-}
+// The snapshot shape moved to shared (`HeartbeatMarketSnapshot`) with the
+// synthesizer; re-exported under the original names so existing importers
+// (and the route's own honesty tests) keep working unchanged.
+export type MarketSnapshot = HeartbeatMarketSnapshot;
+export type { HeartbeatRecommendation };
 
 /** Fetch wrapper that reports reachability instead of fabricating a body on
  *  failure. The old `|| 65000`-style defaults made an on-chain advisory read
@@ -134,69 +121,16 @@ async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
   };
 }
 
+/**
+ * Deterministic advisory synthesizer — now the shared implementation.
+ *
+ * Extracted verbatim to `@diversifi/shared/src/services/guardian-reasoning`
+ * (Phase 0 of the unified reasoning service); golden tests in that package
+ * prove this alias produces byte-identical output to the original inline
+ * implementation across live / partial-down / all-down fixtures.
+ */
 export function pickRecommendation(snapshot: MarketSnapshot): HeartbeatRecommendation {
-  const inflation = snapshot.worldBank.current_inflation;
-  const btcPrice = snapshot.coingecko.bitcoin;
-  const paxGoldPrice = snapshot.coingecko.pax_gold;
-  const topYield = snapshot.defillama.pools[0];
-
-  // Simple rule-based logic — real AI synthesis happens via the gateway,
-  // but for the heartbeat we want deterministic, auditable reasoning.
-  // Only observed figures enter the reasoning; each carries its live source.
-  const dataPoints: string[] = [];
-  if (inflation !== null) dataPoints.push(`Inflation: ${inflation}% (World Bank CPI, live)`);
-  if (btcPrice !== null) dataPoints.push(`BTC: $${btcPrice.toLocaleString()} (CoinGecko, live)`);
-  if (paxGoldPrice !== null) dataPoints.push(`PAXG: $${paxGoldPrice.toLocaleString()} (CoinGecko, live)`);
-  if (topYield && topYield.apy > 0) {
-    dataPoints.push(`Top yield: ${topYield.protocol} at ${topYield.apy.toFixed(2)}% APY ($${(topYield.tvl / 1e6).toFixed(1)}M TVL, DeFiLlama, live)`);
-  }
-
-  // Name what could not be observed so the recorded advisory never reads as
-  // if those sources had spoken — the on-chain reasoning is immutable, so a
-  // missing source is disclosed, never defaulted.
-  const unavailable: string[] = [];
-  if (inflation === null) unavailable.push('World Bank CPI');
-  if (!snapshot.coingecko.live) unavailable.push('CoinGecko prices');
-  if (!snapshot.defillama.live) unavailable.push('DeFiLlama yields');
-  const caveat =
-    unavailable.length > 0
-      ? ` Sources unavailable this beat: ${unavailable.join(', ')} — no fallback figures were used.`
-      : '';
-
-  const dataLine = dataPoints.length > 0 ? `${dataPoints.join(', ')}.` : '';
-
-  // Decisions gate on the driving datum being LIVE: a hardcoded inflation
-  // read must never trigger (or suppress) the high-inflation branch.
-  if (inflation !== null && inflation > 3.5) {
-    const reasoning =
-      `High inflation (${inflation}%) detected (World Bank CPI, live). ` +
-      `Recommend cUSD savings position on Celo to preserve purchasing power. ${dataLine}${caveat}`;
-    return { action: 'ADVISORY_HEARTBEAT', targetToken: 'cUSD', reasoning, confidence: 0.72 };
-  }
-
-  if (topYield && topYield.apy > 5) {
-    const reasoning =
-      `Attractive yield opportunity: ${topYield.protocol} at ${topYield.apy.toFixed(2)}% APY (DeFiLlama, live). ` +
-      `Recommend USDC deployment on Arbitrum. ${dataLine}${caveat}`;
-    return { action: 'ADVISORY_HEARTBEAT', targetToken: 'USDC', reasoning, confidence: 0.68 };
-  }
-
-  // Default: hold cEUR as the steady-state core. "Stable regime" is only
-  // claimed when inflation was actually measured below the threshold.
-  if (inflation !== null && inflation <= 3.5) {
-    const reasoning =
-      `Stable regime measured: inflation ${inflation}% (World Bank CPI, live). ` +
-      `Recommend holding cEUR as inflation hedge. ${dataLine}${caveat}`;
-    return { action: 'ADVISORY_HEARTBEAT', targetToken: 'cEUR', reasoning, confidence: 0.65 };
-  }
-
-  const reasoning = (
-    'No actionable live signal this beat — inflation not measured' +
-    (topYield ? ' and yields below the 5% threshold' : '') +
-    '. Recommend holding the cEUR core; no fallback market figures were used.' +
-    ` ${dataLine}${caveat}`
-  ).trim();
-  return { action: 'ADVISORY_HEARTBEAT', targetToken: 'cEUR', reasoning, confidence: 0.6 };
+  return synthesizeHeartbeatAdvisory(snapshot);
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
