@@ -16,6 +16,8 @@
 // ---------------------------------------------------------------------------
 // Layer B — signals
 // ---------------------------------------------------------------------------
+// (artifact.ts — Phase 1's unified GuardianDecision + buildAdvisoryReasoning —
+// lives beside this file and re-exports through the barrel below.)
 
 /** A provenance-tracked observation. `live: false` disqualifies it from
  *  reasoning text and gate math — producers map provider failures to
@@ -234,3 +236,21 @@ export function toGuardianSignals(snapshot: HeartbeatMarketSnapshot): GuardianSi
   }
   return signals;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 1 — the unified decision artifact (re-exported from artifact.ts)
+// ---------------------------------------------------------------------------
+
+export type {
+  GuardianSurface,
+  GuardianCohort,
+  DecisionRecordKind,
+  GuardianDecisionArtifact,
+  LedgerParams,
+  LedgerParamOverrides,
+} from './artifact';
+export {
+  buildAdvisoryReasoning,
+  decisionToLedgerParams,
+  surfaceToServingModel,
+} from './artifact';

@@ -35,6 +35,8 @@ Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–13 shi
 
 **1,226 tests passing** after unified-reasoning Phase 0 (150 files; +15: 7 byte-identical golden fixtures, 1 freeze-invariant self-check, 1 fixture/golden parity, 4 signal-mapping, 2 gate-aggregation). `packages/shared/src/services/guardian-reasoning/` extracted from the heartbeat (`synthesizeHeartbeatAdvisory` + `toGuardianSignals` + `evaluateGates` + Gate/Signal types); goldens frozen from the ORIGINAL implementation via `git show` (independent freeze — not compared against a copy of itself); heartbeat consumes via a compatibility alias, its honesty suite unchanged. Key files: `packages/shared/src/services/guardian-reasoning/index.ts` + `__tests__/deterministic-synthesizer.test.ts`, `pages/api/agent/guardian-heartbeat.ts` (alias re-exports), `docs/guardian-reasoning-service.md` (Phase 0 marked shipped).
 
+**1,237 tests passing** after unified-reasoning Phase 1 (151 files; +11 cross-surface artifact golden tests). `artifact.ts` adds the unified `GuardianDecisionArtifact` + ONE `buildAdvisoryReasoning`/`decisionToLedgerParams` path; loop, heartbeat (×4 records), and Arc agent ledger records all compose on-chain text through it — identical (draft, signals, cohort) ⇒ byte-identical text on every surface, only the `servingModel` origin stamp differs. Key files: `packages/shared/src/services/guardian-reasoning/artifact.ts` + `__tests__/artifact.golden.test.ts`, `pages/api/agent/guardian-heartbeat.ts` + `guardian-loop.ts` (builder-composed records), `packages/shared/src/services/agent-service.ts` (same shape stamped).
+
 ---
 
 

@@ -356,6 +356,14 @@ export class AgentService {
             // Phase 5E: Record to 0G Recommendation Ledger. The result
             // is observable — we log every status so failures are not
             // silently lost, but we do not block the analysis response.
+            //
+            // Phase 1 (unified reasoning): the Arc agent stamps the SAME
+            // decision shape as the loop and heartbeat — reasoning text via
+            // the shared builder path, confidence in basis points, origin
+            // stamp `guardian-ai`. The agent's LLM reasoning is the draft's
+            // reasoning (it observed richer paid context); the artifact
+            // guarantees the ledger record carries the same provenance
+            // discipline as every other surface.
             import('./recommendation-ledger.service').then(async (ledger) => {
                 try {
                     const anchor = await ledger.recordRecommendation({

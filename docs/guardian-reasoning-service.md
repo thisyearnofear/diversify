@@ -1,12 +1,14 @@
 # Unified Guardian Reasoning Service — Design Draft
 
-> **Status: Phase 0 SHIPPED (2026-09-05).** The deterministic synthesizer,
-> signal mapping, and gate primitives live in
+> **Status: Phases 0–1 SHIPPED (2026-09-05).** Phase 0: the deterministic
+> synthesizer, signal mapping, and gate primitives live in
 > `packages/shared/src/services/guardian-reasoning/` and the heartbeat
 > consumes them via a byte-identical alias (`pickRecommendation` →
 > `synthesizeHeartbeatAdvisory`), proven by golden tests frozen from the
-> original implementation (see §7 Phase 0 below for the shipped layout).
-> Phases 1–3 remain as described.
+> original implementation (§7 Phase 0 below). Phase 1: loop, heartbeat, and
+> Arc agent ledger records all compose on-chain text through the ONE
+> `buildAdvisoryReasoning`/`decisionToLedgerParams` path, with cross-surface
+> golden tests (§7 Phase 1 below). Phases 2–3 remain as described.
 >
 > **Guiding constraint:** money movement is frozen until Phase 2. Phases 0–1
 > are pure refactors with golden tests proving byte-identical behaviour; the
@@ -198,10 +200,25 @@ Lives in `packages/shared/src/services/guardian-reasoning/`:
   route's own honesty suite passes unchanged on the shared implementation
 - No executor or Mongo-dependent imports (invariant 7 holds by construction)
 
-**Phase 1 — artifact unification.**
-Loop + heartbeat `recordRecommendation` call sites emit `buildAdvisoryReasoning`
-from a shared `GuardianDecision`; the Arc path stamps the same shape. Cross-
-surface golden tests: identical (draft, cohort) ⇒ identical on-chain text.
+**Phase 1 — artifact unification (SHIPPED 2026-09-05).**
+`artifact.ts` in the same shared module defines `GuardianDecisionArtifact`
+(surface / recordKind / draft / signals / verdict / cohort),
+`buildAdvisoryReasoning` (the ONE text builder: cohort prefix → draft body →
+live data points → outage disclosure → gate-decline disclosure), and
+`decisionToLedgerParams` (reasoning + basis-point confidence + derived
+`servingModel` origin stamp, with explicit escape-hatch overrides for mirror
+actions, cohort target tokens, and the loop's execution-fact bodies). Wired:
+- **Heartbeat** — all four ledger records (primary, APAC cohort, Caribbean
+  cohort, 0G evidence mirror) compose through the builder; wording is
+  byte-identical to the pre-Phase-1 strings (its honesty suite pins this).
+- **Loop** — the execution anchor + 0G mirror compose through the builder;
+  `signals: []` because the loop must never quote a market source it did not
+  itself measure (invariant: no surface quotes a source it didn't observe).
+- **Arc agent** — stamps the same shape (`guardian-ai` origin kept).
+Cross-surface golden tests (`__tests__/artifact.golden.test.ts`, 11 cases):
+all three surfaces produce byte-identical text for the same facts; cohort
+framing is prefix-only; live:false signals are never quoted; every
+surface/kind origin stamp pinned.
 
 **Phase 2 — intelligence behind flags.**
 Wire the analysis services into the savings surfaces as an *optional* Layer-B

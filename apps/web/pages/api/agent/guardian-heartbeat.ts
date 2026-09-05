@@ -36,8 +36,11 @@ import { recordGuardianRun } from '../../../lib/guardian-run-status';
 // implementation (docs/guardian-reasoning-service.md §7).
 import {
   synthesizeHeartbeatAdvisory,
+  toGuardianSignals,
+  decisionToLedgerParams,
   type HeartbeatMarketSnapshot,
   type HeartbeatRecommendation,
+  type GuardianDecisionArtifact,
 } from '@diversifi/shared/src/services/guardian-reasoning';
 
 const GUARDIAN_LOOP_SECRET = (() => {
@@ -159,20 +162,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // yield) and — when the regional ledgers are configured — the APAC-cohort
     // (HashKey) and Caribbean-cohort (Celo) savings advisories in parallel.
     // The records target different chains/contexts, so the signer's nonces
-    // are independent and neither wait blocks the other. Each advisory is
-    // routed via the same chain-aware logic as user recommendations and
-    // self-describes its cohort in the on-chain reasoning, so the global
-    // proof feed answers "why am I seeing this chain?" honestly
-    // (docs/apac-rail.md, docs/caribbean-rail.md).
+    // are independent and neither wait blocks the other.
+    //
+    // Phase 1 (unified reasoning): every record composes its on-chain text
+    // through the ONE shared builder (`decisionToLedgerParams` →
+    // `buildAdvisoryReasoning`) from the same decision facts — cohort prefix,
+    // draft reasoning, live data points, outage disclosure. The wording the
+    // loop or the marketplace agent would emit for the same facts is now
+    // byte-identical by construction (golden-tested cross-surface).
+    const decisionBase: Omit<GuardianDecisionArtifact, 'recordKind'> = {
+      surface: 'heartbeat',
+      draft: {
+        action: rec.action,
+        targetToken: rec.targetToken,
+        confidence: rec.confidence,
+        reasoning: rec.reasoning,
+      },
+      signals: toGuardianSignals(snapshot),
+    };
+
     const apacPromise = process.env.HASHKEY_LEDGER_CONTRACT
       ? recommendationLedgerService.recordRecommendation({
           user: GUARDIAN_AGENT_ADDRESS,
-          action: 'ADVISORY_HEARTBEAT',
-          targetToken: 'USDC',
-          reasoning: `APAC savings advisory (Confucian/Gotong Royong cohort): hold stablecoin core on the APAC rail. ${rec.reasoning}`,
+          ...decisionToLedgerParams(
+            { ...decisionBase, recordKind: 'advisory', cohort: 'confucian' },
+            { targetTokenOverride: 'USDC' },
+          ),
           evidenceCid: '',
-          servingModel: 'guardian-heartbeat',
-          confidence: Math.round(rec.confidence * 10000),
           routingContext: { philosophy: 'confucian', region: 'Asia' },
         }).catch((err: any) => {
           console.warn(`[guardian-heartbeat] APAC rail advisory failed: ${err.message}`);
@@ -188,12 +204,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const caribbeanPromise = process.env.CELO_MAINNET_LEDGER_CONTRACT
       ? recommendationLedgerService.recordRecommendation({
           user: GUARDIAN_AGENT_ADDRESS,
-          action: 'ADVISORY_HEARTBEAT',
-          targetToken: 'cUSD',
-          reasoning: `Caribbean savings advisory (Pan-Caribbean cohort): hold USD-pegged stablecoin core on Celo. ${rec.reasoning}`,
+          ...decisionToLedgerParams(
+            { ...decisionBase, recordKind: 'advisory', cohort: 'pan_caribbean' },
+            { targetTokenOverride: 'cUSD' },
+          ),
           evidenceCid: '',
-          servingModel: 'guardian-heartbeat',
-          confidence: Math.round(rec.confidence * 10000),
           routingContext: { philosophy: 'pan_caribbean', region: 'Caribbean' },
         }).catch((err: any) => {
           console.warn(`[guardian-heartbeat] Caribbean rail advisory failed: ${err.message}`);
@@ -203,24 +218,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const primaryResult = await recommendationLedgerService.recordRecommendation({
       user: GUARDIAN_AGENT_ADDRESS,
-      action: rec.action,
-      targetToken: rec.targetToken,
-      reasoning: rec.reasoning,
+      ...decisionToLedgerParams({ ...decisionBase, recordKind: 'advisory' }),
       evidenceCid: '',
-      servingModel: 'guardian-heartbeat',
-      confidence: Math.round(rec.confidence * 10000),
     });
 
     // 3. Mirror to 0G mainnet as evidence anchor (fire-and-forget)
     const mirrorPromise = recommendationLedgerService.mirrorRecommendationToZeroG({
       user: GUARDIAN_AGENT_ADDRESS,
-      action: 'EVIDENCE_MIRROR',
-      targetToken: rec.targetToken,
-      reasoning: `Evidence anchor for heartbeat rec: ${rec.reasoning}`,
+      ...decisionToLedgerParams(
+        { ...decisionBase, recordKind: 'evidence-mirror' },
+        {
+          actionOverride: 'EVIDENCE_MIRROR',
+          mirrorBody: `Evidence anchor for heartbeat rec: ${rec.reasoning}`,
+        },
+      ),
       evidenceCid: '',
-      servingModel: 'guardian-heartbeat-mirror',
       settlementTxHash: primaryResult.status === 'failed' ? '' : primaryResult.txHash,
-      confidence: Math.round(rec.confidence * 10000),
     }).catch((err) => {
       console.warn(`[guardian-heartbeat] 0G mirror failed: ${err.message}`);
       return null;

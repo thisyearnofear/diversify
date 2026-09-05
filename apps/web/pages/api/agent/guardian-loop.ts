@@ -41,6 +41,10 @@ import { appendDecisionLog, claimExecutionLock, dequeueRecommendation, getGuardi
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
+// Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
+// their reasoning through the ONE shared builder so identical facts produce
+// identical wording on every surface (docs/guardian-reasoning-service.md §5).
+import { decisionToLedgerParams, type GuardianDecisionArtifact } from '@diversifi/shared/src/services/guardian-reasoning';
 import { guardianEventBus } from './_guardian-event-bus';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
 import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
@@ -671,38 +675,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           // Anchor to 0G RecommendationLedger on-chain and persist the
           // observable status. Awaited so a failure is recorded, not
           // swallowed — the Guardian proof feed surfaces this status.
+          //
+          // Phase 1 (unified reasoning): the reasoning text is composed by
+          // the ONE shared builder from the decision artifact. The loop's
+          // execution body (cycle dates, amounts, one-liner) is an execution
+          // fact, passed through `bodyOverride`; market signals the loop
+          // didn't observe are simply absent from its signal bundle — so no
+          // surface ever quotes a source it didn't measure.
+          const loopDecision: GuardianDecisionArtifact = {
+            surface: 'guardian-loop',
+            recordKind: cycleExecution ? 'cycle-execution' : 'autonomous-execution',
+            draft: {
+              // Phase 5: cycle-aware executions stamp the distinct
+              // `CYCLE_PROTECTION` action so on-chain history is grep-able
+              // separately from generic AUTONOMOUS_REBALANCE entries.
+              action: cycleExecution ? 'CYCLE_PROTECTION' : 'AUTONOMOUS_REBALANCE',
+              targetToken,
+              confidence, // Contract uses basis points (mapped below)
+              reasoning: cycleExecution
+                ? cycleExecution.reasoning
+                : (recommendation.oneLiner || recommendation.reasoning || 'Guardian auto-execution'),
+            },
+            signals: [],
+          };
+          const anchorParams = decisionToLedgerParams(loopDecision);
           const anchor = await recommendationLedgerService.recordRecommendation({
             user: userAddress,
-            // Phase 5: cycle-aware executions stamp the distinct
-            // `CYCLE_PROTECTION` action so on-chain history is grep-able
-            // separately from generic AUTONOMOUS_REBALANCE entries.
-            action: cycleExecution ? 'CYCLE_PROTECTION' : 'AUTONOMOUS_REBALANCE',
-            targetToken,
-            reasoning: cycleExecution
-              ? cycleExecution.reasoning
-              : (recommendation.oneLiner || recommendation.reasoning || 'Guardian auto-execution'),
+            ...anchorParams,
             evidenceCid: '', // Will be populated if 0G Storage upload precedes
-            // Phase 5: cycle executions stamp `guardian-loop-cycle` so the
-            // servingModel field distinguishes them from generic rebalances
-            // in downstream 0G Serving analytics.
-            servingModel: cycleExecution ? 'guardian-loop-cycle' : 'guardian-loop',
             settlementTxHash: txHash,
-            confidence: Math.round(confidence * 10000), // Contract uses basis points
             routingContext: cycleExecution ? undefined : deriveLedgerRoutingContextFromVault(vault.strategy),
           });
 
           // Mirror to 0G evidence anchor (fire-and-forget). This creates a
           // cross-chain verifiable reference on 0G mainnet — the evidence
           // layer — alongside the primary settlement chain recording above.
+          // Same decision artifact, `evidence-mirror` record kind: the
+          // mirror reference line is builder-composed too.
           recommendationLedgerService.mirrorRecommendationToZeroG({
             user: userAddress,
-            action: 'EVIDENCE_MIRROR',
-            targetToken,
-            reasoning: `Evidence anchor for ${anchor.status} rec on chain ${anchor.chainId}: ${recommendation.oneLiner || recommendation.reasoning || ''}`,
+            ...decisionToLedgerParams(
+              loopDecision,
+              {
+                actionOverride: 'EVIDENCE_MIRROR',
+                mirrorBody: `Evidence anchor for ${anchor.status} rec on chain ${anchor.chainId}: ${recommendation.oneLiner || recommendation.reasoning || ''}`,
+              },
+            ),
             evidenceCid: '',
-            servingModel: 'guardian-loop-mirror',
             settlementTxHash: anchor.status === 'failed' ? '' : anchor.txHash,
-            confidence: Math.round(confidence * 10000),
           }).catch((mirrorErr) => {
             console.warn(`[guardian-loop] 0G mirror failed for ${userAddress}: ${mirrorErr.message}`);
           });
