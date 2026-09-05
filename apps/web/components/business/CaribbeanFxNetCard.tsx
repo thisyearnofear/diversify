@@ -52,6 +52,7 @@ export function CaribbeanFxNetCard() {
   const {
     data, isLoading, error, match,
     settlements, refreshSettlements, settle, isSettling, settleError,
+    creditProfile, refreshCreditProfile,
   } = useFxNetting(address ?? null, signMessage);
 
   const [sellCurrency, setSellCurrency] = React.useState("JMD");
@@ -62,6 +63,10 @@ export function CaribbeanFxNetCard() {
   React.useEffect(() => {
     void refreshSettlements();
   }, [refreshSettlements]);
+
+  React.useEffect(() => {
+    void refreshCreditProfile();
+  }, [refreshCreditProfile]);
 
   const sellAmountNum = sellAmount ? Number(sellAmount) : 0;
   const currenciesValid =
@@ -341,7 +346,67 @@ export function CaribbeanFxNetCard() {
           )}
         </div>
       )}
+
+      {/* Settlement-native credit file — the MSME credit layer's user surface.
+          Walletless visitors have no file (null → hidden); a thin file is
+          rendered as the honest data it is, never dressed up. */}
+      {creditProfile && !creditProfile.synthetic && (
+        <CreditFileSection profile={creditProfile} />
+      )}
     </motion.section>
+  );
+}
+
+/**
+ * CreditFileSection — the caller's settlement-native credit profile.
+ * One job: "your settled trades are building your credit file." The thin-file
+ * state is the honest headline, not a failure state.
+ */
+function CreditFileSection({
+  profile,
+}: {
+  profile: {
+    score: number | null;
+    fileStrength: 'none' | 'thin' | 'emerging' | 'established';
+    settledVolumeUsd: number;
+    settlementsCompleted: number;
+    counterparties: number;
+    summary: string;
+    lendingReadiness: string;
+  };
+}) {
+  const strengthLabel =
+    profile.fileStrength === 'established'
+      ? 'Established file'
+      : profile.fileStrength === 'emerging'
+        ? 'Emerging file'
+        : profile.fileStrength === 'thin'
+          ? 'Thin file'
+          : 'No file yet';
+  return (
+    <div
+      className="mt-4 rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3"
+      data-testid="fx-credit-file"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+          Your credit file
+        </p>
+        <p className="text-xs font-black text-teal-900 dark:text-teal-100" data-testid="fx-credit-score">
+          {profile.score !== null ? profile.score : strengthLabel}
+        </p>
+      </div>
+      <p className="text-[11px] text-teal-800/90 dark:text-teal-200/90 mt-1" data-testid="fx-credit-summary">
+        {profile.settlementsCompleted >= 3
+          ? `${profile.settlementsCompleted} verified settlements · $${Math.round(profile.settledVolumeUsd).toLocaleString()} · ${profile.counterparties} counterpart${profile.counterparties === 1 ? 'y' : 'ies'} · every settled trade builds this file.`
+          : profile.settlementsCompleted > 0
+            ? `${profile.settlementsCompleted} verified settlement${profile.settlementsCompleted === 1 ? '' : 's'} so far — your next settled trade strengthens this file.`
+            : 'No verified settlements yet — your first settled trade starts this file. Coordination today underwrites working capital tomorrow.'}
+      </p>
+      <p className="text-[10px] text-teal-700/70 dark:text-teal-300/70 mt-0.5">
+        {profile.lendingReadiness}
+      </p>
+    </div>
   );
 }
 

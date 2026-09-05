@@ -25,6 +25,20 @@ const ERC20_ABI = [
   'function transfer(address to, uint256 amount) returns (bool)',
 ] as const;
 
+/** Summary of the settlement-native credit profile (GET /api/fx-netting/credit-profile). */
+export interface SettlementCreditProfileSummary {
+  /** 300–850 when scoreable; null = thin file (honest, not an error). */
+  score: number | null;
+  fileStrength: 'none' | 'thin' | 'emerging' | 'established';
+  settledVolumeUsd: number;
+  settlementsCompleted: number;
+  counterparties: number;
+  summary: string;
+  lendingReadiness: string;
+  /** Synthetic participants (demo/observer/guardian) have no file by design. */
+  synthetic: boolean;
+}
+
 export interface FxNettingMatch {
   matchId: string;
   matchedAmount: number;
@@ -112,7 +126,50 @@ export function useFxNetting(
   const [settlements, setSettlements] = useState<FxSettlement[] | null>(null);
   const [isSettling, setIsSettling] = useState(false);
   const [settleError, setSettleError] = useState<string | null>(null);
+  const [creditProfile, setCreditProfile] = useState<SettlementCreditProfileSummary | null>(null);
   const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
+  /**
+   * Fetch the caller's settlement-native credit profile (wallet-authed).
+   * Walletless visitors have no file by definition — null, not an error.
+   * The thin-file shape (score: null) is DATA and is rendered as such.
+   */
+  const refreshCreditProfile = useCallback(async () => {
+    if (!userAddress) {
+      setCreditProfile(null);
+      return;
+    }
+    try {
+      const { getWalletAuthHeaders } = await import('@/lib/wallet-auth');
+      const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
+      if (!authHeaders) {
+        setCreditProfile(null);
+        return;
+      }
+      const res = await fetchWithTimeout(
+        `${apiBase}/api/fx-netting/credit-profile`,
+        { method: 'GET', headers: authHeaders },
+        FX_NETTING_TIMEOUT_MS,
+      );
+      if (!res.ok) {
+        setCreditProfile(null);
+        return;
+      }
+      const json = await res.json();
+      setCreditProfile({
+        score: json.score ?? null,
+        fileStrength: json.fileStrength ?? 'none',
+        settledVolumeUsd: json.settledVolumeUsd ?? 0,
+        settlementsCompleted: json.settlementsCompleted ?? 0,
+        counterparties: json.counterparties ?? 0,
+        summary: json.summary ?? '',
+        lendingReadiness: json.lendingReadiness ?? '',
+        synthetic: json.synthetic === true,
+      });
+    } catch {
+      setCreditProfile(null);
+    }
+  }, [userAddress, signMessage, apiBase]);
 
   const match = useCallback(
     async (myIntent: FxNettingInput, counterpartyIntents: FxNettingInput[]) => {
@@ -317,5 +374,7 @@ export function useFxNetting(
     settle,
     isSettling,
     settleError,
+    creditProfile,
+    refreshCreditProfile,
   };
 }

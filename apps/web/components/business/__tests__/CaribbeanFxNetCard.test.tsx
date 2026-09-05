@@ -8,18 +8,26 @@ import CaribbeanFxNetCard from '../CaribbeanFxNetCard';
 // handles so walletless (observer) behaviour is testable too.
 const mockMatch = vi.fn();
 const mockRefreshSettlements = vi.fn(async () => {});
+const mockRefreshCreditProfile = vi.fn(async () => {});
+/** Tests that need a full hook shape set this; factory spreads it. */
+let mockHookOverride: Record<string, unknown> | null = null;
 let mockAddress: string | null = '0xabc';
 let mockData: Record<string, unknown> | null = null;
 
 vi.mock('../../../hooks/use-fx-netting', () => ({
-  useFxNetting: () => ({
-    data: mockData,
-    isLoading: false,
-    error: null,
-    match: mockMatch,
-    settlements: null,
-    refreshSettlements: mockRefreshSettlements,
-  }),
+  useFxNetting: () =>
+    mockHookOverride
+      ? { ...mockHookOverride }
+      : {
+          data: mockData,
+          isLoading: false,
+          error: null,
+          match: mockMatch,
+          settlements: null,
+          refreshSettlements: mockRefreshSettlements,
+          creditProfile: null,
+          refreshCreditProfile: mockRefreshCreditProfile,
+        },
 }));
 
 vi.mock('../../wallet/WalletProvider', () => ({
@@ -124,5 +132,64 @@ describe('CaribbeanFxNetCard — currency validation', () => {
     fireEvent.change(screen.getByLabelText('Currency you want'), { target: { value: 'JMD' } });
     fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '500' } });
     expect(screen.getByRole('button', { name: 'Match my intent' })).toBeDisabled();
+  });
+});
+
+describe('CaribbeanFxNetCard — settlement-native credit file readout', () => {
+  afterEach(() => {
+    mockHookOverride = null;
+  });
+
+  it('renders a scored file with volume and counterparty counts', () => {
+    mockHookOverride = {
+      data: null, isLoading: false, error: null, match: vi.fn(),
+      settlements: null, refreshSettlements: vi.fn(), settle: vi.fn(),
+      isSettling: false, settleError: null,
+      creditProfile: {
+        score: 712, fileStrength: 'established', settledVolumeUsd: 32500,
+        settlementsCompleted: 9, counterparties: 4,
+        summary: '9 verified settlements.', lendingReadiness: 'Decision-support ready.',
+        synthetic: false,
+      },
+      refreshCreditProfile: vi.fn(),
+    };
+    render(<CaribbeanFxNetCard />);
+    expect(screen.getByTestId('fx-credit-score')).toHaveTextContent('712');
+    expect(screen.getByTestId('fx-credit-summary')).toHaveTextContent(/9 verified settlements/);
+    expect(screen.getByTestId('fx-credit-summary')).toHaveTextContent(/4 counterparties/);
+  });
+
+  it('renders the thin-file state honestly — no score, path forward named', () => {
+    mockHookOverride = {
+      data: null, isLoading: false, error: null, match: vi.fn(),
+      settlements: null, refreshSettlements: vi.fn(), settle: vi.fn(),
+      isSettling: false, settleError: null,
+      creditProfile: {
+        score: null, fileStrength: 'thin', settledVolumeUsd: 0,
+        settlementsCompleted: 1, counterparties: 1,
+        summary: 'Thin file.', lendingReadiness: 'Early file.',
+        synthetic: false,
+      },
+      refreshCreditProfile: vi.fn(),
+    };
+    render(<CaribbeanFxNetCard />);
+    expect(screen.getByTestId('fx-credit-score')).toHaveTextContent('Thin file');
+    expect(screen.getByTestId('fx-credit-summary')).toHaveTextContent(/next settled trade strengthens this file/);
+  });
+
+  it('hides the credit section for synthetic participants', () => {
+    mockHookOverride = {
+      data: null, isLoading: false, error: null, match: vi.fn(),
+      settlements: null, refreshSettlements: vi.fn(), settle: vi.fn(),
+      isSettling: false, settleError: null,
+      creditProfile: {
+        score: null, fileStrength: 'none', settledVolumeUsd: 0,
+        settlementsCompleted: 0, counterparties: 0,
+        summary: '', lendingReadiness: '', synthetic: true,
+      },
+      refreshCreditProfile: vi.fn(),
+    };
+    render(<CaribbeanFxNetCard />);
+    expect(screen.queryByTestId('fx-credit-file')).not.toBeInTheDocument();
   });
 });
