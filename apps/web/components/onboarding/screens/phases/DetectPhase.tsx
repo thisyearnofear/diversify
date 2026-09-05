@@ -181,25 +181,44 @@ export function DetectPhase({
             <p className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">
               {manualCountrySearch ? 'Matches' : 'Suggested countries'}
             </p>
-            <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-              {filteredCountries.map((c) => (
+            {manualCountrySearch && filteredCountries.length === 0 ? (
+              // No-match search: never a blank grid. Honest copy + two ways
+              // out — clear the search, or drop to the request flow that
+              // sits one scroll below the sheet.
+              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  No country matches “{manualCountrySearch}”. Try a country
+                  name or a 3-letter currency code (e.g. “JMD”).
+                </p>
                 <button
-                  key={c.iso2}
-                  onClick={() => {
-                    setCountryOverride(c.iso2);
-                    setShowCountryPicker(false);
-                    setManualCountrySearch('');
-                  }}
-                  className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                  type="button"
+                  onClick={() => setManualCountrySearch('')}
+                  className="mt-2 px-3 py-1.5 text-[11px] font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                 >
-                  <span className="text-lg">{c.flag}</span>
-                  <div>
-                    <div className="text-xs font-bold text-white">{c.countryName}</div>
-                    <div className="text-[10px] text-slate-400">{c.code}</div>
-                  </div>
+                  ← Clear search
                 </button>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                {filteredCountries.map((c) => (
+                  <button
+                    key={c.iso2}
+                    onClick={() => {
+                      setCountryOverride(c.iso2);
+                      setShowCountryPicker(false);
+                      setManualCountrySearch('');
+                    }}
+                    className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                  >
+                    <span className="text-lg">{c.flag}</span>
+                    <div>
+                      <div className="text-xs font-bold text-white">{c.countryName}</div>
+                      <div className="text-[10px] text-slate-400">{c.code}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -209,12 +228,12 @@ export function DetectPhase({
           it without leaving the dialog. */}
       {countryRequestStatus === 'success' ? (
         <p className="text-[10px] text-emerald-400 font-bold text-center py-2">
-          ✓ Request sent — we'll add it soon.
+          ✓ Request sent — we&apos;ll add it soon.
         </p>
       ) : (
         <div className="mt-2 pt-2 border-t border-white/10">
           <p className="text-[10px] text-slate-400 text-center mb-1.5">
-            Don't see your country?
+            Don&apos;t see your country?
           </p>
           <div className="flex items-center justify-center gap-2">
             <input
