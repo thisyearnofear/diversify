@@ -72,7 +72,7 @@ export function VerifiedEvidence({ className = "" }: Props) {
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((v) => !v)}
-        className="inline-flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded"
+        className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
       >
         <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black" aria-hidden="true">✓</span>
         <span className="font-semibold tracking-wide">Verified</span>

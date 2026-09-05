@@ -163,6 +163,31 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.queryByText(/\bless\./)).not.toBeInTheDocument();
   });
 
+  it('never renders a signed zero — sub-1% deltas keep one decimal', async () => {
+    // Live data really returns values like −0.4 (KES vs USD, trailing year).
+    // Math.round formatting turned that into "−0%", which reads as broken.
+    const { container } = render(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, delta: -0.4, personalImpact: 40, state: 'calm' }}
+      />,
+    );
+    expect(await screen.findByText('−0.4%')).toBeInTheDocument();
+    expect(container.textContent).not.toContain('−0%');
+  });
+
+  it('renders a dead-flat delta as unsigned 0%', () => {
+    const { container } = render(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, delta: 0, personalImpact: 0, state: 'calm' }}
+      />,
+    );
+    expect(container.textContent).toContain('0%');
+    expect(container.textContent).not.toContain('+0%');
+    expect(container.textContent).not.toContain('−0%');
+  });
+
   it('applies a single neutral accent instead of a traffic-light', () => {
     const { container, rerender } = render(<CurrencyMomentCard {...baseProps} />);
     const review = container.querySelector('[style*="color"]');

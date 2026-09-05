@@ -289,6 +289,7 @@ const SwapInterface = forwardRef<
             tokenChainId={fromChainId}
             experienceMode={experienceMode}
             financialStrategy={financialStrategy ?? undefined}
+            hasWallet={Boolean(address)}
           />
 
           {/* Switch button with rotation animation */}
@@ -323,6 +324,7 @@ const SwapInterface = forwardRef<
             tokenChainId={toChainId}
             experienceMode={experienceMode}
             financialStrategy={financialStrategy ?? undefined}
+            hasWallet={Boolean(address)}
           />
 
           {/* Compact live quote row — hidden walletless: no wallet, no quote

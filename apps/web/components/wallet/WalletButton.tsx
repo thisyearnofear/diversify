@@ -410,7 +410,7 @@ export default function WalletButton({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleConnect}
-        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
+        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 min-h-[44px] rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
         title={hasInjectedWallet ? "Connect with MetaMask/Coinbase or other browser wallet" : "Connect via WalletConnect, Email, or Social login"}
       >
         {variant === 'primary' && (

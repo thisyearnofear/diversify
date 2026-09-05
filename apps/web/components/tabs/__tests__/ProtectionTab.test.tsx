@@ -166,11 +166,17 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", () => ({
     ),
 }));
 
+// Mutable demo flag for the demo-honesty tests below.
+const demoState = { isActive: false };
 vi.mock("@/context/app/DemoModeContext", () => ({
   useDemoMode: () => ({
-    demoMode: { isActive: false },
-    enableDemoMode: vi.fn(),
-    disableDemoMode: vi.fn(),
+    demoMode: demoState,
+    enableDemoMode: vi.fn(() => {
+      demoState.isActive = true;
+    }),
+    disableDemoMode: vi.fn(() => {
+      demoState.isActive = false;
+    }),
   }),
 }));
 
@@ -350,6 +356,7 @@ describe("ProtectionTab — instrument shapes", () => {
     mockFinancialStrategy = null;
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
+    demoState.isActive = false;
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
       chainId: null,
@@ -519,6 +526,36 @@ describe("ProtectionTab — instrument shapes", () => {
       />,
     );
     expect(screen.getAllByTestId("data-freshness")).toHaveLength(1);
+    expect(screen.getByText("Wallet data live")).toBeInTheDocument();
+  });
+
+  it("demo mode never claims live wallet data — the badge reads 'Sample data' (honesty rail)", () => {
+    demoState.isActive = true;
+    render(
+      <ProtectionTab
+        userRegion="USA"
+        portfolio={{ ...MOCK_PORTFOLIO, lastUpdated: Date.now() }}
+      />,
+    );
+    const badge = screen.getByTestId("data-freshness");
+    expect(badge.textContent).toContain("Sample data");
+    expect(badge.textContent).not.toContain("live");
+    // No refresh affordance on data that is not real.
+    expect(badge.querySelector("button")).toBeNull();
+  });
+
+  it("connected mode still claims live data (demo marker does not leak)", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(
+      <ProtectionTab
+        userRegion="USA"
+        portfolio={{ ...MOCK_PORTFOLIO, lastUpdated: Date.now() }}
+      />,
+    );
     expect(screen.getByText("Wallet data live")).toBeInTheDocument();
   });
 });

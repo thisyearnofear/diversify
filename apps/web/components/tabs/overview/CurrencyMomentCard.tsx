@@ -62,11 +62,17 @@ const MOMENT_ACCENT = BENCHMARK_COLORS.USD;
 /**
  * DeltaNumber — the moment's one colored number, counted up (Skills
  * "number-details"). Keyed remounts restart the count on selection.
+ * One decimal when |delta| < 1: a live −0.4% must never render as "−0%"
+ * (rounding to a signed zero reads as broken data, not as a small move).
  */
 function DeltaNumber({ delta, accent }: { delta: number; accent: string }) {
-  const value = useCountUp(Math.abs(delta), {
-    format: (n) => `${delta > 0 ? '+' : '−'}${Math.round(Math.abs(n))}%`,
-  });
+  const formatDelta = (n: number) => {
+    const abs = Math.abs(n);
+    if (abs < 0.05) return "0%"; // dead flat — never a signed zero
+    const sign = delta > 0 ? "+" : "−";
+    return abs >= 0.95 ? `${sign}${Math.round(abs)}%` : `${sign}${abs.toFixed(1)}%`;
+  };
+  const value = useCountUp(Math.abs(delta), { format: formatDelta });
   return (
     <div className="text-4xl font-black tabular-nums" style={{ color: accent }}>
       <motion.span>{value}</motion.span>

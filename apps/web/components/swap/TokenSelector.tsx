@@ -31,6 +31,10 @@ interface TokenSelectorProps {
   tokenChainId?: number;
   experienceMode?: UserExperienceMode;
   financialStrategy?: FinancialStrategy;
+  /** False when no wallet is connected — suppresses the balance line
+   *  entirely. A walletless visitor has no balances; showing
+   *  "Balance: 0.0000 X" fabricates a state that cannot become true. */
+  hasWallet?: boolean;
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -48,6 +52,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   tokenChainId,
   experienceMode = "beginner",
   financialStrategy,
+  hasWallet = true,
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const reducedMotion = useReducedMotion();
@@ -209,7 +214,8 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           <button
             type="button"
             onClick={() => setShowWhySwap((s) => !s)}
-            className="flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-1 text-xs font-semibold text-blue-600 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="relative flex items-center gap-1 rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-1 my-0.5 text-xs font-semibold text-blue-600 dark:text-blue-300 transition-colors hover:bg-blue-100 dark:hover:bg-blue-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 before:absolute before:inset-[-10px] before:content-['']"
+            aria-label="Why swap? Different currencies lose value at different rates"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -227,7 +233,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </p>
           <button
             onClick={() => setShowWhySwap(false)}
-            className="mt-2 text-xs font-bold text-blue-500 hover:text-blue-700"
+            className="relative mt-2 text-xs font-bold text-blue-500 hover:text-blue-700 before:absolute before:inset-[-12px] before:content-['']"
           >
             Got it
           </button>
@@ -283,7 +289,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             onClick={() => setPickerOpen(true)}
             disabled={disabled}
             aria-label={`Select ${label} token`}
-            className="flex items-center gap-2 px-3 my-1.5 mr-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 min-h-[44px] my-1.5 mr-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <TokenIcon symbol={selectedToken} size={24} />
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
@@ -295,7 +301,9 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           </button>
         </div>
 
-        {/* Balance line */}
+        {/* Balance line — only with a connected wallet: no wallet, no
+            balances, and "0.0000" would be a fabricated number. */}
+        {hasWallet && (
         <div className="flex items-center justify-between px-4 pb-2.5">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-400 dark:text-gray-500">
@@ -321,6 +329,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             </span>
           )}
         </div>
+        )}
       </div>
 
       {/* Non-compliant inline warning (compact, one line) */}

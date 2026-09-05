@@ -11,6 +11,13 @@ interface DataFreshnessIndicatorProps {
   isStale?: boolean;
   /** Some of the displayed values are fallback estimates, not live quotes */
   hasEstimates?: boolean;
+  /**
+   * Static demo/sample data ("Explore demo first"). Demo data may carry a
+   * lastUpdated timestamp for realism, but it can never be "live wallet"
+   * data — the demo visitor has no wallet. Renders the neutral
+   * "Sample data" badge instead of a freshness claim.
+   */
+  isDemo?: boolean;
   isLoading?: boolean;
   error?: string | null;
   onRefresh?: () => void;
@@ -21,11 +28,22 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
   lastUpdated,
   isStale = false,
   hasEstimates = false,
+  isDemo = false,
   isLoading = false,
   error = null,
   onRefresh,
   className = "",
 }) => {
+  // Demo/sample data never claims freshness of any kind — no "stale", no
+  // "live", no refresh affordance. It must sit above every other branch.
+  if (isDemo) {
+    return (
+      <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
+        <StatusBadge label="Sample data" tone="neutral" compact />
+      </div>
+    );
+  }
+
   // Format relative time (e.g., "2 min ago")
   const getRelativeTime = (timestamp: number): string => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -93,7 +111,6 @@ export const DataFreshnessIndicator: React.FC<DataFreshnessIndicatorProps> = ({
     );
   }
 
-  // Fresh data
   return (
     <div data-testid="data-freshness" className={`flex items-center gap-2 text-xs ${className}`}>
       <StatusBadge

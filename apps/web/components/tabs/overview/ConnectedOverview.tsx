@@ -259,6 +259,7 @@ export function ConnectedOverview({
           lastUpdated={portfolio.lastUpdated}
           isStale={portfolio.isStale}
           hasEstimates={portfolio.hasEstimates}
+          isDemo={isDemo}
           isLoading={portfolio.isLoading}
           error={chainErrors.length > 0 ? chainErrors[0] : null}
           onRefresh={refreshBalances ? handleRefresh : undefined}

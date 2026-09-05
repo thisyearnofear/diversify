@@ -19,6 +19,9 @@ export interface FreshnessInfo {
   lastUpdated: number | null;
   isStale?: boolean;
   hasEstimates?: boolean;
+  /** Static demo/sample data — the freshness slot renders a neutral
+   *  "Sample data" badge instead of any freshness claim. */
+  isDemo?: boolean;
   isLoading?: boolean;
   errors?: string[] | null;
 }
@@ -55,6 +58,7 @@ export function InstrumentShell({
             lastUpdated={portfolio.lastUpdated}
             isStale={portfolio.isStale}
             hasEstimates={portfolio.hasEstimates}
+            isDemo={portfolio.isDemo}
             isLoading={portfolio.isLoading}
             error={portfolio.errors?.[0] ?? null}
             onRefresh={onRefresh}

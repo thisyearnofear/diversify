@@ -207,6 +207,14 @@ export const DEMO_PORTFOLIO = {
 
     isLoading: false,
     isStale: false,
+    /**
+     * Honesty marker: this object is static sample data for the
+     * "Explore demo first" path. The freshness indicator must render
+     * "Sample data", never a "live wallet" claim — a demo visitor has
+     * no wallet, so no data can be live. Consumers:
+     * InstrumentShell → DataFreshnessIndicator (isDemo prop).
+     */
+    isDemo: true as const,
     errors: [],
     lastUpdated: Date.now(),
 };
