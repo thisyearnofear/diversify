@@ -21,6 +21,19 @@ Users can sign in via email, social login, or existing wallet (Privy). No wallet
 
 That's the minimum to run the app. Every other env var (AI providers, data feeds, Arc/x402, Circle, deployment) is documented in [`integrations.md`](./integrations.md) — pick what you need and the linked doc has the table, the purpose, and the source.
 
+### Try the Caribbean FX netting demo (no keys beyond Privy)
+
+The Future Caribbean submission's core system runs with just the minimum setup plus MongoDB:
+
+1. Add `MONGODB_URI` (free Atlas tier — `.env.example` has the shape). This hosts the intent pool so intents match across users and across time.
+2. `pnpm dev` → open the app → **Exchange tab → FX Corridor → Caribbean FX Net card**.
+3. Post an intent (e.g. *sell BBD, buy JMD*). Open a second browser profile (or ask a friend) and post the opposing intent (*sell JMD, buy BBD*).
+4. The matching engine pairs them **directly at mid-market — no USD bridge** — shows the net obligation and the computed savings vs. the ~7% traditional corridor, and settlement executes wallet-to-wallet with on-chain verification.
+
+Prefer not to run anything? The deterministic engine is a pure-function library — read it directly: [`packages/shared/src/services/fx-netting/matching-engine.ts`](../packages/shared/src/services/fx-netting/matching-engine.ts), with its test suite in `__tests__/`.
+
+> Walletless visitors see the full ticket with a connect CTA — nothing fabricates balances or quotes without a wallet (honesty by mechanism, not disclaimer).
+
 ### Supported Chains
 
 | Chain | Role | Testnet Faucet |
