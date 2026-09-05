@@ -179,6 +179,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         reasoning: rec.reasoning,
       },
       signals: toGuardianSignals(snapshot),
+      // Phase 3 correctness fix: the Phase 0 synthesizer's reasoning string
+      // already renders its data points + outage disclosure (frozen wording).
+      // Without this flag the builder appended a SECOND data-point sentence
+      // to the on-chain text. The probe test in the shared package pins the
+      // pre-Phase-1 wording through the full wiring path.
+      bodyComplete: true,
     };
 
     const apacPromise = process.env.HASHKEY_LEDGER_CONTRACT

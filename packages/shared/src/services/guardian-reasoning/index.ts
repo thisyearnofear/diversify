@@ -254,3 +254,17 @@ export {
   decisionToLedgerParams,
   surfaceToServingModel,
 } from './artifact';
+
+// ---------------------------------------------------------------------------
+// Phase 3 — the cross-surface replay harness
+// ---------------------------------------------------------------------------
+
+export type { ReplaySurface, ReplaySurfaceProjection, ReplayFixture, ReplayResult, ReplaySurfacesResult } from './harness';
+export {
+  replaySignalFixture,
+  assertReplayContract,
+  findQuotedDeadSignals,
+  textQuotesUnlabeledFigures,
+  describeReplay,
+  harness,
+} from './harness';

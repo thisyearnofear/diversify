@@ -1,6 +1,6 @@
 # Unified Guardian Reasoning Service — Design Draft
 
-> **Status: Phases 0–1 SHIPPED (2026-09-05).** Phase 0: the deterministic
+> **Status: Phases 0–1 + 3 SHIPPED (2026-09-05).** Phase 0: the deterministic
 > synthesizer, signal mapping, and gate primitives live in
 > `packages/shared/src/services/guardian-reasoning/` and the heartbeat
 > consumes them via a byte-identical alias (`pickRecommendation` →
@@ -8,7 +8,11 @@
 > original implementation (§7 Phase 0 below). Phase 1: loop, heartbeat, and
 > Arc agent ledger records all compose on-chain text through the ONE
 > `buildAdvisoryReasoning`/`decisionToLedgerParams` path, with cross-surface
-> golden tests (§7 Phase 1 below). Phases 2–3 remain as described.
+> golden tests (§7 Phase 1 below). Phase 3: the cross-surface replay harness
+> (`harness.ts`) replays one signal fixture across all three surfaces and
+> asserts identity, determinism, and honesty on every run (§7 Phase 3
+> below). Phase 2 (optional AI ranker behind free-first gates) remains as
+> described.
 >
 > **Guiding constraint:** money movement is frozen until Phase 2. Phases 0–1
 > are pure refactors with golden tests proving byte-identical behaviour; the
@@ -226,10 +230,24 @@ ranker (env-gated, free sources only). Feed Cognee memory in as context (cohort
 preferences, past decisions) so the same user does not get contradicting
 advice week to week.
 
-**Phase 3 — cross-surface evaluation harness.**
-A decision replay harness (mocked providers + frozen clock, the pattern the
-loop tests already use) that drives all three surfaces from the same signal
-fixture and asserts identical verdicts and artifacts.
+**Phase 3 — cross-surface evaluation harness (SHIPPED 2026-09-05).**
+`harness.ts` in the shared module. Pure and provider-free: a fixture is
+data, not mocks — surfaces participate by projecting the fixture into the
+artifact their REAL wiring builds (`ReplaySurfaceProjection`), which is the
+thing that can silently drift. `replaySignalFixture` asserts four properties
+per scenario: cross-surface identity (§8.4), determinism (§8.6), the honesty
+scanner (a `live:false` signal can never appear quoted — checked on every
+replay, including the poison case of a dead signal carrying a plausible
+value), and **route parity** — when a fixture carries the heartbeat
+snapshot, the synthesizer→artifact path must compose the frozen Phase 0
+golden text exactly, so wiring drift (e.g. a dropped flag) fails the harness
+instead of silently rewording on-chain text. The first run of the harness
+class proved its worth immediately: a parity probe caught the Phase 1 wiring
+duplicating the heartbeat's data-point sentence (the synthesizer's body is
+already complete); fixed with explicit `bodyComplete` semantics on the
+artifact and the probe is now a permanent regression test. Mutation probes
+in `__tests__/harness.replay.test.ts` prove the harness detects drift (a
+drafted-differently surface breaks identity) rather than trivially passing.
 
 ## 8. Invariants & tests (regardless of phase)
 

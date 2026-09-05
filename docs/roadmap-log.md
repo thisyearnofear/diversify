@@ -37,6 +37,8 @@ Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–13 shi
 
 **1,237 tests passing** after unified-reasoning Phase 1 (151 files; +11 cross-surface artifact golden tests). `artifact.ts` adds the unified `GuardianDecisionArtifact` + ONE `buildAdvisoryReasoning`/`decisionToLedgerParams` path; loop, heartbeat (×4 records), and Arc agent ledger records all compose on-chain text through it — identical (draft, signals, cohort) ⇒ byte-identical text on every surface, only the `servingModel` origin stamp differs. Key files: `packages/shared/src/services/guardian-reasoning/artifact.ts` + `__tests__/artifact.golden.test.ts`, `pages/api/agent/guardian-heartbeat.ts` + `guardian-loop.ts` (builder-composed records), `packages/shared/src/services/agent-service.ts` (same shape stamped).
 
+**1,246 tests passing** after unified-reasoning Phase 3 (153 files; +1 parity probe, +7 harness replay tests, +1 raw-body path test). `harness.ts` replays one signal fixture across all three surface projections asserting identity/determinism/honesty + route parity against the Phase 0 golden; its first run caught the Phase 1 heartbeat wiring duplicating the synthesizer's data-point sentence on-chain — fixed with explicit `bodyComplete` semantics (`artifact.ts`) and `bodyComplete: true` in the heartbeat wiring; wording byte-identical to the pre-Phase-1 freeze (probe is permanent). Mutation probes prove drift detection. Key files: `packages/shared/src/services/guardian-reasoning/harness.ts` + `__tests__/harness.replay.test.ts` + `__tests__/artifact-heartbeat-parity.test.ts`, `pages/api/agent/guardian-heartbeat.ts` (bodyComplete flag).
+
 ---
 
 

@@ -65,6 +65,15 @@ export interface GuardianDecisionArtifact {
   cohort?: GuardianCohort;
   /** For evidence mirrors: the kind + status + chain of the record being mirrored. */
   mirror?: { anchorStatus: string; chainId: number | string; primaryReasoning?: string };
+  /**
+   * Phase 3 correctness fix: when the draft body ALREADY renders its own
+   * data points and outage disclosure — the Phase 0 heartbeat synthesizer's
+   * frozen wording — the builder must not append a second copy. Leave
+   * undefined for raw bodies (loop execution facts, bare LLM text) and the
+   * builder renders the canonical signal lines; set `true` for complete
+   * bodies. Default `false` preserves Phase 1 rendering behaviour.
+   */
+  bodyComplete?: boolean;
 }
 
 /** Render one signal as a quoted data point — NEVER for `live: false`. */
@@ -99,6 +108,17 @@ export function buildAdvisoryReasoning(decision: GuardianDecisionArtifact): stri
   }
 
   const body = decision.draft.reasoning || 'Guardian advisory';
+
+  if (decision.bodyComplete) {
+    // The draft body is already fully rendered (data points + disclosure);
+    // only cohort prefix and gate disclosure remain builder-owned.
+    let completeText = `${prefix}${body}`;
+    const declinedComplete = decision.verdict?.status === 'declined' && (decision.verdict.reasons.length > 0);
+    if (declinedComplete) {
+      completeText += ` Gates declined: ${decision.verdict!.reasons.join(', ')}.`;
+    }
+    return completeText.trim();
+  }
 
   const dataPoints = decision.signals
     .map(renderSignal)
