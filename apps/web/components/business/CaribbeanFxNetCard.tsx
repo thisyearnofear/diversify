@@ -284,24 +284,27 @@ export function CaribbeanFxNetCard() {
               {data && data.matches.length === 0 && !isLoading && (
                 <div className="mt-4 rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3">
                   <p className="text-xs text-teal-800 dark:text-teal-200 leading-relaxed">
-                    No counterparty in the pool needs{' '}
+                    No live counterparty needs{' '}
                     <span className="font-black">
                       {sellCurrency} ↔ {buyCurrency}
                     </span>{' '}
-                    yet — the engine only matches opposing flows at the live
-                    mid-market; it never invents one.
+                    at mid-market right now — the engine matches opposing
+                    flows exactly; it never invents one.
                   </p>
                   {address ? (
                     <p className="mt-1.5 text-[11px] text-teal-700 dark:text-teal-300 leading-relaxed">
                       Your intent stays open for the next matching cycle — the
                       first counterparty who posts the opposing leg gets matched
                       automatically, and you settle the net from your wallet.
+                      Guardian standing liquidity already covers BBD↔JMD and
+                      TTD↔JMD at mid-market.
                     </p>
                   ) : (
                     <p className="mt-1.5 text-[11px] text-teal-700 dark:text-teal-300 leading-relaxed">
                       Connect a wallet to post your intent into the pool so the
                       next counterparty — tomorrow, next week — matches against
-                      it.
+                      it. BBD↔JMD and TTD↔JMD carry Guardian standing liquidity
+                      at mid-market right now.
                     </p>
                   )}
                 </div>
@@ -309,19 +312,42 @@ export function CaribbeanFxNetCard() {
 
               {data?.matches.length ? (
                 <ul className="mt-4 space-y-2">
-                  {data.matches.map((m) => (
-                    <li
-                      key={m.matchId}
-                      className="rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3 text-xs leading-relaxed text-teal-800 dark:text-teal-200"
-                    >
-                      <span className="font-black">{m.intentA.sellCurrency}</span> →{" "}
-                      <span className="font-black">{m.intentB.sellCurrency}</span> ·{" "}
-                      <span className="font-bold tabular-nums">{m.matchedAmount.toLocaleString()}</span>{" "}
-                      matched at <span className="font-mono">{m.rate.toFixed(4)}</span>
-                    </li>
-                  ))}
+                  {data.matches.map((m) => {
+                    const guardianLeg =
+                      m.intentA.participantId.toLowerCase().startsWith('guardian-liquidity-') ||
+                      m.intentB.participantId.toLowerCase().startsWith('guardian-liquidity-');
+                    return (
+                      <li
+                        key={m.matchId}
+                        className="rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3 text-xs leading-relaxed text-teal-800 dark:text-teal-200"
+                      >
+                        <span className="font-black">{m.intentA.sellCurrency}</span> →{" "}
+                        <span className="font-black">{m.intentB.sellCurrency}</span> ·{" "}
+                        <span className="font-bold tabular-nums">{m.matchedAmount.toLocaleString()}</span>{" "}
+                        matched at <span className="font-mono">{m.rate.toFixed(4)}</span>
+                        {guardianLeg && (
+                          <span
+                            className="mt-1 block text-[10px] font-bold text-teal-600 dark:text-teal-400"
+                            data-testid={`fx-guardian-match-${m.matchId}`}
+                          >
+                            Filled by Guardian standing liquidity — the pool’s
+                            always-on mid-market quote.
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               ) : null}
+
+              {data?.bootstrapNote && (
+                <p
+                  className="mt-3 text-[10px] text-teal-700/80 dark:text-teal-300/80 leading-snug"
+                  data-testid="fx-bootstrap-note"
+                >
+                  {data.bootstrapNote}
+                </p>
+              )}
 
               <footer className="mt-4 text-[10px] text-teal-700/70 dark:text-teal-300/70 leading-snug">
                 {data && data.rateSourceNote
@@ -330,7 +356,7 @@ export function CaribbeanFxNetCard() {
                 {typeof data?.poolSize === 'number' && data.poolSize > 0
                   ? `Matched against ${data.poolSize} open intent${data.poolSize === 1 ? '' : 's'} in the pool. `
                   : data && !isLoading
-                    ? 'The live pool is empty — your intent joined as a preview run. '
+                    ? 'No open intents in the pool this run. '
                     : ''}
                 Real matches anchor on-chain to the region-canonical ledger.
               </footer>

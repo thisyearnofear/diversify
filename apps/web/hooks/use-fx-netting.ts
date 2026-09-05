@@ -57,6 +57,11 @@ export interface FxNettingResult {
   unmatchedCount: number;
   rateSourceNote: string;
   rateDate: string | null;
+  /** Present when Guardian standing liquidity seeded corridors this run. */
+  bootstrapNote: string | null;
+  /** True when the caller's own match was against Guardian standing liquidity. */
+  matchedWithGuardianLiquidity: boolean;
+  totalMatchedGuardianLiquidity?: never;
   /** Size of the open pool the server matched against (hosted pool). */
   poolSize?: number;
   /** True when the run was a walletless observer dry-run — the engine ran
@@ -199,13 +204,27 @@ export function useFxNetting(
         );
         if (!res.ok) throw new Error(`fx-netting ${res.status}`);
         const json = await res.json();
+        // Did the caller's own leg match Guardian standing liquidity?
+        // A Guardian match is a trust-positive (the pool's standing quote
+        // filled you at mid-market) and must be labelled as such.
+        const myParticipant = (userAddress ?? newObserverId()).toLowerCase();
+        const matchedGuardian = (json.matches ?? []).some(
+          (m: FxNettingMatch) =>
+            [m.intentA, m.intentB].some(
+              (side) =>
+                side.participantId.toLowerCase().startsWith('guardian-liquidity-') &&
+                side.participantId.toLowerCase() !== myParticipant,
+            ),
+        );
         setData({
           matches: json.matches ?? [],
           totalMatchedUsd: json.totalMatchedUsd ?? 0,
+          matchedWithGuardianLiquidity: matchedGuardian,
           totalSavingsUsd: json.totalSavingsUsd ?? 0,
           unmatchedCount: json.unmatchedIntents?.length ?? 0,
           rateSourceNote: json.rateSourceNote ?? '',
           rateDate: json.rateDate ?? null,
+          bootstrapNote: json.bootstrapNote ?? null,
           poolSize: json.poolSize,
           observer: json.observer === true,
         });
