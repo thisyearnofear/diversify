@@ -154,7 +154,13 @@ A tab change that fails any of these is the old stack. Do not ship it.
    hidden Exchange tab is a bug.
 4. **Persona morphs the object, it does not add a module.** Caribbean
    netting stays an Exchange shape. Yield annotates the quote. RWA is a
-   ring token. Payment cycle is a Shield inspector body.
+   ring token. Payment cycle is a Shield inspector body. The morph is the
+   object's *default* for its persona — connected or not — and every other
+   persona reaches it through the status rail ("FX netting: match
+   currencies directly →" ↔ "Swap ticket →"), never a new tab. A wallet
+   is not required to *see* the engine: walletless visitors run it as a
+   dry-run observer (real pool, real mid-market, nothing persisted) and
+   the card says so.
 5. **Unconnected is a morph too.** The object stays: Home's moment card
    works walletless (geo data, not wallet data), Exchange's ticket CTA
    becomes the connect button, Shield's philosophy picker stays the object
