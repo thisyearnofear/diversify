@@ -213,10 +213,13 @@ The autonomous-execution Guardian (this doc: `guardian-loop` + heartbeat +
 `Permission`/`GuardianState`/`VaultService`) and the advisory analysis stack
 (`packages/shared/src/services/guardian/*` — six-question recommendation
 contract, consumed by `agent-service.ts`, the Arc/x402 marketplace agent that
-pays for its own data) share a name but almost no code. A future unification
-workstream should give both ONE reasoning service — deterministic gates as the
-safety floor, AI ranking/explaining *within* those gates — so the on-chain
-advisory contract is identical everywhere and the two surfaces cannot drift.
+pays for its own data) share a name but almost no code. The unification plan
+is drafted in `docs/guardian-reasoning-service.md`: ONE reasoning domain
+(signals → deterministic synthesizer floor → optional AI rank/explain within
+the gates → pure `GatesEvaluator` → one artifact + one on-chain reasoning
+builder), executed in zero-behaviour-change phases with golden tests. The
+safety floor is deterministic; AI never authorizes; the executor and its
+`VaultService.rebalance` choke point are untouched by the migration.
 
 ---
 
