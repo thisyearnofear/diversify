@@ -88,7 +88,7 @@ The stablecoin "coin motif" is now the onboarding design language. Reusable piec
 - **Wave 6:** `PhilosophyHeroCard` DRY for Home + Shield unconnected heroes *(superseded 2026-09-04: hero cards retired — all four unconnected tabs are instrument morphs with the shared `UnconnectedStatusTier`; `PhilosophyHeroCard`, `UnconnectedStateShell`, and `GuardianStateScrollytelling` deleted — design-language §5 rail 5)*; onboarding detect phase waits for user tap
 - **Wave 7:** `getPlanPreview()` + phase-3 `PlanPreviewCard`; `PhilosophyPromptCard` DRY; `STRATEGY_ALLOCATIONS` shared with Guardian wizard
 - **Wave 8:** Honest price feeds — shared `fetchWithTimeout` (`packages/shared/src/utils/promise-utils.ts`); EM price service per-provider timeouts + serves expired cache before fabricating a static price (fallbacks report `change24h: null`, never a fake `+0.0%`); `use-emerging-markets-prices` derives staleness from data timestamps and exposes `hasEstimates` → `DataFreshnessIndicator` "Includes estimates"; EM prices API route on `unifiedCache` (new `realtime` category, coalesces concurrent fan-outs); dead `use-data-freshness` + unused `useEmergingMarketPrice` deleted
-- **1,211 tests passing** (149 files); see `docs/roadmap-log.md` § UX consolidation waves for the full table
+- **1,246 tests passing** (153 files); see `docs/roadmap-log.md` § UX consolidation waves for the full table
 
 **Wave 9 — progressive disclosure (2026-08-31):** user feedback said the tabs were "verbose and card heavy" — ProtectionTab rendered ~25 always-open sections, ConnectedOverview ~24. Wave 9 collapsed them into `DisclosureSection` rows. That was a density tactic, not the layout.
 
