@@ -287,9 +287,12 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
             <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-1">
                 Recent on-chain activity
             </h4>
+            {/* §7 chain-agnostic trust: the badges name the chains (data);
+                prose stays rail-blind. Which chains exist is not this
+                line's job — the ✓ explainer is. */}
             <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mb-2">
-                Live Guardian receipts from our rails — Arbitrum (yield), Celo (savings, incl. Caribbean) and
-                HashKey (APAC rail). A <span className="font-bold text-emerald-600 dark:text-emerald-400">✓</span> means
+                Live Guardian receipts across our settlement networks — the badge on each row
+                names its chain. A <span className="font-bold text-emerald-600 dark:text-emerald-400">✓</span> means
                 the chain&apos;s RPC confirmed the receipt against the ledger contract.
             </p>
             <ul className="space-y-0.5" aria-live="polite" aria-atomic="true">

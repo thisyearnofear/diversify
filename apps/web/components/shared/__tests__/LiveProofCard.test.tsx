@@ -235,4 +235,21 @@ describe('LiveProofTicker', () => {
             expect(screen.getByTestId('tx-verified-16661-246')).toBeInTheDocument();
         });
     });
+
+    // §7 chain-agnostic trust: the per-row badges carry chain identity as
+    // data; the prose must stay rail-blind. Regression lock — the old copy
+    // enumerated Arbitrum/Celo/HashKey on every unconnected Shield, which
+    // read as "why is it talking about HashKey" for any non-APAC lens.
+    it('keeps the explainer prose rail-blind (no chain names)', () => {
+        render(
+            <CtxWrap value={{ isLoading: false, data: SAMPLE_DATA }}>
+                <LiveProofTicker />
+            </CtxWrap>,
+        );
+        const ticker = screen.getByTestId('live-proof-ticker');
+        expect(ticker.textContent).toContain('settlement networks');
+        expect(ticker.textContent).not.toContain('HashKey');
+        expect(ticker.textContent).not.toContain('Arbitrum');
+        expect(ticker.textContent).not.toContain('Celo');
+    });
 });
