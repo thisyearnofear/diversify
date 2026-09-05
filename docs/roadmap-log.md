@@ -39,6 +39,8 @@ Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–13 shi
 
 **1,246 tests passing** after unified-reasoning Phase 3 (153 files; +1 parity probe, +7 harness replay tests, +1 raw-body path test). `harness.ts` replays one signal fixture across all three surface projections asserting identity/determinism/honesty + route parity against the Phase 0 golden; its first run caught the Phase 1 heartbeat wiring duplicating the synthesizer's data-point sentence on-chain — fixed with explicit `bodyComplete` semantics (`artifact.ts`) and `bodyComplete: true` in the heartbeat wiring; wording byte-identical to the pre-Phase-1 freeze (probe is permanent). Mutation probes prove drift detection. Key files: `packages/shared/src/services/guardian-reasoning/harness.ts` + `__tests__/harness.replay.test.ts` + `__tests__/artifact-heartbeat-parity.test.ts`, `pages/api/agent/guardian-heartbeat.ts` (bodyComplete flag).
 
+**1,258 tests passing** after the settlement-native credit layer + liquidity bootstrap (155 files; +8 credit scorer, +4 bootstrap builder; match route suite unchanged). `credit-profile.ts` (pure scorer: thin-file honesty gate, behavioural factors from verified settlements, provenance per factor) + `GET /api/fx-netting/credit-profile` (self/counterparty views, synthetic-id exclusion) + `liquidity-bootstrap.ts` (Guardian standing mid-market intents on BBD↔JMD / TTD↔JMD, hourly rotation, no-rate skip) wired into the match route with observer-dry-run seeding excluded + `bootstrapNote` disclosure. Key files: `packages/shared/src/services/fx-netting/credit-profile.ts` + `liquidity-bootstrap.ts` + `__tests__/`, `pages/api/fx-netting/credit-profile.ts`, `pages/api/fx-netting/match.ts`.
+
 ---
 
 

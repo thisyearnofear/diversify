@@ -33,6 +33,7 @@ import {
 } from '@diversifi/shared/src/services/fx-netting/matching-engine';
 import { buildSettlementPlan } from '@diversifi/shared/src/services/fx-netting/settlement';
 import { buildLiveRateProvider } from '@diversifi/shared/src/services/fx-netting/rate-adapter';
+import { buildStandingIntents } from '@diversifi/shared/src/services/fx-netting/liquidity-bootstrap';
 import type { FxIntent } from '@diversifi/shared/src/services/fx-netting/intent';
 
 const RATE_LIMIT = 20;
@@ -50,6 +51,9 @@ interface MatchResponse {
     rateDate: string | null;
     /** Size of the open pool this run matched against. */
     poolSize: number;
+    /** Present when the Guardian's standing liquidity seeded corridors this
+     *  run — names how many were seeded and how many skipped (no live rate). */
+    bootstrapNote?: string | null;
     /** True when the run was a walletless observer (dry-run) — matches are
      *  real engine output but nothing was persisted. */
     observer?: boolean;
@@ -133,6 +137,39 @@ export default async function handler(
         }
 
         const now = Date.now();
+
+        // Liquidity bootstrap (honest cold start): the Guardian seeds the
+        // deepest Caribbean corridors with STANDING mid-market intents so a
+        // real SME's first intent finds a counterparty instead of a dead
+        // pool. Guardian ids are `guardian-liquidity-` prefixed, excluded
+        // from credit scoring, and settlement of a Guardian-matched leg
+        // remains zero-custody (the Guardian intent is a standing quote, NOT
+        // a promise of settlement capital — funded-float participation is an
+        // explicit Phase 2 workstream). Skipped corridors are disclosed,
+        // never seeded at a fabricated rate.
+        //
+        // A walletless OBSERVER run never seeds: a preview must not mutate
+        // the pool it previews (the same dry-run guarantee as below).
+        let bootstrapNote: string | null = null;
+        if (observerIntents.length === 0) {
+            const standing = buildStandingIntents(now, (c) => {
+                if (!rateProvider.hasRate(c)) return null;
+                // local-per-USD for the corridor's sell currency (USD→local).
+                // The standing intent sells `amount` units of local for
+                // USD-equivalent value at mid-market — the engine prices
+                // the match itself.
+                return rateProvider.midRate('USD', c);
+            });
+            if (standing.intents.length > 0) {
+                for (const intent of standing.intents) {
+                    await upsertPoolIntent(FxIntentRecord, intent);
+                }
+                bootstrapNote = standing.skipped.length > 0
+                    ? `Guardian standing liquidity seeded ${standing.intents.length} corridor(s); ${standing.skipped.length} skipped (no live rate).`
+                    : `Guardian standing liquidity seeded ${standing.intents.length} corridor(s) at mid-market.`;
+            }
+        }
+
         const pool = await loadOpenPool(FxIntentRecord, now);
 
         // Observer intents join THIS run's matching set but never the pool.
@@ -286,6 +323,7 @@ export default async function handler(
             rateSourceNote: rateProvider.sourceNote,
             rateDate: rateProvider.date,
             poolSize: pool.length,
+            bootstrapNote,
         });
     } catch (err) {
         const message = err instanceof Error ? err.message : 'FX netting failed';
