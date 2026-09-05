@@ -103,17 +103,35 @@ export async function upsertPoolIntent(
     return existing;
   }
 
-  return model.create({
-    intentId: intent.intentId,
-    participantId: intent.participantId.toLowerCase(),
-    sellCurrency: intent.sellCurrency.toUpperCase(),
-    sellAmount: intent.sellAmount,
-    buyCurrency: intent.buyCurrency.toUpperCase(),
-    buyAmountMin: intent.buyAmountMin ?? null,
-    deadline: intent.deadline,
-    remainingSell: intent.sellAmount,
-    status: 'open',
-  });
+  try {
+    return await model.create({
+      intentId: intent.intentId,
+      participantId: intent.participantId.toLowerCase(),
+      sellCurrency: intent.sellCurrency.toUpperCase(),
+      sellAmount: intent.sellAmount,
+      buyCurrency: intent.buyCurrency.toUpperCase(),
+      buyAmountMin: intent.buyAmountMin ?? null,
+      deadline: intent.deadline,
+      remainingSell: intent.sellAmount,
+      status: 'open',
+    });
+  } catch (err) {
+    // Concurrent match runs can pass the findOne check simultaneously and
+    // both reach create() — the unique intentId index rejects the loser.
+    // That's the idempotency contract WORKING (one row wins, both callers
+    // proceed with the same pool state), not an error: re-read and return
+    // the winner, refreshed to this run's deadline.
+    if ((err as { code?: number }).code !== 11000) throw err;
+    const winner = await model
+      .findOne({ intentId: intent.intentId })
+      .exec();
+    if (winner) {
+      winner.deadline = intent.deadline;
+      await winner.save();
+      return winner;
+    }
+    throw err;
+  }
 }
 
 interface MatchSide {
