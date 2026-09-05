@@ -11,7 +11,11 @@
  *
  * Flow:
  *   1. Fetch live market data (DeFiLlama yields, CoinGecko prices, World Bank inflation)
- *   2. Generate an advisory recommendation via the AI service
+ *      — provenance-tracked: an unreachable provider yields `null` figures and a
+ *      `live: false` flag, never a hardcoded "default price" wearing a live source
+ *   2. Generate an advisory recommendation via the AI service — decided and
+ *      reasoned ONLY from live observations; reasoning names each source and
+ *      discloses any source unavailable this beat (no fallback figures)
  *   3. Record on the chain-aware primary ledger (Celo for savings, Arbitrum for yield)
  *      — plus an APAC-cohort savings advisory on HashKey when the rail is configured
  *      — plus a Caribbean-cohort savings advisory on Celo (cohort-labelled receipt)
@@ -38,101 +42,160 @@ const GUARDIAN_LOOP_SECRET = (() => {
 
 const GUARDIAN_AGENT_ADDRESS = process.env.GUARDIAN_AGENT_ADDRESS || '0x803798fb6AC2ab3234f482350FB2aF6422b2B8f2';
 
-interface MarketSnapshot {
-  defillama: { protocol: string; apy: number; tvl: number }[];
-  coingecko: { bitcoin: number; ethereum: number; pax_gold: number };
-  worldBank: { current_inflation: number; source: string };
+export interface MarketSnapshot {
+  /** live=false means the provider was unreachable this beat — never confuse
+   *  an empty/absent read with an observed market condition. */
+  defillama: {
+    live: boolean;
+    /** Live-but-empty is a legitimate read (no qualifying pools);
+     *  failure also yields empty, distinguished by `live`. */
+    pools: { protocol: string; apy: number; tvl: number }[];
+  };
+  coingecko: {
+    live: boolean;
+    bitcoin: number | null;
+    pax_gold: number | null;
+  };
+  worldBank: {
+    /** True only when the request succeeded AND a finite value was returned. */
+    live: boolean;
+    current_inflation: number | null;
+  };
   timestamp: string;
 }
 
-async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
-  const [defillamaRes, coingeckoRes, worldBankRes] = await Promise.all([
-    fetch('https://yields.llama.fi/pools').then(r => r.json()).catch(() => ({ data: [] })),
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,pax-gold&vs_currencies=usd')
-      .then(r => r.json()).catch(() => ({})),
-    fetch('https://api.worldbank.org/v2/country/US/indicator/FP.CPI.TOTL.ZG?format=json&per_page=1&date=2023')
-      .then(r => r.json()).catch(() => ([[], [{ value: 3.1 }]])),
-  ]);
-
-  const stablePools = (defillamaRes.data || [])
-    .filter((pool: { symbol: string; tvlUsd: number }) =>
-      pool.symbol?.includes('USDC') && pool.tvlUsd > 1_000_000)
-    .sort((a: { apy: number }, b: { apy: number }) => b.apy - a.apy)
-    .slice(0, 5)
-    .map((pool: { project: string; apy: number; tvlUsd: number }) => ({
-      protocol: pool.project,
-      apy: pool.apy,
-      tvl: pool.tvlUsd,
-    }));
-
-  const cg = coingeckoRes || {};
-  const wbData = worldBankRes?.[1]?.[0]?.value || 3.1;
-
-  return {
-    defillama: stablePools,
-    coingecko: {
-      bitcoin: cg.bitcoin?.usd || 65000,
-      ethereum: cg.ethereum?.usd || 3500,
-      pax_gold: cg['pax-gold']?.usd || 2400,
-    },
-    worldBank: { current_inflation: wbData, source: 'World Bank API' },
-    timestamp: new Date().toISOString(),
-  };
-}
-
-function pickRecommendation(snapshot: MarketSnapshot): {
+export interface HeartbeatRecommendation {
   action: string;
   targetToken: string;
   reasoning: string;
   confidence: number;
-} {
-  const topYield = snapshot.defillama[0];
+}
+
+/** Fetch wrapper that reports reachability instead of fabricating a body on
+ *  failure. The old `|| 65000`-style defaults made an on-chain advisory read
+ *  as if CoinGecko had quoted those prices — a fallback labeled as live. */
+type FetchResult<T> = { ok: true; data: T } | { ok: false };
+
+async function fetchJson<T>(url: string): Promise<FetchResult<T>> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return { ok: false };
+    return { ok: true, data: (await response.json()) as T };
+  } catch {
+    return { ok: false };
+  }
+}
+
+async function fetchMarketSnapshot(): Promise<MarketSnapshot> {
+  const [defillamaFetch, coingeckoFetch, worldBankFetch] = await Promise.all([
+    fetchJson<{ data?: { symbol?: string; tvlUsd?: number; project?: string; apy?: number }[] }>(
+      'https://yields.llama.fi/pools'),
+    fetchJson<{
+      bitcoin?: { usd?: number };
+      'pax-gold'?: { usd?: number };
+    }>('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,pax-gold&vs_currencies=usd'),
+    fetchJson<[{ value?: unknown }[], { value?: unknown }[]]>(
+      'https://api.worldbank.org/v2/country/US/indicator/FP.CPI.TOTL.ZG?format=json&per_page=1&date=2023'),
+  ]);
+
+  const stablePools = defillamaFetch.ok
+    ? (defillamaFetch.data.data || [])
+        .filter((pool) => pool.symbol?.includes('USDC') && (pool.tvlUsd || 0) > 1_000_000)
+        .sort((a, b) => (b.apy || 0) - (a.apy || 0))
+        .slice(0, 5)
+        .map((pool) => ({
+          protocol: pool.project || 'unknown',
+          apy: pool.apy || 0,
+          tvl: pool.tvlUsd || 0,
+        }))
+    : [];
+
+  const cg = coingeckoFetch.ok ? coingeckoFetch.data : {};
+
+  // A real World Bank response can also carry `value: null` (no observation
+  // for the requested year) — that is not a number we may quote either.
+  const wbValue = worldBankFetch.ok ? worldBankFetch.data?.[1]?.[0]?.value : undefined;
+  const inflationLive =
+    typeof wbValue === 'number' && Number.isFinite(wbValue);
+
+  return {
+    defillama: { live: defillamaFetch.ok, pools: stablePools },
+    coingecko: {
+      live: coingeckoFetch.ok,
+      bitcoin: typeof cg?.bitcoin?.usd === 'number' ? cg.bitcoin.usd : null,
+      pax_gold: typeof cg?.['pax-gold']?.usd === 'number' ? cg['pax-gold'].usd : null,
+    },
+    worldBank: {
+      live: inflationLive,
+      current_inflation: inflationLive ? (wbValue as number) : null,
+    },
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export function pickRecommendation(snapshot: MarketSnapshot): HeartbeatRecommendation {
   const inflation = snapshot.worldBank.current_inflation;
   const btcPrice = snapshot.coingecko.bitcoin;
   const paxGoldPrice = snapshot.coingecko.pax_gold;
+  const topYield = snapshot.defillama.pools[0];
 
   // Simple rule-based logic — real AI synthesis happens via the gateway,
   // but for the heartbeat we want deterministic, auditable reasoning.
-  const reasoningParts: string[] = [
-    `Inflation: ${inflation}%`,
-    `BTC: $${btcPrice.toLocaleString()}`,
-    `PAXG: $${paxGoldPrice.toLocaleString()}`,
-  ];
-
-  if (topYield) {
-    reasoningParts.push(`Top yield: ${topYield.protocol} at ${topYield.apy.toFixed(2)}% APY ($${(topYield.tvl / 1e6).toFixed(1)}M TVL)`);
+  // Only observed figures enter the reasoning; each carries its live source.
+  const dataPoints: string[] = [];
+  if (inflation !== null) dataPoints.push(`Inflation: ${inflation}% (World Bank CPI, live)`);
+  if (btcPrice !== null) dataPoints.push(`BTC: $${btcPrice.toLocaleString()} (CoinGecko, live)`);
+  if (paxGoldPrice !== null) dataPoints.push(`PAXG: $${paxGoldPrice.toLocaleString()} (CoinGecko, live)`);
+  if (topYield && topYield.apy > 0) {
+    dataPoints.push(`Top yield: ${topYield.protocol} at ${topYield.apy.toFixed(2)}% APY ($${(topYield.tvl / 1e6).toFixed(1)}M TVL, DeFiLlama, live)`);
   }
 
-  // If inflation is high, recommend cUSD (savings on Celo)
-  // If yields are attractive, recommend USDC (yield on Arbitrum)
-  if (inflation > 3.5) {
-    const reasoning = `High inflation (${inflation}%) detected. Recommend cUSD savings position on Celo to preserve purchasing power. ${reasoningParts.join(', ')}.`;
-    return {
-      action: 'ADVISORY_HEARTBEAT',
-      targetToken: 'cUSD',
-      reasoning,
-      confidence: 0.72,
-    };
+  // Name what could not be observed so the recorded advisory never reads as
+  // if those sources had spoken — the on-chain reasoning is immutable, so a
+  // missing source is disclosed, never defaulted.
+  const unavailable: string[] = [];
+  if (inflation === null) unavailable.push('World Bank CPI');
+  if (!snapshot.coingecko.live) unavailable.push('CoinGecko prices');
+  if (!snapshot.defillama.live) unavailable.push('DeFiLlama yields');
+  const caveat =
+    unavailable.length > 0
+      ? ` Sources unavailable this beat: ${unavailable.join(', ')} — no fallback figures were used.`
+      : '';
+
+  const dataLine = dataPoints.length > 0 ? `${dataPoints.join(', ')}.` : '';
+
+  // Decisions gate on the driving datum being LIVE: a hardcoded inflation
+  // read must never trigger (or suppress) the high-inflation branch.
+  if (inflation !== null && inflation > 3.5) {
+    const reasoning =
+      `High inflation (${inflation}%) detected (World Bank CPI, live). ` +
+      `Recommend cUSD savings position on Celo to preserve purchasing power. ${dataLine}${caveat}`;
+    return { action: 'ADVISORY_HEARTBEAT', targetToken: 'cUSD', reasoning, confidence: 0.72 };
   }
 
   if (topYield && topYield.apy > 5) {
-    const reasoning = `Attractive yield opportunity: ${topYield.protocol} at ${topYield.apy.toFixed(2)}% APY. Recommend USDC deployment on Arbitrum. ${reasoningParts.join(', ')}.`;
-    return {
-      action: 'ADVISORY_HEARTBEAT',
-      targetToken: 'USDC',
-      reasoning,
-      confidence: 0.68,
-    };
+    const reasoning =
+      `Attractive yield opportunity: ${topYield.protocol} at ${topYield.apy.toFixed(2)}% APY (DeFiLlama, live). ` +
+      `Recommend USDC deployment on Arbitrum. ${dataLine}${caveat}`;
+    return { action: 'ADVISORY_HEARTBEAT', targetToken: 'USDC', reasoning, confidence: 0.68 };
   }
 
-  // Default: hold cEUR as inflation hedge
-  const reasoning = `Stable regime. Recommend holding cEUR as inflation hedge. ${reasoningParts.join(', ')}.`;
-  return {
-    action: 'ADVISORY_HEARTBEAT',
-    targetToken: 'cEUR',
-    reasoning,
-    confidence: 0.65,
-  };
+  // Default: hold cEUR as the steady-state core. "Stable regime" is only
+  // claimed when inflation was actually measured below the threshold.
+  if (inflation !== null && inflation <= 3.5) {
+    const reasoning =
+      `Stable regime measured: inflation ${inflation}% (World Bank CPI, live). ` +
+      `Recommend holding cEUR as inflation hedge. ${dataLine}${caveat}`;
+    return { action: 'ADVISORY_HEARTBEAT', targetToken: 'cEUR', reasoning, confidence: 0.65 };
+  }
+
+  const reasoning = (
+    'No actionable live signal this beat — inflation not measured' +
+    (topYield ? ' and yields below the 5% threshold' : '') +
+    '. Recommend holding the cEUR core; no fallback market figures were used.' +
+    ` ${dataLine}${caveat}`
+  ).trim();
+  return { action: 'ADVISORY_HEARTBEAT', targetToken: 'cEUR', reasoning, confidence: 0.6 };
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -260,10 +323,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         explorerUrl: caribbeanResult.status === 'failed' ? undefined : (caribbeanResult as any).explorerUrl,
       } : null,
       marketSnapshot: {
+        // null = source unreachable this beat, not a fabricated default.
         inflation: snapshot.worldBank.current_inflation,
-        topYield: snapshot.defillama[0] || null,
+        topYield: snapshot.defillama.pools[0] || null,
         btcPrice: snapshot.coingecko.bitcoin,
         paxGoldPrice: snapshot.coingecko.pax_gold,
+        dataSources: {
+          defillama: snapshot.defillama.live,
+          coingecko: snapshot.coingecko.live,
+          worldBank: snapshot.worldBank.live,
+        },
       },
     });
   } catch (error: any) {
