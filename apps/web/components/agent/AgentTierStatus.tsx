@@ -628,10 +628,24 @@ export const AgentTierStatus: React.FC<{
         error: execution.error,
       }));
 
-    return [...persistedEvents, ...liveEvents]
+    // Guardian declines — the loop's decision log. A Guardian that stood
+    // down (daily budget hit, awaiting first confirmation, advisory-only
+    // proposal) should be as visible in the journal as one that moved.
+    const decisionEvents = (sessionInfo?.decisionLog || [])
+      .filter((decision) => !decision.capturedAt || decision.capturedAt.length > 0)
+      .map((decision) => ({
+        id: `decision-${decision.capturedAt}-${decision.status}`,
+        source: "vault" as const,
+        title: "Guardian stood down",
+        subtitle: decision.reason || decision.status,
+        timestamp: new Date(decision.capturedAt).getTime(),
+        status: "declined",
+      }));
+
+    return [...decisionEvents, ...persistedEvents, ...liveEvents]
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 10);
-  }, [wdkReceipts, sessionInfo?.recentExecutions]);
+  }, [wdkReceipts, sessionInfo?.recentExecutions, sessionInfo?.decisionLog]);
 
   // Index the rolling 0G anchor history by txHash so the proof feed
   // can attach a small "Anchored on 0G" chip to the row whose txHash

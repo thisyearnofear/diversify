@@ -31,6 +31,8 @@ Critical UI/UX audit against the emerging/APAC saver persona. **Waves 0–13 shi
 
 **1,186 tests passing** after the Wave 13 follow-on (145 files; +5 Home fallback/CountryOverrideSelect placeholder regression tests — `857f021`). Key files: `components/tabs/overview/NotConnectedState.tsx`, `components/tabs/overview/CountryOverrideSelect.tsx`, `components/tabs/overview/__tests__/NotConnectedState.test.tsx`.
 
+**1,211 tests passing** after the Guardian architecture hardening (149 files; +7 vault actual-debit validation for `usdDebitOfAmountIn`, +5 decision-log dedupe/cap, +6 run-status freshness/health derivation — one regression assertion each added to the loop journaling paths). Key files: `pages/api/vault/_guardian-state.ts` (`decisionLog` + `appendDecisionLog`/`pushDecisionLog`), `models/GuardianState.ts` + `models/GuardianRunLog.ts` + `lib/guardian-run-status.ts` (record/derive run health), `pages/api/agent/guardian-loop.ts` (decline journaling + `declinesJournaled` + terminal run records), `pages/api/agent/guardian-heartbeat.ts` (terminal run records + data-source provenance), `packages/shared/src/services/vault/vault.service.ts` (`usdDebitOfAmountIn` — caps/counters/fees keyed to the actual debit), `pages/api/vault/permission.ts` (decisionLog in session), `pages/api/agent/status.ts` (`guardian.loop`/`guardian.heartbeat` health), `components/agent/AgentTierStatus.tsx` + `GuardianJournalTab.tsx` ("Guardian stood down" events). Full narrative in `docs/guardian.md` § Guardian architecture notes.
+
 ---
 
 

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AIService, ArcAgent } from '@diversifi/shared';
+import { getGuardianRunHealth } from '../../../lib/guardian-run-status';
 
 /**
  * Agent Status API Endpoint
@@ -73,6 +74,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const geminiStatus = aiStatus.gemini ?? { available: false, initialized: false };
     const elevenLabsStatus = aiStatus.elevenLabs ?? { available: false, initialized: false };
 
+    // Guardian cron liveness: last loop/heartbeat run, age, and whether the
+    // run actually worked. A 5-min cron that silently died for an hour shows
+    // up here as freshness: 'stale' even though nothing else is red.
+    let guardian = null;
+    try {
+        guardian = await getGuardianRunHealth();
+    } catch (error: any) {
+        console.warn('[Status API] Guardian run-status read failed:', error?.message ?? error);
+        guardian = null;
+    }
+
     return res.status(200).json({
         // Arc Agent status
         enabled: arcEnabled,
@@ -113,6 +125,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         features: {
             webEnrichedAnalysis: veniceStatus.available,
             multiProviderTTS: false, // Venice TTS not implemented yet
-        }
+        },
+
+        // Guardian cron health (null when the read failed — the status page
+        // can still answer "is the app itself up" without Mongo).
+        guardian,
     });
 }

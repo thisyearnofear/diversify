@@ -37,13 +37,14 @@ import {
   releaseCycleExecutionClaim,
   type CycleExecutionContext,
 } from '../../../lib/guardian/cycle-execution';
-import { claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
+import { appendDecisionLog, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { circleExecutor } from '../vault/_executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 import { guardianEventBus } from './_guardian-event-bus';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
 import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
+import { recordGuardianRun } from '../../../lib/guardian-run-status';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -59,6 +60,44 @@ const GUARDIAN_LOOP_SECRET = (() => {
 })();
 const CONFIDENCE_THRESHOLD = parseFloat(process.env.GUARDIAN_CONFIDENCE_THRESHOLD || '0.6');
 const MAX_EXECUTIONS_PER_LOOP = 5; // Safety cap per cron tick
+
+/**
+ * Decline statuses worth persisting to the user's decision log.
+ *
+ * These are decisions the user can see and act on (fund the vault, raise the
+ * daily limit, confirm auto-mode, review an advisory-only proposal). The
+ * transient per-tick skips (execution locks, concurrent claims) are noise and
+ * are deliberately excluded — the user cannot act on them, and journaling
+ * them would spam the log five times an hour.
+ */
+const PERSISTED_DECISION_STATUSES = new Set([
+  'awaiting_first_confirmation',
+  'daily_limit_reached',
+  'stale_recommendation',
+  'cycle_unavailable',
+  'cycle_advisory_only',
+  'cycle_outside_permission_bounds',
+  'advisory_pending_user_review',
+  'no_vault',
+]);
+
+/**
+ * Stable dedupe key for the decision log. Persistent states (exhausted daily
+ * budget, awaiting first confirmation, advisory-only proposals) keep ONE live
+ * entry that each tick refreshes; one-shot declines (a stale recommendation,
+ * a vanished cycle) key by the candidate they declined so the same candidate
+ * is never double-journaled.
+ */
+function decisionLogKey(status: string, candidate?: GuardianRecommendationSnapshot): string {
+  if (
+    status === 'stale_recommendation' ||
+    status === 'cycle_unavailable' ||
+    status === 'cycle_advisory_only'
+  ) {
+    return `${status}:${candidate?.capturedAt || ''}`;
+  }
+  return status;
+}
 
 /**
  * Memory maintenance pass — runs automatic forgetting (sweep) on every tick
@@ -187,9 +226,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Recording the run outcome must never change the cron's behaviour — if
+  // the run-status write itself fails (e.g. Mongo is down), warn and move on.
+  async function recordRunSafely(kind: 'loop' | 'heartbeat', args: Parameters<typeof recordGuardianRun>[1]) {
+    try {
+      await recordGuardianRun(kind, args);
+    } catch (err: unknown) {
+      console.warn('[guardian-loop] run-status write failed:', err instanceof Error ? err.message : err);
+    }
+  }
+
   try {
     await dbConnect();
   } catch (dbError: any) {
+    await recordRunSafely('loop', {
+      status: 'failed',
+      error: `Database unavailable: ${dbError.message}`,
+    });
     return res.status(200).json({
       success: false,
       timestamp: new Date().toISOString(),
@@ -197,6 +250,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       permissionsChecked: 0,
       executionsAttempted: 0,
       executionsSucceeded: 0,
+      declinesJournaled: 0,
       results: [],
     });
   }
@@ -209,6 +263,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     reason?: string;
     txHash?: string;
   }> = [];
+
+  /**
+   * Decline journal for this tick — one entry per user, then flushed to the
+   * per-user decisionLog after the permission loop (bounded, deduped, and
+   * surfaced in the journal alongside executed moves).
+   */
+  const pendingDecisions = new Map<string, GuardianDecisionEntry>();
+  const trackDecline = (
+    userAddress: string,
+    status: string,
+    reason: string,
+    candidate?: GuardianRecommendationSnapshot,
+  ): void => {
+    if (!PERSISTED_DECISION_STATUSES.has(status)) return;
+    // First decision for this user wins the tick — later branches in the same
+    // user iteration (e.g. several stale candidates) would otherwise journal
+    // the whole queue as a wall of near-identical entries.
+    if (pendingDecisions.has(userAddress)) return;
+    pendingDecisions.set(userAddress, {
+      capturedAt: new Date().toISOString(),
+      status,
+      reason,
+      action: 'skip',
+      source: candidate?.source,
+      targetToken: candidate?.targetToken,
+      identityKey: decisionLogKey(status, candidate),
+    });
+  };
 
   try {
     // Find all active, non-expired permissions
@@ -242,6 +324,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
       if (perm.totalSpentUSD === 0 && !perm.firstAutoExecutionConfirmed) {
+        trackDecline(
+          userAddress,
+          'awaiting_first_confirmation',
+          'Permission exists but user has not yet triggered a manual execution or confirmed auto-mode',
+        );
         results.push({
           userAddress,
           action: 'skip',
@@ -256,6 +343,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const remainingToday = perm.dailyLimitUSD - spentToday;
 
       if (remainingToday <= 0) {
+        trackDecline(
+          userAddress,
+          'daily_limit_reached',
+          `No daily budget remaining ($${spentToday.toFixed(2)} spent of $${perm.dailyLimitUSD}/day)`,
+        );
         results.push({
           userAddress,
           action: 'skip',
@@ -284,6 +376,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       for (const candidate of queue) {
         const ageMinutes = (Date.now() - new Date(candidate.capturedAt).getTime()) / 60000;
         if (ageMinutes > 60) {
+          trackDecline(
+            userAddress,
+            'stale_recommendation',
+            `Recommendation is ${Math.round(ageMinutes)} minutes old (max 60)`,
+            candidate,
+          );
           results.push({
             userAddress,
             action: 'skip',
@@ -323,6 +421,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
           if (cycleLoad.kind === 'stale') {
             // Stale cycle — drop with a specific reason the user can act on.
+            trackDecline(
+              userAddress,
+              'cycle_unavailable',
+              'PurchaseCycle no longer active, monitoring disabled, or outside the 14-day auto-execution window',
+              candidate,
+            );
             results.push({
               userAddress,
               action: 'skip',
@@ -334,6 +438,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           }
           if (cycleLoad.kind === 'unsupported') {
             advisoryBlocked += 1;
+            trackDecline(
+              userAddress,
+              'cycle_advisory_only',
+              cycleLoad.reason,
+              candidate,
+            );
             results.push({
               userAddress,
               action: 'skip',
@@ -373,6 +483,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           ) {
             recommendation = null;
             advisoryBlocked += 1;
+            trackDecline(
+              userAddress,
+              'cycle_outside_permission_bounds',
+              'The full cycle amount does not fit the signed action, daily, and total permission bounds',
+              candidate,
+            );
             results.push({
               userAddress,
               action: 'skip',
@@ -394,6 +510,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       if (!recommendation) {
         if (advisoryBlocked > 0) {
+          trackDecline(
+            userAddress,
+            'advisory_pending_user_review',
+            `${advisoryBlocked} queued proposal(s) require manual review (no auto-executable trade amount)`,
+          );
           results.push({
             userAddress,
             action: 'skip',
@@ -410,6 +531,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const confidence = recommendation.confidence ?? 0;
 
       if (tradeAmountUSD < 1) {
+        trackDecline(
+          userAddress,
+          'daily_limit_reached',
+          `Remaining daily budget $${remainingToday.toFixed(2)} below $1 minimum trade size`,
+          recommendation,
+        );
         results.push({
           userAddress,
           action: 'skip',
@@ -429,6 +556,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // if it was never resolved (queue was empty at the top of the loop).
       const vault = cycleVault ?? (await vaultStore.findVaultByUser(userAddress));
       if (!vault) {
+        trackDecline(userAddress, 'no_vault', 'No vault found for this user — fund or create a vault to enable Guardian moves');
         results.push({ userAddress, action: 'skip', status: 'no_vault' });
         continue;
       }
@@ -690,6 +818,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Flush this tick's decline journal into each user's decisionLog. The
+    // log is bounded + deduped server-side (appendDecisionLog); failures here
+    // must never wedge the loop, so this is fire-and-forget with a warn.
+    const declinesJournaled = pendingDecisions.size;
+    if (pendingDecisions.size > 0) {
+      await Promise.allSettled(
+        [...pendingDecisions.entries()].map(([userAddress, entry]) =>
+          Promise.resolve()
+            .then(() => appendDecisionLog(userAddress, entry))
+            .catch((err: unknown) => {
+              console.warn(
+                `[guardian-loop] decision-log write failed for ${userAddress}:`,
+                err instanceof Error ? err.message : err,
+              );
+            }),
+        ),
+      );
+    }
+
     let cycleMonitor: Awaited<ReturnType<typeof runCycleMonitor>> | null = null;
     try {
       cycleMonitor = await runCycleMonitor();
@@ -710,17 +857,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       activePermissions.map(p => p.userAddress).filter(Boolean) as string[]
     );
 
+    // Terminal run record for /api/agent/status. An attempted-but-failed
+    // execution degrades the run even though the tick completed; a tick that
+    // found nobody to act for is a healthy idle, not an outage.
+    const attemptsFailed = results.some(r => r.action === 'attempted');
+    const runStatus = attemptsFailed
+      ? 'degraded'
+      : activePermissions.length === 0 && results.length === 0
+        ? 'idle'
+        : 'ok';
+    await recordRunSafely('loop', {
+      status: runStatus,
+      summary: {
+        permissionsChecked: activePermissions.length,
+        executionsAttempted: results.filter(r => r.action === 'executed' || r.action === 'attempted').length,
+        executionsSucceeded: results.filter(r => r.status === 'success').length,
+        declinesJournaled,
+        resultsCount: results.length,
+      },
+    });
+
     return res.status(200).json({
       success: true,
       timestamp: new Date().toISOString(),
       permissionsChecked: activePermissions.length,
       executionsAttempted: results.filter(r => r.action === 'executed' || r.action === 'attempted').length,
       executionsSucceeded: results.filter(r => r.status === 'success').length,
+      declinesJournaled,
       cycleMonitor,
       memoryMaintenance,
       results,
     });
   } catch (error: any) {
+    await recordRunSafely('loop', {
+      status: 'failed',
+      error: error.message,
+    });
     return res.status(500).json({
       success: false,
       error: error.message,

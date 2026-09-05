@@ -77,6 +77,38 @@ export interface GuardianAnchorRecord {
   capturedAt: string;
 }
 
+/**
+ * A recorded Guardian decision NOT to act — the loop's skip journal.
+ *
+ * Successful and failed executions are persisted via anchors; declines were
+ * previously only returned in the cron HTTP body, so a user whose Guardian
+ * stood down (daily budget hit, awaiting first confirmation, stale proposal,
+ * advisory-only cycle) saw nothing. Each entry carries the human reason the
+ * loop already produces, so the drawer/proof feed can answer "why did the
+ * Guardian not move?" honestly.
+ *
+ * Transient skips (execution locks, concurrent claims) are deliberately NOT
+ * journaled — they are per-tick noise, not decisions the user can act on.
+ */
+export interface GuardianDecisionEntry {
+  /** When the loop reached the decision (newest-first ordering key). */
+  capturedAt: string;
+  /** Loop skip status code, e.g. `daily_limit_reached`. */
+  status: string;
+  /** Human reason already produced by the loop for this skip. */
+  reason: string;
+  action?: string;
+  source?: string;
+  targetToken?: string;
+  /**
+   * Dedupe key stamped at append. Persistent states (e.g. the daily limit
+   * being exhausted) use a stable key so every 5-min tick refreshes ONE
+   * entry instead of filling the log with copies; one-shot skips key by
+   * the candidate they declined.
+   */
+  identityKey?: string;
+}
+
 export interface GuardianStateRecord {
   /**
    * Head of `recommendationQueue` — kept for backward-compatible readers
@@ -98,6 +130,11 @@ export interface GuardianStateRecord {
    * most recent one.
    */
   latestAnchors?: GuardianAnchorRecord[];
+  /**
+   * Recent Guardian declines (why the loop did not act), newest-first,
+   * bounded to MAX_DECISION_LOG. See GuardianDecisionEntry.
+   */
+  decisionLog?: GuardianDecisionEntry[];
   /**
    * Map of alertId → unix epoch ms when the alert was last emitted.
    * Per-user (server-side) cooldowns for the proactive monitoring loop.
@@ -126,6 +163,12 @@ export const MAX_ANCHOR_HISTORY = 5;
 /** Upper bound on pending recommendations per user. */
 export const MAX_RECOMMENDATION_QUEUE = 5;
 
+/**
+ * Upper bound on the per-user decision log. Eight is enough to show a
+ * week of nightly "stood down" beats without bloating the document.
+ */
+export const MAX_DECISION_LOG = 8;
+
 function normalizeUserAddress(userAddress: string): string {
   return userAddress.trim().toLowerCase();
 }
@@ -136,6 +179,7 @@ const STATE_FIELDS: Array<keyof GuardianStateRecord> = [
   'recommendationQueue',
   'latestAnchor',
   'latestAnchors',
+  'decisionLog',
   'alertCooldowns',
   'latestDaSnapshot',
 ];
@@ -226,6 +270,68 @@ export function pushAnchorHistory(
   cap: number = MAX_ANCHOR_HISTORY,
 ): GuardianAnchorRecord[] {
   return [next, ...(history ?? [])].slice(0, Math.max(0, cap));
+}
+
+/**
+ * Pure helper: prepend a decision entry, replacing any prior entry with the
+ * same identity key (so a persistent state like an exhausted daily budget
+ * keeps ONE live entry refreshed by each tick, not a wall of copies), then
+ * cap at `MAX_DECISION_LOG` newest-first.
+ */
+export function pushDecisionLog(
+  history: GuardianDecisionEntry[] | undefined,
+  entry: GuardianDecisionEntry,
+  cap: number = MAX_DECISION_LOG,
+): GuardianDecisionEntry[] {
+  const key = entry.identityKey || `${entry.status}:${entry.capturedAt}`;
+  const withoutDup = (history ?? []).filter((e) => e.identityKey !== key);
+  return [entry, ...withoutDup].slice(0, Math.max(0, cap));
+}
+
+/**
+ * Atomically record a Guardian decline for a user. Single aggregation
+ * `findOneAndUpdate`: drop any entry with the same identity key, prepend the
+ * new entry, cap the log — one server-side round-trip, so concurrent ticks
+ * cannot clobber each other's decision history (same guarantee as enqueue).
+ */
+export async function appendDecisionLog(
+  userAddress: string,
+  entry: GuardianDecisionEntry,
+): Promise<void> {
+  await dbConnect();
+  const normalized = normalizeUserAddress(userAddress);
+  const stamped: GuardianDecisionEntry = {
+    ...entry,
+    identityKey: entry.identityKey || `${entry.status}:${entry.capturedAt}`,
+  };
+
+  await GuardianState.findOneAndUpdate(
+    { userAddress: normalized },
+    [
+      {
+        $set: {
+          decisionLog: {
+            $slice: [
+              {
+                $concatArrays: [
+                  [stamped],
+                  {
+                    $filter: {
+                      input: { $ifNull: ['$decisionLog', []] },
+                      as: 'item',
+                      cond: { $ne: ['$$item.identityKey', stamped.identityKey] },
+                    },
+                  },
+                ],
+              },
+              MAX_DECISION_LOG,
+            ],
+          },
+        },
+      },
+    ],
+    { upsert: true },
+  ).lean();
 }
 
 export async function getGuardianState(userAddress: string): Promise<GuardianStateRecord | null> {

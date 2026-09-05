@@ -80,6 +80,7 @@ vi.mock('../../vault/_guardian-state', () => ({
   releaseExecutionLock: vi.fn().mockResolvedValue(undefined),
   dequeueRecommendation: vi.fn().mockResolvedValue(true),
   pushAnchorHistory: vi.fn().mockReturnValue([]),
+  appendDecisionLog: vi.fn().mockResolvedValue(undefined),
   resolveRecommendationQueue: (state: { recommendationQueue?: unknown[]; latestRecommendation?: unknown } | null) =>
     state?.recommendationQueue ?? (state?.latestRecommendation ? [state.latestRecommendation] : []),
 }));
@@ -90,6 +91,13 @@ vi.mock('../../../../lib/guardian/cycle-monitor-run', () => ({
     proposalWindowDays: 14,
     results: [],
   }),
+}));
+
+// The handler records its terminal outcome for /api/agent/status at the end
+// of every run. Mock the run-status lib so that write (a real mongoose model)
+// never hangs the suite on an unconnected model buffer.
+vi.mock('../../../../lib/guardian-run-status', () => ({
+  recordGuardianRun: vi.fn().mockResolvedValue(undefined),
 }));
 
 // The execute-success path snapshots Guardian state to 0G DA
@@ -309,6 +317,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       releaseExecutionLock: vi.fn().mockResolvedValue(undefined),
       dequeueRecommendation: vi.fn().mockResolvedValue(true),
       pushAnchorHistory: vi.fn().mockReturnValue([]),
+      appendDecisionLog: vi.fn().mockResolvedValue(undefined),
       resolveRecommendationQueue: (s: { recommendationQueue?: unknown[] } | null) =>
         s?.recommendationQueue ?? [],
     }));
@@ -457,6 +466,9 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     expect(rebalance).not.toHaveBeenCalled();
     const advisory = body.results.find((r: any) => r.status === 'advisory_pending_user_review');
     expect(advisory).toBeDefined();
+    // The decline is journaled (not just returned in the cron body) so the
+    // user's drawer can answer "why did the Guardian not move?"
+    expect(body.declinesJournaled).toBe(1);
   });
 
   it('keeps CYCLE_PROTECTION advisory (cycle_advisory_only) when the vault cannot fund the plan', async () => {
@@ -484,6 +496,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     const advisory = body.results.find((r: any) => r.status === 'cycle_advisory_only');
     expect(advisory).toBeDefined();
     expect(advisory.reason).toMatch(/does not hold enough KESm/);
+    expect(body.declinesJournaled).toBe(1);
   });
 
   it('drops CYCLE_PROTECTION with cycle_unavailable when matching PurchaseCycle is missing', async () => {
@@ -500,6 +513,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     const stale = body.results.find((r: any) => r.status === 'cycle_unavailable');
     expect(stale).toBeDefined();
     expect(stale.reason).toMatch(/no longer active, monitoring disabled, or outside the 14-day/);
+    expect(body.declinesJournaled).toBe(1);
   });
 
   it('regression guard: non-cycle proposal still uses AUTONOMOUS_REBALANCE on-chain label', async () => {

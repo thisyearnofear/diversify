@@ -28,6 +28,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
+import { recordGuardianRun } from '../../../lib/guardian-run-status';
 
 const GUARDIAN_LOOP_SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -206,6 +207,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
+  // Recording the run outcome must never change the cron's behaviour.
+  async function recordRunSafely(args: Parameters<typeof recordGuardianRun>[1]) {
+    try {
+      await recordGuardianRun('heartbeat', args);
+    } catch (err: unknown) {
+      console.warn('[guardian-heartbeat] run-status write failed:', err instanceof Error ? err.message : err);
+    }
+  }
+
   try {
     // 1. Fetch live market data
     const snapshot = await fetchMarketSnapshot();
@@ -288,6 +298,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       caribbeanPromise,
     ]);
 
+    await recordRunSafely({
+      status: primaryResult.status === 'failed' ? 'degraded' : 'ok',
+      summary: {
+        targetToken: rec.targetToken,
+        confidence: rec.confidence,
+        primaryStatus: primaryResult.status,
+        evidenceMirror: mirrorResult?.status ?? null,
+        apacRail: apacResult?.status ?? null,
+        caribbeanRail: caribbeanResult?.status ?? null,
+        inflationQuoted: snapshot.worldBank.current_inflation !== null,
+        dataSources: {
+          defillama: snapshot.defillama.live,
+          coingecko: snapshot.coingecko.live,
+          worldBank: snapshot.worldBank.live,
+        },
+      },
+    });
+
     return res.status(200).json({
       success: true,
       timestamp: new Date().toISOString(),
@@ -337,6 +365,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (error: any) {
     console.error('[guardian-heartbeat] Error:', error.message);
+    await recordRunSafely({
+      status: 'failed',
+      error: error.message,
+    });
     return res.status(500).json({
       success: false,
       error: error.message,

@@ -143,7 +143,80 @@ is the blocker, so:
   the real (dark) ERC-7710 redemption path.
 - `pages/api/vault/_executor.ts` — current Privy/Safe/`VAULT_PRIVATE_KEY` execution.
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
-- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Cron every 2 hours.
+- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
+
+---
+
+## Guardian architecture notes (2026-09-05)
+
+Plumbing audit outcome — four gaps closed between "what the Guardian is
+documented to do" and what a user or a monitor can actually observe. Each
+change is enforced by tests.
+
+### 1. Decision log — declines are recorded and surfaced
+
+Executed moves and failed attempts were already persisted (anchors / proof
+feed). **Declines were not** — `daily_limit_reached`, `awaiting_first_confirmation`,
+stale proposals, advisory-only cycles, out-of-bounds cycles, no-vault skips
+lived only in the cron's HTTP response body, so a user whose Guardian stood
+down saw nothing.
+
+The loop now journals the first user-actionable skip per user per tick into
+`GuardianState.decisionLog` (`appendDecisionLog`, bounded to 8, aggregation-
+pipeline atomic like enqueue; `pushDecisionLog` pure + unit-tested). Dedupe keys
+give persistent states (exhausted budget, awaiting confirmation) ONE live entry
+that each tick refreshes, while one-shot declines (a stale recommendation, a
+vanished cycle) key by the candidate they declined. Transient per-tick noise
+(execution locks, concurrent claims) is deliberately not journaled.
+
+Surfacing: `GET /api/vault/permission` returns `decisionLog`; the Guardian
+journal (`AgentTierStatus` → `GuardianJournalTab`) renders each as an amber
+"Guardian stood down" event with the loop's own reason. The loop response now
+carries `declinesJournaled` for cron logs.
+
+### 2. Honest cron health — run status is recorded, not inferred
+
+The loop returns HTTP 200 for a healthy idle beat *and* for a Mongo outage at
+start (`success:false`) — indistinguishable to a monitor. New `GuardianRunLog`
+model (one document per `loop` / `heartbeat` key) + `lib/guardian-run-status.ts`:
+`recordGuardianRun()` upserts the terminal outcome; `deriveGuardianRunHealth()`
+(pure, tested) computes `freshness` (`fresh` | `stale` | `never` — window = 3×
+cadence: 15 min for the loop, 90 min for the heartbeat) and `healthy` (fresh
+AND not `failed`). Both cron endpoints record `ok` / `idle` / `degraded` /
+`failed` with compact summaries; `/api/agent/status` exposes
+`guardian: { loop, heartbeat }` with `lastRunAt`, `ageSeconds`, `freshness`,
+`healthy`, `status`. A cron that died an hour ago shows `freshness: 'stale'`
+even when every AI provider is green.
+
+### 3. Spending caps account the actual debit, not the caller's estimate
+
+`VaultService.validateSwap` and the daily/total spend counters were keyed to
+`rec.estimatedAmountUSD`. An `amountIn` worth $50 paired with a $10 estimate
+sailed past the signed caps. New exported `usdDebitOfAmountIn()` derives the
+real debit from `amountIn` wei at the funding token's decimals (Celo
+stablecoins 18, USDC/USDT 6) and caps + counters + swap-fee math all use it.
+Guardian-loop flows are numerically unchanged (their estimates ARE the exact
+debits — the loop floors to micro-USD then mints `amountIn` from it); any other
+caller of `rebalance()` is now bounded by what actually leaves the wallet. The
+rebalance transaction's `amountUSD` records the real debit.
+
+### 4. Heartbeat run record carries data provenance
+
+Companion to the market-fallback honesty fix: the heartbeat's run summary
+records which data sources were live (`defillama` / `coingecko` / `worldBank`)
+and whether inflation was quoted, so an advisory's evidential basis is
+reconstructible from the run log even after the fact.
+
+### Boundary note (two Guardians, one name)
+
+The autonomous-execution Guardian (this doc: `guardian-loop` + heartbeat +
+`Permission`/`GuardianState`/`VaultService`) and the advisory analysis stack
+(`packages/shared/src/services/guardian/*` — six-question recommendation
+contract, consumed by `agent-service.ts`, the Arc/x402 marketplace agent that
+pays for its own data) share a name but almost no code. A future unification
+workstream should give both ONE reasoning service — deterministic gates as the
+safety floor, AI ranking/explaining *within* those gates — so the on-chain
+advisory contract is identical everywhere and the two surfaces cannot drift.
 
 ---
 

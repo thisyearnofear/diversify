@@ -36,6 +36,12 @@ export interface IGuardianState extends Document {
   recommendationQueue?: Array<Record<string, unknown>>;
   latestAnchor?: Record<string, unknown>;
   latestAnchors?: Array<Record<string, unknown>>;
+  /**
+   * Recent Guardian declines (why the loop did not act), newest-first.
+   * Bounded on the server to MAX_DECISION_LOG; surfaced in the journal
+   * so a Guardian that stands down is as visible as one that moves.
+   */
+  decisionLog?: Array<Record<string, unknown>>;
   alertCooldowns?: Record<string, number>;
   executionLock?: IGuardianExecutionLock | null;
   /**
@@ -56,6 +62,7 @@ const GuardianStateSchema = new Schema<IGuardianState>(
     recommendationQueue: { type: [Schema.Types.Mixed], default: undefined },
     latestAnchor: { type: Schema.Types.Mixed, default: undefined },
     latestAnchors: { type: [Schema.Types.Mixed], default: undefined },
+    decisionLog: { type: [Schema.Types.Mixed], default: undefined },
     alertCooldowns: { type: Schema.Types.Mixed, default: undefined },
     executionLock: { type: Schema.Types.Mixed, default: null },
     graduationPromptDismissedAt: { type: Date, default: null },

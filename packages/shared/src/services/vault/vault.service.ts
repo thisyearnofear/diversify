@@ -13,6 +13,7 @@
  */
 
 import { feeEngine, type FeeSummary } from './fee-engine';
+import { CELO_TOKEN_ADDRESSES } from '../../config/celo-tokens';
 
 // Types are defined here rather than importing from MongoDB models
 // to keep the shared package decoupled from the app's DB layer.
@@ -167,6 +168,39 @@ export interface VaultExecutor {
     chainId: number
   ): Promise<{ txHash: string; amountOut?: string }>;
   withdraw(vault: Vault, destinationAddress: string, amountUSD: number, chainId?: number): Promise<{ txHash: string; amountReceived: number }>;
+}
+
+// ─── Spend accounting ───────────────────────────────────────────────────
+
+/**
+ * Actual USD debit of an execution, derived from the real input amount
+ * (`amountIn` wei at the funding token's decimals) rather than the
+ * caller-supplied `estimatedAmountUSD`.
+ *
+ * The daily/total spending caps bound how much of the user's money the
+ * Guardian can MOVE, and `amountIn` is what actually leaves the wallet — so
+ * the cap check and the spend counter must be keyed to it. Trusting the
+ * estimate alone let a caller understate the real debit (an `amountIn` worth
+ * $50 paired with a $10 estimate) and sail past the signed limit. When
+ * `amountIn` is missing or unparseable we fall back to the estimate rather
+ * than refusing (the executor will reject a missing amount anyway), but a
+ * real debit always wins.
+ */
+export function usdDebitOfAmountIn(
+  tokenIn: string | undefined,
+  tokenInAddress: string | undefined,
+  amountIn: string | undefined,
+): number | null {
+  if (!amountIn) return null;
+  const wei = Number(amountIn);
+  if (!Number.isFinite(wei) || wei <= 0) return null;
+
+  const symbol = tokenIn || '';
+  const known = CELO_TOKEN_ADDRESSES[symbol] || CELO_TOKEN_ADDRESSES[symbol.toUpperCase()];
+  const decimals =
+    known?.decimals ??
+    (['USDC', 'USDT'].includes(symbol.toUpperCase()) ? 6 : 18);
+  return wei / 10 ** decimals;
 }
 
 // ─── Service ────────────────────────────────────────────────────────────
@@ -371,8 +405,15 @@ export class VaultService {
         continue;
       }
 
+      // The real debit is the input amount (what leaves the wallet), not the
+      // caller's estimate — the cap check and counter use it (see
+      // usdDebitOfAmountIn). The estimate remains only as the display fallback.
+      const debitUSD = usdDebitOfAmountIn(rec.tokenIn, rec.tokenInAddress, rec.amountIn)
+        ?? rec.estimatedAmountUSD
+        ?? 0;
+
       // Calculate swap fee
-      const swapFee = feeEngine.calculateSwapFee(rec.estimatedAmountUSD);
+      const swapFee = feeEngine.calculateSwapFee(debitUSD);
 
       const executionChainId = permission.chainId || 42220;
       const explorerBase = executionChainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
@@ -398,11 +439,11 @@ export class VaultService {
           tokenOut: rec.tokenOut,
           amountIn: rec.amountIn,
           amountOut: result.amountOut,
-          amountUSD: rec.estimatedAmountUSD,
+          amountUSD: debitUSD,
           executionLayer: 'circle_sdk',
           strategyUsed: 'vault-rebalance',
           feeUSD: swapFee,
-          feePercentage: (swapFee / rec.estimatedAmountUSD) * 100,
+          feePercentage: debitUSD > 0 ? (swapFee / debitUSD) * 100 : 0,
         };
 
         await this.store.createTransaction(tx);
@@ -411,15 +452,15 @@ export class VaultService {
           status: 'executed',
           tokenIn: rec.tokenIn,
           tokenOut: rec.tokenOut,
-          amountUSD: rec.estimatedAmountUSD,
+          amountUSD: debitUSD,
           reason: rec.reason,
           txHash: tx.txHash,
           explorerUrl: tx.explorerUrl,
         });
 
         // Update permission spending
-        permission.spentTodayUSD += rec.estimatedAmountUSD;
-        permission.totalSpentUSD += rec.estimatedAmountUSD;
+        permission.spentTodayUSD += debitUSD;
+        permission.totalSpentUSD += debitUSD;
 
         executed++;
         totalFeesUSD += swapFee;
@@ -525,14 +566,23 @@ export class VaultService {
     if (!destinationAllowed) {
       return { allowed: false, reason: `Destination token ${rec.tokenOut} not in allowed list` };
     }
-    if (permission.spentTodayUSD + rec.estimatedAmountUSD > permission.dailyLimitUSD) {
+    // Cap checks are keyed to the ACTUAL debit (amountIn → USD), not the
+    // caller-supplied estimate — an understated estimate must not let the
+    // real spend sail past the signed daily/total limits.
+    const debitUSD = usdDebitOfAmountIn(rec.tokenIn, rec.tokenInAddress, rec.amountIn)
+      ?? rec.estimatedAmountUSD
+      ?? 0;
+    if (permission.spentTodayUSD + debitUSD > permission.dailyLimitUSD) {
       return {
         allowed: false,
-        reason: `Daily limit exceeded ($${permission.spentTodayUSD.toFixed(2)} + $${rec.estimatedAmountUSD.toFixed(2)} > $${permission.dailyLimitUSD})`,
+        reason: `Daily limit exceeded ($${permission.spentTodayUSD.toFixed(2)} + $${debitUSD.toFixed(2)} > $${permission.dailyLimitUSD})`,
       };
     }
-    if (permission.totalSpentUSD + rec.estimatedAmountUSD > permission.spendingLimitUSD) {
-      return { allowed: false, reason: 'Total spending limit exceeded' };
+    if (permission.totalSpentUSD + debitUSD > permission.spendingLimitUSD) {
+      return {
+        allowed: false,
+        reason: `Total spending limit exceeded ($${permission.totalSpentUSD.toFixed(2)} + $${debitUSD.toFixed(2)} > $${permission.spendingLimitUSD})`,
+      };
     }
     return { allowed: true };
   }

@@ -131,6 +131,20 @@ export interface GuardianSessionInfo {
         error?: string;
         capturedAt: string;
     }>;
+    /**
+     * Recent Guardian declines — why the loop chose NOT to act, newest-first.
+     * Journaled by the cron loop and read back so a Guardian that stands
+     * down is as visible as one that moves.
+     */
+    decisionLog?: Array<{
+        capturedAt: string;
+        status: string;
+        reason: string;
+        action?: string;
+        source?: string;
+        targetToken?: string;
+        identityKey?: string;
+    }>;
     latestRecommendation?: {
         capturedAt: string;
         source: string;
