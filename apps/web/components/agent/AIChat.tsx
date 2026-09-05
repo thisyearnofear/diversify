@@ -403,7 +403,7 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { setActiveTab, navigateToSwap, setFocusedCycleId, setFocusedYieldKey } = useNavigation();
+  const { setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId, setFocusedYieldKey } = useNavigation();
   const { address } = useWalletContext();
   const portfolio = useSharedMultichainBalances(address);
   const walletView = buildWalletPortfolioView(portfolio);
@@ -804,11 +804,12 @@ export default function AIChat() {
                               closeReview();
                               return;
                             case 'open_fx_netting_review':
-                              // FX netting lives in the CaribbeanFxNetCard
-                              // inside the FX Corridor / business section on
-                              // the Overview (Home) tab. The pair carried on
-                              // the action is the hand-off key.
-                              setActiveTab('overview');
+                              // FX netting lives in the CaribbeanFxNetCard —
+                              // the Exchange tab's netting morph (the persona
+                              // default for pan-Caribbean / upcoming-payment,
+                              // reachable via the status-rail link or chat
+                              // hand-off for everyone).
+                              navigateToNetting();
                               closeReview();
                               return;
                             case 'claim_ubi':

@@ -57,6 +57,9 @@ export interface LiveRateProvider {
     midRate: MidRateFn;
     date: string | null;
     sourceNote: string;
+    /** True when the USD table covers this code. Codes without coverage
+     *  would price at a silent 1:1 — callers should reject them instead. */
+    hasRate: (code: CurrencyCode) => boolean;
 }
 
 /**
@@ -92,5 +95,7 @@ export async function buildLiveRateProvider(): Promise<LiveRateProvider> {
         sourceNote:
             'Live mid-market rates: fawazahmed0 open currency dataset (current snapshot). ' +
             'Indicative mid-market, not tradeable quotes.',
+        hasRate: (code: CurrencyCode) =>
+            code.toUpperCase() === 'USD' || Boolean(table[code.toLowerCase()]),
     };
 }

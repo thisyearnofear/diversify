@@ -12,8 +12,41 @@ import { trackFunnelEvent } from "@/lib/analytics";
  *   3. SETTLE (when the caller is a net debtor) — send the cUSD obligation
  *      from your own wallet; the server verifies the transfer on-chain and
  *      advances both sides to settled.
+ * Walletless visitors run the engine in observer mode: matching is real,
+ * posting/settling needs a wallet — the copy says exactly that.
  * Honest fallback when no counterparty pool is hosted yet.
  */
+
+/**
+ * Curated ISO-4217 codes for the intent form's datalist + soft validation.
+ * CARICOM set first (the track's corridor), then the Africa/major codes the
+ * engine demonstrably matches. Unknown codes fall through the server's rate
+ * adapter at a silent 1:1 — which would fabricate a rate — so the form
+ * blocks anything not on this list rather than matching on a fake rate.
+ */
+const KNOWN_CURRENCIES = [
+  // CARICOM / Caribbean rail
+  "JMD", "BBD", "TTD", "HTG", "XCD", "BSD", "BZD", "GYD", "SRD", "DOP", "CUP",
+  // Africa rail (the same engine nets these — chain-agnostic by design)
+  "NGN", "GHS", "KES", "XOF", "XAF", "ZAR", "EGP", "MAD", "TZS", "UGX", "RWF",
+  // APAC rail
+  "INR", "PHP", "IDR", "VND", "PKR", "BDT",
+  // Benchmarks
+  "USD", "EUR", "GBP", "CAD", "CHF", "JPY", "CNY",
+];
+
+function isKnownCurrency(code: string): boolean {
+  return KNOWN_CURRENCIES.includes(code.toUpperCase());
+}
+
+/** Common corridor presets — one tap instead of two dropdowns. */
+const CORRIDOR_PRESETS: Array<{ sell: string; buy: string; label: string }> = [
+  { sell: "BBD", buy: "JMD", label: "BBD → JMD" },
+  { sell: "TTD", buy: "JMD", label: "TTD → JMD" },
+  { sell: "JMD", buy: "BBD", label: "JMD → BBD" },
+  { sell: "NGN", buy: "GHS", label: "NGN → GHS" },
+  { sell: "KES", buy: "NGN", label: "KES → NGN" },
+];
 export function CaribbeanFxNetCard() {
   const { address, signMessage } = useWalletContext();
   const {
@@ -31,7 +64,11 @@ export function CaribbeanFxNetCard() {
   }, [refreshSettlements]);
 
   const sellAmountNum = sellAmount ? Number(sellAmount) : 0;
-  const canMatch = sellAmountNum > 0 && sellCurrency !== buyCurrency;
+  const currenciesValid =
+    isKnownCurrency(sellCurrency) &&
+    isKnownCurrency(buyCurrency) &&
+    sellCurrency.toUpperCase() !== buyCurrency.toUpperCase();
+  const canMatch = sellAmountNum > 0 && currenciesValid;
 
   /** Settlements where the connected wallet is the net debtor (worklist). */
   const myDebts: FxSettlement[] = (settlements ?? []).filter(
@@ -55,6 +92,37 @@ export function CaribbeanFxNetCard() {
     void settle(s);
   };
 
+  const currencyInputClass =
+    "mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border text-sm font-bold text-teal-900 dark:text-teal-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60";
+
+  const currencyField = (
+    side: "sell" | "buy",
+    value: string,
+    onChange: (v: string) => void,
+  ) => {
+    const known = isKnownCurrency(value);
+    return (
+      <label className="flex-1 min-w-0">
+        <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+          {side === "sell" ? "You have" : "You want"}
+        </span>
+        <input
+          type="text"
+          list="fx-currency-codes"
+          maxLength={3}
+          value={value}
+          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          aria-label={side === "sell" ? "Currency you have" : "Currency you want"}
+          className={`${currencyInputClass} ${
+            value && !known
+              ? "border-amber-400 dark:border-amber-600"
+              : "border-teal-200 dark:border-teal-800"
+          }`}
+        />
+      </label>
+    );
+  };
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 6 }}
@@ -63,6 +131,11 @@ export function CaribbeanFxNetCard() {
       className="rounded-2xl border border-teal-200 dark:border-teal-900/60 bg-gradient-to-br from-teal-50/60 to-cyan-50/60 dark:from-teal-950/20 dark:to-cyan-950/20 p-5"
       data-testid="caribbean-fx-net-card"
     >
+      <datalist id="fx-currency-codes">
+        {KNOWN_CURRENCIES.map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
       <div className="flex items-start gap-3 mb-4">
         <div className="w-9 h-9 rounded-lg bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center shrink-0">
           <span aria-hidden="true">🌴</span>
@@ -81,18 +154,7 @@ export function CaribbeanFxNetCard() {
       {!matched ? (
         <div data-testid="fx-phase-intent">
           <div className="flex flex-col sm:flex-row gap-3">
-            <label className="flex-1 min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
-                You have
-              </span>
-              <input
-                type="text"
-                value={sellCurrency}
-                onChange={(e) => setSellCurrency(e.target.value.toUpperCase())}
-                aria-label="Currency you have"
-                className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-800 text-sm font-bold text-teal-900 dark:text-teal-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60"
-              />
-            </label>
+            {currencyField("sell", sellCurrency, setSellCurrency)}
             <label className="flex-1 min-w-0">
               <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
                 Amount
@@ -108,18 +170,33 @@ export function CaribbeanFxNetCard() {
                 className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-800 text-sm font-bold text-teal-900 dark:text-teal-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60"
               />
             </label>
-            <label className="flex-1 min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
-                You want
-              </span>
-              <input
-                type="text"
-                value={buyCurrency}
-                onChange={(e) => setBuyCurrency(e.target.value.toUpperCase())}
-                aria-label="Currency you want"
-                className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-800 text-sm font-bold text-teal-900 dark:text-teal-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60"
-              />
-            </label>
+            {currencyField("buy", buyCurrency, setBuyCurrency)}
+          </div>
+
+          {(sellCurrency && !isKnownCurrency(sellCurrency)) ||
+          (buyCurrency && !isKnownCurrency(buyCurrency)) ? (
+            <p
+              className="mt-2 text-[11px] text-amber-700 dark:text-amber-300"
+              role="status"
+            >
+              Unsupported currency code — pick a 3-letter ISO code from the list.
+            </p>
+          ) : null}
+
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
+            {CORRIDOR_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => {
+                  setSellCurrency(p.sell);
+                  setBuyCurrency(p.buy);
+                }}
+                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-teal-200 dark:border-teal-800 text-[11px] font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100/60 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -146,6 +223,19 @@ export function CaribbeanFxNetCard() {
         </div>
       ) : (
         <div data-testid="fx-phase-review">
+          {!address && (
+            <div
+              className="mb-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-white/70 dark:bg-gray-900/60 p-3"
+              data-testid="fx-observer-banner"
+            >
+              <p className="text-xs text-teal-800 dark:text-teal-200 leading-relaxed">
+                <span className="font-black">You&apos;re previewing the live matching engine.</span>{" "}
+                Your intent runs against the real pool and the real mid-market,
+                but posting it for future counterparties and settling need a
+                connected wallet.
+              </p>
+            </div>
+          )}
           {error ? (
             <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-950/20 p-3">
               <p className="text-xs text-amber-800 dark:text-amber-200">{error}</p>
@@ -186,6 +276,32 @@ export function CaribbeanFxNetCard() {
                 </div>
               </div>
 
+              {data && data.matches.length === 0 && !isLoading && (
+                <div className="mt-4 rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3">
+                  <p className="text-xs text-teal-800 dark:text-teal-200 leading-relaxed">
+                    No counterparty in the pool needs{' '}
+                    <span className="font-black">
+                      {sellCurrency} ↔ {buyCurrency}
+                    </span>{' '}
+                    yet — the engine only matches opposing flows at the live
+                    mid-market; it never invents one.
+                  </p>
+                  {address ? (
+                    <p className="mt-1.5 text-[11px] text-teal-700 dark:text-teal-300 leading-relaxed">
+                      Your intent stays open for the next matching cycle — the
+                      first counterparty who posts the opposing leg gets matched
+                      automatically, and you settle the net from your wallet.
+                    </p>
+                  ) : (
+                    <p className="mt-1.5 text-[11px] text-teal-700 dark:text-teal-300 leading-relaxed">
+                      Connect a wallet to post your intent into the pool so the
+                      next counterparty — tomorrow, next week — matches against
+                      it.
+                    </p>
+                  )}
+                </div>
+              )}
+
               {data?.matches.length ? (
                 <ul className="mt-4 space-y-2">
                   {data.matches.map((m) => (
@@ -200,15 +316,7 @@ export function CaribbeanFxNetCard() {
                     </li>
                   ))}
                 </ul>
-              ) : (
-                !isLoading && (
-                  <p className="mt-4 text-xs text-teal-700 dark:text-teal-300 leading-relaxed">
-                    No counterparty matched your intent yet. Your intent stays open
-                    for the next matching cycle — matching runs at the live
-                    mid-market with no USD bridge.
-                  </p>
-                )
-              )}
+              ) : null}
 
               <footer className="mt-4 text-[10px] text-teal-700/70 dark:text-teal-300/70 leading-snug">
                 {data && data.rateSourceNote
@@ -216,8 +324,10 @@ export function CaribbeanFxNetCard() {
                   : "Matching against the live mid-market."}{" "}
                 {typeof data?.poolSize === 'number' && data.poolSize > 0
                   ? `Matched against ${data.poolSize} open intent${data.poolSize === 1 ? '' : 's'} in the pool. `
-                  : ""}
-                Every match is anchored on-chain to the region-canonical ledger.
+                  : data && !isLoading
+                    ? 'The live pool is empty — your intent joined as a preview run. '
+                    : ''}
+                Real matches anchor on-chain to the region-canonical ledger.
               </footer>
 
               <SettlementSection

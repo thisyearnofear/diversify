@@ -27,6 +27,7 @@ import {
     upsertPoolIntent,
     persistMatchOutcomes,
 } from '@/lib/fx-intent-pool';
+import { isObserverIntent } from '@/hooks/use-fx-netting';
 import {
     runNetting,
 } from '@diversifi/shared/src/services/fx-netting/matching-engine';
@@ -49,6 +50,9 @@ interface MatchResponse {
     rateDate: string | null;
     /** Size of the open pool this run matched against. */
     poolSize: number;
+    /** True when the run was a walletless observer (dry-run) — matches are
+     *  real engine output but nothing was persisted. */
+    observer?: boolean;
 }
 
 export default async function handler(
@@ -67,9 +71,57 @@ export default async function handler(
 
     try {
         const body = req.body as { intents?: FxIntent[] };
-        const bodyIntents = Array.isArray(body?.intents) ? body.intents : [];
+        const allBodyIntents = Array.isArray(body?.intents) ? body.intents : [];
+
+        // Walletless visitors join the run as OBSERVERS: their intents drive
+        // this match run (a judge with no wallet sees the real engine match
+        // against the real pool) but are never persisted — no ghost intents
+        // that can never settle, no pool consumption by preview runs.
+        const observerIntents = allBodyIntents.filter((i) =>
+            isObserverIntent(String(i.participantId ?? '')),
+        );
+        const bodyIntents = allBodyIntents.filter(
+            (i) => !isObserverIntent(String(i.participantId ?? '')),
+        );
 
         await connectDB();
+
+        // Fetch live mid-market rates FIRST — rate coverage is a validation
+        // input. A code outside the table would otherwise price at a silent
+        // 1:1 inside the adapter and fabricate a rate.
+        const rateProvider = await buildLiveRateProvider();
+
+        // Validate EVERYTHING before persisting anything — a malformed body
+        // must never leave a half-upserted pool behind.
+        const isoShape = /^[A-Z]{3}$/;
+        const validateIntent = (intent: FxIntent): string | null => {
+            if (!intent.participantId || !intent.sellCurrency || !intent.buyCurrency || !intent.sellAmount) {
+                return 'Each intent needs participantId, sellCurrency, buyCurrency, sellAmount';
+            }
+            if (intent.sellCurrency === intent.buyCurrency) {
+                return 'sellCurrency and buyCurrency must differ';
+            }
+            if (!isoShape.test(intent.sellCurrency) || !isoShape.test(intent.buyCurrency)) {
+                return 'Currency codes must be 3-letter ISO 4217 (e.g. JMD, BBD)';
+            }
+            if (!rateProvider.hasRate(intent.sellCurrency) || !rateProvider.hasRate(intent.buyCurrency)) {
+                return `Unsupported currency — no live rate for ${intent.sellCurrency}/${intent.buyCurrency}`;
+            }
+            return null;
+        };
+        for (const intent of bodyIntents) {
+            const error = validateIntent(intent);
+            if (error) return res.status(400).json({ error });
+        }
+        for (const intent of observerIntents) {
+            const error = validateIntent(intent);
+            if (error) return res.status(400).json({ error });
+        }
+        if (observerIntents.length > 0 && bodyIntents.length > 0) {
+            return res.status(400).json({
+                error: 'Mixing observer (walletless) and persisted intents in one run is not supported',
+            });
+        }
 
         // Hosted pool: any intents supplied in the body (e.g. the card's
         // just-submitted intent) are upserted first, then the FULL open pool
@@ -77,28 +129,67 @@ export default async function handler(
         // counterparty intents posted earlier. Idempotent per participant+pair
         // (see upsertPoolIntent), so card retries don't pile up duplicates.
         for (const intent of bodyIntents) {
-            if (!intent.participantId || !intent.sellCurrency || !intent.buyCurrency || !intent.sellAmount) {
-                return res.status(400).json({ error: 'Each intent needs participantId, sellCurrency, buyCurrency, sellAmount' });
-            }
-            if (intent.sellCurrency === intent.buyCurrency) {
-                return res.status(400).json({ error: 'sellCurrency and buyCurrency must differ' });
-            }
             await upsertPoolIntent(FxIntentRecord, intent);
         }
 
         const now = Date.now();
         const pool = await loadOpenPool(FxIntentRecord, now);
 
-        // Fetch live mid-market rates
-        const rateProvider = await buildLiveRateProvider();
+        // Observer intents join THIS run's matching set but never the pool.
+        // Persisted pool intents (if any body intents exist) were upserted
+        // above; the observer's intent is appended in-memory only so the
+        // engine matches it against real pool counterparties.
+        const runPool = [...pool, ...observerIntents];
 
         // Run the matching + netting pipeline against the hosted pool
         const result = runNetting(
-            pool,
+            runPool,
             rateProvider.midRate,
             'cUSD',
             now,
         );
+
+        if (observerIntents.length > 0) {
+            // Dry-run: report outcomes for the observer's leg but persist
+            // nothing. Two things must NOT happen: pool intents being
+            // consumed by a preview (their remainingSell would drain with no
+            // one able to settle), and ghost settlement records appearing in
+            // a walletless visitor's inbox.
+            const observerIds = new Set(observerIntents.map((i) => String(i.participantId)));
+            const observerMatches = result.matches.filter(
+                (m) =>
+                    observerIds.has(String(m.intentA.participantId)) ||
+                    observerIds.has(String(m.intentB.participantId)),
+            );
+            const observerNet = result.netObligations;
+            const observerSettlementPlan = buildSettlementPlan({
+                ...result,
+                matches: observerMatches,
+            });
+            return res.status(200).json({
+                ok: true,
+                matches: observerMatches,
+                netObligations: observerNet,
+                unmatchedIntents: result.unmatchedIntents.filter(
+                    (u) => observerIds.has(String(u.participantId)),
+                ),
+                settlementPlan: observerSettlementPlan,
+                // Observer savings numbers are real math (same engine, same
+                // rates) but scoped to the observer's matches only.
+                totalMatchedUsd: observerMatches.reduce(
+                    (sum, m) => sum + m.notionalUsd,
+                    0,
+                ),
+                totalSavingsUsd: observerMatches.reduce(
+                    (sum, m) => sum + (m.savingsBps / 10_000) * m.notionalUsd,
+                    0,
+                ),
+                rateSourceNote: rateProvider.sourceNote,
+                rateDate: rateProvider.date,
+                poolSize: pool.length,
+                observer: true,
+            });
+        }
 
         // Persist match outcomes: remainingSell decrements, status advances
         // (matched / partially_matched), matchId audit trail per intent.

@@ -39,11 +39,15 @@ export interface FxNettingResult {
   matches: FxNettingMatch[];
   totalMatchedUsd: number;
   totalSavingsUsd: number;
+  /** Count of the CALLER's intents left unmatched (the caller's leg only). */
   unmatchedCount: number;
   rateSourceNote: string;
   rateDate: string | null;
   /** Size of the open pool the server matched against (hosted pool). */
   poolSize?: number;
+  /** True when the run was a walletless observer dry-run — the engine ran
+   *  for real against the live pool, but nothing was persisted. */
+  observer?: boolean;
 }
 
 export interface FxSettlement {
@@ -85,6 +89,18 @@ function toIntentPayload(input: FxNettingInput, participantId: string) {
   };
 }
 
+/** Session-scoped observer id for walletless matches — never persisted as a
+ *  participant (no wallet to verify), only used to exclude self-matching
+ *  within this run. See /api/fx-netting/match — it strips these from the
+ *  pool after upserting real, signed intents. */
+const OBSERVER_PREFIX = 'observer-';
+function newObserverId(): string {
+  return `${OBSERVER_PREFIX}${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+export function isObserverIntent(participantId: string): boolean {
+  return participantId.startsWith(OBSERVER_PREFIX);
+}
+
 export function useFxNetting(
   userAddress: string | null,
   /** Wallet personal_sign — from useWalletContext; needed for the wallet-authed settle endpoints. */
@@ -100,18 +116,16 @@ export function useFxNetting(
 
   const match = useCallback(
     async (myIntent: FxNettingInput, counterpartyIntents: FxNettingInput[]) => {
-      if (!userAddress) {
-        setError('Connect your wallet to match FX intents');
-        return;
-      }
       setIsLoading(true);
       setError(null);
       try {
-        // Build the intent pool: the user's intent + any counterparties.
-        // In a production system, the server would maintain the intent pool;
-        // for the prototype, the client sends the full set.
+        // Walletless visitors still get the real engine — they join the run
+        // as an ephemeral observer: their intent participates in THIS match
+        // run (and persists for the pool's lifetime via the server-side
+        // persist window) but carries no wallet to settle with. The honest
+        // state: matching works, settlement needs a wallet.
         const intents = [
-          toIntentPayload(myIntent, userAddress),
+          toIntentPayload(myIntent, userAddress ?? newObserverId()),
           ...counterpartyIntents.map((c, i) =>
             toIntentPayload(c, `0x_counterparty_${i}`),
           ),
@@ -136,6 +150,7 @@ export function useFxNetting(
           rateSourceNote: json.rateSourceNote ?? '',
           rateDate: json.rateDate ?? null,
           poolSize: json.poolSize,
+          observer: json.observer === true,
         });
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Failed to match FX intents');
@@ -145,7 +160,6 @@ export function useFxNetting(
     },
     [userAddress, apiBase],
   );
-
   /** Load the caller's settlements (debtor worklist + creditor inbox). */
   const refreshSettlements = useCallback(async () => {
     if (!userAddress) {

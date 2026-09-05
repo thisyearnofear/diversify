@@ -25,6 +25,9 @@ type NavigationContextValue = NavigationState & {
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
+  /** Deep-link to the Exchange tab's FX netting morph (CaribbeanFxNetCard).
+   *  Clears any swap prefill — a netting hand-off is not a swap. */
+  navigateToNetting: () => void;
   initializeFromStorage: () => void;
   /**
    * Cycle to focus in `PaymentCycleReport`. Set when the drawer's
@@ -98,6 +101,15 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setState((prev) => ({ ...prev, swapPrefill: null }));
   }, []);
 
+  /**
+   * Open the Exchange tab in its netting morph (CaribbeanFxNetCard).
+   * Same intent contract as navigateToSwap: one call, one artefact. Also
+   * mirrors the ?netting=1 URL hand-off used by chat deep links.
+   */
+  const navigateToNetting = useCallback(() => {
+    setState((prev) => ({ ...prev, activeTab: 'exchange', swapPrefill: null }));
+  }, []);
+
   const initializeFromStorage = useCallback(() => {
     const savedTab = localStorage.getItem('activeTab');
     if (!savedTab) return;
@@ -119,13 +131,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       setSwapPrefill,
       navigateToSwap,
       clearSwapPrefill,
+      navigateToNetting,
       initializeFromStorage,
       focusedCycleId,
       setFocusedCycleId,
       focusedYieldKey,
       setFocusedYieldKey,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, initializeFromStorage, focusedCycleId, focusedYieldKey],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, initializeFromStorage, focusedCycleId, focusedYieldKey],
   );
 
   // The consuming surfaces (PaymentCycleReport, BestYieldCard) already

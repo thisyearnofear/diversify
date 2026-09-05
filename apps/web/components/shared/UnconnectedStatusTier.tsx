@@ -19,15 +19,21 @@ interface UnconnectedStatusTierProps {
   /** Called when the visitor taps "Explore a sample plan". */
   onEnableDemo: () => void;
   className?: string;
+  /** Optional extra quiet links (e.g. the FX netting hand-off on Exchange).
+   *  Rendered between the trust line and the demo link — keep them text-links,
+   *  the tier stays quiet by contract. */
+  children?: React.ReactNode;
 }
 
 export function UnconnectedStatusTier({
   onEnableDemo,
   className = "",
+  children,
 }: UnconnectedStatusTierProps) {
   return (
-    <div className={`flex items-center justify-between gap-3 ${className}`.trim()}>
+    <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 ${className}`.trim()}>
       <VerifiedEvidence />
+      {children}
       <button
         type="button"
         onClick={onEnableDemo}
