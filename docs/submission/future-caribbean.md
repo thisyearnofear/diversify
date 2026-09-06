@@ -56,7 +56,7 @@ The bar set by this track: *"Strong teams build financial infrastructure. Weak t
 
 **Evidence of validation (early, honest):**
 - **Live mainnet, 5 chains:** ledger receipts incl. Caribbean-cohort advisories and FX anchors, explorable on Celo/Arbitrum/HashKey/0G explorers; Agentic ID minted on 0G mainnet.
-- **1,258 tests / 155 files green**; MIT-licensed public repo with ~1,000 commits documenting every step (see [Logbook](./logbook.md)).
+- **1,261 tests / 155 files green**; MIT-licensed public repo with ~1,000 commits documenting every step (see [Logbook](./logbook.md)).
 - **Cold-start position, stated plainly:** the netting pool is young — no live institutional volume yet, and none is simulated (demo traffic is excluded from credit files and pool state by construction). What the prototype demonstrates end-to-end is the full path — intent → match → net → on-chain-verified settlement → settlement-native credit file — with the savings math computed per run. Guardian standing liquidity means the first real intent finds a counterparty, and the first real settlement starts a credit file: early participation is worth more than late participation, by design. Partner LOIs are the explicit next milestone.
 
 **Path to deployment & global scaling:**
