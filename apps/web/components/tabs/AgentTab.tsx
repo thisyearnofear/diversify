@@ -10,6 +10,7 @@ import AutomationSettings from "../agent/AutomationSettings";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useExperience } from "../../context/app/ExperienceContext";
+import { useNavigation } from "../../context/app/NavigationContext";
 import { useAdvisor } from "../../hooks/use-advisor";
 import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
@@ -51,6 +52,9 @@ export default function AgentTab({
   const { config, updateConfig } = useAgentConfig();
   const { experienceMode } = useExperience();
   const { askAdvisor } = useAdvisor();
+  // One-shot hand-off from another instrument (e.g. Shield's gap inspector)
+  // — renders once as a context card, then clears so it can't go stale.
+  const { guardianContext, clearGuardianContext } = useNavigation();
   const [boundsOpen, setBoundsOpen] = useState(false);
   const [dismissError, setDismissError] = useState(false);
   const previousAddress = React.useRef(address);
@@ -124,6 +128,38 @@ export default function AgentTab({
 
   const object = (
     <div data-testid="guardian-object">
+      {guardianContext && (
+        <div
+          data-testid="guardian-context"
+          className="mb-4 rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-3 dark:border-blue-800/50 dark:bg-blue-950/30"
+        >
+          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+            From your Shield plan
+          </p>
+          <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+            {guardianContext.summary}
+          </p>
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                askAdvisor(guardianContext.prompt);
+                clearGuardianContext();
+              }}
+              className="min-h-[44px] flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 transition-colors"
+            >
+              Ask Guardian about this
+            </button>
+            <button
+              type="button"
+              onClick={clearGuardianContext}
+              className="min-h-[44px] px-3 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {GUARDIAN_CONTROL_TITLE}

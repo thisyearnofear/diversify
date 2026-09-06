@@ -19,6 +19,21 @@ export type FocusedYieldKey = string;
  */
 export const FOCUS_HIGHLIGHT_MS = 4000;
 
+/**
+ * One-shot hand-off payload for the Guardian tab: the Shield (or other
+ * instrument) slice the user was acting on when they navigated over.
+ * The Guardian surface renders it as a context card — so "Guardian
+ * activity" doesn't land on a generic page with the user's intent lost —
+ * and clears it on consume. `prompt` is a prefilled Ask-Guardian message
+ * so the card can hand the conversation the same context in one tap.
+ */
+export interface GuardianContext {
+  /** Short human line, e.g. "JMD — 12% held vs 20% target". */
+  summary: string;
+  /** Prefilled Ask-Guardian prompt carrying the same context. */
+  prompt: string;
+}
+
 type NavigationContextValue = NavigationState & {
   setActiveTab: (tab: TabId) => void;
   setChainId: (chainId: number | null) => void;
@@ -28,6 +43,12 @@ type NavigationContextValue = NavigationState & {
   /** Deep-link to the Exchange tab's FX netting morph (CaribbeanFxNetCard).
    *  Clears any swap prefill — a netting hand-off is not a swap. */
   navigateToNetting: () => void;
+  /** Navigate to the Guardian tab carrying the slice the user was acting
+   *  on. `context` is transient — the Guardian surface consumes it once. */
+  navigateToGuardian: (context?: GuardianContext) => void;
+  /** Current Guardian hand-off (null once consumed or never set). */
+  guardianContext: GuardianContext | null;
+  clearGuardianContext: () => void;
   initializeFromStorage: () => void;
   /**
    * Cycle to focus in `PaymentCycleReport`. Set when the drawer's
@@ -63,6 +84,9 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // not history).
   const [focusedCycleId, setFocusedCycleId] = useState<string | null>(null);
   const [focusedYieldKey, setFocusedYieldKey] = useState<FocusedYieldKey | null>(null);
+  // Transient Guardian hand-off — see GuardianContext above. Not persisted:
+  // it reflects the current "take this to Guardian" gesture, not history.
+  const [guardianContext, setGuardianContext] = useState<GuardianContext | null>(null);
 
   // init from storage (active tab)
   useEffect(() => {
@@ -110,6 +134,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setState((prev) => ({ ...prev, activeTab: 'exchange', swapPrefill: null }));
   }, []);
 
+  /**
+   * Open the Guardian tab carrying the slice context the user came from.
+   * One call, one artefact — the same contract as navigateToSwap.
+   */
+  const navigateToGuardian = useCallback((context?: GuardianContext) => {
+    setGuardianContext(context ?? null);
+    setState((prev) => ({ ...prev, activeTab: 'agent' }));
+  }, []);
+
+  const clearGuardianContext = useCallback(() => {
+    setGuardianContext(null);
+  }, []);
+
   const initializeFromStorage = useCallback(() => {
     const savedTab = localStorage.getItem('activeTab');
     if (!savedTab) return;
@@ -132,13 +169,16 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navigateToSwap,
       clearSwapPrefill,
       navigateToNetting,
+      navigateToGuardian,
+      guardianContext,
+      clearGuardianContext,
       initializeFromStorage,
       focusedCycleId,
       setFocusedCycleId,
       focusedYieldKey,
       setFocusedYieldKey,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, initializeFromStorage, focusedCycleId, focusedYieldKey],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, initializeFromStorage, focusedCycleId, focusedYieldKey],
   );
 
   // The consuming surfaces (PaymentCycleReport, BestYieldCard) already

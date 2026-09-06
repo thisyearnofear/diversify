@@ -104,8 +104,12 @@ vi.mock("@/hooks/use-agent-status", () => ({
 }));
 
 const mockNavigateToSwap = vi.fn();
+const mockNavigateToGuardian = vi.fn();
 vi.mock("@/context/app/NavigationContext", () => ({
-  useNavigation: () => ({ navigateToSwap: mockNavigateToSwap }),
+  useNavigation: () => ({
+    navigateToSwap: mockNavigateToSwap,
+    navigateToGuardian: mockNavigateToGuardian,
+  }),
 }));
 
 vi.mock("@/context/app/StrategyContext", () => ({
@@ -155,13 +159,26 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", () => ({
       "div",
       { "data-testid": "protection-plan-ring" },
       React.createElement(
-        "button",
-        {
-          type: "button",
-          "data-testid": "ring-select-kesm",
-          onClick: () => onSelectToken(selectedToken === "KESm" ? null : "KESm"),
-        },
-        selectedToken ? `ring:${selectedToken}` : "ring:idle",
+        "div",
+        null,
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            "data-testid": "ring-select-kesm",
+            onClick: () => onSelectToken(selectedToken === "KESm" ? null : "KESm"),
+          },
+          selectedToken ? `ring:${selectedToken}` : "ring:idle",
+        ),
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            "data-testid": "ring-select-weth",
+            onClick: () => onSelectToken(selectedToken === "WETH" ? null : "WETH"),
+          },
+          "weth",
+        ),
       ),
     ),
 }));
@@ -231,6 +248,11 @@ vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
           )
         : null,
     ),
+}));
+
+vi.mock("@/components/agent/GuardianMobileWizard", () => ({
+  GuardianMobileWizard: () =>
+    React.createElement("div", { "data-testid": "guardian-mobile-wizard" }),
 }));
 
 vi.mock("@/components/tabs/protect/ProfileWizard", () => ({
@@ -464,6 +486,88 @@ describe("ProtectionTab — instrument shapes", () => {
       expect(sheetAfterDeselect.style.height).toBe("0px");
       expect(sheetAfterDeselect.style.opacity).toBe("0");
     }
+  });
+
+  it("on-target slice: the CTA is Guardian monitoring, not a dead end", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    // KESm 600/1000 = 60% held vs 60% plan → on target.
+    const onTarget = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 1000,
+          tokenCount: 1,
+          balances: [{ symbol: "KESm", value: 600, chainId: 42220 }],
+        },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={onTarget} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    const cta = screen.getByRole("button", { name: "Have Guardian keep this aligned" });
+    fireEvent.click(cta);
+    expect(screen.getByTestId("guardian-mobile-wizard")).toBeInTheDocument();
+  });
+
+  it("on-target slice while monitoring: the CTA carries the slice into Guardian", () => {
+    mockFinancialStrategy = "africapitalism";
+    mockGuardianState = "monitoring";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    const onTarget = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 1000,
+          tokenCount: 1,
+          balances: [{ symbol: "KESm", value: 600, chainId: 42220 }],
+        },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={onTarget} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    fireEvent.click(screen.getByRole("button", { name: "See Guardian activity" }));
+    expect(mockNavigateToGuardian).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToGuardian.mock.calls[0][0]?.summary).toContain("KESm");
+    expect(mockNavigateToGuardian.mock.calls[0][0]?.prompt).toContain("KESm");
+  });
+
+  it("outside-plan slice: the primary CTA asks Guardian what to do", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-weth"));
+    expect(screen.getByText(/Outside the plan/)).toBeInTheDocument();
+    const cta = screen.getByRole("button", { name: "Ask Guardian what to do with WETH" });
+    fireEvent.click(cta);
+    expect(mockAdvisor).toHaveBeenCalledWith(expect.stringContaining("WETH"));
+  });
+
+  it("empty-wallet slice: the CTA is fund-the-plan, not a dead end", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(
+      screen.getByRole("button", { name: /Fund this plan/ }),
+    ).toBeInTheDocument();
   });
 
   it("persona morphs the inspector: payment cycle rides the selected slice, no module meta-talk (§5 rail 4)", () => {

@@ -56,6 +56,7 @@ import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfol
 import StatusBadge from "../shared/StatusBadge";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { rwaLegFor } from "./protect/RwaAssetCards";
+import WalletButton from "../wallet/WalletButton";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -74,7 +75,7 @@ export default function ProtectionTab({
   refreshBalances,
 }: ProtectionTabProps) {
   const { address, chainId, isMiniPay } = useWalletContext();
-  const { navigateToSwap } = useNavigation();
+  const { navigateToSwap, navigateToGuardian } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { askAdvisor } = useAdvisor();
@@ -470,10 +471,14 @@ export default function ProtectionTab({
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900 dark:text-white">{focusedToken} position</p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                <StatusBadge label={`${selectedHeld.toFixed(0)}% held`} tone="info" compact />
+                <StatusBadge
+                  label={`${selectedHeld.toFixed(0)}% held${totalValue > 0 ? ` · ${fmt((selectedHeld / 100) * totalValue)}` : ""}`}
+                  tone="info"
+                  compact
+                />
                 {selectedAlloc ? (
                   <StatusBadge
-                    label={`${selectedAlloc.percent}% target`}
+                    label={`${selectedAlloc.percent}% target${totalValue > 0 ? ` · ${fmt((selectedAlloc.percent / 100) * totalValue)}` : ""}`}
                     tone={gapPct > 2 ? "warning" : "ready"}
                     compact
                   />
@@ -487,9 +492,9 @@ export default function ProtectionTab({
           <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
             {selectedAlloc
               ? gapPct > 2
-                ? `You're ${gapPct.toFixed(0)} points light — plan ${selectedAlloc.percent}%, you hold ${selectedHeld.toFixed(0)}%${riskData ? ` · ${riskData.code} is the risk this offsets` : ""}.`
-                : `On target — you hold ${selectedHeld.toFixed(0)}% vs ${selectedAlloc.percent}% plan.`
-              : `Outside the plan — you hold ${selectedHeld.toFixed(0)}% in a token the plan doesn't use.`}
+                ? `You're ${gapPct.toFixed(0)} points light${totalValue > 0 ? ` (≈ ${fmt((gapPct / 100) * totalValue)})` : ""} — plan ${selectedAlloc.percent}%, you hold ${selectedHeld.toFixed(0)}%${riskData ? ` · ${riskData.code} is the risk this offsets` : ""}.`
+                : `On target — you hold ${selectedHeld.toFixed(0)}% vs ${selectedAlloc.percent}% plan${totalValue > 0 ? ` (≈ ${fmt((selectedHeld / 100) * totalValue)})` : ""}.`
+              : `Outside the plan — you hold ${selectedHeld.toFixed(0)}%${totalValue > 0 ? ` (≈ ${fmt((selectedHeld / 100) * totalValue)})` : ""} in a token the plan doesn't use.`}
           </p>
           {(() => {
             const rwa = rwaLegFor(focusedToken);
@@ -500,7 +505,14 @@ export default function ProtectionTab({
               </p>
             );
           })()}
-          {selectedAlloc && gapPct > 2 && totalValue > 0 && canSafelyExecute(walletView.freshness) && (
+          {/* One forward CTA per selection — the inspector is never a dead
+              end (design-language §5: selection → gap inspector → one CTA).
+              Which action shows depends on wallet state, not on whether the
+              user "earned" a forward path. */}
+          {!address && (
+            <WalletButton variant="primary" className="w-full" />
+          )}
+          {address && selectedAlloc && gapPct > 2 && totalValue > 0 && canSafelyExecute(walletView.freshness) && (
             <button
               type="button"
               onClick={() => openProtectionFlow(selectedAlloc.token)}
@@ -510,22 +522,84 @@ export default function ProtectionTab({
               {fmt((gapPct / 100) * totalValue)})
             </button>
           )}
-          {selectedAlloc && gapPct > 2 && !canSafelyExecute(walletView.freshness) && (
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Refresh wallet data before reviewing an executable protection move.
-            </p>
+          {address && selectedAlloc && gapPct > 2 && totalValue > 0 && !canSafelyExecute(walletView.freshness) && (
+            <div className="space-y-2">
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Refresh wallet data before reviewing an executable protection move.
+              </p>
+              {refreshBalances && (
+                <button
+                  type="button"
+                  onClick={() => void refreshBalances()}
+                  className="min-h-[44px] w-full rounded-xl border border-blue-600 text-blue-600 dark:text-blue-400 text-sm font-bold px-4 transition-colors"
+                >
+                  Refresh wallet data
+                </button>
+              )}
+            </div>
           )}
-          <button
-            type="button"
-            onClick={() =>
-              askAdvisor(
-                `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${currentGoalLabel} plan in ${userRegion}?`,
-              )
-            }
-            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-          >
-            Ask Guardian about this slice
-          </button>
+          {address && selectedAlloc && gapPct > 2 && totalValue <= 0 && (
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(address);
+                  showToast("Address copied — fund this wallet to start the plan", "success");
+                } catch {
+                  showToast("Could not copy address", "error");
+                }
+              }}
+              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+            >
+              Fund this plan — copy deposit address
+            </button>
+          )}
+          {address && selectedAlloc && gapPct <= 2 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (guardianState === "monitoring") {
+                  navigateToGuardian({
+                    summary: `${focusedToken} — on target (${selectedHeld.toFixed(0)}% held vs ${selectedAlloc.percent}% plan)`,
+                    prompt: `Guardian, keep monitoring my ${focusedToken} holding — it's on target at ${selectedHeld.toFixed(0)}% vs the ${selectedAlloc.percent}% plan for my ${currentGoalLabel} strategy. Flag me if it drifts.`,
+                  });
+                } else {
+                  setShowMobileWizard(true);
+                }
+              }}
+              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+            >
+              {guardianState === "monitoring"
+                ? "See Guardian activity"
+                : "Have Guardian keep this aligned"}
+            </button>
+          )}
+          {address && !selectedAlloc && (
+            <button
+              type="button"
+              onClick={() =>
+                askAdvisor(
+                  `My ${focusedToken} holding (${selectedHeld.toFixed(0)}% of my wallet) is outside my ${currentGoalLabel} plan. What are my options — hold, swap into a plan token, or something else in ${userRegion}?`,
+                )
+              }
+              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+            >
+              Ask Guardian what to do with {focusedToken}
+            </button>
+          )}
+          {(selectedAlloc || !address) && (
+            <button
+              type="button"
+              onClick={() =>
+                askAdvisor(
+                  `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${currentGoalLabel} plan in ${userRegion}?`,
+                )
+              }
+              className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            >
+              Ask Guardian about this slice
+            </button>
+          )}
           {isPaymentCycle && selectedAlloc && (
             <div className="pt-3 mt-3 border-t border-purple-100 dark:border-purple-900/30">
               <div className="flex items-center gap-1.5 mb-2">
@@ -575,7 +649,16 @@ export default function ProtectionTab({
           type="button"
           onClick={() => {
             if (guardianState === "monitoring") {
-              setActiveTab?.("agent");
+              // Carry the focused slice (or plan) so Guardian opens with
+              // the user's context, not a generic status page.
+              navigateToGuardian(
+                focusedToken
+                  ? {
+                      summary: `${focusedToken} — ${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}`,
+                      prompt: `Guardian, what's the status on my ${focusedToken} holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}) for my ${currentGoalLabel} plan?`,
+                    }
+                  : undefined,
+              );
             } else {
               setShowMobileWizard(true);
             }

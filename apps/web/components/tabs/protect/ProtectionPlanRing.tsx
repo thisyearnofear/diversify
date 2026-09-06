@@ -184,18 +184,22 @@ export function ProtectionPlanRing({
       };
     }
     if (selected || selectedLive) {
+      // Money beside the percentage — "8 pts light" lands as meaning when
+      // it's also "≈ $2,000". Only when a real wallet value exists.
+      const moneyHint = (pct: number) =>
+        totalValue > 0 ? ` · ≈ ${fmt(Math.abs(pct) / 100 * totalValue)}` : "";
       if (!selected) {
         return {
           number: `${Math.round(selectedHeld)}%`,
           label: selectedSymbol,
-          hint: "outside plan",
+          hint: `outside plan${moneyHint(selectedHeld)}`,
         };
       }
       if (onTarget) {
         return {
           number: null as React.ReactNode,
           label: "On target",
-          hint: selectedSymbol,
+          hint: `${selectedSymbol}${moneyHint(selectedHeld)}`,
         };
       }
       return {
@@ -203,7 +207,7 @@ export function ProtectionPlanRing({
           <motion.span>{gapFormatted}</motion.span>
         ),
         label: gapPts > 0 ? "pts light" : "pts over",
-        hint: selectedSymbol,
+        hint: `${selectedSymbol}${moneyHint(gapPts)}`,
       };
     }
     return {

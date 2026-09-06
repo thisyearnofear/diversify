@@ -40,6 +40,14 @@ vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: vi.fn() }),
 }));
 
+vi.mock("@/context/app/NavigationContext", () => ({
+  useNavigation: () => ({
+    guardianContext: null,
+    clearGuardianContext: vi.fn(),
+    navigateToGuardian: vi.fn(),
+  }),
+}));
+
 vi.mock("@/components/wallet/WalletButton", () => ({
   default: () => <button type="button">Connect wallet</button>,
 }));
