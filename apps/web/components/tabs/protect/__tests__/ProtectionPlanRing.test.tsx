@@ -151,6 +151,27 @@ describe('ProtectionPlanRing — projections shape', () => {
     );
     expect(screen.getByText('Add funds')).toBeInTheDocument();
   });
+
+  it('emptyLabel replaces the Add funds label (walletless ghost ring)', () => {
+    const empty = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 0,
+      tokens: [],
+      chains: [],
+    } as unknown as MultichainPortfolio;
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={empty}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        empty
+        emptyLabel="Connect to fund"
+      />,
+    );
+    expect(screen.getByText('Connect to fund')).toBeInTheDocument();
+    expect(screen.queryByText('Add funds')).not.toBeInTheDocument();
+  });
 });
 
 describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {

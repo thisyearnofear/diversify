@@ -35,6 +35,8 @@ interface Props {
   alignmentScore?: number | null;
   /** Empty-wallet morph — hole says Add funds; slices are the plan. */
   empty?: boolean;
+  /** Replaces the empty hole's label line (walletless: "Connect to fund"). */
+  emptyLabel?: string;
   /** Makes the hole tappable while idle/empty — Shield uses it for compare mode. */
   onHoleTap?: () => void;
   /** Replaces the idle hint text (compare mode: "under this plan"). */
@@ -48,6 +50,7 @@ export function ProtectionPlanRing({
   onSelectToken,
   alignmentScore = null,
   empty = false,
+  emptyLabel = "Add funds",
   onHoleTap,
   holeHintOverride,
 }: Props) {
@@ -185,7 +188,7 @@ export function ProtectionPlanRing({
     if (empty) {
       return {
         number: null as React.ReactNode,
-        label: "Add funds",
+        label: emptyLabel,
         hint: archetype.name,
       };
     }

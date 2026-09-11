@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 // The strategy/profile hooks drive the persona banners. Default: no
@@ -10,12 +10,13 @@ const mockState = {
   financialStrategy: null as string | null,
   userRegion: null as string | null,
   detectedRegion: "USA" as string,
+  setFinancialStrategy: vi.fn(),
 };
 
 vi.mock("@/context/app/StrategyContext", () => ({
   useStrategy: () => ({
     financialStrategy: mockState.financialStrategy,
-    setFinancialStrategy: vi.fn(),
+    setFinancialStrategy: mockState.setFinancialStrategy,
   }),
 }));
 
@@ -30,7 +31,17 @@ vi.mock("@/hooks/use-user-region", () => ({
 }));
 
 vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
-  ProtectionPlanGallery: () => <div data-testid="plan-gallery" />,
+  ProtectionPlanGallery: () => (
+    <div data-testid="plan-gallery">
+      <button
+        type="button"
+        data-testid="plan-card-buen_vivir"
+        onClick={() => mockState.setFinancialStrategy("buen_vivir")}
+      >
+        Buen Vivir
+      </button>
+    </div>
+  ),
 }));
 
 vi.mock("@/components/wallet/WalletButton", () => ({
@@ -66,9 +77,12 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
     ).toBeInTheDocument();
-    // Two buttons total: the connect CTA + the demo text link. No other
-    // actions exist — the gallery's own selection state is internal.
-    expect(screen.getAllByRole("button").length).toBe(2);
+    // Two buttons total besides plan cards: the connect CTA + the demo
+    // text link. No other actions exist.
+    const buttons = screen
+      .getAllByRole("button")
+      .filter((b) => !b.getAttribute("data-testid")?.startsWith("plan-card-"));
+    expect(buttons.length).toBe(2);
   });
 
   it("drops the marketing stack — no hero card, no how-it-works, no scrollytelling card", () => {
@@ -105,6 +119,70 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       mockState.financialStrategy = null;
       mockState.userRegion = null;
       mockState.detectedRegion = "USA";
+    }
+  });
+
+  it("with a philosophy, the ghost ring leads the object — 'Connect to fund' hole, connect CTA stays the only action", () => {
+    mockState.financialStrategy = "africapitalism";
+    try {
+      render(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+
+      const ring = screen.getByTestId("shield-ring");
+      expect(ring).toHaveAttribute("data-walletless");
+      // Empty-hole morph speaks walletless: label asks to connect, the
+      // hint still names the plan.
+      expect(within(ring).getByText("Connect to fund")).toBeInTheDocument();
+      expect(within(ring).getAllByText("Africapitalism").length).toBeGreaterThan(0);
+      // The ring sits above the picker; the picker line is unchanged.
+      expect(ring.compareDocumentPosition(screen.getByTestId("shield-picker")) & 4).toBeTruthy();
+      expect(screen.getByText("Choose a protection philosophy")).toBeInTheDocument();
+
+      // Outside the ring's own slice rows and the plan cards, only the
+      // connect CTA + demo link exist. No compare hole, no extra actions.
+      const buttons = screen
+        .getAllByRole("button")
+        .filter(
+          (b) =>
+            !ring.contains(b) &&
+            !b.getAttribute("data-testid")?.startsWith("plan-card-"),
+        );
+      expect(buttons.length).toBe(2);
+      expect(screen.queryByTestId("ring-hole")).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("with no philosophy the picker alone is the object — no ring", () => {
+    render(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+    expect(screen.queryByTestId("shield-ring")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
+  });
+
+  it("tapping a plan card commits and re-slices the ghost ring", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.setFinancialStrategy.mockClear();
+    try {
+      const { rerender } = render(
+        <ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />,
+      );
+      expect(
+        within(screen.getByTestId("shield-ring")).getAllByText("Africapitalism").length,
+      ).toBeGreaterThan(0);
+
+      fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+      expect(mockState.setFinancialStrategy).toHaveBeenCalledWith("buen_vivir");
+
+      mockState.financialStrategy = "buen_vivir";
+      rerender(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+      expect(
+        within(screen.getByTestId("shield-ring")).getAllByText("Buen Vivir").length,
+      ).toBeGreaterThan(0);
+      expect(
+        within(screen.getByTestId("shield-ring")).queryByText("Africapitalism"),
+      ).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
     }
   });
 
