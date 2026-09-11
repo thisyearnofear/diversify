@@ -31,67 +31,19 @@ import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { ProtectionPlanRing } from "./ProtectionPlanRing";
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
-import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
+import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
 interface Props {
   experienceMode: UserExperienceMode;
   onEnableDemo?: () => void;
 }
 
-// Walletless ghost portfolio: the ring draws the plan's own slices, no
-// holdings, no loading shimmer.
-const WALLETLESS_PORTFOLIO: MultichainPortfolio = {
-  totalValue: 0,
-  tokenCount: 0,
-  regionCount: 0,
-  tokens: [],
-  regionalExposure: [],
-  weightedInflationRisk: 0,
-  diversificationScore: 0,
-  diversificationRating: "Poor",
-  diversificationTips: [],
-  concentrationRisk: "LOW",
-  goalScores: { hedge: 0, diversify: 0, rwa: 0 },
-  totalAnnualYield: 0,
-  totalInflationCost: 0,
-  netAnnualGain: 0,
-  avgYieldRate: 0,
-  netRate: 0,
-  isNetPositive: false,
-  missingRegions: [],
-  overExposedRegions: [],
-  underExposedRegions: [],
-  rebalancingOpportunities: [],
-  goalAnalysis: {
-    userGoal: "",
-    title: "",
-    description: "",
-    recommendations: [],
-  },
-  targetAllocations: {
-    inflation_protection: [],
-    geographic_diversification: [],
-    rwa_access: [],
-    exploring: [],
-  },
-  hyperliquidExposure: { totalValue: 0, percentage: 0, positions: [] },
-  projections: {
-    currentPath: { value1Year: 0, value3Year: 0, purchasingPowerLost: 0 },
-    optimizedPath: { value1Year: 0, value3Year: 0, purchasingPowerPreserved: 0 },
-  },
-  chainCount: 0,
-  chains: [],
-  allTokens: [],
-  tokenMap: {},
-  regionData: [],
-  isLoading: false,
-  isStale: false,
-  errors: [],
-  lastUpdated: null,
-};
-
 export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnableDemo }: Props) {
   const { financialStrategy } = useStrategy();
+  // Walletless ghost portfolio: the ring draws the plan's own slices, no
+  // holdings, no loading shimmer. Fresh instance per mount — never a
+  // shared mutable const.
+  const walletlessPortfolio = React.useMemo(() => createEmptyPortfolio(), []);
   const { config: profileConfig } = useProtectionProfile();
   const { region: detectedRegion } = useUserRegion();
   // Identity travels with the morph: the moment a philosophy is chosen
@@ -115,7 +67,7 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
         <div data-testid="shield-ring" data-walletless>
           <ProtectionPlanRing
             strategyKey={ringKey}
-            portfolio={WALLETLESS_PORTFOLIO}
+            portfolio={walletlessPortfolio}
             selectedToken={null}
             onSelectToken={() => {}}
             alignmentScore={null}

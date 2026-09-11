@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
+import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
 vi.mock("framer-motion", () => {
   const MotionDiv = React.forwardRef((props: any, ref: any) =>
@@ -165,16 +166,7 @@ const baseShellState = {
   snoozeGuardianUpdate: vi.fn(),
   muteGuardianUpdateType: vi.fn(),
   multichainPortfolio: {
-    totalValue: 0,
-    chainCount: 0,
-    chains: [],
-    regionData: [],
-    isLoading: false,
-    isStale: false,
-    rebalancingOpportunities: [],
-    diversificationScore: 0,
-    weightedInflationRisk: 0,
-    tokenCount: 0,
+    ...createEmptyPortfolio(),
     refresh: vi.fn(),
   },
   isRegionLoading: false,

@@ -62,27 +62,20 @@ vi.mock("../../../hooks/use-wallet", () => ({
   useWallet: () => h.walletSentinel,
 }));
 
-vi.mock("../../../hooks/use-multichain-balances", () => ({
-  useMultichainBalances: (address: unknown) => {
-    h.multichainAddresses.push(address);
-    // Only `refresh` (plus the spread) is consumed by PortfolioContext;
-    // the rest keeps the shape honest for any portfolio reader.
-    return {
-      totalValue: 0,
-      lastUpdated: null,
-      isLoading: false,
-      isStale: false,
-      hasEstimates: false,
-      errors: [],
-      chains: [],
-      allTokens: [],
-      tokenMap: {},
-      regionData: [],
-      chainCount: 0,
-      refresh: async () => {},
-    };
-  },
-}));
+vi.mock("../../../hooks/use-multichain-balances", async (importOriginal) => {
+  const mod =
+    await importOriginal<
+      typeof import("../../../hooks/use-multichain-balances")
+    >();
+  return {
+    useMultichainBalances: (address: unknown) => {
+      h.multichainAddresses.push(address);
+      // Only `refresh` (plus the spread) is consumed by PortfolioContext;
+      // the real factory keeps the shape honest for any portfolio reader.
+      return { ...mod.createEmptyPortfolio(), refresh: async () => {} };
+    },
+  };
+});
 
 import { AppProviders } from "../AppProviders";
 import { useWalletContext, WalletProvider } from "../../../components/wallet/WalletProvider";

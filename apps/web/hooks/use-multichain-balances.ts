@@ -88,6 +88,70 @@ export interface MultichainPortfolio extends PortfolioAnalysis {
   lastUpdated: number | null;
 }
 
+/**
+ * A fresh, fully-zeroed MultichainPortfolio.
+ *
+ * A factory — not a frozen const — so no consumer can mutate shared
+ * state; every caller gets its own object. The walletless ghost ring
+ * (ProtectionNotConnected) and any test that needs an honest
+ * "no holdings yet" shape both start here.
+ */
+export function createEmptyPortfolio(): MultichainPortfolio {
+  return {
+    totalValue: 0,
+    tokenCount: 0,
+    regionCount: 0,
+    tokens: [],
+    regionalExposure: [],
+    weightedInflationRisk: 0,
+    diversificationScore: 0,
+    diversificationRating: "Poor",
+    diversificationTips: [],
+    concentrationRisk: "LOW",
+    goalScores: { hedge: 0, diversify: 0, rwa: 0 },
+    totalAnnualYield: 0,
+    totalInflationCost: 0,
+    netAnnualGain: 0,
+    avgYieldRate: 0,
+    netRate: 0,
+    isNetPositive: false,
+    missingRegions: [],
+    overExposedRegions: [],
+    underExposedRegions: [],
+    rebalancingOpportunities: [],
+    goalAnalysis: {
+      userGoal: "",
+      title: "",
+      description: "",
+      recommendations: [],
+    },
+    targetAllocations: {
+      inflation_protection: [],
+      geographic_diversification: [],
+      rwa_access: [],
+      exploring: [],
+    },
+    hyperliquidExposure: { totalValue: 0, percentage: 0, positions: [] },
+    projections: {
+      currentPath: { value1Year: 0, value3Year: 0, purchasingPowerLost: 0 },
+      optimizedPath: {
+        value1Year: 0,
+        value3Year: 0,
+        purchasingPowerPreserved: 0,
+      },
+    },
+    chainCount: 0,
+    chains: [],
+    allTokens: [],
+    tokenMap: {},
+    regionData: [],
+    isLoading: false,
+    isStale: false,
+    errors: [],
+    lastUpdated: null,
+  };
+}
+
 // ============================================================================
 // CONFIGURATION - Production Chains Only
 // ============================================================================

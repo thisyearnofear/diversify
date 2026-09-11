@@ -372,19 +372,9 @@ vi.mock("../../wallet/WalletProvider", () => ({
 }));
 
 import ProtectionTab from "../ProtectionTab";
+import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
-const EMPTY_PORTFOLIO = {
-  totalValue: 0,
-  chainCount: 0,
-  chains: [],
-  regionData: [],
-  isLoading: false,
-  isStale: false,
-  rebalancingOpportunities: [],
-  diversificationScore: 0,
-  weightedInflationRisk: 0,
-  tokenCount: 0,
-} as any;
+const EMPTY_PORTFOLIO = createEmptyPortfolio();
 
 const MOCK_PORTFOLIO = {
   totalValue: 5000,

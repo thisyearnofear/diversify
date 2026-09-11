@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 import { buildWalletPortfolioView, canSafelyExecute, getProtectionGaps, getWalletHoldings } from "../wallet-portfolio-view";
 
 const balance = (symbol: string, value: number, chainId = 42220) => ({
@@ -13,12 +14,8 @@ const balance = (symbol: string, value: number, chainId = 42220) => ({
 });
 
 const portfolio = (chains: any[], extra: any = {}) => ({
+  ...createEmptyPortfolio(),
   chains,
-  totalValue: 0,
-  errors: [],
-  isLoading: false,
-  isStale: false,
-  hasEstimates: false,
   ...extra,
 }) as any;
 

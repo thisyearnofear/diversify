@@ -21,8 +21,10 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { render, cleanup, screen, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
-import { createEmptyAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";
-import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
+import {
+  createEmptyPortfolio,
+  type MultichainPortfolio,
+} from "@/hooks/use-multichain-balances";
 import type { HomeSections } from "@/hooks/use-home-sections";
 
 // ──────────────────────────────────────────────────────────────────────────
@@ -262,15 +264,9 @@ import { ConnectedOverview } from "../ConnectedOverview";
 
 function buildPortfolio(overrides: Partial<MultichainPortfolio> = {}): MultichainPortfolio {
   return {
-    ...createEmptyAnalysis(),
+    ...createEmptyPortfolio(),
     chainCount: 1,
-    chains: [],
-    allTokens: [],
-    tokenMap: {},
     regionData: [{ region: "Africa", value: 500, color: "#000", usdValue: 500 }],
-    isLoading: false,
-    isStale: false,
-    errors: [],
     lastUpdated: Date.now(),
     totalValue: 1000,
     diversificationScore: 72,
@@ -279,7 +275,7 @@ function buildPortfolio(overrides: Partial<MultichainPortfolio> = {}): Multichai
     goalScores: { hedge: 55, diversify: 55, rwa: 0 },
     missingRegions: ["Europe"],
     ...overrides,
-  } as MultichainPortfolio;
+  };
 }
 
 function renderOverview(props: Partial<React.ComponentProps<typeof ConnectedOverview>> = {}) {
