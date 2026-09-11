@@ -21,9 +21,12 @@ const nextConfig = {
   ],
 
   // Monorepo tracing root can otherwise pull Foundry/docs/tests into lambdas.
+  // NOTE: patterns here apply to the tracing ROOT (repo root), so every entry
+  // must be repo-root-relative AND narrow. Never add bare 'lib/**/*' — it
+  // matches node_modules/**/lib/** (including Next's own server lib) and
+  // ships lambdas missing 'next/dist/server/lib/…' (all-API 500s, 2026-09-11).
   outputFileTracingExcludes: {
     '*': [
-      'lib/**/*',
       'contracts/**/*',
       'docs/**/*',
       'scripts/**/*',
