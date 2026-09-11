@@ -13,8 +13,6 @@ const VALID_STRATEGIES = [
   'confucian',
   'gotong_royong',
   'islamic',
-  'halo',
-  'taco',
   'custom',
 ];
 

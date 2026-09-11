@@ -101,20 +101,6 @@ function getPhilosophyFraming(strategy: string | null): PhilosophyFraming {
         icon: '🌐',
         accent: strategyAccent('global'),
       };
-    case 'halo':
-      return {
-        whatProtectionMeans: 'hard-asset, low-obsolescence holdings',
-        scoreLabel: 'Hard Asset Coverage',
-        icon: '🥇',
-        accent: strategyAccent('halo'),
-      };
-    case 'taco':
-      return {
-        whatProtectionMeans: 'political and macroeconomic neutrality',
-        scoreLabel: 'Political Neutrality',
-        icon: '⚖️',
-        accent: strategyAccent('taco'),
-      };
     default:
       return {
         whatProtectionMeans: 'diversifying across stronger currencies',
@@ -204,7 +190,7 @@ export function ProtectionScorecard({
       if (financialStrategy === 'africapitalism' || financialStrategy === 'buen_vivir' || financialStrategy === 'gotong_royong') {
         return Math.round(gs.diversify ?? 0);
       }
-      if (financialStrategy === 'islamic' || financialStrategy === 'halo') {
+      if (financialStrategy === 'islamic') {
         return Math.round(gs.rwa ?? 0);
       }
       return Math.round(gs.hedge ?? gs.diversify ?? 0);

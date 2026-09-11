@@ -463,7 +463,7 @@ Two fixes shipped after initial deploy:
 
 ### Why "risk is universal" is the right framing
 
-The assumption that "USD = safe, everything else = risky" is itself a normative judgment. A US investor worried about political instability, a Muslim in London seeking Sharia-compliant holdings, or a Kenyan-American whose family's savings are in KES — all of them have risk, and all of them can find a philosophy that matches their values. Gold (XAU) works as the universal benchmark because it has outperformed every currency, including USD. The philosophy system then provides the values-driven response: HALO for hard-asset hedgers, Africapitalism for diaspora wealth retention, Islamic Finance for Sharia compliance, TACO for political neutrality.
+The assumption that "USD = safe, everything else = risky" is itself a normative judgment. A US investor worried about political instability, a Muslim in London seeking Sharia-compliant holdings, or a Kenyan-American whose family's savings are in KES — all of them have risk, and all of them can find a philosophy that matches their values. Gold (XAU) works as the universal benchmark because it has outperformed every currency, including USD. The philosophy system then provides the values-driven response: Africapitalism for diaspora wealth retention, Islamic Finance for Sharia compliance, Pan-Caribbean for imported-inflation hedging.
 
 ## Track 4 — North Star: SME FX Working Capital & the Retail→Business Funnel (2026-07-11)
 

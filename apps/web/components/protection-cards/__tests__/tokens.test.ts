@@ -9,6 +9,6 @@ describe('strategyToArchetype', () => {
 
   it('returns null for unknown or empty strategy', () => {
     expect(strategyToArchetype(null)).toBeNull();
-    expect(strategyToArchetype('halo')).toBeNull();
+    expect(strategyToArchetype('nope')).toBeNull();
   });
 });

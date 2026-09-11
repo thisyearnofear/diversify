@@ -20,22 +20,13 @@ export const QUIET_GRAY = '#64748b';
 /** Default accent when no philosophy is selected (blue-600). */
 export const DEFAULT_ACCENT = '#2563eb';
 
-// Legacy strategy keys with no archetype mapping keep their historical hues.
-const STRATEGY_ACCENT_OVERRIDES: Record<string, string> = {
-  halo: ARCHETYPES.custom.accent,
-  taco: ARCHETYPES.global_diversification.accent,
-};
-
 /**
- * The accent for a strategy key: the archetype's own accent token, a
- * legacy override, or the default blue.
+ * The accent for a strategy key: the archetype's own accent token,
+ * or the default blue.
  */
 export function strategyAccent(strategyKey: string | null | undefined): string {
   const archetypeId = strategyToArchetype(strategyKey);
   if (archetypeId) return ARCHETYPES[archetypeId].accent;
-  if (strategyKey && STRATEGY_ACCENT_OVERRIDES[strategyKey]) {
-    return STRATEGY_ACCENT_OVERRIDES[strategyKey];
-  }
   return DEFAULT_ACCENT;
 }
 
@@ -88,12 +79,6 @@ export const BENCHMARK_COLORS = {
   EUR: '#14b8a6', // teal-500
   XAU: GOLD,
 } as const;
-
-/** Ring tints for strategies whose ring color is semantic, not accent. */
-export const STRATEGY_RING_TINTS: Record<string, string> = {
-  halo: '#fbbf24', // amber-400 — hard assets read as gold
-  taco: '#22c55e', // green-500 — neutrality reads as green
-};
 
 /** Chain brand colors (official brand values, not theme tokens). */
 export const CHAIN_BRAND_COLORS: Record<string, string> = {

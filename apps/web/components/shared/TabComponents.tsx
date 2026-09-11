@@ -5,7 +5,7 @@ import { useAnimatedNumber } from "../../hooks/use-animation";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import AskAIButton from "../ui/AskAIButton";
-import { STATUS_COLORS, STRATEGY_RING_TINTS } from "./palette";
+import { STATUS_COLORS } from "./palette";
 
 // ============================================================================
 // NEW: Progressive Disclosure Components (following Core Principles)
@@ -385,7 +385,6 @@ export const ProtectionDashboard = ({
   isLoading = false,
   isStale = false,
   children,
-  strategy = 'global',
 }: {
   title?: string;
   subtitle?: string;
@@ -397,25 +396,19 @@ export const ProtectionDashboard = ({
   isLoading?: boolean;
   isStale?: boolean;
   children?: React.ReactNode;
+  /** Retained for caller compatibility — the dashboard no longer themes per strategy. */
   strategy?: string;
 }) => {
   const isGood = score >= 80;
   const isOk = score >= 60;
   const [activeFactor, setActiveFactor] = useState<number | null>(null);
 
-  const ringColor = strategy === 'halo' ? STRATEGY_RING_TINTS.halo : strategy === 'taco' ? STRATEGY_RING_TINTS.taco : isGood ? STATUS_COLORS.good : isOk ? STATUS_COLORS.warn : STATUS_COLORS.bad;
+  const ringColor = isGood ? STATUS_COLORS.good : isOk ? STATUS_COLORS.warn : STATUS_COLORS.bad;
   const statusText = isGood ? 'Excellent' : isOk ? 'Good' : 'Needs attention';
 
   const filled = (score / 100) * RING_C;
 
-  // Strategy-specific themes
-  const themes = {
-    halo: "from-amber-400 via-yellow-600 to-amber-800",
-    taco: "from-emerald-600 via-teal-700 to-emerald-900",
-    default: "from-indigo-600 via-indigo-700 to-purple-800",
-  };
-
-  const currentTheme = strategy === 'halo' ? themes.halo : strategy === 'taco' ? themes.taco : themes.default;
+  const currentTheme = "from-indigo-600 via-indigo-700 to-purple-800";
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden shadow-xl">
@@ -424,14 +417,6 @@ export const ProtectionDashboard = ({
         {/* Decorative Background Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 animate-pulse" />
         <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-400/10 rounded-full blur-2xl -ml-10 -mb-10" />
-
-        {strategy === 'taco' && (
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-400/5 to-transparent h-20 w-full"
-            animate={{ top: ['-20%', '120%'] }}
-            transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
-          />
-        )}
 
         <div className="relative z-10 flex justify-between items-start mb-6">
           <div className="flex items-center gap-4">

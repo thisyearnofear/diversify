@@ -154,12 +154,6 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
       case "islamic":
         if (tokenSymbol.match(/PAXG|USDm|EURm/i)) return { label: "Halal" };
         break;
-      case "halo":
-        if (tokenSymbol.match(/PAXG|USDY/i)) return { label: "Hard Assets" };
-        break;
-      case "taco":
-        if (tokenSymbol.match(/USDC|USDm|EURC|EURm/i)) return { label: "Neutral Hedge" };
-        break;
       case "global":
       case "custom":
       default:
