@@ -7,6 +7,9 @@
  * Consumers (the SSE handler) call `subscribe(userAddress)` and receive
  * a disposer that removes their listener.
  *
+ * Implementation lives in `@/lib/agent/guardian-event-bus` (not under
+ * `pages/api`) so Vercel does not ship it as its own serverless route.
+ *
  * Scope: SINGLE NODE PROCESS ONLY. The bus is a per-runtime singleton.
  * If/when the runtime is sharded to multiple Node instances, this
  * needs to be replaced with a cross-process pub/sub (Redis pub/sub,
@@ -18,7 +21,7 @@
  */
 
 import { EventEmitter } from 'node:events';
-import type { GuardianAnchorRecord } from '../vault/_guardian-state';
+import type { GuardianAnchorRecord } from '@/lib/vault/guardian-state';
 
 export type GuardianStreamEvent =
     | { type: 'hello'; address: string; capturedAt: string }

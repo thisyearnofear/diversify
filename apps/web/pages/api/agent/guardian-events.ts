@@ -18,7 +18,7 @@
  *    heartbeat keeps the connection warm so we don't lose the
  *    subscription to a silent proxy close.
  *
- * The bus is a SINGLE-NODE singleton (see _guardian-event-bus.ts).
+ * The bus is a SINGLE-NODE singleton (see `@/lib/agent/guardian-event-bus`).
  * Multi-instance deployments need a cross-process bus.
  *
  * The first event sent on connect is `event: hello` so the client
@@ -26,7 +26,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { guardianEventBus, type GuardianStreamEvent } from './_guardian-event-bus';
+import { guardianEventBus, type GuardianStreamEvent } from '@/lib/agent/guardian-event-bus';
 
 const HEARTBEAT_MS = 25_000;
 

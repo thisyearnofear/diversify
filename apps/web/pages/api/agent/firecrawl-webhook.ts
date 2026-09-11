@@ -21,8 +21,8 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
-import { enqueueRecommendation } from '../vault/_guardian-state';
-import { guardianEventBus } from './_guardian-event-bus';
+import { enqueueRecommendation } from '@/lib/vault/guardian-state';
+import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { Permission } from '../../../models/Permission';
 import { Vault } from '../../../models/Vault';
 import dbConnect from '../../../lib/mongodb';

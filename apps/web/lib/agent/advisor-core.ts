@@ -1,6 +1,6 @@
 import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
-import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS } from '../../../config';
-import { isTabId, LEGACY_TAB_MAP } from '../../../constants/tabs';
+import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS } from '@/config';
+import { isTabId, LEGACY_TAB_MAP } from '@/constants/tabs';
 
 /**
  * Resolve a raw [ACTION:NAVIGATE:xxx] tab name from the LLM into a real

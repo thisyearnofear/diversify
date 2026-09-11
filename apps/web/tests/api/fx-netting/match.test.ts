@@ -96,7 +96,7 @@ describe('POST /api/fx-netting/match — observer dry-run', () => {
   });
 
   it('rejects non-POST with 405', async () => {
-    const handler = (await import('../match')).default;
+    const handler = (await import('@/pages/api/fx-netting/match')).default;
     const res = makeRes();
     await handler(makeReq('GET') as never, res as never);
     expect(res.statusCode).toBe(405);
@@ -115,7 +115,7 @@ describe('POST /api/fx-netting/match — observer dry-run', () => {
       }),
     ]);
 
-    const handler = (await import('../match')).default;
+    const handler = (await import('@/pages/api/fx-netting/match')).default;
     const res = makeRes();
     await handler(
       makeReq('POST', {
@@ -148,7 +148,7 @@ describe('POST /api/fx-netting/match — observer dry-run', () => {
   });
 
   it('rejects observer + persisted intents mixed in one run', async () => {
-    const handler = (await import('../match')).default;
+    const handler = (await import('@/pages/api/fx-netting/match')).default;
     const res = makeRes();
     await handler(
       makeReq('POST', {
@@ -163,7 +163,7 @@ describe('POST /api/fx-netting/match — observer dry-run', () => {
   });
 
   it('rejects malformed currency codes with a 400 (no silent 1:1 fabrication)', async () => {
-    const handler = (await import('../match')).default;
+    const handler = (await import('@/pages/api/fx-netting/match')).default;
     const res = makeRes();
     await handler(
       makeReq('POST', {
@@ -176,7 +176,7 @@ describe('POST /api/fx-netting/match — observer dry-run', () => {
   });
 
   it('rejects an observer intent with a malformed currency code', async () => {
-    const handler = (await import('../match')).default;
+    const handler = (await import('@/pages/api/fx-netting/match')).default;
     const res = makeRes();
     await handler(
       makeReq('POST', {
@@ -205,7 +205,7 @@ describe('POST /api/fx-netting/match — observer dry-run', () => {
         remainingSell: 160000,
       }),
     ]);
-    const handler = (await import('../match')).default;
+    const handler = (await import('@/pages/api/fx-netting/match')).default;
     const res = makeRes();
     await handler(
       makeReq('POST', { intents: [] }) as never,

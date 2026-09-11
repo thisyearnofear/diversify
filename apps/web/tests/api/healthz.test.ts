@@ -17,7 +17,7 @@ vi.mock('@diversifi/shared', () => ({
 // Mock MongoDB so the handler doesn't make a real network call to Atlas
 // that flakes the 5s test timeout. Path is relative to the test file:
 // pages/api/__tests__/ → ../../../lib/mongodb
-vi.mock('../../../lib/mongodb', () => ({
+vi.mock('@/lib/mongodb', () => ({
   default: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -51,7 +51,7 @@ function makeRes(): ResMock {
 
 describe('GET /api/healthz', () => {
   it('rejects non-GET with 405', async () => {
-    const handler = (await import('../healthz')).default;
+    const handler = (await import('@/pages/api/healthz')).default;
     const req: ApiMock = { method: 'POST' };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -60,7 +60,7 @@ describe('GET /api/healthz', () => {
   });
 
   it('rejects PUT with 405', async () => {
-    const handler = (await import('../healthz')).default;
+    const handler = (await import('@/pages/api/healthz')).default;
     const req: ApiMock = { method: 'PUT' };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -68,7 +68,7 @@ describe('GET /api/healthz', () => {
   });
 
   it('returns 200 with status ok on successful check', async () => {
-    const handler = (await import('../healthz')).default;
+    const handler = (await import('@/pages/api/healthz')).default;
     const req: ApiMock = { method: 'GET' };
     const res = makeRes();
     await handler(req as never, res as never);

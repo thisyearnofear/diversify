@@ -23,7 +23,7 @@ vi.mock('@diversifi/shared', () => ({
 import {
   pickRecommendation,
   type MarketSnapshot,
-} from '../guardian-heartbeat';
+} from '@/pages/api/agent/guardian-heartbeat';
 
 const TS = '2026-09-05T00:00:00.000Z';
 

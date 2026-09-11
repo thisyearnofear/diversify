@@ -81,7 +81,7 @@ Firecrawl detects macro change → webhook → AI extracts signal → guardian-s
 | Guardian Loop | `pages/api/agent/guardian-loop.ts` | Cron-driven autonomous execution |
 | Firecrawl Webhook | `pages/api/agent/firecrawl-webhook.ts` | Macro signal ingestion |
 | Firecrawl Setup | `scripts/setup-firecrawl-monitors.ts` | Register page watchers |
-| Guardian State | `pages/api/vault/_guardian-state.ts` | Pending recommendation store |
+| Guardian State | `apps/web/lib/vault/guardian-state.ts` | Pending recommendation store |
 | Cognee Memory | `packages/shared/src/services/cognee-memory-service.ts` | Cross-session learning (fallback) |
 | Tablestore Memory | `packages/shared/src/services/tablestore-memory-service.ts` | Alibaba Cloud Agent Memory (preferred when configured) |
 | Memory Consolidation | `packages/shared/src/services/memory-consolidation-service.ts` | Qwen long-context consolidation (FC delegation or local) |
@@ -111,9 +111,9 @@ agent-side `settleOnChain` fire-and-forget tx. See
 
 | Component | Responsibility |
 |-----------|-----------------|
-| `pages/api/agent/_advisor-core.ts` | Decide what evidence is needed before recommending an action |
+| `apps/web/lib/agent/advisor-core.ts` | Decide what evidence is needed before recommending an action |
 | `pages/api/agent/x402-gateway.ts` | Issue payment challenge, verify payment, enforce credit drawdown, and return paid evidence |
-|| `packages/shared/src/services/settlement-service.ts` | Configurable USDC micro-payment rail (`SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`) |
+| `packages/shared/src/services/settlement-service.ts` | Configurable USDC micro-payment rail (`SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`) |
 | Shared source registry | Canonical source IDs, alias mapping, pricing, reputation, and freshness rules |
 
 ### Payment Boundary

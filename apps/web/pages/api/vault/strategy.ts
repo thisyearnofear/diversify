@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
-import { vaultStore } from './_store';
+import { vaultStore } from '@/lib/vault/store';
 
 // Must match the strategies exposed in hooks/useFinancialStrategies.ts and
 // the FinancialStrategy type in @diversifi/shared. Previously this list had

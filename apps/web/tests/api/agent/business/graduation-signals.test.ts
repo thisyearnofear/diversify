@@ -12,7 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../../lib/mongodb', () => ({
+vi.mock('@/lib/mongodb', () => ({
   default: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -21,31 +21,31 @@ const mockExists = vi.fn();
 const mockGuardianFindOne = vi.fn();
 const mockGuardianFindOneAndUpdate = vi.fn();
 
-vi.mock('../../../../../models/Transaction', () => ({
+vi.mock('@/models/Transaction', () => ({
   Transaction: { find: (...args: unknown[]) => mockFind(...args) },
 }));
 
-vi.mock('../../../../../models/PurchaseCycle', () => ({
+vi.mock('@/models/PurchaseCycle', () => ({
   PurchaseCycle: { exists: (...args: unknown[]) => mockExists(...args) },
 }));
 
-vi.mock('../../../../../models/GuardianState', () => ({
+vi.mock('@/models/GuardianState', () => ({
   GuardianState: {
     findOne: (...args: unknown[]) => mockGuardianFindOne(...args),
     findOneAndUpdate: (...args: unknown[]) => mockGuardianFindOneAndUpdate(...args),
   },
 }));
 
-vi.mock('../../../../../lib/require-wallet-auth', () => ({
+vi.mock('@/lib/require-wallet-auth', () => ({
   requireWalletAuth: vi.fn().mockReturnValue('0xtestwallet'),
 }));
 
-vi.mock('../../../../../lib/rate-limit', () => ({
+vi.mock('@/lib/rate-limit', () => ({
   rateLimit: vi.fn().mockReturnValue({ allowed: true, retryAfterSec: 0 }),
   getClientIp: vi.fn().mockReturnValue('127.0.0.1'),
 }));
 
-import handler from '../graduation-signals';
+import handler from '@/pages/api/agent/business/graduation-signals';
 
 type ApiMock = {
   method?: string;
@@ -291,7 +291,7 @@ describe('/api/agent/business/graduation-signals', () => {
   });
 
   it('rejects request without wallet auth with 401', async () => {
-    const requireMod = await import('../../../../../lib/require-wallet-auth');
+    const requireMod = await import('@/lib/require-wallet-auth');
     vi.mocked(requireMod.requireWalletAuth).mockReturnValueOnce(null);
     const req: ApiMock = { method: 'GET', headers: {} };
     const res = makeRes();

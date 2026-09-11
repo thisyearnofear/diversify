@@ -1,5 +1,5 @@
-import dbConnect from '../../../lib/mongodb';
-import { GuardianState } from '../../../models/GuardianState';
+import dbConnect from '@/lib/mongodb';
+import { GuardianState } from '@/models/GuardianState';
 import type { GuardianRecommendationContract } from '@diversifi/shared/src/types/guardian-protection';
 
 export interface GuardianRecommendationSnapshot {

@@ -10,14 +10,14 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../_guardian-event-bus', () => ({
+vi.mock('@/lib/agent/guardian-event-bus', () => ({
     guardianEventBus: {
         subscribe: vi.fn(() => () => {}),
         publish: vi.fn(),
     },
 }));
 
-import handler from '../guardian-events';
+import handler from '@/pages/api/agent/guardian-events';
 
 type ApiMock = {
     method?: string;

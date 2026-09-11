@@ -10,7 +10,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../_guardian-state', () => ({
+vi.mock('@/lib/vault/guardian-state', () => ({
   dismissRecommendation: vi.fn().mockResolvedValue(true),
   enqueueRecommendation: vi.fn().mockResolvedValue({ recommendationQueue: [] }),
   getGuardianState: vi.fn().mockResolvedValue(null),
@@ -22,8 +22,8 @@ vi.mock('@/lib/require-wallet-auth', () => ({
   requireWalletAuth: vi.fn().mockReturnValue('0xUSER'),
 }));
 
-import handler from '../guardian-state';
-import { enqueueRecommendation } from '../_guardian-state';
+import handler from '@/pages/api/vault/guardian-state';
+import { enqueueRecommendation } from '@/lib/vault/guardian-state';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
 
 type ResMock = {

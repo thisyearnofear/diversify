@@ -1,12 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
-import { vaultStore } from './_store';
-import { circleExecutor } from './_executor';
+import { vaultStore } from '@/lib/vault/store';
+import { circleExecutor } from '@/lib/vault/executor';
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '@diversifi/shared/src/config/celo-tokens';
 import {
   getGuardianState,
-} from './_guardian-state';
+} from '@/lib/vault/guardian-state';
 import { Permission } from '../../../models/Permission';
 
 type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' | 'failed';

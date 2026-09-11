@@ -20,6 +20,26 @@ const nextConfig = {
     "@stable-station/mento-utils",
   ],
 
+  // Monorepo tracing root can otherwise pull Foundry/docs/tests into lambdas.
+  outputFileTracingExcludes: {
+    '*': [
+      'lib/**/*',
+      'contracts/**/*',
+      'docs/**/*',
+      'scripts/**/*',
+      'examples/**/*',
+      'videos/**/*',
+      'vendor/**/*',
+      'broadcast/**/*',
+      'cache/**/*',
+      'apps/web/tests/**/*',
+      '**/__tests__/**',
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.tsbuildinfo',
+    ],
+  },
+
   experimental: {
     prefetchInlining: true,
     appNewScrollHandler: true,

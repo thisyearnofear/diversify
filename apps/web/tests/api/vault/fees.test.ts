@@ -7,7 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('../../../../lib/mongodb', () => ({
+vi.mock('@/lib/mongodb', () => ({
   default: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -36,7 +36,7 @@ describe('GET /api/vault/fees', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('rejects non-GET with 405', async () => {
-    const handler = (await import('../fees')).default;
+    const handler = (await import('@/pages/api/vault/fees')).default;
     const req: ApiMock = { method: 'POST' };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -44,7 +44,7 @@ describe('GET /api/vault/fees', () => {
   });
 
   it('rejects missing userAddress with 400', async () => {
-    const handler = (await import('../fees')).default;
+    const handler = (await import('@/pages/api/vault/fees')).default;
     const req: ApiMock = { method: 'GET', query: {} };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -53,7 +53,7 @@ describe('GET /api/vault/fees', () => {
   });
 
   it('rejects DELETE with 405', async () => {
-    const handler = (await import('../fees')).default;
+    const handler = (await import('@/pages/api/vault/fees')).default;
     const req: ApiMock = { method: 'DELETE' };
     const res = makeRes();
     await handler(req as never, res as never);

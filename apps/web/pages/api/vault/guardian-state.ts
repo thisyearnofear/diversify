@@ -5,7 +5,7 @@ import {
   getGuardianState,
   pruneAlertCooldowns,
   updateGuardianState,
-} from './_guardian-state';
+} from '@/lib/vault/guardian-state';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
 
 /**

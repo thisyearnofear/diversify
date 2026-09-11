@@ -13,7 +13,7 @@ import {
   enqueueRecommendation,
   getGuardianState,
   recommendationIdentityKey,
-} from '../../pages/api/vault/_guardian-state';
+} from '@/lib/vault/guardian-state';
 
 export const CYCLE_PROPOSAL_WINDOW_DAYS = 14;
 

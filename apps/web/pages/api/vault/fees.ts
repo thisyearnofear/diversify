@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
-import { vaultStore } from './_store';
+import { vaultStore } from '@/lib/vault/store';
 import { feeEngine } from '@diversifi/shared/src/services/vault/fee-engine';
 
 /**

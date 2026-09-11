@@ -141,7 +141,7 @@ is the blocker, so:
 - `packages/shared/src/services/erc7715-grant.ts` — client-side grant counterpart.
 - `packages/shared/src/services/vault/providers/metamask-delegation-provider.ts` —
   the real (dark) ERC-7710 redemption path.
-- `pages/api/vault/_executor.ts` — current Privy/Safe/`VAULT_PRIVATE_KEY` execution.
+- `apps/web/lib/vault/executor.ts` — current Privy/Safe/`VAULT_PRIVATE_KEY` execution.
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
 - `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
 

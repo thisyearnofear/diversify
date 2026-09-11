@@ -514,7 +514,7 @@ Goal: detect retail users who are actually traders and surface the business laye
 |---|---|---|
 | Add server-side graduation signal detection | `pages/api/agent/business/graduation-signals.ts` or extend existing analytics | MODULAR |
 | Signals: cyclical deposits/withdrawals, larger balances, corridor swaps (local stable ↔ USD stable) | query existing `vaultStore` / swap history / `FunnelEvent` | DRY |
-| Store signal in `GuardianState` or `FunnelEvent` | `models/FunnelEvent.ts`, `pages/api/vault/_guardian-state.ts` | CLEAN |
+| Store signal in `GuardianState` or `FunnelEvent` | `models/FunnelEvent.ts`, `apps/web/lib/vault/guardian-state.ts` | CLEAN |
 | Add `BusinessPromptCard` | `components/business/BusinessPromptCard.tsx` (pattern: `PhilosophyPromptCard`) | ENHANCEMENT FIRST |
 | Show prompt in Overview/Protection for high-signal users | `components/tabs/overview/ConnectedOverview.tsx` or `components/tabs/ProtectionTab.tsx` | ENHANCEMENT FIRST |
 | CTA: "See what FX drag is costing your business" → opens `BusinessDragReport` | — | — |
@@ -533,13 +533,13 @@ Goal: the Guardian autonomously protects working capital as a supplier payment a
 | ✅ Compute days-until-payment + proposal contract | `recommendation-contract.ts`, `lib/guardian/cycle-monitor-run.ts` | DRY |
 | ✅ Inline cycle monitor in guardian-loop cron | `pages/api/agent/guardian-loop.ts` | ENHANCEMENT FIRST |
 | ✅ Client proactive alerts for monitored cycles | `hooks/use-proactive-agent.ts` | ENHANCEMENT FIRST |
-| ✅ Bounded recommendation queue (no single-pointer clobber) | `pages/api/vault/_guardian-state.ts` (`enqueueRecommendation` / `dequeueRecommendation`) | CLEAN |
+| ✅ Bounded recommendation queue (no single-pointer clobber) | `apps/web/lib/vault/guardian-state.ts` (`enqueueRecommendation` / `dequeueRecommendation`) | CLEAN |
 | ✅ Fail-closed execution plan (Celo-only, verified funding rail, vault-balance check) | `lib/guardian/cycle-execution.ts` (`deriveCycleExecutionPlan`) | ENHANCEMENT FIRST |
 | ✅ `guardian-loop.ts` executes `CYCLE_PROTECTION` with cycle context, atomic per-cycle claim/finish idempotency | `pages/api/agent/guardian-loop.ts`, `lib/guardian/cycle-execution.ts` | ENHANCEMENT FIRST |
 | ✅ Second-stage consent (`Permission.autoExecuteCycleProtection`) — `PATCH /api/vault/permission`, opt-in checkbox in the Protect tab | `pages/api/vault/permission.ts`, `hooks/use-purchase-cycles.ts`, `components/tabs/protect/PaymentCycleReport.tsx` | ENHANCEMENT FIRST |
 | ✅ Browser writes to `guardian-state` rejected for reserved server-origin fields (`source: 'cycle-monitor'`, `cycleId`) | `pages/api/vault/guardian-state.ts` | CLEAN |
 | ✅ Record on-chain with distinct `CYCLE_PROTECTION` action + `guardian-loop-cycle` serving model | `pages/api/agent/guardian-loop.ts` | DRY |
-| ✅ Tests: plan derivation, staleness gate, claim/finish idempotency, two-tick no-double-execute, consent trust boundary | `lib/guardian/__tests__/cycle-execution.test.ts`, `pages/api/agent/__tests__/guardian-loop.test.ts`, `pages/api/vault/__tests__/guardian-state-handler.test.ts` | MODULAR |
+| ✅ Tests: plan derivation, staleness gate, claim/finish idempotency, two-tick no-double-execute, consent trust boundary | `lib/guardian/__tests__/cycle-execution.test.ts`, `apps/web/tests/api/agent/guardian-loop.test.ts`, `apps/web/tests/api/vault/guardian-state-handler.test.ts` | MODULAR |
 
 **Why:** This is the autonomous protection half of the value proposition. It builds on Phase 2–4, not in parallel.
 

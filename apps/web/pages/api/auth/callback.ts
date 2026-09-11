@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { TokenVaultClient } from '@diversifi/shared/src/services/auth0-token-vault';
-import { readJsonFile, writeJsonFile } from '../agent/_json-store';
+import { readJsonFile, writeJsonFile } from '@/lib/agent/json-store';
 import * as path from 'path';
 
 const STORAGE_PATH = process.env.AGENT_AUTOMATION_PATH || path.join(process.cwd(), '.data', 'agent-automation-preferences.json');

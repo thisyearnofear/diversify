@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as path from 'path';
-import { readJsonFile, writeJsonFile } from './_json-store';
+import { readJsonFile, writeJsonFile } from '@/lib/agent/json-store';
 
 interface AgentActivityRecord {
   id: string;

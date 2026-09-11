@@ -41,7 +41,7 @@ describe('GET /api/swap/oneinch-proxy', () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
   it('rejects non-GET with 405', async () => {
-    const handler = (await import('../oneinch-proxy')).default;
+    const handler = (await import('@/pages/api/swap/oneinch-proxy')).default;
     const req: ApiMock = { method: 'POST' };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -50,7 +50,7 @@ describe('GET /api/swap/oneinch-proxy', () => {
 
   it('rejects missing chainId and endpoint with 400', async () => {
     delete process.env.ONEINCH_API_KEY;
-    const handler = (await import('../oneinch-proxy')).default;
+    const handler = (await import('@/pages/api/swap/oneinch-proxy')).default;
     const req: ApiMock = { method: 'GET', query: {} };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -59,7 +59,7 @@ describe('GET /api/swap/oneinch-proxy', () => {
 
   it('rejects missing endpoint with 400', async () => {
     delete process.env.ONEINCH_API_KEY;
-    const handler = (await import('../oneinch-proxy')).default;
+    const handler = (await import('@/pages/api/swap/oneinch-proxy')).default;
     const req: ApiMock = { method: 'GET', query: { chainId: '42220' } };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -68,7 +68,7 @@ describe('GET /api/swap/oneinch-proxy', () => {
 
   it('returns 500 when API key is not configured', async () => {
     delete process.env.ONEINCH_API_KEY;
-    const handler = (await import('../oneinch-proxy')).default;
+    const handler = (await import('@/pages/api/swap/oneinch-proxy')).default;
     const req: ApiMock = {
       method: 'GET',
       query: { chainId: '42220', endpoint: 'quote' },

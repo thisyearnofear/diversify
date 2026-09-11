@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { runAdvisorAnalysis, runAdvisorConversation, runAdvisorConversationStream } from './_advisor-core';
+import { runAdvisorAnalysis, runAdvisorConversation, runAdvisorConversationStream } from '@/lib/agent/advisor-core';
 
 // In-memory per-IP rate limiter. The advisor calls paid LLM providers, so an
 // unauthenticated, unthrottled endpoint is an open spend faucet. Mirrors the

@@ -4,11 +4,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // we can assert the atomic-query SHAPE in isolation — specifically that the
 // release is owner-checked (filters on the claim's timestamp), which is the
 // whole point of the lock-token round trip.
-vi.mock('../../../../lib/mongodb', () => ({ default: vi.fn(async () => {}) }));
+vi.mock('@/lib/mongodb', () => ({ default: vi.fn(async () => {}) }));
 
 const findOneAndUpdate = vi.fn();
 const findOne = vi.fn();
-vi.mock('../../../../models/GuardianState', () => ({
+vi.mock('@/models/GuardianState', () => ({
     GuardianState: {
         findOneAndUpdate: (...args: unknown[]) => findOneAndUpdate(...args),
         findOne: (...args: unknown[]) => findOne(...args),
@@ -34,7 +34,7 @@ import {
     mergeRecommendationQueue,
     recommendationIdentityKey,
     type GuardianAnchorRecord,
-} from '../_guardian-state';
+} from '@/lib/vault/guardian-state';
 
 describe('pruneAlertCooldowns', () => {
     const ONE_HOUR = 60 * 60 * 1000;

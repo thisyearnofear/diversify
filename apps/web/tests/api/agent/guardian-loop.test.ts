@@ -8,11 +8,10 @@
  * Env-independent tests use a static import (fast). The env-dependent
  * tests (custom GUARDIAN_LOOP_SECRET) use dynamic import with resetModules.
  *
- * Mock-path note: vi.mock/vi.doMock specifiers resolve relative to THIS
- * file (`pages/api/agent/__tests__/`), not the handler. The handler's
- * `../vault/_store` is therefore `../../vault/_store` here — a one-level
- * mismatch silently mocks a nonexistent module and lets the real one load,
- * which in the past hung the suite on real Mongo connection attempts.
+ * Mock-path note: vi.mock/vi.doMock specifiers must match the handler's
+ * import IDs exactly (`@/lib/vault/...`). A relative-path mismatch silently
+ * mocks a nonexistent module and lets the real one load — which used to
+ * hang the suite on real Mongo connection attempts.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -59,11 +58,11 @@ vi.mock('@diversifi/shared', () => ({
   deriveLedgerRoutingContextFromVault: vi.fn().mockReturnValue(undefined),
 }));
 
-vi.mock('../../../../lib/mongodb', () => ({
+vi.mock('@/lib/mongodb', () => ({
   default: vi.fn().mockResolvedValue(undefined),
 }));
 
-vi.mock('../../../../models/Permission', () => ({
+vi.mock('@/models/Permission', () => ({
   Permission: {
     find: vi.fn().mockReturnValue({
       lean: vi.fn().mockResolvedValue([]),
@@ -71,9 +70,9 @@ vi.mock('../../../../models/Permission', () => ({
   },
 }));
 
-vi.mock('../../vault/_store', () => ({ vaultStore: {} }));
-vi.mock('../../vault/_executor', () => ({ circleExecutor: {} }));
-vi.mock('../../vault/_guardian-state', () => ({
+vi.mock('@/lib/vault/store', () => ({ vaultStore: {} }));
+vi.mock('@/lib/vault/executor', () => ({ circleExecutor: {} }));
+vi.mock('@/lib/vault/guardian-state', () => ({
   getGuardianState: vi.fn().mockResolvedValue(null),
   updateGuardianState: vi.fn().mockResolvedValue(undefined),
   claimExecutionLock: vi.fn().mockResolvedValue('mock-token'),
@@ -85,7 +84,7 @@ vi.mock('../../vault/_guardian-state', () => ({
     state?.recommendationQueue ?? (state?.latestRecommendation ? [state.latestRecommendation] : []),
 }));
 
-vi.mock('../../../../lib/guardian/cycle-monitor-run', () => ({
+vi.mock('@/lib/guardian/cycle-monitor-run', () => ({
   runCycleMonitor: vi.fn().mockResolvedValue({
     checked: 0,
     proposalWindowDays: 14,
@@ -96,7 +95,7 @@ vi.mock('../../../../lib/guardian/cycle-monitor-run', () => ({
 // The handler records its terminal outcome for /api/agent/status at the end
 // of every run. Mock the run-status lib so that write (a real mongoose model)
 // never hangs the suite on an unconnected model buffer.
-vi.mock('../../../../lib/guardian-run-status', () => ({
+vi.mock('@/lib/guardian-run-status', () => ({
   recordGuardianRun: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -115,7 +114,7 @@ vi.mock('@diversifi/shared-0g/src/services/persistence-service', () => ({
   },
 }));
 
-import handler from '../guardian-loop';
+import handler from '@/pages/api/agent/guardian-loop';
 
 type ApiMock = {
   method?: string;
@@ -171,7 +170,7 @@ describe('POST /api/agent/guardian-loop', () => {
   it('accepts correct auth header and returns loop result', async () => {
     vi.resetModules();
     process.env.GUARDIAN_LOOP_SECRET = 'test-secret';
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const req: ApiMock = {
       method: 'POST',
       headers: { 'x-guardian-secret': 'test-secret' },
@@ -192,7 +191,7 @@ describe('POST /api/agent/guardian-loop', () => {
   it('accepts secret via request body as fallback', async () => {
     vi.resetModules();
     process.env.GUARDIAN_LOOP_SECRET = 'body-secret';
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const req: ApiMock = {
       method: 'POST',
       headers: {},
@@ -270,7 +269,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
         }),
       },
     }));
-    vi.doMock('../../../../models/Permission', () => ({
+    vi.doMock('@/models/Permission', () => ({
       Permission: {
         find: vi.fn().mockReturnValue({
           lean: vi.fn().mockResolvedValue([
@@ -295,7 +294,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
         }),
       },
     }));
-    vi.doMock('../../vault/_store', () => ({
+    vi.doMock('@/lib/vault/store', () => ({
       vaultStore: {
         findVaultByUser: vi.fn().mockResolvedValue({
           _id: 'VID',
@@ -307,8 +306,8 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
         }),
       },
     }));
-    vi.doMock('../../vault/_executor', () => ({ circleExecutor: {} }));
-    vi.doMock('../../vault/_guardian-state', () => ({
+    vi.doMock('@/lib/vault/executor', () => ({ circleExecutor: {} }));
+    vi.doMock('@/lib/vault/guardian-state', () => ({
       getGuardianState: vi.fn().mockResolvedValue({
         recommendationQueue: opts.recommendationQueue,
       }),
@@ -378,7 +377,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       recommendationQueue: [buildCycleRecommendation()],
     });
 
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const body = await runTick(mod);
 
     expect(body.executionsSucceeded).toBe(1);
@@ -428,7 +427,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       recommendationQueue: [buildCycleRecommendation()],
     });
 
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
 
     const tick1 = await runTick(mod);
     expect(tick1.executionsSucceeded).toBe(1);
@@ -459,7 +458,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       recommendationQueue: [buildCycleRecommendation()],
     });
 
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const body = await runTick(mod);
 
     expect(body.executionsSucceeded).toBe(0);
@@ -488,7 +487,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       vaultAllocations: [], // no KESm held — plan is unfundable
     });
 
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const body = await runTick(mod);
 
     expect(body.executionsSucceeded).toBe(0);
@@ -506,7 +505,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       recommendationQueue: [buildCycleRecommendation({ cycleId: 'ghost' })],
     });
 
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const body = await runTick(mod);
 
     expect(body.executionsSucceeded).toBe(0);
@@ -533,7 +532,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
       ],
     });
 
-    const mod = await import('../guardian-loop');
+    const mod = await import('@/pages/api/agent/guardian-loop');
     const body = await runTick(mod);
 
     expect(body.executionsSucceeded).toBe(1);

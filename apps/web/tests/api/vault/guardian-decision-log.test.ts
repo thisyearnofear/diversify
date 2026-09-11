@@ -3,7 +3,7 @@ import {
   MAX_DECISION_LOG,
   pushDecisionLog,
   type GuardianDecisionEntry,
-} from '../_guardian-state';
+} from '@/lib/vault/guardian-state';
 
 function entry(overrides: Partial<GuardianDecisionEntry> = {}): GuardianDecisionEntry {
   return {

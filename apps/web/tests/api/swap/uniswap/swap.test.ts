@@ -31,7 +31,7 @@ describe('POST /api/swap/uniswap/swap', () => {
   beforeEach(() => { vi.resetModules(); });
 
   it('rejects non-POST with 405', async () => {
-    const handler = (await import('../swap')).default;
+    const handler = (await import('@/pages/api/swap/uniswap/swap')).default;
     const req: ApiMock = { method: 'GET' };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -40,7 +40,7 @@ describe('POST /api/swap/uniswap/swap', () => {
 
   it('rejects missing API key with 500', async () => {
     delete process.env.UNISWAP_API_KEY;
-    const handler = (await import('../swap')).default;
+    const handler = (await import('@/pages/api/swap/uniswap/swap')).default;
     const req: ApiMock = { method: 'POST', body: {} };
     const res = makeRes();
     await handler(req as never, res as never);
@@ -50,7 +50,7 @@ describe('POST /api/swap/uniswap/swap', () => {
 
   it('rejects missing quoteResponse with 400 when API key set', async () => {
     process.env.UNISWAP_API_KEY = 'test-key';
-    const handler = (await import('../swap')).default;
+    const handler = (await import('@/pages/api/swap/uniswap/swap')).default;
     const req: ApiMock = { method: 'POST', body: {} };
     const res = makeRes();
     await handler(req as never, res as never);

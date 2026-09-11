@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
-import { vaultStore } from './_store';
-import { circleExecutor } from './_executor';
+import { vaultStore } from '@/lib/vault/store';
+import { circleExecutor } from '@/lib/vault/executor';
 import { VaultService } from '@diversifi/shared/src/services/vault/vault.service';
 
 /**

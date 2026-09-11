@@ -6,7 +6,7 @@ Server endpoints for the DiversiFi Guardian, advisor chat, x402 gateway, and rel
 
 | Route / file | Role |
 |---|---|
-| `advisor.ts` + `_advisor-core.ts` | AI chat (SSE streaming) |
+| `advisor.ts` (+ `@/lib/agent/advisor-core`) | AI chat (SSE streaming) |
 | `guardian-loop.ts` | Cron autonomous execution within permission bounds |
 | `guardian-heartbeat.ts` | Advisory heartbeat + ledger writes |
 | `x402-gateway.ts` / `x402-metrics.ts` | Paid intelligence gateway + metrics |
@@ -17,6 +17,6 @@ Server endpoints for the DiversiFi Guardian, advisor chat, x402 gateway, and rel
 | `business/` | SME cycles / graduation signals |
 | `enterprise/` | Enterprise audit surfaces |
 
-Shared helpers in this folder are prefixed with `_` (e.g. `_guardian-event-bus.ts`).
+Shared helpers live under `@/lib/agent` and `@/lib/vault` (not under `pages/api`) so Vercel does not package them as serverless routes. Route tests live under `apps/web/tests/api/`.
 
 Auth, rate limits, and env tables: [`docs/integrations.md`](../../../../docs/integrations.md). Enforcement model: [`docs/guardian.md`](../../../../docs/guardian.md).

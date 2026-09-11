@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { guardianEventBus } from '../_guardian-event-bus';
+import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 
 describe('guardianEventBus', () => {
     it('routes events to subscribers of the same address only', () => {

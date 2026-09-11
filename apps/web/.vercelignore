@@ -1,0 +1,18 @@
+# Project Root Directory is apps/web — exclude non-runtime bulk from packaging.
+../../lib/
+../../contracts/
+../../docs/
+../../scripts/
+../../examples/
+../../videos/
+../../vendor/
+../../broadcast/
+../../cache/
+../../.agents/
+../../ops/
+../../.github/
+tests/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.tsbuildinfo

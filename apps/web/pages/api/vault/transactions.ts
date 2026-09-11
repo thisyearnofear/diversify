@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
-import { vaultStore } from './_store';
+import { vaultStore } from '@/lib/vault/store';
 
 /**
  * GET /api/vault/transactions?vaultId=... — Transaction history for a vault.

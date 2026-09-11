@@ -29,7 +29,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { Permission } from '../../../models/Permission';
-import { vaultStore } from '../vault/_store';
+import { vaultStore } from '@/lib/vault/store';
 import {
   claimCycleExecution,
   finishCycleExecution,
@@ -37,15 +37,15 @@ import {
   releaseCycleExecutionClaim,
   type CycleExecutionContext,
 } from '../../../lib/guardian/cycle-execution';
-import { appendDecisionLog, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '../vault/_guardian-state';
+import { appendDecisionLog, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '@/lib/vault/guardian-state';
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
-import { circleExecutor } from '../vault/_executor';
+import { circleExecutor } from '@/lib/vault/executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 // Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
 // their reasoning through the ONE shared builder so identical facts produce
 // identical wording on every surface (docs/guardian-reasoning-service.md §5).
 import { decisionToLedgerParams, type GuardianDecisionArtifact } from '@diversifi/shared/src/services/guardian-reasoning';
-import { guardianEventBus } from './_guardian-event-bus';
+import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
 import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
 import { recordGuardianRun } from '../../../lib/guardian-run-status';

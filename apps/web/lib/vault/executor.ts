@@ -25,7 +25,7 @@ import {
   type SmartAccountProvider,
 } from '@diversifi/shared/src/services/vault/smart-account-provider';
 import { CELO_TOKEN_ADDRESSES } from '@diversifi/shared/src/config/celo-tokens';
-import { NETWORKS } from '../../../config';
+import { NETWORKS } from '@/config';
 
 // Register providers (ensures they're available)
 import '@diversifi/shared/src/services/vault/providers';
