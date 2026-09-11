@@ -34,7 +34,7 @@ describe("wallet portfolio view", () => {
 
   it("includes wallet-only tokens when calculating gaps", () => {
     const holdings = [{ symbol: "WETH", valueUsd: 100, percent: 100, balances: [] }];
-    const gaps = getProtectionGaps(holdings, [{ token: "USDC", region: "Global", percent: 100 }]);
+    const gaps = getProtectionGaps(holdings, [{ token: "USDC", region: "Global", percent: 100, why: "Global liquid core" }]);
     expect(gaps).toEqual([
       { token: "WETH", heldPercent: 100, targetPercent: 0, deltaPercent: -100 },
       { token: "USDC", heldPercent: 0, targetPercent: 100, deltaPercent: 100 },

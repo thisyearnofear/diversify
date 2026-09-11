@@ -1,5 +1,5 @@
 import type { MultichainPortfolio, TokenBalance } from "@/hooks/use-multichain-balances";
-import type { AllocationSlice } from "@/components/protection-cards/plan-preview";
+import type { PlanLeg } from "@/components/protection-cards/plan-preview";
 
 export interface WalletHolding {
   symbol: string;
@@ -25,7 +25,7 @@ export interface WalletPortfolio {
 }
 
 export interface ProtectionPlan {
-  targets: AllocationSlice[];
+  targets: PlanLeg[];
 }
 
 export interface WalletPortfolioView extends WalletPortfolio {
@@ -60,7 +60,7 @@ export function getWalletHoldings(portfolio: MultichainPortfolio | null | undefi
 
 export function getProtectionGaps(
   holdings: WalletHolding[],
-  targets: AllocationSlice[],
+  targets: PlanLeg[],
 ): ProtectionGap[] {
   const heldByToken = new Map(holdings.map((holding) => [holding.symbol, holding.percent]));
   const tokens = new Set([...heldByToken.keys(), ...targets.map((target) => target.token)]);
@@ -76,7 +76,7 @@ export function getProtectionGaps(
 
 export function buildWalletPortfolioView(
   portfolio: MultichainPortfolio | null | undefined,
-  targets: AllocationSlice[] = [],
+  targets: PlanLeg[] = [],
 ): WalletPortfolioView {
   const holdings = getWalletHoldings(portfolio);
   const totalUsd = holdings.reduce((sum, holding) => sum + holding.valueUsd, 0);

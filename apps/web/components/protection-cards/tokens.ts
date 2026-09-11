@@ -8,7 +8,12 @@
  * Accent values are sourced from `docs/makeathon/protection-plans.md` and
  * mirror Tailwind's named scale so any future Figma variable collection
  * round-trips cleanly.
+ *
+ * `STRATEGY_TO_ARCHETYPE` is the ONE strategy↔archetype map —
+ * `strategyToArchetype` and `archetypeToStrategy` both derive from it.
  */
+
+import type { FinancialStrategy } from '@/context/app/types';
 
 export const TOKENS = {
   background: '#0a0a0a',
@@ -163,7 +168,7 @@ export const ARCHETYPE_ORDER: ArchetypeId[] = [
 ];
 
 /** Map app financial strategy ids to protection-plan archetype ids. */
-const STRATEGY_TO_ARCHETYPE: Record<string, ArchetypeId> = {
+const STRATEGY_TO_ARCHETYPE: Partial<Record<FinancialStrategy, ArchetypeId>> = {
   africapitalism: 'africapitalism',
   buen_vivir: 'buen_vivir',
   pan_caribbean: 'pan_caribbean',
@@ -178,7 +183,15 @@ export function strategyToArchetype(
   strategy: string | null | undefined,
 ): ArchetypeId | null {
   if (!strategy) return null;
-  return STRATEGY_TO_ARCHETYPE[strategy] ?? null;
+  return STRATEGY_TO_ARCHETYPE[strategy as FinancialStrategy] ?? null;
+}
+
+/** Inverse of `strategyToArchetype`, derived from the same map. */
+export function archetypeToStrategy(id: ArchetypeId): FinancialStrategy {
+  const entry = (
+    Object.entries(STRATEGY_TO_ARCHETYPE) as [FinancialStrategy, ArchetypeId][]
+  ).find(([, archetype]) => archetype === id);
+  return entry?.[0] ?? 'custom';
 }
 
 export function alpha(hex: string, opacity: number): string {

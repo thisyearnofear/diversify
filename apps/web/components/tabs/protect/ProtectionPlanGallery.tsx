@@ -21,6 +21,7 @@ import {
   ARCHETYPE_ORDER,
   ARCHETYPES,
   CARD_SIZE,
+  archetypeToStrategy,
   type ArchetypeId,
 } from '@/components/protection-cards/tokens';
 import { useAmbientOrigin } from './ProtectionAmbient';
@@ -30,19 +31,6 @@ import FlickScrollRow, { useDidDrag } from '@/components/shared/FlickScrollRow';
 import { NETWORKS } from '@/config';
 
 const RENDERED_W = 260;
-
-// IDs differ slightly between the design-system tokens and the live
-// app's strategy enum; this mapper bridges the two.
-const STRATEGY_ID: Record<ArchetypeId, FinancialStrategy> = {
-  africapitalism: 'africapitalism',
-  buen_vivir: 'buen_vivir',
-  pan_caribbean: 'pan_caribbean',
-  confucian: 'confucian',
-  gotong_royong: 'gotong_royong',
-  islamic_finance: 'islamic',
-  global_diversification: 'global',
-  custom: 'custom',
-};
 
 interface Props {
   /** Focused (not yet committed) plan — ring only, no ACTIVE overlay. */
@@ -181,7 +169,7 @@ export function ProtectionPlanGallery({
           lectured about the rendering pipeline). */}
       <FlickScrollRow className="gap-4 px-4 pb-4" style={{ scrollPaddingInline: 16 }}>
         {ARCHETYPE_ORDER.map((id) => {
-          const strategyId = STRATEGY_ID[id];
+          const strategyId = archetypeToStrategy(id);
           return (
             <PlanCard
               key={id}

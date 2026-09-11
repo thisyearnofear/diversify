@@ -31,10 +31,14 @@ interface Props {
   /** Controlled selection — the tab's focus state lives in ProtectionTab. */
   selectedToken: string | null;
   onSelectToken: (token: string | null) => void;
-  /** Plan alignment 0–100. Idle hole. */
-  alignmentScore?: number;
+  /** Plan alignment 0–100, or null when there's nothing to score. Idle hole. */
+  alignmentScore?: number | null;
   /** Empty-wallet morph — hole says Add funds; slices are the plan. */
   empty?: boolean;
+  /** Makes the hole tappable while idle/empty — Shield uses it for compare mode. */
+  onHoleTap?: () => void;
+  /** Replaces the idle hint text (compare mode: "under this plan"). */
+  holeHintOverride?: string;
 }
 
 export function ProtectionPlanRing({
@@ -42,8 +46,10 @@ export function ProtectionPlanRing({
   portfolio,
   selectedToken,
   onSelectToken,
-  alignmentScore = 0,
+  alignmentScore = null,
   empty = false,
+  onHoleTap,
+  holeHintOverride,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -97,7 +103,7 @@ export function ProtectionPlanRing({
 
   const reducedMotion = useReducedMotion();
   const tilt = usePointerTilt(!reducedMotion);
-  const alignmentFormatted = useCountUp(alignmentScore, {
+  const alignmentFormatted = useCountUp(alignmentScore ?? 0, {
     format: (n) => `${Math.round(n)}%`,
   });
   const gapFormatted = useCountUp(Math.abs(gapPts), {
@@ -210,10 +216,17 @@ export function ProtectionPlanRing({
         hint: `${selectedSymbol}${moneyHint(gapPts)}`,
       };
     }
+    if (alignmentScore === null) {
+      return {
+        number: '—' as React.ReactNode,
+        label: archetype.name,
+        hint: holeHintOverride ?? 'no holdings yet',
+      };
+    }
     return {
       number: <motion.span>{alignmentFormatted}</motion.span>,
       label: archetype.name,
-      hint: "aligned · tap a slice",
+      hint: holeHintOverride ?? 'of your money follows the plan',
     };
   })();
 
@@ -255,25 +268,48 @@ export function ProtectionPlanRing({
             size={200}
             thickness={24}
           >
-            <motion.div
-              key={selectedToken ?? `idle-${alignmentScore}`}
-              initial={reducedMotion ? false : { opacity: 0, filter: "blur(6px)", y: 4 }}
-              animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              className="flex flex-col items-center"
-            >
-              {hole.number != null && (
-                <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
-                  {typeof hole.number === "string" ? hole.number : hole.number}
-                </span>
-              )}
-              <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
-                {hole.label}
-              </span>
-              <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                {hole.hint}
-              </span>
-            </motion.div>
+            {(() => {
+              const holeContent = (
+                <>
+                  {hole.number != null && (
+                    <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
+                      {hole.number}
+                    </span>
+                  )}
+                  <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
+                    {hole.label}
+                  </span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {hole.hint}
+                  </span>
+                </>
+              );
+              const holeBody =
+                onHoleTap && !selectedToken ? (
+                  <button
+                    type="button"
+                    data-testid="ring-hole"
+                    aria-label="Compare philosophies"
+                    onClick={onHoleTap}
+                    className="flex flex-col items-center min-h-[44px] min-w-[44px] p-2"
+                  >
+                    {holeContent}
+                  </button>
+                ) : (
+                  <div className="flex flex-col items-center">{holeContent}</div>
+                );
+              return (
+                <motion.div
+                  key={selectedToken ?? `idle-${strategyKey ?? "none"}-${alignmentScore ?? "na"}`}
+                  initial={reducedMotion ? false : { opacity: 0, filter: "blur(6px)", y: 4 }}
+                  animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+                  transition={{ duration: 0.22, ease: "easeOut" }}
+                  className="flex flex-col items-center"
+                >
+                  {holeBody}
+                </motion.div>
+              );
+            })()}
           </AllocationRing>
         </motion.div>
       </div>

@@ -13,6 +13,7 @@ vi.mock("@/hooks/use-advisor", () => ({
 }));
 
 vi.mock("@/hooks/use-protection-profile", () => ({
+  consumeRetiredPhilosophyNotice: () => false,
   useProtectionProfile: () => ({
     mode: "view" as const,
     currentStep: 0,
@@ -147,41 +148,72 @@ vi.mock("@/hooks/use-currency-risk", () => ({
   useCurrencyRisk: () => ({ riskData: null, primaryDepreciation: 0 }),
 }));
 
-vi.mock("@/components/tabs/protect/ProtectionPlanRing", () => ({
-  ProtectionPlanRing: ({
-    selectedToken,
-    onSelectToken,
-  }: {
-    selectedToken: string | null;
-    onSelectToken: (token: string | null) => void;
-  }) =>
-    React.createElement(
-      "div",
-      { "data-testid": "protection-plan-ring" },
-      React.createElement(
+vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
+  const { ARCHETYPES, strategyToArchetype } = await import(
+    "@/components/protection-cards/tokens"
+  );
+  return {
+    ProtectionPlanRing: ({
+      strategyKey,
+      selectedToken,
+      onSelectToken,
+      alignmentScore,
+      holeHintOverride,
+      onHoleTap,
+    }: {
+      strategyKey: string | null;
+      selectedToken: string | null;
+      onSelectToken: (token: string | null) => void;
+      alignmentScore?: number | null;
+      holeHintOverride?: string;
+      onHoleTap?: () => void;
+    }) => {
+      const archetypeId = strategyToArchetype(strategyKey);
+      const name = archetypeId ? ARCHETYPES[archetypeId].name : "";
+      const hole =
+        onHoleTap && !selectedToken
+          ? React.createElement(
+              "button",
+              {
+                type: "button",
+                "data-testid": "ring-hole",
+                onClick: onHoleTap,
+              },
+              React.createElement("span", null, name),
+              holeHintOverride
+                ? React.createElement("span", null, holeHintOverride)
+                : null,
+              alignmentScore != null
+                ? React.createElement("span", null, `${alignmentScore}%`)
+                : null,
+            )
+          : null;
+      const selectButton = (token: string, testid: string) =>
+        React.createElement(
+          "button",
+          {
+            type: "button",
+            "data-testid": testid,
+            onClick: () =>
+              onSelectToken(selectedToken === token ? null : token),
+          },
+          token.toLowerCase(),
+        );
+      return React.createElement(
         "div",
-        null,
+        { "data-testid": "protection-plan-ring" },
+        hole,
         React.createElement(
-          "button",
-          {
-            type: "button",
-            "data-testid": "ring-select-kesm",
-            onClick: () => onSelectToken(selectedToken === "KESm" ? null : "KESm"),
-          },
-          selectedToken ? `ring:${selectedToken}` : "ring:idle",
+          "div",
+          null,
+          selectButton("KESm", "ring-select-kesm"),
+          selectButton("WETH", "ring-select-weth"),
+          selectButton("PAXG", "ring-select-paxg"),
         ),
-        React.createElement(
-          "button",
-          {
-            type: "button",
-            "data-testid": "ring-select-weth",
-            onClick: () => onSelectToken(selectedToken === "WETH" ? null : "WETH"),
-          },
-          "weth",
-        ),
-      ),
-    ),
-}));
+      );
+    },
+  };
+});
 
 // Mutable demo flag for the demo-honesty tests below.
 const demoState = { isActive: false };
@@ -205,6 +237,14 @@ const mockShowToast = vi.fn();
 vi.mock("@/components/ui/Toast", () => ({
   useToast: () => ({ showToast: mockShowToast }),
 }));
+
+// Mutable reduced-motion flag — flipped per-test, not globally (the fold
+// animation's mid-exit styles are part of an existing assertion).
+const reducedMotionState = { on: false };
+vi.mock("framer-motion", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("framer-motion")>();
+  return { ...actual, useReducedMotion: () => reducedMotionState.on };
+});
 
 vi.mock("next/dynamic", () => ({
   default: () => {
@@ -238,13 +278,26 @@ vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
       { "data-testid": "protection-plan-gallery" },
       onInspect
         ? React.createElement(
-            "button",
-            {
-              type: "button",
-              "data-testid": "inspect-africapitalism",
-              onClick: () => onInspect("africapitalism"),
-            },
-            "Inspect Africapitalism",
+            React.Fragment,
+            null,
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                "data-testid": "inspect-africapitalism",
+                onClick: () => onInspect("africapitalism"),
+              },
+              "Inspect Africapitalism",
+            ),
+            React.createElement(
+              "button",
+              {
+                type: "button",
+                "data-testid": "plan-card-buen_vivir",
+                onClick: () => onInspect("buen_vivir"),
+              },
+              "Inspect Buen Vivir",
+            ),
           )
         : null,
     ),
@@ -591,13 +644,27 @@ describe("ProtectionTab — instrument shapes", () => {
       address: "0xabc",
       chainId: 42220,
     } as any);
+    // Aligned = the wallet's token split matches the plan legs
+    // (africapitalism: KESm 60 / cUSD 25 / cEUR 15).
     render(
       <ProtectionTab
         userRegion="USA"
         portfolio={{
           ...MOCK_PORTFOLIO,
-          diversificationScore: 95,
-          weightedInflationRisk: 0,
+          totalValue: 1000,
+          chains: [
+            {
+              chainId: 42220,
+              chainName: "Celo",
+              totalValue: 1000,
+              tokenCount: 3,
+              balances: [
+                { symbol: "KESm", value: 600, chainId: 42220 },
+                { symbol: "cUSD", value: 250, chainId: 42220 },
+                { symbol: "cEUR", value: 150, chainId: 42220 },
+              ],
+            },
+          ],
         }}
       />,
     );
@@ -661,5 +728,188 @@ describe("ProtectionTab — instrument shapes", () => {
       />,
     );
     expect(screen.getByText("Wallet data live")).toBeInTheDocument();
+  });
+
+  it("gap idle: one CTA beneath the ring — close the biggest gap — none in the status tier", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    // MOCK_PORTFOLIO vs africapitalism (KESm 60 / cUSD 25 / cEUR 15):
+    // KESm is 20% held → the 40pt gap is the biggest.
+    const cta = screen.getByTestId("shield-biggest-gap-cta");
+    expect(cta.textContent).toContain("KESm");
+    expect(cta.textContent).toContain("$2,000");
+    // The CTA belongs to the object, not the status tier.
+    expect(
+      screen.getByTestId("shield-ring").contains(cta),
+    ).toBe(true);
+    // The CTA names the job — no duplicate sentence, no second CTA.
+    expect(screen.queryByText("Tap a slice to close the gap.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Set up Guardian" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Guardian activity" })).not.toBeInTheDocument();
+
+    // Selecting it opens the inspector with that slice's CTA; the
+    // object's CTA steps aside (the button says the job — §3).
+    fireEvent.click(cta);
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Review move to KESm/ })).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
+  });
+
+  it("leg-why explains a plan slice but not an RWA slice (which explains itself)", () => {
+    mockFinancialStrategy = "islamic";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    // PAXG is an islamic plan leg AND an RWA asset — its own copy wins.
+    fireEvent.click(screen.getByTestId("ring-select-paxg"));
+    expect(screen.getByTestId("rwa-leg")).toBeInTheDocument();
+    expect(screen.queryByTestId("leg-why")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("ring-select-paxg"));
+
+    mockFinancialStrategy = "africapitalism";
+    cleanup();
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.getByTestId("leg-why")).toHaveTextContent(
+      "Kenyan shilling — wealth stays home",
+    );
+  });
+
+  it("tapping the ring centre enters compare mode without committing", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+    const statusLine = screen.getByTestId("shield-compare-status");
+    expect(statusLine.textContent).toContain("Keep Africapitalism");
+    // Exactly the escape — no other CTA in the status tier.
+    expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Set up Guardian" })).not.toBeInTheDocument();
+  });
+
+  it("inspecting a card re-slices the ring preview and 'Use this plan' commits", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    const hole = screen.getByTestId("ring-hole");
+    expect(hole.textContent).toContain("Africapitalism");
+    // Committed plan scores 30 on this wallet.
+    expect(hole.textContent).toContain("30%");
+
+    fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+    expect(hole.textContent).toContain("Buen Vivir");
+    expect(hole.textContent).toContain("under this plan");
+    // Buen Vivir (cREAL/COPm/cUSD) overlaps this wallet less — score differs.
+    expect(hole.textContent).toContain("10%");
+
+    fireEvent.click(screen.getByRole("button", { name: "Use this plan" }));
+    expect(mockSetFinancialStrategy).toHaveBeenCalledWith("buen_vivir");
+    expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+  });
+
+  it("'Keep <Name>' exits compare mode without committing", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+    fireEvent.click(screen.getByRole("button", { name: /Keep Africapitalism/ }));
+    expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("shows the compare hint when alignment is low and hides it when aligned", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    // Score 30 → gap + low alignment → hint.
+    expect(screen.getByTestId("shield-compare-hint")).toBeInTheDocument();
+    cleanup();
+
+    const aligned = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 1000,
+          tokenCount: 3,
+          balances: [
+            { symbol: "KESm", value: 600, chainId: 42220 },
+            { symbol: "cUSD", value: 250, chainId: 42220 },
+            { symbol: "cEUR", value: 150, chainId: 42220 },
+          ],
+        },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={aligned} />);
+    expect(screen.queryByTestId("shield-compare-hint")).not.toBeInTheDocument();
+  });
+
+  it("fund shape: compare mode replaces the fund block, exit restores it", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-fund")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Keep Africapitalism/ }));
+    expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
+  });
+
+  it("reduced motion: compare mode renders the same instrument ids", () => {
+    reducedMotionState.on = true;
+    try {
+      mockFinancialStrategy = "africapitalism";
+      vi.mocked(useWalletContext).mockReturnValue({
+        address: "0xabc",
+        chainId: 42220,
+      } as any);
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("ring-hole"));
+      expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
+      expect(screen.getByTestId("shield-compare-status")).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+      expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
+    } finally {
+      reducedMotionState.on = false;
+    }
   });
 });

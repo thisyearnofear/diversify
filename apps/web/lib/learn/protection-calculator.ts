@@ -7,7 +7,7 @@
  * model: USDY/USDC follow USD inflation, not a fabricated APY.
  */
 
-import { STRATEGY_ALLOCATIONS, type AllocationSlice } from "@/components/protection-cards/plan-preview";
+import { STRATEGY_ALLOCATIONS, type PlanLeg } from "@/components/protection-cards/plan-preview";
 
 export interface MixSlice {
   token: string;
@@ -89,7 +89,7 @@ export function seriesFor(
 
 export function mixForPhilosophy(philosophy: string | null | undefined): MixSlice[] {
   if (!philosophy) return GOLD_MIX;
-  const direct = STRATEGY_ALLOCATIONS[philosophy] as AllocationSlice[] | undefined;
+  const direct = STRATEGY_ALLOCATIONS[philosophy] as PlanLeg[] | undefined;
   if (direct && direct.length > 0) {
     return direct.map((s) => ({ token: s.token, percent: s.percent }));
   }

@@ -161,12 +161,37 @@ export const TIME_HORIZONS: Array<{
 // STORAGE HELPERS
 // ============================================================================
 
+// Set once per session when a retired philosophy (HALO/TACO) was migrated
+// to 'global' on load — ProtectionTab consumes it for a one-shot toast.
+let retiredPhilosophyMigrated = false;
+
+/** Returns true once after a HALO/TACO → global migration, then resets. */
+export function consumeRetiredPhilosophyNotice(): boolean {
+  const was = retiredPhilosophyMigrated;
+  retiredPhilosophyMigrated = false;
+  return was;
+}
+
+const RETIRED_PHILOSOPHIES = new Set(['halo', 'taco']);
+
 function migrateLegacyPhilosophy(config: ProtectionConfig): ProtectionConfig {
+  if (config.philosophy && RETIRED_PHILOSOPHIES.has(config.philosophy)) {
+    const migrated = { ...config, philosophy: 'global' as FinancialStrategy };
+    retiredPhilosophyMigrated = true;
+    saveConfig(migrated);
+    return migrated;
+  }
   if (config.philosophy) return config;
   try {
     const legacy = localStorage.getItem(LEGACY_STRATEGY_KEY) as FinancialStrategy | null;
     if (legacy) {
-      const migrated = { ...config, philosophy: legacy };
+      const migrated = {
+        ...config,
+        philosophy: RETIRED_PHILOSOPHIES.has(legacy)
+          ? ('global' as FinancialStrategy)
+          : legacy,
+      };
+      if (RETIRED_PHILOSOPHIES.has(legacy)) retiredPhilosophyMigrated = true;
       saveConfig(migrated);
       localStorage.removeItem(LEGACY_STRATEGY_KEY);
       return migrated;

@@ -14,10 +14,9 @@ import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
-import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { useToast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
@@ -31,6 +30,7 @@ import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
 import { shieldPatternFor } from "./protect/shield-pattern";
 import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
+import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
@@ -98,7 +98,7 @@ export default function ProtectionTab({
     deriveGuardianState,
   });
 
-  const { totalValue, chains, regionData } = activePortfolio;
+  const { totalValue, chains } = activePortfolio;
   const { config, currentGoalLabel } = useProtectionProfile();
   const { riskData } = useCurrencyRisk();
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
@@ -106,6 +106,7 @@ export default function ProtectionTab({
 
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
   const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
+  const [comparing, setComparing] = useState(false);
   const [learnYear, setLearnYear] = useState(5);
   const [learnAmountOverride, setLearnAmountOverride] = useState<number | null>(null);
   const previousAddress = useRef(address);
@@ -123,6 +124,8 @@ export default function ProtectionTab({
 
   const strategyKey = (selectedStrategy || financialStrategy) as string | null;
   const hasPlan = Boolean(strategyKey);
+  const planName =
+    STRATEGIES.find((s) => s.id === strategyKey)?.name ?? currentGoalLabel;
   const planRingVisible = useMemo(() => {
     if (!strategyKey) return false;
     const archetypeId = strategyToArchetype(strategyKey);
@@ -146,6 +149,31 @@ export default function ProtectionTab({
     }
     return map;
   }, [chains, totalValue]);
+
+  // Compare mode (Wave D): the ring previews the focused philosophy's plan
+  // without committing it — the committed alignment/shape/since-last-visit
+  // stay on strategyKey; only the ring and its hole read the preview.
+  const previewKey =
+    comparing && focusedPhilosophy ? focusedPhilosophy : strategyKey;
+  const previewAllocations = useMemo(() => {
+    if (!previewKey) return [];
+    const archetypeId = strategyToArchetype(previewKey);
+    return archetypeId ? getArchetypeAllocations(archetypeId) : [];
+  }, [previewKey]);
+  const previewAlignment = useMemo(
+    () => scorePlanAlignment(previewAllocations, heldPctByToken, totalValue),
+    [previewAllocations, heldPctByToken, totalValue],
+  );
+  const exitCompare = useCallback(() => {
+    setFocusedToken(null);
+    setComparing(false);
+    setFocusedPhilosophy(null);
+  }, []);
+  const toggleCompare = useCallback(() => {
+    setFocusedToken(null);
+    setComparing((c) => !c);
+    if (comparing) setFocusedPhilosophy(null);
+  }, [comparing]);
 
   const openProtectionFlow = (
     targetToken: string,
@@ -195,7 +223,7 @@ export default function ProtectionTab({
       fromToken: sourceToken,
       toToken: targetToken,
       amount: swapAmount,
-      reason: `Review protection move to ${targetToken} for ${currentGoalLabel}`,
+      reason: `Review protection move to ${targetToken} for ${planName}`,
       fromChainId,
       toChainId,
     });
@@ -230,30 +258,12 @@ export default function ProtectionTab({
     return (balance * percentage).toFixed(2);
   };
 
-  const protectionScore = Math.round(
-    ((activePortfolio.diversificationScore ?? 0) +
-      (100 - (activePortfolio.weightedInflationRisk || 0) * 5)) /
-      2,
+  // One truth: the ring's own slices are the plan. The score is pure
+  // token overlap — how much of the wallet already follows it.
+  const alignment = useMemo(
+    () => scorePlanAlignment(allocations, heldPctByToken, totalValue),
+    [allocations, heldPctByToken, totalValue],
   );
-
-  const strategyAlignmentScore = useMemo(() => {
-    if (!selectedStrategy || !regionData.length) return protectionScore;
-    const totalVal = regionData.reduce(
-      (sum, region) => sum + (region.usdValue || region.value || 0),
-      0,
-    );
-    if (totalVal === 0) return 0;
-    const regionAllocations = regionData.reduce(
-      (acc, region) => {
-        acc[region.region] = ((region.usdValue || region.value || 0) / totalVal) * 100;
-        return acc;
-      },
-      {} as Record<string, number>,
-    );
-    return Math.round(
-      StrategyService.calculateScore(selectedStrategy, regionAllocations as never).score,
-    );
-  }, [selectedStrategy, regionData, protectionScore]);
 
   const prevStrategyRef = useRef(selectedStrategy);
   useEffect(() => {
@@ -263,14 +273,29 @@ export default function ProtectionTab({
       prevStrategyRef.current !== selectedStrategy
     ) {
       const data = getStrategyById(selectedStrategy);
-      const msg = `${data?.icon ?? ""} Switched to ${
-        data?.name ?? selectedStrategy
-      } — ${strategyAlignmentScore}% aligned.`;
-      showToast(msg, strategyAlignmentScore < 50 ? "warning" : "success");
+      const score = alignment.score;
+      const msg =
+        score == null
+          ? `${data?.icon ?? ""} Switched to ${data?.name ?? selectedStrategy}.`
+          : `${data?.icon ?? ""} Switched to ${
+              data?.name ?? selectedStrategy
+            } — ${score}% aligned.`;
+      showToast(msg, score != null && score < 50 ? "warning" : "success");
     }
     prevStrategyRef.current = selectedStrategy;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStrategy]);
+
+  // One-shot notice when a retired HALO/TACO philosophy was migrated to
+  // Global on load (see use-protection-profile).
+  useEffect(() => {
+    if (consumeRetiredPhilosophyNotice()) {
+      showToast(
+        "HALO/TACO plans were retired — you're on Global Diversification. Tap the ring centre to compare philosophies.",
+        "info",
+      );
+    }
+  }, [showToast]);
 
   // Single source of truth: the pattern layer tints with the archetype's
   // own accent token — the same color the ring badge and plan cards use
@@ -282,13 +307,13 @@ export default function ProtectionTab({
   // visitor sees the drift without anyone claiming fresh insight.
   const previousAlignment = useSinceLastVisit(
     `shield-alignment:${strategyKey ?? "none"}`,
-    hasPlan ? Math.round(strategyAlignmentScore) : null,
+    hasPlan && alignment.score != null ? Math.round(alignment.score) : null,
   );
   const alignmentSinceLine = (() => {
-    if (!hasPlan || !previousAlignment) return null;
+    if (!hasPlan || !previousAlignment || alignment.score == null) return null;
     const now = Date.now();
     if (now - previousAlignment.at < MIN_SNAPSHOT_AGE_MS) return null;
-    const current = Math.round(strategyAlignmentScore);
+    const current = Math.round(alignment.score);
     const elapsed = formatElapsed(previousAlignment.at, now);
     if (previousAlignment.value === current) {
       return `Alignment steady at ${current}% since your last visit (${elapsed})`;
@@ -299,7 +324,7 @@ export default function ProtectionTab({
   const shape = deriveShieldShape({
     hasPlan,
     hasFunds: totalValue > 0,
-    alignmentScore: strategyAlignmentScore,
+    alignmentScore: alignment.score ?? 0,
     guardianMonitoring: guardianState === "monitoring",
   });
 
@@ -350,6 +375,7 @@ export default function ProtectionTab({
     if (!focusedPhilosophy) return;
     setFinancialStrategy(focusedPhilosophy);
     setFocusedPhilosophy(null);
+    setComparing(false);
     haptics.confirm();
     if (address && chainId) {
       void Promise.resolve(
@@ -397,16 +423,49 @@ export default function ProtectionTab({
         </div>
       )}
       {planRingVisible && shape !== "picker" && (
-        <div data-testid="shield-ring">
+        <div data-testid="shield-ring" data-comparing={comparing || undefined}>
           <ProtectionPlanRing
-            strategyKey={strategyKey}
+            strategyKey={previewKey}
             portfolio={activePortfolio as MultichainPortfolio}
             selectedToken={focusedToken}
-            onSelectToken={handleMarqueeSelect}
-            alignmentScore={strategyAlignmentScore}
+            onSelectToken={comparing ? () => {} : handleMarqueeSelect}
+            alignmentScore={comparing ? previewAlignment.score : alignment.score}
             empty={shape === "fund"}
+            onHoleTap={toggleCompare}
+            holeHintOverride={
+              comparing && focusedPhilosophy ? "under this plan" : undefined
+            }
           />
-          {shape === "fund" && (
+          {comparing && (
+            <div data-testid="shield-compare" className="mt-3">
+              <ProtectionPlanGallery
+                selectedId={focusedPhilosophy}
+                onInspect={(id) => {
+                  setFocusedPhilosophy((prev) => (prev === id ? null : id));
+                  trackFunnelEvent("marquee_select", {
+                    strategy: id,
+                    source: "shield_compare",
+                  });
+                }}
+              />
+            </div>
+          )}
+          {!comparing && shape === "gap" && !focusedToken &&
+            alignment.biggestGap && address &&
+            guardianState !== "monitoring" && (
+            <div data-testid="shield-gap-cta" className="mt-3">
+              <button
+                type="button"
+                data-testid="shield-biggest-gap-cta"
+                onClick={() => handleMarqueeSelect(alignment.biggestGap!.token)}
+                className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+              >
+                Close the biggest gap: {alignment.biggestGap.token} ~
+                {fmt((alignment.biggestGap.gap / 100) * totalValue)}
+              </button>
+            </div>
+          )}
+          {shape === "fund" && !comparing && (
             <div data-testid="shield-fund" className="mt-3 space-y-2">
               {isMiniPay ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -438,18 +497,20 @@ export default function ProtectionTab({
 
   const inspector = (
     <InspectorSheet
-      selectedId={shape === "picker" ? focusedPhilosophy : focusedToken}
+      selectedId={
+        shape === "picker" || comparing ? focusedPhilosophy : focusedToken
+      }
       onClose={() => {
         setFocusedToken(null);
         setFocusedPhilosophy(null);
       }}
       title={
-        shape === "picker"
+        shape === "picker" || comparing
           ? (STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "Plan")
           : (focusedToken ?? "Slice")
       }
     >
-      {shape === "picker" && focusedPhilosophy && (
+      {(shape === "picker" || comparing) && focusedPhilosophy && (
         <div className="space-y-3">
           <ProtectionCalculator
             amount={learnAmount}
@@ -477,7 +538,7 @@ export default function ProtectionTab({
           </button>
         </div>
       )}
-      {shape !== "picker" && focusedToken && (
+      {shape !== "picker" && !comparing && focusedToken && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <TokenIcon symbol={focusedToken} size={22} />
@@ -509,6 +570,15 @@ export default function ProtectionTab({
                 : `On target — you hold ${selectedHeld.toFixed(0)}% vs ${selectedAlloc.percent}% plan${totalValue > 0 ? ` (≈ ${fmt((selectedHeld / 100) * totalValue)})` : ""}.`
               : `Outside the plan — you hold ${selectedHeld.toFixed(0)}%${totalValue > 0 ? ` (≈ ${fmt((selectedHeld / 100) * totalValue)})` : ""} in a token the plan doesn't use.`}
           </p>
+          {(() => {
+            const leg = alignment.legs.find((l) => l.token === focusedToken);
+            if (!leg?.why || rwaLegFor(focusedToken)) return null;
+            return (
+              <p data-testid="leg-why" className="text-xs text-gray-500 dark:text-gray-400">
+                {leg.why}
+              </p>
+            );
+          })()}
           {(() => {
             const rwa = rwaLegFor(focusedToken);
             if (!rwa) return null;
@@ -574,7 +644,7 @@ export default function ProtectionTab({
                 if (guardianState === "monitoring") {
                   navigateToGuardian({
                     summary: `${focusedToken} — on target (${selectedHeld.toFixed(0)}% held vs ${selectedAlloc.percent}% plan)`,
-                    prompt: `Guardian, keep monitoring my ${focusedToken} holding — it's on target at ${selectedHeld.toFixed(0)}% vs the ${selectedAlloc.percent}% plan for my ${currentGoalLabel} strategy. Flag me if it drifts.`,
+                    prompt: `Guardian, keep monitoring my ${focusedToken} holding — it's on target at ${selectedHeld.toFixed(0)}% vs the ${selectedAlloc.percent}% plan for my ${planName} strategy. Flag me if it drifts.`,
                   });
                 } else {
                   setShowMobileWizard(true);
@@ -592,7 +662,7 @@ export default function ProtectionTab({
               type="button"
               onClick={() =>
                 askAdvisor(
-                  `My ${focusedToken} holding (${selectedHeld.toFixed(0)}% of my wallet) is outside my ${currentGoalLabel} plan. What are my options — hold, swap into a plan token, or something else in ${userRegion}?`,
+                  `My ${focusedToken} holding (${selectedHeld.toFixed(0)}% of my wallet) is outside my ${planName} plan. What are my options — hold, swap into a plan token, or something else in ${userRegion}?`,
                 )
               }
               className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
@@ -605,7 +675,7 @@ export default function ProtectionTab({
               type="button"
               onClick={() =>
                 askAdvisor(
-                  `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${currentGoalLabel} plan in ${userRegion}?`,
+                  `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${planName} plan in ${userRegion}?`,
                 )
               }
               className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
@@ -649,10 +719,25 @@ export default function ProtectionTab({
         </p>
       )}
       <div className="flex items-center justify-between gap-3">
-      {shape === "quiet" ? (
+      {comparing ? (
+        <p data-testid="shield-compare-status">
+          Comparing against your wallet ·{" "}
+          <button
+            type="button"
+            onClick={exitCompare}
+            className="font-semibold text-blue-600 dark:text-blue-400"
+          >
+            Keep {planName}
+          </button>
+        </p>
+      ) : shape === "quiet" ? (
         <p data-testid="shield-quiet">Plan aligned. Guardian is monitoring.</p>
       ) : guardianState === "monitoring" ? (
         <p>Guardian is monitoring this plan.</p>
+      ) : shape === "gap" && !focusedToken && alignment.biggestGap ? (
+        // The biggest-gap CTA beneath the ring names the job — no
+        // duplicate sentence here.
+        null
       ) : (
         <p>
           {shape === "gap"
@@ -662,31 +747,48 @@ export default function ProtectionTab({
               : "Choose your protection philosophy."}
         </p>
       )}
-      {address && (
+      {!comparing && address && guardianState === "monitoring" && (
         <button
           type="button"
           onClick={() => {
-            if (guardianState === "monitoring") {
-              // Carry the focused slice (or plan) so Guardian opens with
-              // the user's context, not a generic status page.
-              navigateToGuardian(
-                focusedToken
-                  ? {
-                      summary: `${focusedToken} — ${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}`,
-                      prompt: `Guardian, what's the status on my ${focusedToken} holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}) for my ${currentGoalLabel} plan?`,
-                    }
-                  : undefined,
-              );
-            } else {
-              setShowMobileWizard(true);
-            }
+            // Carry the focused slice (or plan) so Guardian opens with
+            // the user's context, not a generic status page.
+            navigateToGuardian(
+              focusedToken
+                ? {
+                    summary: `${focusedToken} — ${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}`,
+                    prompt: `Guardian, what's the status on my ${focusedToken} holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}) for my ${planName} plan?`,
+                  }
+                : undefined,
+            );
           }}
           className="min-h-[44px] px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
         >
-          {guardianState === "monitoring" ? "Guardian activity" : "Set up Guardian"}
+          Guardian activity
+        </button>
+      )}
+      {!comparing && address && guardianState !== "monitoring" &&
+        !(shape === "gap" && !focusedToken && alignment.biggestGap) &&
+        (shape === "quiet" || (alignment.score != null && alignment.score >= 80)) && (
+        <button
+          type="button"
+          onClick={() => setShowMobileWizard(true)}
+          className="min-h-[44px] px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+        >
+          Set up Guardian
         </button>
       )}
       </div>
+      {!comparing &&
+        (shape === "gap" || shape === "fund") &&
+        (alignment.score == null || alignment.score < 50) && (
+          <p
+            data-testid="shield-compare-hint"
+            className="text-[11px] text-gray-400 dark:text-gray-500"
+          >
+            Not the right fit? Tap the ring centre to compare philosophies.
+          </p>
+        )}
     </div>
   );
 

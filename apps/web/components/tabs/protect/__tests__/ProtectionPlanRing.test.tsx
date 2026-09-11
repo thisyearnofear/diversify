@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { ProtectionPlanRing } from '../ProtectionPlanRing';
 import { DEMO_PORTFOLIO } from '@/lib/demo-data';
@@ -150,5 +150,90 @@ describe('ProtectionPlanRing — projections shape', () => {
       />,
     );
     expect(screen.getByText('Add funds')).toBeInTheDocument();
+  });
+});
+
+describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
+  it('renders the hole as a button only when onHoleTap is provided and nothing is selected', () => {
+    const onHoleTap = vi.fn();
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={onHoleTap}
+      />,
+    );
+    const hole = screen.getByTestId('ring-hole');
+    fireEvent.click(hole);
+    expect(onHoleTap).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the hole non-interactive without onHoleTap', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
+  });
+
+  it('is not a button while a slice is selected', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken="cUSD"
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
+  });
+
+  it('holeHintOverride replaces the idle hint', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        holeHintOverride="under this plan"
+      />,
+    );
+    expect(screen.getByText('under this plan')).toBeInTheDocument();
+    expect(screen.queryByText('of your money follows the plan')).not.toBeInTheDocument();
+  });
+
+  it('re-keys the hole when the previewed plan changes at the same score', () => {
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={null}
+      />,
+    );
+    expect(screen.getAllByText('Africapitalism').length).toBeGreaterThan(0);
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="buen_vivir"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={null}
+      />,
+    );
+    expect(screen.getAllByText('Buen Vivir').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Africapitalism')).not.toBeInTheDocument();
   });
 });

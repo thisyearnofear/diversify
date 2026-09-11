@@ -3,9 +3,11 @@ import { usePrivy } from "@privy-io/react-auth";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 // Deep leaf imports — NOT the barrel — keeps the portfolio-analysis + strategy stacks out of first-load.
 import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";
-import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
+import { scorePlanAlignment } from "@/lib/plan-alignment";
+import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
+import { strategyToArchetype } from "@/components/protection-cards/tokens";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
 // full convention). 30s preserves the original AbortController budget for the
@@ -120,21 +122,37 @@ export function useAgentAnalysis({
         updateState({ portfolioAnalysis: localAnalysis });
 
         const strategy = getPersistedStrategy();
-        if (
-          strategy &&
-          localAnalysis.regionalExposure.length > 0 &&
-          localAnalysis.totalValue > 0
-        ) {
-          const allocations = localAnalysis.regionalExposure.reduce((acc, r) => {
-            acc[r.region as any] = (r.value / localAnalysis.totalValue) * 100;
-            return acc;
-          }, {} as Record<string, number>);
-          const { score, feedback } = StrategyService.calculateScore(
-            strategy,
-            allocations as any,
+        if (strategy) {
+          const archetypeId = strategyToArchetype(strategy);
+          const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
+          const heldPctByToken = new Map<string, number>();
+          if (portfolio.totalValue > 0) {
+            for (const b of (portfolio.chains ?? []).flatMap((c) => c.balances ?? [])) {
+              if (b.value > 0) {
+                heldPctByToken.set(
+                  b.symbol,
+                  (heldPctByToken.get(b.symbol) ?? 0) + (b.value / portfolio.totalValue) * 100,
+                );
+              }
+            }
+          }
+          const { score, legs: alignedLegs } = scorePlanAlignment(
+            legs,
+            heldPctByToken,
+            portfolio.totalValue,
           );
-          if (score < 60 && feedback.length > 0) {
-            showToast(`⚠️ Strategy drift detected: ${feedback[0]}`, "warning");
+          const feedback = alignedLegs.map((leg) => {
+            if (leg.gap > 2) {
+              return `⚠ ${leg.token}: ${Math.round(leg.gap)} pts light (${leg.held.toFixed(0)}% vs ${leg.target}%)`;
+            }
+            if (leg.gap < -2) {
+              return `○ ${leg.token}: ${Math.round(-leg.gap)} pts over`;
+            }
+            return `✓ ${leg.token}: on target (${leg.held.toFixed(0)}%)`;
+          });
+          const lines = score == null ? ["No holdings to score yet"] : feedback;
+          if (score != null && score < 60 && lines.length > 0) {
+            showToast(`⚠️ Strategy drift detected: ${lines[0]}`, "warning");
           }
         }
 

@@ -52,56 +52,6 @@ describe('StrategyService.getConfig — null / default', () => {
     });
 });
 
-// ─── calculateScore ───────────────────────────────────────────────────────────
-
-describe('StrategyService.calculateScore — pan_caribbean', () => {
-    it('rates excellent when all three target regions are at or above ideal', () => {
-        const allocations = {
-            Global: 45,
-            USA: 25,
-            Commodities: 15,
-        } as Record<string, number>;
-
-        const result = StrategyService.calculateScore('pan_caribbean', allocations as any);
-        expect(result.score).toBeGreaterThanOrEqual(80);
-        expect(result.rating).toBe('excellent');
-    });
-
-    it('rates good when allocations meet minimums but not ideals', () => {
-        const allocations = {
-            Global: 32,
-            USA: 17,
-            Commodities: 11,
-        } as Record<string, number>;
-
-        const result = StrategyService.calculateScore('pan_caribbean', allocations as any);
-        expect(result.rating).toBe('good');
-    });
-
-    it('rates needs_work when portfolio has no target-region exposure', () => {
-        const allocations = {
-            Africa: 100,
-        } as Record<string, number>;
-
-        const result = StrategyService.calculateScore('pan_caribbean', allocations as any);
-        expect(result.rating).toBe('needs_work');
-    });
-
-    it('returns feedback mentioning each target region', () => {
-        const allocations = {
-            Global: 45,
-            USA: 25,
-            Commodities: 15,
-        } as Record<string, number>;
-
-        const { feedback } = StrategyService.calculateScore('pan_caribbean', allocations as any);
-        const text = feedback.join(' ');
-        expect(text).toContain('Global');
-        expect(text).toContain('USA');
-        expect(text).toContain('Commodities');
-    });
-});
-
 // ─── getAIPrompt ──────────────────────────────────────────────────────────────
 
 describe('StrategyService.getAIPrompt — pan_caribbean', () => {
@@ -144,8 +94,6 @@ const ALL_STRATEGIES: FinancialStrategy[] = [
     'islamic',
     'global',
     'custom',
-    'halo',
-    'taco',
     'inflation_protection',
     'geographic_diversification',
     'rwa_access',

@@ -1,6 +1,9 @@
 /**
  * Shield tab shapes — the same screen, four jobs.
  * Persona morphs which inspector body appears; it does not reorder modules.
+ *
+ * `comparing` (ProtectionTab state) overlays fund/gap/quiet — it changes
+ * what the ring previews, not the shape.
  */
 
 export type ShieldShape = "picker" | "fund" | "gap" | "quiet";

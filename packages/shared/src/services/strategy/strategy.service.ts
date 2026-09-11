@@ -200,46 +200,6 @@ export class StrategyService {
                     },
                 };
 
-            case 'halo':
-                return {
-                    preferredRegions: ['Commodities', 'USA'],
-                    targetAllocations: [
-                        { region: 'Commodities', min: 30, ideal: 50, max: 70 },
-                        { region: 'USA', min: 20, ideal: 30, max: 50 },
-                    ],
-                    prioritizeAssets: ['PAXG', 'USDY'],
-                    scoringWeights: {
-                        regionalConcentration: 0.4,
-                        globalDiversification: 0.4,
-                        assetCompliance: 0.2,
-                    },
-                    successThresholds: {
-                        excellent: 80,
-                        good: 60,
-                        needsWork: 40,
-                    },
-                };
-
-            case 'taco':
-                return {
-                    preferredRegions: ['Global', 'Europe'],
-                    targetAllocations: [
-                        { region: 'Global', min: 40, ideal: 60, max: 80 },
-                        { region: 'Europe', min: 10, ideal: 20, max: 40 },
-                    ],
-                    prioritizeAssets: ['USDC', 'EURC', 'USDm', 'EURm'],
-                    scoringWeights: {
-                        regionalConcentration: 0.2,
-                        globalDiversification: 0.7,
-                        assetCompliance: 0.1,
-                    },
-                    successThresholds: {
-                        excellent: 80,
-                        good: 60,
-                        needsWork: 40,
-                    },
-                };
-
             case 'custom':
             default:
                 return this.getDefaultConfig();
@@ -270,56 +230,6 @@ export class StrategyService {
                 needsWork: 40,
             },
         };
-    }
-
-    /**
-     * Calculate strategy-aware diversification score
-     */
-    static calculateScore(
-        strategy: FinancialStrategy | null,
-        currentAllocations: Record<AssetRegion, number>
-    ): {
-        score: number;
-        rating: 'excellent' | 'good' | 'needs_work';
-        feedback: string[];
-    } {
-        const config = this.getConfig(strategy);
-        let score = 0;
-        const feedback: string[] = [];
-
-        // Check target allocations
-        config.targetAllocations.forEach(target => {
-            const current = currentAllocations[target.region] || 0;
-
-            if (current >= target.ideal) {
-                score += 30;
-                feedback.push(`✓ ${target.region}: Excellent allocation (${current.toFixed(0)}%)`);
-            } else if (current >= target.min) {
-                score += 20;
-                feedback.push(`○ ${target.region}: Good allocation (${current.toFixed(0)}%)`);
-            } else if (current > 0) {
-                score += 10;
-                feedback.push(`⚠ ${target.region}: Below target (${current.toFixed(0)}% < ${target.min}%)`);
-            } else {
-                feedback.push(`✗ ${target.region}: No exposure (target: ${target.min}%+)`);
-            }
-        });
-
-        // Normalize score to 0-100
-        const maxPossibleScore = config.targetAllocations.length * 30;
-        score = (score / maxPossibleScore) * 100;
-
-        // Determine rating
-        let rating: 'excellent' | 'good' | 'needs_work';
-        if (score >= config.successThresholds.excellent) {
-            rating = 'excellent';
-        } else if (score >= config.successThresholds.good) {
-            rating = 'good';
-        } else {
-            rating = 'needs_work';
-        }
-
-        return { score, rating, feedback };
     }
 
     /**
@@ -391,22 +301,6 @@ export class StrategyService {
 - Balance developed and emerging markets
 - Hedge currency and geopolitical risk
 - Target: Equal distribution across continents`;
-
-            case 'halo':
-                return `The user follows HALO (Hard Assets, Low Obsolescence) strategy. Prioritize recommendations that:
-- Focus on asset-backed tokens with intrinsic value
-- Increase exposure to physical gold (PAXG)
-- Use US Treasury-backed yield (USDY) for stability
-- Avoid high-velocity regional stables in favor of "hard" base assets
-- Target: 50% Commodities (PAXG), 30% US Treasuries (USDY)`;
-
-            case 'taco':
-                return `The user follows TACO (Political Neutrality/Hedge) strategy. Prioritize recommendations that:
-- Hedge against political and macro-economic volatility
-- Prioritize high-liquidity, neutral stablecoins (USDC, EURC)
-- Maintain global flexibility by avoiding regional concentration
-- Suggest assets that are geographically distant from the user's primary region
-- Target: 60% Global Neutral Assets, 20% European Stability`;
 
             default:
                 return 'Analyze the portfolio and provide balanced diversification recommendations.';
