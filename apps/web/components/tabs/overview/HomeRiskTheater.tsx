@@ -79,6 +79,8 @@ interface HomeRiskTheaterProps {
   onSelectHorizon: (h: Horizon) => void;
   onAmountChange: (amount: number) => void;
   onProtect: () => void;
+  /** Philosophy-aware label for the protect CTA; defaults to "Protect this". */
+  protectLabel?: string;
   onChangeCountry?: (code: string) => void;
   frame: MomentFrame | null;
   // Holdings context — quiet strip, not a hero swap
@@ -98,6 +100,7 @@ export function HomeRiskTheater({
   onSelectHorizon,
   onAmountChange,
   onProtect,
+  protectLabel,
   onChangeCountry,
   frame,
   regionData,
@@ -294,6 +297,7 @@ export function HomeRiskTheater({
                 onSelectHorizon={onSelectHorizon}
                 onAmountChange={onAmountChange}
                 onProtect={onProtect}
+                protectLabel={protectLabel}
                 onChangeCountry={onChangeCountry}
                 frame={frame}
               />
@@ -352,6 +356,7 @@ export function HomeRiskTheater({
           onAmountChange={onAmountChange}
           onChangeCountry={onChangeCountry}
           onProtect={onProtect}
+          protectLabel={protectLabel}
         />
         {holdingsStrip}
       </section>

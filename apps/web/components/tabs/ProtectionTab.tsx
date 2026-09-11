@@ -85,7 +85,7 @@ export default function ProtectionTab({
   refreshBalances,
 }: ProtectionTabProps) {
   const { address, chainId, isMiniPay } = useWalletContext();
-  const { navigateToSwap, navigateToGuardian } = useNavigation();
+  const { navigateToSwap, navigateToGuardian, compareRequested, consumeCompareRequest } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { askAdvisor } = useAdvisor();
@@ -363,6 +363,17 @@ export default function ProtectionTab({
     () => pickBiggestFillableGap(alignment.legs, chainId),
     [alignment.legs, chainId],
   );
+
+  // Deep link (e.g. Home's "Compare philosophies →"): open the ring's compare
+  // mode once. No plan → the picker already IS the gallery; just consume.
+  useEffect(() => {
+    if (!compareRequested) return;
+    if (hasPlan && shape !== "picker") {
+      setFocusedToken(null);
+      setComparing(true);
+    }
+    consumeCompareRequest();
+  }, [compareRequested, hasPlan, shape, consumeCompareRequest]);
 
   const learnMix = useMemo(() => {
     const archetypeId = focusedPhilosophy
@@ -835,7 +846,7 @@ export default function ProtectionTab({
       <div className="flex items-center justify-between gap-3">
       {comparing ? (
         <p data-testid="shield-compare-status">
-          Comparing against your wallet ·{" "}
+          Comparing philosophies against your wallet ·{" "}
           <button
             type="button"
             onClick={exitCompare}
@@ -893,16 +904,6 @@ export default function ProtectionTab({
         </button>
       )}
       </div>
-      {!comparing &&
-        (shape === "gap" || shape === "fund") &&
-        (alignment.score == null || alignment.score < 50) && (
-          <p
-            data-testid="shield-compare-hint"
-            className="text-[11px] text-gray-400 dark:text-gray-500"
-          >
-            Not the right fit? Tap the ring centre to compare philosophies.
-          </p>
-        )}
     </div>
   );
 

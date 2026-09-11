@@ -257,6 +257,47 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
     expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
   });
 
+  it('shows the "Compare plans" affordance only when the hole is tappable and not previewing', () => {
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={() => {}}
+      />,
+    );
+    expect(screen.getByText('Compare plans ▾')).toBeInTheDocument();
+
+    // No tap affordance → no hint.
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
+
+    // Compare preview ("under this plan") → the affordance steps aside.
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={() => {}}
+        holeHintOverride="under this plan"
+      />,
+    );
+    expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
+    expect(screen.getByText('under this plan')).toBeInTheDocument();
+  });
+
   it('holeHintOverride replaces the idle hint', () => {
     render(
       <ProtectionPlanRing

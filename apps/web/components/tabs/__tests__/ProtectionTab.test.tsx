@@ -110,10 +110,14 @@ vi.mock("@/hooks/use-agent-status", () => ({
 
 const mockNavigateToSwap = vi.fn();
 const mockNavigateToGuardian = vi.fn();
+const mockConsumeCompareRequest = vi.fn();
+const navState = { compareRequested: false };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToSwap: mockNavigateToSwap,
     navigateToGuardian: mockNavigateToGuardian,
+    compareRequested: navState.compareRequested,
+    consumeCompareRequest: mockConsumeCompareRequest,
   }),
 }));
 
@@ -427,6 +431,7 @@ describe("ProtectionTab — instrument shapes", () => {
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     demoState.isActive = false;
+    navState.compareRequested = false;
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
       chainId: null,
@@ -866,36 +871,33 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
-  it("shows the compare hint when alignment is low and hides it when aligned", () => {
+  it("opens compare mode when a Home deep link requested it", () => {
     mockFinancialStrategy = "africapitalism";
+    navState.compareRequested = true;
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
-    // Score 30 → gap + low alignment → hint.
-    expect(screen.getByTestId("shield-compare-hint")).toBeInTheDocument();
-    cleanup();
 
-    const aligned = {
-      ...MOCK_PORTFOLIO,
-      totalValue: 1000,
-      chains: [
-        {
-          chainId: 42220,
-          chainName: "Celo",
-          totalValue: 1000,
-          tokenCount: 3,
-          balances: [
-            { symbol: "KESm", value: 600, chainId: 42220 },
-            { symbol: "cUSD", value: 250, chainId: 42220 },
-            { symbol: "cEUR", value: 150, chainId: 42220 },
-          ],
-        },
-      ],
-    } as any;
-    render(<ProtectionTab userRegion="USA" portfolio={aligned} />);
-    expect(screen.queryByTestId("shield-compare-hint")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
+    expect(mockConsumeCompareRequest).toHaveBeenCalled();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("consumes a compare request without entering compare when there is no plan", () => {
+    mockFinancialStrategy = null;
+    navState.compareRequested = true;
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+    expect(mockConsumeCompareRequest).toHaveBeenCalled();
   });
 
   it("fund shape: compare mode replaces the fund block, exit restores it", () => {

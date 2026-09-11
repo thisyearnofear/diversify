@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, cleanup, screen, act } from "@testing-library/react";
+import { render, cleanup, screen, act, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import {
@@ -72,8 +72,9 @@ vi.mock("@/hooks/use-market-regime", () => ({
   useMarketRegime: () => null,
 }));
 
+const mockNavigateToCompare = vi.fn();
 vi.mock("@/context/app/NavigationContext", () => ({
-  useNavigation: () => ({ navigateToSwap: vi.fn() }),
+  useNavigation: () => ({ navigateToSwap: vi.fn(), navigateToCompare: mockNavigateToCompare }),
 }));
 
 vi.mock("@/lib/market-regime", () => ({
@@ -214,6 +215,9 @@ vi.mock("@/components/portfolio/StrategyMetrics", () => ({ default: () => null }
 vi.mock("@/components/enterprise-fx/PortfolioRiskWidget", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/RiskMetrics", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
+vi.mock("../CountryOverrideSelect", () => ({
+  CountryOverrideSelect: () => <select data-testid="country-override-select" />,
+}));
 vi.mock("../InflationMomentCard", () => ({
   InflationMomentCard: () => <div data-testid="inflation-moment-card" />,
 }));
@@ -473,5 +477,69 @@ describe("ConnectedOverview — currency-moment hero", () => {
     expect(screen.getByTestId("currency-moment-card")).toBeInTheDocument();
     expect(screen.queryByTestId("holdings-strip")).not.toBeInTheDocument();
     expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// Geo-failure fallback + compare deep link (Wave 18)
+// ──────────────────────────────────────────────────────────────────────────
+
+describe("ConnectedOverview — geo-failure fallback and compare link", () => {
+  afterEach(() => {
+    cleanup();
+    mockExperienceMode = "standard";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+    mockNavigateToCompare.mockClear();
+  });
+
+  it("fallback shows the country picker — the same actionable affordance as the unconnected morph", () => {
+    mockMoment = null;
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    renderOverview();
+
+    expect(screen.getByTestId("home-fallback-hero")).toBeInTheDocument();
+    expect(screen.getByTestId("country-override-select")).toBeInTheDocument();
+    expect(screen.getByText(/could not detect your country/i)).toBeInTheDocument();
+  });
+
+  it("fallback CTA names the committed philosophy and goes to Shield — never Exchange", () => {
+    mockMoment = null;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    const setActiveTab = vi.fn();
+    renderOverview({ setActiveTab });
+
+    const cta = screen.getByRole("button", { name: "See your Buen Vivir shield" });
+    fireEvent.click(cta);
+    expect(setActiveTab).toHaveBeenCalledWith("protect");
+    expect(screen.queryByText("Review Your Shield")).not.toBeInTheDocument();
+    expect(screen.queryByText(/exchange/i)).not.toBeInTheDocument();
+  });
+
+  it("fallback CTA says 'Set up your plan' when no philosophy is committed", () => {
+    mockMoment = null;
+    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    renderOverview();
+
+    expect(screen.getByRole("button", { name: "Set up your plan" })).toBeInTheDocument();
+    expect(screen.queryByText("Review Your Shield")).not.toBeInTheDocument();
+  });
+
+  it("status tier shows 'Compare philosophies →' only when a philosophy is committed, and it deep-links", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    renderOverview();
+
+    const link = screen.getByTestId("home-compare-link");
+    fireEvent.click(link);
+    expect(mockNavigateToCompare).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    renderOverview();
+    expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
   });
 });

@@ -23,6 +23,8 @@ interface Props {
   onAmountChange: (amount: number) => void;
   /** The one action. Omitted and the CTA disappears (0px). */
   onProtect?: () => void;
+  /** Philosophy-aware label for the protect CTA; defaults to "Protect this". */
+  protectLabel?: string;
   /** Change the country whose savings this is about (diaspora override). */
   onChangeCountry?: (code: string) => void;
   className?: string;
@@ -34,6 +36,7 @@ export function InflationMomentCard({
   moment,
   onAmountChange,
   onProtect,
+  protectLabel,
   onChangeCountry,
   className = '',
 }: Props) {
@@ -100,7 +103,7 @@ export function InflationMomentCard({
           onClick={onProtect}
           className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
         >
-          Protect this
+          {protectLabel ?? "Protect this"}
         </button>
       )}
 

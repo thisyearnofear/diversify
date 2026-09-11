@@ -49,6 +49,13 @@ type NavigationContextValue = NavigationState & {
   /** Current Guardian hand-off (null once consumed or never set). */
   guardianContext: GuardianContext | null;
   clearGuardianContext: () => void;
+  /**
+   * Deep-link to the Shield tab's compare mode. Sets a transient flag the
+   * Shield surface consumes once (like `focusedCycleId`) — not persisted.
+   */
+  navigateToCompare: () => void;
+  compareRequested: boolean;
+  consumeCompareRequest: () => void;
   initializeFromStorage: () => void;
   /**
    * Cycle to focus in `PaymentCycleReport`. Set when the drawer's
@@ -87,6 +94,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Transient Guardian hand-off — see GuardianContext above. Not persisted:
   // it reflects the current "take this to Guardian" gesture, not history.
   const [guardianContext, setGuardianContext] = useState<GuardianContext | null>(null);
+  // Transient Shield-compare hand-off — the Shield tab consumes it once.
+  const [compareRequested, setCompareRequested] = useState(false);
 
   // init from storage (active tab)
   useEffect(() => {
@@ -147,6 +156,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setGuardianContext(null);
   }, []);
 
+  /**
+   * Open the Shield tab in compare mode — the gallery unfolds beneath the
+   * ring. One call, one artefact — the same contract as navigateToSwap.
+   */
+  const navigateToCompare = useCallback(() => {
+    setCompareRequested(true);
+    setState((prev) => ({ ...prev, activeTab: 'protect', swapPrefill: null }));
+  }, []);
+
+  const consumeCompareRequest = useCallback(() => {
+    setCompareRequested(false);
+  }, []);
+
   const initializeFromStorage = useCallback(() => {
     const savedTab = localStorage.getItem('activeTab');
     if (!savedTab) return;
@@ -172,13 +194,16 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navigateToGuardian,
       guardianContext,
       clearGuardianContext,
+      navigateToCompare,
+      compareRequested,
+      consumeCompareRequest,
       initializeFromStorage,
       focusedCycleId,
       setFocusedCycleId,
       focusedYieldKey,
       setFocusedYieldKey,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, initializeFromStorage, focusedCycleId, focusedYieldKey],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, initializeFromStorage, focusedCycleId, focusedYieldKey],
   );
 
   // The consuming surfaces (PaymentCycleReport, BestYieldCard) already

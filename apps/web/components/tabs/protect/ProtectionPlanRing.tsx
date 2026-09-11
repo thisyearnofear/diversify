@@ -288,6 +288,11 @@ export function ProtectionPlanRing({
                   <span className="text-[11px] text-gray-500 dark:text-gray-400">
                     {hole.hint}
                   </span>
+                  {onHoleTap && !holeHintOverride && (
+                    <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      Compare plans ▾
+                    </span>
+                  )}
                 </>
               );
               const holeBody =

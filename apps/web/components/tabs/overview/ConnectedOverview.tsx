@@ -16,6 +16,10 @@ import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { HomeRiskTheater } from "./HomeRiskTheater";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
+import { useNavigation } from "@/context/app/NavigationContext";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { STRATEGIES } from "@/hooks/useFinancialStrategies";
+import { CountryOverrideSelect } from "./CountryOverrideSelect";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { InspectorSheet } from "../../shared/InspectorSheet";
@@ -85,8 +89,14 @@ export function ConnectedOverview({
     setHorizon,
     setSavingsAmount,
     onChangeCountry,
+    countryCode,
     frame,
   } = useCurrencyMoment();
+  const { navigateToCompare } = useNavigation();
+  const { config: profileConfig } = useProtectionProfile();
+  const philosophyName = profileConfig.philosophy
+    ? STRATEGIES.find((s) => s.id === profileConfig.philosophy)?.name ?? null
+    : null;
 
   const handleMomentBenchmark = useCallback(
     (b: Benchmark) => {
@@ -146,6 +156,7 @@ export function ConnectedOverview({
       onSelectHorizon={handleMomentHorizon}
       onAmountChange={setSavingsAmount}
       onProtect={() => setActiveTab("protect")}
+      protectLabel={philosophyName ? `See your ${philosophyName} shield` : undefined}
       onChangeCountry={onChangeCountry}
       frame={frame}
       regionData={regionData}
@@ -167,30 +178,45 @@ export function ConnectedOverview({
           : adaptiveConfig.content.hero.icon &&
             `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
       </div>
-      <HeroValue
-        value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-        label={home.isBeginner ? "Protection Score" : "Total Value"}
-      />
-      <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
-        {diversificationRating}
-      </p>
+      {hasHoldings && (
+        <>
+          <HeroValue
+            value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+            label={home.isBeginner ? "Protection Score" : "Total Value"}
+          />
+          <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
+            {diversificationRating}
+          </p>
+        </>
+      )}
+      {/* Geo failed — same actionable fallback the unconnected morph uses:
+          the instruction and the affordance travel together (§5). */}
+      <div className="space-y-3">
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          We could not detect your country — choose where your savings live
+          to see your specific currency risk.
+        </p>
+        <CountryOverrideSelect
+          currentCountryCode={countryCode ?? ''}
+          currentCountryName=''
+          onChange={onChangeCountry}
+        />
+      </div>
       {(() => {
         const ctaLabel = home.isBeginner
-          ? hasHoldings
-            ? "Review Your Shield"
-            : "Set Up Your Plan"
+          ? philosophyName
+            ? `See your ${philosophyName} shield`
+            : "Set up your plan"
           : adaptiveConfig.content.hero.ctaLabel;
         const ctaTab = home.isBeginner
-          ? hasHoldings
-            ? "exchange"
-            : "protect"
+          ? "protect"
           : (adaptiveConfig.content.hero.ctaTab as TabId | null);
         if (!ctaLabel) return null;
         return (
           <div className="mt-5">
             <button
               onClick={() =>
-                setActiveTab(ctaTab ?? (hasHoldings ? "exchange" : "protect"))
+                setActiveTab(ctaTab ?? "protect")
               }
               className="min-h-[44px] px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
             >
@@ -268,6 +294,16 @@ export function ConnectedOverview({
         />
         <VerifiedEvidence />
       </div>
+      {philosophyName && (
+        <button
+          type="button"
+          onClick={navigateToCompare}
+          className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+          data-testid="home-compare-link"
+        >
+          Compare philosophies →
+        </button>
+      )}
       {home.primaryTip && hasHoldings && (
         <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
       )}

@@ -36,6 +36,8 @@ interface Props {
   onAmountChange: (amount: number) => void;
   /** The one action. Omitted and the CTA disappears (0px). */
   onProtect?: () => void;
+  /** Philosophy-aware label for the protect CTA; defaults to "Protect this". */
+  protectLabel?: string;
   /** Change the country whose savings this is about (diaspora override). */
   onChangeCountry?: (code: string) => void;
   /** Philosophy-aware frame (accent + consequence reframe). null → neutral. */
@@ -88,6 +90,7 @@ export function CurrencyMomentCard({
   onSelectHorizon,
   onAmountChange,
   onProtect,
+  protectLabel,
   className = '',
   onChangeCountry,
   frame,
@@ -245,7 +248,7 @@ export function CurrencyMomentCard({
           onClick={onProtect}
           className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
-          Protect this
+          {protectLabel ?? "Protect this"}
         </button>
       )}
 
