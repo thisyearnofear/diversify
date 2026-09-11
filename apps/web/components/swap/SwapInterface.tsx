@@ -11,8 +11,9 @@ import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import SwapActionButton from "./SwapActionButton";
 import WalletButton from "../wallet/WalletButton";
-import { RegionalPattern } from "../regional/RegionalIconography";
-import type { Region } from "@/hooks/use-user-region";
+import { Coin } from "../shared/FloatingCoins";
+import { QUIET_GRAY } from "../shared/palette";
+import { springPop } from "@/lib/motion-tokens";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useMobile } from "@/hooks/use-mobile";
@@ -200,12 +201,10 @@ const SwapInterface = forwardRef<
   }));
 
   return (
-    <div className="relative bg-white dark:bg-gray-900 p-4 rounded-lg shadow-md overflow-hidden SwapInterface border border-gray-200 dark:border-gray-700">
-      {fromTokenRegion && toTokenRegion && (
-        <div className="absolute inset-0">
-          <RegionalPattern region={toTokenRegion as Region} className="opacity-5" />
-        </div>
-      )}
+    // The shell (InstrumentShell) owns the surface — the ticket renders bare
+    // inside it (design-language §1: one solid card per tab, owned by the
+    // shell). `.SwapInterface` stays: the demo overlay targets it for scroll.
+    <div className="relative SwapInterface">
       <div className="relative">
         {!instrument && (
           <div className="flex justify-between items-center mb-3">
@@ -292,21 +291,23 @@ const SwapInterface = forwardRef<
             hasWallet={Boolean(address)}
           />
 
-          {/* Switch button with rotation animation */}
+          {/* Direction switch — a coin, because coins decide (§4). Tap
+              flips it (the LensCoinSelector mint-flip doing real work:
+              direction reversal IS the flip). Reduced motion swaps
+              instantly below; no spin. */}
           <div className="flex justify-center -my-1 relative z-10">
             <motion.button
+              type="button"
               onClick={handleSwitch}
-              animate={{ rotate: switchRotated ? 180 : 0 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2.5 rounded-full bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md hover:border-blue-400 dark:hover:border-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              animate={reducedMotion ? undefined : { rotateY: switchRotated ? 180 : 0 }}
+              transition={springPop}
+              whileTap={reducedMotion ? undefined : { scale: 0.9 }}
+              className="p-1.5 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ transformStyle: "preserve-3d" }}
               disabled={isLoading}
               aria-label="Switch tokens"
             >
-              <svg className="w-5 h-5 text-gray-700 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-              </svg>
+              <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" />
             </motion.button>
           </div>
 
@@ -401,16 +402,14 @@ const SwapInterface = forwardRef<
             <SwapActionButton
               isLoading={isLoading}
               status={status}
-              fromToken={fromToken}
-              toToken={toToken}
-              fromTokenRegion={fromTokenRegion}
-              toTokenRegion={toTokenRegion}
               isBeginner={isBeginner}
               zapMode={zapMode}
               disabled={Boolean(ctaDisabledReason)}
               disabledReason={ctaDisabledReason}
               onClick={() => executeSwap(onSwap, contractCall)}
-              stickyMobile={isMobile}
+              // In instrument mode the tab dock owns the bottom edge — a
+              // fixed CTA would render on top of it (both bottom-0 z-50).
+              stickyMobile={isMobile && !instrument}
             />
           ) : (
             <WalletButton variant="primary" className="w-full" />

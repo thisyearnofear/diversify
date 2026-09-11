@@ -16,7 +16,6 @@ import { CountryOverrideSelect } from "./CountryOverrideSelect";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
-import { Card } from "../../shared/TabComponents";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 
@@ -70,17 +69,18 @@ export function NotConnectedState({
           onChangeCountry={onChangeCountry}
         />
       ) : isLoading ? (
-        <Card className="text-center">
+        <div className="text-center py-2">
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Detecting your region…
           </p>
-        </Card>
+        </div>
       ) : (
         // Detection failed (geo blocked, VPN, offline) — the honest fallback
         // is an ACTIONABLE one: the same "whose savings?" control the moment
         // cards use, so the instruction and the affordance always travel
-        // together (§5: selection rewrites the artefact).
-        <Card className="text-center">
+        // together (§5: selection rewrites the artefact). No card chrome —
+        // InstrumentShell owns the surface.
+        <div className="text-center space-y-3">
           <p className="text-sm text-gray-600 dark:text-gray-300">
             We could not detect your country — choose where your savings live
             to see your specific currency risk.
@@ -90,7 +90,7 @@ export function NotConnectedState({
             currentCountryName=''
             onChange={onChangeCountry}
           />
-        </Card>
+        </div>
       )}
       {/* The one CTA — attached to the object, no card wrapper. */}
       <WalletButton variant="primary" className="w-full" />

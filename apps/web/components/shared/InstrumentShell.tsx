@@ -6,6 +6,13 @@
  * bound to selection, and a quiet status/transition line. Do not pass a
  * list of feature modules as children.
  *
+ * The shell OWNS the surface (§1 "surfaces are solid"): one solid card —
+ * rounded-2xl, quiet border, shadow-sm — shared by every tab and every
+ * connection morph, so no tab can drift into its own backing treatment.
+ * Objects must not bring their own card chrome (the swap ticket and the
+ * moment card render bare inside the shell). The InspectorSheet keeps its
+ * own subtle border as the fold-down inset inside this surface.
+ *
  * `portfolio` is the DRY freshness slot: pass the multichain portfolio and
  * the shell renders the shared DataFreshnessIndicator once, identically
  * positioned across tabs — no per-tab copy-paste of the same five props.
@@ -13,6 +20,10 @@
 
 import React from "react";
 import { DataFreshnessIndicator } from "./DataFreshnessIndicator";
+
+/** The one instrument surface — every tab, every morph, same card. */
+const SURFACE =
+  "rounded-2xl border border-gray-200 bg-white px-4 py-5 shadow-sm dark:border-gray-800 dark:bg-gray-900";
 
 /** Minimal shape the freshness slot needs — satisfied by MultichainPortfolio. */
 export interface FreshnessInfo {
@@ -49,7 +60,7 @@ export function InstrumentShell({
   className = "",
 }: InstrumentShellProps) {
   return (
-    <div className={`relative ${className}`.trim()}>
+    <div className={`relative ${SURFACE} ${className}`.trim()}>
       <div className="min-h-0">{object}</div>
       {inspector}
       {portfolio ? (

@@ -15,6 +15,7 @@ import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
+import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -89,6 +90,7 @@ export default function ExchangeTab({
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Match a currency need with a counterparty — netted and settled on-chain, no USD bridge.
             </p>
+            <VerifiedEvidence className="ml-auto" />
             <button
               type="button"
               onClick={() => setNettingOverride(false)}
@@ -103,13 +105,17 @@ export default function ExchangeTab({
   }
 
   const nettingLink = (
-    <button
-      type="button"
-      onClick={() => setNettingOverride(true)}
-      className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
-    >
-      FX netting: match currencies directly →
-    </button>
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+      {/* Trust parity — Home and Shield carry the same quiet line (§7). */}
+      <VerifiedEvidence />
+      <button
+        type="button"
+        onClick={() => setNettingOverride(true)}
+        className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+      >
+        FX netting: match currencies directly →
+      </button>
+    </div>
   );
 
   if (!address) {

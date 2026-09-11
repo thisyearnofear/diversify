@@ -56,9 +56,10 @@ describe("ExpectedOutputCard — quote lifecycle", () => {
     render(<ExpectedOutputCard {...baseProps} expectedOutput="12940" canFetchQuote={true} />);
 
     expect(screen.getByTestId("quote-row")).toBeInTheDocument();
-    expect(screen.getByTestId("animated-number")).toBeInTheDocument();
+    // Two count-ups: the unit rate (1 USDm ≈ …) and the receive amount.
+    expect(screen.getAllByTestId("animated-number")).toHaveLength(2);
     expect(screen.getByText(/1 USDm ≈/)).toBeInTheDocument();
-    expect(screen.getByText("KESm")).toBeInTheDocument();
+    expect(screen.getAllByText("KESm").length).toBeGreaterThan(0);
     expect(document.querySelector(".animate-pulse")).not.toBeInTheDocument();
   });
 

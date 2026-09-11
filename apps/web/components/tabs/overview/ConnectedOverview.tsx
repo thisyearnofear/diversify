@@ -8,7 +8,7 @@ import React, { useCallback } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
-import { Card, DataError, HeroValue } from "../../shared/TabComponents";
+import { DataError, HeroValue } from "../../shared/TabComponents";
 import { ContextualBanner } from "../../shared/ContextualBanner";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
@@ -155,7 +155,9 @@ export function ConnectedOverview({
       isDemo={isDemo}
     />
   ) : (
-    <Card className="text-center">
+    // No card here — InstrumentShell owns the one surface; the fallback
+    // hero is bare content inside it.
+    <div className="text-center" data-testid="home-fallback-hero">
       <div
         id="home-hero-title"
         className="mb-3 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
@@ -197,7 +199,7 @@ export function ConnectedOverview({
           </div>
         );
       })()}
-    </Card>
+    </div>
   );
 
   const inspector = (

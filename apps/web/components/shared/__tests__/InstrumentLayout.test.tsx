@@ -17,6 +17,18 @@ describe("InstrumentShell", () => {
     expect(screen.getByTestId("status")).toBeInTheDocument();
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
   });
+
+  it("owns the one surface — the same solid card for every tab and morph (design-language §1)", () => {
+    const { container } = render(
+      <InstrumentShell object={<div data-testid="object">ring</div>} />,
+    );
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell.className).toContain("rounded-2xl");
+    expect(shell.className).toContain("bg-white");
+    expect(shell.className).toContain("border-gray-200");
+    expect(shell.className).toContain("shadow-sm");
+    expect(shell.className).toContain("dark:bg-gray-900");
+  });
 });
 
 describe("InspectorSheet", () => {

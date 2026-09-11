@@ -109,7 +109,14 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
         <div className="flex items-center gap-2 shrink-0">
           {hasOutput && (
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
-              {parsedOutput < 1 ? parsedOutput.toFixed(6) : parsedOutput.toFixed(4)} {toToken}
+              {/* Count-up punch on the number that carries the meaning (§6) —
+                  same treatment the rate gets. */}
+              <AnimatedNumber
+                value={parsedOutput}
+                decimals={parsedOutput < 1 ? 6 : parsedOutput < 100 ? 4 : 2}
+                duration={reducedMotion ? 0.3 : 0.8}
+              />{" "}
+              {toToken}
             </span>
           )}
           <motion.svg

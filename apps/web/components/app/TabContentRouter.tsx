@@ -209,7 +209,7 @@ export default function TabContentRouter() {
 
   const overviewContent = (
     <PullToRefresh onRefresh={refresh}>
-      <div className="p-4">
+      <div className="px-4">
         <ErrorBoundary moduleName="Overview Dashboard">
           <OverviewTab
             portfolio={multichainPortfolio}
@@ -274,57 +274,65 @@ export default function TabContentRouter() {
 
         {activeTab === "protect" && (
           <TabPane key="protect" id="protect" direction={direction}>
-            <ErrorBoundary>
-              <ProtectionTab
-                userRegion={userRegion}
-                portfolio={multichainPortfolio}
-                isLoading={isMultichainLoading}
-                setActiveTab={setActiveTab}
-                refreshBalances={refresh}
-              />
-            </ErrorBoundary>
+            <div className="px-4">
+              <ErrorBoundary>
+                <ProtectionTab
+                  userRegion={userRegion}
+                  portfolio={multichainPortfolio}
+                  isLoading={isMultichainLoading}
+                  setActiveTab={setActiveTab}
+                  refreshBalances={refresh}
+                />
+              </ErrorBoundary>
+            </div>
           </TabPane>
         )}
 
         {activeTab === "exchange" && (
           <TabPane key="exchange" id="exchange" direction={direction}>
-            <ErrorBoundary>
-              <ExchangeTab
-                userRegion={userRegion}
-                inflationData={inflationData}
-                refreshBalances={refresh}
-                refreshChainId={async () => walletChainId ?? null}
-                isBalancesLoading={isMultichainLoading}
-                portfolio={multichainPortfolio}
-              />
-            </ErrorBoundary>
+            <div className="px-4">
+              <ErrorBoundary>
+                <ExchangeTab
+                  userRegion={userRegion}
+                  inflationData={inflationData}
+                  refreshBalances={refresh}
+                  refreshChainId={async () => walletChainId ?? null}
+                  isBalancesLoading={isMultichainLoading}
+                  portfolio={multichainPortfolio}
+                />
+              </ErrorBoundary>
+            </div>
           </TabPane>
         )}
 
         {activeTab === "agent" && tabOrder.includes("agent") && (
           <TabPane key="agent" id="agent" direction={direction}>
-            <ErrorBoundary>
-              <AgentTab
-                isMiniPay={isMiniPay}
-                isFarcaster={isFarcaster}
-                portfolio={multichainPortfolio}
-                refreshBalances={refresh}
-                onNavigateToFund={() => setActiveTab("exchange")}
-              />
-            </ErrorBoundary>
+            <div className="px-4">
+              <ErrorBoundary>
+                <AgentTab
+                  isMiniPay={isMiniPay}
+                  isFarcaster={isFarcaster}
+                  portfolio={multichainPortfolio}
+                  refreshBalances={refresh}
+                  onNavigateToFund={() => setActiveTab("exchange")}
+                />
+              </ErrorBoundary>
+            </div>
           </TabPane>
         )}
 
         {activeTab === "info" && tabOrder.includes("info") && (
           <TabPane key="info" id="info" direction={direction}>
-            <ErrorBoundary>
-              <InfoTab
-                userRegion={userRegion}
-                isLoading={isMultichainLoading}
-                setActiveTab={setActiveTab}
-                refreshBalances={refresh}
-              />
-            </ErrorBoundary>
+            <div className="px-4">
+              <ErrorBoundary>
+                <InfoTab
+                  userRegion={userRegion}
+                  isLoading={isMultichainLoading}
+                  setActiveTab={setActiveTab}
+                  refreshBalances={refresh}
+                />
+              </ErrorBoundary>
+            </div>
           </TabPane>
         )}
       </AnimatePresence>

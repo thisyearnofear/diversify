@@ -141,4 +141,14 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("route-schematic")).toHaveTextContent("cUSD-USDC");
   });
+
+  it("connected: the status rail carries the same quiet trust line as Home and Shield", () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(screen.getByText("· Evidence mirrored")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+  });
 });

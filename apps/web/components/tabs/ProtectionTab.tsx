@@ -691,7 +691,6 @@ export default function ProtectionTab({
           isDemo: isDemo || Boolean((activePortfolio as { isDemo?: boolean }).isDemo),
         }}
         onRefresh={refreshBalances}
-        className="rounded-2xl border border-gray-200 bg-white px-4 py-5 shadow-sm dark:border-gray-800 dark:bg-gray-900"
       />
 
       {showMobileWizard && address && (
