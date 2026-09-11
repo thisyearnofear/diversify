@@ -1,24 +1,24 @@
 # Keep Foundry / docs / video / tooling out of Vercel upload + traces.
-# Root Directory is apps/web; these paths are still present in the monorepo checkout.
-lib/
-contracts/
-docs/
-scripts/
-examples/
-videos/
-vendor/
-broadcast/
-cache/
-.agents/
-ops/
-.github/
-.husky/
-out/
-coverage/
+# Patterns are root-anchored (/…) so apps/web/lib is NOT excluded.
+/lib/
+/contracts/
+/docs/
+/scripts/
+/examples/
+/videos/
+/vendor/
+/broadcast/
+/cache/
+/.agents/
+/ops/
+/.github/
+/.husky/
+/out/
+/coverage/
 **/*.tsbuildinfo
 
 # Tests must never become serverless functions
 **/__tests__/
 **/*.test.ts
 **/*.test.tsx
-apps/web/tests/
+/apps/web/tests/

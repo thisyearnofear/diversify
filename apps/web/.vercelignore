@@ -1,4 +1,5 @@
-# Project Root Directory is apps/web — exclude non-runtime bulk from packaging.
+# Project Root Directory is apps/web.
+# Exclude monorepo bulk above this app; never ignore ./lib (runtime helpers).
 ../../lib/
 ../../contracts/
 ../../docs/
@@ -11,7 +12,8 @@
 ../../.agents/
 ../../ops/
 ../../.github/
-tests/
+# App test tree only
+/tests/
 **/__tests__/
 **/*.test.ts
 **/*.test.tsx
