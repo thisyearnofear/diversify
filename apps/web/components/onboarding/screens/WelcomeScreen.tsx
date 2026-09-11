@@ -28,7 +28,7 @@ import {
   exampleSavingsFor,
   type Benchmark,
 } from '../../../constants/currency-risk';
-import { saveMoneyPurpose } from '../../../hooks/use-protection-profile';
+import { saveMoneyPurpose, useProtectionProfile } from '../../../hooks/use-protection-profile';
 import type { MoneyPurpose } from '../../../constants/money-purpose';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
@@ -76,6 +76,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
       liveSeries,
     } = useCurrencyRisk();
     const { setFinancialStrategy } = useStrategy();
+    const { config: profileConfig } = useProtectionProfile();
     const { enableDemoMode } = useDemoMode();
     const reduceMotion = useReducedMotion();
 
@@ -276,7 +277,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
       selectedArchetype &&
       activeLens &&
       (showAllApproaches || activeLens.archetypes.includes(selectedArchetype))
-        ? getPlanPreviewFor(selectedArchetype, localExample, 20)
+        ? getPlanPreviewFor(selectedArchetype, localExample, 20, profileConfig.riskTolerance)
         : null;
 
     // Panel entrance — one per combine variant, timed off the hand-off

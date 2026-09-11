@@ -120,6 +120,44 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
   });
 
+  it('merges a USDm holding into the cUSD legend row (one asset, one name)', () => {
+    const usdmWallet = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 100,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: 'Celo',
+          totalValue: 100,
+          tokenCount: 1,
+          balances: [
+            {
+              symbol: 'USDm',
+              value: 100,
+              balance: '100',
+              formattedBalance: '100',
+              name: 'USDm',
+              chainId: 42220,
+              chainName: 'Celo',
+            },
+          ],
+        },
+      ],
+    } as unknown as MultichainPortfolio;
+    render(
+      <ProtectionPlanRing
+        strategyKey="buen_vivir"
+        portfolio={usdmWallet}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    // One row under the plan-facing name — never a stray "not in plan" USDm row.
+    expect(screen.getAllByText('cUSD').length).toBeGreaterThan(0);
+    expect(screen.queryByText('USDm')).not.toBeInTheDocument();
+    expect(screen.queryByText('not in plan')).not.toBeInTheDocument();
+  });
+
   it('puts the gap in the hole when a slice is selected', async () => {
     render(
       <ProtectionPlanRing

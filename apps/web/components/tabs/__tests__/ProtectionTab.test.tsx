@@ -756,6 +756,34 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
   });
 
+  it("scores a live wallet's config ticker (USDm) against the cUSD leg", () => {
+    mockFinancialStrategy = "buen_vivir";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    // Live Celo balances report USDm — the same contract as the plan's cUSD leg.
+    const usdmPortfolio = {
+      ...MOCK_PORTFOLIO,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 1000,
+          tokenCount: 1,
+          balances: [{ symbol: "USDm", value: 1000, chainId: 42220 }],
+        },
+      ],
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={usdmPortfolio} />);
+
+    // 100% USDm vs buen_vivir (cUSD 20 leg) scores exactly like 100% cUSD: 20.
+    // Before canonicalisation this scored 0 — the wallet's whole balance read
+    // as outside the plan.
+    const hole = screen.getByTestId("ring-hole");
+    expect(hole.textContent).toContain("20%");
+  });
+
   it("leg-why explains a plan slice but not an RWA slice (which explains itself)", () => {
     mockFinancialStrategy = "islamic";
     vi.mocked(useWalletContext).mockReturnValue({

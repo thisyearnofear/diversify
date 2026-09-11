@@ -53,4 +53,31 @@ describe("wallet portfolio view", () => {
     expect(result.freshness).toBe("partial");
     expect(result.totalUsd).toBe(100);
   });
+
+  it("merges config tickers into the plan-leg name when a plan is in scope", () => {
+    const buenVivir = [
+      { token: "cREAL", region: "LatAm", percent: 45, why: "x" },
+      { token: "COPm", region: "LatAm", percent: 35, why: "x" },
+      { token: "cUSD", region: "Global", percent: 20, why: "x" },
+    ];
+    const result = buildWalletPortfolioView(
+      portfolio([
+        { balances: [balance("USDm", 40), balance("BRLm", 10), balance("PAXG", 50)] },
+      ]),
+      buenVivir,
+    );
+    const symbols = result.holdings.map((h) => h.symbol);
+    expect(symbols).toContain("cUSD");
+    expect(symbols).not.toContain("USDm");
+    expect(symbols).not.toContain("BRLm");
+    expect(result.holdings.find((h) => h.symbol === "cUSD")?.percent).toBe(40);
+    expect(result.holdings.find((h) => h.symbol === "cREAL")?.percent).toBe(10);
+  });
+
+  it("leaves raw symbols untouched when no plan is in scope", () => {
+    const result = buildWalletPortfolioView(
+      portfolio([{ balances: [balance("USDm", 100)] }]),
+    );
+    expect(result.holdings.map((h) => h.symbol)).toEqual(["USDm"]);
+  });
 });

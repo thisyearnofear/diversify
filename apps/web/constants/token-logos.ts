@@ -27,6 +27,11 @@ export const TOKEN_LOGOS: Record<string, string> = {
   // Mento "m" branding used in protection-plan allocations
   KESM: celo('0x456a3D042C0DbD3db53D5489e98dFb038553B0d0'),
   COPM: celo('0x8A567e2aE79CA692Bd748aB832081C45de4041eA'),
+  // Same contracts under the chain config's tickers (live balances report these)
+  USDM: celo('0x765DE816845861e75A25fCA122bb6898B8B1282a'),
+  EURM: celo('0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6cA73'),
+  BRLM: celo('0xe8537a3d056DA446677B9E9d6c5dB704EaAb4787'),
+  PHPM: celo('0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B'),
 
   // Majors
   USDC: celo('0xcebA9300f2b948710d2653dD7B07f33A8B32118C'),

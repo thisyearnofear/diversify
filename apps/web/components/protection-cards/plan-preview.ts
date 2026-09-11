@@ -159,6 +159,7 @@ export interface PlanPreviewInput {
   savingsAmount: number;
   shieldPercent?: number;
   preservedValue?: number | null;
+  riskTolerance?: RiskTolerance | null;
 }
 
 export function getArchetypeAllocations(archetypeId: ArchetypeId): PlanLeg[] {
@@ -186,10 +187,11 @@ export function getPlanPreview({
   savingsAmount,
   shieldPercent = 20,
   preservedValue = null,
+  riskTolerance = null,
 }: PlanPreviewInput): PlanPreview {
   const archetype = ARCHETYPES[archetypeId];
   const shieldAmount = savingsAmount * (shieldPercent / 100);
-  const allocations = getArchetypeAllocations(archetypeId);
+  const allocations = legsForRisk(getArchetypeAllocations(archetypeId), riskTolerance);
 
   const slices: PlanPreviewSlice[] =
     allocations.length > 0

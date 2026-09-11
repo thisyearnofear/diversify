@@ -6,6 +6,7 @@ import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/
 import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
+import { canonicalToken } from "@/lib/plan-legs";
 import { getArchetypeAllocations, legsForRisk } from "@/components/protection-cards/plan-preview";
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
 
@@ -132,9 +133,10 @@ export function useAgentAnalysis({
           if (portfolio.totalValue > 0) {
             for (const b of (portfolio.chains ?? []).flatMap((c) => c.balances ?? [])) {
               if (b.value > 0) {
+                const key = canonicalToken(b.symbol);
                 heldPctByToken.set(
-                  b.symbol,
-                  (heldPctByToken.get(b.symbol) ?? 0) + (b.value / portfolio.totalValue) * 100,
+                  key,
+                  (heldPctByToken.get(key) ?? 0) + (b.value / portfolio.totalValue) * 100,
                 );
               }
             }

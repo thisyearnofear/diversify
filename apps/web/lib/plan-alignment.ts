@@ -8,6 +8,7 @@
  */
 
 import type { PlanLeg } from '@/components/protection-cards/plan-preview';
+import { canonicalToken } from '@/lib/plan-legs';
 
 export interface PlanAlignmentLeg {
   token: string;
@@ -33,8 +34,17 @@ export function scorePlanAlignment(
   heldPctByToken: ReadonlyMap<string, number>,
   totalValue: number,
 ): PlanAlignment {
+  // Held balances arrive under config tickers (USDm) and legacy demo names
+  // (cKES); plan legs speak the wallet-facing name. Canonicalise so the same
+  // asset always lands in one bucket.
+  const heldPct = new Map<string, number>();
+  for (const [symbol, pct] of heldPctByToken) {
+    const key = canonicalToken(symbol);
+    heldPct.set(key, (heldPct.get(key) ?? 0) + pct);
+  }
+
   const alignedLegs: PlanAlignmentLeg[] = legs.map((leg) => {
-    const held = totalValue > 0 ? heldPctByToken.get(leg.token) ?? 0 : 0;
+    const held = totalValue > 0 ? heldPct.get(leg.token) ?? 0 : 0;
     return { token: leg.token, target: leg.percent, held, gap: leg.percent - held, why: leg.why };
   });
 
@@ -49,7 +59,7 @@ export function scorePlanAlignment(
 
   const planTokens = new Set(legs.map((leg) => leg.token));
   let heldInPlan = 0;
-  for (const [token, pct] of heldPctByToken) {
+  for (const [token, pct] of heldPct) {
     if (planTokens.has(token)) heldInPlan += pct;
   }
   const heldOutsidePlan = Math.max(0, 100 - heldInPlan);

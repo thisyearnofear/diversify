@@ -28,6 +28,7 @@ import {
 import {
   getPlanPreview as buildPlanPreview,
   type PlanPreview,
+  type RiskTolerance,
 } from '../components/protection-cards/plan-preview';
 import type { ArchetypeId } from '../components/protection-cards/tokens';
 
@@ -87,6 +88,7 @@ export interface UseCurrencyRiskReturn {
     archetypeId: ArchetypeId,
     savingsAmount: number,
     shieldPercent?: number,
+    riskTolerance?: RiskTolerance | null,
   ) => PlanPreview;
   /** Live 1yr depreciation vs USD from fawazahmed0, or null if unavailable. */
   liveDepreciation1yr: number | null;
@@ -208,6 +210,7 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     archetypeId: ArchetypeId,
     savingsAmount: number,
     shieldPercent = 20,
+    riskTolerance: RiskTolerance | null = null,
   ): PlanPreview => {
     const preservedValue = riskData
       ? calculateCounterfactual(savingsAmount, shieldPercent, 'XAU', '5yr')
@@ -217,6 +220,7 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
       savingsAmount,
       shieldPercent,
       preservedValue,
+      riskTolerance,
     });
   };
 

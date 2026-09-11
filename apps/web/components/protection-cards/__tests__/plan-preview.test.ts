@@ -35,6 +35,21 @@ describe('getPlanPreview', () => {
     expect(preview.shieldAmount).toBe(500);
     expect(preview.slices).toHaveLength(0);
   });
+
+  it('applies riskTolerance — Conservative buen_vivir shows the raised floor', () => {
+    const preview = getPlanPreview({
+      archetypeId: 'buen_vivir',
+      savingsAmount: 10000,
+      shieldPercent: 20,
+      riskTolerance: 'Conservative',
+    });
+
+    // Balanced cUSD 20 → Conservative floor 35.
+    expect(preview.slices.find((s) => s.token === 'cUSD')?.percent).toBe(35);
+    const total = preview.slices.reduce((sum, s) => sum + s.amount, 0);
+    expect(total).toBeCloseTo(preview.shieldAmount, 6);
+    expect(preview.slices.reduce((sum, s) => sum + s.percent, 0)).toBe(100);
+  });
 });
 
 describe('getArchetypeAllocations', () => {

@@ -35,7 +35,7 @@ import {
   legsForRisk,
 } from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
-import { isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
+import { canonicalToken, configTokenFor, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
 import { PlanFloorControl } from "./protect/PlanFloorControl";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
@@ -152,7 +152,8 @@ export default function ProtectionTab({
     const balances = (chains ?? []).flatMap((c) => c.balances as TokenBalance[]);
     for (const b of balances) {
       if (b.value > 0) {
-        map.set(b.symbol, (map.get(b.symbol) ?? 0) + (b.value / totalValue) * 100);
+        const key = canonicalToken(b.symbol);
+        map.set(key, (map.get(key) ?? 0) + (b.value / totalValue) * 100);
       }
     }
     return map;
@@ -207,9 +208,15 @@ export default function ProtectionTab({
       .find((t) => t.symbol === sourceToken && t.value > 0);
 
     const fromChainId = sourceTokenObj?.chainId;
+    // The Exchange speaks config tickers (USDm/BRLm); the plan leg speaks the
+    // wallet-facing name (cUSD/cREAL) for the same contract.
+    const swapToken = configTokenFor(
+      targetToken,
+      fromChainId ?? NETWORKS.CELO_MAINNET.chainId,
+    );
     let toChainId: number | undefined;
 
-    if (fromChainId && NETWORK_TOKENS[fromChainId]?.includes(targetToken)) {
+    if (fromChainId && NETWORK_TOKENS[fromChainId]?.includes(swapToken)) {
       toChainId = fromChainId;
     } else {
       const PREFERRED_CHAINS = [
@@ -217,14 +224,14 @@ export default function ProtectionTab({
         NETWORKS.ARBITRUM_ONE.chainId,
       ];
       for (const id of PREFERRED_CHAINS) {
-        if (NETWORK_TOKENS[id]?.includes(targetToken)) {
+        if (NETWORK_TOKENS[id]?.includes(swapToken)) {
           toChainId = id;
           break;
         }
       }
       if (!toChainId) {
         for (const [chainIdStr, tokens] of Object.entries(NETWORK_TOKENS)) {
-          if (tokens.includes(targetToken)) {
+          if (tokens.includes(swapToken)) {
             toChainId = Number(chainIdStr);
             break;
           }
@@ -235,7 +242,7 @@ export default function ProtectionTab({
     setActiveTab?.("exchange");
     navigateToSwap({
       fromToken: sourceToken,
-      toToken: targetToken,
+      toToken: swapToken,
       amount: swapAmount,
       reason: `Review protection move to ${targetToken} for ${planName}`,
       fromChainId,

@@ -13,13 +13,14 @@
  *   - ORGANIZED: Steps map to vault lifecycle
  */
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { strategyAccent } from "../shared/palette";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useMobile } from "@/hooks/use-mobile";
 import { LiveProofCard } from "../shared/LiveProofCard";
 import { STRATEGIES as CANONICAL_STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { STRATEGY_ALLOCATIONS, type PlanLeg } from "@/components/protection-cards/plan-preview";
+import { STRATEGY_ALLOCATIONS, legsForRisk, type PlanLeg } from "@/components/protection-cards/plan-preview";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -113,6 +114,7 @@ export function GuardianMobileWizard({
   const isMobile = useMobile();
   const prefersReducedMotion = useReducedMotion();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const { config: profileConfig } = useProtectionProfile();
 
   // Focus the step heading and trap focus in the modal
   useEffect(() => {
@@ -217,6 +219,11 @@ export function GuardianMobileWizard({
   // ─── Step 1: Strategy ────────────────────────────────────────────────
 
   const selectedStrategyData = STRATEGIES.find((s) => s.id === selectedStrategy) ?? STRATEGIES[0];
+  // The preview bar shows the same risk-adjusted legs the Shield ring draws.
+  const previewLegs = useMemo(
+    () => legsForRisk(selectedStrategyData.allocation, profileConfig.riskTolerance),
+    [selectedStrategyData, profileConfig.riskTolerance],
+  );
 
   const StrategyStep = () => (
     <div className="space-y-4">
@@ -264,9 +271,9 @@ export function GuardianMobileWizard({
       </div>
 
       {/* Live allocation preview for selected strategy */}
-      {selectedStrategyData.allocation.length > 0 && (
+      {previewLegs.length > 0 && (
         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-1.5">
-          {selectedStrategyData.allocation.map((a) => (
+          {previewLegs.map((a) => (
             <div key={a.token} className="flex items-center gap-2 text-xs">
               <span className="w-14 font-bold text-gray-900 dark:text-white truncate">
                 {a.token}

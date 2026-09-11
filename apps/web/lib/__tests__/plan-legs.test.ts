@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { isLegFillable, pickBiggestFillableGap } from "../plan-legs";
+import { canonicalToken, configTokenFor, isLegFillable, pickBiggestFillableGap, TOKEN_ALIASES } from "../plan-legs";
 import { NETWORKS } from "@/config";
 
 // No real chain map carries a zero address today; chain 999 models one so
@@ -18,10 +18,52 @@ vi.mock("@/config", async (importOriginal) => {
 const CELO = NETWORKS.CELO_MAINNET.chainId;
 const ARBITRUM = NETWORKS.ARBITRUM_ONE.chainId;
 
+describe("canonicalToken", () => {
+  it("returns the symbol unchanged when no alias exists", () => {
+    expect(canonicalToken("USDC")).toBe("USDC");
+    expect(canonicalToken("KESm")).toBe("KESm");
+  });
+
+  it("collapses every alias to the plan-leg name", () => {
+    expect(canonicalToken("USDm")).toBe("cUSD");
+    expect(canonicalToken("EURm")).toBe("cEUR");
+    expect(canonicalToken("BRLm")).toBe("cREAL");
+    expect(canonicalToken("cKES")).toBe("KESm");
+    expect(canonicalToken("cCOP")).toBe("COPm");
+    expect(canonicalToken("cPHP")).toBe("PHPm");
+    for (const [alias, canonical] of Object.entries(TOKEN_ALIASES)) {
+      expect(canonicalToken(alias)).toBe(canonical);
+    }
+  });
+});
+
+describe("configTokenFor", () => {
+  it("maps a plan leg to the chain's config ticker", () => {
+    expect(configTokenFor("cUSD", CELO)).toBe("USDm");
+    expect(configTokenFor("cREAL", CELO)).toBe("BRLm");
+    expect(configTokenFor("cEUR", CELO)).toBe("EURm");
+  });
+
+  it("passes through tokens the chain already knows by name", () => {
+    expect(configTokenFor("KESm", CELO)).toBe("KESm");
+    expect(configTokenFor("USDC", ARBITRUM)).toBe("USDC");
+  });
+
+  it("falls back to the inverse alias when the chain is unknown", () => {
+    expect(configTokenFor("cUSD", null)).toBe("USDm");
+    expect(configTokenFor("KESm", null)).toBe("KESm");
+  });
+});
+
 describe("isLegFillable", () => {
   it("knows a token that exists on the chain", () => {
     expect(isLegFillable("cUSD", CELO)).toBe(true);
     expect(isLegFillable("USDC", ARBITRUM)).toBe(true);
+  });
+
+  it("resolves legs through ticker aliases (cREAL → BRLm)", () => {
+    expect(isLegFillable("cREAL", CELO)).toBe(true);
+    expect(isLegFillable("cEUR", CELO)).toBe(true);
   });
 
   it("rejects a token absent from the chain's address map", () => {

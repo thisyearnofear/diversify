@@ -44,6 +44,28 @@ describe('scorePlanAlignment', () => {
     expect(result.score).toBe(55); // 100 - 0.5*(90 + 0)
   });
 
+  it('scores held balances reported under the config ticker (USDm → cUSD)', () => {
+    const result = scorePlanAlignment(BUEN_VIVIR, new Map([['USDm', 100]]), 1000);
+    expect(result.score).toBe(20); // identical to holding cUSD directly
+    expect(result.legs.find((l) => l.token === 'cUSD')?.held).toBe(100);
+  });
+
+  it('sums both names of the same asset into one bucket', () => {
+    const held = new Map([
+      ['USDm', 12], // config ticker
+      ['cUSD', 8],  // plan-facing name — same contract
+      ['cREAL', 45],
+      ['COPm', 35],
+    ]);
+    expect(scorePlanAlignment(BUEN_VIVIR, held, 1000).score).toBe(100);
+  });
+
+  it('scores demo tickers through the alias map (cKES → KESm)', () => {
+    const legs: PlanLeg[] = [{ token: 'KESm', region: 'Africa', percent: 100, why: 'x' }];
+    const result = scorePlanAlignment(legs, new Map([['cKES', 100]]), 1000);
+    expect(result.score).toBe(100);
+  });
+
   it('reports null biggestGap when every gap is within ±2', () => {
     const held = new Map([
       ['cREAL', 46],
