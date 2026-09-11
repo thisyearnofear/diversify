@@ -18,7 +18,7 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
-import { getArchetypeAllocations } from '@/components/protection-cards/plan-preview';
+import { getArchetypeAllocations, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
@@ -41,6 +41,8 @@ interface Props {
   onHoleTap?: () => void;
   /** Replaces the idle hint text (compare mode: "under this plan"). */
   holeHintOverride?: string;
+  /** Plan legs override — callers pass risk-adjusted legs so the ring, score, and mix agree. */
+  legs?: PlanLeg[];
 }
 
 export function ProtectionPlanRing({
@@ -53,12 +55,13 @@ export function ProtectionPlanRing({
   emptyLabel = "Add funds",
   onHoleTap,
   holeHintOverride,
+  legs,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
   const allocations = useMemo(
-    () => (archetypeId ? getArchetypeAllocations(archetypeId) : []),
-    [archetypeId],
+    () => legs ?? (archetypeId ? getArchetypeAllocations(archetypeId) : []),
+    [legs, archetypeId],
   );
 
   const walletView = useMemo(

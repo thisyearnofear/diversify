@@ -87,6 +87,11 @@ export function seriesFor(
   }));
 }
 
+/** Mix directly from plan legs — used when the legs are already risk-adjusted. */
+export function mixFromLegs(legs: PlanLeg[]): MixSlice[] {
+  return legs.map((s) => ({ token: s.token, percent: s.percent }));
+}
+
 export function mixForPhilosophy(philosophy: string | null | undefined): MixSlice[] {
   if (!philosophy) return GOLD_MIX;
   const direct = STRATEGY_ALLOCATIONS[philosophy] as PlanLeg[] | undefined;

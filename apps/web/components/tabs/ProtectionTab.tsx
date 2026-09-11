@@ -27,10 +27,16 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
-import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { shieldPatternFor } from "./protect/shield-pattern";
-import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
+import {
+  describePlanDelta,
+  getArchetypeAllocations,
+  legsForRisk,
+} from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
+import { isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
+import { PlanFloorControl } from "./protect/PlanFloorControl";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
@@ -46,6 +52,7 @@ import { FALLBACK_INFLATION_DATA } from "@/constants/inflation";
 import {
   localInflationRate,
   mixForPhilosophy,
+  mixFromLegs,
   mixLabelFor,
   seriesFor,
   type InflationRates,
@@ -99,7 +106,7 @@ export default function ProtectionTab({
   });
 
   const { totalValue, chains } = activePortfolio;
-  const { config, currentGoalLabel } = useProtectionProfile();
+  const { config, currentGoalLabel, setRiskTolerance } = useProtectionProfile();
   const { riskData } = useCurrencyRisk();
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const { showToast } = useToast();
@@ -135,8 +142,9 @@ export default function ProtectionTab({
   const allocations = useMemo(() => {
     if (!strategyKey) return [];
     const archetypeId = strategyToArchetype(strategyKey);
-    return archetypeId ? getArchetypeAllocations(archetypeId) : [];
-  }, [strategyKey]);
+    const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
+    return legsForRisk(legs, config.riskTolerance);
+  }, [strategyKey, config.riskTolerance]);
 
   const heldPctByToken = useMemo(() => {
     const map = new Map<string, number>();
@@ -158,8 +166,9 @@ export default function ProtectionTab({
   const previewAllocations = useMemo(() => {
     if (!previewKey) return [];
     const archetypeId = strategyToArchetype(previewKey);
-    return archetypeId ? getArchetypeAllocations(archetypeId) : [];
-  }, [previewKey]);
+    const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
+    return legsForRisk(legs, config.riskTolerance);
+  }, [previewKey, config.riskTolerance]);
   const previewAlignment = useMemo(
     () => scorePlanAlignment(previewAllocations, heldPctByToken, totalValue),
     [previewAllocations, heldPctByToken, totalValue],
@@ -174,6 +183,11 @@ export default function ProtectionTab({
     setComparing((c) => !c);
     if (comparing) setFocusedPhilosophy(null);
   }, [comparing]);
+  // While comparing, a slice tap only reads the previewed plan's leg —
+  // the inspector stays on the philosophy, not the token.
+  const handleCompareSliceSelect = useCallback((token: string | null) => {
+    setFocusedToken((prev) => (token !== null && prev === token ? null : token));
+  }, []);
 
   const openProtectionFlow = (
     targetToken: string,
@@ -336,11 +350,26 @@ export default function ProtectionTab({
   const selectedHeld = focusedToken ? heldPctByToken.get(focusedToken) ?? 0 : 0;
   const gapPct = selectedAlloc ? selectedAlloc.percent - selectedHeld : 0;
   const isPaymentCycle = config.moneyPurpose === "upcoming_payment";
-
-  const learnMix = useMemo(
-    () => mixForPhilosophy(focusedPhilosophy),
-    [focusedPhilosophy],
+  // The CTA offers a gap the user's network can actually fill when one
+  // exists — it never disappears because a leg lives elsewhere.
+  const biggestGap = useMemo(
+    () => pickBiggestFillableGap(alignment.legs, chainId),
+    [alignment.legs, chainId],
   );
+
+  const learnMix = useMemo(() => {
+    const archetypeId = focusedPhilosophy
+      ? strategyToArchetype(focusedPhilosophy)
+      : null;
+    if (archetypeId) {
+      const legs = legsForRisk(
+        getArchetypeAllocations(archetypeId),
+        config.riskTolerance,
+      );
+      if (legs.length > 0) return mixFromLegs(legs);
+    }
+    return mixForPhilosophy(focusedPhilosophy);
+  }, [focusedPhilosophy, config.riskTolerance]);
   const learnMixLabel = mixLabelFor(
     focusedPhilosophy,
     learnMix,
@@ -375,6 +404,7 @@ export default function ProtectionTab({
     if (!focusedPhilosophy) return;
     setFinancialStrategy(focusedPhilosophy);
     setFocusedPhilosophy(null);
+    setFocusedToken(null);
     setComparing(false);
     haptics.confirm();
     if (address && chainId) {
@@ -413,6 +443,7 @@ export default function ProtectionTab({
           <ProtectionPlanGallery
             selectedId={focusedPhilosophy}
             onInspect={(id) => {
+              setFocusedToken(null);
               setFocusedPhilosophy((prev) => (prev === id ? null : id));
               trackFunnelEvent("marquee_select", {
                 strategy: id,
@@ -426,9 +457,10 @@ export default function ProtectionTab({
         <div data-testid="shield-ring" data-comparing={comparing || undefined}>
           <ProtectionPlanRing
             strategyKey={previewKey}
+            legs={comparing ? previewAllocations : allocations}
             portfolio={activePortfolio as MultichainPortfolio}
             selectedToken={focusedToken}
-            onSelectToken={comparing ? () => {} : handleMarqueeSelect}
+            onSelectToken={comparing ? handleCompareSliceSelect : handleMarqueeSelect}
             alignmentScore={comparing ? previewAlignment.score : alignment.score}
             empty={shape === "fund"}
             onHoleTap={toggleCompare}
@@ -436,11 +468,25 @@ export default function ProtectionTab({
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
           />
+          {!comparing && (
+            <div className="mt-3">
+              <PlanFloorControl
+                value={config.riskTolerance}
+                legs={allocations}
+                accent={(() => {
+                  const id = strategyToArchetype(strategyKey);
+                  return id ? ARCHETYPES[id].accent : undefined;
+                })()}
+                onChange={setRiskTolerance}
+              />
+            </div>
+          )}
           {comparing && (
             <div data-testid="shield-compare" className="mt-3">
               <ProtectionPlanGallery
                 selectedId={focusedPhilosophy}
                 onInspect={(id) => {
+                  setFocusedToken(null);
                   setFocusedPhilosophy((prev) => (prev === id ? null : id));
                   trackFunnelEvent("marquee_select", {
                     strategy: id,
@@ -451,17 +497,17 @@ export default function ProtectionTab({
             </div>
           )}
           {!comparing && shape === "gap" && !focusedToken &&
-            alignment.biggestGap && address &&
+            biggestGap && address &&
             guardianState !== "monitoring" && (
             <div data-testid="shield-gap-cta" className="mt-3">
               <button
                 type="button"
                 data-testid="shield-biggest-gap-cta"
-                onClick={() => handleMarqueeSelect(alignment.biggestGap!.token)}
+                onClick={() => handleMarqueeSelect(biggestGap.token)}
                 className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
               >
-                Close the biggest gap: {alignment.biggestGap.token} ~
-                {fmt((alignment.biggestGap.gap / 100) * totalValue)}
+                Close the biggest gap: {biggestGap.token} ~
+                {fmt((biggestGap.gap / 100) * totalValue)}
               </button>
             </div>
           )}
@@ -512,6 +558,59 @@ export default function ProtectionTab({
     >
       {(shape === "picker" || comparing) && focusedPhilosophy && (
         <div className="space-y-3">
+          {comparing && (
+            <p
+              data-testid="plan-delta"
+              className="text-xs text-gray-600 dark:text-gray-300"
+            >
+              {focusedPhilosophy !== strategyKey
+                ? describePlanDelta(allocations, previewAllocations)
+                : "Your current plan"}
+            </p>
+          )}
+          {(() => {
+            const values =
+              STRATEGIES.find((s) => s.id === focusedPhilosophy)?.values ?? [];
+            if (values.length === 0) return null;
+            return (
+              <div data-testid="plan-values" className="flex flex-wrap gap-1.5">
+                {values.slice(0, 3).map((v) => (
+                  <span
+                    key={v}
+                    className="text-[11px] rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-gray-500"
+                  >
+                    {v}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
+          {(() => {
+            if (!comparing || !focusedToken) return null;
+            const leg = previewAllocations.find((l) => l.token === focusedToken);
+            if (!leg) return null;
+            return (
+              <div>
+                <div
+                  data-testid="compare-leg"
+                  className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-200"
+                >
+                  <TokenIcon symbol={leg.token} size={20} />
+                  <span>
+                    {leg.token} · {leg.percent}% — {leg.why}
+                  </span>
+                </div>
+                {!isLegFillable(leg.token, chainId) && (
+                  <p
+                    data-testid="leg-unfillable"
+                    className="mt-1 text-[11px] text-amber-600 dark:text-amber-400"
+                  >
+                    Not on this network — needs a bridge
+                  </p>
+                )}
+              </div>
+            );
+          })()}
           <ProtectionCalculator
             amount={learnAmount}
             onAmountChange={setLearnAmountOverride}
@@ -579,6 +678,14 @@ export default function ProtectionTab({
               </p>
             );
           })()}
+          {!isLegFillable(focusedToken, chainId) && (
+            <p
+              data-testid="leg-unfillable"
+              className="text-[11px] text-amber-600 dark:text-amber-400"
+            >
+              Not on this network — needs a bridge
+            </p>
+          )}
           {(() => {
             const rwa = rwaLegFor(focusedToken);
             if (!rwa) return null;
@@ -734,7 +841,7 @@ export default function ProtectionTab({
         <p data-testid="shield-quiet">Plan aligned. Guardian is monitoring.</p>
       ) : guardianState === "monitoring" ? (
         <p>Guardian is monitoring this plan.</p>
-      ) : shape === "gap" && !focusedToken && alignment.biggestGap ? (
+      ) : shape === "gap" && !focusedToken && biggestGap ? (
         // The biggest-gap CTA beneath the ring names the job — no
         // duplicate sentence here.
         null
@@ -768,7 +875,7 @@ export default function ProtectionTab({
         </button>
       )}
       {!comparing && address && guardianState !== "monitoring" &&
-        !(shape === "gap" && !focusedToken && alignment.biggestGap) &&
+        !(shape === "gap" && !focusedToken && biggestGap) &&
         (shape === "quiet" || (alignment.score != null && alignment.score >= 80)) && (
         <button
           type="button"

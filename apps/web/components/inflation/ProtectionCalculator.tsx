@@ -10,7 +10,6 @@ import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { YearPoint } from "@/lib/learn/protection-calculator";
 import { useCountUp } from "@/hooks/use-count-up";
-import { springPop } from "@/lib/motion-tokens";
 import { DEFAULT_ACCENT } from "../shared/palette";
 
 interface ProtectionCalculatorProps {
@@ -133,7 +132,7 @@ export function ProtectionCalculator({
                     transition: reducedMotion ? undefined : "height 0.35s ease",
                   }}
                   animate={selected && !reducedMotion ? { scaleY: [1, 1.04, 1] } : { scaleY: 1 }}
-                  transition={springPop}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
                 />
                 <div
                   className="absolute bottom-0 left-0 right-0 rounded-t-md bg-gray-300 dark:bg-gray-600 opacity-80"

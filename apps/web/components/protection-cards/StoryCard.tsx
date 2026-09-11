@@ -15,6 +15,7 @@ import {
   alpha,
 } from './tokens';
 import { TrustMark } from './TrustMark';
+import { getArchetypeAllocations } from './plan-preview';
 
 const FONT = 'Space Grotesk';
 const STORY_W = 1080;
@@ -35,6 +36,11 @@ export function StoryCard({
   subMark,
 }: StoryCardProps) {
   const surface = `linear-gradient(135deg, ${archetype.surface.start} 0%, ${archetype.surface.mid} 50%, ${archetype.surface.end} 100%)`;
+  const planLegs = getArchetypeAllocations(archetype.id);
+  const pills =
+    planLegs.length > 0
+      ? planLegs.map((leg) => `${leg.token} ${leg.percent}`)
+      : archetype.allocation;
 
   return (
     <div
@@ -230,7 +236,7 @@ export function StoryCard({
           marginBottom: 40,
         }}
       >
-        {archetype.allocation.map((pill) => (
+        {pills.map((pill) => (
           <div
             key={pill}
             style={{

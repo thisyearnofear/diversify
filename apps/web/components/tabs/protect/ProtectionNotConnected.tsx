@@ -30,7 +30,12 @@ import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBan
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { ProtectionPlanRing } from "./ProtectionPlanRing";
-import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { PlanFloorControl } from "./PlanFloorControl";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import {
+  getArchetypeAllocations,
+  legsForRisk,
+} from "@/components/protection-cards/plan-preview";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
 interface Props {
@@ -44,7 +49,7 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
   // holdings, no loading shimmer. Fresh instance per mount — never a
   // shared mutable const.
   const walletlessPortfolio = React.useMemo(() => createEmptyPortfolio(), []);
-  const { config: profileConfig } = useProtectionProfile();
+  const { config: profileConfig, setRiskTolerance } = useProtectionProfile();
   const { region: detectedRegion } = useUserRegion();
   // Identity travels with the morph: the moment a philosophy is chosen
   // (walletless commits work), the surface picks up its archetype tint.
@@ -59,7 +64,14 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
   );
 
   const ringKey = financialStrategy ?? profileConfig.philosophy ?? null;
-  const showRing = ringKey != null && strategyToArchetype(ringKey) != null;
+  const ringArchetype = ringKey != null ? strategyToArchetype(ringKey) : null;
+  const showRing = ringArchetype != null;
+  const ringLegs = ringArchetype
+    ? legsForRisk(
+        getArchetypeAllocations(ringArchetype),
+        profileConfig.riskTolerance,
+      )
+    : [];
 
   const object = (
     <div className="space-y-4" data-testid="shield-unconnected-object">
@@ -67,6 +79,7 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
         <div data-testid="shield-ring" data-walletless>
           <ProtectionPlanRing
             strategyKey={ringKey}
+            legs={ringLegs}
             portfolio={walletlessPortfolio}
             selectedToken={null}
             onSelectToken={() => {}}
@@ -74,6 +87,14 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
             empty
             emptyLabel="Connect to fund"
           />
+          <div className="mt-3">
+            <PlanFloorControl
+              value={profileConfig.riskTolerance}
+              legs={ringLegs}
+              accent={ARCHETYPES[ringArchetype].accent}
+              onChange={setRiskTolerance}
+            />
+          </div>
         </div>
       )}
       <div data-testid="shield-picker">

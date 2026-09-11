@@ -20,6 +20,7 @@ import {
   alpha,
 } from './tokens';
 import { TrustMark } from './TrustMark';
+import { getArchetypeAllocations } from './plan-preview';
 
 const FONT = 'Space Grotesk';
 
@@ -40,6 +41,13 @@ export function BaseCard({
 }: BaseCardProps) {
   // Per-archetype surface gradient (135°) — each culture has its own register.
   const surface = `linear-gradient(135deg, ${archetype.surface.start} 0%, ${archetype.surface.mid} 50%, ${archetype.surface.end} 100%)`;
+  // Pills carry the plan's real splits (Balanced defaults — cards are
+  // identity, not personalised); name-only fallback when a plan has no legs.
+  const planLegs = getArchetypeAllocations(archetype.id);
+  const pills =
+    planLegs.length > 0
+      ? planLegs.map((leg) => `${leg.token} ${leg.percent}`)
+      : archetype.allocation;
 
   return (
     <div
@@ -208,7 +216,7 @@ export function BaseCard({
           marginBottom: 32,
         }}
       >
-        {archetype.allocation.map((pill) => (
+        {pills.map((pill) => (
           <div
             key={pill}
             style={{

@@ -6,7 +6,7 @@ import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/
 import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
-import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
+import { getArchetypeAllocations, legsForRisk } from "@/components/protection-cards/plan-preview";
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
@@ -124,7 +124,10 @@ export function useAgentAnalysis({
         const strategy = getPersistedStrategy();
         if (strategy) {
           const archetypeId = strategyToArchetype(strategy);
-          const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
+          const baseLegs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
+          // Same risk-adjusted legs the ring draws — drift feedback can't
+          // disagree with what the user sees.
+          const legs = legsForRisk(baseLegs, config.riskTolerance);
           const heldPctByToken = new Map<string, number>();
           if (portfolio.totalValue > 0) {
             for (const b of (portfolio.chains ?? []).flatMap((c) => c.balances ?? [])) {

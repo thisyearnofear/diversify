@@ -10,7 +10,9 @@ const mockState = {
   financialStrategy: null as string | null,
   userRegion: null as string | null,
   detectedRegion: "USA" as string,
+  riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
   setFinancialStrategy: vi.fn(),
+  setRiskTolerance: vi.fn(),
 };
 
 vi.mock("@/context/app/StrategyContext", () => ({
@@ -22,7 +24,12 @@ vi.mock("@/context/app/StrategyContext", () => ({
 
 vi.mock("@/hooks/use-protection-profile", () => ({
   useProtectionProfile: () => ({
-    config: { philosophy: mockState.financialStrategy, userRegion: mockState.userRegion },
+    config: {
+      philosophy: mockState.financialStrategy,
+      userRegion: mockState.userRegion,
+      riskTolerance: mockState.riskTolerance,
+    },
+    setRiskTolerance: mockState.setRiskTolerance,
   }),
 }));
 

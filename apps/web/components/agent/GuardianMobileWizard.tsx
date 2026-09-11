@@ -408,7 +408,7 @@ export function GuardianMobileWizard({
           className="text-5xl inline-block"
           initial={{ scale: 0 }}
           animate={{ scale: 1, rotate: [0, -10, 10, -10, 0] }}
-          transition={{ type: "spring", stiffness: 300, damping: 15, delay: 0.1 }}
+          transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
         >
           🎉
         </motion.span>

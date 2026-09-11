@@ -57,6 +57,87 @@ export const STRATEGY_ALLOCATIONS: Record<string, PlanLeg[]> = {
 
 const TRADABLE_TOKEN = /^[A-Z][A-Za-z0-9]{1,5}$/;
 
+// ============================================================================
+// Dollar-floor dial — riskTolerance shapes the plan legs (one truth: ring,
+// score, learn mix, Guardian feedback all read the adjusted legs).
+// ============================================================================
+
+/** Legs that count as the plan's dollar floor. */
+export const FLOOR_TOKENS = new Set(['cUSD', 'USDC']);
+
+export type RiskTolerance = 'Conservative' | 'Balanced' | 'Aggressive';
+
+const FLOOR_SHIFT: Record<RiskTolerance, number> = {
+  Conservative: 15,
+  Balanced: 0,
+  Aggressive: -15,
+};
+
+/** Sum of dollar-floor legs in a plan. */
+export function floorPercent(legs: PlanLeg[]): number {
+  return legs.reduce((sum, leg) => sum + (FLOOR_TOKENS.has(leg.token) ? leg.percent : 0), 0);
+}
+
+/**
+ * Re-slice a plan for a risk tolerance: shift weight between the dollar
+ * floor and the identity legs, preserving order and proportions inside
+ * each group. Balanced/unset returns the same reference.
+ */
+export function legsForRisk(
+  legs: PlanLeg[],
+  risk: RiskTolerance | null | undefined,
+): PlanLeg[] {
+  const shift = risk ? FLOOR_SHIFT[risk] : undefined;
+  if (shift == null || shift === 0) return legs;
+  const floorLegs = legs.filter((l) => FLOOR_TOKENS.has(l.token));
+  const identityLegs = legs.filter((l) => !FLOOR_TOKENS.has(l.token));
+  if (floorLegs.length === 0 || identityLegs.length === 0) return legs;
+
+  const baseFloor = floorPercent(legs);
+  const targetFloor = Math.min(90, Math.max(10, baseFloor + shift));
+  const floorScale = targetFloor / baseFloor;
+  const identityScale = (100 - targetFloor) / (100 - baseFloor);
+
+  const adjusted = legs.map((leg) => ({
+    ...leg,
+    percent: Math.round(
+      leg.percent * (FLOOR_TOKENS.has(leg.token) ? floorScale : identityScale),
+    ),
+  }));
+  const drift = 100 - adjusted.reduce((sum, l) => sum + l.percent, 0);
+  if (drift !== 0) {
+    const largest = adjusted.reduce((a, b) => (b.percent > a.percent ? b : a));
+    largest.percent += drift;
+  }
+  return adjusted;
+}
+
+/**
+ * One line describing what changes between two plans — token swaps and
+ * the dollar-floor shift. "Same mix as your current plan" when identical.
+ */
+export function describePlanDelta(current: PlanLeg[], preview: PlanLeg[]): string {
+  const currentTokens = new Set(current.map((l) => l.token));
+  const previewTokens = new Set(preview.map((l) => l.token));
+  const removed = current.filter((l) => !previewTokens.has(l.token)).map((l) => l.token);
+  const added = preview.filter((l) => !currentTokens.has(l.token)).map((l) => l.token);
+
+  const parts: string[] = [];
+  if (removed.length > 0 && added.length > 0) {
+    parts.push(`Swaps ${removed.join(', ')} → ${added.join(', ')}`);
+  } else if (added.length > 0) {
+    parts.push(`Adds ${added.join(', ')}`);
+  } else if (removed.length > 0) {
+    parts.push(`Drops ${removed.join(', ')}`);
+  }
+  const floorFrom = floorPercent(current);
+  const floorTo = floorPercent(preview);
+  if (floorFrom !== floorTo) {
+    parts.push(`dollar floor ${floorFrom}% → ${floorTo}%`);
+  }
+  return parts.length > 0 ? parts.join(' · ') : 'Same mix as your current plan';
+}
+
 export interface PlanPreviewSlice {
   token: string;
   percent: number;

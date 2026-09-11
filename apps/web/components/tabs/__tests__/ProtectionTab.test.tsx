@@ -12,6 +12,10 @@ vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAdvisor }),
 }));
 
+const profileState = {
+  riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
+};
+const mockSetRiskTolerance = vi.fn();
 vi.mock("@/hooks/use-protection-profile", () => ({
   consumeRetiredPhilosophyNotice: () => false,
   useProtectionProfile: () => ({
@@ -19,7 +23,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
     currentStep: 0,
     config: {
       userGoal: "inflation_protection",
-      riskTolerance: "medium",
+      riskTolerance: profileState.riskTolerance,
       timeHorizon: "medium",
       moneyPurpose: mockMoneyPurpose,
     },
@@ -34,7 +38,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
     skipToEnd: vi.fn(),
     completeEditing: vi.fn(),
     setUserGoal: vi.fn(),
-    setRiskTolerance: vi.fn(),
+    setRiskTolerance: mockSetRiskTolerance,
     setTimeHorizon: vi.fn(),
   }),
   USER_GOALS: [
@@ -209,6 +213,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           selectButton("KESm", "ring-select-kesm"),
           selectButton("WETH", "ring-select-weth"),
           selectButton("PAXG", "ring-select-paxg"),
+          selectButton("cREAL", "ring-select-creal"),
         ),
       );
     },
@@ -881,6 +886,85 @@ describe("ProtectionTab — instrument shapes", () => {
     fireEvent.click(screen.getByRole("button", { name: /Keep Africapitalism/ }));
     expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
     expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
+  });
+
+  it("dollar-floor dial sits under the ring and drives setRiskTolerance", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    const dial = screen.getByTestId("plan-floor-control");
+    // Under the ring, above the status tier — inside the object column.
+    expect(screen.getByTestId("shield-ring").contains(dial)).toBe(true);
+    expect(dial).toHaveTextContent("Dollar floor · 25%");
+    expect(
+      screen.getByRole("radio", { name: "Balanced" }),
+    ).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(screen.getByRole("radio", { name: "Conservative" }));
+    expect(mockSetRiskTolerance).toHaveBeenCalledWith("Conservative");
+    cleanup();
+
+    // After the profile updates, the caption follows the adjusted legs.
+    profileState.riskTolerance = "Conservative";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent(
+      "Dollar floor · 40%",
+    );
+    profileState.riskTolerance = "Balanced";
+  });
+
+  it("dial is hidden while comparing; delta + values + leg row in the inspector", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42161, // Arbitrum — cREAL isn't deployed there
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.queryByTestId("plan-floor-control")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+    expect(screen.getByTestId("plan-delta")).toHaveTextContent(
+      "Swaps KESm, cEUR → cREAL, COPm · dollar floor 25% → 20%",
+    );
+    const values = screen.getByTestId("plan-values");
+    expect(values).toHaveTextContent("Collective prosperity");
+    expect(values.querySelectorAll("span").length).toBe(3);
+
+    // Slice tap while comparing reads the previewed leg — no CTA.
+    fireEvent.click(screen.getByTestId("ring-select-creal"));
+    const legRow = screen.getByTestId("compare-leg");
+    expect(legRow).toHaveTextContent("cREAL · 45% — Brazil's real — the LatAm anchor");
+    // cREAL isn't deployed on Celo — honesty line, not a block.
+    expect(screen.getByTestId("leg-unfillable")).toHaveTextContent(
+      "Not on this network — needs a bridge",
+    );
+  });
+
+  it("leg-unfillable shows on the slice inspector for a token absent on this chain", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42161, // Arbitrum — KESm isn't there
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.getByTestId("leg-unfillable")).toBeInTheDocument();
+    cleanup();
+
+    // On Celo the same leg IS fillable — no honesty line.
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.queryByTestId("leg-unfillable")).not.toBeInTheDocument();
   });
 
   it("reduced motion: compare mode renders the same instrument ids", () => {
