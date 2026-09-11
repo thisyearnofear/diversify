@@ -20,28 +20,15 @@ const nextConfig = {
     "@stable-station/mento-utils",
   ],
 
-  // Monorepo tracing root can otherwise pull Foundry/docs/tests into lambdas.
-  // NOTE: patterns here apply to the tracing ROOT (repo root), so every entry
-  // must be repo-root-relative AND narrow. Never add bare 'lib/**/*' — it
-  // matches node_modules/**/lib/** (including Next's own server lib) and
-  // ships lambdas missing 'next/dist/server/lib/…' (all-API 500s, 2026-09-11).
-  outputFileTracingExcludes: {
-    '*': [
-      'contracts/**/*',
-      'docs/**/*',
-      'scripts/**/*',
-      'examples/**/*',
-      'videos/**/*',
-      'vendor/**/*',
-      'broadcast/**/*',
-      'cache/**/*',
-      'apps/web/tests/**/*',
-      '**/__tests__/**',
-      '**/*.test.ts',
-      '**/*.test.tsx',
-      '**/*.tsbuildinfo',
-    ],
-  },
+  // NOTE (2026-09-11): outputFileTracingExcludes REMOVED entirely. Both
+  // attempts broke ALL /api/* lambdas in production with MODULE_NOT_FOUND for
+  // next/dist/server/lib/… files. NFT's exclude globs match path SEGMENTS, so
+  // even repo-root-prefixed patterns like 'contracts/**/*' prune
+  // node_modules copies of traced workspace packages (pnpm symlinks
+  // @diversifi/shared into node_modules, and its traced files land under
+  // paths containing those segments). Storage savings come from the root
+  // .vercelignore (upload-time) + lean route code, not from trace excludes.
+  // Do NOT re-add outputFileTracingExcludes without a production canary.
 
   experimental: {
     prefetchInlining: true,
