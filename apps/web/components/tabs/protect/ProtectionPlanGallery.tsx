@@ -11,6 +11,9 @@
  */
 
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { springPop } from '@/lib/motion-tokens';
+import { haptics } from '@/lib/haptics';
 import { useStrategy } from '@/context/app/StrategyContext';
 import type { FinancialStrategy } from '@/context/app/types';
 import { CARD_REGISTRY } from '@/components/protection-cards/cards';
@@ -71,6 +74,7 @@ function PlanCard({
   const { recordActivity } = useStreakRewards();
   const { address, chainId } = useWalletContext();
   const didDragRef = useDidDrag();
+  const reducedMotion = useReducedMotion();
   const Card = CARD_REGISTRY[id];
   const archetype = ARCHETYPES[id];
 
@@ -96,6 +100,7 @@ function PlanCard({
           return;
         }
         setFinancialStrategy(strategyId);
+        haptics.confirm();
         // Record protection plan selection to the streak system —
         // this awards the "first-protection-plan" achievement and
         // contributes to the "savings-loop-master" achievement.
@@ -141,9 +146,14 @@ function PlanCard({
         <Card />
       </div>
 
-      {/* Selection overlay */}
+      {/* Selection overlay — pops in on commit (§5: motion confirms the
+          choice; the LensCoinSelector moment-of-choice beat, scaled down
+          to a badge). Reduced motion renders it instantly. */}
       {isActive && (
-        <div
+        <motion.div
+          initial={reducedMotion ? false : { scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={springPop}
           className="absolute top-2 right-2 px-2 py-1 rounded-full text-[10px] font-bold tracking-wider"
           style={{
             background: archetype.accent,
@@ -151,7 +161,7 @@ function PlanCard({
           }}
         >
           ACTIVE
-        </div>
+        </motion.div>
       )}
     </button>
   );

@@ -153,6 +153,10 @@ export function CaribbeanFxNetCard() {
             Match a currency need directly with a counterparty — no USD bridge,
             no 7% bank corridor.
           </p>
+          <p className="text-[11px] text-teal-600/80 dark:text-teal-400/80 mt-1">
+            The sou-sou (partner circle), digitized — the circle settles with
+            itself, and your history in the circle becomes your credit file.
+          </p>
         </div>
       </div>
 
@@ -427,7 +431,7 @@ function CreditFileSection({
           ? `${profile.settlementsCompleted} verified settlements · $${Math.round(profile.settledVolumeUsd).toLocaleString()} · ${profile.counterparties} counterpart${profile.counterparties === 1 ? 'y' : 'ies'} · every settled trade builds this file.`
           : profile.settlementsCompleted > 0
             ? `${profile.settlementsCompleted} verified settlement${profile.settlementsCompleted === 1 ? '' : 's'} so far — your next settled trade strengthens this file.`
-            : 'No verified settlements yet — your first settled trade starts this file. Coordination today underwrites working capital tomorrow.'}
+            : 'No verified settlements yet — your first settled trade starts this file. Like a sou-sou, the circle remembers who honours their hand; coordination today underwrites working capital tomorrow.'}
       </p>
       <p className="text-[10px] text-teal-700/70 dark:text-teal-300/70 mt-0.5">
         {profile.lendingReadiness}

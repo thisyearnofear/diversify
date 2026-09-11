@@ -315,6 +315,25 @@ answer on the same thesis. A future DiversiFi ↔ Carib$ integration
 (DiversiFi as the savings/yield layer, Carib$ as the cross-border
 settlement layer) is a compelling long-term partnership narrative.
 
+### 2.6 The cultural primitive: the sou-sou (partner circle)
+
+The netting pool + settlement-native credit file are not new concepts to
+the region — they are the formalization of its oldest financial
+coordination primitive. The **rotating savings club** — *partner* in
+Jamaica, *sou-sou* in Trinidad & Tobago and the wider English Caribbean,
+*san* in the Dominican Republic — pools contributions in a circle and
+settles with itself, no bank in the middle. Its underwriting has always
+been behavioural: your standing in the circle is your credit.
+
+This is the same family of institution as West Africa's *tontine*,
+Kenya's *chama*, Mexico's *tanda*, the Philippines' *paluwagan*, and
+Egypt's *gameya* — which is why the framing travels with the engine as it
+generalizes across rails. The design implication, encoded in the product:
+the netting card introduces itself as "the sou-sou, digitized", and the
+credit readout treats a thin file the way a circle treats a new member —
+the first settled trade starts your file, and the circle remembers who
+honours their hand.
+
 ---
 
 ## 3. The token strategy that actually works

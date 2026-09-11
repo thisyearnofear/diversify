@@ -29,6 +29,34 @@ describe("InstrumentShell", () => {
     expect(shell.className).toContain("shadow-sm");
     expect(shell.className).toContain("dark:bg-gray-900");
   });
+
+  it("tints the surface with the archetype pattern INSIDE the card, content above it (design-language §1/§4)", () => {
+    const { container } = render(
+      <InstrumentShell
+        object={<div data-testid="object">ring</div>}
+        pattern={{ className: "shields-pattern--pan_caribbean", color: "#0ea5e9" }}
+      />,
+    );
+    const shell = container.firstElementChild as HTMLElement;
+    // The pattern layer is a child of the card itself — painting it as a
+    // sibling under the opaque card (the old bug) made it invisible.
+    const layer = shell.querySelector(".shields-pattern-layer") as HTMLElement;
+    expect(layer).not.toBeNull();
+    expect(layer.className).toContain("shields-pattern--pan_caribbean");
+    expect(layer.style.color).toBe("rgb(14, 165, 233)");
+    expect(layer.getAttribute("aria-hidden")).toBe("true");
+    // Content wrapper comes after the layer and is positioned above it.
+    const content = shell.lastElementChild as HTMLElement;
+    expect(content.className).toContain("relative");
+    expect(content.contains(screen.getByTestId("object"))).toBe(true);
+  });
+
+  it("renders no pattern layer when no archetype is selected", () => {
+    const { container } = render(
+      <InstrumentShell object={<div data-testid="object">ring</div>} />,
+    );
+    expect(container.querySelector(".shields-pattern-layer")).toBeNull();
+  });
 });
 
 describe("InspectorSheet", () => {

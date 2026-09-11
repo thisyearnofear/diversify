@@ -16,6 +16,7 @@ import React from "react";
 import WalletButton from "../../wallet/WalletButton";
 import type { UserExperienceMode } from "@/context/app/types";
 import { InstrumentShell } from "../../shared/InstrumentShell";
+import { shieldPatternFor } from "./shield-pattern";
 import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
@@ -36,6 +37,9 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
   const { financialStrategy } = useStrategy();
   const { config: profileConfig } = useProtectionProfile();
   const { region: detectedRegion } = useUserRegion();
+  // Identity travels with the morph: the moment a philosophy is chosen
+  // (walletless commits work), the surface picks up its archetype tint.
+  const pattern = shieldPatternFor(financialStrategy ?? profileConfig.philosophy ?? null);
   const showApacBanner = needsApacRailMessaging(
     financialStrategy ?? profileConfig.philosophy,
     profileConfig.userRegion ?? detectedRegion,
@@ -72,5 +76,5 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
     </div>
   );
 
-  return <InstrumentShell object={object} status={status} />;
+  return <InstrumentShell object={object} status={status} pattern={pattern} />;
 }

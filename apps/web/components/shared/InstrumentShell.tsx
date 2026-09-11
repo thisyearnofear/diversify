@@ -48,6 +48,11 @@ interface InstrumentShellProps {
   portfolio?: FreshnessInfo | null;
   /** Refresh handler for the freshness indicator. */
   onRefresh?: () => Promise<void> | void;
+  /** Archetype pattern tint. Rendered INSIDE the card — above its solid
+   *  background, below the content — so the 3% archetype texture is felt
+   *  on the surface itself (before this slot existed, Shield painted the
+   *  pattern as a sibling UNDER the opaque card: invisible). */
+  pattern?: { className: string; color: string } | null;
   className?: string;
 }
 
@@ -57,26 +62,37 @@ export function InstrumentShell({
   status,
   portfolio,
   onRefresh,
+  pattern = null,
   className = "",
 }: InstrumentShellProps) {
   return (
     <div className={`relative ${SURFACE} ${className}`.trim()}>
-      <div className="min-h-0">{object}</div>
-      {inspector}
-      {portfolio ? (
-        <div className="mt-3">
-          <DataFreshnessIndicator
-            lastUpdated={portfolio.lastUpdated}
-            isStale={portfolio.isStale}
-            hasEstimates={portfolio.hasEstimates}
-            isDemo={portfolio.isDemo}
-            isLoading={portfolio.isLoading}
-            error={portfolio.errors?.[0] ?? null}
-            onRefresh={onRefresh}
-          />
-        </div>
+      {pattern ? (
+        <div
+          className={`shields-pattern-layer rounded-2xl ${pattern.className}`}
+          style={{ color: pattern.color }}
+          aria-hidden="true"
+        />
       ) : null}
-      {status ? <div className="mt-3">{status}</div> : null}
+      {/* Positioned so the content always paints above the pattern layer. */}
+      <div className="relative">
+        <div className="min-h-0">{object}</div>
+        {inspector}
+        {portfolio ? (
+          <div className="mt-3">
+            <DataFreshnessIndicator
+              lastUpdated={portfolio.lastUpdated}
+              isStale={portfolio.isStale}
+              hasEstimates={portfolio.hasEstimates}
+              isDemo={portfolio.isDemo}
+              isLoading={portfolio.isLoading}
+              error={portfolio.errors?.[0] ?? null}
+              onRefresh={onRefresh}
+            />
+          </div>
+        ) : null}
+        {status ? <div className="mt-3">{status}</div> : null}
+      </div>
     </div>
   );
 }

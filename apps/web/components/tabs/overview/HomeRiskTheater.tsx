@@ -20,6 +20,9 @@ import type { NarrativeMoment, InflationMoment } from "@/lib/narrative/currency-
 import type { MomentFrame } from "@/lib/narrative/moment-framing";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { haptics } from "@/lib/haptics";
+import { springSoft } from "@/lib/motion-tokens";
+import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
+import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import FlickScrollRow, { useDidDrag } from "@/components/shared/FlickScrollRow";
 
 interface RegionDatum {
@@ -107,6 +110,29 @@ export function HomeRiskTheater({
   const [flipped, setFlipped] = useState(false);
   const hasHoldings = totalValue > 0 && regionData.length > 0;
 
+  // Quiet memory: last session's delta for this exact moment (currency ×
+  // benchmark × horizon), so a returning visitor sees what moved without
+  // anyone claiming fresh insight. Rounded to 0.1 — sub-tenth noise is
+  // not a memory worth keeping.
+  const momentKey = moment
+    ? `home-moment:${moment.currencyCode}:${moment.benchmark}:${moment.horizon}`
+    : "home-moment:idle";
+  const previousMoment = useSinceLastVisit(
+    momentKey,
+    moment ? Math.round(moment.delta * 10) / 10 : null,
+  );
+  const sinceLine = (() => {
+    if (!moment || !previousMoment) return null;
+    const now = Date.now();
+    if (now - previousMoment.at < MIN_SNAPSHOT_AGE_MS) return null;
+    const diff = Math.round((moment.delta - previousMoment.value) * 10) / 10;
+    const elapsed = formatElapsed(previousMoment.at, now);
+    if (Math.abs(diff) < 0.05) {
+      return `${moment.currencyCode} steady vs ${moment.benchmark} since your last visit (${elapsed})`;
+    }
+    return `Since your last visit (${elapsed}): ${moment.currencyCode} moved ${diff > 0 ? "+" : ""}${diff} pts vs ${moment.benchmark}`;
+  })();
+
   const largest = useMemo(
     () =>
       regionData.reduce(
@@ -136,9 +162,11 @@ export function HomeRiskTheater({
         )}
       </div>
 
-      {/* Stacked bar — quiet, 6px, segments tappable, selected undimmed */}
+      {/* Stacked bar — quiet, 6px, segments tappable, selected undimmed.
+          Segments draw in left-to-right when the strip arrives (§5: the
+          reveal IS the data arriving); selection still undims at 0.18s. */}
       <div className="mt-2 flex h-1.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/10">
-        {regionData.map((r) => {
+        {regionData.map((r, idx) => {
           const pct = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
           const isSelected = focusedRegion === r.region;
           const isDimmed = focusedRegion !== null && !isSelected;
@@ -153,13 +181,17 @@ export function HomeRiskTheater({
                 onSelectRegion(focusedRegion === r.region ? null : r.region);
               }}
               className="h-full min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-              style={{
+              style={{ backgroundColor: r.color }}
+              initial={reducedMotion ? false : { width: 0, opacity: 1 }}
+              animate={{
                 width: `${pct}%`,
-                backgroundColor: r.color,
                 opacity: isDimmed ? 0.35 : 1,
               }}
-              animate={reducedMotion ? undefined : { opacity: isDimmed ? 0.35 : 1 }}
-              transition={{ duration: 0.18 }}
+              transition={
+                reducedMotion
+                  ? { duration: 0 }
+                  : { width: { ...springSoft, delay: idx * 0.05 }, opacity: { duration: 0.18 } }
+              }
             />
           );
         })}
@@ -300,6 +332,11 @@ export function HomeRiskTheater({
         </div>
         {hasHoldings && !flipped && (
           <p className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">Tap the coin to see holdings</p>
+        )}
+        {sinceLine && (
+          <p data-testid="since-last-visit" className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">
+            {sinceLine}
+          </p>
         )}
         {holdingsStrip}
       </section>

@@ -47,7 +47,11 @@ connected or not. Objects render bare inside it: the moment card, the
 swap ticket, and the ring carry no card chrome of their own. A tab that
 wraps its object in its own card (or a shell that skips the card) is out
 of contract — that drift is exactly what users read as "the tabs feel
-like different apps".
+like different apps". **The shell also owns the identity tint:** the
+archetype pattern renders through the shell's `pattern` slot — INSIDE the
+card, above its solid background, below the content. Painting it as a
+sibling under the opaque card makes it invisible; painting it over the
+content fights the text.
 
 ## 2. One object gets the color
 
@@ -350,7 +354,7 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `Coin`, `FloatingCoins`, `ShellCoinField` | `apps/web/components/shared/FloatingCoins.tsx` | coin motif; drift fields (onboarding), one-shot shell backdrop (in-app) |
 | `GuardianMascot` | `apps/web/components/shared/GuardianMascot.tsx` | digital shield mascot, mood + gaze system |
 | `LensCoinSelector` | `apps/web/components/onboarding/LensCoinSelector.tsx` | flickable selection row |
-| `InstrumentShell` | `apps/web/components/shared/InstrumentShell.tsx` | tab layout: object + inspector + status — and the ONE surface card (§1: the shell owns the surface) |
+| `InstrumentShell` | `apps/web/components/shared/InstrumentShell.tsx` | tab layout: object + inspector + status — the ONE surface card + its `pattern` identity slot (§1: the shell owns the surface) |
 | `InspectorSheet` | `apps/web/components/shared/InspectorSheet.tsx` | selection-bound fold/sheet; closed when idle |
 | `AllocationRing` | `apps/web/components/shared/AllocationRing.tsx` | plan ring, exposure dial |
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |

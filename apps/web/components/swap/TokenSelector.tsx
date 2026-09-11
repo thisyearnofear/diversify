@@ -1,6 +1,9 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
+import { Coin } from "../shared/FloatingCoins";
+import { QUIET_GRAY, tokenColor } from "../shared/palette";
+import { springPop, springSoft } from "@/lib/motion-tokens";
 import TokenPickerSheet, { type TokenPickerItem } from "./TokenPickerSheet";
 import { REGION_COLORS, TOKEN_METADATA, EXCHANGE_RATES } from "../../config";
 import type { UserExperienceMode } from "@/context/app/types";
@@ -35,6 +38,43 @@ interface TokenSelectorProps {
    *  entirely. A walletless visitor has no balances; showing
    *  "Balance: 0.0000 X" fabricates a state that cannot become true. */
   hasWallet?: boolean;
+  /** Live quoted receive amount (To row only). When it parses > 0 the
+   *  destination coin pours full — the ticket answering the amount you
+   *  typed (§5: motion confirms). Replays on each new quote. */
+  receiveAmount?: string | null;
+}
+
+/**
+ * The destination coin fills as the quote arrives — the ticket answering
+ * the amount you typed (§5: motion confirms selection/response; one shot
+ * per new quote, never a loop). Quiet gray until a live quote exists;
+ * reduced motion renders the filled state instantly.
+ */
+function PourCoin({
+  symbol,
+  receiveAmount,
+}: {
+  symbol: string;
+  receiveAmount?: string | null;
+}) {
+  const reducedMotion = useReducedMotion();
+  const filled = Boolean(receiveAmount && Number.parseFloat(receiveAmount) > 0);
+  return (
+    <span className="relative inline-flex h-6 w-6 shrink-0" aria-hidden="true">
+      <Coin size={24} symbol={symbol.slice(0, 1)} color={QUIET_GRAY} variant="asset" />
+      {filled && (
+        <motion.span
+          key={receiveAmount}
+          className="absolute inset-0"
+          initial={reducedMotion ? false : { clipPath: "inset(100% 0 0 0)" }}
+          animate={{ clipPath: "inset(0% 0 0 0)" }}
+          transition={reducedMotion ? { duration: 0 } : springSoft}
+        >
+          <Coin size={24} symbol={symbol.slice(0, 1)} color={tokenColor(symbol)} variant="asset" />
+        </motion.span>
+      )}
+    </span>
+  );
 }
 
 const TokenSelector: React.FC<TokenSelectorProps> = ({
@@ -53,6 +93,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   experienceMode = "beginner",
   financialStrategy,
   hasWallet = true,
+  receiveAmount = null,
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const reducedMotion = useReducedMotion();
@@ -269,6 +310,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           {/* When no amount input (To field), show balance/region info instead */}
           {!showAmountInput && (
             <div className="flex-1 min-w-0 px-4 py-3.5 flex items-center gap-2">
+              <PourCoin symbol={selectedToken} receiveAmount={receiveAmount} />
               {regionColor && tokenRegion && tokenRegion !== "Unknown" && (
                 <span
                   className="inline-block w-2 h-2 rounded-full shrink-0"
@@ -291,7 +333,19 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             aria-label={`Select ${label} token`}
             className="flex items-center gap-2 px-3 min-h-[44px] my-1.5 mr-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <TokenIcon symbol={selectedToken} size={24} />
+            {/* Mint flip — the LensCoinSelector moment-of-choice beat:
+                picking a token mints it into the pill (§5 confirms the
+                selection). Keyed remount replays per change; reduced
+                motion swaps instantly. */}
+            <motion.span
+              key={selectedToken}
+              className="inline-flex"
+              initial={reducedMotion ? false : { rotateY: 90, opacity: 0.3 }}
+              animate={{ rotateY: 0, opacity: 1 }}
+              transition={springPop}
+            >
+              <TokenIcon symbol={selectedToken} size={24} />
+            </motion.span>
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100">
               {selectedToken}
             </span>

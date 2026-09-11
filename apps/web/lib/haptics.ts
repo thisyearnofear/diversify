@@ -22,7 +22,9 @@ const PATTERNS: Record<HapticPattern, number | number[]> = {
  */
 export function haptic(pattern: HapticPattern = 'medium'): void {
   if (typeof window === 'undefined') return;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // matchMedia is absent in some test/jsdom environments — haptics must
+  // never break the app, so treat its absence as "no preference signal".
+  if (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if (!('vibrate' in navigator)) return;
 
   try {

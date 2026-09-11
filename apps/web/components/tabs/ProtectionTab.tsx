@@ -19,6 +19,9 @@ import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { useToast } from "@/components/ui/Toast";
+import { haptics } from "@/lib/haptics";
+import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
+import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
@@ -26,7 +29,7 @@ import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
 import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
-import { QUIET_GRAY, strategyAccent } from "@/components/shared/palette";
+import { shieldPatternFor } from "./protect/shield-pattern";
 import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
@@ -269,20 +272,29 @@ export default function ProtectionTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedStrategy]);
 
-  const patternClass = useMemo(() => {
-    if (!strategyKey) return "";
-    const normalized = strategyKey.replace("_finance", "").replace("_diversification", "");
-    return `shields-pattern--${normalized}`;
-  }, [strategyKey]);
-
   // Single source of truth: the pattern layer tints with the archetype's
   // own accent token — the same color the ring badge and plan cards use
-  // (Sylva's "one palette, derived facets" discipline). Only strategies
-  // with no archetype mapping (halo, taco) keep explicit values.
-  const patternColor = useMemo(() => {
-    if (!strategyKey) return QUIET_GRAY;
-    return strategyAccent(strategyKey);
-  }, [strategyKey]);
+  // (Sylva's "one palette, derived facets" discipline). Shared with the
+  // unconnected morph via shieldPatternFor.
+  const pattern = useMemo(() => shieldPatternFor(strategyKey), [strategyKey]);
+
+  // Quiet memory: last session's alignment for this plan, so a returning
+  // visitor sees the drift without anyone claiming fresh insight.
+  const previousAlignment = useSinceLastVisit(
+    `shield-alignment:${strategyKey ?? "none"}`,
+    hasPlan ? Math.round(strategyAlignmentScore) : null,
+  );
+  const alignmentSinceLine = (() => {
+    if (!hasPlan || !previousAlignment) return null;
+    const now = Date.now();
+    if (now - previousAlignment.at < MIN_SNAPSHOT_AGE_MS) return null;
+    const current = Math.round(strategyAlignmentScore);
+    const elapsed = formatElapsed(previousAlignment.at, now);
+    if (previousAlignment.value === current) {
+      return `Alignment steady at ${current}% since your last visit (${elapsed})`;
+    }
+    return `Since you were here (${elapsed}): alignment ${previousAlignment.value}% → ${current}%`;
+  })();
 
   const shape = deriveShieldShape({
     hasPlan,
@@ -338,6 +350,7 @@ export default function ProtectionTab({
     if (!focusedPhilosophy) return;
     setFinancialStrategy(focusedPhilosophy);
     setFocusedPhilosophy(null);
+    haptics.confirm();
     if (address && chainId) {
       void Promise.resolve(
         recordActivity({
@@ -630,6 +643,11 @@ export default function ProtectionTab({
         )}
         <VerifiedEvidence className="ml-auto" />
       </div>
+      {alignmentSinceLine && (
+        <p data-testid="shield-since-last-visit" className="text-[11px] text-gray-400 dark:text-gray-500">
+          {alignmentSinceLine}
+        </p>
+      )}
       <div className="flex items-center justify-between gap-3">
       {shape === "quiet" ? (
         <p data-testid="shield-quiet">Plan aligned. Guardian is monitoring.</p>
@@ -674,14 +692,8 @@ export default function ProtectionTab({
 
   return (
     <div className="relative">
-      {patternClass && (
-        <div
-          className={`shields-pattern-layer ${patternClass}`}
-          style={{ color: patternColor }}
-          aria-hidden="true"
-        />
-      )}
       <InstrumentShell
+        pattern={pattern}
         object={object}
         inspector={inspector}
         status={status}
