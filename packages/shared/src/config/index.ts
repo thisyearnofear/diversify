@@ -786,7 +786,7 @@ export function getLiFiVaultByAddress(chainId: number, address: string): VaultCo
 // Single source of truth for Celo token metadata. Replaces the previously
 // duplicated TOKEN_ADDRESSES maps in pages/api/agent/guardian-loop.ts,
 // pages/api/vault/rebalance.ts, components/agent/AIChat.tsx, and the
-// richer TOKENS map in pages/api/vault/_executor.ts.
+// richer TOKENS map in apps/web/lib/vault/executor.ts.
 export {
     CELO_TOKEN_ADDRESSES,
     CELO_TOKEN_ADDRESS_BY_SYMBOL,

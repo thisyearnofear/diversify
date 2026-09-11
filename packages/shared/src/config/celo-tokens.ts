@@ -10,7 +10,7 @@
  *   - components/agent/AIChat.tsx (RwaActionWidget)
  *
  * and the previously-duplicated `TOKENS` map in
- *   - pages/api/vault/_executor.ts
+ *   - apps/web/lib/vault/executor.ts
  *
  * All four call sites now import from here. Adding a new Celo token
  * means one edit, one PR.
