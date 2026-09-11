@@ -4,7 +4,7 @@
 
 ### Vercel packaging diet (2026-09-11)
 
-Account Functions/Deployment storage was bloated (~4.95 GB for `diversify`) because Next treated colocated `pages/api/**/__tests__` and underscore “helpers” as serverless routes (~101 lambdas × ~15 MB, plus many retained Production deploys). Fix: move helpers to `apps/web/lib/{agent,vault}/`, move route tests to `apps/web/tests/api/`, drop mistaken root `outputDirectory`, add `.vercelignore` + `outputFileTracingExcludes`. Historic deploys pruned with `vercel rm --safe` (124 → 5 aliased). Next prod deploy is what shrinks the live lambda set.
+Account Functions/Deployment storage was bloated (~4.95 GB for `diversify`) because Next treated colocated `pages/api/**/__tests__` and underscore “helpers” as serverless routes (~101 lambdas × ~15 MB, plus many retained Production deploys). Fix: move helpers to `apps/web/lib/{agent,vault}/`, move route tests to `apps/web/tests/api/`, add root-anchored `.vercelignore` + `outputFileTracingExcludes` (keep root `outputDirectory: apps/web/.next` — required so Vercel finds the turbo build under the monorepo checkout). Historic deploys pruned with `vercel rm --safe` (124 → 5 aliased).
 
 ### UX consolidation waves (2026-07-10)
 
