@@ -102,7 +102,13 @@ const nextConfig = {
   // Route heavy/slow API routes to Hetzner (always-on, no cold starts, no 15s timeout)
   async rewrites() {
     const hetznerBase = process.env.HETZNER_API_URL;
-    if (!hetznerBase) return [];
+    if (!hetznerBase) {
+      // Build-time warning so a stripped/missing env never silently disables
+      // the Hetzner proxy again (2026-09-11: turbo dropped the var, heavy
+      // routes served as Vercel lambdas with no signal in the build log).
+      console.warn('[rewrites] HETZNER_API_URL unset — heavy API routes will serve from Vercel lambdas instead of Hetzner. Production builds must pass it via turbo.json globalEnv.');
+      return [];
+    }
     return [
       { source: '/api/agent/status', destination: `${hetznerBase}/api/agent/status` },
       { source: '/api/agent/advisor', destination: `${hetznerBase}/api/agent/advisor` },

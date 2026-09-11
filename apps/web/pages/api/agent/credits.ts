@@ -45,6 +45,22 @@ async function verifyProofUrl(urlStr: string): Promise<boolean> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // GET with ?userAddress — return all claims for a user (used to sync on
+  // connect). This MUST come before the plain-GET branch: an early return
+  // above would swallow the query and leave this branch unreachable.
+  if (req.method === 'GET' && req.query.userAddress) {
+    const userAddress = String(req.query.userAddress).toLowerCase();
+    try {
+      await dbConnect();
+      const claims = await CreditClaim.find({ userAddress }).sort({ claimedAt: -1 }).lean();
+      const totalEarned = claims.reduce((sum, c) => sum + c.creditsEarned, 0);
+      const completedActions = claims.map(c => c.action);
+      return res.status(200).json({ claims, totalEarned, completedActions });
+    } catch {
+      return res.status(200).json({ claims: [], totalEarned: 0, completedActions: [] });
+    }
+  }
+
   // GET — return reward action definitions
   if (req.method === 'GET') {
     return res.status(200).json({ rewardActions: REWARD_ACTIONS });
@@ -160,19 +176,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
-  // GET /claims — return all claims for a user (used to sync on connect)
-  if (req.method === 'GET' && req.query.userAddress) {
-    const userAddress = String(req.query.userAddress).toLowerCase();
-    try {
-      await dbConnect();
-      const claims = await CreditClaim.find({ userAddress }).sort({ claimedAt: -1 }).lean();
-      const totalEarned = claims.reduce((sum, c) => sum + c.creditsEarned, 0);
-      const completedActions = claims.map(c => c.action);
-      return res.status(200).json({ claims, totalEarned, completedActions });
-    } catch {
-      return res.status(200).json({ claims: [], totalEarned: 0, completedActions: [] });
-    }
-  }
+  // (GET ?userAddress claims branch lives above, before the plain-GET early
+  // return — a copy here would be unreachable dead code.)
 
   return res.status(405).json({ error: 'Method not allowed' });
 }

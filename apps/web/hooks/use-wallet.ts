@@ -51,9 +51,12 @@ export function useWallet() {
   const privyEnabled =
     WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID;
 
-  // Sync Privy wallet state with our wallet state
+  // Sync Privy wallet state with our wallet state.
+  // Routine state traces use console.debug (hidden unless verbose logging is
+  // on); only real failures use warn/error. Unauthenticated visitors would
+  // otherwise see alarming "[Wallet] …" lines for a healthy idle state.
   useEffect(() => {
-    console.log("[Wallet] Privy sync check:", {
+    console.debug("[Wallet] Privy sync check:", {
       privyEnabled,
       ready: privy.ready,
       authenticated: privy.authenticated,
@@ -63,22 +66,22 @@ export function useWallet() {
     });
 
     if (!privyEnabled) {
-      console.log("[Wallet] Privy not enabled");
+      console.debug("[Wallet] Privy not enabled");
       return;
     }
 
     if (!privy.ready) {
-      console.log("[Wallet] Privy not ready yet");
+      console.debug("[Wallet] Privy not ready yet");
       return;
     }
 
     if (!privy.authenticated) {
-      console.log("[Wallet] Privy not authenticated");
+      console.debug("[Wallet] Privy not authenticated");
       return;
     }
 
     const syncPrivyWallet = async () => {
-      console.log(
+      console.debug(
         "[Wallet] Privy is ready and authenticated, checking wallets...",
       );
 
@@ -86,10 +89,10 @@ export function useWallet() {
         const embeddedWallet = privyWallets[0];
         const walletAddress = embeddedWallet.address;
 
-        console.log("[Wallet] Found Privy wallet:", walletAddress);
+        console.debug("[Wallet] Found Privy wallet:", walletAddress);
 
         if (walletAddress) {
-          console.log("[Wallet] Syncing Privy wallet to app state");
+          console.debug("[Wallet] Syncing Privy wallet to app state");
           setAddress(walletAddress);
           setIsConnected(true);
           setIsConnecting(false); // Stop the connecting state
@@ -106,7 +109,7 @@ export function useWallet() {
               const parsedChainId = parseInt(chainIdHex as string, 16);
               setChainId(parsedChainId);
               cacheChainId(parsedChainId);
-              console.log(
+              console.debug(
                 "[Wallet] Privy wallet synced successfully, chainId:",
                 parsedChainId,
               );
@@ -116,7 +119,7 @@ export function useWallet() {
           }
         }
       } else {
-        console.log(
+        console.debug(
           "[Wallet] Privy authenticated but no wallets found yet, waiting...",
         );
       }
@@ -135,7 +138,7 @@ export function useWallet() {
   useEffect(() => {
     // Skip auto-connect if user manually disconnected
     if (userDisconnected) {
-      console.log("[Wallet] Skipping auto-connect due to manual disconnect");
+      console.debug("[Wallet] Skipping auto-connect due to manual disconnect");
       return;
     }
 
@@ -253,7 +256,7 @@ export function useWallet() {
         (window as any).ethereum
       ) {
         // Injected wallet detected - use it directly (no Privy modal)
-        console.log("[Wallet] Using detected injected wallet");
+        console.debug("[Wallet] Using detected injected wallet");
         try {
           const accounts = (await provider.request({
             method: "eth_requestAccounts",
@@ -284,11 +287,11 @@ export function useWallet() {
       if (privyEnabled && privy.ready) {
         // Check if already authenticated
         if (privy.authenticated) {
-          console.log("[Wallet] Already authenticated with Privy");
+          console.debug("[Wallet] Already authenticated with Privy");
 
           // Check if wallet exists
           if (privyWallets.length > 0) {
-            console.log("[Wallet] Privy wallet exists, syncing");
+            console.debug("[Wallet] Privy wallet exists, syncing");
             const embeddedWallet = privyWallets[0];
             if (embeddedWallet.address) {
               setAddress(embeddedWallet.address);
@@ -297,11 +300,11 @@ export function useWallet() {
             }
             return;
           } else {
-            console.log("[Wallet] No Privy wallet found, creating one...");
+            console.debug("[Wallet] No Privy wallet found, creating one...");
             // Wallet doesn't exist yet - create it
             try {
               await privy.createWallet();
-              console.log("[Wallet] Privy wallet created, waiting for sync...");
+              console.debug("[Wallet] Privy wallet created, waiting for sync...");
               // The useEffect will pick it up once created
               return;
             } catch (createError) {
@@ -315,7 +318,7 @@ export function useWallet() {
           }
         }
 
-        console.log("[Wallet] Opening Privy modal (social login)");
+        console.debug("[Wallet] Opening Privy modal (social login)");
 
         try {
           await privy.login();
@@ -328,7 +331,7 @@ export function useWallet() {
             privyError?.message?.includes("User closed modal") ||
             privyError?.message?.includes("cancelled")
           ) {
-            console.log("[Wallet] Privy login cancelled by user");
+            console.debug("[Wallet] Privy login cancelled by user");
             return;
           }
 
@@ -387,7 +390,7 @@ export function useWallet() {
         return;
       }
 
-      console.log("[Wallet] Switching to chain:", targetChainId, "hex:", toHexChainId(targetChainId));
+      console.debug("[Wallet] Switching to chain:", targetChainId, "hex:", toHexChainId(targetChainId));
 
       try {
         await provider.request({
@@ -441,13 +444,13 @@ export function useWallet() {
     if (privyEnabled && privy.authenticated) {
       try {
         await privy.logout();
-        console.log("[Wallet] Logged out from Privy");
+        console.debug("[Wallet] Logged out from Privy");
       } catch (err) {
         console.warn("[Wallet] Error logging out from Privy:", err);
       }
     }
 
-    console.log("[Wallet] Disconnected and cleared preferences");
+    console.debug("[Wallet] Disconnected and cleared preferences");
   };
 
   const connectFarcasterWallet = async () => {
@@ -628,7 +631,7 @@ function cacheWalletPreference(
       "diversifi-wallet-preference",
       JSON.stringify(preference),
     );
-    console.log(
+    console.debug(
       `[Wallet] Cached preference: ${type} wallet (${address.substring(0, 6)}...${address.substring(address.length - 4)})`,
     );
   } catch {
