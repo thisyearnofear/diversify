@@ -407,12 +407,25 @@ export interface AgentChatState {
   messages: AIMessage[];
   isChatting: boolean;
   thinkingStep: string;
+  /**
+   * Whether the last completed advisor response reported server-side
+   * long-term memory active (`done` event's `memoryEnabled`). Drives the
+   * quiet "Guardian remembers past conversations" disclosure in the chat
+   * drawer. Session-scoped — not persisted.
+   */
+  memoryEnabled: boolean;
 }
 
 export interface AgentChatActions {
   sendChatMessage: (content: string) => Promise<void>;
   addMessage: (message: AIMessage) => void;
   clearMessages: () => void;
+  /**
+   * Override the memoryEnabled flag — used by "Also forget what it
+   * remembers" to drop the disclosure line after a successful
+   * DELETE /api/agent/memory, without waiting for the next response.
+   */
+  setMemoryEnabled: (enabled: boolean) => void;
   /**
    * Patch an existing message in place. Matched by `id` (preferred) or
    * `timestamp` fallback. Routes to the global conversation context

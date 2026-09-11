@@ -16,11 +16,18 @@ import React, { createContext, useContext, useState, useCallback, type ReactNode
 type ChatStoreState = {
   isChatting: boolean;
   thinkingStep: string;
+  /**
+   * Whether the last advisor response reported long-term memory active
+   * (SSE `done` event). Session-scoped disclosure state for the chat
+   * drawer — reset by "Also forget what it remembers".
+   */
+  memoryEnabled: boolean;
 };
 
 const defaultChatState: ChatStoreState = {
   isChatting: false,
   thinkingStep: '',
+  memoryEnabled: false,
 };
 
 type AgentChatContextValue = {

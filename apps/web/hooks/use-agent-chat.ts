@@ -38,11 +38,19 @@ function contentIncludesQuestion(text: string): boolean {
 type ChatStoreState = {
   isChatting: boolean;
   thinkingStep: string;
+  /**
+   * Whether the last advisor response reported long-term memory active
+   * (SSE `done` event's `memoryEnabled`). Session-scoped disclosure
+   * state for the chat drawer — reset by "Also forget what it
+   * remembers".
+   */
+  memoryEnabled: boolean;
 };
 
 const defaultChatState: ChatStoreState = {
   isChatting: false,
   thinkingStep: "",
+  memoryEnabled: false,
 };
 
 // macro_analysis(0.004) + portfolio_optimization(0.005) + risk_assessment(0.006)
@@ -89,7 +97,7 @@ export function useAgentChat({
 
   const isUsingGlobal = useGlobalConversation && globalConversation !== undefined;
   const messages = isUsingGlobal ? globalConversation!.messages : localMessages;
-  const { isChatting, thinkingStep } = chatState;
+  const { isChatting, thinkingStep, memoryEnabled } = chatState;
 
   const addMessage = useCallback(
     (message: AIMessage) => {
@@ -539,6 +547,9 @@ export function useAgentChat({
           }
 
           const result = finalResult;
+          // The `done` event reports whether server-side long-term memory
+          // (Cognee) is active — surface it as the drawer's disclosure line.
+          updateChatState({ memoryEnabled: result.memoryEnabled === true });
           // Patch receipt amount to reflect true cost to user's research allowance
           const patchedReceipt = x402Receipt && x402Receipt.status !== "failed" && x402Receipt.sources.length > 0
             ? { ...x402Receipt, amount: (Number.parseFloat(x402Receipt.amount || "0") || RESEARCH_BUNDLE_PRICE).toFixed(3) }
@@ -752,13 +763,20 @@ export function useAgentChat({
     ],
   );
 
+  const setMemoryEnabled = useCallback(
+    (enabled: boolean) => updateChatState({ memoryEnabled: enabled }),
+    [updateChatState],
+  );
+
   return {
     messages,
     isChatting,
     thinkingStep,
+    memoryEnabled,
     sendChatMessage,
     addMessage,
     clearMessages,
+    setMemoryEnabled,
     patchMessage,
   };
 }

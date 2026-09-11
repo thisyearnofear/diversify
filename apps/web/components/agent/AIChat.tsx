@@ -30,6 +30,7 @@ import { GUARDIAN_DRAWER_SUBTITLE } from "@/constants/guardian-copy";
 import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { useSharedMultichainBalances } from "@/context/app/PortfolioContext";
+import { useToast } from "../ui/Toast";
 
 const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
   ssr: false,
@@ -396,7 +397,7 @@ export default function AIChat() {
   const { key: userGeminiKey, save: saveGeminiKey } = useUserGeminiKey();
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
-  const { isChatting, thinkingStep, sendChatMessage } = useAgentChat({
+  const { isChatting, thinkingStep, sendChatMessage, memoryEnabled, setMemoryEnabled } = useAgentChat({
     apiBase: API_BASE,
     capabilities,
     useGlobalConversation: true,
@@ -404,13 +405,15 @@ export default function AIChat() {
   });
   const { claimReward } = useCredits();
   const { setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId, setFocusedYieldKey } = useNavigation();
-  const { address } = useWalletContext();
+  const { address, signMessage } = useWalletContext();
+  const { showToast } = useToast();
   const portfolio = useSharedMultichainBalances(address);
   const walletView = buildWalletPortfolioView(portfolio);
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef<number | null>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
+  const [isForgetting, setIsForgetting] = React.useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
   // Direct-claim flow: shared from app-level context.
   const flow = useClaimFlowContext();
@@ -527,6 +530,52 @@ export default function AIChat() {
     setShowClearConfirm(false);
   };
 
+  // "Also forget what it remembers" — clears the SERVER-side long-term
+  // memory (Cognee + Tablestore, scoped to the wallet) in addition to the
+  // local transcript. Wallet-signed: the signature is the consent gesture.
+  // On failure we keep the modal open so "New conversation" (local clear)
+  // is still offered.
+  const handleForgetMemory = async () => {
+    if (!address || isForgetting) return;
+    setIsForgetting(true);
+    try {
+      const { getWalletAuthHeaders } = await import("@/lib/wallet-auth");
+      const authHeaders = await getWalletAuthHeaders(address, signMessage);
+      if (!authHeaders) {
+        showToast("Signature needed to forget past conversations.", "error");
+        return;
+      }
+      const res = await fetch(`${API_BASE}/api/agent/memory`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      if (!res.ok) {
+        showToast("Couldn't reach memory — past conversations may still be remembered.", "error");
+        return;
+      }
+      const data = await res.json().catch(() => null);
+      // Honest reporting: warn when a configured backend didn't confirm
+      // deletion. `available: false` means nothing was stored there.
+      const partialFailure = data && (
+        (data.available?.cognee === true && data.cognee === false) ||
+        (data.available?.tablestore === true && data.tablestore === false)
+      );
+      setMemoryEnabled(false);
+      clearMessages();
+      setShowClearConfirm(false);
+      showToast(
+        partialFailure
+          ? "Forgot what's reachable — one memory store may still hold past conversations."
+          : "Forgot past conversations.",
+        partialFailure ? "warning" : "success",
+      );
+    } catch {
+      showToast("Couldn't reach memory — past conversations may still be remembered.", "error");
+    } finally {
+      setIsForgetting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
       {/* Backdrop */}
@@ -541,7 +590,7 @@ export default function AIChat() {
         />
       )}
 
-      {/* Clear Confirmation Modal */}
+      {/* New Conversation Confirmation Modal */}
       {showClearConfirm && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -551,10 +600,10 @@ export default function AIChat() {
         >
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-5 max-w-[280px] mx-4 border border-gray-200 dark:border-gray-700">
             <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
-              Clear chat?
+              New conversation?
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
-              This can&apos;t be undone.
+              Clears this thread. The Guardian still remembers your goals and past advice.
             </p>
             <div className="flex gap-2">
               <button
@@ -565,11 +614,22 @@ export default function AIChat() {
               </button>
               <button
                 onClick={handleConfirmClear}
-                className="flex-1 px-3 py-2 text-xs font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
+                className="flex-1 px-3 py-2 text-xs font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Clear
+                New conversation
               </button>
             </div>
+            {/* Quiet opt-out of long-term memory too — needs a wallet
+                signature, so only offered when a wallet is connected. */}
+            {address && (
+              <button
+                onClick={handleForgetMemory}
+                disabled={isForgetting}
+                className="mt-3 w-full text-center text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2 transition-colors disabled:opacity-50"
+              >
+                {isForgetting ? "Forgetting…" : "Also forget what it remembers"}
+              </button>
+            )}
           </div>
         </motion.div>
       )}
@@ -687,9 +747,10 @@ export default function AIChat() {
             </button>
             <button
               onClick={() => setShowClearConfirm(true)}
-              className="text-[10px] font-black text-gray-400 hover:text-red-500 uppercase tracking-wider"
+              className="text-[10px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-wider"
+              title="Start a new conversation"
             >
-              Clear
+              New
             </button>
             {/* Explicit close button so users can dismiss without confusion */}
             <button
@@ -1195,6 +1256,14 @@ export default function AIChat() {
                 </button>
               )}
             </form>
+            {/* Trust footnote (design-language §7): one quiet line, shown
+                only when the last advisor response reported long-term
+                memory active. Removed by "Also forget what it remembers". */}
+            {memoryEnabled && (
+              <p className="px-1 text-[11px] text-gray-400">
+                Guardian remembers past conversations
+              </p>
+            )}
           </div>
         </div>
       </motion.div>
