@@ -207,9 +207,21 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           },
           token.toLowerCase(),
         );
+      const badge = onHoleTap
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "plan-badge",
+              onClick: onHoleTap,
+            },
+            name,
+          )
+        : null;
       return React.createElement(
         "div",
         { "data-testid": "protection-plan-ring" },
+        badge,
         hole,
         React.createElement(
           "div",
@@ -898,6 +910,24 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
     expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
     expect(mockConsumeCompareRequest).toHaveBeenCalled();
+  });
+
+  it("header plan badge enters compare and exits it again", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    const badge = screen.getByTestId("plan-badge");
+    fireEvent.click(badge);
+    expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
+
+    fireEvent.click(screen.getByTestId("plan-badge"));
+    expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
   it("fund shape: compare mode replaces the fund block, exit restores it", () => {

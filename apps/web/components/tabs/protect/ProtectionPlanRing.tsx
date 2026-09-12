@@ -242,16 +242,36 @@ export function ProtectionPlanRing({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
         </h3>
-        <motion.span
-          key={archetype.id}
-          className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
-          style={{ background: `${archetype.accent}18`, color: archetype.accent }}
-          initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={springPop}
-        >
-          {archetype.name}
-        </motion.span>
+        {onHoleTap ? (
+          <motion.button
+            key={archetype.id}
+            type="button"
+            data-testid="plan-badge"
+            aria-label={
+              holeHintOverride ? "Exit compare" : "Compare philosophies"
+            }
+            onClick={onHoleTap}
+            className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full inline-block min-h-[32px] min-w-[44px] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            style={{ background: `${archetype.accent}18`, color: archetype.accent }}
+            initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={springPop}
+          >
+            {archetype.name}
+            {!holeHintOverride && " ▾"}
+          </motion.button>
+        ) : (
+          <motion.span
+            key={archetype.id}
+            className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
+            style={{ background: `${archetype.accent}18`, color: archetype.accent }}
+            initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={springPop}
+          >
+            {archetype.name}
+          </motion.span>
+        )}
       </div>
 
       <div className="flex justify-center">
@@ -302,7 +322,7 @@ export function ProtectionPlanRing({
                     data-testid="ring-hole"
                     aria-label="Compare philosophies"
                     onClick={onHoleTap}
-                    className="flex flex-col items-center min-h-[44px] min-w-[44px] p-2"
+                    className="flex flex-col items-center min-h-[44px] min-w-[44px] p-2 pointer-events-auto"
                   >
                     {holeContent}
                   </button>

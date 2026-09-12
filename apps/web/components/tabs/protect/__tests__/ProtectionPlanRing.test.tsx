@@ -230,6 +230,84 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
     expect(onHoleTap).toHaveBeenCalledTimes(1);
   });
 
+  it('the hole button opts back into pointer events despite the inert centre wrapper', () => {
+    // AllocationRing wraps hole children in `pointer-events-none` (slice arcs
+    // under the padding must stay tappable). The button must re-enable events
+    // itself or real clicks never land — jsdom ignores pointer-events CSS, so
+    // this asserts the class contract rather than the click outcome.
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={() => {}}
+      />,
+    );
+    const hole = screen.getByTestId('ring-hole');
+    expect(hole.className).toContain('pointer-events-auto');
+    let node = hole.parentElement;
+    while (node) {
+      if (node.className?.includes?.('pointer-events-none')) {
+        expect(hole.className).toContain('pointer-events-auto');
+      }
+      node = node.parentElement;
+    }
+  });
+
+  it('header pill is a compare button only when onHoleTap is provided', () => {
+    const onHoleTap = vi.fn();
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={onHoleTap}
+      />,
+    );
+    const badge = screen.getByTestId('plan-badge');
+    fireEvent.click(badge);
+    expect(onHoleTap).toHaveBeenCalledTimes(1);
+    expect(badge.textContent).toContain('▾');
+
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    expect(screen.queryByTestId('plan-badge')).not.toBeInTheDocument();
+    screen.getAllByText('Africapitalism').forEach((el) => {
+      expect(el.tagName).not.toBe('BUTTON');
+    });
+  });
+
+  it('the pill keeps calling onHoleTap while comparing — as the exit ("Keep")', () => {
+    const onHoleTap = vi.fn();
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        onHoleTap={onHoleTap}
+        holeHintOverride="under this plan"
+      />,
+    );
+    const badge = screen.getByTestId('plan-badge');
+    expect(badge).toHaveAttribute('aria-label', 'Exit compare');
+    expect(badge.textContent).not.toContain('▾');
+    fireEvent.click(badge);
+    expect(onHoleTap).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps the hole non-interactive without onHoleTap', () => {
     render(
       <ProtectionPlanRing
