@@ -161,6 +161,10 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
     "@/components/protection-cards/tokens"
   );
   return {
+    SLEEVE_ID: "sleeve",
+    VAULT_SLICE_PREFIX: "vault:",
+    isSleeveSelection: (id: string | null | undefined) =>
+      id === "sleeve" || Boolean(id?.startsWith("vault:")),
     ProtectionPlanRing: ({
       strategyKey,
       selectedToken,

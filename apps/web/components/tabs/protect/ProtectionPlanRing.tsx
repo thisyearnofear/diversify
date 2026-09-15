@@ -24,6 +24,34 @@ import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
 import { rwaLegFor } from './RwaAssetCards';
+import { IXS_VAULT_BY_ID } from '@diversifi/shared/src/services/serv/ixs-vault-catalog';
+import type { VaultAllocation } from '@diversifi/shared/src/services/serv/rwa-allocator';
+
+/** Selection id the parent uses for the RWA vault-sleeve view. */
+export const SLEEVE_ID = 'sleeve';
+/** Slice id prefix for fanned IXS vault wedges. */
+export const VAULT_SLICE_PREFIX = 'vault:';
+/** Preview sleeve weight when the plan has no RWA leg to fan. */
+const SLEEVE_PREVIEW_PCT = 15;
+
+export function isSleeveSelection(id: string | null | undefined): boolean {
+  return id === SLEEVE_ID || Boolean(id?.startsWith(VAULT_SLICE_PREFIX));
+}
+
+/** Mix a hex color toward white — fanned vault wedges stay one hue family. */
+function tintHex(hex: string, t: number): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1], 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * t);
+  return `#${(
+    (mix((n >> 16) & 0xff) << 16) |
+    (mix((n >> 8) & 0xff) << 8) |
+    mix(n & 0xff)
+  )
+    .toString(16)
+    .padStart(6, '0')}`;
+}
 
 interface Props {
   /** Effective strategy key (selected strategy overrides onboarding philosophy). */
@@ -44,6 +72,14 @@ interface Props {
   holeHintOverride?: string;
   /** Plan legs override — callers pass risk-adjusted legs so the ring, score, and mix agree. */
   legs?: PlanLeg[];
+  /**
+   * RWA sleeve view is open (selection is 'sleeve' or 'vault:<id>'). The
+   * hatched RWA leg re-slices into the IXS vault allocation; plans without
+   * an RWA leg get a labelled preview sleeve appended to the ring.
+   */
+  sleeveOpen?: boolean;
+  /** Vault weights for the fan — the allocation rows sum to 100. */
+  sleeveVaults?: VaultAllocation[] | null;
 }
 
 export function ProtectionPlanRing({
@@ -57,6 +93,8 @@ export function ProtectionPlanRing({
   onHoleTap,
   holeHintOverride,
   legs,
+  sleeveOpen = false,
+  sleeveVaults = null,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -173,6 +211,31 @@ export function ProtectionPlanRing({
     ];
   }, [slices, primary, dust, dustTotalHeld, dustTotalPlan, needsDisclosure, showDust]);
 
+  // RWA sleeve fan — selecting the sleeve re-slices the hatched wedge into
+  // the IXS vault allocation (or appends a labelled preview sleeve when the
+  // plan has no RWA leg). One hue family, all hatched: it reads as the same
+  // wedge decomposed, not five new colors.
+  const sleeveHost = useMemo(
+    () => ringSlicesForDisplay.find((s) => s.hatch) ?? null,
+    [ringSlicesForDisplay],
+  );
+  const displaySlices = useMemo(() => {
+    if (!sleeveOpen || !sleeveVaults?.length) return ringSlicesForDisplay;
+    const basePct = sleeveHost ? sleeveHost.percent : SLEEVE_PREVIEW_PCT;
+    const baseColor = sleeveHost?.color ?? archetype?.accent ?? QUIET_GRAY;
+    const fan: RingSlice[] = [...sleeveVaults]
+      .sort((a, b) => b.weightPct - a.weightPct)
+      .map((v, i) => ({
+        id: `${VAULT_SLICE_PREFIX}${v.vaultId}`,
+        label: `${IXS_VAULT_BY_ID[v.vaultId]?.name ?? v.vaultId} — RWA vault`,
+        percent: Math.max(0.5, (basePct * v.weightPct) / 100),
+        color: tintHex(baseColor, i * 0.14),
+        hatch: true,
+      }));
+    if (!sleeveHost) return [...ringSlicesForDisplay, ...fan];
+    return ringSlicesForDisplay.flatMap((s) => (s.id === sleeveHost.id ? fan : [s]));
+  }, [sleeveOpen, sleeveVaults, sleeveHost, ringSlicesForDisplay, archetype]);
+
   if (!archetype || allocations.length === 0 || slices.length === 0) return null;
 
   const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
@@ -194,6 +257,23 @@ export function ProtectionPlanRing({
         number: null as React.ReactNode,
         label: emptyLabel,
         hint: archetype.name,
+      };
+    }
+    if (selectedToken === SLEEVE_ID) {
+      return {
+        number: 'RWA' as React.ReactNode,
+        label: 'vault sleeve',
+        hint: sleeveHost ? `${sleeveHost.id} leg` : 'preview — not in your plan',
+      };
+    }
+    if (selectedToken?.startsWith(VAULT_SLICE_PREFIX)) {
+      const vaultId = selectedToken.slice(VAULT_SLICE_PREFIX.length);
+      const meta = IXS_VAULT_BY_ID[vaultId];
+      const weight = sleeveVaults?.find((v) => v.vaultId === vaultId)?.weightPct;
+      return {
+        number: `${weight ?? '—'}%`,
+        label: meta ? meta.name.replace(/ Vault$/, '') : vaultId,
+        hint: 'of the RWA sleeve',
       };
     }
     if (selected || selectedLive) {
@@ -283,8 +363,8 @@ export function ProtectionPlanRing({
       <div className="flex justify-center">
         <motion.div style={{ ...tilt.style, transformPerspective: 900 }} {...tilt.props}>
           <AllocationRing
-            slices={ringSlicesForDisplay}
-            selectedId={selectedToken}
+            slices={displaySlices}
+            selectedId={selectedToken === SLEEVE_ID ? null : selectedToken}
             onSelect={(id) => {
               if (id === "__other__") {
                 setShowDust(true);

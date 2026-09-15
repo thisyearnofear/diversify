@@ -212,6 +212,121 @@ describe('ProtectionPlanRing — projections shape', () => {
   });
 });
 
+describe('ProtectionPlanRing — RWA sleeve fan', () => {
+  const emptyPortfolio = {
+    ...DEMO_PORTFOLIO,
+    totalValue: 0,
+    tokens: [],
+    chains: [],
+  } as unknown as MultichainPortfolio;
+
+  const SLEEVE_VAULTS = [
+    { vaultId: 'ixs-usd-mmf', weightPct: 40, why: 'cash anchor' },
+    { vaultId: 'ixs-open-ended', weightPct: 30, why: 'daily liquidity' },
+    { vaultId: 'ixs-corp-bond', weightPct: 15, why: 'credit' },
+    { vaultId: 'ixs-private-credit', weightPct: 15, why: 'yield' },
+  ];
+
+  it('fans the hatched wedge into IXS vault wedges when the sleeve opens', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="islamic"
+        portfolio={emptyPortfolio}
+        selectedToken="sleeve"
+        onSelectToken={() => {}}
+        sleeveOpen
+        sleeveVaults={SLEEVE_VAULTS}
+      />,
+    );
+    // The PAXG wedge decomposes — vault wedges appear, the host is gone.
+    expect(
+      screen.getByRole('button', {
+        name: /Fidelity USD Money Market Fund Vault — RWA vault/,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Open-Ended Vault \(daily liquidity\) — RWA vault/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /^PAXG — plan/ }),
+    ).not.toBeInTheDocument();
+    // Other plan legs are untouched.
+    expect(screen.getByRole('button', { name: /^cUSD — plan/ })).toBeInTheDocument();
+    // Hole names the sleeve context.
+    expect(screen.getByText('vault sleeve')).toBeInTheDocument();
+    expect(screen.getByText('PAXG leg')).toBeInTheDocument();
+  });
+
+  it('appends a labelled preview sleeve when the plan has no RWA leg', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={emptyPortfolio}
+        selectedToken="sleeve"
+        onSelectToken={() => {}}
+        sleeveOpen
+        sleeveVaults={SLEEVE_VAULTS}
+      />,
+    );
+    // Plan legs stay put…
+    expect(screen.getByRole('button', { name: /^KESm — plan/ })).toBeInTheDocument();
+    // …and the vault fan is appended as a preview.
+    expect(
+      screen.getByRole('button', {
+        name: /Fidelity USD Money Market Fund Vault — RWA vault/,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('preview — not in your plan')).toBeInTheDocument();
+  });
+
+  it('shows the focused vault in the hole when a wedge is selected', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="islamic"
+        portfolio={emptyPortfolio}
+        selectedToken="vault:ixs-usd-mmf"
+        onSelectToken={() => {}}
+        sleeveOpen
+        sleeveVaults={SLEEVE_VAULTS}
+      />,
+    );
+    expect(screen.getByText('of the RWA sleeve')).toBeInTheDocument();
+    expect(screen.getByText('Fidelity USD Money Market Fund')).toBeInTheDocument();
+  });
+
+  it('emits the vault slice id when a fanned wedge is tapped', () => {
+    const onSelect = vi.fn();
+    render(
+      <ProtectionPlanRing
+        strategyKey="islamic"
+        portfolio={emptyPortfolio}
+        selectedToken="sleeve"
+        onSelectToken={onSelect}
+        sleeveOpen
+        sleeveVaults={SLEEVE_VAULTS}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: /Fidelity USD Money Market Fund Vault — RWA vault/ }),
+    );
+    expect(onSelect).toHaveBeenCalledWith('vault:ixs-usd-mmf');
+  });
+
+  it('does not fan while the sleeve view is closed', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="islamic"
+        portfolio={emptyPortfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        sleeveVaults={SLEEVE_VAULTS}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /RWA vault/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^PAXG — plan/ })).toBeInTheDocument();
+  });
+});
+
 describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
   it('renders the hole as a button only when onHoleTap is provided and nothing is selected', () => {
     const onHoleTap = vi.fn();

@@ -66,6 +66,10 @@ import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfol
 import StatusBadge from "../shared/StatusBadge";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { rwaLegFor } from "./protect/RwaAssetCards";
+import { RwaVaultSleeve } from "./protect/RwaVaultSleeve";
+import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
+import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
+import { IXS_VAULT_BY_ID } from "@diversifi/shared/src/services/serv/ixs-vault-catalog";
 import WalletButton from "../wallet/WalletButton";
 
 interface ProtectionTabProps {
@@ -125,9 +129,30 @@ export default function ProtectionTab({
     }
   }, [address]);
   const handleMarqueeSelect = useCallback((token: string | null) => {
-    setFocusedToken(token);
+    // Re-tapping a vault wedge steps back to the sleeve, not out of it.
+    setFocusedToken((prev) =>
+      token === null && prev?.startsWith(VAULT_SLICE_PREFIX) ? SLEEVE_ID : token,
+    );
     if (token) trackFunnelEvent("marquee_select", { token, source: "shield_ring" });
   }, []);
+
+  // RWA vault sleeve — the hatched wedge fans into the IXS allocation.
+  // Free heuristic is local + instant; SERV Reasoning is an opt-in rail in
+  // the inspector, fetched only while the sleeve view is open.
+  const [rwaServOn, setRwaServOn] = useState(false);
+  const sleeveOpen = !comparing && isSleeveSelection(focusedToken);
+  const rwa = useRwaAllocation(
+    useMemo(
+      () => ({
+        philosophy: config.philosophy,
+        riskTolerance: config.riskTolerance,
+        region: config.userRegion,
+        amountUsd: totalValue > 0 ? Math.round(totalValue) : null,
+      }),
+      [config.philosophy, config.riskTolerance, config.userRegion, totalValue],
+    ),
+    rwaServOn && sleeveOpen,
+  );
 
   const strategyKey = (selectedStrategy || financialStrategy) as string | null;
   const hasPlan = Boolean(strategyKey);
@@ -158,6 +183,13 @@ export default function ProtectionTab({
     }
     return map;
   }, [chains, totalValue]);
+
+  // The wedge the sleeve fans from — a held RWA token first (funded ring is
+  // holdings), else the plan's RWA leg. Null means the sleeve is a preview.
+  const sleeveHostSymbol = useMemo(() => {
+    const held = [...heldPctByToken.keys()].find((t) => rwaLegFor(t));
+    return held ?? allocations.find((a) => rwaLegFor(a.token))?.token ?? null;
+  }, [heldPctByToken, allocations]);
 
   // Compare mode (Wave D): the ring previews the focused philosophy's plan
   // without committing it — the committed alignment/shape/since-last-visit
@@ -485,6 +517,8 @@ export default function ProtectionTab({
             holeHintOverride={
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
+            sleeveOpen={sleeveOpen}
+            sleeveVaults={rwa.allocations}
           />
           {!comparing && (
             <div className="mt-3">
@@ -571,9 +605,35 @@ export default function ProtectionTab({
       title={
         shape === "picker" || comparing
           ? (STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "Plan")
-          : (focusedToken ?? "Slice")
+          : focusedToken === SLEEVE_ID
+            ? "RWA vault sleeve"
+            : focusedToken?.startsWith(VAULT_SLICE_PREFIX)
+              ? (IXS_VAULT_BY_ID[focusedToken.slice(VAULT_SLICE_PREFIX.length)]?.name ??
+                "RWA vault")
+              : (focusedToken ?? "Slice")
       }
     >
+      {shape !== "picker" && !comparing && sleeveOpen && (
+        <RwaVaultSleeve
+          allocations={rwa.allocations}
+          summary={rwa.summary}
+          source={rwa.source}
+          loading={rwa.loading}
+          degradedReason={rwa.degradedReason}
+          receipt={rwa.receipt}
+          servOn={rwaServOn}
+          onToggleServ={setRwaServOn}
+          focusedVaultId={
+            focusedToken?.startsWith(VAULT_SLICE_PREFIX)
+              ? focusedToken.slice(VAULT_SLICE_PREFIX.length)
+              : null
+          }
+          onSelectVault={(id) =>
+            setFocusedToken(id ? `${VAULT_SLICE_PREFIX}${id}` : SLEEVE_ID)
+          }
+          sleeveContext={sleeveHostSymbol ? `${sleeveHostSymbol} leg` : "preview"}
+        />
+      )}
       {(shape === "picker" || comparing) && focusedPhilosophy && (
         <div className="space-y-3">
           {comparing && (
@@ -655,7 +715,7 @@ export default function ProtectionTab({
           </button>
         </div>
       )}
-      {shape !== "picker" && !comparing && focusedToken && (
+      {shape !== "picker" && !comparing && focusedToken && !isSleeveSelection(focusedToken) && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <TokenIcon symbol={focusedToken} size={22} />
@@ -708,9 +768,19 @@ export default function ProtectionTab({
             const rwa = rwaLegFor(focusedToken);
             if (!rwa) return null;
             return (
-              <p data-testid="rwa-leg" className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                {rwa.label} — {rwa.description}
-              </p>
+              <>
+                <p data-testid="rwa-leg" className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {rwa.label} — {rwa.description}
+                </p>
+                <button
+                  type="button"
+                  data-testid="rwa-sleeve-rail"
+                  onClick={() => setFocusedToken(SLEEVE_ID)}
+                  className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
+                >
+                  See this sleeve as licensed RWA vaults →
+                </button>
+              </>
             );
           })()}
           {/* One forward CTA per selection — the inspector is never a dead
@@ -842,6 +912,33 @@ export default function ProtectionTab({
         <p data-testid="shield-since-last-visit" className="text-[11px] text-gray-400 dark:text-gray-500">
           {alignmentSinceLine}
         </p>
+      )}
+      {/* RWA sleeve rail — the status/transition grammar (§5 rail 4). Plans
+          with an RWA leg reach the sleeve through the hatched wedge; every
+          other persona reaches it here. */}
+      {sleeveOpen ? (
+        <button
+          type="button"
+          data-testid="rwa-sleeve-back"
+          onClick={() => setFocusedToken(null)}
+          className="font-semibold text-blue-600 dark:text-blue-400"
+        >
+          ← Back to plan
+        </button>
+      ) : (
+        !comparing &&
+        planRingVisible &&
+        !sleeveHostSymbol &&
+        !focusedToken && (
+          <button
+            type="button"
+            data-testid="rwa-sleeve-entry"
+            onClick={() => setFocusedToken(SLEEVE_ID)}
+            className="font-semibold text-blue-600 dark:text-blue-400"
+          >
+            RWA vaults: preview a yield sleeve →
+          </button>
+        )
       )}
       <div className="flex items-center justify-between gap-3">
       {comparing ? (
