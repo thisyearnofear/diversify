@@ -88,6 +88,19 @@ X402_SOURCES=macro_analysis,portfolio_optimization,risk_assessment \
 pnpm generate-x402-volume
 ```
 
+### Rive objects (optional — only when editing them)
+
+The app's five self-contained Rive objects ship compiled in `apps/web/public/rive/`
+— no tooling needed to run the app. To edit one:
+
+1. Install the `rive` CLI (it prints its own install flow on first run).
+2. Edit `apps/web/rive/<object>/scene.rml`, then `rive apps/web/rive/<object> --verify`.
+3. `pnpm rive:build` recompiles all five into `apps/web/public/rive/`.
+4. `pnpm dev` → open `/rive-test` (dev-only, renders nothing in production) to exercise every
+   object, its bound colors, and its settled/armed/posture states side by side.
+
+Rules and the object inventory: [`design-language.md`](./design-language.md) §5.
+
 ### Test Drive
 
 1. Switch to Celo Sepolia in your wallet
