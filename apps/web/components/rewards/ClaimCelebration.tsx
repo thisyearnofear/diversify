@@ -7,9 +7,8 @@
 
 import React, { useEffect } from 'react';
 import { NETWORKS } from "../../config";
-import { Coin } from '../shared/FloatingCoins';
+import RiveCoin from '../shared/RiveCoin';
 import Scrim from '../shared/Scrim';
-import { STATUS_COLORS } from "../shared/palette";
 
 interface ClaimCelebrationProps {
   amount: string;
@@ -27,17 +26,21 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
       <Scrim intensity="default" onClick={onClose} />
+      <div
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+        onClick={onClose}
+      >
       <div
         className="w-full sm:max-w-md bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl p-8 animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 duration-500 relative overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center mb-6 relative z-10">
           <div className="flex justify-center mb-3">
-            <div className="animate-in zoom-in duration-500 coin-float">
-              <Coin size={80} symbol="G$" color={STATUS_COLORS.good} />
-            </div>
+            <RiveCoin size={120} symbol="G$" />
           </div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-1 tracking-tight">
             Claim Successful
@@ -100,6 +103,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
           Maybe later
         </button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

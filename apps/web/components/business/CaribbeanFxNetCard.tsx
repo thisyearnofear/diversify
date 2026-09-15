@@ -3,6 +3,8 @@ import { motion } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useFxNetting, type FxSettlement } from "../../hooks/use-fx-netting";
 import { trackFunnelEvent } from "@/lib/analytics";
+import RiveNetPair from "../shared/RiveNetPair";
+import { codeCoinTint } from "../shared/palette";
 
 /**
  * CaribbeanFxNetCard — the FX Corridor card for the Future Caribbean track.
@@ -84,6 +86,14 @@ export function CaribbeanFxNetCard() {
   /** Settlements owed TO the caller, settled ones included (receipts). */
   const myReceipts: FxSettlement[] = (settlements ?? []).filter(
     (s) => s.toParticipant.toLowerCase() === (address ?? '').toLowerCase(),
+  );
+  /** True once any settlement the caller is party to has verified on-chain —
+   *  drives the pair object's seal state (it is a state, not an event). */
+  const me = (address ?? '').toLowerCase();
+  const pairSealed = (settlements ?? []).some(
+    (s) =>
+      s.status === 'settled' &&
+      (s.fromParticipant.toLowerCase() === me || s.toParticipant.toLowerCase() === me),
   );
 
   const handleSubmit = () => {
@@ -258,6 +268,19 @@ export function CaribbeanFxNetCard() {
             </div>
           ) : (
             <>
+              {/* The match artefact: coins link when the pool matched, seal
+                  when a leg settles on-chain. State-driven (§5) — the object
+                  replays only if this subtree remounts. */}
+              {data && data.matches.length > 0 && (
+                <div className="mb-3" data-testid="fx-net-pair">
+                  <RiveNetPair
+                    size={170}
+                    leftColor={codeCoinTint(sellCurrency)}
+                    rightColor={codeCoinTint(buyCurrency)}
+                    settled={pairSealed}
+                  />
+                </div>
+              )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
                   <div className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matched</div>

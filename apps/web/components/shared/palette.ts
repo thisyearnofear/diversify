@@ -47,6 +47,20 @@ export function tokenColor(symbol: string | null | undefined): string {
   return (symbol && TOKEN_COLORS[symbol]) || QUIET_GRAY;
 }
 
+/**
+ * Deterministic coin tint for a code with no brand color — fiat legs in
+ * FX netting (BBD, JMD, …). A code always maps to the same tint so a pair
+ * keeps its identity across renders.
+ */
+export function codeCoinTint(code: string | null | undefined): string {
+  if (!code) return QUIET_GRAY;
+  const upper = code.toUpperCase();
+  if (TOKEN_COLORS[upper]) return TOKEN_COLORS[upper];
+  let h = 0;
+  for (const c of upper) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return COIN_TINTS[h % COIN_TINTS.length];
+}
+
 /** Curated coin tints for fallback asset icons — warm, saturated, legible
  * on both light and dark chip backgrounds. */
 export const COIN_TINTS = [

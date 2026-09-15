@@ -1,0 +1,245 @@
+<Rive version="1" kind="fragment">
+    <Artboard defaultStateMachineId="0:7" viewModelId="0:80" styleId="0:5" width="160" height="160" name="VerifiedSeal" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- Draw order is front-to-back: first declared paints on top. -->
+
+        <!-- Check: stamps in on verify (scale pop on its own node). -->
+        <Node x="80" y="80" name="CheckNode" id="0:21" scaleX="0" scaleY="0">
+            <Shape name="Check">
+                <PointsPath name="Path">
+                    <StraightVertex x="-17" y="1" radius="5"/>
+                    <StraightVertex x="-5" y="14" radius="5"/>
+                    <StraightVertex x="19" y="-14" radius="5"/>
+                </PointsPath>
+                <Stroke thickness="9" cap="round" join="round" name="Stroke">
+                    <SolidColor colorValue="FFFFFFFF" name="Color"/>
+                </Stroke>
+            </Shape>
+        </Node>
+
+        <!-- SealDisc: the accent face that presses in behind the check. -->
+        <Shape x="80" y="80" name="SealDisc" id="0:22" scaleX="0" scaleY="0">
+            <Ellipse width="88" height="88" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="Fill">
+                <RadialGradient startX="-14" startY="-16" endX="12" endY="20" name="Gradient">
+                    <GradientStop colorValue="FF34D399" position="0" id="0:27" name="StopLight">
+                        <DataBindContext sourcePathIds="0:80-0:83" propertyKey="38"/>
+                    </GradientStop>
+                    <GradientStop colorValue="FF10B981" position="0.6" id="0:28" name="StopMid">
+                        <DataBindContext sourcePathIds="0:80-0:82" propertyKey="38"/>
+                    </GradientStop>
+                    <GradientStop colorValue="FF047857" position="1" id="0:29" name="StopDark">
+                        <DataBindContext sourcePathIds="0:80-0:84" propertyKey="38"/>
+                    </GradientStop>
+                </RadialGradient>
+            </Fill>
+        </Shape>
+
+        <!-- RingSolid: the accent ring that trims closed on verify. -->
+        <Shape x="80" y="80" name="RingSolid" id="0:23">
+            <Ellipse width="104" height="104" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="6" cap="round" name="Stroke">
+                <SolidColor colorValue="FF10B981" name="Color" id="0:30">
+                    <DataBindContext sourcePathIds="0:80-0:82" propertyKey="37"/>
+                </SolidColor>
+                <TrimPath start="0" end="0" offset="0.25" name="Trim" id="0:24"/>
+            </Stroke>
+        </Shape>
+
+        <!-- RingPending: dashed slate ring, visible until verified. -->
+        <Shape x="80" y="80" name="RingPending" id="0:25">
+            <Ellipse width="104" height="104" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="4" name="Stroke">
+                <SolidColor colorValue="FF94A3B8" name="Color"/>
+                <DashPath name="Dashes">
+                    <Dash length="10" name="On"/>
+                    <Dash length="8" name="Off"/>
+                </DashPath>
+            </Stroke>
+        </Shape>
+
+        <!-- Pulse: one expanding ring on the stamp frame. -->
+        <Shape x="80" y="80" name="Pulse" id="0:26" opacity="0" scaleX="0.55" scaleY="0.55">
+            <Ellipse width="104" height="104" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="3" name="Stroke">
+                <SolidColor colorValue="FF34D399" name="Color" id="0:31">
+                    <DataBindContext sourcePathIds="0:80-0:83" propertyKey="37"/>
+                </SolidColor>
+            </Stroke>
+        </Shape>
+
+        <StateMachine name="VerifiedSeal" id="0:7">
+            <StateMachineLayer name="Main" id="0:8">
+                <AnyState x="560" y="-140"/>
+                <ExitState x="720" y="-140"/>
+                <EntryState>
+                    <StateTransition stateToId="0:12"/>
+                </EntryState>
+
+                <AnimationState x="160" y="0" animationId="0:60" id="0:12" stateName="Pending">
+                    <StateTransition stateToId="0:13" duration="60">
+                        <TransitionViewModelCondition opValue="equal">
+                            <TransitionPropertyViewModelComparator>
+                                <BindablePropertyBoolean>
+                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="634"/>
+                                </BindablePropertyBoolean>
+                            </TransitionPropertyViewModelComparator>
+                            <TransitionValueBooleanComparator value="true"/>
+                        </TransitionViewModelCondition>
+                    </StateTransition>
+                </AnimationState>
+
+                <AnimationState x="340" y="0" animationId="0:61" id="0:13" stateName="Stamp">
+                    <StateTransition stateToId="0:14" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+
+                <AnimationState x="520" y="0" animationId="0:62" id="0:14" stateName="Sealed">
+                    <!-- Entering Sealed writes `sealed` for the host (confirm haptic). -->
+                    <ListenerViewModelChange>
+                        <BindablePropertyTrigger>
+                            <DataBindContext sourcePathIds="0:80-0:85" propertyKey="686" direction="true"/>
+                        </BindablePropertyTrigger>
+                    </ListenerViewModelChange>
+                </AnimationState>
+            </StateMachineLayer>
+        </StateMachine>
+
+        <!-- PendingHold: dashed ring only. -->
+        <LinearAnimation duration="1" name="PendingHold" id="0:60">
+            <KeyedObject objectId="0:25">
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:24">
+                <KeyedProperty propertyKey="115"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:26">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="0.55" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="0.55" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- Stamp: pending fades, ring trims closed, disc presses in, check pops, one pulse. -->
+        <LinearAnimation duration="40" name="Stamp" id="0:61">
+            <KeyedObject objectId="0:25">
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="8" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:24">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="2" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="16" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="8" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1.1" period="0.5"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="20" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="8" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1.1" period="0.5"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="20" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="13" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1.2" period="0.45"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="24" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="13" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1.2" period="0.45"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="24" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:26">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.55" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0.55" frame="12" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.4" frame="30" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0.55" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0.55" frame="12" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.4" frame="30" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="12" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.55" frame="14" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="32" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- SealedHold: ring closed, disc + check present, pulse gone. -->
+        <LinearAnimation duration="1" name="SealedHold" id="0:62">
+            <KeyedObject objectId="0:25">
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:24">
+                <KeyedProperty propertyKey="115"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:22">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:26">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1.4" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1.4" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+    </Artboard>
+
+    <ViewModel defaultInstanceId="0:90" name="VerifiedSeal" id="0:80">
+        <ViewModelPropertyBoolean name="verified" id="0:81"/>
+        <ViewModelPropertyColor name="accent" id="0:82"/>
+        <ViewModelPropertyColor name="accentLight" id="0:83"/>
+        <ViewModelPropertyColor name="accentDark" id="0:84"/>
+        <ViewModelPropertyTrigger name="sealed" id="0:85"/>
+        <ViewModelInstance exports="true" name="Default" id="0:90">
+            <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:81"/>
+            <ViewModelInstanceColor propertyValue="FF10B981" viewModelPropertyId="0:82"/>
+            <ViewModelInstanceColor propertyValue="FF34D399" viewModelPropertyId="0:83"/>
+            <ViewModelInstanceColor propertyValue="FF047857" viewModelPropertyId="0:84"/>
+        </ViewModelInstance>
+    </ViewModel>
+</Rive>

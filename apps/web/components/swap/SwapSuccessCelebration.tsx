@@ -8,8 +8,9 @@ import {
 import { NETWORKS } from "../../config";
 import Scrim from "../shared/Scrim";
 import { Coin } from "../shared/FloatingCoins";
+import RiveCoin from "../shared/RiveCoin";
 import { haptics } from "../../lib/haptics";
-import { STATUS_COLORS } from "../shared/palette";
+import { STATUS_COLORS, TOKEN_COLORS } from "../shared/palette";
 
 interface SwapSuccessCelebrationProps {
   isVisible: boolean;
@@ -78,8 +79,12 @@ export default function SwapSuccessCelebration({
   }, [isVisible, onClose]);
 
   return (
-    <AnimatePresence>
-      {isVisible && (
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
+      {isVisible && <Scrim intensity="heavy" />}
+      <AnimatePresence>
+        {isVisible && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -87,7 +92,6 @@ export default function SwapSuccessCelebration({
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
           onClick={onClose}
         >
-          <Scrim intensity="heavy" />
           {/* Coin rain — brand coins, not generic dots (reduced-motion: none) */}
           {!reduceMotion &&
             confettiPieces.map((piece) => (
@@ -120,17 +124,17 @@ export default function SwapSuccessCelebration({
             className="relative bg-gradient-to-br from-white via-emerald-50 to-blue-50 dark:from-gray-900 dark:via-emerald-900/20 dark:to-blue-900/20 rounded-3xl shadow-2xl p-8 max-w-md w-full border-2 border-emerald-200 dark:border-emerald-800"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Minted coin — the destination token, flipping into existence.
-                Same mint idiom as ClaimCelebration and the wizard's coin steps. */}
-            <motion.div
-              initial={reduceMotion ? { scale: 0 } : { scale: 0, rotateY: -180 }}
-              animate={{ scale: 1, rotateY: 0 }}
-              transition={{ delay: 0.2, type: "spring", damping: 12, stiffness: 200 }}
-              className="mx-auto mb-6 w-fit"
-              style={{ transformStyle: 'preserve-3d' }}
-            >
-              <Coin size={80} symbol={toToken} color={STATUS_COLORS.good} shine />
-            </motion.div>
+            {/* Minted coin — the destination token mints in its own brand
+                color. Same mint idiom as ClaimCelebration (the Rive object
+                owns the drop/flip/land/shine; reduced motion falls back to
+                the static Coin with the token glyph). */}
+            <div className="mx-auto mb-6 w-fit">
+              <RiveCoin
+                size={110}
+                symbol={toToken}
+                color={TOKEN_COLORS[toToken] ?? STATUS_COLORS.good}
+              />
+            </div>
 
             {/* Title */}
             <motion.h2
@@ -323,7 +327,8 @@ export default function SwapSuccessCelebration({
             </motion.button>
           </motion.div>
         </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

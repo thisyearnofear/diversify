@@ -1,0 +1,470 @@
+<Rive version="1" kind="fragment">
+    <Artboard defaultStateMachineId="0:7" viewModelId="0:40" styleId="0:5" width="240" height="140" name="NetPair" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- Draw order is front-to-back: first declared paints on top. -->
+
+        <!-- Seal badge: emerald disc + check, stamps onto the coin junction on `settled`. -->
+        <Node x="120" y="70" name="Badge" id="0:35" opacity="0" scaleX="0" scaleY="0">
+            <Shape name="Check">
+                <PointsPath name="Path">
+                    <StraightVertex x="-7" y="0.5" radius="2.5"/>
+                    <StraightVertex x="-1.5" y="6" radius="2.5"/>
+                    <StraightVertex x="8" y="-7" radius="2.5"/>
+                </PointsPath>
+                <Stroke thickness="6" cap="round" join="round" name="Stroke">
+                    <SolidColor colorValue="FFFFFFFF" name="Color"/>
+                </Stroke>
+            </Shape>
+            <Shape name="BadgeDisc">
+                <Ellipse width="34" height="34" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="Fill"><SolidColor colorValue="FF10B981" name="Color"/></Fill>
+                <Stroke thickness="1.5" name="Stroke">
+                    <SolidColor colorValue="FF047857" name="Color"/>
+                </Stroke>
+            </Shape>
+        </Node>
+
+        <!-- Sparkle: 4-point star, pops once at the ring's close. -->
+        <Shape x="186" y="42" name="Sparkle" id="0:30" opacity="0" scaleX="0" scaleY="0">
+            <Star width="26" height="26" points="4" innerRadius="0.18" cornerRadius="2" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="Fill"><SolidColor colorValue="FFFFFFFF" name="Color"/></Fill>
+        </Shape>
+
+        <!-- Coin A (sell side): disc fill bound to view model `leftColor`. -->
+        <Node x="95" y="70" name="CoinA" id="0:20" opacity="0">
+            <Shape name="Gloss">
+                <Ellipse x="-9" y="-11" width="18" height="10" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="Fill"><SolidColor colorValue="38FFFFFF" name="Color"/></Fill>
+            </Shape>
+            <Shape name="InnerRing">
+                <Ellipse width="44" height="44" originX="0.5" originY="0.5" name="Path"/>
+                <Stroke thickness="2" name="Stroke">
+                    <SolidColor colorValue="59FFFFFF" name="Color"/>
+                </Stroke>
+            </Shape>
+            <Shape name="Disc">
+                <Ellipse width="56" height="56" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="Fill">
+                    <SolidColor colorValue="FF14B8A6" name="Color" id="0:23">
+                        <DataBindContext sourcePathIds="0:40-0:41" propertyKey="37"/>
+                    </SolidColor>
+                </Fill>
+            </Shape>
+        </Node>
+
+        <!-- Coin B (buy side): disc fill bound to view model `rightColor`. -->
+        <Node x="145" y="70" name="CoinB" id="0:21" opacity="0">
+            <Shape name="Gloss">
+                <Ellipse x="-9" y="-11" width="18" height="10" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="Fill"><SolidColor colorValue="38FFFFFF" name="Color"/></Fill>
+            </Shape>
+            <Shape name="InnerRing">
+                <Ellipse width="44" height="44" originX="0.5" originY="0.5" name="Path"/>
+                <Stroke thickness="2" name="Stroke">
+                    <SolidColor colorValue="59FFFFFF" name="Color"/>
+                </Stroke>
+            </Shape>
+            <Shape name="Disc">
+                <Ellipse width="56" height="56" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="Fill">
+                    <SolidColor colorValue="FFF59E0B" name="Color" id="0:27">
+                        <DataBindContext sourcePathIds="0:40-0:42" propertyKey="37"/>
+                    </SolidColor>
+                </Fill>
+            </Shape>
+        </Node>
+
+        <!-- Link ring: stadium stroke around the pair, trim-draws closed once they meet. -->
+        <Shape x="120" y="70" name="LinkRing" id="0:31">
+            <Rectangle width="138" height="76" cornerRadiusTL="38" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="3.5" name="Stroke">
+                <SolidColor colorValue="FF14B8A6" name="Color" id="0:33"/>
+                <TrimPath start="0" end="0" offset="0.25" name="Trim" id="0:34"/>
+            </Stroke>
+        </Shape>
+
+        <StateMachine name="NetPair" id="0:7">
+            <StateMachineLayer name="Main" id="0:8">
+                <AnyState x="600" y="-120"/>
+                <ExitState x="760" y="-120"/>
+                <EntryState>
+                    <StateTransition stateToId="0:12"/>
+                </EntryState>
+
+                <AnimationState x="160" y="0" animationId="0:6" id="0:12" stateName="Converge">
+                    <StateTransition stateToId="0:13" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+
+                <AnimationState x="340" y="0" animationId="0:60" id="0:13" stateName="Linked">
+                    <ListenerViewModelChange>
+                        <BindablePropertyTrigger>
+                            <DataBindContext sourcePathIds="0:40-0:45" propertyKey="686" direction="true"/>
+                        </BindablePropertyTrigger>
+                    </ListenerViewModelChange>
+                    <StateTransition stateToId="0:14" duration="140">
+                        <TransitionViewModelCondition>
+                            <TransitionPropertyViewModelComparator>
+                                <BindablePropertyBoolean>
+                                    <DataBindContext sourcePathIds="0:40-0:43" propertyKey="634"/>
+                                </BindablePropertyBoolean>
+                            </TransitionPropertyViewModelComparator>
+                            <TransitionValueBooleanComparator value="true"/>
+                        </TransitionViewModelCondition>
+                    </StateTransition>
+                </AnimationState>
+
+                <AnimationState x="520" y="0" animationId="0:61" id="0:14" stateName="Settle">
+                    <StateTransition stateToId="0:15" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+
+                <AnimationState x="700" y="0" animationId="0:62" id="0:15" stateName="Sealed">
+                    <ListenerViewModelChange>
+                        <BindablePropertyTrigger>
+                            <DataBindContext sourcePathIds="0:40-0:46" propertyKey="686" direction="true"/>
+                        </BindablePropertyTrigger>
+                    </ListenerViewModelChange>
+                </AnimationState>
+            </StateMachineLayer>
+        </StateMachine>
+
+
+
+        <!-- Converge: both coins fly in edge-first, meet with a squash, ring draws, sparkle pops. -->
+        <LinearAnimation duration="66" name="Converge" id="0:6">
+
+            <KeyedObject objectId="0:20">
+                <!-- x: in from the left, slight overshoot to contact (95 rest), settle -->
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="-50" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="100" frame="20" interpolationType="linear"/>
+                    <KeyFrameDouble value="95" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="70" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="-0.14" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="30" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="18" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.14" frame="21" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0.95" frame="27" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="18" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.84" frame="21" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.05" frame="27" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="4" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <KeyedObject objectId="0:21">
+                <!-- x: in from the right, mirror of coin A -->
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="290" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.2" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="140" frame="20" interpolationType="linear"/>
+                    <KeyFrameDouble value="145" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="70" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0.14" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="30" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="18" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.14" frame="21" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0.95" frame="27" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="18" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.84" frame="21" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.05" frame="27" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="34" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="4" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Ring: trim-draws closed once the coins meet -->
+            <KeyedObject objectId="0:34">
+                <KeyedProperty propertyKey="115">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="30" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="58" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Ring stroke colour: teal throughout the link -->
+            <KeyedObject objectId="0:33">
+                <KeyedProperty propertyKey="37">
+                    <KeyFrameColor value="FF14B8A6" frame="0" interpolationType="hold"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Sparkle: elastic pop as the ring closes, then out -->
+            <KeyedObject objectId="0:30">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="52" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="62" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="52" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="62" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="52" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="56" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="66" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Badge: parked invisible the whole link phase -->
+            <KeyedObject objectId="0:35">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="120" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+
+            <!-- Ring scale held neutral in the link phase -->
+            <KeyedObject objectId="0:31">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- LinkedHold: one frame at the linked pose; the pair sits still until `settled`. -->
+        <LinearAnimation duration="1" name="LinkedHold" id="0:60">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="95" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="15"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="145" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="15"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:34">
+                <KeyedProperty propertyKey="115"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:33">
+                <KeyedProperty propertyKey="37"><KeyFrameColor value="FF14B8A6" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:30">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:35">
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:31">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- Settle: the badge stamps onto the junction, ring goes emerald, coins press. -->
+        <LinearAnimation duration="30" name="Settle" id="0:61">
+            <KeyedObject objectId="0:35">
+                <!-- y: stamp drop onto the junction -->
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="52" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="52" frame="4" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.55" y1="0" x2="1" y2="0.45"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="70" frame="14" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="4" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.35"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="18" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="4" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.35"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="18" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.88" frame="20" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.4" y1="0" x2="0.6" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="26" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="4" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="8" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Ring goes emerald as the seal lands -->
+            <KeyedObject objectId="0:33">
+                <KeyedProperty propertyKey="37">
+                    <KeyFrameColor value="FF14B8A6" frame="0" interpolationType="hold"/>
+                    <KeyFrameColor value="FF14B8A6" frame="4" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameColor>
+                    <KeyFrameColor value="FF10B981" frame="18" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Ring breathes once as the seal lands -->
+            <KeyedObject objectId="0:31">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="10" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.035" frame="14" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="24" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="10" interpolationType="linear"/>
+                    <KeyFrameDouble value="1.035" frame="14" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="24" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Coins press slightly under the stamp -->
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="10" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.95" frame="14" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.4" y1="0" x2="0.6" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="24" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="10" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.95" frame="14" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.4" y1="0" x2="0.6" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="24" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+
+        <!-- SealedHold: one frame at the sealed pose -->
+        <LinearAnimation duration="1" name="SealedHold" id="0:62">
+            <KeyedObject objectId="0:35">
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:33">
+                <KeyedProperty propertyKey="37"><KeyFrameColor value="FF10B981" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:34">
+                <KeyedProperty propertyKey="115"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:31">
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="95" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:21">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="145" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="70" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+    </Artboard>
+
+    <ViewModel defaultInstanceId="0:44" name="NetPair" id="0:40">
+        <ViewModelPropertyColor name="leftColor" id="0:41"/>
+        <ViewModelPropertyColor name="rightColor" id="0:42"/>
+        <ViewModelPropertyBoolean name="settled" id="0:43"/>
+        <ViewModelPropertyTrigger name="linked" id="0:45"/>
+        <ViewModelPropertyTrigger name="sealed" id="0:46"/>
+        <ViewModelInstance exports="true" name="Default" id="0:44">
+            <ViewModelInstanceColor propertyValue="FF14B8A6" viewModelPropertyId="0:41"/>
+            <ViewModelInstanceColor propertyValue="FFF59E0B" viewModelPropertyId="0:42"/>
+            <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:43"/>
+        </ViewModelInstance>
+    </ViewModel>
+</Rive>

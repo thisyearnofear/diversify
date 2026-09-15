@@ -1,0 +1,230 @@
+<Rive version="1" kind="fragment">
+    <Artboard defaultStateMachineId="0:7" viewModelId="0:80" styleId="0:5" width="240" height="240" name="ClaimCoin" id="0:2">
+        <LayoutComponentStyle name="Artboard Style" id="0:5"/>
+
+        <!-- Draw order is front-to-back: first declared paints on top. -->
+
+        <!-- Sparkle: 4-point star, pops at the coin's top-right after landing, then fades. -->
+        <Shape x="192" y="54" name="Sparkle" id="0:30" opacity="0" scaleX="0" scaleY="0">
+            <Star width="36" height="36" points="4" innerRadius="0.16" cornerRadius="3" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="Fill"><SolidColor colorValue="FFFFFFFF" name="Color"/></Fill>
+        </Shape>
+
+        <!-- Shine band: rotated soft white band, clipped to the disc, sweeps once. -->
+        <Shape x="-30" y="120" rotation="0.4363323" name="Shine" id="0:40">
+            <Rectangle width="44" height="260" originX="0.5" originY="0.5" name="Path"/>
+            <Fill name="Fill">
+                <LinearGradient startX="-22" startY="0" endX="22" endY="0" name="Gradient">
+                    <GradientStop colorValue="00FFFFFF" position="0"/>
+                    <GradientStop colorValue="8CFFFFFF" position="0.5"/>
+                    <GradientStop colorValue="00FFFFFF" position="1"/>
+                </LinearGradient>
+            </Fill>
+            <ClippingShape sourceId="0:50" name="Clip"/>
+        </Shape>
+
+        <!-- Coin: disc + reeded rim + inner ring + check emblem. -->
+        <Node x="120" y="120" name="Coin" id="0:20" opacity="0">
+            <Shape name="Check">
+                <PointsPath name="Path">
+                    <StraightVertex x="-30" y="2" radius="6"/>
+                    <StraightVertex x="-8" y="24" radius="6"/>
+                    <StraightVertex x="34" y="-26" radius="6"/>
+                </PointsPath>
+                <Stroke thickness="13" cap="round" join="round" name="Stroke">
+                    <SolidColor colorValue="FFFFFFFF" name="Color"/>
+                </Stroke>
+            </Shape>
+            <Shape name="InnerRing">
+                <Ellipse width="124" height="124" originX="0.5" originY="0.5" name="Path"/>
+                <Stroke thickness="2.5" name="Stroke">
+                    <SolidColor colorValue="59A7F3D0" name="Color"/>
+                </Stroke>
+            </Shape>
+            <Shape name="Rim">
+                <Ellipse width="156" height="156" originX="0.5" originY="0.5" name="Path"/>
+                <Stroke thickness="9" name="Stroke">
+                    <SolidColor colorValue="73065F46" name="Color"/>
+                    <DashPath name="Reeds">
+                        <Dash length="3.5" name="On"/>
+                        <Dash length="5" name="Off"/>
+                    </DashPath>
+                </Stroke>
+            </Shape>
+            <Shape name="Disc">
+                <Ellipse width="164" height="164" originX="0.5" originY="0.5" name="Path"/>
+                <Fill name="Fill">
+                    <RadialGradient startX="-20" startY="-24" endX="18" endY="30" name="Gradient">
+                        <GradientStop colorValue="FF6EE7B7" position="0" id="0:51" name="StopLight">
+                            <DataBindContext sourcePathIds="0:80-0:81" propertyKey="38"/>
+                        </GradientStop>
+                        <GradientStop colorValue="FF10B981" position="0.55" id="0:52" name="StopMid">
+                            <DataBindContext sourcePathIds="0:80-0:82" propertyKey="38"/>
+                        </GradientStop>
+                        <GradientStop colorValue="FF047857" position="1" id="0:53" name="StopDark">
+                            <DataBindContext sourcePathIds="0:80-0:83" propertyKey="38"/>
+                        </GradientStop>
+                    </RadialGradient>
+                </Fill>
+            </Shape>
+        </Node>
+
+        <!-- Clip mask for the shine: geometry only, no paint = invisible. -->
+        <Shape x="120" y="120" name="CoinMask" id="0:50">
+            <Ellipse width="164" height="164" originX="0.5" originY="0.5" name="Path"/>
+        </Shape>
+
+        <StateMachine name="State Machine 1" id="0:7">
+            <StateMachineLayer name="Layer 1" id="0:8">
+                <AnyState x="200" y="-120"/>
+                <ExitState x="560" y="-120"/>
+                <EntryState>
+                    <StateTransition stateToId="0:12"/>
+                </EntryState>
+                <AnimationState x="200" animationId="0:6" id="0:12" stateName="Mint">
+                    <StateTransition stateToId="0:13" enableExitTime="true" exitTimeIsPercetange="true" exitTime="100"/>
+                </AnimationState>
+                <!-- Rest: hold the landed pose; entering it fires `landed` for the host. -->
+                <AnimationState x="380" animationId="0:60" id="0:13" stateName="Rest">
+                    <ListenerViewModelChange>
+                        <BindablePropertyTrigger>
+                            <DataBindContext sourcePathIds="0:80-0:85" propertyKey="686" direction="true"/>
+                        </BindablePropertyTrigger>
+                    </ListenerViewModelChange>
+                </AnimationState>
+            </StateMachineLayer>
+        </StateMachine>
+
+        <!-- Mint: drop edge-on while flipping, land with squash, shine sweep, sparkle pop. -->
+        <LinearAnimation duration="66" name="Mint" id="0:6">
+
+            <KeyedObject objectId="0:20">
+                <!-- y: fall from above, small dip on landing, settle (artboard space: rest = 120) -->
+                <KeyedProperty propertyKey="14">
+                    <KeyFrameDouble value="-100" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.6" y1="0" x2="1" y2="0.5"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="120" frame="16" interpolationType="linear"/>
+                    <KeyFrameDouble value="125" frame="20" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="120" frame="32" interpolationType="linear"/>
+                </KeyedProperty>
+                <!-- scaleX: edge-on -> flip through the axis twice -> face at landing -->
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0.06" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="-0.55" frame="6" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.55" frame="12" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.2" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="16" interpolationType="linear"/>
+                </KeyedProperty>
+                <!-- scaleY: squash on landing, rebound, settle -->
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="1" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="16" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.4" y1="0" x2="0.6" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0.84" frame="18" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1.06" frame="24" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="32" interpolationType="linear"/>
+                </KeyedProperty>
+                <!-- rotation: slight tilt while falling, straightens on land -->
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="-0.55" frame="0" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.3" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="22" interpolationType="linear"/>
+                </KeyedProperty>
+                <!-- opacity: quick fade-in as it enters -->
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="linear"/>
+                    <KeyFrameDouble value="1" frame="3" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Shine: parked off-canvas until frame 30, then one sweep across the disc -->
+            <KeyedObject objectId="0:40">
+                <KeyedProperty propertyKey="13">
+                    <KeyFrameDouble value="-30" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="-30" frame="30" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="270" frame="56" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+            <!-- Sparkle: elastic pop after the land, then fade out -->
+            <KeyedObject objectId="0:30">
+                <KeyedProperty propertyKey="16">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="24" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="36" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="17">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="24" interpolationType="elastic">
+                        <ElasticInterpolator easingValue="1" amplitude="1" period="0.4"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="36" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="18">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="24" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0" y1="0" x2="0.58" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="1" frame="28" interpolationType="hold"/>
+                    <KeyFrameDouble value="1" frame="46" interpolationType="cubic">
+                        <CubicEaseInterpolator x1="0.42" y1="0" x2="1" y2="1"/>
+                    </KeyFrameDouble>
+                    <KeyFrameDouble value="0" frame="56" interpolationType="linear"/>
+                </KeyedProperty>
+                <KeyedProperty propertyKey="15">
+                    <KeyFrameDouble value="0" frame="0" interpolationType="hold"/>
+                    <KeyFrameDouble value="0" frame="24" interpolationType="linear"/>
+                    <KeyFrameDouble value="0.9" frame="56" interpolationType="linear"/>
+                </KeyedProperty>
+            </KeyedObject>
+
+        </LinearAnimation>
+
+        <!-- RestHold: one frame at the landed pose -->
+        <LinearAnimation duration="1" name="RestHold" id="0:60">
+            <KeyedObject objectId="0:20">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="120" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="14"><KeyFrameDouble value="120" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="15"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:40">
+                <KeyedProperty propertyKey="13"><KeyFrameDouble value="270" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+            <KeyedObject objectId="0:30">
+                <KeyedProperty propertyKey="15"><KeyFrameDouble value="0.9" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="16"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="17"><KeyFrameDouble value="1" frame="0" interpolationType="hold"/></KeyedProperty>
+                <KeyedProperty propertyKey="18"><KeyFrameDouble value="0" frame="0" interpolationType="hold"/></KeyedProperty>
+            </KeyedObject>
+        </LinearAnimation>
+    </Artboard>
+
+    <ViewModel defaultInstanceId="0:84" name="ClaimCoin" id="0:80">
+        <ViewModelPropertyColor name="accentLight" id="0:81"/>
+        <ViewModelPropertyColor name="accent" id="0:82"/>
+        <ViewModelPropertyColor name="accentDark" id="0:83"/>
+        <ViewModelPropertyTrigger name="landed" id="0:85"/>
+        <ViewModelInstance exports="true" name="Default" id="0:84">
+            <ViewModelInstanceColor propertyValue="FF6EE7B7" viewModelPropertyId="0:81"/>
+            <ViewModelInstanceColor propertyValue="FF10B981" viewModelPropertyId="0:82"/>
+            <ViewModelInstanceColor propertyValue="FF047857" viewModelPropertyId="0:83"/>
+        </ViewModelInstance>
+    </ViewModel>
+</Rive>

@@ -22,6 +22,7 @@ import { getArchetypeAllocations, type PlanLeg } from '@/components/protection-c
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
+import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
 import { rwaLegFor } from './RwaAssetCards';
 
 interface Props {
@@ -242,6 +243,10 @@ export function ProtectionPlanRing({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
         </h3>
+        {/* Armed-state seal — stamps once per mount (keyed to the plan),
+            then holds. The §5 confirm artefact for committing a plan. */}
+        <div className="flex items-center gap-2">
+          <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
         {onHoleTap ? (
           <motion.button
             key={archetype.id}
@@ -272,6 +277,7 @@ export function ProtectionPlanRing({
             {archetype.name}
           </motion.span>
         )}
+        </div>
       </div>
 
       <div className="flex justify-center">

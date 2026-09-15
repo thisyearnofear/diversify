@@ -125,6 +125,31 @@ the bundle):
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
 - **Flick scroll row** (`FlickScrollRow`, powered by `useDragToScroll`): the ONLY sanctioned horizontal scroll row — new rows compose the primitive instead of re-rolling `overflow-x-auto`. Native touch, pointer drag with momentum on mouse/pen, chevron buttons; `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Interactive children guard with `useDidDrag()` inside a child component (a body-level call reads the never-drag default and silently no-ops); drag-release swallows exactly one click, a new press revokes the trap. Live users: philosophy picker, Home region chips, BestYield chain toolbar, onboarding ArchetypeStrip.
 
+**Rive objects (scoped exception).** A self-contained interactive object —
+a coin that flips, lands, and shines on claim; a celebration artefact — may
+be authored in Rive (`.rml` source under `apps/web/rive/`, compiled `.riv`
+served from `apps/web/public/rive/`). Rive owns the *inside* of the object;
+framer-motion still owns all UI motion (reveals, folds, tilts, transitions
+between screen states). Rules: one-shot choreography only — no ambient
+loops, same budget as everything above; reduced-motion renders the static
+primitive fallback (`Coin` SVG), never a playing canvas; text stays in the
+DOM (the `canvas-lite` runtime ships no text engine — bake text into the
+.riv only if the full canvas runtime is deliberately chosen); the WASM
+runtime loads on demand behind a `ssr: false` dynamic import — never in the
+initial bundle. Live objects (all `apps/web/components/shared/Rive*.tsx`,
+rebuilt via `pnpm rive:build`): `claim-coin` mints on claim + swap-success
+(accent binds to the token's brand color), `net-pair` converges two
+currency-tinted coins and seals on settlement (FX netting card),
+`protection-seal` stamps ring + shield + check when a plan arms (Shield
+ring header), `guardian` postures the agent status chip
+(watching/acting/alert/resting), `verified-seal` stamps on confirmed
+on-chain evidence (`VerifiedEvidence`). Host state crosses the WASM
+boundary through view-model binds (colors as RGB channels, booleans,
+strings) and file-written triggers fire frame-accurate haptics — never
+deprecated SM inputs or `onStateChange`. Every mounted object gets
+`useViewModelInstance(vm, { useNew: true })`: sharing the file's default
+instance across two canvases crashes the lite WASM.
+
 Backdrop coins obey the same budget. The app-shell field (`ShellCoinField`)
 settles once on arrival — the reveal of the post-onboarding scene — and
 re-settles once when the philosophy accent changes (a confirmation). The

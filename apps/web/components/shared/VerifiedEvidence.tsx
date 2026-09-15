@@ -16,6 +16,7 @@ import {
   VERIFY_HASH_PATTERN,
   LEDGER_VERIFY_PATH,
 } from "@/constants/guardian-identity";
+import RiveVerifiedSeal from "@/components/shared/RiveVerifiedSeal";
 
 const CHAINS = TRUST_CHAINS;
 
@@ -143,30 +144,34 @@ export function VerifiedEvidence({ className = "" }: Props) {
                   </button>
                 </div>
                 {verify.kind === "result" && (
-                  <p
-                    role="status"
-                    className={`text-[11px] leading-relaxed ${
-                      verify.verified
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-amber-600 dark:text-amber-400"
-                    }`}
-                  >
-                    {verify.verified
-                      ? "✓ Confirmed on-chain — settled to the ledger contract."
-                      : verify.found
-                        ? "Tx exists but didn't settle to the ledger contract."
-                        : "No receipt found for this hash."}{" "}
-                    {verify.explorerUrl && (
-                      <a
-                        href={verify.explorerUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-                      >
-                        Explorer ({shortHex(trimmed)}) →
-                      </a>
-                    )}
-                  </p>
+                  <div role="status" className="flex items-center gap-2.5">
+                    {/* The seal stamps once when the check confirms — posture
+                        only; the result copy + link stay in the DOM. */}
+                    {verify.verified && <RiveVerifiedSeal size={40} verified />}
+                    <p
+                      className={`text-[11px] leading-relaxed ${
+                        verify.verified
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : "text-amber-600 dark:text-amber-400"
+                      }`}
+                    >
+                      {verify.verified
+                        ? "✓ Confirmed on-chain — settled to the ledger contract."
+                        : verify.found
+                          ? "Tx exists but didn't settle to the ledger contract."
+                          : "No receipt found for this hash."}{" "}
+                      {verify.explorerUrl && (
+                        <a
+                          href={verify.explorerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+                        >
+                          Explorer ({shortHex(trimmed)}) →
+                        </a>
+                      )}
+                    </p>
+                  </div>
                 )}
                 {verify.kind === "error" && (
                   <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">

@@ -25,6 +25,7 @@
     "register-agent": "npx tsx scripts/register-on-agentscan.ts",
     "register-erc8004": "npx tsx scripts/register-erc8004.ts",
     "render-guardian-assets": "npx tsx scripts/render-guardian-assets.ts",
+    "rive:build": "cd apps/web/rive && for p in claim-coin net-pair protection-seal guardian verified-seal; do rive \"$p\" --once --quiet || exit 1; done && cp claim-coin/build/claim-coin.riv net-pair/build/net-pair.riv protection-seal/build/protection-seal.riv guardian/build/guardian.riv verified-seal/build/verified-seal.riv ../public/rive/",
     "prepare": "husky"
   },
   "devDependencies": {

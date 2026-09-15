@@ -10,7 +10,7 @@
  */
 
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { GuardianMascot } from '@/components/shared/GuardianMascot';
+import RiveGuardian, { type GuardianPosture } from '@/components/shared/RiveGuardian';
 import {
   deriveProtectionLifecycleState,
   PROTECTION_STATE_LABELS,
@@ -147,6 +147,15 @@ export function GuardianStatusChip({
     [financialStrategy],
   );
 
+  // Sentinel posture from the shared tier state: monitoring protects,
+  // authorized/funded watch for their next step, idle rests.
+  const guardianPosture: GuardianPosture =
+    guardianState === 'monitoring'
+      ? 'acting'
+      : guardianState === 'idle'
+        ? 'resting'
+        : 'watching';
+
   if (!address) return null;
 
   const handleCta = () => {
@@ -181,11 +190,9 @@ export function GuardianStatusChip({
       aria-label={`Guardian: ${copy.headline}`}
     >
       <div className="flex items-start gap-3">
-        <GuardianMascot
-          size={56}
-          mood={isActive ? 'happy' : 'neutral'}
-          className="shrink-0"
-        />
+        <div className="shrink-0">
+          <RiveGuardian size={56} posture={guardianPosture} />
+        </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <h3 className="text-sm font-black text-gray-900 dark:text-white">

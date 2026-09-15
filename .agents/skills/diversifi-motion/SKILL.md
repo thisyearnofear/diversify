@@ -1,6 +1,6 @@
 ---
 name: diversifi-motion
-description: DiversiFi's motion techniques — count-up numbers, pointer tilt, masked line reveals, draw-in paths, plan-change pops, dock magnification, progressive-blur footnotes, keep-mounted Home. Framer-motion only (no GSAP per design contract), reduced-motion first-class. Use when adding or editing any animation in apps/web.
+description: DiversiFi's motion techniques — count-up numbers, pointer tilt, masked line reveals, draw-in paths, plan-change pops, dock magnification, progressive-blur footnotes, keep-mounted Home. Framer-motion for UI motion (no GSAP per design contract); Rive permitted for self-contained objects (design-language §5). Reduced-motion first-class. Use when adding or editing any animation in apps/web.
 ---
 
 # DiversiFi motion techniques
@@ -89,6 +89,22 @@ runs `mode="popLayout"` to keep transitions smooth in both layouts. Only the
 Overview pane is kept mounted — other tabs unmount normally. Hidden panes must
 not rely on `inert` (React 18 warns); `visibility: hidden` already removes
 focusability.
+
+### 10. Rive objects (scoped exception — design-language §5)
+Self-contained objects may be Rive state machines: `.rml` source in
+`apps/web/rive/<name>/` authored via the `rive` CLI (`rive --verify`,
+`rive --screenshot` for headless frame checks), compiled `.riv` in
+`apps/web/public/rive/` (`pnpm rive:build` rebuilds all five). Wrappers
+live at `apps/web/components/shared/Rive*.tsx` — `RiveCoin` (claim +
+swap-success mint), `RiveNetPair` (FX netting link/seal),
+`RiveProtectionSeal` (plan armed), `RiveGuardian` (agent posture),
+`RiveVerifiedSeal` (evidence confirmed) — `@rive-app/react-canvas-lite`
+behind `next/dynamic` `ssr: false`, WASM loads on demand,
+`useReducedMotion()` renders the static primitive instead. Host→file
+state crosses via view-model binds + file-written triggers for haptics;
+each canvas needs `useViewModelInstance(vm, { useNew: true })` or two
+mounted objects share one data context and crash the lite WASM. Rive
+never owns screen transitions; text stays in the DOM.
 
 ## Reduced-motion checklist for any new animation
 
