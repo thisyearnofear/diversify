@@ -444,8 +444,11 @@ export function useExpectedAmountOut({
             setCachedResult(fromToken, toToken, amount, chainId, formattedAmount);
             return formattedAmount;
           } catch (error) {
+            // Expected fallback path — no two-step route via CELO, the
+            // static-rate estimate below covers it. console.error would
+            // surface in the Next.js dev overlay as a runtime error.
             if (process.env.NODE_ENV === 'development') {
-              console.error('Error calculating two-step expected amount:', error);
+              console.warn('No two-step route; using static-rate estimate:', error);
             }
           }
         }

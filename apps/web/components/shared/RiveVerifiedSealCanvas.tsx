@@ -26,6 +26,9 @@ import { haptics } from '../../lib/haptics';
 import { hexToRgb, shadeHex } from '../../lib/rive-color';
 
 RuntimeLoader.setWasmUrl('/rive/rive.wasm');
+// Fallback build for older WASM engines — self-hosted too, or a primary
+// failure would silently fetch it from jsdelivr.
+RuntimeLoader.setWasmFallbackUrl('/rive/rive_fallback.wasm');
 
 interface RiveVerifiedSealCanvasProps {
   size: number;

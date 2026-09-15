@@ -15,6 +15,16 @@ interface ScrimProps {
 /**
  * Scrim - Consistent backdrop overlay for modals and drawers.
  * Standardizes the blur and opacity across all overlay surfaces.
+ *
+ * IMPORTANT: render Scrim as a SIBLING of the overlay wrapper, never
+ * nested inside it. It is `fixed inset-0 z-[49]` — inside a fixed z-50+
+ * wrapper it creates a stacking context where z-49 paints above the
+ * panel's z-auto, dimming the dialog and swallowing its clicks:
+ *
+ *   <Scrim onClick={onClose} />          {/* backdrop at z-49 *\/}
+ *   <div className="fixed inset-0 z-50" onClick={onClose}>
+ *     <Panel onClick={(e) => e.stopPropagation()} />
+ *   </div>
  */
 export function Scrim({ onClick, className = '', intensity = 'default' }: ScrimProps) {
   // Map the intensity prop to the matching token-driven utility class so

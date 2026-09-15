@@ -25,6 +25,9 @@ import { haptics } from '../../lib/haptics';
 import { GuardianPosture, POSTURE_LABEL } from './RiveGuardian';
 
 RuntimeLoader.setWasmUrl('/rive/rive.wasm');
+// Fallback build for older WASM engines — self-hosted too, or a primary
+// failure would silently fetch it from jsdelivr.
+RuntimeLoader.setWasmFallbackUrl('/rive/rive_fallback.wasm');
 
 interface RiveGuardianCanvasProps {
   size: number;
