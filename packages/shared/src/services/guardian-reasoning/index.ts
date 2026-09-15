@@ -1,7 +1,7 @@
 /**
  * Guardian reasoning domain — Phase 0 of the unified reasoning service.
  *
- * Docs: docs/guardian-reasoning-service.md. One deterministic, free,
+ * Docs: docs/internal/guardian-reasoning-service.md. One deterministic, free,
  * provenance-honest reasoning floor that the heartbeat (and, in later
  * phases, the loop and the Arc marketplace agent) consume.
  *

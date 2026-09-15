@@ -4,36 +4,7 @@
 
 > **Enforcement model (important):** the user-signed permission is cryptographic *consent*, verified server-side. Its spending bounds are currently enforced in **application code**, not on-chain — execution on Celo/Mento runs through a server-custodied smart account. True on-chain enforcement (ERC-7710 redemption) is the residual gap. See [`docs/guardian.md`](./guardian.md).
 
-## Connected-wallet enrichment (2026-09-01)
-
-The connected wallet is the source of truth for actual holdings; protection philosophy and strategy allocations represent user intent. `apps/web/lib/wallet-portfolio-view.ts` provides shared pure selectors for aggregating balances across supported chains, calculating live token percentages, comparing holdings with plan targets, and classifying freshness (`loading`, `empty`, `ready`, `stale`, `partial`).
-
-The shared view is consumed by Shield, Overview, Exchange, Agent, and Learn. Shield renders live holdings in its allocation ring while showing plan targets as comparison data. Exchange prioritizes held tokens without changing tradeability rules. Agent sends wallet percentages, gaps, and freshness to the advisor. Learn initializes its editable calculator from the live wallet value. Demo/example values remain isolated from connected-wallet data. Focused regression tests and TypeScript checks are clean.
-
-## Recent Hardening (2026-06)
-
-This document reflects the post-hardening state. The headline changes since the initial 8.4/10 review:
-
-- **EIP-712 server-side signature verification** on `POST /api/vault/permission` — every persisted permission is now cryptographically bound to the user's wallet signature (was: trust on first use with server-side inflation defaults).
-- **0G anchor observability** — `recordRecommendation` returns a discriminated `AnchorResult` (`anchored | pending | failed`) and the status is surfaced in the chat receipt, the proof feed, and `GuardianState.latestAnchor`. The `pending` case (60s receipt timeout) is honest rather than silent.
-- **Server-side alert cooldowns** — per-user, in `GuardianState.alertCooldowns`, surviving device switches. The localStorage map is gone.
-- **Unified Guardian tier state machine** — `deriveGuardianTierState` in `@diversifi/shared` is the single source of truth for `idle | authorized | funded | monitoring`, replacing three inline implementations.
-- **Celo token registry** — one shared config (`packages/shared/src/config/celo-tokens.ts`) replaces four duplicate `TOKEN_ADDRESSES` maps. The misleading `USDY: cUSD` placeholder is deleted.
-- **Proactive loop decoupled from chat** — `ProactiveAgentRunner` mounted in `_app.tsx` owns the single 5-minute monitoring timer.
-- **Guardian "Run dry-run now" button** on the tier card, wired to the existing `triggerExecutionLoop(true)` path. The duplicate button in the expanded view was removed.
-- **Tab reorder (new user first-run)** — Home → Protect → Exchange → Pilot → Learn. Beginner mode includes Pilot tab. `/`-separated pill labels visible at all breakpoints.
-- **GuardianStateScrollytelling** — vertical 4-state pipeline (`idle → authorized → funded → monitoring`) on the Protect tab's unconnected state, with animated step dots and "You are here" badge.
-- **TabNavHint + useTabDiscovery** — animated swipe/explore hint above the tab bar on first visit, tracked via `TabDiscoveryProvider` context so TabNavigation and TabContentRouter share dismissal state. Auto-dismisses after 3 tab visits or first swipe.
-- **GuidedTour consolidation** — 3-step tour (risk → Shield → connect) for users who skip philosophy onboarding. Region/goal/philosophy live in `useProtectionProfile`; `StrategyContext` delegates to profile storage. `TourTrigger` skips when philosophy is set and migrates old localStorage keys.
-- **Beginner IA** — Simple mode: 3 tabs (Shield, Home, Learn), plain-language tips, compact proof card, `GuardianStatusChip` instead of wizard. Header hides mode toggle and chain pill.
-- **APAC rail UX** — `needsApacRailMessaging()` surfaces an `apac-rail` contextual banner on Home and Shield for Confucian/Gotong Royong + Asia region; copy swaps honest "coming soon" vs live HashKey explorer link via `isApacRailLive()`.
-- **Caribbean rail UX** — parity with APAC: `needsCaribbeanRailMessaging()` + a `CaribbeanRailHonestyBanner` (Home/Shield) for the Pan-Caribbean + Caribbean profile. Because the Caribbean rail has no separate chain (it settles on the always-on Celo home rail), the banner is always-live explanatory copy + Celo explorer link — no fake "coming soon" branch. Region-canonical routing (`isCaribbeanRailProfile` → Celo) and a Caribbean-cohort Guardian heartbeat leg sit alongside the APAC ones. The `CaribbeanFxNetCard` (two-phase intent → match review) mounts in the FX Corridor section against a hosted Mongo intent pool (`FxIntentRecord` + `lib/fx-intent-pool.ts`); the Guardian's `open_fx_netting_review` recommendation hands off to it.
-- **Multi-chain proof feed** — `GET /api/agent/zero-g-ledger` merges recent receipts from Arbitrum, Celo, Robinhood Chain, and HashKey (per configured ledgers) for LiveProofCard; every ticker row surfaces the on-chain reasoning and falls back to the ledger-contract explorer link when a receipt has no settlement tx.
-- **Testnet UX gating** — `shouldShowTestnetBanner()` hides the testnet strip unless `NEXT_PUBLIC_SHOW_TESTNET`, dev mode, or explicit opt-in via onboarding developer menu.
-- **UnconnectedStateShell prop expansion** — `proofCardSide` (`'above' | 'below'`), `className`, `howItWorksCardClassName`, `demoCtaCardClassName` for flexible slot layout.
-- **LiveProofCard as trust surface** — 0G-anchored proof feed rendered on Protect (above hero) and Overview tabs before wallet connection.
-
-Net: 9 phases, +64 tests (300 → 343), 0 lint errors, 4.6 / 5 in per-pillar hardening. Rating moved from 8.4 → 8.7 / 10 (see `docs/roadmap.md` for the per-phase score table).
+> **Current state:** this doc describes the post-hardening architecture (rating 8.7/10 after the 2026-06 review pass). The connected wallet is the source of truth for holdings — `apps/web/lib/wallet-portfolio-view.ts` is the shared selector layer consumed by all tabs. Dated change history lives in [`roadmap-log.md`](./roadmap-log.md).
 
 ## High-Level Architecture
 
@@ -215,28 +186,14 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
 
 ## Agent Identity (ERC-8004 + Self Protocol)
 
-The DiversiFi Guardian has two on-chain identity registrations. Both are
-ERC-8004 compliant; Self Protocol adds a Proof-of-Human layer on top.
+The Guardian has two ERC-8004-compliant on-chain identities on Celo mainnet:
+the generic 8004scan registry (agentId 9654, `0x8004A169…a432`) for
+ecosystem discoverability, and the Self Protocol Agent ID (registry
+`0xaC3DF9AB…5944`) which adds ZK-passport proof-of-human (one human = one
+agent). The hosted registration file is `public/.well-known/erc8004.json`.
 
-| Registry | Address | Chain | Status |
-|---|---|---|---|
-| ERC-8004 Identity Registry (8004scan) | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` | Celo mainnet | **Registered** — agentId 9654, owner `0x3542…Af48` |
-| Self Protocol Agent ID | `0xaC3DF9ABf80d0F5c020C06B04Cced27763355944` (registry) | Celo mainnet (42220) | **Registered** — agent `0xE8cDb7CA…f170`, verified with real passport (proof-of-human, mainnet) |
-
-**ERC-8004 (8004scan):** Portable, censorship-resistant agent identity. The
-registration file at `public/.well-known/erc8004.json` describes the agent
-(services, x402 support, supported trust signals). `pnpm register-erc8004`
-mints the NFT; the `agentURI` points to the hosted registration file.
-
-**Self Protocol Agent ID:** Sybil-resistant identity on Celo backed by ZK
-passport verification (one human = one agent). The
-`SelfAgentRegistration` component renders a QR code; the agent owner scans
-with the Self app → soulbound NFT minted. `self-agent-service.ts` provides
-signing (`getSelfSigningAgent`) and verification (`getSelfAgentVerifier`)
-for outbound/inbound agent requests.
-
-See [`docs/guardian.md`](./guardian.md) for registration
-instructions, env vars, and the signing/verification API.
+Registration, env vars, and the signing/verification API:
+[`docs/guardian.md`](./guardian.md) § Agent Identity.
 
 ## State Management (Frontend)
 
@@ -263,9 +220,9 @@ All 40+ hooks live in `/hooks/`. Key patterns:
 
 The `useProactiveAgent` monitoring loop is mounted once at the app root via `components/agent/ProactiveAgentRunner.tsx` (inside `ProviderTree` in `pages/_app.tsx`), so the 5-minute market + yield + UBI check survives chat-surface open/close transitions.
 
-### Known issue: Prop drilling
+### AppShell state
 
-`pages/index.tsx` passes 27 props through `AppShell`. This will be resolved via a `useAppShell()` hook (see `roadmap.md`).
+`AppShell` no longer takes a prop spread — `AppShellContext` (`context/app/AppShellContext.tsx`) aggregates the domain hooks once via `AppShellProvider`, and every consumer reads `useAppShellContext()`.
 
 ## 0G Verifiability Stack
 
@@ -300,15 +257,7 @@ StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.ar
 
 ### Anchor observability
 
-`recordRecommendation` returns a discriminated `AnchorResult`:
-
-| Status | Meaning | UI behaviour |
-|---|---|---|
-| `anchored` | Tx mined, `RecommendationRecorded` event parsed, `id` known | "0G anchored #N" + explorer link |
-| `pending`  | Tx broadcast but receipt not confirmed within 60 s | "0G anchor pending" + tx hash, may resolve later |
-| `failed`   | Revert, missing signer, RPC throw, or missing contract | "0G anchor failed" with `error` text |
-
-The status is patched into the corresponding `AIMessage.x402Receipt.anchor` in place via `AIConversationContext.patchMessage`, so the user sees the verifier surface in the receipt itself. The Guardian cron persists the same shape to `GuardianState.latestAnchor` and surfaces it on the proof feed. `firecrawl-webhook` includes the anchor in its response, and `zero-g-ledger` POST returns `status`, `txHash`, `explorerUrl`, and (when available) `id`.
+`recordRecommendation` returns a discriminated `AnchorResult` (`anchored` / `pending` / `failed`), patched into `AIMessage.x402Receipt.anchor` via `AIConversationContext.patchMessage` so the verifier surface lives in the receipt itself. The Guardian cron persists the same shape to `GuardianState.latestAnchor` for the proof feed. Status contract and caller obligations: [`integrations.md`](./integrations.md) § Anchor observability.
 
 ## Arc x402 Payment Loop
 
@@ -501,4 +450,4 @@ flowchart TD
 
 
 ---
-> Dependency audit + Circle agent-stack findings moved to [`architecture-notes.md`](./architecture-notes.md).
+> Dependency audit + Circle agent-stack findings moved to [`internal/architecture-notes.md`](./internal/architecture-notes.md).

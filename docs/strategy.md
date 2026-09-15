@@ -1,8 +1,6 @@
 # SME FX Strategy — Importer/Exporter Working Capital & the Retail→Business Funnel
 
-## SME FX Strategy — Importer/Exporter Working Capital & the Retail→Business Funnel
-
-**Status:** Drafted 2026-07-11 (north-star direction). Updated 2026-07-13 with shipped payment-cycle slice + trust pass. Reframed 2026-07-19 to reflect the universal nature of the problem. Updated 2026-08-24 with adaptive experience architecture — Phase 0 (landing page calculator) and Phase 1 (signal detection + adaptive routing) are shipped.
+**Status:** North-star direction, partially live. Payment-cycle report, wallet-authenticated cycle CRUD, monitoring proposals, recommendation queue, the landing-page FX calculator, and signal-detected adaptive tabs are shipped; the Importer `FinancialStrategy` archetype + graduation funnel are planned. Dated history: [`roadmap-log.md`](./roadmap-log.md).
 **Purpose:** Capture the strategic direction that emerged from a real user
 conversation — a Ghanaian importer who buys in USD abroad (China, US, UK)
 and sells locally in cedis — plus the market research, competitive gap,
@@ -11,11 +9,7 @@ Ghanaian importer is the wedge — the most extreme, clearest case — but
 the problem is universal: any business with a currency mismatch between
 revenue and costs faces the same working-capital risk.
 
-**Implementation plan:** `docs/strategy.md` — the phased build plan that turns this strategy into code, aligned with the Core Principles.
-
-**Current-state honesty:** The free payment-cycle report, wallet-authenticated cycle CRUD, monitoring proposals, and recommendation queue **are live** (2026-07-13). Phase 0 (FX drag calculator landing page) and Phase 1 (signal detection + adaptive tab labels) **are shipped** (2026-08-24). The Importer `FinancialStrategy` + graduation funnel are still planned. Concierge tooling (`scripts/fx-drag-report.ts`) remains useful for offline trader validation.
-
-> **Adaptive experience (2026-08-24):** The SME FX layer is delivered through an adaptive experience architecture — the same backend serves all personas; the frontend is a configuration that changes based on signals (geo, wallet, behavior). The landing page calculator (§4.2 below) is Phase 0 of this architecture. Signal detection + adaptive tab labels (Phase 1) are wired into the app shell. See [`docs/product.md`](./product.md) for the full signal architecture, routing schema, and implementation phases.
+> **Adaptive experience:** The SME FX layer is delivered through an adaptive experience architecture — the same backend serves all personas; the frontend is a configuration that changes based on signals (geo, wallet, behavior). The landing page calculator (§4.2 below) is Phase 0; signal detection + adaptive tab labels (Phase 1) are wired into the app shell. Design doc: [`internal/adaptive-experience.md`](./internal/adaptive-experience.md); product summary: [`product.md`](./product.md) § Adaptive experience.
 
 ---
 
@@ -588,7 +582,7 @@ Goal: give rails players and larger SMEs a business view.
 
 - `docs/strategy.md` — strategic direction, market research, persona design, sequencing
 - `docs/product.md` — product positioning and the two differentiators
-- `docs/roadmap.md` — active tracks and the product quality plan
+- `docs/roadmap.md` — active priorities and track status; `docs/roadmap-log.md` — shipped history
 - `scripts/fx-drag-report.ts` — existing concierge validation tool
 - **§ HSP Settlement & FX Protection Insight** below — the paid, HSP-settled proof of this layer (adjacent surface, see the 2026-07-12 note above)
 

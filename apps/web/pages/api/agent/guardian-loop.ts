@@ -43,7 +43,7 @@ import { circleExecutor } from '@/lib/vault/executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 // Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
 // their reasoning through the ONE shared builder so identical facts produce
-// identical wording on every surface (docs/guardian-reasoning-service.md §5).
+// identical wording on every surface (docs/internal/guardian-reasoning-service.md §5).
 import { decisionToLedgerParams, type GuardianDecisionArtifact } from '@diversifi/shared/src/services/guardian-reasoning';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';

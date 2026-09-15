@@ -299,7 +299,7 @@ decide, numbers convince, one button acts).
 blue eyes. The 2026-08-25 "Rounded Guardian" redesign softened everything into
 a kawaii blob (domed head, cheek bulges, round cartoon eyes, no points), and
 the AI raster candidates generated for it (GPT Image 2,
-`docs/mascot-raster-brief.md`) made the problem concrete: cute, beveled,
+`docs/internal/mascot-raster-brief.md`) made the problem concrete: cute, beveled,
 toy-like — the robustness was gone. The current spec restores the digital
 shield's visual DNA and keeps the redesign's motion discipline.
 
@@ -351,7 +351,7 @@ shield's visual DNA and keeps the redesign's motion discipline.
 **Raster assets (icon.png, OG image, splash):**
 - Render from the SVG source — deterministic export, character-faithful.
   AI image generation is **not** the production path for the mark: the
-  2026-08-25 GPT Image 2 tests (see `docs/mascot-raster-brief.md`) came back
+  2026-08-25 GPT Image 2 tests (see `docs/internal/mascot-raster-brief.md`) came back
   cutesy and beveled. The SVG IS the mascot; rasters are screenshots of it.
 - Single source of truth: `apps/web/components/shared/guardian-mark.ts` holds
   the geometry + palette; the live component AND

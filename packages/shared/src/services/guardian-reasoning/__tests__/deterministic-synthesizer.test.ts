@@ -1,7 +1,7 @@
 /**
  * Phase 0 golden tests — deterministic synthesizer extraction.
  *
- * Contract being proven (docs/guardian-reasoning-service.md §7 Phase 0):
+ * Contract being proven (docs/internal/guardian-reasoning-service.md §7 Phase 0):
  * `synthesizeHeartbeatAdvisory` reproduces the heartbeat's original
  * `pickRecommendation` output **byte-for-byte** across live / partial-down /
  * all-down fixtures.

@@ -1,7 +1,7 @@
 /**
  * Phase 1 golden tests — the unified decision artifact.
  *
- * The contract (docs/guardian-reasoning-service.md §5, §7 Phase 1, §8.4):
+ * The contract (docs/internal/guardian-reasoning-service.md §5, §7 Phase 1, §8.4):
  * identical (draft facts, signals, cohort) ⇒ **byte-identical** on-chain
  * text, no matter which surface emits it. These tests drive all three
  * surfaces through `buildAdvisoryReasoning` / `decisionToLedgerParams` and

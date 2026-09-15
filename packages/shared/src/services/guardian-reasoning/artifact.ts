@@ -1,6 +1,6 @@
 /**
  * The unified Guardian decision artifact — Phase 1 of the reasoning-service
- * plan (docs/guardian-reasoning-service.md §5).
+ * plan (docs/internal/guardian-reasoning-service.md §5).
  *
  * Every Guardian surface (auto-execution loop, advisory heartbeat, Arc
  * marketplace agent) composes its on-chain `reasoning` text through ONE

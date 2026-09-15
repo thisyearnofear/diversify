@@ -66,15 +66,7 @@
 
 ## Autonomous Guardian Loop
 
-The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio rebalancing within user-approved permission bounds.
-
-```
-Firecrawl detects macro change → webhook → AI extracts signal → guardian-state updated
-→ cron ticks → guardian-loop checks permissions → confidence > threshold? → auto-execute
-→ chain-aware RecommendationLedger records on the chain where the action settled
-  (Celo for savings, Arbitrum for yield) → 0G Storage anchors evidence CID → memory persists
-  (Tablestore preferred when configured, Cognee fallback)
-```
+The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio rebalancing within user-approved permission bounds. Loop mechanics (signal ingestion → permission validation → chain-aware execution → evidence anchor): [`architecture.md`](./architecture.md) § Guardian Autonomous Loop.
 
 | Component | File | Purpose |
 |-----------|------|---------|
@@ -174,13 +166,9 @@ settlement metrics and the active explorer are exposed at
 
 ## 0G Chain — Evidence Anchor + RecommendationLedger
 
-Every advisor recommendation is recorded on a chain-aware
-`RecommendationLedger` — the ledger of record follows the money. 0G is
-the **evidence layer**: Storage holds the reasoning CIDs, Compute
-provides TEE-verified inference, DA holds state snapshots. The 0G
-mainnet hosts the evidence anchor deployment; the chain-aware ledgers of
-record live on Celo (savings) and Arbitrum (yield). Galileo Testnet remains
-available as a fallback mirror for development.
+0G is the evidence layer; the ledger of record follows the money (concept
+and rationale: [`architecture.md`](./architecture.md) § 0G Verifiability
+Stack). Deployed surfaces and configuration:
 
 | Field | Value |
 |-------|-------|
@@ -305,7 +293,7 @@ The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not g
 ## Planned / Explored
 
 The following providers have been evaluated but not yet integrated. See `docs/roadmap.md` →
-"Post-9/0 — Full-stack fintech infrastructure" for the strategic rationale.
+"Post-9/10 — full-stack fintech infrastructure" for the strategic rationale.
 
 | Provider | Layer | Chain compatibility | Celo-native? | Relevant regions |
 |---|---|---|---|---|

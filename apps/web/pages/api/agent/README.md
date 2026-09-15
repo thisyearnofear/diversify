@@ -19,4 +19,4 @@ Server endpoints for the DiversiFi Guardian, advisor chat, x402 gateway, and rel
 
 Shared helpers live under `@/lib/agent` and `@/lib/vault` (not under `pages/api`) so Vercel does not package them as serverless routes. Route tests live under `apps/web/tests/api/`.
 
-Auth, rate limits, and env tables: [`docs/integrations.md`](../../../../docs/integrations.md). Enforcement model: [`docs/guardian.md`](../../../../docs/guardian.md).
+Auth, rate limits, and env tables: [`docs/integrations.md`](../../../../../docs/integrations.md). Enforcement model: [`docs/guardian.md`](../../../../../docs/guardian.md).

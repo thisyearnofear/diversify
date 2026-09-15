@@ -21,18 +21,20 @@ Navigation index for `docs/`. Start at the top, drill down by need.
 | # | Doc | What's in it |
 |---|-----|--------------|
 | 1 | **[`setup.md`](./setup.md)** | Quick start, env vars, supported chains, x402 research-payment mode, test drive, troubleshooting |
-| 2 | **[`product.md`](./product.md)** | What DiversiFi is, who it's for, protection plans, priorities — plus the adaptive/signal-based experience architecture |
+| 2 | **[`product.md`](./product.md)** | What DiversiFi is, who it's for (both directions of the FX trade), protection plans, differentiators — adaptive-experience summary links to `internal/` |
 | 3 | **[`design-language.md`](./design-language.md)** | Surface design principles — one job per screen, concentrated expressiveness, controls-as-motif, disclosure tiers, PR checklist |
-| 4 | **[`architecture.md`](./architecture.md)** | System architecture, AI provider chain, swap orchestrator, Guardian loop + workflow diagram, 0G verifiability stack, data streams & their jobs |
+| 4 | **[`architecture.md`](./architecture.md)** | System architecture, AI provider chain, swap orchestrator, Guardian loop, 0G verifiability stack, data streams & their jobs |
 | 5 | **[`integrations.md`](./integrations.md)** | API endpoints, AI providers, data sources, env var tables, external agent integration guide |
-| 6 | **[`roadmap.md`](./roadmap.md)** | The forward-looking plan — grant tracks, product reframe, SME FX north star, yield engine, 0G Bridge plan |
+| 6 | **[`roadmap.md`](./roadmap.md)** | The forward-looking plan only — active priorities, long-term chain architecture, deferred list |
 | 7 | **[`strategy.md`](./strategy.md)** | North star — SME FX working capital, Ghanaian-importer wedge, market research, implementation plan |
 | 8 | **[`guardian.md`](./guardian.md)** | Guardian spending bounds, threat model, enforcement plan + agent identity (ERC-8004 + Self Protocol) |
 | 9 | **[`rails.md`](./rails.md)** | Regional savings & settlement lanes — APAC (HashKey), Caribbean, Arbitrum x402 settlement |
 | 10 | **[`ops.md`](./ops.md)** | Deployment & ops (Alibaba Cloud proof, deploy scripts) |
-| — | [`architecture-notes.md`](./architecture-notes.md) | Exploratory/historical engineering findings (Circle agent stack, dependency audit) — reference, not current architecture |
-| — | [`roadmap-log.md`](./roadmap-log.md) | Historical log of what shipped per wave — advisory record, not the forward plan |
-| — | [`mascot-raster-brief.md`](./mascot-raster-brief.md) | **Superseded** mascot raster brief (authoritative spec: `design-language.md` §9) |
+| — | [`roadmap-log.md`](./roadmap-log.md) | Historical log of what shipped per wave + grant-track close-outs — the dated history sink |
+| — | [`internal/architecture-notes.md`](./internal/architecture-notes.md) | Exploratory engineering findings (Circle agent stack, dependency audit) — reference, not current architecture |
+| — | [`internal/adaptive-experience.md`](./internal/adaptive-experience.md) | Adaptive-experience design doc — signal schema, per-persona routing, phases (summary: `product.md` § Adaptive experience) |
+| — | [`internal/guardian-reasoning-service.md`](./internal/guardian-reasoning-service.md) | Design draft for the unified Guardian reasoning service (shipped — see `guardian.md`) |
+| — | [`internal/mascot-raster-brief.md`](./internal/mascot-raster-brief.md) | **Superseded** mascot raster brief (authoritative spec: `design-language.md` §9) |
 | — | **This file** | Navigation index |
 
 ## By need
@@ -45,7 +47,7 @@ Navigation index for `docs/`. Start at the top, drill down by need.
 - **Agent identity (ERC-8004 + Self Protocol)** → [`guardian.md`](./guardian.md) § Agent Identity
 - **Building or reviewing any user-facing surface** → [`design-language.md`](./design-language.md) (rules also in `AGENTS.md` § Surface design principles)
 - **Regional rails (APAC / Caribbean / Arbitrum x402)** → [`rails.md`](./rails.md)
-- **Roadmap, grant tracks, yield strategy, 0G plan** → [`roadmap.md`](./roadmap.md)
+- **Forward plan + track status** → [`roadmap.md`](./roadmap.md); **what shipped when** → [`roadmap-log.md`](./roadmap-log.md)
 - **North star — SME FX strategy** → [`strategy.md`](./strategy.md)
 - **Architecture & the data-stream map** → [`architecture.md`](./architecture.md)
 
@@ -62,6 +64,6 @@ Navigation index for `docs/`. Start at the top, drill down by need.
 - **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)** — setup, commands, "where do I change X?"
 - **[`../AGENTS.md`](../AGENTS.md)** — repo conventions, build/test commands, coding style for coding agents
 
-## Local-only notes
+## Internal docs
 
-`docs/internal/` is **git-ignored** (local-only scratch) — it isn't committed and won't appear for contributors. Committed history/exploratory material lives at the top level: [`architecture-notes.md`](./architecture-notes.md), [`roadmap-log.md`](./roadmap-log.md), and the superseded [`mascot-raster-brief.md`](./mascot-raster-brief.md).
+`docs/internal/` holds exploratory, superseded, and design-draft material — committed, but not part of the active doc set. Historical shipped-work detail lives in [`roadmap-log.md`](./roadmap-log.md).

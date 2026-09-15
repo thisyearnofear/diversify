@@ -1,7 +1,7 @@
 /**
  * Phase 3 — the cross-surface replay harness.
  *
- * docs/guardian-reasoning-service.md §7 Phase 3: a decision replay harness
+ * docs/internal/guardian-reasoning-service.md §7 Phase 3: a decision replay harness
  * (mocked providers + frozen clock — the pattern the loop tests already use)
  * that drives all three surfaces from the SAME signal fixture and asserts
  * identical verdicts and artifacts.

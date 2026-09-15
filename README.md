@@ -2,7 +2,7 @@
 
 Risk-aware, values-driven treasury management.
 
-DiversiFi detects a visitor’s local currency depreciation against USD, EUR, and gold, then helps protect savings through stablecoin allocation, gold-backed tokens, and yield vaults. Every Guardian decision is recorded on-chain, with AI reasoning anchored to 0G. The philosophy/values system is the retention moat.
+DiversiFi detects a visitor’s local currency depreciation against USD, EUR, and gold, then helps protect savings through stablecoin allocation, gold-backed tokens, and yield vaults. The same machinery runs both directions: savers in volatile-currency economies protecting purchasing power, and businesses and savers in developed markets trading with — or diversifying into — emerging markets along cultural, values, or philosophy lines, with FX exposure quantified either way. Every Guardian decision is recorded on-chain, with AI reasoning anchored to 0G. The philosophy/values system is the retention moat.
 
 **Live app:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app) · Full pitch: [`docs/product.md`](./docs/product.md)
 

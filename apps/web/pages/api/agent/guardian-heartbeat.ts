@@ -33,7 +33,7 @@ import { recordGuardianRun } from '../../../lib/guardian-run-status';
 // to @diversifi/shared so the loop, heartbeat, and marketplace agent can
 // share one reasoning floor. This module re-exports it for compatibility;
 // golden tests prove the shared output is byte-identical to the original
-// implementation (docs/guardian-reasoning-service.md §7).
+// implementation (docs/internal/guardian-reasoning-service.md §7).
 import {
   synthesizeHeartbeatAdvisory,
   toGuardianSignals,
