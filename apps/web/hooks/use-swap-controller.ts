@@ -7,6 +7,7 @@ import { useStreakRewards } from "./use-streak-rewards";
 import { NETWORKS } from "../config";
 // Deep leaf imports — NOT the barrel — keeps the swap + cross-chain-tokens stacks out of first-load.
 import { isTokenAvailableOnChain, getTokensForChain } from "@diversifi/shared/src/utils/cross-chain-tokens";
+import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import { SwapErrorHandler } from "@diversifi/shared/src/services/swap/error-handler";
 
 interface Token {
@@ -143,17 +144,34 @@ export function useSwapController({
     const targetFromTokens = enableCrossChain
       ? availableFromTokens
       : availableTokens;
-    const fromExists = targetFromTokens.some((t) => t.symbol === fromToken);
-    if (!fromExists && targetFromTokens.length > 0) {
-      setFromToken(targetFromTokens[0].symbol);
-    }
-
     const targetToTokens = enableCrossChain
       ? availableToTokens
       : availableTokens;
-    const toExists = targetToTokens.some((t) => t.symbol === toToken);
-    if (!toExists && targetToTokens.length > 0) {
-      const differentToken = targetToTokens.find((t) => t.symbol !== fromToken);
+    // Symbols arrive in several casings (config "BRLm", plan-leg "cREAL",
+    // uppercased "BRLM" from imperative prefills) — match case-insensitively
+    // and heal state to the list's canonical spelling rather than discarding
+    // the user's selection.
+    const matchSymbol = (list: Token[], symbol: string) =>
+      list.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase())
+        ?.symbol;
+
+    const canonicalFrom = matchSymbol(targetFromTokens, fromToken);
+    const effectiveFrom =
+      canonicalFrom ?? (targetFromTokens.length > 0 ? targetFromTokens[0].symbol : undefined);
+    if (effectiveFrom && effectiveFrom !== fromToken) {
+      setFromToken(effectiveFrom);
+    }
+
+    const canonicalTo = matchSymbol(targetToTokens, toToken);
+    if (canonicalTo) {
+      if (canonicalTo !== toToken) setToToken(canonicalTo);
+    } else if (targetToTokens.length > 0) {
+      // Compare against the effective from-token, not the stale state value:
+      // when both resets land in the same pass, picking ≠ the old fromToken
+      // could select the exact token the from side just reset to.
+      const differentToken = targetToTokens.find(
+        (t) => t.symbol !== effectiveFrom,
+      );
       setToToken(differentToken?.symbol || targetToTokens[0].symbol);
     }
   }, [
@@ -165,17 +183,24 @@ export function useSwapController({
     toToken,
   ]);
 
-  // Cross-chain token availability synchronization
+  // Cross-chain token availability synchronization. Registry gating only
+  // applies to bridge routes — on a same-chain route the local list is the
+  // authority and natives like CELO (absent from CROSS_CHAIN_TOKENS) are
+  // valid Mento swaps.
   useEffect(() => {
-    if (enableCrossChain) {
-      if (!isTokenAvailableOnChain(fromToken, fromChainId)) {
-        const first = availableFromTokens[0]?.symbol;
-        if (first) setFromToken(first);
-      }
-      if (!isTokenAvailableOnChain(toToken, toChainId)) {
-        const first = availableToTokens[0]?.symbol;
-        if (first) setToToken(first);
-      }
+    if (!enableCrossChain) return;
+    if (!ChainDetectionService.isCrossChain(fromChainId, toChainId)) return;
+    const fromAvailable = isTokenAvailableOnChain(fromToken, fromChainId);
+    const effectiveFrom = fromAvailable
+      ? fromToken
+      : (availableFromTokens.find((t) => t.symbol !== toToken) ??
+          availableFromTokens[0])?.symbol;
+    if (!fromAvailable && effectiveFrom) setFromToken(effectiveFrom);
+    if (!isTokenAvailableOnChain(toToken, toChainId)) {
+      const first =
+        availableToTokens.find((t) => t.symbol !== effectiveFrom) ??
+        availableToTokens[0];
+      if (first) setToToken(first.symbol);
     }
   }, [
     enableCrossChain,

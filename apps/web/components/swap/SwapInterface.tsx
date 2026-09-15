@@ -1,8 +1,9 @@
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useSwapController } from "../../hooks/use-swap-controller";
-// Deep leaf import — NOT the barrel — keeps the swap/ethers stack out of first-load.
+// Deep leaf imports — NOT the barrel — keep the swap/ethers stack out of first-load.
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
+import { getTokensForChain } from "@diversifi/shared/src/utils/cross-chain-tokens";
 import { NETWORKS } from "../../config";
 import TokenSelector from "./TokenSelector";
 import ChainSelector from "./ChainSelector";
@@ -16,6 +17,7 @@ import { QUIET_GRAY } from "../shared/palette";
 import { springPop, springSoft } from "@/lib/motion-tokens";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
+import { configTokenFor } from "@/lib/plan-legs";
 import { useMobile } from "@/hooks/use-mobile";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useBestYield, yieldHintForDestination } from "@/hooks/use-best-yield";
@@ -190,10 +192,29 @@ const SwapInterface = forwardRef<
       phoneNumber?: string,
       recipientAddress?: string,
     ) => {
+      // Prefill callers speak several casings ("BRLm", "cREAL", "BRLM").
+      // Resolve to the canonical list symbol case-insensitively — a blind
+      // toUpperCase() produced "BRLM", which matched nothing and the
+      // controller's sync effect silently rewrote the destination.
+      const resolveSymbol = (symbol: string, targetChainId?: number) => {
+        // Plan-leg spellings (cREAL/cUSD) collapse to config tickers first.
+        const candidate = configTokenFor(symbol, targetChainId ?? chainId);
+        const pools: { symbol: string }[][] = [availableTokens];
+        if (targetChainId) pools.push(getTokensForChain(targetChainId));
+        for (const raw of [candidate, symbol]) {
+          for (const pool of pools) {
+            const hit = pool.find(
+              (t) => t.symbol.toUpperCase() === raw.toUpperCase(),
+            );
+            if (hit) return hit.symbol;
+          }
+        }
+        return candidate;
+      };
       if (fromChainId) setFromChainId(fromChainId);
       if (toChainId) setToChainId(toChainId);
-      setFromToken(from.toUpperCase());
-      setToToken(to.toUpperCase());
+      setFromToken(resolveSymbol(from, fromChainId));
+      setToToken(resolveSymbol(to, toChainId));
       if (inputAmount !== undefined) setAmount(inputAmount);
       if (phoneNumber !== undefined) setPhoneNumber(phoneNumber || null);
       if (recipientAddress !== undefined) setRecipientAddress(recipientAddress || null);
