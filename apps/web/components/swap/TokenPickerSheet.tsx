@@ -127,21 +127,30 @@ export default function TokenPickerSheet({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div
-          className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center"
-          role="dialog"
-          aria-modal="true"
-          aria-label={title}
-        >
-          <Scrim intensity="light" onClick={onClose} />
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49]
+          would paint above the panel (z-auto) and swallow its clicks. */}
+      {isOpen && <Scrim intensity="light" onClick={onClose} />}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            onClick={onClose}
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+          >
           <motion.div
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
             className="relative w-full sm:max-w-md max-h-[80dvh] bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800">
@@ -281,8 +290,9 @@ export default function TokenPickerSheet({
               )}
             </div>
           </motion.div>
-        </div>
-      )}
-    </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }

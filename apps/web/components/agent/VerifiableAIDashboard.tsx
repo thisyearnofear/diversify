@@ -101,12 +101,16 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
   const recent = ledgerData?.recent ?? [];
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6">
-          {/* Backdrop */}
-          <Scrim intensity="heavy" onClick={onClose} />
-
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
+      {isOpen && <Scrim intensity="heavy" onClick={onClose} />}
+      <AnimatePresence>
+        {isOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-6"
+          onClick={onClose}
+        >
           {/* Dashboard Panel */}
           <motion.div
             initial={{ scale: 0.92, opacity: 0, y: 30 }}
@@ -114,6 +118,7 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="relative w-full max-w-2xl max-h-[85vh] bg-white/95 dark:bg-gray-950/95 backdrop-blur-2xl rounded-t-[2rem] sm:rounded-[2.5rem] shadow-[0_32px_80px_rgba(0,0,0,0.5)] overflow-hidden border border-white/20 dark:border-white/5 flex flex-col"
+            onClick={(e) => e.stopPropagation()}
           >
             {/* ================================================================ */}
             {/* HEADER */}
@@ -261,8 +266,9 @@ export function VerifiableAIDashboard({ isOpen, onClose }: V0AIDashboardProps) {
             </div>
           </motion.div>
         </div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 

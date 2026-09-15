@@ -82,8 +82,14 @@ export const GuardianPermissionModal: React.FC<{
   }, [onCancel]);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
       <Scrim intensity="default" onClick={onCancel} />
+      <div
+        className="fixed inset-0 z-[100] flex items-end justify-center"
+        onClick={onCancel}
+      >
       <div
         ref={dialogRef}
         role="dialog"
@@ -283,6 +289,7 @@ export const GuardianPermissionModal: React.FC<{
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

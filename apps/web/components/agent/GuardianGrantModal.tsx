@@ -23,8 +23,14 @@ export const GuardianGrantModal: React.FC<{
   onContinue,
 }) => {
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center">
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
       <Scrim intensity="default" onClick={onCancel} />
+      <div
+        className="fixed inset-0 z-[100] flex items-end justify-center"
+        onClick={onCancel}
+      >
       <div
         className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -100,6 +106,7 @@ export const GuardianGrantModal: React.FC<{
           </button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };

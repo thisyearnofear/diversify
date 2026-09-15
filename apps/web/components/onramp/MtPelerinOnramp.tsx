@@ -207,13 +207,17 @@ function MtPelerinModal({ widgetUrl, onClose }: MtPelerinModalProps) {
   }, [isLoading]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4"
-    >
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
       <Scrim intensity="heavy" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4"
+        onClick={onClose}
+      >
       <motion.div
         initial={{ scale: 0.95, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -380,7 +384,8 @@ function MtPelerinModal({ widgetUrl, onClose }: MtPelerinModalProps) {
           </div>
         </div>
       </motion.div>
-    </motion.div>
+      </motion.div>
+    </>
   );
 }
 

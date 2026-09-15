@@ -19,11 +19,14 @@ export default function AssetModal({
     if (!asset) return null;
 
     return (
-        <div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={onClose}
-        >
+        <>
+            {/* Scrim is a sibling, not a child: nested, its fixed z-[49]
+                would paint above the panel and swallow its clicks. */}
             <Scrim intensity="heavy" />
+            <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                onClick={onClose}
+            >
             <div
                 className="bg-white dark:bg-gray-900 rounded-3xl max-w-sm w-full p-6 shadow-2xl relative z-10"
                 onClick={(e) => e.stopPropagation()}
@@ -105,6 +108,7 @@ export default function AssetModal({
                     </button>
                 </div>
             </div>
-        </div>
+            </div>
+        </>
     );
 }

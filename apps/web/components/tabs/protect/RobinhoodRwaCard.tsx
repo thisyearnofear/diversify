@@ -120,11 +120,14 @@ interface AssetDetailModalProps {
 
 function AssetDetailModal({ asset, price, onClose }: AssetDetailModalProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      onClick={onClose}
-    >
+    <>
+      {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
+          paint above the panel (z-auto) and swallow its clicks. */}
       <Scrim intensity="heavy" />
+      <div
+        className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+        onClick={onClose}
+      >
       <motion.div
         initial={{ y: "100%", opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
@@ -183,7 +186,8 @@ function AssetDetailModal({ asset, price, onClose }: AssetDetailModalProps) {
           Close
         </button>
       </motion.div>
-    </div>
+      </div>
+    </>
   );
 }
 
