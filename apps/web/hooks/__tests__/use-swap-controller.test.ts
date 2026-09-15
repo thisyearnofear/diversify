@@ -127,3 +127,46 @@ describe("useSwapController — token sync", () => {
     expect(result.current.toToken).toBe("BRLm");
   });
 });
+
+describe("useSwapController — unsupported wallet chain", () => {
+  // Repro of the production failure: wallet on Ethereum mainnet (chainId
+  // 1) got adopted into the ticket's from/to chains, then execution sent
+  // Celo token addresses (KESm/COPm) to 1inch on chain 1 → UNKNOWN_TOKEN.
+  it("does not adopt an unsupported wallet chain into the ticket", () => {
+    const { result } = renderController({ chainId: 1 });
+
+    expect(result.current.fromChainId).toBe(CELO_CHAIN_ID);
+    expect(result.current.toChainId).toBe(CELO_CHAIN_ID);
+  });
+
+  it("still serves the available (Celo-fallback) token list on an unsupported chain", () => {
+    const { result } = renderController({ chainId: 1 });
+
+    // availableTokens is what getChainAssets() produced for the wallet —
+    // the Celo fallback list for unknown chains. The ticket chain is
+    // Celo, so the from/to lists should be that list verbatim (native
+    // CELO stays selectable), not the cross-chain registry.
+    expect(result.current.availableFromTokens).toEqual(CELO_TOKENS);
+    expect(result.current.availableToTokens).toEqual(CELO_TOKENS);
+  });
+
+  it("follows the wallet when it later moves to a supported chain", () => {
+    const { result, rerender } = renderHook(
+      ({ chainId }: { chainId: number }) =>
+        useSwapController({
+          address: "0xtest",
+          chainId,
+          availableTokens: CELO_TOKENS,
+          enableCrossChain: true,
+        }),
+      { initialProps: { chainId: 1 } },
+    );
+
+    expect(result.current.fromChainId).toBe(CELO_CHAIN_ID);
+
+    rerender({ chainId: 42161 }); // Arbitrum — supported
+
+    expect(result.current.fromChainId).toBe(42161);
+    expect(result.current.toChainId).toBe(42161);
+  });
+});

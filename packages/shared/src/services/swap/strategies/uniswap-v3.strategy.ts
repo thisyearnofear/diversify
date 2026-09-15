@@ -39,9 +39,13 @@ export class UniswapV3Strategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Supports same-chain swaps on networks with Uniswap V3
+        // Supports same-chain swaps on networks with Uniswap V3 that the
+        // app actually configures (token map + RPC). Routers exist on
+        // Ethereum/Polygon/etc., but with no app token config the
+        // Celo-fallback token map would feed foreign addresses.
         return (
             params.fromChainId === params.toChainId &&
+            ChainDetectionService.isSupported(params.fromChainId) &&
             UNISWAP_V3_ROUTER_ADDRESSES[params.fromChainId] !== undefined
         );
     }

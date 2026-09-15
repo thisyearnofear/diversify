@@ -46,9 +46,14 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Supports same-chain swaps on supported networks
+        // Supports same-chain swaps on supported networks.
+        // ChainDetectionService.isSupported gates this to chains the app
+        // actually configures — 1inch covers Ethereum/Base/etc., but our
+        // token maps don't, so claiming them routes Celo addresses into
+        // a foreign-chain API call (1inch UNKNOWN_TOKEN).
         return (
             params.fromChainId === params.toChainId &&
+            ChainDetectionService.isSupported(params.fromChainId) &&
             this.getSupportedChainIds().includes(params.fromChainId)
         );
     }

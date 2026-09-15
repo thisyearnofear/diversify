@@ -19,6 +19,10 @@ import {
     getWalletProvider,
     setupWalletEventListenersForProvider,
 } from '@diversifi/shared/src/modules/wallet/core/provider-registry';
+import {
+    getAddChainParameter,
+    toHexChainId,
+} from '@diversifi/shared/src/modules/wallet/core/chains';
 import { NETWORKS, TX_CONFIG } from '../config';
 
 interface HookSwapParams {
@@ -201,7 +205,7 @@ export function useSwap() {
             }
 
             // Always get fresh chain ID from wallet to ensure we're on the right network
-            const currentChainId = await ProviderFactoryService.getCurrentChainId();
+            let currentChainId = await ProviderFactoryService.getCurrentChainId();
             if (currentChainId !== chainId) {
                 console.log(`[useSwap] Chain ID updated: ${chainId} -> ${currentChainId}`);
                 setChainId(currentChainId);
@@ -219,13 +223,71 @@ export function useSwap() {
                 toToken,
                 amount,
                 fromChainId: params.fromChainId || currentChainId,
-                toChainId: params.toChainId || currentChainId,
+                toChainId: params.toChainId || params.fromChainId || currentChainId,
                 userAddress,
                 slippageTolerance: finalSlippage,
                 recipientAddress: params.recipientAddress,
                 phoneNumber: params.phoneNumber,
                 contractCall: params.contractCall,
             };
+
+            // An explicitly pinned but unsupported source chain can't be
+            // served — fail before any strategy runs. When no source was
+            // pinned, the ticket displays the Celo asset list for unknown
+            // wallet chains (getChainAssets fallback), so anchor the route
+            // to Celo there rather than letting Celo token addresses leak
+            // into a foreign-chain execution.
+            if (!ChainDetectionService.isSupported(swapParams.fromChainId)) {
+                if (params.fromChainId) {
+                    throw new Error(
+                        `Swaps on ${ChainDetectionService.getNetworkName(swapParams.fromChainId)} aren't supported. Please switch to a supported network.`
+                    );
+                }
+                swapParams.fromChainId = NETWORKS.CELO_MAINNET.chainId;
+                if (!params.toChainId) {
+                    swapParams.toChainId = NETWORKS.CELO_MAINNET.chainId;
+                }
+            }
+
+            // The wallet must sit on the source chain to sign. If it
+            // doesn't (e.g. user is on Ethereum mainnet while the ticket
+            // targets Celo), ask the wallet to switch before touching any
+            // strategy — otherwise Celo token addresses get routed to a
+            // foreign chain and fail deep inside 1inch/Uniswap.
+            if (currentChainId !== swapParams.fromChainId && !isMiniPay) {
+                const targetName = ChainDetectionService.getNetworkName(swapParams.fromChainId);
+                onProgress?.(`Switching to ${targetName}...`, 2, 4);
+                const provider = await getWalletProvider();
+                try {
+                    await provider.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: toHexChainId(swapParams.fromChainId) }],
+                    });
+                } catch (switchError: any) {
+                    console.warn('[useSwap] wallet_switchEthereumChain failed:', switchError?.code, switchError?.message);
+                    try {
+                        await provider.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [getAddChainParameter(swapParams.fromChainId)],
+                        });
+                    } catch (addError) {
+                        console.error('[useSwap] wallet_addEthereumChain failed:', addError);
+                        throw new Error(`Please switch your wallet to ${targetName} to continue.`);
+                    }
+                }
+                const switchedChainId = await ProviderFactoryService.getCurrentChainId();
+                if (switchedChainId !== swapParams.fromChainId) {
+                    throw new Error(`Please switch your wallet to ${targetName} to continue.`);
+                }
+                currentChainId = switchedChainId;
+                setChainId(switchedChainId);
+                // The cached Web3Provider pins its detected network
+                // (anyNetwork=false) — after a chain switch its
+                // getNetwork() throws "underlying network changed".
+                // Drop it so strategies get a provider bound to the
+                // wallet's new chain.
+                ProviderFactoryService.clearWeb3Cache();
+            }
 
             // Check if swap is supported
             if (!SwapOrchestratorService.isSwapSupported(swapParams)) {

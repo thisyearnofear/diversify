@@ -4,7 +4,7 @@ import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useInflationData } from "./use-inflation-data";
 import { useStreakRewards } from "./use-streak-rewards";
-import { NETWORKS } from "../config";
+import { NETWORKS, NETWORK_TOKENS } from "../config";
 // Deep leaf imports — NOT the barrel — keeps the swap + cross-chain-tokens stacks out of first-load.
 import { isTokenAvailableOnChain, getTokensForChain } from "@diversifi/shared/src/utils/cross-chain-tokens";
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
@@ -69,11 +69,30 @@ export function useSwapController({
   const [recipientAddress, setRecipientAddress] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
 
+  // The wallet chain the ticket may follow: only chains the swap
+  // orchestrator can actually execute on. Unsupported chains (e.g.
+  // Ethereum mainnet) leave the ticket on its supported default so
+  // execution can request a wallet network switch instead of sending
+  // Celo token addresses to a foreign route.
+  const supportedChainId =
+    chainId != null && ChainDetectionService.isSupported(chainId)
+      ? chainId
+      : null;
+
+  // The chain `availableTokens` describes from the ticket's perspective.
+  // getChainAssets() serves a chain's own list when NETWORK_TOKENS has
+  // one (incl. non-swap chains like Robinhood) and the Celo list
+  // otherwise — so a connected wallet on an unknown chain maps to Celo.
+  const listChainId =
+    chainId != null
+      ? (NETWORK_TOKENS[chainId] ? chainId : NETWORKS.CELO_MAINNET.chainId)
+      : null;
+
   const [fromChainId, setFromChainId] = useState<number>(
-    chainId || NETWORKS.CELO_MAINNET.chainId,
+    supportedChainId ?? NETWORKS.CELO_MAINNET.chainId,
   );
   const [toChainId, setToChainId] = useState<number>(
-    chainId || NETWORKS.CELO_MAINNET.chainId,
+    supportedChainId ?? NETWORKS.CELO_MAINNET.chainId,
   );
 
   const [status, setStatus] = useState<
@@ -109,35 +128,39 @@ export function useSwapController({
   // 3. Derived Token Lists
   const availableFromTokens = useMemo(() => {
     if (!enableCrossChain) return availableTokens;
-    if (fromChainId === chainId) return availableTokens;
+    if (fromChainId === listChainId) return availableTokens;
     return getTokensForChain(fromChainId).map((token) => ({
       symbol: token.symbol,
       name: token.name,
       region: token.region,
     }));
-  }, [enableCrossChain, fromChainId, chainId, availableTokens]);
+  }, [enableCrossChain, fromChainId, listChainId, availableTokens]);
 
   const availableToTokens = useMemo(() => {
     if (!enableCrossChain) return availableTokens;
-    if (toChainId === chainId) return availableTokens;
+    if (toChainId === listChainId) return availableTokens;
     return getTokensForChain(toChainId).map((token) => ({
       symbol: token.symbol,
       name: token.name,
       region: token.region,
     }));
-  }, [enableCrossChain, toChainId, chainId, availableTokens]);
+  }, [enableCrossChain, toChainId, listChainId, availableTokens]);
 
   // 4. Effects & Synchronization
 
-  // Wallet Chain synchronization
+  // Wallet Chain synchronization. An unsupported wallet chain (e.g.
+  // Ethereum mainnet) must NOT be adopted into the ticket: the token
+  // lists fall back to Celo assets for unknown chains, so a ticket on
+  // chain 1 would send Celo token addresses to an Ethereum route.
+  // Keeping the ticket on its supported chain lets useSwap request a
+  // wallet network switch at execution time instead.
   useEffect(() => {
-    if (chainId) {
-      if (!enableCrossChain || fromChainId === toChainId) {
-        setFromChainId(chainId);
-        setToChainId(chainId);
-      }
+    if (supportedChainId == null) return;
+    if (!enableCrossChain || fromChainId === toChainId) {
+      setFromChainId(supportedChainId);
+      setToChainId(supportedChainId);
     }
-  }, [chainId, enableCrossChain, fromChainId, toChainId]);
+  }, [supportedChainId, enableCrossChain, fromChainId, toChainId]);
 
   // Search/Filter synchronization
   useEffect(() => {
