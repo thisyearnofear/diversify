@@ -61,7 +61,7 @@ validated (unknown vault ids dropped, weights normalized to 100).
 | `SERV_BASE_URL` | `https://inference-api.openserv.ai` | OpenAI-compatible |
 | `SERV_MODEL` | `gpt-5.4-mini` | Chat Completions model |
 | `SERV_REASONING_EFFORT` | `medium` | `none`/`low`/`medium`/`high` |
-| `SERV_TIMEOUT_MS` | `8000` | Hard abort, then heuristic fallback |
+| `SERV_TIMEOUT_MS` | `20000` | Hard abort, then heuristic fallback |
 
 Files: `packages/shared/src/services/serv/{ixs-vault-catalog,rwa-allocator,serv-reasoning-client}.ts`.
 

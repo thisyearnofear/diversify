@@ -27,7 +27,7 @@ export function isServConfigured(): boolean {
 
 const DEFAULT_BASE = 'https://inference-api.openserv.ai';
 const DEFAULT_MODEL = 'gpt-5.4-mini';
-const DEFAULT_TIMEOUT_MS = 8_000;
+const DEFAULT_TIMEOUT_MS = 20_000;
 
 function servConfig() {
   return {
@@ -42,6 +42,8 @@ function servConfig() {
 export async function callServReasoning(opts: {
   system: string;
   user: string;
+  /** Optional OpenAI structured-outputs schema (response_format json_schema). */
+  jsonSchema?: { name: string; schema: Record<string, unknown> };
 }): Promise<ServCallResult> {
   const cfg = servConfig();
   if (!cfg.apiKey) return { ok: false, reason: 'serv_not_configured' };
@@ -63,8 +65,21 @@ export async function callServReasoning(opts: {
             { role: 'user', content: opts.user },
           ],
           reasoning_effort: cfg.effort,
-          temperature: 0.2,
-          max_tokens: 800,
+          // Generous cap: reasoning_tokens count toward completion_tokens on
+          // this family, so a tight budget can leave content truncated/empty.
+          max_completion_tokens: Number(process.env.SERV_MAX_TOKENS ?? 4000) || 4000,
+          ...(opts.jsonSchema
+            ? {
+                response_format: {
+                  type: 'json_schema',
+                  json_schema: {
+                    name: opts.jsonSchema.name,
+                    schema: opts.jsonSchema.schema,
+                    strict: true,
+                  },
+                },
+              }
+            : {}),
         }),
       },
       cfg.timeoutMs,

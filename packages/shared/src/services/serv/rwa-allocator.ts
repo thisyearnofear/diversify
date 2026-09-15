@@ -151,11 +151,35 @@ export function computeHeuristicAllocation(profile: AllocationProfile): VaultAll
 // SERV-enhanced path — re-weight + explain via SERV Reasoning
 // ---------------------------------------------------------------------------
 
-export const SERV_ALLOCATION_SYSTEM_PROMPT = `You are the DiversiFi Guardian allocating stablecoin capital across licensed IXS Finance RWA vaults (ERC-4626, Bahamas DARE Act, KYC at deposit). Respond with ONLY a JSON object — no prose, no markdown:
+export const SERV_ALLOCATION_SYSTEM_PROMPT = `You are the DiversiFi Guardian allocating stablecoin capital across licensed IXS Finance RWA vaults (ERC-4626, Bahamas DARE Act, KYC at deposit). Weight every vault in the catalog (0 = excluded), weights must sum to 100. Give each vault a one-sentence rationale tied to the user's profile, and a one-sentence summary. Respect the user's values lens (e.g. islamic profiles minimize conventional interest-bearing vaults) and stated risk tolerance; indicative APY bands are not guarantees.`;
 
-{"weights": {"<vaultId>": <number 0-100>, ...}, "rationale": {"<vaultId>": "<one sentence>"}, "summary": "<one sentence>"}
-
-Rules: only use vault ids provided; weights must sum to 100; respect the user's values lens (e.g. islamic profiles minimize conventional interest-bearing vaults); respect the stated risk tolerance; indicative APY bands are not guarantees.`;
+/** Strict json_schema for SERV structured outputs — keys are the catalog ids. */
+function allocationJsonSchema(): { name: string; schema: Record<string, unknown> } {
+  const ids = IXS_VAULTS.map((v) => v.id);
+  return {
+    name: 'rwa_allocation',
+    schema: {
+      type: 'object',
+      properties: {
+        weights: {
+          type: 'object',
+          properties: Object.fromEntries(ids.map((id) => [id, { type: 'number' }])),
+          required: ids,
+          additionalProperties: false,
+        },
+        rationale: {
+          type: 'object',
+          properties: Object.fromEntries(ids.map((id) => [id, { type: 'string' }])),
+          required: ids,
+          additionalProperties: false,
+        },
+        summary: { type: 'string' },
+      },
+      required: ['weights', 'rationale', 'summary'],
+      additionalProperties: false,
+    },
+  };
+}
 
 function buildServPrompt(profile: AllocationProfile, heuristic: VaultAllocation[]): string {
   const catalog = IXS_VAULTS.map((v) => ({
@@ -200,8 +224,15 @@ function parseServAllocation(text: string): {
   } catch {
     throw new Error('serv returned non-JSON');
   }
-  const weightsIn = parsed.weights;
-  if (!weightsIn || typeof weightsIn !== 'object') throw new Error('serv response missing weights');
+  // Tolerate the model collapsing to a flat {vaultId: weight} map — the same
+  // strict validation (known ids, positive numbers, normalize to 100) applies.
+  const weightsIn =
+    parsed.weights && typeof parsed.weights === 'object'
+      ? parsed.weights
+      : Object.values(parsed as Record<string, unknown>).some((v) => typeof v === 'number')
+        ? (parsed as unknown as Record<string, unknown>)
+        : null;
+  if (!weightsIn) throw new Error('serv response missing weights');
 
   const entries: { vaultId: string; raw: number }[] = [];
   for (const [id, w] of Object.entries(weightsIn)) {
@@ -272,6 +303,7 @@ export async function getRwaAllocation(
     const res = await callServReasoning({
       system: SERV_ALLOCATION_SYSTEM_PROMPT,
       user: buildServPrompt(profile, heuristic),
+      jsonSchema: allocationJsonSchema(),
     });
     if (!res.ok) {
       return {
