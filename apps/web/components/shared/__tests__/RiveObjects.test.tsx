@@ -13,6 +13,20 @@ vi.mock('next/dynamic', () => ({
   },
 }));
 
+// jsdom lacks matchMedia — canMountRive() gates canvas mounting on it.
+// next/dynamic is stubbed above, so stubbing matchMedia exercises the
+// mount path without ever touching WASM.
+window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+  matches: false,
+  media: query,
+  onchange: null,
+  addListener: vi.fn(),
+  removeListener: vi.fn(),
+  addEventListener: vi.fn(),
+  removeEventListener: vi.fn(),
+  dispatchEvent: vi.fn(),
+}));
+
 const reducedMotionState = { on: false };
 vi.mock('framer-motion', async () => {
   const actual = await vi.importActual<typeof import('framer-motion')>('framer-motion');

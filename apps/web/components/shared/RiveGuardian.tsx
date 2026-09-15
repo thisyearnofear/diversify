@@ -15,6 +15,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useReducedMotion } from 'framer-motion';
 import { STATUS_COLORS, QUIET_GRAY, DEFAULT_ACCENT } from './palette';
+import { canMountRive } from '../../lib/rive-runtime';
 
 const RiveGuardianCanvas = dynamic(() => import('./RiveGuardianCanvas'), { ssr: false });
 
@@ -74,7 +75,7 @@ function GuardianGlyph({ size, posture }: { size: number; posture: GuardianPostu
 
 export default function RiveGuardian({ size = 56, posture = 'watching' }: RiveGuardianProps) {
   const reducedMotion = useReducedMotion();
-  if (reducedMotion) {
+  if (reducedMotion || !canMountRive()) {
     return <GuardianGlyph size={size} posture={posture} />;
   }
   return <RiveGuardianCanvas size={size} posture={posture} />;

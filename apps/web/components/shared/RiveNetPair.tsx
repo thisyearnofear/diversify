@@ -16,6 +16,7 @@ import dynamic from 'next/dynamic';
 import { useReducedMotion } from 'framer-motion';
 import { Coin } from './FloatingCoins';
 import { COIN_TINTS, STATUS_COLORS } from './palette';
+import { canMountRive } from '../../lib/rive-runtime';
 
 const RiveNetPairCanvas = dynamic(() => import('./RiveNetPairCanvas'), { ssr: false });
 
@@ -102,7 +103,7 @@ export default function RiveNetPair({
   settled = false,
 }: RiveNetPairProps) {
   const reducedMotion = useReducedMotion();
-  if (reducedMotion) {
+  if (reducedMotion || !canMountRive()) {
     return (
       <StaticPair size={size} leftColor={leftColor} rightColor={rightColor} settled={settled} />
     );

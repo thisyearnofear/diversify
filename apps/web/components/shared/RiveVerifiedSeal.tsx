@@ -15,6 +15,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useReducedMotion } from 'framer-motion';
 import { STATUS_COLORS, QUIET_GRAY } from './palette';
+import { canMountRive } from '../../lib/rive-runtime';
 
 const RiveVerifiedSealCanvas = dynamic(() => import('./RiveVerifiedSealCanvas'), { ssr: false });
 
@@ -68,7 +69,7 @@ function SealGlyph({ size, verified, accent }: { size: number; verified: boolean
 
 export default function RiveVerifiedSeal({ size = 48, verified = false, accent = STATUS_COLORS.good }: RiveVerifiedSealProps) {
   const reducedMotion = useReducedMotion();
-  if (reducedMotion) {
+  if (reducedMotion || !canMountRive()) {
     return <SealGlyph size={size} verified={verified} accent={accent} />;
   }
   return <RiveVerifiedSealCanvas size={size} verified={verified} accent={accent} />;

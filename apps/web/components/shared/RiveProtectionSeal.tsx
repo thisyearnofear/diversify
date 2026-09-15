@@ -15,6 +15,7 @@ import React from 'react';
 import dynamic from 'next/dynamic';
 import { useReducedMotion } from 'framer-motion';
 import { STATUS_COLORS } from './palette';
+import { canMountRive } from '../../lib/rive-runtime';
 
 const RiveProtectionSealCanvas = dynamic(() => import('./RiveProtectionSealCanvas'), { ssr: false });
 
@@ -60,7 +61,7 @@ export default function RiveProtectionSeal({
   armed = true,
 }: RiveProtectionSealProps) {
   const reducedMotion = useReducedMotion();
-  if (reducedMotion) {
+  if (reducedMotion || !canMountRive()) {
     return <StaticSeal size={size} color={color} armed={armed} />;
   }
   return <RiveProtectionSealCanvas size={size} color={color} armed={armed} />;
