@@ -42,6 +42,29 @@
 
 > **User-supplied keys**: Users can paste their own Gemini API key in the ⚙️ chat settings modal. The key is stored in `localStorage` and forwarded via the `x-gemini-key` request header — it is never persisted server-side. This removes shared rate-limit pressure and qualifies for the Google prize track.
 
+### SERV Reasoning (opt-in, not in the chat chain)
+
+SERV (`inference-api.openserv.ai`) is an OpenAI-compatible inference API used
+**only** by the RWA vault allocator (`POST /api/agent/rwa-allocation`, demo at
+`/rwa-vaults`) — it is deliberately **not** part of the `AIService` failover
+chain. The default path is a free deterministic heuristic over the IXS Finance
+ERC-4626 catalog; SERV engages only on explicit opt-in (`?serv=1` /
+`{ serv: true }`) with `SERV_API_KEY` configured. Every failure — missing key,
+`SERV_ENABLED=false`, timeout (8s), 401/403, 429, 5xx, malformed JSON — falls
+back to the heuristic with `degradedReason` set; the response is strictly
+validated (unknown vault ids dropped, weights normalized to 100).
+
+| Env | Default | Notes |
+|---|---|---|
+| `SERV_API_KEY` | — | Server-only, never `NEXT_PUBLIC_` |
+| `SERV_ENABLED` | `true` | Explicit off-switch even with a key present |
+| `SERV_BASE_URL` | `https://inference-api.openserv.ai` | OpenAI-compatible |
+| `SERV_MODEL` | `gpt-5.4-mini` | Chat Completions model |
+| `SERV_REASONING_EFFORT` | `medium` | `none`/`low`/`medium`/`high` |
+| `SERV_TIMEOUT_MS` | `8000` | Hard abort, then heuristic fallback |
+
+Files: `packages/shared/src/services/serv/{ixs-vault-catalog,rwa-allocator,serv-reasoning-client}.ts`.
+
 ### AI Endpoints & Caching
 
 - All AI responses cached for 5 minutes to reduce API calls

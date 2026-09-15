@@ -17,6 +17,7 @@ settlement rails: [`rails.md`](./rails.md).
 | **HashKey mainnet deploy** | APAC rail code shipped; deployment pending HSK gas. Runbook: [`rails.md`](./rails.md) § APAC Rail. | HashKey Horizon |
 | **Caribbean evidence** | User/partner evidence (LOI) for the FX netting track; rail parity, settlement execution, credit-layer embryo, and liquidity bootstrap are all shipped. | Future Caribbean |
 | **SME FX — remaining phases** | Importer `FinancialStrategy` archetype, GHS on/off-ramp partner, rails design partner, graduation funnel. Phased plan: [`strategy.md`](./strategy.md). | North star |
+| **SERV Hackathon Ed. 01 close-out** | RWA Vaults allocator shipped (free heuristic + opt-in SERV Reasoning over the IXS catalog; `roadmap-log.md` § SERV Hackathon). Remaining: `SERV_API_KEY` on the backend, data-collection toggle at console.openserv.ai, demo video, public X post + form. Submission package: [`submission/serv-edition-01.md`](./submission/serv-edition-01.md). | Deadline 28 Sep 00:00 UTC |
 
 ---
 
@@ -31,6 +32,7 @@ settlement rails: [`rails.md`](./rails.md).
 | Qwen MemoryAgent | Shipped — Tablestore/DashScope memory, Function Compute proof, +38% eval | — |
 | Product quality plan | 14-day plan closed (details + close-out notes in `roadmap-log.md`) | axe-core CI pass unverified |
 | SME FX north star | Vertical slice + fail-closed cycle protection shipped | Phases above |
+| SERV Hackathon Ed. 01 | Allocator + demo page shipped (`/rwa-vaults`, free-default, SERV opt-in) | Deploy key, video, X post, form |
 
 ---
 
