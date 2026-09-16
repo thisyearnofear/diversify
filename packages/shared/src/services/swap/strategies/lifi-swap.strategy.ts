@@ -108,7 +108,7 @@ export class LiFiSwapStrategy extends BaseSwapStrategy {
     }
 
     async execute(params: SwapParams, callbacks?: SwapCallbacks): Promise<SwapResult> {
-        this.log('Executing LiFi swap on Arbitrum', params);
+        this.log(`Executing LiFi swap on chain ${params.fromChainId}`, params);
 
         try {
             // Validate

@@ -90,8 +90,26 @@ export class SwapOrchestratorService {
 
             console.log(`[SwapOrchestrator] Trying strategy: ${strategyName}`);
 
+            // Once a transaction (approval or swap) has been submitted, a
+            // failure means gas was spent on-chain. Falling back would ask
+            // the user to sign again with a different provider — likely
+            // another approval and another chance to revert. Surface the
+            // failure and let the user decide whether to retry.
+            let txSubmitted = false;
+            const guardedCallbacks: SwapCallbacks = {
+                ...callbacks,
+                onApprovalSubmitted: (hash: string) => {
+                    txSubmitted = true;
+                    callbacks?.onApprovalSubmitted?.(hash);
+                },
+                onSwapSubmitted: (hash: string) => {
+                    txSubmitted = true;
+                    callbacks?.onSwapSubmitted?.(hash);
+                },
+            };
+
             try {
-                const result = await strategy.execute(params, callbacks);
+                const result = await strategy.execute(params, guardedCallbacks);
 
                 if (result.success) {
                     // Update performance data
@@ -147,6 +165,19 @@ export class SwapOrchestratorService {
                     return result; // Return the guidance message directly
                 }
 
+                if (txSubmitted) {
+                    console.log(`[SwapOrchestrator] ${strategyName} failed after a transaction was submitted — not falling back`);
+                    return {
+                        success: false,
+                        error: this.getUserFriendlyError(result.error || 'Transaction failed on-chain'),
+                    };
+                }
+
+                if (this.isUserRejection(result.error)) {
+                    console.log(`[SwapOrchestrator] ${strategyName} cancelled by user — not falling back`);
+                    return { success: false, error: 'Transaction was cancelled.' };
+                }
+
                 lastError = result.error;
 
             } catch (error: any) {
@@ -155,6 +186,14 @@ export class SwapOrchestratorService {
 
                 lastError = error.message;
                 console.log(`[SwapOrchestrator] ${strategyName} failed:`, error.message);
+
+                if (txSubmitted || this.isUserRejection(error.message)) {
+                    console.log(`[SwapOrchestrator] ${strategyName} stopped — ${txSubmitted ? 'transaction submitted' : 'user rejected'}; not falling back`);
+                    return {
+                        success: false,
+                        error: this.getUserFriendlyError(error.message || 'Transaction failed on-chain'),
+                    };
+                }
             }
         }
 
@@ -280,6 +319,21 @@ export class SwapOrchestratorService {
         existing.lastUpdated = Date.now();
 
         this.performanceData.set(strategyName, existing);
+    }
+
+    /**
+     * Detect wallet-level user rejection across provider error shapes
+     * (MetaMask "denied", viem/LiFi "rejected the request", ethers
+     * ACTION_REJECTED). A rejected signature must not trigger fallback —
+     * the next strategy would just pop another signing prompt.
+     */
+    private static isUserRejection(message?: string): boolean {
+        if (!message) return false;
+        const m = message.toLowerCase();
+        return m.includes('user rejected') ||
+            m.includes('user denied') ||
+            m.includes('rejected the request') ||
+            m.includes('action_rejected');
     }
 
     /**

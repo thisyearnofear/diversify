@@ -39,10 +39,13 @@ describe('swap strategy chain gating', () => {
             }
         });
 
-        it('still supports Celo and Arbitrum same-chain swaps', () => {
+        it('rejects Celo — the 1inch API does not support chain 42220', () => {
+            // Production regression: a USDT→KESm fallback hit
+            // "Unsupported chain id: 42220" (404). The provider gate must
+            // reflect the API's real chain list, not the app's.
             expect(
                 strategy.supports(sameChainParams(NETWORKS.CELO_MAINNET.chainId)),
-            ).toBe(true);
+            ).toBe(false);
             expect(
                 strategy.supports(sameChainParams(NETWORKS.ARBITRUM_ONE.chainId)),
             ).toBe(true);

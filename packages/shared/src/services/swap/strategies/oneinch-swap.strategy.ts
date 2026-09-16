@@ -59,6 +59,9 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
     }
 
     private getSupportedChainIds(): number[] {
+        // 1inch's API chain list — Celo is deliberately absent: the API
+        // answers "Unsupported chain id: 42220" (observed in production).
+        // Celo Mento pairs route through MentoSwapStrategy / LiFi instead.
         return [
             1,     // Ethereum
             56,    // BSC
@@ -67,7 +70,6 @@ export class OneInchSwapStrategy extends BaseSwapStrategy {
             43114, // Avalanche
             10,    // Optimism
             8453,  // Base
-            42220, // Celo
         ];
     }
 

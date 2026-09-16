@@ -17,9 +17,21 @@ import { SwapExecutionService } from '../execution';
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
 import { getTokenAddresses, getBrokerAddress, TOKEN_METADATA, TX_CONFIG } from '../../../config';
+import type { ExchangeInfo } from '../../../types/swap';
 
 // USDm is the hub token - all Mento pairs route through it
 const ROUTING_TOKEN_SYMBOL = 'USDm';
+
+// Assets the Celo mainnet broker can actually exchange — verified on-chain
+// via getExchangeProviders()/getExchanges(): every published exchange is a
+// USDm<->regional pair, so the routable set is USDm plus the regional
+// stables below. Other tokens in the Celo map (CELO, EURm, GBPm, JPYm,
+// CHFm, USDT, G$) have no broker exchange and must route through DEX
+// aggregators. Update this set if Mento governance registers new exchanges.
+const MENTO_BROKER_TOKENS = new Set([
+    'USDm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm',
+    'XOFm', 'ZARm', 'CADm', 'AUDm', 'NGNm',
+]);
 
 export class MentoSwapStrategy extends BaseSwapStrategy {
     getName(): string {
@@ -27,20 +39,16 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
     }
 
     supports(params: SwapParams): boolean {
-        // Only supports same-chain swaps on Celo networks for Mento tokens
-        // G$ and other non-Mento tokens should fall through to LiFi
+        // Same-chain Celo swaps where both tokens are broker assets.
+        // Claiming anything broader wastes an approval transaction in
+        // execute() before exchange discovery finds nothing.
         if (!ChainDetectionService.isCelo(params.fromChainId) ||
             params.fromChainId !== params.toChainId) {
             return false;
         }
 
-        // Check if both tokens are Mento tokens (not G$ or other non-Mento tokens)
-        const nonMentoTokens = ['G$', 'USDT']; // Tokens that exist on Celo but aren't Mento
-        const isFromNonMento = nonMentoTokens.includes(params.fromToken);
-        const isToNonMento = nonMentoTokens.includes(params.toToken);
-
-        // If either token is non-Mento, let LiFi handle it
-        return !isFromNonMento && !isToNonMento;
+        return MENTO_BROKER_TOKENS.has(params.fromToken) &&
+            MENTO_BROKER_TOKENS.has(params.toToken);
     }
 
     async validate(params: SwapParams): Promise<boolean> {
@@ -190,7 +198,42 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 gasPrice
             };
 
-            // Step 1: Check and handle approval
+            // Step 1: Find exchange BEFORE approving — an approval tx burns
+            // gas, so it must never be submitted for a pair the broker
+            // can't exchange.
+            this.log('Finding exchange');
+            const directExchange = await ExchangeDiscoveryService.findDirectExchange(
+                brokerAddress,
+                fromTokenAddress,
+                toTokenAddress,
+                readProvider
+            );
+
+            const routingTokenAddress = tokens[ROUTING_TOKEN_SYMBOL as keyof typeof tokens];
+
+            let twoStepExchange: { first: ExchangeInfo; second: ExchangeInfo } | null = null;
+
+            if (!directExchange) {
+                if (!routingTokenAddress ||
+                    params.fromToken === ROUTING_TOKEN_SYMBOL ||
+                    params.toToken === ROUTING_TOKEN_SYMBOL) {
+                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
+                }
+
+                twoStepExchange = await ExchangeDiscoveryService.findTwoStepExchange(
+                    brokerAddress,
+                    fromTokenAddress,
+                    toTokenAddress,
+                    routingTokenAddress,
+                    readProvider
+                );
+
+                if (!twoStepExchange) {
+                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken} (even via USDm)`);
+                }
+            }
+
+            // Step 2: Check and handle approval
             this.log('Checking token approval');
             const approvalStatus = await ApprovalService.checkApproval(
                 fromTokenAddress,
@@ -216,23 +259,14 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
                 approvalTxHash = approveTx.hash;
                 callbacks?.onApprovalSubmitted?.(approveTx.hash);
 
-                const confirmations = isTestnet
+                const approvalConfirmations = isTestnet
                     ? TX_CONFIG.CONFIRMATIONS.TESTNET
                     : TX_CONFIG.CONFIRMATIONS.MAINNET;
 
-                await ApprovalService.waitForApproval(approveTx, confirmations);
+                await ApprovalService.waitForApproval(approveTx, approvalConfirmations);
                 callbacks?.onApprovalConfirmed?.();
                 this.log('Approval confirmed');
             }
-
-            // Step 2: Find exchange (direct or via USDm)
-            this.log('Finding exchange');
-            const directExchange = await ExchangeDiscoveryService.findDirectExchange(
-                brokerAddress,
-                fromTokenAddress,
-                toTokenAddress,
-                readProvider
-            );
 
             const slippage = params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE;
             const confirmations = isTestnet
@@ -272,31 +306,10 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
 
                 await SwapExecutionService.waitForSwap(swapTx, confirmations);
                 finalTxHash = swapTx.hash;
-            } else {
-                // No direct exchange - route through USDm
+            } else if (twoStepExchange) {
+                // No direct exchange - route through USDm (twoStepExchange
+                // was resolved before the approval step above)
                 this.log('No direct exchange, routing through USDm');
-                const routingTokenAddress = tokens[ROUTING_TOKEN_SYMBOL as keyof typeof tokens];
-
-                if (!routingTokenAddress) {
-                    throw new Error('USDm not available on this network for routing');
-                }
-
-                // Skip if one of the tokens is already USDm
-                if (params.fromToken === ROUTING_TOKEN_SYMBOL || params.toToken === ROUTING_TOKEN_SYMBOL) {
-                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
-                }
-
-                const twoStepExchange = await ExchangeDiscoveryService.findTwoStepExchange(
-                    brokerAddress,
-                    fromTokenAddress,
-                    toTokenAddress,
-                    routingTokenAddress,
-                    readProvider
-                );
-
-                if (!twoStepExchange) {
-                    throw new Error(`No exchange found for ${params.fromToken}/${params.toToken} (even via USDm)`);
-                }
 
                 // Step 1: Swap fromToken -> USDm
                 this.log('Step 1: Swapping to USDm');
@@ -377,6 +390,11 @@ export class MentoSwapStrategy extends BaseSwapStrategy {
 
                 await SwapExecutionService.waitForSwap(secondSwapTx, confirmations);
                 finalTxHash = secondSwapTx.hash;
+            } else {
+                // Unreachable — discovery above throws when neither a direct
+                // nor a USDm-routed exchange exists — but keeps the compiler
+                // certain that finalTxHash is assigned.
+                throw new Error(`No exchange found for ${params.fromToken}/${params.toToken}`);
             }
 
             this.log('Swap confirmed');
