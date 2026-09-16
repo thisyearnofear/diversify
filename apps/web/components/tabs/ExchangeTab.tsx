@@ -14,8 +14,43 @@ import { CaribbeanFxNetCard } from "@/components/business/CaribbeanFxNetCard";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
+import { CorridorDetail } from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
+
+/** The pair inspector — route schematic plus the corridor context: what
+ *  these two currencies are and how they've treated each other. */
+function PairInspector({
+  inspectedPair,
+  userRegion,
+  onClose,
+}: {
+  inspectedPair: { fromToken: string; toToken: string } | null;
+  userRegion: Region;
+  onClose: () => void;
+}) {
+  return (
+    <InspectorSheet
+      selectedId={inspectedPair ? `${inspectedPair.fromToken}-${inspectedPair.toToken}` : null}
+      onClose={onClose}
+      title="Route and settlement"
+    >
+      {inspectedPair ? (
+        <>
+          <RouteSchematic
+            fromToken={inspectedPair.fromToken}
+            toToken={inspectedPair.toToken}
+            caption={userRegion}
+          />
+          <CorridorDetail
+            fromToken={inspectedPair.fromToken}
+            toToken={inspectedPair.toToken}
+          />
+        </>
+      ) : null}
+    </InspectorSheet>
+  );
+}
 
 interface ExchangeTabProps {
   userRegion: Region;
@@ -132,8 +167,19 @@ export default function ExchangeTab({
               userRegion={userRegion}
               inflationData={inflationData}
               instrument
+              onInspectQuote={(fromToken, toToken) =>
+                setInspectedPair({ fromToken, toToken })
+              }
+              quoteInspected={Boolean(inspectedPair)}
             />
           </div>
+        }
+        inspector={
+          <PairInspector
+            inspectedPair={inspectedPair}
+            userRegion={userRegion}
+            onClose={() => setInspectedPair(null)}
+          />
         }
         status={
           <UnconnectedStatusTier onEnableDemo={enableDemoMode}>
@@ -171,19 +217,11 @@ export default function ExchangeTab({
         </div>
       }
       inspector={
-        <InspectorSheet
-          selectedId={inspectedPair ? `${inspectedPair.fromToken}-${inspectedPair.toToken}` : null}
+        <PairInspector
+          inspectedPair={inspectedPair}
+          userRegion={userRegion}
           onClose={() => setInspectedPair(null)}
-          title="Route and settlement"
-        >
-          {inspectedPair ? (
-            <RouteSchematic
-              fromToken={inspectedPair.fromToken}
-              toToken={inspectedPair.toToken}
-              caption={userRegion}
-            />
-          ) : null}
-        </InspectorSheet>
+        />
       }
       portfolio={freshness}
       onRefresh={refreshBalances}

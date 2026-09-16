@@ -10,6 +10,7 @@ import ChainSelector from "./ChainSelector";
 import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
+import { CorridorLine } from "./CorridorContext";
 import SwapActionButton from "./SwapActionButton";
 import WalletButton from "../wallet/WalletButton";
 import { Coin } from "../shared/FloatingCoins";
@@ -379,6 +380,18 @@ const SwapInterface = forwardRef<
             />
           )}
 
+          {/* Corridor context — the two currencies behind this pair and
+              their 5-year relationship. One quiet line; the full story is
+              one tap away in the pair inspector. Absent (never padded)
+              when the pair has no fiat meaning. */}
+          <CorridorLine
+            fromToken={fromToken}
+            toToken={toToken}
+            onInspect={
+              onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+            }
+          />
+
           {/* Unified inflation differentiator — one line, one moment */}
           {shouldShowIntermediateFeatures() && hasInflationBenefit && (
             <InflationInsightRow
@@ -422,6 +435,8 @@ const SwapInterface = forwardRef<
             error={localError}
             txHash={localTxHash}
             fromChainId={fromChainId}
+            fromToken={fromToken}
+            toToken={toToken}
           />
 
           {/* Unconnected morph: the ticket stays the object and its one

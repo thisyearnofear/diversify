@@ -1,11 +1,16 @@
 import React from "react";
 import { NETWORKS } from "../../config";
+import RiveNetPair from "../shared/RiveNetPair";
+import { codeCoinTint } from "../shared/palette";
 
 interface SwapStatusProps {
     status: "idle" | "approving" | "swapping" | "completed" | "error";
     error: string | null;
     txHash: string | null;
     fromChainId: number;
+    /** The pair in flight — the two coins converge while the tx confirms. */
+    fromToken?: string;
+    toToken?: string;
 }
 
 const SwapStatus: React.FC<SwapStatusProps> = ({
@@ -13,8 +18,12 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
     error,
     txHash,
     fromChainId,
+    fromToken,
+    toToken,
 }) => {
     if (status === "idle" || status === "completed") return null;
+
+    const inFlight = status === "approving" || status === "swapping";
 
     return (
         <section
@@ -25,6 +34,18 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                 : "border-sky-200 bg-sky-50/80 text-sky-800 dark:border-sky-900/50 dark:bg-sky-950/20 dark:text-sky-200"
                 }`}
         >
+            {/* The pair object IS the wait — the two coins converge while
+                the transaction is out. Reduced motion renders the static
+                linked pair; completion is the success modal's minted coin. */}
+            {inFlight && fromToken && toToken && (
+                <div data-testid="swap-pair-wait" className="mb-3 flex justify-center">
+                    <RiveNetPair
+                        size={120}
+                        leftColor={codeCoinTint(fromToken)}
+                        rightColor={codeCoinTint(toToken)}
+                    />
+                </div>
+            )}
             <div className="flex items-start gap-3">
                 {status === "approving" && (
                     <>
