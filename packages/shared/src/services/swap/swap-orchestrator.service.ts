@@ -24,8 +24,12 @@ import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 import { EmergingMarketsStrategy } from './strategies/emerging-markets.strategy';
 import { CurveArcStrategy } from './strategies/curve-arc.strategy';
 import { HyperliquidPerpStrategy } from './strategies/hyperliquid-perp.strategy';
+import { ethers } from 'ethers';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
+
+// Mento's hub token — every broker exchange pairs against it.
+const ROUTING_HUB_SYMBOL = 'USDm';
 
 interface StrategyPerformance {
     successRate: number;
@@ -170,12 +174,13 @@ export class SwapOrchestratorService {
                     return {
                         success: false,
                         error: this.getUserFriendlyError(result.error || 'Transaction failed on-chain'),
+                        errorClass: 'onchain-failed',
                     };
                 }
 
                 if (this.isUserRejection(result.error)) {
                     console.log(`[SwapOrchestrator] ${strategyName} cancelled by user — not falling back`);
-                    return { success: false, error: 'Transaction was cancelled.' };
+                    return { success: false, error: 'Transaction was cancelled.', errorClass: 'cancelled' };
                 }
 
                 lastError = result.error;
@@ -187,20 +192,33 @@ export class SwapOrchestratorService {
                 lastError = error.message;
                 console.log(`[SwapOrchestrator] ${strategyName} failed:`, error.message);
 
-                if (txSubmitted || this.isUserRejection(error.message)) {
-                    console.log(`[SwapOrchestrator] ${strategyName} stopped — ${txSubmitted ? 'transaction submitted' : 'user rejected'}; not falling back`);
+                if (txSubmitted) {
+                    console.log(`[SwapOrchestrator] ${strategyName} threw after a transaction was submitted — not falling back`);
                     return {
                         success: false,
                         error: this.getUserFriendlyError(error.message || 'Transaction failed on-chain'),
+                        errorClass: 'onchain-failed',
                     };
+                }
+
+                if (this.isUserRejection(error.message)) {
+                    console.log(`[SwapOrchestrator] ${strategyName} cancelled by user — not falling back`);
+                    return { success: false, error: 'Transaction was cancelled.', errorClass: 'cancelled' };
                 }
             }
         }
 
         // All strategies failed
+        const errorClass = this.classifyError(lastError);
         return {
             success: false,
-            error: this.getUserFriendlyError(lastError || 'All swap methods are currently unavailable'),
+            // A classified no-route keeps the specific reason (which pool /
+            // which pair) — "contact support" would contradict the ticket's
+            // "try a larger amount" copy.
+            error: errorClass === 'no-route' && lastError
+                ? lastError
+                : this.getUserFriendlyError(lastError || 'All swap methods are currently unavailable'),
+            errorClass,
         };
     }
 
@@ -215,10 +233,13 @@ export class SwapOrchestratorService {
             throw new Error(this.getUserFriendlyError(this.getNoStrategyError(params)));
         }
 
-        // Try to get estimate from the best strategy
+        // Try to get estimate from the best strategy — stamp which provider
+        // produced it so the ticket can say "via Mento" honestly.
         for (const strategy of rankedStrategies) {
             try {
-                return await strategy.getEstimate(params);
+                const estimate = await strategy.getEstimate(params);
+                estimate.provider = this.getProviderLabel(strategy.getName());
+                return estimate;
             } catch (error: any) {
                 console.log(`[SwapOrchestrator] Estimate failed for ${strategy.getName()}:`, error.message);
                 continue;
@@ -226,6 +247,146 @@ export class SwapOrchestratorService {
         }
 
         throw new Error('Unable to get swap estimate. Please try again later.');
+    }
+
+    /**
+     * Which provider would execute this swap — the top-ranked supporting
+     * strategy's display label, or null when nothing can route it. Cheap
+     * and synchronous: the ticket shows provenance without a quote call.
+     */
+    static getRouteProvider(params: SwapParams, islamicFinance = false): string | null {
+        const ranked = this.getRankedStrategies(params, islamicFinance);
+        return ranked.length > 0 ? this.getProviderLabel(ranked[0].getName()) : null;
+    }
+
+    /**
+     * Expected wallet confirmations for the top-ranked route: swap
+     * transactions plus ERC20 approvals the user will be asked to sign.
+     * Returns null when it can't be determined — the UI renders nothing
+     * rather than guessing (absent > vague).
+     */
+    static async estimateConfirmations(params: SwapParams): Promise<number | null> {
+        const ranked = this.getRankedStrategies(params);
+        if (ranked.length === 0) return null;
+        const strategy = ranked[0];
+        const name = strategy.getName();
+
+        try {
+            if (name === 'MentoSwapStrategy') {
+                return await this.estimateMentoConfirmations(params);
+            }
+            // Aggregator/direct-DEX routes: one swap, plus an approval when
+            // the source isn't the chain's native asset (CELO needs none).
+            const nativeSymbol = this.getNativeSymbol(params.fromChainId);
+            const approvals = params.fromToken === nativeSymbol ? 0 : 1;
+            return 1 + approvals;
+        } catch {
+            return null;
+        }
+    }
+
+    private static async estimateMentoConfirmations(params: SwapParams): Promise<number | null> {
+        const { getTokenAddresses, getBrokerAddress, TOKEN_METADATA } = require('../../config');
+        const { ExchangeDiscoveryService } = require('./exchange-discovery');
+        const { ApprovalService } = require('./approval');
+        const { ProviderFactoryService } = require('./provider-factory.service');
+
+        const tokens = getTokenAddresses(params.fromChainId);
+        const brokerAddress = getBrokerAddress(params.fromChainId);
+        if (!brokerAddress || brokerAddress === '0x0000000000000000000000000000000000000000') {
+            return null;
+        }
+        const fromTokenAddress = tokens[params.fromToken as keyof typeof tokens];
+        const toTokenAddress = tokens[params.toToken as keyof typeof tokens];
+        if (!fromTokenAddress || !toTokenAddress) return null;
+
+        const provider = ProviderFactoryService.getProvider(params.fromChainId);
+        const fromDecimals = (TOKEN_METADATA[params.fromToken as keyof typeof TOKEN_METADATA]?.decimals) || 18;
+        const amountIn = ethers.utils.parseUnits(params.amount, fromDecimals);
+
+        const hubAddress = tokens[ROUTING_HUB_SYMBOL as keyof typeof tokens];
+
+        const direct = await ExchangeDiscoveryService.findDirectExchange(
+            brokerAddress, fromTokenAddress, toTokenAddress, provider,
+        );
+        const twoStep = !direct && hubAddress
+            ? await ExchangeDiscoveryService.findTwoStepExchange(
+                brokerAddress, fromTokenAddress, toTokenAddress, hubAddress, provider,
+            )
+            : null;
+        if (!direct && !twoStep) return null;
+
+        const swaps = direct ? 1 : 2;
+        let approvals = 0;
+        const fromApproval = await ApprovalService.checkApproval(
+            fromTokenAddress, params.userAddress, brokerAddress, amountIn,
+            params.fromChainId, fromDecimals,
+        );
+        if (!fromApproval.isApproved) approvals += 1;
+
+        if (twoStep) {
+            // The USDm leg needs its own approval unless one already covers it.
+            const hubApproval = await ApprovalService.checkApproval(
+                hubAddress!, params.userAddress, brokerAddress,
+                ethers.utils.parseUnits('1', 18), params.fromChainId, 18,
+            );
+            if (!hubApproval.isApproved) approvals += 1;
+        }
+
+        return swaps + approvals;
+    }
+
+    private static getProviderLabel(strategyName: string): string {
+        const labels: Record<string, string> = {
+            MentoSwapStrategy: 'Mento',
+            LiFiSwapStrategy: 'LiFi',
+            LiFiBridgeStrategy: 'LiFi bridge',
+            LiFiEarnStrategy: 'LiFi',
+            OneInchSwapStrategy: '1inch',
+            UniswapV3Strategy: 'Uniswap V3',
+            EmergingMarketsStrategy: 'DiversiFi markets',
+            CurveArcStrategy: 'Curve',
+            ArcTestnetStrategy: 'Arc',
+            HyperliquidPerpStrategy: 'Hyperliquid',
+            GmxGmDepositStrategy: 'GMX',
+            DirectRWAStrategy: 'RWA direct',
+        };
+        return labels[strategyName] || strategyName;
+    }
+
+    private static getNativeSymbol(chainId: number): string {
+        if (ChainDetectionService.isCelo(chainId)) return 'CELO';
+        if (ChainDetectionService.isArbitrum(chainId)) return 'ETH';
+        if (ChainDetectionService.isArc(chainId)) return 'USDC';
+        return 'ETH';
+    }
+
+    /**
+     * Classify a terminal error for the ticket: route-absence, wallet
+     * session, and gas failures each get their own moment and copy.
+     */
+    private static classifyError(message?: string): SwapResult['errorClass'] {
+        if (!message) return 'error';
+        const m = message.toLowerCase();
+        if (
+            m.includes('no swap routes') || m.includes('no exchange found') ||
+            m.includes('no available quotes') || m.includes('no route') ||
+            m.includes('unable to get swap estimate') || m.includes('no uniswap v3 pool') ||
+            m.includes('not available on')
+        ) {
+            return 'no-route';
+        }
+        if (
+            m.includes('exceeded max attempts') || m.includes('sdk execution provider') ||
+            m.includes('no wallet provider') || m.includes('not authenticated') ||
+            m.includes('session')
+        ) {
+            return 'session';
+        }
+        if (m.includes('insufficient funds') || m.includes('gas')) {
+            return 'no-gas';
+        }
+        return 'error';
     }
 
     /**

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
@@ -9,6 +9,13 @@ import { NETWORKS, NETWORK_TOKENS } from "../config";
 import { isTokenAvailableOnChain, getTokensForChain } from "@diversifi/shared/src/utils/cross-chain-tokens";
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import { SwapErrorHandler } from "@diversifi/shared/src/services/swap/error-handler";
+import { SwapOrchestratorService } from "@diversifi/shared/src/services/swap/swap-orchestrator.service";
+import { MENTO_BROKER_TOKENS } from "@diversifi/shared/src/services/swap/strategies/mento-swap.strategy";
+import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strategies/base-swap.strategy";
+
+// Hub the aggregator can't beat on Celo: USDm is the broker's routing
+// token, so a failed X -> Y often decomposes into X -> USDm -> Y.
+const HUB_TOKEN = "USDm";
 
 interface Token {
   symbol: string;
@@ -99,9 +106,16 @@ export function useSwapController({
     "idle" | "approving" | "swapping" | "completed" | "error"
   >("idle");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [localErrorClass, setLocalErrorClass] = useState<SwapErrorClass | null>(null);
   const [localTxHash, setLocalTxHash] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [mounted, setMounted] = useState<boolean>(false);
+  // Recovery state: after a failed X -> Y on Celo we can offer the
+  // two-leg route X -> USDm -> Y. pendingViaFinal remembers Y while leg 1
+  // is in flight; leg2Hint flags the just-advanced ticket.
+  const [pendingViaFinal, setPendingViaFinal] = useState<string | null>(null);
+  const [leg2Hint, setLeg2Hint] = useState<string | null>(null);
+  const [signatureCount, setSignatureCount] = useState<number | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -113,10 +127,11 @@ export function useSwapController({
   const {
     swap: performSwap,
     error: swapError,
+    errorClass: swapErrorClass,
     txHash: swapTxHash,
     step: swapStep,
   } = useSwap();
-  const { expectedOutput, isLoading: isExpectedOutputLoading } =
+  const { expectedOutput, isLoading: isExpectedOutputLoading, quotedAt, refreshQuote } =
     useExpectedAmountOut({ fromToken, toToken, amount });
   const {
     getInflationRateForStablecoin,
@@ -291,6 +306,7 @@ export function useSwapController({
 
       setIsLoading(true);
       setLocalError(null);
+      setLocalErrorClass(null);
       setLocalTxHash(null);
       setStatus("approving");
 
@@ -314,7 +330,7 @@ export function useSwapController({
           setStatus("completed");
           refreshWithRetries();
         } else {
-          await performSwap({
+          const res = await performSwap({
             fromToken,
             toToken,
             amount,
@@ -325,10 +341,17 @@ export function useSwapController({
             phoneNumber: phoneNumber || undefined,
             contractCall,
           });
+          // A cancellation produces no error state in the hook — reset the
+          // ticket quietly rather than stranding it on "approving".
+          if (res && !res.success && res.errorClass === "cancelled") {
+            setStatus("idle");
+          }
           // Note: Hook state will be handled via useEffect tracking swapStep
         }
       } catch (err) {
+        const anyErr = err as { errorClass?: SwapErrorClass };
         setLocalError(SwapErrorHandler.handle(err, "swap tokens"));
+        setLocalErrorClass(anyErr?.errorClass ?? "error");
         setStatus("error");
       } finally {
         setIsLoading(false);
@@ -351,11 +374,85 @@ export function useSwapController({
     ],
   );
 
+  // Which provider would execute this pair — the top-ranked strategy,
+  // computed synchronously so the ticket can say "via Mento" before any
+  // quote resolves. Null when nothing can route it.
+  const routeProvider = useMemo(() => {
+    if (!address || !fromToken || !toToken || fromToken === toToken) return null;
+    return SwapOrchestratorService.getRouteProvider({
+      fromToken,
+      toToken,
+      amount: amount || "1",
+      fromChainId,
+      toChainId,
+      userAddress: address,
+    });
+  }, [address, fromToken, toToken, amount, fromChainId, toChainId]);
+
+  // Signature disclosure — once a quote exists, count the wallet
+  // confirmations the chosen route will ask for (swaps + approvals).
+  // Null means "couldn't determine" — the UI stays silent rather than
+  // guess. Recomputed when the quote refreshes.
+  const signatureReqRef = useRef(0);
+  useEffect(() => {
+    if (!address || !expectedOutput || !Number.isFinite(Number.parseFloat(amount)) || Number.parseFloat(amount) <= 0) {
+      setSignatureCount(null);
+      return;
+    }
+    const req = ++signatureReqRef.current;
+    SwapOrchestratorService.estimateConfirmations({
+      fromToken,
+      toToken,
+      amount,
+      fromChainId,
+      toChainId,
+      userAddress: address,
+    }).then((count) => {
+      if (signatureReqRef.current === req) setSignatureCount(count);
+    }).catch(() => {
+      if (signatureReqRef.current === req) setSignatureCount(null);
+    });
+  }, [address, expectedOutput, fromToken, toToken, amount, fromChainId, toChainId]);
+
+  // Recovery offer: a failed Celo pair that isn't USDm-involving can often
+  // decompose through the broker's hub. Offered only for failure classes
+  // where a different route could succeed — never after a cancellation.
+  const viaHub = useMemo(() => {
+    if (status !== "error") return null;
+    if (localErrorClass !== "onchain-failed" && localErrorClass !== "no-route") return null;
+    if (!ChainDetectionService.isCelo(fromChainId) || fromChainId !== toChainId) return null;
+    if (fromToken === HUB_TOKEN || toToken === HUB_TOKEN) return null;
+    // Only worth offering when at least one leg lands on a broker asset —
+    // otherwise both hops still need an aggregator anyway.
+    if (!MENTO_BROKER_TOKENS.has(fromToken) && !MENTO_BROKER_TOKENS.has(toToken)) return null;
+    return HUB_TOKEN;
+  }, [status, localErrorClass, fromChainId, toChainId, fromToken, toToken]);
+
+  const applyViaHub = useCallback(() => {
+    if (!viaHub) return;
+    // Leg 1: X -> USDm. The original destination is remembered so a
+    // completed leg advances the ticket to USDm -> Y automatically.
+    setPendingViaFinal(toToken);
+    setToToken(viaHub);
+    setStatus("idle");
+    setLocalError(null);
+    setLocalErrorClass(null);
+    setLeg2Hint(null);
+  }, [viaHub, toToken]);
+
   // Sync hook status to local status
   useEffect(() => {
     if (swapStep === "completed" && status !== "completed") {
       setStatus("completed");
       refreshWithRetries();
+
+      // Leg-2 advance: leg 1 was X -> USDm; reload the ticket USDm -> Y.
+      if (pendingViaFinal && toToken === HUB_TOKEN) {
+        setFromToken(HUB_TOKEN);
+        setToToken(pendingViaFinal);
+        setLeg2Hint(`Final step — swap ${HUB_TOKEN} to ${pendingViaFinal} to finish the route`);
+        setPendingViaFinal(null);
+      }
 
       // Record streak activity for qualifying saves
       const amountNum = parseFloat(amount);
@@ -370,12 +467,18 @@ export function useSwapController({
         const currentTotal = parseFloat(localStorage.getItem(todayKey) || '0');
         localStorage.setItem(todayKey, (currentTotal + amountNum).toString());
       }
+    } else if (swapStep === "swapping" && status === "approving") {
+      // onSwapSubmitted fires before confirmation — advance the ticket to
+      // the in-flight state even when a provider (LiFi) never confirms an
+      // approval first.
+      setStatus("swapping");
     } else if (swapError) {
       setLocalError(swapError);
+      setLocalErrorClass(swapErrorClass ?? "error");
       setStatus("error");
     }
     if (swapTxHash && status !== "completed") setLocalTxHash(swapTxHash);
-  }, [swapStep, swapError, swapTxHash, refreshWithRetries, status, amount, recordSwap]);
+  }, [swapStep, swapError, swapErrorClass, swapTxHash, refreshWithRetries, status, amount, recordSwap, pendingViaFinal, toToken]);
 
   // 6. Inflation Data Processing
   const {
@@ -426,9 +529,17 @@ export function useSwapController({
     setToChainId,
     status,
     localError,
+    localErrorClass,
     localTxHash,
     isLoading,
     mounted,
+
+    // route context
+    routeProvider,
+    signatureCount,
+    viaHub,
+    applyViaHub,
+    leg2Hint,
 
     // items
     availableFromTokens,
@@ -436,6 +547,8 @@ export function useSwapController({
     tokenBalances,
     expectedOutput,
     isExpectedOutputLoading,
+    quotedAt,
+    refreshQuote,
     inflationDataSource,
 
     // inflation derived

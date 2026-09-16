@@ -28,7 +28,7 @@ const ROUTING_TOKEN_SYMBOL = 'USDm';
 // stables below. Other tokens in the Celo map (CELO, EURm, GBPm, JPYm,
 // CHFm, USDT, G$) have no broker exchange and must route through DEX
 // aggregators. Update this set if Mento governance registers new exchanges.
-const MENTO_BROKER_TOKENS = new Set([
+export const MENTO_BROKER_TOKENS = new Set([
     'USDm', 'BRLm', 'KESm', 'COPm', 'PHPm', 'GHSm',
     'XOFm', 'ZARm', 'CADm', 'AUDm', 'NGNm',
 ]);

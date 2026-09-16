@@ -2,28 +2,80 @@ import React from "react";
 import { NETWORKS } from "../../config";
 import RiveNetPair from "../shared/RiveNetPair";
 import { codeCoinTint } from "../shared/palette";
+import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strategies/base-swap.strategy";
 
 interface SwapStatusProps {
     status: "idle" | "approving" | "swapping" | "completed" | "error";
     error: string | null;
+    errorClass?: SwapErrorClass | null;
     txHash: string | null;
     fromChainId: number;
     /** The pair in flight — the two coins converge while the tx confirms. */
     fromToken?: string;
     toToken?: string;
+    /** Recovery offer: hub symbol (e.g. USDm) + handler refills the ticket. */
+    viaHubSymbol?: string | null;
+    onViaHub?: () => void;
+}
+
+const EXPLORER_BY_CHAIN: Record<number, string> = Object.fromEntries(
+    Object.values(NETWORKS).map((n) => [n.chainId, n.explorerUrl]),
+);
+
+function explorerTxUrl(chainId: number, txHash: string): string {
+    const base = EXPLORER_BY_CHAIN[chainId] ?? NETWORKS.CELO_MAINNET.explorerUrl;
+    return `${base}/tx/${txHash}`;
+}
+
+/** Per-class title/body — the number/line carries the meaning (§6). */
+function errorCopy(
+    errorClass: SwapErrorClass | null | undefined,
+    error: string | null,
+): { title: string; body: string } {
+    switch (errorClass) {
+        case "onchain-failed":
+            return {
+                title: "Route failed on-chain",
+                body: "Your tokens never left your wallet — only the network fee was spent.",
+            };
+        case "no-route":
+            return {
+                title: "No route for this amount",
+                body: "Try a larger amount, or route through USDm below.",
+            };
+        case "session":
+            return {
+                title: "Wallet session expired",
+                body: "Reconnect your wallet and try again.",
+            };
+        case "no-gas":
+            return {
+                title: "Not enough for network fees",
+                body: error || "You need a little of the chain's native token for gas.",
+            };
+        default:
+            return {
+                title: "Transaction needs attention",
+                body: error || "Something went wrong while trying to protect your savings",
+            };
+    }
 }
 
 const SwapStatus: React.FC<SwapStatusProps> = ({
     status,
     error,
+    errorClass,
     txHash,
     fromChainId,
     fromToken,
     toToken,
+    viaHubSymbol,
+    onViaHub,
 }) => {
     if (status === "idle" || status === "completed") return null;
 
     const inFlight = status === "approving" || status === "swapping";
+    const copy = errorCopy(errorClass, error);
 
     return (
         <section
@@ -119,15 +171,28 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                         >
                             <path
                                 fillRule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293-1.293a1 1 0 10-1.414-1.414L11.414 10l1.293 1.293a1 1 0 001.414-1.414L10 8.586 8.707 7.293z"
                                 clipRule="evenodd"
                             />
                         </svg>
                         <div>
-                            <p className="text-sm font-bold">Transaction needs attention</p>
+                            <p className="text-sm font-bold">{copy.title}</p>
                             <p className="mt-1 text-sm leading-6">
-                                {error || "Something went wrong while trying to protect your savings"}
+                                {copy.body}
                             </p>
+                            {error && error !== copy.body && (
+                                <p className="mt-1 text-xs leading-5 opacity-75">{error}</p>
+                            )}
+                            {viaHubSymbol && onViaHub && (
+                                <button
+                                    type="button"
+                                    onClick={onViaHub}
+                                    data-testid="via-hub-action"
+                                    className="mt-2 inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-50 dark:bg-gray-900 dark:text-emerald-300 dark:hover:bg-gray-800"
+                                >
+                                    Route via {viaHubSymbol} instead →
+                                </button>
+                            )}
                         </div>
                     </>
                 )}
@@ -161,15 +226,7 @@ const SwapStatus: React.FC<SwapStatusProps> = ({
                     </div>
                     <div className="mt-2">
                         <a
-                            href={
-                                fromChainId === NETWORKS.CELO_SEPOLIA.chainId
-                                    ? `${NETWORKS.CELO_SEPOLIA.explorerUrl}/tx/${txHash}`
-                                    : fromChainId === NETWORKS.ARC_TESTNET.chainId
-                                        ? `${NETWORKS.ARC_TESTNET.explorerUrl}/tx/${txHash}`
-                                        : fromChainId === NETWORKS.ARBITRUM_ONE.chainId
-                                            ? `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`
-                                            : `${NETWORKS.ARBITRUM_ONE.explorerUrl}/tx/${txHash}`
-                            }
+                            href={explorerTxUrl(fromChainId, txHash)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center rounded-md bg-white px-3 py-1.5 text-sm font-medium text-sky-700 hover:underline dark:bg-gray-900 dark:text-sky-300"

@@ -122,13 +122,21 @@ const SwapInterface = forwardRef<
     setToChainId,
     status,
     localError,
+    localErrorClass,
     localTxHash,
     isLoading,
     mounted,
+    routeProvider,
+    signatureCount,
+    viaHub,
+    applyViaHub,
+    leg2Hint,
     availableFromTokens,
     availableToTokens,
     tokenBalances,
     expectedOutput,
+    quotedAt,
+    refreshQuote,
     inflationDataSource,
     fromTokenInflationRate,
     toTokenInflationRate,
@@ -166,6 +174,9 @@ const SwapInterface = forwardRef<
     if (!amount) return "Enter amount";
     if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) return "Invalid amount";
     if (parsedAmount > availableBalance) return `Exceeds ${fromToken} balance`;
+    // No strategy supports this pair/chain — don't present it as
+    // executable; the click would only produce a failed execution.
+    if (!routeProvider) return "No route for this pair";
     return null;
   };
 
@@ -377,6 +388,10 @@ const SwapInterface = forwardRef<
               }
               inspected={quoteInspected}
               yieldHint={resolvedYieldHint}
+              provider={routeProvider}
+              signatureCount={signatureCount}
+              quotedAt={quotedAt}
+              onRefreshQuote={refreshQuote}
             />
           )}
 
@@ -430,13 +445,24 @@ const SwapInterface = forwardRef<
             </div>
           )}
 
+          {/* Leg-2 hint — after the via-hub recovery's first swap lands,
+              the ticket has advanced to the final leg already. */}
+          {leg2Hint && status === "idle" && (
+            <p className="mt-1 px-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300" data-testid="leg2-hint">
+              {leg2Hint}
+            </p>
+          )}
+
           <SwapStatus
             status={status}
             error={localError}
+            errorClass={localErrorClass}
             txHash={localTxHash}
             fromChainId={fromChainId}
             fromToken={fromToken}
             toToken={toToken}
+            viaHubSymbol={viaHub}
+            onViaHub={viaHub ? applyViaHub : undefined}
           />
 
           {/* Unconnected morph: the ticket stays the object and its one

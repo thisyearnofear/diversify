@@ -9,8 +9,8 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { describe, it, expect, afterEach, vi } from 'vitest';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import SwapStatus from '../SwapStatus';
 
@@ -64,5 +64,80 @@ describe('SwapStatus pair object', () => {
     );
     expect(screen.queryByTestId('swap-pair-wait')).not.toBeInTheDocument();
     expect(screen.getByText('User rejected the transaction')).toBeInTheDocument();
+  });
+});
+
+describe('SwapStatus error classes', () => {
+  it('onchain-failed reassures that funds never left the wallet', () => {
+    render(
+      <SwapStatus
+        {...BASE}
+        status="error"
+        errorClass="onchain-failed"
+        error="Transaction was reverted"
+      />,
+    );
+    expect(screen.getByText('Route failed on-chain')).toBeInTheDocument();
+    expect(screen.getByText(/never left your wallet/)).toBeInTheDocument();
+  });
+
+  it('no-route suggests a larger amount and offers the hub leg when provided', () => {
+    const onViaHub = vi.fn();
+    render(
+      <SwapStatus
+        {...BASE}
+        status="error"
+        errorClass="no-route"
+        error="No Uniswap V3 pool found"
+        viaHubSymbol="USDm"
+        onViaHub={onViaHub}
+      />,
+    );
+    expect(screen.getByText('No route for this amount')).toBeInTheDocument();
+    const btn = screen.getByTestId('via-hub-action');
+    fireEvent.click(btn);
+    expect(onViaHub).toHaveBeenCalled();
+  });
+
+  it('session class tells the user to reconnect', () => {
+    render(
+      <SwapStatus
+        {...BASE}
+        status="error"
+        errorClass="session"
+        error="Privy iframe failed to load"
+      />,
+    );
+    expect(screen.getByText('Wallet session expired')).toBeInTheDocument();
+  });
+
+  it('no-gas names the missing fee token', () => {
+    render(
+      <SwapStatus
+        {...BASE}
+        status="error"
+        errorClass="no-gas"
+        error="You need a little CELO for network fees before swapping."
+      />,
+    );
+    expect(screen.getByText('Not enough for network fees')).toBeInTheDocument();
+    expect(screen.getByText(/CELO/)).toBeInTheDocument();
+  });
+
+  it('submitted tx hash still links to the explorer on failure', () => {
+    render(
+      <SwapStatus
+        {...BASE}
+        status="error"
+        errorClass="onchain-failed"
+        error="reverted"
+        txHash="0xabc123"
+      />,
+    );
+    const link = screen.getByText('View on Explorer').closest('a');
+    expect(link).toHaveAttribute(
+      'href',
+      'https://celo.blockscout.com/tx/0xabc123',
+    );
   });
 });

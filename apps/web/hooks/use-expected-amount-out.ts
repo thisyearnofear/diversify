@@ -77,6 +77,10 @@ export function useExpectedAmountOut({
   const [error, setError] = useState<string | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [debouncedAmount, setDebouncedAmount] = useState(amount);
+  const [quotedAt, setQuotedAt] = useState<number | null>(null);
+  // Bumped by refreshQuote() — forces the quote effect to re-run even when
+  // the inputs haven't changed (stale quote, user taps refresh).
+  const [refreshTick, setRefreshTick] = useState(0);
   const debounceTimerRef = useRef<any>(null);
 
   // Debounce the amount parameter
@@ -133,6 +137,7 @@ export function useExpectedAmountOut({
       try {
         const output = await getExpectedAmountOut(fromToken, toToken, debouncedAmount);
         setExpectedOutput(output);
+        setQuotedAt(Date.now());
       } catch (err) {
         if (process.env.NODE_ENV === 'development') {
           console.warn("Error getting expected output:", err);
@@ -149,7 +154,7 @@ export function useExpectedAmountOut({
     // with `[chainId]` deps, so adding it here would be a no-op (chainId
     // is already in the deps and the callback is otherwise stable).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fromToken, toToken, debouncedAmount, chainId]);
+  }, [fromToken, toToken, debouncedAmount, chainId, refreshTick]);
 
   // Get expected amount out for a swap
   const getExpectedAmountOut = useCallback(async (
@@ -631,9 +636,18 @@ export function useExpectedAmountOut({
     }
   }, [chainId]);
 
+  // Manual refresh — busts the 30s result cache for this pair so the
+  // re-run actually re-quotes rather than serving the stale entry.
+  const refreshQuote = useCallback(() => {
+    resultCache.delete(`${fromToken}-${toToken}-${debouncedAmount}-${chainId}`);
+    setRefreshTick((t) => t + 1);
+  }, [fromToken, toToken, debouncedAmount, chainId]);
+
   return {
     expectedOutput,
     isLoading,
     error,
+    quotedAt,
+    refreshQuote,
   };
 }

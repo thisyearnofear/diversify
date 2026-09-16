@@ -23,12 +23,27 @@ export interface SwapParams {
     }; // For LI.FI Composer execution
 }
 
+/**
+ * Failure taxonomy — the ticket renders different moments per class:
+ * cancelled resets quietly, onchain-failed proves funds stayed in the
+ * wallet, no-route suggests a different amount/corridor, session asks
+ * for a reconnect, no-gas blocks before signing.
+ */
+export type SwapErrorClass =
+    | 'cancelled'
+    | 'onchain-failed'
+    | 'no-route'
+    | 'session'
+    | 'no-gas'
+    | 'error';
+
 export interface SwapResult {
     success: boolean;
     txHash?: string;
     approvalTxHash?: string;
     amountOut?: string; // Standardize output amount across strategies
     error?: string;
+    errorClass?: SwapErrorClass;
     steps?: any[];
 }
 

@@ -24,6 +24,21 @@ interface ExpectedOutputCardProps {
   inspected?: boolean;
   /** Quiet APY annotation when the destination has a yield path. */
   yieldHint?: string | null;
+  /** Which provider would execute — "via Mento" / "via LiFi". */
+  provider?: string | null;
+  /** Wallet confirmations the route will ask for (swaps + approvals). */
+  signatureCount?: number | null;
+  /** When the displayed quote resolved — stale quotes show their age. */
+  quotedAt?: number | null;
+  /** Refresh affordance for stale quotes — busts the quote cache. */
+  onRefreshQuote?: () => void;
+}
+
+const QUOTE_STALE_MS = 30_000;
+
+function quoteAge(quotedAt: number): string {
+  const secs = Math.max(0, Math.round((Date.now() - quotedAt) / 1000));
+  return secs < 60 ? `${secs}s` : `${Math.floor(secs / 60)}m`;
 }
 
 /**
@@ -45,10 +60,22 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
   onInspect,
   inspected = false,
   yieldHint,
+  provider,
+  signatureCount,
+  quotedAt,
+  onRefreshQuote,
 }) => {
   const [expanded, setExpanded] = React.useState(false);
+  const [, setAgeTick] = React.useState(0);
   const reducedMotion = useReducedMotion();
   const open = onInspect ? inspected : expanded;
+
+  // Re-render the "Xs ago" stamp every 15s while a quote is shown.
+  React.useEffect(() => {
+    if (!quotedAt) return;
+    const t = setInterval(() => setAgeTick((n) => n + 1), 15000);
+    return () => clearInterval(t);
+  }, [quotedAt]);
 
   const parsedAmount = Number.parseFloat(amount);
   const hasValidAmount = Number.isFinite(parsedAmount) && parsedAmount > 0;
@@ -100,9 +127,25 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
           {hasOutput && (
             <span className="text-xs text-gray-400 dark:text-gray-500">
               · {typeof slippageTolerance === "number" ? `${slippageTolerance}%` : "Auto"}
+              {provider ? ` · via ${provider}` : ""}
+              {signatureCount ? ` · ${signatureCount} signature${signatureCount === 1 ? "" : "s"}` : ""}
               {isCrossChain && " · bridge"}
               {yieldHint ? ` · ${yieldHint}` : ""}
             </span>
+          )}
+          {hasOutput && quotedAt && Date.now() - quotedAt > QUOTE_STALE_MS && (
+            <button
+              type="button"
+              data-testid="quote-refresh"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRefreshQuote?.();
+              }}
+              className="text-xs text-gray-400 dark:text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap"
+              title="Refresh quote"
+            >
+              · {quoteAge(quotedAt)} old · refresh
+            </button>
           )}
         </div>
 

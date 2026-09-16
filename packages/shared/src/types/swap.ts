@@ -34,6 +34,7 @@ export interface SwapState {
     step: SwapStep;
     isLoading: boolean;
     error: string | null;
+    errorClass?: import('../services/swap/strategies/base-swap.strategy').SwapErrorClass | null;
     txHash: string | null;
     approvalTxHash: string | null;
 }

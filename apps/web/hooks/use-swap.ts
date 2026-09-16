@@ -54,7 +54,18 @@ interface SwapEstimate {
     priceImpact: string;
     riskLevel: 'low' | 'medium' | 'high';
     route: string;
+    provider?: string;
 }
+
+// Native gas token per supported chain — for the pre-signing preflight.
+const NATIVE_GAS_SYMBOLS: Record<number, string> = {
+    [NETWORKS.CELO_MAINNET.chainId]: 'CELO',
+    [NETWORKS.CELO_SEPOLIA.chainId]: 'CELO',
+    [NETWORKS.ARBITRUM_ONE.chainId]: 'ETH',
+    [NETWORKS.ARBITRUM_SEPOLIA.chainId]: 'ETH',
+    [NETWORKS.ARC_TESTNET.chainId]: 'USDC',
+    5042001: 'USDC', // Arc mainnet
+};
 
 export function useSwap() {
     const [state, setState] = useState<SwapState>({
@@ -154,7 +165,8 @@ export function useSwap() {
                 networkFee: formatNetworkFee(estimate.gasCostEstimate),
                 priceImpact: `${estimate.priceImpact.toFixed(2)}%`,
                 riskLevel: assessRiskLevel(swapParams, estimate),
-                route: getRouteDescription(swapParams)
+                route: getRouteDescription(swapParams),
+                provider: estimate.provider,
             };
 
             setCurrentEstimate(userEstimate);
@@ -289,6 +301,23 @@ export function useSwap() {
                 ProviderFactoryService.clearWeb3Cache();
             }
 
+            // Gas preflight: a zero native balance can't even submit the
+            // approval — fail before any strategy asks for a signature.
+            try {
+                const nativeBalance = await signer.provider!.getBalance(userAddress);
+                if (nativeBalance.isZero()) {
+                    const native = NATIVE_GAS_SYMBOLS[swapParams.fromChainId] || 'the native token';
+                    const gasError: any = new Error(
+                        `You need a little ${native} for network fees before swapping.`
+                    );
+                    gasError.errorClass = 'no-gas';
+                    throw gasError;
+                }
+            } catch (gasCheckError: any) {
+                if (gasCheckError?.errorClass) throw gasCheckError;
+                // A failed balance read must not block the swap — continue.
+            }
+
             // Check if swap is supported
             if (!SwapOrchestratorService.isSwapSupported(swapParams)) {
                 throw new Error(
@@ -311,14 +340,19 @@ export function useSwap() {
                     onApprovalConfirmed?.();
                 },
                 onSwapSubmitted: (hash) => {
-                    setState((prev) => ({ ...prev, txHash: hash }));
+                    // LiFi never fires onApprovalConfirmed — without this the
+                    // ticket would say "Preparing your route" for the entire
+                    // on-chain wait. Submission IS the swapping state.
+                    setState((prev) => ({ ...prev, step: 'swapping', txHash: hash }));
                     onProgress?.('Swap submitted, waiting for confirmation...', 4, 4);
                     onSwapSubmitted?.(hash);
                 },
             });
 
             if (!swapResult.success) {
-                throw new Error(swapResult.error || 'Swap failed');
+                const failure: any = new Error(swapResult.error || 'Swap failed');
+                failure.errorClass = swapResult.errorClass;
+                throw failure;
             }
 
             // Success
@@ -337,19 +371,28 @@ export function useSwap() {
             onProgress?.('Swap completed successfully!', 4, 4);
             return result;
 
-        } catch (error) {
+        } catch (error: any) {
             console.error('Swap error:', error);
 
-            const errorMessage = SwapErrorHandler.handle(error, 'swap tokens');
+            // Classified errors already carry humanized orchestrator copy —
+            // re-wrapping them in SwapErrorHandler's "Failed to swap tokens"
+            // prefix would bury the actual reason.
+            const errorMessage = error?.errorClass
+                ? (error.message || 'Swap failed')
+                : SwapErrorHandler.handle(error, 'swap tokens');
             result.error = errorMessage;
+            result.errorClass = error?.errorClass;
 
-            setState({
-                step: 'error',
+            // Keep a submitted tx hash: on an on-chain failure the explorer
+            // link is the proof that funds never left the wallet.
+            setState((prev) => ({
+                step: error?.errorClass === 'cancelled' ? 'idle' : 'error',
                 isLoading: false,
-                error: errorMessage,
-                txHash: null,
-                approvalTxHash: result.approvalTxHash || null,
-            });
+                error: error?.errorClass === 'cancelled' ? null : errorMessage,
+                errorClass: error?.errorClass || null,
+                txHash: prev.txHash,
+                approvalTxHash: result.approvalTxHash || prev.approvalTxHash,
+            }));
 
             return result;
         }
