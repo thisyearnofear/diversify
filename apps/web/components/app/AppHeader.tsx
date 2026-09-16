@@ -10,6 +10,7 @@ import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
 import { ChainPill } from "./ChainPill";
 import { GuardianMascot } from "@/components/shared/GuardianMascot";
 import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
+import { useClaimFlowContext } from "@/hooks/claim-flow-context";
 
 const MODE_ICON: Record<UserExperienceMode, string> = {
   beginner: "🌱",
@@ -56,6 +57,16 @@ export default function AppHeader({
     if (typeof window !== "undefined") localStorage.setItem("seenModeTip", "1");
   };
 
+  // The streak badge's claim affordance rides the shared claim flow —
+  // "Claim ready" in the header is a working action, not just a signal.
+  let handleClaim: (() => void) | undefined;
+  try {
+    const flow = useClaimFlowContext();
+    handleClaim = () => void flow.handleClaim();
+  } catch {
+    handleClaim = undefined;
+  }
+
   const isBeginner = experienceMode === "beginner";
 
   return (
@@ -77,7 +88,7 @@ export default function AppHeader({
           </h1>
           {/* Compact streak signal beside the wordmark — replaces the former full-bleed card at top of Home */}
           <div className="hidden min-[400px]:inline-flex">
-            <StreakNavBadge variant="header" />
+            <StreakNavBadge variant="header" onClaim={handleClaim} />
           </div>
           {address && (
             <div className="flex items-center gap-1 flex-shrink-0">
@@ -98,7 +109,7 @@ export default function AppHeader({
       <div className="flex items-center gap-1 sm:gap-2">
         {/* Compact streak on narrow screens — header's hidden wordmark leaves room; show badge here instead */}
         <div className="min-[400px]:hidden">
-          <StreakNavBadge variant="header" />
+          <StreakNavBadge variant="header" onClaim={handleClaim} />
         </div>
         {!isBeginner && (
         <>

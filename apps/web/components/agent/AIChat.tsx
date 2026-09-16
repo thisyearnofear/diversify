@@ -918,7 +918,7 @@ export default function AIChat() {
                                 onClick={() => handleTypedAction(typedAction!)}
                                 className="w-full min-h-11 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
                               >
-                                🪙 Claim Daily G$ UBI
+                                🪙 Claim Daily G$
                               </button>
                             )}
                           </div>
@@ -1107,7 +1107,7 @@ export default function AIChat() {
                           onClick={handleClaimFromChat}
                           className="mt-3 w-full px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
                         >
-                          🪙 Claim Daily G$ UBI
+                          🪙 Claim Daily G$
                         </button>
                       )}
                       {msg.action?.type === 'verify_identity' && (

@@ -10,6 +10,7 @@ import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
 import { DataError, HeroValue } from "../../shared/TabComponents";
 import { ContextualBanner } from "../../shared/ContextualBanner";
+import { ClaimRail } from "../../rewards/ClaimRail";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
@@ -332,6 +333,9 @@ export function ConnectedOverview({
           setActiveTab("exchange");
         }}
       />
+      {/* The persistent daily-G$ rail — morphs through claim states
+          (ready / verify / unlock / claimed); null when nothing to say. */}
+      <ClaimRail />
     </div>
   );
 

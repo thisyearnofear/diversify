@@ -23,7 +23,6 @@ import type { TabId } from "@/constants/tabs";
 import { useExperience } from "../context/app/ExperienceContext";
 import { useProtectionProfile } from "./use-protection-profile";
 import { useColdStart } from "./use-cold-start";
-import { useStreakRewards } from "./use-streak-rewards";
 // Deep leaf import — NOT the barrel — keeps the agent-tier stack out of first-load.
 import { getBeginnerPrimaryTip, type ProtectionUserGoal } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
@@ -39,7 +38,6 @@ export type ContextualBannerKind =
   | "apac-rail" // APAC philosophy + Asia region — live or coming-soon copy
   | "caribbean-rail" // Pan-Caribbean philosophy + Caribbean region — lives on Celo
   | "fx-corridor-hint" // SME-graduated user → discover the FX Corridor section
-  | "daily-claim"     // GoodDollar reward ready
   | "fx-drag-warning" // Importer: FX drag is eating margins
   | "family-savings"  // Diaspora: family savings context
   | "currency-risk"   // US/EU: currency risk awareness
@@ -126,8 +124,7 @@ const DEMO_PRIORITY = 80;
 const GOAL_DRIFT_PRIORITY = 60;
 const APAC_RAIL_PRIORITY = 55;
 const CARIBBEAN_RAIL_PRIORITY = 54; // sibling of apac-rail — only one applies per profile
-const FX_CORRIDOR_HINT_PRIORITY = 50; // below apac-rail, above daily-claim
-const DAILY_CLAIM_PRIORITY = 40;
+const FX_CORRIDOR_HINT_PRIORITY = 50;
 
 export function useHomeSections({
   portfolio,
@@ -138,7 +135,6 @@ export function useHomeSections({
 }: UseHomeSectionsInput): HomeSections {
   const { experienceMode } = useExperience();
   const { config: profileConfig, isComplete: profileComplete } = useProtectionProfile();
-  const { canClaim } = useStreakRewards();
   const coldStart = useColdStart(chainId);
   const { config: adaptiveConfig } = useAdaptiveContext();
 
@@ -190,11 +186,10 @@ export function useHomeSections({
       // Demo mode is its own banner above, so we skip cold-start in demo.
       banner = "cold-start";
       bannerPriority = Math.max(bannerPriority, COLD_START_PRIORITY);
-    } else if (canClaim && hasHoldings) {
-      // Daily claim is shown alongside holdings.
-      banner = "daily-claim";
-      bannerPriority = Math.max(bannerPriority, DAILY_CLAIM_PRIORITY);
     }
+    // Daily G$ claim is the ClaimRail's job — a state-morphing rail line,
+    // not a banner kind (the old daily-claim banner rendered nothing in
+    // status placement and navigated to a tab with no claim UI).
     // First-visit SME-graduated users (`moneyPurpose === 'upcoming_payment'`
     // who haven't yet dismissed the FX Corridor hint) get the discovery
     // hint first instead of goal-drift. The hint is a one-time nudge;
@@ -211,7 +206,7 @@ export function useHomeSections({
       hasHoldings &&
       !isFirstVisitSme
     ) {
-      // Goal drift overrides daily-claim but is overridden by cold-start.
+      // Goal drift is overridden by cold-start.
       if (bannerPriority < GOAL_DRIFT_PRIORITY) {
         banner = "goal-drift";
         bannerPriority = GOAL_DRIFT_PRIORITY;
@@ -328,7 +323,6 @@ export function useHomeSections({
     profileConfig.userRegion,
     profileConfig.moneyPurpose,
     profileComplete,
-    canClaim,
     hasHoldings,
     isDemo,
     portfolio,

@@ -98,7 +98,7 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
         onClick={onClaim}
         className={`focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded-full ${className}`}
         data-testid="streak-nav-badge"
-        aria-label="Claim daily streak reward"
+        aria-label="Claim Daily G$"
       >
         {pill}
       </button>

@@ -155,17 +155,7 @@ describe("ContextualBanner", () => {
     expect(screen.getByText(/Rebalance/)).toBeInTheDocument();
   });
 
-  it("renders the daily-claim variant", () => {
-    render(
-      <ContextualBanner
-        {...baseProps}
-        kind="daily-claim"
-        dailyClaimText="3-day streak"
-      />,
-    );
-    expect(screen.getByText("Daily Reward Ready")).toBeInTheDocument();
-    expect(screen.getByText("3-day streak")).toBeInTheDocument();
-  });
+
 
   it("renders only ONE banner at a time (priority semantics)", () => {
     // The component takes a single `kind` prop. This test documents the

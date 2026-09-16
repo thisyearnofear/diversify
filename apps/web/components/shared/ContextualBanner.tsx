@@ -2,7 +2,7 @@
  * ContextualBanner — A single, priority-ordered slot for "look here" notices.
  *
  * Before this component, the home page had up to four competing full-bleed
- * banners (cold-start, daily-claim, goal-drift, demo) that all vied for the
+ * banners (cold-start, goal-drift, demo) that all vied for the
  * user's attention. They never stacked well and made the page feel noisy.
  *
  * `useHomeSections()` resolves to exactly one `kind` and `ContextualBanner`
@@ -29,7 +29,6 @@ export interface ContextualBannerProps {
     | "cold-start"
     | "demo"
     | "goal-drift"
-    | "daily-claim"
     | "apac-rail"
     | "caribbean-rail"
     | "fx-corridor-hint"
@@ -45,8 +44,6 @@ export interface ContextualBannerProps {
   goalDriftMessage?: string;
   /** Goal alignment action label */
   goalDriftActionLabel?: string;
-  /** Streak / claim text for the daily-claim variant */
-  dailyClaimText?: string;
   userRegion: Region;
   chainId: number | null;
   address?: string | null;
@@ -68,7 +65,7 @@ export interface ContextualBannerProps {
   /**
    * hero: first-viewport card (legacy). status: quiet footnote under the
    * instrument. Home uses status so banners never sit above the object.
-   * cold-start / goal-drift / daily-claim are other surfaces' jobs — status
+   * cold-start / goal-drift are other surfaces' jobs — status
    * renders nothing for those kinds.
    */
   placement?: "hero" | "status";
@@ -85,7 +82,6 @@ export function ContextualBanner({
   demoValue,
   goalDriftMessage,
   goalDriftActionLabel,
-  dailyClaimText,
   userRegion,
   chainId,
   address,
@@ -146,12 +142,6 @@ export function ContextualBanner({
           message={goalDriftMessage}
           actionLabel={goalDriftActionLabel}
           onAction={() => setActiveTab("exchange")}
-        />
-      )}
-      {kind === "daily-claim" && (
-        <DailyClaimVariant
-          text={dailyClaimText}
-          onAction={() => setActiveTab("protect")}
         />
       )}
       {kind === "apac-rail" && <ApacRailHonestyBanner variant="home" />}
@@ -387,37 +377,6 @@ function FxCorridorHintVariant({ onAction }: { onAction: () => void }) {
   );
 }
 
-function DailyClaimVariant({
-  text,
-  onAction,
-}: {
-  text?: string;
-  onAction: () => void;
-}) {
-  return (
-    <button
-      onClick={onAction}
-      className="w-full flex items-center justify-between gap-3 px-4 py-3 min-h-[44px] bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-2xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 active:scale-[0.99] transition-[transform,box-shadow]"
-      aria-label="Claim your daily GoodDollar reward"
-    >
-      <div className="flex items-center gap-3 min-w-0">
-        <span className="text-2xl shrink-0 animate-bounce">🎁</span>
-        <div className="text-left min-w-0">
-          <div className="text-xs font-bold uppercase tracking-wide">
-            Daily Reward Ready
-          </div>
-          <div className="text-xs text-emerald-100 font-medium truncate">
-            {text || "Tap to claim — keeps your streak alive"}
-          </div>
-        </div>
-      </div>
-      <div className="bg-white/20 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0">
-        Claim Now
-      </div>
-    </button>
-  );
-}
-
 // ── Persona banner variants ─────────────────────────────────────────────────
 
 /**
@@ -525,7 +484,7 @@ function ContextualBannerStatus({
   onDisableDemo?: () => void;
   onDismissFxCorridorHint?: () => void;
 }) {
-  if (kind === "cold-start" || kind === "goal-drift" || kind === "daily-claim" || kind === "cycle-alert") {
+  if (kind === "cold-start" || kind === "goal-drift" || kind === "cycle-alert") {
     return null;
   }
 

@@ -147,10 +147,13 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("demo");
     });
 
-    it("shows daily-claim when streak is claimable and has holdings", () => {
+    it("does not spend the banner slot on daily claims — ClaimRail owns that surface", () => {
+      // A claimable streak used to set banner="daily-claim", which the
+      // status placement rendered as null. The claim surface now lives in
+      // <ClaimRail>, driven by the streak state machine directly.
       mockUseStreakRewards.mockReturnValue({ canClaim: true, isWhitelisted: true });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.banner).toBe("daily-claim");
+      expect(result.current.banner).not.toBe("daily-claim");
     });
 
     it("shows goal-drift when profile is complete with a real goal and has holdings", () => {
@@ -282,10 +285,10 @@ describe("useHomeSections", () => {
       expect(result.current.banner).toBe("apac-rail");
     });
 
-    it("fx-corridor-hint outranks daily-claim for SME-graduated users with a streak", () => {
-      // An importer with a claimable streak: the FX Corridor hint is more
-      // relevant (it's a discovery moment for the new section) than the
-      // daily-claim reward.
+    it("fx-corridor-hint surfaces for first-visit SME-graduated users", () => {
+      // An importer with a claimable streak: the FX Corridor hint is the
+      // discovery moment for the new section; the daily claim rides the
+      // ClaimRail line, not the banner slot.
       mockUseStreakRewards.mockReturnValue({ canClaim: true, isWhitelisted: true });
       mockUseProtectionProfile.mockReturnValue({
         config: {
