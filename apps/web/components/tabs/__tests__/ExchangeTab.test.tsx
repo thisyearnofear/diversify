@@ -13,10 +13,15 @@ vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress }),
 }));
 
+let mockNettingRequested = false;
+const mockConsumeNetting = vi.fn();
+
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     swapPrefill: null,
     setSwapPrefill: vi.fn(),
+    nettingRequested: mockNettingRequested,
+    consumeNettingRequest: mockConsumeNetting,
   }),
 }));
 
@@ -44,8 +49,13 @@ vi.mock("@/components/wallet/WalletButton", () => ({
   default: () => null,
 }));
 
-vi.mock("@/components/business/CaribbeanFxNetCard", () => ({
-  CaribbeanFxNetCard: () => React.createElement("div", { "data-testid": "caribbean-fx" }),
+vi.mock("@/components/business/FxNettingRail", () => ({
+  FxNettingRail: (props: { initialSell?: string; initialBuy?: string }) =>
+    React.createElement(
+      "div",
+      { "data-testid": "fx-netting-rail" },
+      `${props.initialSell ?? ""}-${props.initialBuy ?? ""}`,
+    ),
 }));
 
 vi.mock("@/components/swap/RouteSchematic", () => ({
@@ -93,6 +103,7 @@ describe("ExchangeTab — instrument", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAddress = "0xabc";
+    mockNettingRequested = false;
   });
 
   it("mounts the ticket as the object, with no extra inspect button or yield card", () => {
@@ -150,5 +161,39 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByText("Verified")).toBeInTheDocument();
     expect(screen.getByText("· Evidence mirrored")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+  });
+
+  it("the FX netting link unfolds the rail inside the inspector — no object flip", () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    // Ticket remains the object — no separate netting card mounts.
+    expect(screen.getByTestId("exchange-swap-object")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /FX netting/ }));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByTestId("fx-netting-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("exchange-swap-object")).toBeInTheDocument();
+  });
+
+  it("pair inspection shows route detail AND the netting rail prefilled from the pair's corridor", () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("quote-row"));
+    expect(screen.getByTestId("route-schematic")).toHaveTextContent("cUSD-USDC");
+    // cUSD→USDC both mirror USD — corridorSideFor yields USD/USD.
+    expect(screen.getByTestId("fx-netting-rail")).toHaveTextContent("USD-USD");
+  });
+
+  it("a netting hand-off (navigateToNetting) unfolds the rail on arrival", () => {
+    mockNettingRequested = true;
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByTestId("fx-netting-rail")).toBeInTheDocument();
   });
 });

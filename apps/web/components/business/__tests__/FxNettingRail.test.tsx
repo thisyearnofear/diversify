@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import CaribbeanFxNetCard from '../CaribbeanFxNetCard';
+import FxNettingRail from '../FxNettingRail';
 import { buildWalletAuthMessage } from '@/lib/wallet-auth';
 
 // Mock the wallet + netting hook so the card renders/isolation-testable
@@ -37,7 +37,7 @@ vi.mock('../../wallet/WalletProvider', () => ({
 
 afterEach(cleanup);
 
-describe('CaribbeanFxNetCard — smoke + phase flips', () => {
+describe('FxNettingRail — smoke + phase flips', () => {
   beforeEach(() => {
     mockMatch.mockReset();
     mockRefreshSettlements.mockClear();
@@ -46,16 +46,16 @@ describe('CaribbeanFxNetCard — smoke + phase flips', () => {
   });
 
   it('renders the intent phase by default with JMD/BBD defaults', () => {
-    render(<CaribbeanFxNetCard />);
-    expect(screen.getByTestId('caribbean-fx-net-card')).toBeInTheDocument();
+    render(<FxNettingRail />);
+    expect(screen.getByTestId('fx-netting-rail')).toBeInTheDocument();
     expect(screen.getByTestId('fx-phase-intent')).toBeInTheDocument();
-    expect(screen.getByText('Caribbean FX Netting')).toBeInTheDocument();
+    expect(screen.getByText('Counterparty match')).toBeInTheDocument();
     expect(screen.getByLabelText('Currency you have')).toHaveValue('JMD');
     expect(screen.getByLabelText('Currency you want')).toHaveValue('BBD');
   });
 
   it('flips to the review phase and calls match when the CTA is enabled', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     const amount = screen.getByLabelText('Amount to convert');
     fireEvent.change(amount, { target: { value: '500000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Match my intent' }));
@@ -67,7 +67,7 @@ describe('CaribbeanFxNetCard — smoke + phase flips', () => {
   });
 });
 
-describe('CaribbeanFxNetCard — auth timing (view ≠ sign)', () => {
+describe('FxNettingRail — auth timing (view ≠ sign)', () => {
   beforeEach(() => {
     sessionStorage.clear();
     mockMatch.mockReset();
@@ -78,7 +78,7 @@ describe('CaribbeanFxNetCard — auth timing (view ≠ sign)', () => {
   });
 
   it('requests no authed reads on mount — opening the card must not pop a signature', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     expect(mockRefreshSettlements).not.toHaveBeenCalled();
     expect(mockRefreshCreditProfile).not.toHaveBeenCalled();
   });
@@ -90,13 +90,13 @@ describe('CaribbeanFxNetCard — auth timing (view ≠ sign)', () => {
       `diversifi-wallet-auth:${addr}`,
       JSON.stringify({ message: buildWalletAuthMessage(addr), signature: '0xsig' }),
     );
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     expect(mockRefreshSettlements).toHaveBeenCalled();
     expect(mockRefreshCreditProfile).toHaveBeenCalled();
   });
 
   it('refreshes on entering the review phase — the match act earns the read', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '500000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Match my intent' }));
     expect(mockRefreshSettlements).toHaveBeenCalled();
@@ -104,7 +104,7 @@ describe('CaribbeanFxNetCard — auth timing (view ≠ sign)', () => {
   });
 });
 
-describe('CaribbeanFxNetCard — walletless observer path (judges)', () => {
+describe('FxNettingRail — walletless observer path (judges)', () => {
   beforeEach(() => {
     mockMatch.mockReset();
     mockRefreshSettlements.mockClear();
@@ -113,7 +113,7 @@ describe('CaribbeanFxNetCard — walletless observer path (judges)', () => {
   });
 
   it('renders the intent form and an enabled CTA with NO wallet — matching is not gated on connection', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     const amount = screen.getByLabelText('Amount to convert');
     fireEvent.change(amount, { target: { value: '250000' } });
     const cta = screen.getByRole('button', { name: 'Match my intent' });
@@ -124,7 +124,7 @@ describe('CaribbeanFxNetCard — walletless observer path (judges)', () => {
 
   it('shows the observer preview banner in review phase when walletless', () => {
     mockData = { matches: [], totalMatchedUsd: 0, totalSavingsUsd: 0, unmatchedCount: 1, observer: true, poolSize: 3 };
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '250000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Match my intent' }));
     expect(screen.getByTestId('fx-observer-banner')).toBeInTheDocument();
@@ -133,14 +133,14 @@ describe('CaribbeanFxNetCard — walletless observer path (judges)', () => {
 
   it('guides a walletless visitor with an unmatched intent to connect to post it', () => {
     mockData = { matches: [], totalMatchedUsd: 0, totalSavingsUsd: 0, unmatchedCount: 1, observer: true, poolSize: 0 };
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '250000' } });
     fireEvent.click(screen.getByRole('button', { name: 'Match my intent' }));
     expect(screen.getByText(/connect a wallet to post your intent/i)).toBeInTheDocument();
   });
 });
 
-describe('CaribbeanFxNetCard — currency validation', () => {
+describe('FxNettingRail — currency validation', () => {
   beforeEach(() => {
     mockMatch.mockReset();
     mockRefreshSettlements.mockClear();
@@ -149,7 +149,7 @@ describe('CaribbeanFxNetCard — currency validation', () => {
   });
 
   it('flags an unknown currency code and keeps the CTA disabled', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     fireEvent.change(screen.getByLabelText('Currency you have'), { target: { value: 'JAM' } });
     fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '500' } });
     expect(screen.getByText(/unsupported currency code/i)).toBeInTheDocument();
@@ -157,7 +157,7 @@ describe('CaribbeanFxNetCard — currency validation', () => {
   });
 
   it('keeps the CTA enabled for known codes from the corridor presets', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     fireEvent.click(screen.getByRole('button', { name: 'TTD → JMD' }));
     expect(screen.getByLabelText('Currency you have')).toHaveValue('TTD');
     expect(screen.getByLabelText('Currency you want')).toHaveValue('JMD');
@@ -166,14 +166,14 @@ describe('CaribbeanFxNetCard — currency validation', () => {
   });
 
   it('disables the CTA when both currencies are the same', () => {
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     fireEvent.change(screen.getByLabelText('Currency you want'), { target: { value: 'JMD' } });
     fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '500' } });
     expect(screen.getByRole('button', { name: 'Match my intent' })).toBeDisabled();
   });
 });
 
-describe('CaribbeanFxNetCard — settlement-native credit file readout', () => {
+describe('FxNettingRail — settlement-native credit file readout', () => {
   afterEach(() => {
     mockHookOverride = null;
   });
@@ -191,7 +191,7 @@ describe('CaribbeanFxNetCard — settlement-native credit file readout', () => {
       },
       refreshCreditProfile: vi.fn(),
     };
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     expect(screen.getByTestId('fx-credit-score')).toHaveTextContent('712');
     expect(screen.getByTestId('fx-credit-summary')).toHaveTextContent(/9 verified settlements/);
     expect(screen.getByTestId('fx-credit-summary')).toHaveTextContent(/4 counterparties/);
@@ -210,7 +210,7 @@ describe('CaribbeanFxNetCard — settlement-native credit file readout', () => {
       },
       refreshCreditProfile: vi.fn(),
     };
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     expect(screen.getByTestId('fx-credit-score')).toHaveTextContent('Thin file');
     expect(screen.getByTestId('fx-credit-summary')).toHaveTextContent(/next settled trade strengthens this file/);
   });
@@ -227,7 +227,7 @@ describe('CaribbeanFxNetCard — settlement-native credit file readout', () => {
       },
       refreshCreditProfile: vi.fn(),
     };
-    render(<CaribbeanFxNetCard />);
+    render(<FxNettingRail />);
     expect(screen.queryByTestId('fx-credit-file')).not.toBeInTheDocument();
   });
 });

@@ -865,11 +865,11 @@ export default function AIChat() {
                               closeReview();
                               return;
                             case 'open_fx_netting_review':
-                              // FX netting lives in the CaribbeanFxNetCard —
-                              // the Exchange tab's netting morph (the persona
-                              // default for pan-Caribbean / upcoming-payment,
-                              // reachable via the status-rail link or chat
-                              // hand-off for everyone).
+                              // FX netting is the counterparty rail in the
+                              // Exchange tab's pair inspector — auto-unfolded
+                              // for pan-Caribbean / upcoming-payment personas,
+                              // reachable via the status-rail link or this
+                              // chat hand-off for everyone.
                               navigateToNetting();
                               closeReview();
                               return;

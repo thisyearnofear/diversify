@@ -10,7 +10,8 @@ import type { RegionalInflationData } from "@/hooks/use-inflation-data";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
-import { CaribbeanFxNetCard } from "@/components/business/CaribbeanFxNetCard";
+import { FxNettingRail } from "@/components/business/FxNettingRail";
+import { corridorSideFor } from "@/lib/corridor-context";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
@@ -18,36 +19,68 @@ import { CorridorDetail } from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 
+/** What the inspector is bound to: a selected pair (route + corridor +
+ *  the netting rail prefilled from the pair's fiat legs) or the netting
+ *  rail alone when the user came to match currencies directly. */
+type InspectorSel =
+  | { kind: "pair"; fromToken: string; toToken: string }
+  | { kind: "netting" }
+  | null;
+
 /** The pair inspector — route schematic plus the corridor context: what
- *  these two currencies are and how they've treated each other. */
+ *  these two currencies are and how they've treated each other. The
+ *  netting rail rides here too: counterparty matching is a settlement
+ *  option of the selected pair, not a separate surface. */
 function PairInspector({
-  inspectedPair,
+  selection,
   userRegion,
   onClose,
 }: {
-  inspectedPair: { fromToken: string; toToken: string } | null;
+  selection: InspectorSel;
   userRegion: Region;
   onClose: () => void;
 }) {
+  const pair = selection?.kind === "pair" ? selection : null;
+  // The pair's fiat legs prefill the intent form when they exist —
+  // USDm→KESm becomes USD→KES. Tokens without a fiat mirror leave the
+  // rail on its own defaults.
+  const sellCode = pair ? corridorSideFor(pair.fromToken)?.code : undefined;
+  const buyCode = pair ? corridorSideFor(pair.toToken)?.code : undefined;
+
   return (
     <InspectorSheet
-      selectedId={inspectedPair ? `${inspectedPair.fromToken}-${inspectedPair.toToken}` : null}
+      selectedId={
+        selection?.kind === "pair"
+          ? `${selection.fromToken}-${selection.toToken}`
+          : selection?.kind === "netting"
+            ? "netting"
+            : null
+      }
       onClose={onClose}
-      title="Route and settlement"
+      title={pair ? "Route and settlement" : "Counterparty matching"}
     >
-      {inspectedPair ? (
+      {pair ? (
         <>
           <RouteSchematic
-            fromToken={inspectedPair.fromToken}
-            toToken={inspectedPair.toToken}
+            fromToken={pair.fromToken}
+            toToken={pair.toToken}
             caption={userRegion}
           />
           <CorridorDetail
-            fromToken={inspectedPair.fromToken}
-            toToken={inspectedPair.toToken}
+            fromToken={pair.fromToken}
+            toToken={pair.toToken}
           />
         </>
       ) : null}
+      <FxNettingRail
+        initialSell={sellCode}
+        initialBuy={buyCode}
+        leadIn={
+          pair
+            ? "This pair can also settle peer-to-peer — match a counterparty at mid-market instead of taking the DEX route."
+            : undefined
+        }
+      />
     </InspectorSheet>
   );
 }
@@ -72,39 +105,49 @@ export default function ExchangeTab({
   const { address } = useWalletContext();
   const { enableDemoMode } = useDemoMode();
   const router = useRouter();
-  const { setSwapPrefill, swapPrefill } = useNavigation();
+  const { setSwapPrefill, swapPrefill, nettingRequested, consumeNettingRequest } = useNavigation();
   const { financialStrategy } = useStrategy();
   const { config } = useProtectionProfile();
   const sharedPortfolio = usePortfolio();
   const previousAddress = useRef(address);
-  const [inspectedPair, setInspectedPair] = useState<{
-    fromToken: string;
-    toToken: string;
-  } | null>(null);
+  const [inspectorSel, setInspectorSel] = useState<InspectorSel>(null);
 
   useEffect(() => {
     if (previousAddress.current !== address) {
-      setInspectedPair(null);
+      setInspectorSel(null);
       previousAddress.current = address;
     }
   }, [address]);
 
-  const morphNetting =
+  // Persona morph (§5 rail 4): pan-Caribbean / upcoming-payment users
+  // open with the counterparty rail already unfolded — netting IS their
+  // exchange. The ticket remains the object underneath; a swap prefill
+  // always wins.
+  const nettingPersona =
     (financialStrategy === "pan_caribbean" || config.moneyPurpose === "upcoming_payment") &&
     !swapPrefill;
+  const personaOpenedRef = useRef(false);
+  useEffect(() => {
+    if (nettingPersona && !personaOpenedRef.current) {
+      personaOpenedRef.current = true;
+      setInspectorSel({ kind: "netting" });
+    }
+  }, [nettingPersona]);
 
-  // The FX netting card is the Future Caribbean track's core artifact. The
-  // persona morph (§5 rail 4) decides the DEFAULT object: pan-Caribbean /
-  // upcoming-payment users — connected or not — open on the netting card;
-  // everyone else opens on the swap ticket and can flip to netting via the
-  // status-rail link. A swap prefill always wins (Swaps from Shield open
-  // the ticket), matching the original morphNetting contract.
-  const [nettingOverride, setNettingOverride] = useState<boolean | null>(null);
-  const nettingActive = nettingOverride ?? morphNetting;
+  // Chat deep-link hand-off: navigateToNetting() lands here — unfold the
+  // netting rail once, then clear the transient flag.
+  useEffect(() => {
+    if (!nettingRequested) return;
+    consumeNettingRequest();
+    setInspectorSel((sel) => (sel?.kind === "netting" ? sel : { kind: "netting" }));
+  }, [nettingRequested, consumeNettingRequest]);
 
   useEffect(() => {
     if (!router.isReady) return;
-    const { from, to, amount, reason } = router.query;
+    const { from, to, amount, reason, netting } = router.query;
+    if (netting === "1" || netting === "true") {
+      setInspectorSel({ kind: "netting" });
+    }
     if (from || to || amount) {
       setSwapPrefill({
         fromToken: from as string | undefined,
@@ -116,36 +159,13 @@ export default function ExchangeTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
-  if (nettingActive) {
-    return (
-      <InstrumentShell
-        object={<div data-testid="exchange-netting"><CaribbeanFxNetCard /></div>}
-        status={
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
-              Match a currency need with a counterparty — netted and settled on-chain, no USD bridge.
-            </p>
-            <VerifiedEvidence className="ml-auto" />
-            <button
-              type="button"
-              onClick={() => setNettingOverride(false)}
-              className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60"
-            >
-              Swap ticket →
-            </button>
-          </div>
-        }
-      />
-    );
-  }
-
   const nettingLink = (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
       {/* Trust parity — Home and Shield carry the same quiet line (§7). */}
       <VerifiedEvidence />
       <button
         type="button"
-        onClick={() => setNettingOverride(true)}
+        onClick={() => setInspectorSel({ kind: "netting" })}
         className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
       >
         FX netting: match currencies directly →
@@ -154,11 +174,11 @@ export default function ExchangeTab({
   );
 
   if (!address) {
-    // Unconnected morph (§5): the ticket is still the object — SwapTab
+    // Unconnected morph (§5): the ticket stays the object — SwapTab
     // renders it walletless and its execute CTA becomes the connect button.
     // No hero card, no proof card, no how-it-works stack: trust is one
     // quiet line, demo entry is a text link, and the FX netting hand-off
-    // sits beside them (the card works walletless in observer mode).
+    // sits beside them (the rail works walletless in observer mode).
     return (
       <InstrumentShell
         object={
@@ -168,17 +188,17 @@ export default function ExchangeTab({
               inflationData={inflationData}
               instrument
               onInspectQuote={(fromToken, toToken) =>
-                setInspectedPair({ fromToken, toToken })
+                setInspectorSel({ kind: "pair", fromToken, toToken })
               }
-              quoteInspected={Boolean(inspectedPair)}
+              quoteInspected={inspectorSel?.kind === "pair"}
             />
           </div>
         }
         inspector={
           <PairInspector
-            inspectedPair={inspectedPair}
+            selection={inspectorSel}
             userRegion={userRegion}
-            onClose={() => setInspectedPair(null)}
+            onClose={() => setInspectorSel(null)}
           />
         }
         status={
@@ -210,23 +230,23 @@ export default function ExchangeTab({
             isBalancesLoading={isBalancesLoading}
             instrument
             onInspectQuote={(fromToken, toToken) =>
-              setInspectedPair({ fromToken, toToken })
+              setInspectorSel({ kind: "pair", fromToken, toToken })
             }
-            quoteInspected={Boolean(inspectedPair)}
+            quoteInspected={inspectorSel?.kind === "pair"}
           />
         </div>
       }
       inspector={
         <PairInspector
-          inspectedPair={inspectedPair}
+          selection={inspectorSel}
           userRegion={userRegion}
-          onClose={() => setInspectedPair(null)}
+          onClose={() => setInspectorSel(null)}
         />
       }
       portfolio={freshness}
       onRefresh={refreshBalances}
-      // Non-Caribbean personas reach the netting card from the connected
-      // ticket too — the object switch rides in the status rail.
+      // The netting rail is reachable from the connected ticket too —
+      // it lives inside the pair inspector, not behind an object flip.
       status={nettingLink}
     />
   );

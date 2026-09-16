@@ -40,9 +40,14 @@ type NavigationContextValue = NavigationState & {
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
-  /** Deep-link to the Exchange tab's FX netting morph (CaribbeanFxNetCard).
-   *  Clears any swap prefill — a netting hand-off is not a swap. */
+  /** Deep-link to the Exchange tab's counterparty-matching rail — the
+   *  pair inspector unfolds with the netting form. Clears any swap
+   *  prefill — a netting hand-off is not a swap. */
   navigateToNetting: () => void;
+  /** Transient flag — Exchange consumes it once to open the netting
+   *  inspector (like `compareRequested` on Shield). */
+  nettingRequested: boolean;
+  consumeNettingRequest: () => void;
   /** Navigate to the Guardian tab carrying the slice the user was acting
    *  on. `context` is transient — the Guardian surface consumes it once. */
   navigateToGuardian: (context?: GuardianContext) => void;
@@ -96,6 +101,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const [guardianContext, setGuardianContext] = useState<GuardianContext | null>(null);
   // Transient Shield-compare hand-off — the Shield tab consumes it once.
   const [compareRequested, setCompareRequested] = useState(false);
+  const [nettingRequested, setNettingRequested] = useState(false);
 
   // init from storage (active tab)
   useEffect(() => {
@@ -135,12 +141,18 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   /**
-   * Open the Exchange tab in its netting morph (CaribbeanFxNetCard).
-   * Same intent contract as navigateToSwap: one call, one artefact. Also
-   * mirrors the ?netting=1 URL hand-off used by chat deep links.
+   * Open the Exchange tab with the counterparty-matching rail unfolded in
+   * the pair inspector. Same intent contract as navigateToSwap: one call,
+   * one artefact. Also mirrors the ?netting=1 URL hand-off used by chat
+   * deep links.
    */
   const navigateToNetting = useCallback(() => {
+    setNettingRequested(true);
     setState((prev) => ({ ...prev, activeTab: 'exchange', swapPrefill: null }));
+  }, []);
+
+  const consumeNettingRequest = useCallback(() => {
+    setNettingRequested(false);
   }, []);
 
   /**
@@ -191,6 +203,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navigateToSwap,
       clearSwapPrefill,
       navigateToNetting,
+      nettingRequested,
+      consumeNettingRequest,
       navigateToGuardian,
       guardianContext,
       clearGuardianContext,
@@ -203,7 +217,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       focusedYieldKey,
       setFocusedYieldKey,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, initializeFromStorage, focusedCycleId, focusedYieldKey],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, nettingRequested, consumeNettingRequest, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, initializeFromStorage, focusedCycleId, focusedYieldKey],
   );
 
   // The consuming surfaces (PaymentCycleReport, BestYieldCard) already

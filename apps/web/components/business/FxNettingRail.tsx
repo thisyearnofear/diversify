@@ -1,5 +1,4 @@
 import React from "react";
-import { motion } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useFxNetting, type FxSettlement } from "../../hooks/use-fx-netting";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -8,16 +7,18 @@ import RiveNetPair from "../shared/RiveNetPair";
 import { codeCoinTint } from "../shared/palette";
 
 /**
- * CaribbeanFxNetCard — the FX Corridor card for the Future Caribbean track.
+ * FxNettingRail — counterparty matching as a settlement rail inside the
+ * pair inspector. The ticket stays the object; this is the route the pair
+ * can take when the corridor has nettable flow.
+ *
  * Three phases, one job per phase (docs/design-language.md):
  *   1. INTENT — state "I need to sell X for Y".
- *   2. MATCH REVIEW — netting at mid-market: matched, saved, unmatched, anchor.
- *   3. SETTLE (when the caller is a net debtor) — send the cUSD obligation
- *      from your own wallet; the server verifies the transfer on-chain and
- *      advances both sides to settled.
+ *   2. MATCH REVIEW — netting at mid-market: matched, saved, unmatched.
+ *   3. SETTLE (when the caller is a net debtor) — send the obligation
+ *      from your own wallet; the server verifies the transfer on-chain
+ *      and advances both sides to settled.
  * Walletless visitors run the engine in observer mode: matching is real,
  * posting/settling needs a wallet — the copy says exactly that.
- * Honest fallback when no counterparty pool is hosted yet.
  */
 
 /**
@@ -42,7 +43,7 @@ function isKnownCurrency(code: string): boolean {
   return KNOWN_CURRENCIES.includes(code.toUpperCase());
 }
 
-/** Common corridor presets — one tap instead of two dropdowns. */
+/** Common corridor presets — one tap instead of two fields. */
 const CORRIDOR_PRESETS: Array<{ sell: string; buy: string; label: string }> = [
   { sell: "BBD", buy: "JMD", label: "BBD → JMD" },
   { sell: "TTD", buy: "JMD", label: "TTD → JMD" },
@@ -50,7 +51,16 @@ const CORRIDOR_PRESETS: Array<{ sell: string; buy: string; label: string }> = [
   { sell: "NGN", buy: "GHS", label: "NGN → GHS" },
   { sell: "KES", buy: "NGN", label: "KES → NGN" },
 ];
-export function CaribbeanFxNetCard() {
+
+interface FxNettingRailProps {
+  /** Corridor prefill — the inspected pair's fiat legs when they exist. */
+  initialSell?: string;
+  initialBuy?: string;
+  /** Quiet lead-in line, e.g. how this rail relates to the pair. */
+  leadIn?: string;
+}
+
+export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRailProps) {
   const { address, signMessage } = useWalletContext();
   const {
     data, isLoading, error, match,
@@ -58,9 +68,9 @@ export function CaribbeanFxNetCard() {
     creditProfile, refreshCreditProfile,
   } = useFxNetting(address ?? null, signMessage);
 
-  const [sellCurrency, setSellCurrency] = React.useState("JMD");
+  const [sellCurrency, setSellCurrency] = React.useState(initialSell ?? "JMD");
   const [sellAmount, setSellAmount] = React.useState("");
-  const [buyCurrency, setBuyCurrency] = React.useState("BBD");
+  const [buyCurrency, setBuyCurrency] = React.useState(initialBuy ?? "BBD");
   const [matched, setMatched] = React.useState(false);
 
   // Auth timing: settlements and the credit file are wallet-authed reads —
@@ -145,35 +155,20 @@ export function CaribbeanFxNetCard() {
   };
 
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="rounded-2xl border border-teal-200 dark:border-teal-900/60 bg-gradient-to-br from-teal-50/60 to-cyan-50/60 dark:from-teal-950/20 dark:to-cyan-950/20 p-5"
-      data-testid="caribbean-fx-net-card"
-    >
+    <div data-testid="fx-netting-rail" className="mt-4 border-t border-teal-100 dark:border-teal-900/60 pt-4">
       <datalist id="fx-currency-codes">
         {KNOWN_CURRENCIES.map((c) => (
           <option key={c} value={c} />
         ))}
       </datalist>
-      <div className="flex items-start gap-3 mb-4">
-        <div className="w-9 h-9 rounded-lg bg-teal-100 dark:bg-teal-900/40 flex items-center justify-center shrink-0">
-          <span aria-hidden="true">🌴</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-black text-teal-900 dark:text-teal-100">
-            Caribbean FX Netting
-          </h3>
-          <p className="text-xs text-teal-700 dark:text-teal-300 mt-0.5">
-            Match a currency need directly with a counterparty — no USD bridge,
-            no 7% bank corridor.
-          </p>
-          <p className="text-[11px] text-teal-600/80 dark:text-teal-400/80 mt-1">
-            The sou-sou (partner circle), digitized — the circle settles with
-            itself, and your history in the circle becomes your credit file.
-          </p>
-        </div>
+      <div className="mb-3">
+        <p className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+          Counterparty match
+        </p>
+        <p className="text-xs text-teal-700/90 dark:text-teal-300/90 mt-1 leading-relaxed">
+          {leadIn ??
+            "Match a currency need directly with a counterparty — netted at mid-market, settled on-chain, no USD bridge."}
+        </p>
       </div>
 
       {!matched ? (
@@ -236,8 +231,8 @@ export function CaribbeanFxNetCard() {
             <button
               type="button"
               onClick={() => {
-                setSellCurrency("JMD");
-                setBuyCurrency("BBD");
+                setSellCurrency(initialSell ?? "JMD");
+                setBuyCurrency(initialBuy ?? "BBD");
                 setSellAmount("");
               }}
               className="min-h-11 px-3 py-2 rounded-xl text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100/60 dark:hover:bg-teal-900/30 transition-colors"
@@ -412,7 +407,7 @@ export function CaribbeanFxNetCard() {
       {creditProfile && !creditProfile.synthetic && (
         <CreditFileSection profile={creditProfile} />
       )}
-    </motion.section>
+    </div>
   );
 }
 
@@ -552,4 +547,4 @@ function SettlementSection({
   );
 }
 
-export default CaribbeanFxNetCard;
+export default FxNettingRail;
