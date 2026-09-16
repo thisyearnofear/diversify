@@ -33,10 +33,7 @@ import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { useMobile } from "../../hooks/use-mobile";
-import SwapStatusPanel from "../swap/SwapStatusPanel";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
-import { SocialContactPicker } from "../swap/SocialContactPicker";
-import { useSocialResolve } from "../../hooks/use-social-resolve";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 
@@ -74,9 +71,7 @@ export default function SwapTab({
     () => getPreferredChainIdForGoal(profileConfig.userGoal, isMiniPay),
     [profileConfig.userGoal, isMiniPay],
   );
-  const { resolveIdentifier } = useSocialResolve();
   const [searchQuery, setSearchQuery] = useState("");
-  const [showSocialPicker, setShowSocialPicker] = useState(false);
 
   const isBeginner = experienceMode === "beginner";
   const isDemo = demoMode.isActive;
@@ -90,12 +85,6 @@ export default function SwapTab({
     step: hookSwapStep,
   } = useSwap();
 
-  const [swapStatus, setSwapStatus] = useState<string | null>(null);
-  const [, setApprovalTxHash] = useState<string | null>(null);
-  // BUGFIX: Import proper type from swap types
-  const [, setSwapStep] = useState<
-    "idle" | "approving" | "swapping" | "completed" | "error" | "bridging"
-  >("idle");
   const [showAiRecommendation, setShowAiRecommendation] = useState(false);
   const [aiRecommendationReason, setAiRecommendationReason] = useState<
     string | null
@@ -357,23 +346,13 @@ export default function SwapTab({
       setAutoSwitchNotice(null);
     }
   }, [walletChainId, autoSwitchNotice]);
-  // BUGFIX: Handle swap state changes with proper error prioritization
+  // Completion side-effects (streak, experience, activity, celebration).
+  // The status surface itself lives in the ticket — SwapStatus inside
+  // SwapInterface owns every status moment now.
   useEffect(() => {
-    // CRITICAL: Check error first and return early to prevent simultaneous success/error display
-    if (swapError) {
-      setSwapStatus(`Error: ${swapError}`);
-      setSwapStep("error");
-      return; // Stop processing - don't show success if there's an error
-    }
+    if (swapError) return;
 
-    // Only show success if no error exists
-    // Note: hookSwapStep type is 'idle' | 'approving' | 'swapping' | 'error' from useSwap hook
-    // The 'completed' state is handled by performSwap result, not hookSwapStep
-    if (swapTxHash && !swapError && hookSwapStep !== "completed") {
-      // Transaction submitted successfully
-      setSwapStatus("Swap completed successfully!");
-      setSwapStep("completed");
-
+    if (swapTxHash && hookSwapStep !== "completed") {
       // Record swap completion for experience progression
       recordExperienceSwap();
 
@@ -402,12 +381,6 @@ export default function SwapTab({
       if (celebrationData) {
         setShowCelebration(true);
       }
-      return;
-    }
-
-    // Transaction submitted but waiting for confirmation
-    if (swapTxHash && !swapError && hookSwapStep === "swapping") {
-      setSwapStatus("Transaction submitted...");
     }
   }, [
     swapError,
@@ -433,11 +406,11 @@ export default function SwapTab({
     phoneNumber?: string,
   ) => {
     if (address && !isDemo && !canSafelyExecute(walletView.freshness)) {
-      setSwapStatus("Wallet data is still updating — refresh before swapping.");
-      return { success: false, error: "Wallet data is not ready" };
+      return {
+        success: false,
+        error: "Wallet data is still updating — refresh before swapping.",
+      };
     }
-    setSwapStatus("Initiating swap...");
-    setSwapStep("approving");
 
     // ENHANCEMENT: Store current goal score before swap for impact calculation
     if (profileConfig.userGoal && goalScores) {
@@ -462,33 +435,16 @@ export default function SwapTab({
       chainId: toChainId || walletChainId || 0,
     });
 
-    try {
-      if (!address) throw new Error("Wallet not connected");
-      const result = await performSwap({
-        fromToken,
-        toToken,
-        amount,
-        fromChainId,
-        toChainId,
-        recipientAddress,
-        phoneNumber,
-        onApprovalSubmitted: setApprovalTxHash,
-        onSwapSubmitted: () => {
-          setSwapStatus("Swap submitted...");
-        },
-      });
-
-      if (result.success) {
-        setSwapStatus("Swap completed successfully!");
-        setSwapStep("completed");
-        return result;
-      }
-      return result;
-    } catch (err) {
-      setSwapStatus("Swap failed — please check your wallet and network, then try again.");
-      setSwapStep("error");
-      throw err;
-    }
+    if (!address) return { success: false, error: "Wallet not connected" };
+    return performSwap({
+      fromToken,
+      toToken,
+      amount,
+      fromChainId,
+      toChainId,
+      recipientAddress,
+      phoneNumber,
+    });
   };
 
   const handleRefresh = async () => {
@@ -714,57 +670,6 @@ export default function SwapTab({
             )}
 
             {ticket}
-
-            {/* Social Contact Picker - Send to phone/email (hidden on mobile beginner) */}
-            {showChrome && !isBeginner && address && !isMobile && (
-              <div className="mt-4">
-                <button
-                  onClick={() => setShowSocialPicker(!showSocialPicker)}
-                  className="w-full flex items-center justify-between p-3 min-h-[48px] bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span>👥</span>
-                    <span className="text-sm font-bold text-purple-700 dark:text-purple-300">
-                      Send to Contact
-                    </span>
-                  </div>
-                  <span className="text-xs text-purple-500">
-                    {showSocialPicker ? '▲' : '▼'}
-                  </span>
-                </button>
-                {showSocialPicker && (
-                  <div className="mt-2">
-                    <SocialContactPicker
-                      onSelect={(contact) => {
-                        // Pre-fill swap interface with resolved address
-                        if (swapInterfaceRef.current?.setTokens) {
-                          swapInterfaceRef.current.setTokens(
-                            "USDC",
-                            "USDC",
-                            "",
-                            undefined,
-                            undefined,
-                            contact.identifier,
-                            contact.resolvedAddress,
-                          );
-                        }
-                        setShowSocialPicker(false);
-                      }}
-                      onResolve={resolveIdentifier}
-                      disabled={isSwapLoading}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Transaction status + explorer link — delegated to SwapStatusPanel */}
-            <SwapStatusPanel
-              status={swapStatus ?? ""}
-              txHash={swapTxHash}
-              chainId={walletChainId}
-              isCompleted={hookSwapStep === "completed"}
-            />
           </>
         )}
       </div>

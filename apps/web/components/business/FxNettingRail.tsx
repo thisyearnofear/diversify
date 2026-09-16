@@ -1,8 +1,10 @@
 import React from "react";
+import Link from "next/link";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useFxNetting, type FxSettlement } from "../../hooks/use-fx-netting";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
+import { buildLiveRateProvider } from "@diversifi/shared/src/services/fx-netting/rate-adapter";
 import RiveNetPair from "../shared/RiveNetPair";
 import { codeCoinTint } from "../shared/palette";
 
@@ -42,6 +44,11 @@ const KNOWN_CURRENCIES = [
 function isKnownCurrency(code: string): boolean {
   return KNOWN_CURRENCIES.includes(code.toUpperCase());
 }
+
+const formatMidRate = (rate: number) =>
+  rate.toLocaleString(undefined, {
+    maximumSignificantDigits: rate >= 100 ? 5 : 4,
+  });
 
 /** Common corridor presets — one tap instead of two fields. */
 const CORRIDOR_PRESETS: Array<{ sell: string; buy: string; label: string }> = [
@@ -92,6 +99,42 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
     isKnownCurrency(buyCurrency) &&
     sellCurrency.toUpperCase() !== buyCurrency.toUpperCase();
   const canMatch = sellAmountNum > 0 && currenciesValid;
+
+  // The number that convinces: the live mid-market rate for this corridor,
+  // from the same USD table the matching engine settles at. Walletless —
+  // the provider memoises one fetch per session. Uncovered codes and fetch
+  // failures render nothing rather than a fabricated rate.
+  const [midQuote, setMidQuote] = React.useState<{
+    rate: number;
+    date: string | null;
+  } | null>(null);
+  React.useEffect(() => {
+    if (!currenciesValid) {
+      setMidQuote(null);
+      return;
+    }
+    let cancelled = false;
+    void buildLiveRateProvider()
+      .then((provider) => {
+        if (cancelled) return;
+        if (!provider.hasRate(sellCurrency) || !provider.hasRate(buyCurrency)) {
+          setMidQuote(null);
+          return;
+        }
+        const rate = provider.midRate(sellCurrency, buyCurrency);
+        setMidQuote(
+          Number.isFinite(rate) && rate > 0
+            ? { rate, date: provider.date }
+            : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setMidQuote(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sellCurrency, buyCurrency, currenciesValid]);
 
   /** Settlements where the connected wallet is the net debtor (worklist). */
   const myDebts: FxSettlement[] = (settlements ?? []).filter(
@@ -219,6 +262,18 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             ))}
           </div>
 
+          {midQuote && (
+            <p
+              className="mt-3 text-[11px] text-teal-700/80 dark:text-teal-300/80 tabular-nums"
+              data-testid="fx-mid-rate"
+            >
+              Mid-market now · 1 {sellCurrency.toUpperCase()} ={" "}
+              {formatMidRate(midQuote.rate)} {buyCurrency.toUpperCase()}
+              {midQuote.date ? ` · table of ${midQuote.date}` : ""} — the
+              rate a match settles at.
+            </p>
+          )}
+
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -240,6 +295,16 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
               Reset
             </button>
           </div>
+
+          <p className="mt-3 text-[10px] text-teal-700/60 dark:text-teal-300/60 leading-snug">
+            Weighing a future payment instead?{" "}
+            <Link
+              href="/fx-drag-calculator"
+              className="font-semibold underline underline-offset-2 hover:text-teal-900 dark:hover:text-teal-100"
+            >
+              See what FX timing costs across a whole cycle →
+            </Link>
+          </p>
         </div>
       ) : (
         <div data-testid="fx-phase-review">

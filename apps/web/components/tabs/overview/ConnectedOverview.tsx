@@ -93,7 +93,7 @@ export function ConnectedOverview({
     countryCode,
     frame,
   } = useCurrencyMoment();
-  const { navigateToCompare } = useNavigation();
+  const { navigateToCompare, navigateToNetting } = useNavigation();
   const { config: profileConfig } = useProtectionProfile();
   const philosophyName = profileConfig.philosophy
     ? STRATEGIES.find((s) => s.id === profileConfig.philosophy)?.name ?? null
@@ -311,10 +311,10 @@ export function ConnectedOverview({
       {home.isPaymentCycle && (
         <button
           type="button"
-          onClick={() => setActiveTab("exchange")}
+          onClick={navigateToNetting}
           className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
         >
-          Payment-cycle tools live on Exchange
+          Match this payment against a counterparty →
         </button>
       )}
       <ContextualBanner
@@ -330,7 +330,7 @@ export function ConnectedOverview({
         onEnableDemo={onEnableDemo}
         onDismissFxCorridorHint={() => {
           home.dismissFxCorridorHint();
-          setActiveTab("exchange");
+          navigateToNetting();
         }}
       />
       {/* The persistent daily-G$ rail — morphs through claim states

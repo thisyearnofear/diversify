@@ -11,6 +11,8 @@ import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import { CorridorLine } from "./CorridorContext";
+import { SocialContactPicker } from "./SocialContactPicker";
+import { useSocialResolve } from "../../hooks/use-social-resolve";
 import SwapActionButton from "./SwapActionButton";
 import WalletButton from "../wallet/WalletButton";
 import { Coin } from "../shared/FloatingCoins";
@@ -102,6 +104,8 @@ const SwapInterface = forwardRef<
   const isMobile = useMobile();
   const reducedMotion = useReducedMotion();
   const [switchRotated, setSwitchRotated] = useState(false);
+  const [recipientOpen, setRecipientOpen] = useState(false);
+  const { resolveIdentifier } = useSocialResolve();
 
   const {
     fromToken,
@@ -406,6 +410,43 @@ const SwapInterface = forwardRef<
               onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
             }
           />
+
+          {/* Recipient — the destination can be a person, not just a
+              wallet. A quiet affordance on the ticket, not a separate
+              card: resolving a contact rewrites this ticket's recipient
+              (the emerald chip at the top). */}
+          {address && !isBeginner && !isMobile && !phoneNumber && (
+            <button
+              type="button"
+              onClick={() => setRecipientOpen((o) => !o)}
+              className="mt-1 text-left text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
+              data-testid="recipient-affordance"
+            >
+              Sending to someone?{" "}
+              <span className="font-semibold text-blue-600 dark:text-blue-400">
+                {recipientOpen ? "Close" : "Add a contact →"}
+              </span>
+            </button>
+          )}
+          {recipientOpen && !phoneNumber && (
+            <motion.div
+              initial={reducedMotion ? false : { opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={reducedMotion ? { duration: 0 } : springSoft}
+              className="mt-2"
+            >
+              <SocialContactPicker
+                onSelect={(contact) => {
+                  setPhoneNumber(contact.identifier);
+                  setRecipientAddress(contact.resolvedAddress ?? null);
+                  setRecipientOpen(false);
+                }}
+                onResolve={resolveIdentifier}
+                amount={amount}
+                disabled={isLoading}
+              />
+            </motion.div>
+          )}
 
           {/* Unified inflation differentiator — one line, one moment */}
           {shouldShowIntermediateFeatures() && hasInflationBenefit && (

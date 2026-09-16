@@ -337,16 +337,6 @@ vi.mock("@/components/tabs/protect/ProfileWizard", () => ({
   default: () => React.createElement("div", { "data-testid": "profile-wizard" }),
 }));
 
-vi.mock("@/components/portfolio/MultichainPortfolioBreakdown", () => ({
-  default: () =>
-    React.createElement("div", { "data-testid": "portfolio-breakdown" }),
-}));
-
-vi.mock("@/components/earn/YieldDiscoverySection", () => ({
-  default: () =>
-    React.createElement("div", { "data-testid": "yield-discovery" }),
-}));
-
 vi.mock("@/components/tabs/protect/RwaAssetCards", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/tabs/protect/RwaAssetCards")>();
   return {
@@ -358,11 +348,6 @@ vi.mock("@/components/tabs/protect/RwaAssetCards", async (importOriginal) => {
 vi.mock("@/components/tabs/protect/OptimizationInsight", () => ({
   default: () =>
     React.createElement("div", { "data-testid": "optimization-insight" }),
-}));
-
-vi.mock("@/components/portfolio/PortfolioRecommendations", () => ({
-  default: () =>
-    React.createElement("div", { "data-testid": "portfolio-recommendations" }),
 }));
 
 vi.mock("@/components/ui/EmptyState", () => ({

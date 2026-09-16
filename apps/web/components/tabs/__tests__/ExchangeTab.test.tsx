@@ -89,10 +89,6 @@ vi.mock("../SwapTab", () => ({
     ),
 }));
 
-vi.mock("@/components/earn/BestYieldCard", () => ({
-  BestYieldCard: () => React.createElement("div", { "data-testid": "best-yield-card" }),
-}));
-
 import ExchangeTab from "../ExchangeTab";
 
 describe("ExchangeTab — instrument", () => {
@@ -106,7 +102,7 @@ describe("ExchangeTab — instrument", () => {
     mockNettingRequested = false;
   });
 
-  it("mounts the ticket as the object, with no extra inspect button or yield card", () => {
+  it("mounts the ticket as the object, with no extra inspect button", () => {
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
@@ -114,7 +110,6 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByTestId("exchange-swap-object")).toBeInTheDocument();
     expect(screen.getByText("instrument")).toBeInTheDocument();
     expect(screen.queryByText("Inspect route and settlement")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("best-yield-card")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
   });
 

@@ -164,11 +164,6 @@ vi.mock("@/hooks/use-home-sections", () => ({
 // ──────────────────────────────────────────────────────────────────────────
 
 vi.mock("@/components/wallet/WalletButton", () => ({ default: () => null }));
-vi.mock("@/components/portfolio/CurrencyPerformanceChart", () => ({ default: () => null }));
-vi.mock("@/components/portfolio/ProtectionAnalysis", () => ({
-  default: () => <div data-testid="protection-analysis" />,
-}));
-vi.mock("@/components/trade/DiversificationHealthCard", () => ({ default: () => null, DiversificationHealthCard: () => null }));
 vi.mock("@/components/rewards/StreakRewardsCard", () => ({
   StreakRewardsCard: () => null,
   RewardsStats: () => null,
@@ -193,7 +188,6 @@ vi.mock("@/components/agent/AgentTierStatus", () => ({
 vi.mock("@/components/shared/Tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@/components/agent/GuardianPulse", () => ({ GuardianPulse: () => null }));
 vi.mock("@/components/shared/ContextualBanner", () => ({ ContextualBanner: () => null }));
 vi.mock("@/components/shared/DataFreshnessIndicator", () => ({
   DataFreshnessIndicator: (props: { lastUpdated: number | null; isStale?: boolean; isLoading?: boolean; onRefresh?: () => void }) => (
@@ -207,13 +201,9 @@ vi.mock("@/components/shared/HomeSection", () => ({
 }));
 vi.mock("@/components/shared/HomeNav", () => ({ HomeNav: () => null }));
 vi.mock("@/components/shared/MoreOptions", () => ({ MoreOptions: () => null }));
-vi.mock("@/components/business/BusinessPromptCard", () => ({ BusinessPromptCard: () => null }));
 vi.mock("@/components/tabs/overview/ProtectionScorecard", () => ({ ProtectionScorecard: () => null }));
 vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({ PaymentCycleReport: () => null }));
 vi.mock("@/components/portfolio/ZakatCalculator", () => ({ default: () => null }));
-vi.mock("@/components/portfolio/StrategyMetrics", () => ({ default: () => null }));
-vi.mock("@/components/enterprise-fx/PortfolioRiskWidget", () => ({ default: () => null }));
-vi.mock("@/components/enterprise-fx/RiskMetrics", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
 vi.mock("../CountryOverrideSelect", () => ({
   CountryOverrideSelect: () => <select data-testid="country-override-select" />,

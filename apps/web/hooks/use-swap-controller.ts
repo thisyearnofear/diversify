@@ -325,10 +325,29 @@ export function useSwapController({
             toInflation,
             recipientAddress || undefined,
             phoneNumber || undefined,
-          )) as { swapTxHash?: string };
+          )) as
+            | {
+                success?: boolean;
+                error?: string;
+                errorClass?: SwapErrorClass | null;
+                swapTxHash?: string;
+              }
+            | undefined;
           if (result?.swapTxHash) setLocalTxHash(result.swapTxHash);
-          setStatus("completed");
-          refreshWithRetries();
+          if (result && result.success === false) {
+            // Delegated failure that returned instead of throwing — without
+            // this check the ticket would report success on a dead route.
+            if (result.errorClass === "cancelled") {
+              setStatus("idle");
+            } else {
+              setLocalError(result.error ?? "Swap failed");
+              setLocalErrorClass(result.errorClass ?? "error");
+              setStatus("error");
+            }
+          } else {
+            setStatus("completed");
+            refreshWithRetries();
+          }
         } else {
           const res = await performSwap({
             fromToken,

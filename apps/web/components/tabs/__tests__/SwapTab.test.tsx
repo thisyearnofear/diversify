@@ -223,23 +223,7 @@ vi.mock("@/components/swap/NetworkSwitcher", () => ({
   default: () => null,
 }));
 
-vi.mock("@/components/swap/SwapStatusPanel", () => ({
-  default: () => null,
-}));
-
 vi.mock("@/components/swap/GoalAlignmentBanner", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/components/earn/YieldDiscoverySection", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/components/swap/YieldBridgePrompt", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/components/swap/SwapInsightsPanel", () => ({
   default: () => null,
 }));
 

@@ -35,6 +35,17 @@ vi.mock('../../wallet/WalletProvider', () => ({
   useWalletContext: () => ({ address: mockAddress }),
 }));
 
+// The mid-market line reads the live USD table — mock the provider so
+// tests never touch the network.
+vi.mock('@diversifi/shared/src/services/fx-netting/rate-adapter', () => ({
+  buildLiveRateProvider: vi.fn(async () => ({
+    midRate: () => 0.0421,
+    date: '2026-09-15',
+    sourceNote: 'test table',
+    hasRate: () => true,
+  })),
+}));
+
 afterEach(cleanup);
 
 describe('FxNettingRail — smoke + phase flips', () => {
@@ -52,6 +63,13 @@ describe('FxNettingRail — smoke + phase flips', () => {
     expect(screen.getByText('Counterparty match')).toBeInTheDocument();
     expect(screen.getByLabelText('Currency you have')).toHaveValue('JMD');
     expect(screen.getByLabelText('Currency you want')).toHaveValue('BBD');
+  });
+
+  it('shows the live mid-market line for a covered corridor', async () => {
+    render(<FxNettingRail />);
+    const line = await screen.findByTestId('fx-mid-rate');
+    expect(line).toHaveTextContent('1 JMD = 0.0421 BBD');
+    expect(line).toHaveTextContent('2026-09-15');
   });
 
   it('flips to the review phase and calls match when the CTA is enabled', () => {
