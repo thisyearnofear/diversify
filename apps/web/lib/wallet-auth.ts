@@ -63,15 +63,30 @@ export function getCachedWalletAuth(address: string): WalletAuthProof | null {
   }
 }
 
+// Concurrent callers must share one signing prompt — without this, two
+// mount-time fetches each pop a separate signature request before either
+// can write the sessionStorage cache.
+const pendingSigns = new Map<string, Promise<WalletAuthProof | null>>();
+
 export async function getWalletAuthHeaders(
   address: string,
   signMessage?: (message: string) => Promise<string>,
 ): Promise<Record<string, string> | null> {
   let proof = getCachedWalletAuth(address);
   if (!proof && signMessage) {
-    const message = buildWalletAuthMessage(address);
-    proof = { message, signature: await signMessage(message) };
-    sessionStorage.setItem(`${STORAGE_PREFIX}${address.toLowerCase()}`, JSON.stringify(proof));
+    const key = address.toLowerCase();
+    let pending = pendingSigns.get(key);
+    if (!pending) {
+      pending = (async () => {
+        const message = buildWalletAuthMessage(address);
+        const signature = await signMessage(message);
+        const signed = { message, signature };
+        sessionStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(signed));
+        return signed;
+      })().finally(() => pendingSigns.delete(key));
+      pendingSigns.set(key, pending);
+    }
+    proof = await pending;
   }
   if (!proof) return null;
   return {

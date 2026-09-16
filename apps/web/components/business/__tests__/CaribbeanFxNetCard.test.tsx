@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import CaribbeanFxNetCard from '../CaribbeanFxNetCard';
+import { buildWalletAuthMessage } from '@/lib/wallet-auth';
 
 // Mock the wallet + netting hook so the card renders/isolation-testable
 // without a connection or network. Overridable per-test via the exported
@@ -63,6 +64,43 @@ describe('CaribbeanFxNetCard — smoke + phase flips', () => {
       { sellCurrency: 'JMD', sellAmount: 500000, buyCurrency: 'BBD' },
       [],
     );
+  });
+});
+
+describe('CaribbeanFxNetCard — auth timing (view ≠ sign)', () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+    mockMatch.mockReset();
+    mockRefreshSettlements.mockClear();
+    mockRefreshCreditProfile.mockClear();
+    mockAddress = '0xabc';
+    mockData = null;
+  });
+
+  it('requests no authed reads on mount — opening the card must not pop a signature', () => {
+    render(<CaribbeanFxNetCard />);
+    expect(mockRefreshSettlements).not.toHaveBeenCalled();
+    expect(mockRefreshCreditProfile).not.toHaveBeenCalled();
+  });
+
+  it('refreshes silently on mount when a session proof is already cached', () => {
+    const addr = `0x${'a'.repeat(40)}`;
+    mockAddress = addr;
+    sessionStorage.setItem(
+      `diversifi-wallet-auth:${addr}`,
+      JSON.stringify({ message: buildWalletAuthMessage(addr), signature: '0xsig' }),
+    );
+    render(<CaribbeanFxNetCard />);
+    expect(mockRefreshSettlements).toHaveBeenCalled();
+    expect(mockRefreshCreditProfile).toHaveBeenCalled();
+  });
+
+  it('refreshes on entering the review phase — the match act earns the read', () => {
+    render(<CaribbeanFxNetCard />);
+    fireEvent.change(screen.getByLabelText('Amount to convert'), { target: { value: '500000' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Match my intent' }));
+    expect(mockRefreshSettlements).toHaveBeenCalled();
+    expect(mockRefreshCreditProfile).toHaveBeenCalled();
   });
 });
 

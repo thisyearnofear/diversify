@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useFxNetting, type FxSettlement } from "../../hooks/use-fx-netting";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import RiveNetPair from "../shared/RiveNetPair";
 import { codeCoinTint } from "../shared/palette";
 
@@ -62,13 +63,18 @@ export function CaribbeanFxNetCard() {
   const [buyCurrency, setBuyCurrency] = React.useState("BBD");
   const [matched, setMatched] = React.useState(false);
 
+  // Auth timing: settlements and the credit file are wallet-authed reads —
+  // fetching them on mount would pop a signature request for what is, to
+  // the user, a navigation click. Refresh silently when a session proof
+  // is already cached; otherwise wait until the review phase (a deliberate
+  // act — "Match my intent"), where the settlement worklist renders anyway.
   React.useEffect(() => {
-    void refreshSettlements();
-  }, [refreshSettlements]);
-
-  React.useEffect(() => {
-    void refreshCreditProfile();
-  }, [refreshCreditProfile]);
+    if (!address) return;
+    if (matched || getCachedWalletAuth(address)) {
+      void refreshSettlements();
+      void refreshCreditProfile();
+    }
+  }, [matched, address, refreshSettlements, refreshCreditProfile]);
 
   const sellAmountNum = sellAmount ? Number(sellAmount) : 0;
   const currenciesValid =
