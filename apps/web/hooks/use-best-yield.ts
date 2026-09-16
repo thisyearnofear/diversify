@@ -15,8 +15,8 @@ export interface BestYieldRecommendation {
   impact?: string;
   impactAsset?: string;
   /**
-   * Top-level typed fields used by the focus / highlight surface and the
-   * drawer's `open_yield_review` action. All optional: the producer
+   * Top-level typed fields used by the quote annotation and the drawer's
+   * `open_yield_review` action. All optional: the producer
    * (`packages/shared/src/services/ai/yield-advisor.service.ts`) emits all
    * four for vaults.fyi and GMX rows and as many as it can for free
    * LI.FI rows. Consumers should `?? ''` fall back rather than treat
@@ -28,9 +28,9 @@ export interface BestYieldRecommendation {
   /**
    * Display-friendly chain name (e.g. `"Arbitrum"`, `"Base"`). Wherever
    * possible the producer should emit the name rather than the numeric
-   * chainId so the focus-key helper (`deriveYieldFocusKey` below) and the
-   * drawer's `open_yield_review.chain` stay directly comparable without
-   * an id→name lookup on the consumer side.
+   * chainId so display copy and the drawer's `open_yield_review.chain`
+   * stay directly comparable without an id→name lookup on the consumer
+   * side.
    */
   chain?: string;
   /**
@@ -53,29 +53,6 @@ export interface BestYieldRecommendation {
     venue?: string;
     [k: string]: unknown;
   };
-}
-
-/**
- * Pure helper — derives the focus key used by the drawer's
- * `open_yield_review` action and matched by `BestYieldCard` to highlight a
- * specific row. The key is `${chain}:${symbol}` so a single string
- * uniquely identifies an opportunity in the 4-row cap.
- *
- * IMPORTANT: this helper is a single source of truth for the focus-key
- * shape — both the drawer (`AIChat.tsx`) and the surface (`BestYieldCard.tsx`)
- * call it, so they cannot diverge. If you change the key shape, change it
- * here and update both sides together (the `BestYieldCard` already does).
- *
- * Edge cases:
- * - Missing chain AND missing symbol → `':'` — never seen in practice but
- *   won't throw.
- * - Two rows with the same `${chain}:${symbol}` collide by design. The
- *   unit test in `__tests__/deriveYieldFocusKey.test.ts` proves this; if
- *   upstream data ever surfaces true duplicates the right mitigation is to
- *   include `source` or `id` in the key, NOT to paper over the collision.
- */
-export function deriveYieldFocusKey(rec: Pick<BestYieldRecommendation, 'chain' | 'symbol'>): string {
-  return `${rec.chain ?? ''}:${rec.symbol ?? ''}`;
 }
 
 /**

@@ -265,7 +265,7 @@ export async function getYieldRecommendations(
                     impact: opt.apyPct > 15 ? 'positive' : 'neutral',
                     impactAsset: opt.assetSymbol,
                     timestamp: 'Autonomous',
-                    // Top-level typed fields — `BestYieldCard` reads these
+                    // Top-level typed fields — consumers read these
                     // directly without casting `metadata?.chain` etc.
                     source: 'vaults.fyi',
                     protocol: opt.protocol,
@@ -367,9 +367,7 @@ export async function getYieldRecommendations(
                 timestamp: 'Autonomous',
                 // Top-level typed fields from the free LI.FI Earn layer.
                 // `chain` is emitted as the chainId (stringified) because
-                // LI.FI returns a numeric chainId rather than a label;
-                // BestYieldCard still uses the same `deriveYieldFocusKey`
-                // helper so the drawer and card agree on the key shape.
+                // LI.FI returns a numeric chainId rather than a label.
                 source: 'free',
                 protocol: vault.protocol,
                 // Prefer a human-friendly chain name (NETWORKS name first,

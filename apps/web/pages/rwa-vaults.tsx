@@ -1,17 +1,18 @@
 /**
- * /rwa-vaults — SERV Hackathon Edition 01 demo (RWA Vaults track, IXS Finance).
+ * /rwa-vaults — doorway into the Shield instrument's RWA vault sleeve.
  *
- * Walletless, keyless by default: anyone gets a deterministic heuristic
- * allocation across the licensed IXS ERC-4626 vault catalog. The "SERV
- * Reasoning" toggle (or ?serv=1) opts into the enhanced path — the server
- * re-weights the same catalog through SERV Reasoning and returns a
- * provenance receipt. If SERV is unconfigured, down, or out of credits, the
- * same page shows the heuristic result with an honest degraded badge — the
- * free path can never regress.
+ * The integrated rail is the product surface: this page's job is to land
+ * you inside it — Shield opens with the sleeve inspector unfolded and the
+ * ?serv=1 flag carried through to the SERV Reasoning rail. The heuristic
+ * floor renders instantly underneath, so the doorway can never regress.
+ *
+ * ?sandbox=1 keeps the standalone free-form allocator (philosophy × risk ×
+ * amount) — the judges' playground and the no-app-shell fallback.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { IXS_VAULT_BY_ID } from '@diversifi/shared/src/services/serv/ixs-vault-catalog';
 import type { RwaAllocationResult } from '@diversifi/shared/src/services/serv/rwa-allocator';
@@ -32,6 +33,9 @@ const RISK_OPTIONS = ['Conservative', 'Balanced', 'Aggressive'] as const;
 
 export default function RwaVaultsPage() {
   const router = useRouter();
+  const sandbox =
+    router.isReady &&
+    (router.query.sandbox === '1' || router.query.sandbox === 'true');
   const [philosophy, setPhilosophy] = useState('global');
   const [risk, setRisk] = useState<(typeof RISK_OPTIONS)[number]>('Balanced');
   const [amount, setAmount] = useState('1000');
@@ -39,6 +43,15 @@ export default function RwaVaultsPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RwaAllocationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Doorway: unless the caller asked for the standalone sandbox, land
+  // inside Shield with the vault sleeve open — ?serv=1 carries through
+  // to the instrument's SERV Reasoning rail.
+  useEffect(() => {
+    if (!router.isReady || sandbox) return;
+    const serv = router.query.serv === '1' || router.query.serv === 'true';
+    void router.replace(`/?tab=protect&sleeve=rwa${serv ? '&serv=1' : ''}`);
+  }, [router.isReady, sandbox, router]);
 
   // ?serv=1 opts in from the URL — same flag the demo video uses.
   useEffect(() => {
@@ -72,16 +85,48 @@ export default function RwaVaultsPage() {
   }, [philosophy, risk, amount]);
 
   // First paint runs the free path immediately — no keys, no wallet.
+  // Sandbox only: the doorway redirects before a fetch is needed.
   useEffect(() => {
-    if (router.isReady) run(router.query.serv === '1' || router.query.serv === 'true');
+    if (router.isReady && sandbox) run(router.query.serv === '1' || router.query.serv === 'true');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady]);
+  }, [router.isReady, sandbox]);
 
   const toggleServ = useCallback(() => {
     const next = !servOn;
     setServOn(next);
     run(next);
   }, [servOn, run]);
+
+  if (!sandbox) {
+    return (
+      <>
+        <Head>
+          <title>RWA Vault Allocation — DiversiFi × IXS</title>
+          <meta
+            name="description"
+            content="Values-aware allocation across IXS licensed RWA yield vaults. Free heuristic by default; SERV Reasoning as an opt-in enhancement."
+          />
+        </Head>
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-950 px-4 py-10 flex items-center justify-center">
+          <div className="text-center max-w-sm">
+            <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+              Opening the RWA vault sleeve inside DiversiFi…
+            </p>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              The allocation rail lives inside the Shield instrument now —
+              free heuristic first, SERV Reasoning one toggle away.
+            </p>
+            <Link
+              href="/rwa-vaults?sandbox=1"
+              className="mt-4 inline-block text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Prefer the standalone sandbox? Stay here →
+            </Link>
+          </div>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>

@@ -13,8 +13,8 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, act } from "@testing-library/react";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { render, act, cleanup } from "@testing-library/react";
 
 import { NavigationProvider, useNavigation } from "../NavigationContext";
 import type { NavigationState } from "../types";
@@ -32,6 +32,7 @@ function Probe() {
 beforeEach(() => {
   seen = null;
   window.localStorage.clear();
+  window.history.replaceState({}, "", "/");
 });
 
 describe("NavigationContext — compare deep link", () => {
@@ -96,5 +97,38 @@ describe("NavigationContext — compare deep link", () => {
       expect(value, `localStorage["${key}"]`).not.toContain("compareRequested");
       expect(key).not.toBe("compareRequested");
     }
+  });
+});
+
+describe("NavigationContext — ?tab= doorway", () => {
+  afterEach(() => {
+    cleanup();
+    window.history.replaceState({}, "", "/");
+  });
+
+  it("?tab= wins over the saved tab on mount — the /rwa-vaults doorway contract", () => {
+    window.localStorage.setItem("activeTab", "exchange");
+    window.history.replaceState({}, "", "/?tab=protect&sleeve=rwa&serv=1");
+
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    expect(seen!.activeTab).toBe("protect");
+  });
+
+  it("an unknown ?tab= falls back to the saved tab", () => {
+    window.localStorage.setItem("activeTab", "exchange");
+    window.history.replaceState({}, "", "/?tab=bogus");
+
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    expect(seen!.activeTab).toBe("exchange");
   });
 });

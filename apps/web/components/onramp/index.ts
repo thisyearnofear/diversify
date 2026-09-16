@@ -9,10 +9,6 @@ export {
   SmartSellCryptoButton
 } from './UnifiedOnramp';
 
-export {
-  NetworkOptimizedOnramp
-} from './NetworkOptimizedOnramp';
-
 // Guardarian direct exports
 export {
   GuardarianOnramp,

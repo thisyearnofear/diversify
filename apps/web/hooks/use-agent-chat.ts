@@ -297,8 +297,8 @@ export function useAgentChat({
         if (intent.type === "NAVIGATE") {
           navAction = { type: "navigate", tab: intent.tab };
         } else if (intent.type === "YIELD_EARN") {
-          // Yield/earn content (BestYieldCard, YieldDiscoverySection) lives
-          // inside the Protect tab — there is no standalone "earn" tab.
+          // Yield/earn content lives on the Shield tab (the RWA vault
+          // sleeve) — there is no standalone "earn" tab.
           navAction = { type: "navigate", tab: "protect" };
         } else if (intent.type === "GOODDOLLAR") {
           navAction = {

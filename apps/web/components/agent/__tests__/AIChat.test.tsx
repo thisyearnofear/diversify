@@ -57,7 +57,6 @@ vi.mock('@/context/app/NavigationContext', () => ({
     navigateToSwap: vi.fn(),
     navigateToNetting: vi.fn(),
     setFocusedCycleId: vi.fn(),
-    setFocusedYieldKey: vi.fn(),
   }),
 }));
 
@@ -93,10 +92,6 @@ vi.mock('@/hooks/claim-flow-context', () => ({
     handleClaim: vi.fn(),
   }),
   useOnClaimSuccess: vi.fn(),
-}));
-
-vi.mock('@/hooks/use-best-yield', () => ({
-  deriveYieldFocusKey: vi.fn(() => 'yield-key'),
 }));
 
 vi.mock('@diversifi/shared/src/config/celo-tokens', () => ({

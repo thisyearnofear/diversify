@@ -279,8 +279,8 @@ export default function SwapTab({
       // be on the source chain to sign the swap/bridge transaction.
       //
       // We deliberately do NOT switch on toChainId alone — for a yield
-      // review where only toChainId is set (e.g. BestYieldCard
-      // "Review in Swap"), the wallet is already the source for a
+      // review where only toChainId is set (the drawer's
+      // open_yield_review handoff), the wallet is already the source for a
       // bridge from the user's current chain to the yield's chain.
       // Switching to the destination would strand the user with no
       // source balance to bridge from.

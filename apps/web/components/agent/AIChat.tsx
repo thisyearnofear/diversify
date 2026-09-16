@@ -9,7 +9,7 @@ import { useAgentVoice } from "../../hooks/use-agent-voice";
 import { useCredits } from "../../hooks/use-credits";
 import { useClaimFlowContext, useOnClaimSuccess } from "../../hooks/claim-flow-context";
 import type { GuardianRecommendationAction } from "@diversifi/shared/src/types/guardian-protection";
-import { deriveYieldFocusKey } from "../../hooks/use-best-yield";
+
 // Deep leaf import — NOT the barrel — so this constant doesn't drag the
 // shared AI/swap/ethers stack into the chunk.
 import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared/src/config/celo-tokens";
@@ -404,7 +404,7 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId, setFocusedYieldKey } = useNavigation();
+  const { setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId } = useNavigation();
   const { address, signMessage } = useWalletContext();
   const { showToast } = useToast();
   const portfolio = useSharedMultichainBalances(address);
@@ -836,32 +836,23 @@ export default function AIChat() {
                               closeReview();
                               return;
                             case 'open_yield_review':
-                              // Yield review is a protocol/market pick —
-                              // hand focus off to the existing BestYieldCard
-                              // surface in the Shield tab. deriveYieldFocusKey
-                              // is the same helper the surface uses to derive
-                              // rowKey per row, so the focus key here
-                              // provably matches without a hand-built string.
-                              //
-                              // Defensive skip (LOW #5 from prior review):
-                              // if a server-side producer ever emits a
-                              // typed action with `chain: ''` (empty string),
-                              // the focus key would resolve to `:marketSymbol`
-                              // and silently fail to highlight any row. Skipping
-                              // here surfaces the gap as a no-op nav (best
-                              // case) rather than a phantom row highlight.
-                              if (!a.chain || !a.marketSymbol) {
-                                // Still navigate to the Protect tab so the
-                                // user lands somewhere relevant, just without
-                                // a focus signal on a non-existent row.
-                                setActiveTab('protect');
-                                closeReview();
-                                return;
-                              }
-                              setActiveTab('protect');
-                              setFocusedYieldKey(
-                                deriveYieldFocusKey({ chain: a.chain, symbol: a.marketSymbol }),
-                              );
+                              // Yield annotates the quote — land on the
+                              // ticket pointed at the yield asset on its
+                              // chain. marketSymbol is the recommendation's
+                              // own symbol, the same key
+                              // yieldHintForDestination matches to stamp
+                              // APY on the quote row; chainId (when the
+                              // producer knows it) targets the right
+                              // network without a switch losing the intent.
+                              // The ticket is where source + amount get
+                              // picked — the pieces a detached review card
+                              // could never fill.
+                              navigateToSwap({
+                                toToken: a.marketSymbol || undefined,
+                                toChainId: a.chainId,
+                                reason: activeGuardianReview.contract?.proposal
+                                  ?? activeGuardianReview.summary,
+                              });
                               closeReview();
                               return;
                             case 'open_fx_netting_review':

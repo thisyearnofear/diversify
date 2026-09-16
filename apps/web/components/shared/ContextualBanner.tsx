@@ -21,7 +21,7 @@ import { useColdStart } from "@/hooks/use-cold-start";
 import type { TabId } from "@/constants/tabs";
 import { ApacRailHonestyBanner } from "@/components/shared/ApacRailHonestyBanner";
 import { CaribbeanRailHonestyBanner } from "@/components/shared/CaribbeanRailHonestyBanner";
-import { NetworkOptimizedOnramp } from "../onramp";
+import { SmartBuyCryptoButton } from "../onramp";
 import WalletButton from "../wallet/WalletButton";
 
 export interface ContextualBannerProps {
@@ -212,13 +212,15 @@ function ColdStartVariant({
           </PrimaryButton>
         ) : (
           <div className="space-y-2">
-            <NetworkOptimizedOnramp
+            {/* Same funding control as the wallet dropdown — one buy
+                button learned once, provider choice stays inside it. */}
+            <SmartBuyCryptoButton
               variant="white"
               defaultAmount="100"
               className="w-full"
             />
             <p className="text-xs text-amber-600 dark:text-amber-400 text-center">
-              💳 Buy with card or bank transfer • Low KYC
+              💳 Buy with card or bank transfer
             </p>
           </div>
         )}

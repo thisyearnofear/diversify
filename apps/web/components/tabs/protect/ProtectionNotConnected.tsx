@@ -41,9 +41,11 @@ import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 interface Props {
   experienceMode: UserExperienceMode;
   onEnableDemo?: () => void;
+  /** Selection-bound inspector (e.g. the RWA vault sleeve via ?sleeve=rwa). */
+  inspector?: React.ReactNode;
 }
 
-export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnableDemo }: Props) {
+export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnableDemo, inspector }: Props) {
   const { financialStrategy } = useStrategy();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
   // holdings, no loading shimmer. Fresh instance per mount — never a
@@ -122,5 +124,5 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
     </div>
   );
 
-  return <InstrumentShell object={object} status={status} pattern={pattern} />;
+  return <InstrumentShell object={object} inspector={inspector} status={status} pattern={pattern} />;
 }

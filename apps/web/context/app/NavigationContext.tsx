@@ -3,19 +3,10 @@ import { isTabId, LEGACY_TAB_MAP, type TabId } from '@/constants/tabs';
 import type { NavigationState, SwapPrefill } from './types';
 
 /**
- * Yield review focus key — identifies a specific opportunity in
- * `BestYieldCard`. Computed from `(chain, symbol)` via the pure
- * `deriveYieldFocusKey()` helper in `hooks/use-best-yield.ts`; both the
- * drawer and the surface call that helper so the shape cannot drift.
- */
-export type FocusedYieldKey = string;
-
-/**
  * How long a freshly-focused row stays highlighted before the surface
- * clears the focus and reverts to the unread-notification state. Shared
- * by `PaymentCycleReport` (cycle focus) and `BestYieldCard` (yield focus)
- * so the two surfaces tune UX together. Long enough to read, short enough
- * that a page reload doesn't leave a stale highlight lingering.
+ * clears the focus and reverts to the unread-notification state. Long
+ * enough to read, short enough that a page reload doesn't leave a stale
+ * highlight lingering.
  */
 export const FOCUS_HIGHLIGHT_MS = 4000;
 
@@ -72,12 +63,6 @@ type NavigationContextValue = NavigationState & {
    */
   focusedCycleId: string | null;
   setFocusedCycleId: (id: string | null) => void;
-  /**
-   * Yield opportunity to highlight in `BestYieldCard`. Same shape as
-   * `focusedCycleId` but for the yield review surface.
-   */
-  focusedYieldKey: FocusedYieldKey | null;
-  setFocusedYieldKey: (key: FocusedYieldKey | null) => void;
 };
 
 const NavigationContext = createContext<NavigationContextValue | undefined>(undefined);
@@ -95,7 +80,6 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // persisted (they reflect the user's current "open this review" gesture,
   // not history).
   const [focusedCycleId, setFocusedCycleId] = useState<string | null>(null);
-  const [focusedYieldKey, setFocusedYieldKey] = useState<FocusedYieldKey | null>(null);
   // Transient Guardian hand-off — see GuardianContext above. Not persisted:
   // it reflects the current "take this to Guardian" gesture, not history.
   const [guardianContext, setGuardianContext] = useState<GuardianContext | null>(null);
@@ -103,12 +87,23 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const [compareRequested, setCompareRequested] = useState(false);
   const [nettingRequested, setNettingRequested] = useState(false);
 
-  // init from storage (active tab)
+  // init from storage (active tab). A deep-link doorway (?tab=…) wins
+  // over the saved tab — read straight from the URL, no router.isReady
+  // dependency, and before any descendant's one-shot query consumption.
   useEffect(() => {
+    const urlTab =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('tab')
+        : null;
     const savedTab = localStorage.getItem('activeTab');
     setState((prev) => ({
       ...prev,
-      activeTab: savedTab && isTabId(savedTab) ? savedTab : ('protect' satisfies TabId),
+      activeTab:
+        urlTab && isTabId(urlTab)
+          ? urlTab
+          : savedTab && isTabId(savedTab)
+            ? savedTab
+            : ('protect' satisfies TabId),
     }));
   }, []);
 
@@ -182,15 +177,19 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const initializeFromStorage = useCallback(() => {
+    const urlTab =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('tab')
+        : null;
     const savedTab = localStorage.getItem('activeTab');
-    if (!savedTab) return;
+    if (!urlTab && !savedTab) return;
 
-    const migrated = LEGACY_TAB_MAP[savedTab];
-    const candidate = migrated || savedTab;
+    const migrated = savedTab ? LEGACY_TAB_MAP[savedTab] : undefined;
+    const candidate = urlTab ?? migrated ?? savedTab;
 
     setState((prev) => ({
       ...prev,
-      activeTab: isTabId(candidate) ? candidate : 'protect',
+      activeTab: candidate && isTabId(candidate) ? candidate : 'protect',
     }));
   }, []);
 
@@ -214,14 +213,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       initializeFromStorage,
       focusedCycleId,
       setFocusedCycleId,
-      focusedYieldKey,
-      setFocusedYieldKey,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, nettingRequested, consumeNettingRequest, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, initializeFromStorage, focusedCycleId, focusedYieldKey],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, nettingRequested, consumeNettingRequest, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, initializeFromStorage, focusedCycleId],
   );
 
-  // The consuming surfaces (PaymentCycleReport, BestYieldCard) already
-  // auto-clear the focus after 4s once they have highlighted the row.
+  // The consuming surface (PaymentCycleReport) already auto-clears the
+  // focus after 4s once it has highlighted the row.
   // Do not add a parallel context-level clear — a redundant timer would
   // race the surface and could erase the highlight before the surface
   // noticed it. If the hint ever leaks because a surface was unmounted,

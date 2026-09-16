@@ -50,6 +50,10 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
+vi.mock("next/router", () => ({
+  useRouter: () => ({ isReady: true, query: {} }),
+}));
+
 vi.mock("@/context/app/AppShellContext", () => ({
   useAppShellContext: () => m.ctx.value,
 }));

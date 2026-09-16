@@ -71,6 +71,7 @@ import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/Prot
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
 import { IXS_VAULT_BY_ID } from "@diversifi/shared/src/services/serv/ixs-vault-catalog";
 import WalletButton from "../wallet/WalletButton";
+import { useRouter } from "next/router";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -140,6 +141,21 @@ export default function ProtectionTab({
   // Free heuristic is local + instant; SERV Reasoning is an opt-in rail in
   // the inspector, fetched only while the sleeve view is open.
   const [rwaServOn, setRwaServOn] = useState(false);
+
+  // URL hand-off: ?sleeve=rwa opens the inspector on the vault sleeve;
+  // ?serv=1 arms the SERV Reasoning rail. The /rwa-vaults doorway lands
+  // here — same deep-link contract as Exchange's ?netting=1.
+  const router = useRouter();
+  useEffect(() => {
+    if (!router.isReady) return;
+    if (router.query.sleeve === "rwa") setFocusedToken(SLEEVE_ID);
+    if (router.query.serv === "1" || router.query.serv === "true") {
+      setRwaServOn(true);
+    }
+    // One-shot URL consumption on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
+
   const sleeveOpen = !comparing && isSleeveSelection(focusedToken);
   const rwa = useRwaAllocation(
     useMemo(
@@ -472,15 +488,6 @@ export default function ProtectionTab({
     return <ProtectionSkeleton />;
   }
 
-  if (!address && !isDemo) {
-    return (
-      <ProtectionNotConnected
-        experienceMode={experienceMode}
-        onEnableDemo={enableDemoMode}
-      />
-    );
-  }
-
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   const object = (
@@ -593,27 +600,34 @@ export default function ProtectionTab({
     </>
   );
 
+  // The sleeve is shape-independent: a deep-link (?sleeve=rwa) or a vault
+  // tap opens it even on the picker shape — the doorway must work
+  // walletless and planless.
+  const inspectorSel = comparing
+    ? focusedPhilosophy
+    : isSleeveSelection(focusedToken) || shape !== "picker"
+      ? focusedToken
+      : focusedPhilosophy;
+
   const inspector = (
     <InspectorSheet
-      selectedId={
-        shape === "picker" || comparing ? focusedPhilosophy : focusedToken
-      }
+      selectedId={inspectorSel}
       onClose={() => {
         setFocusedToken(null);
         setFocusedPhilosophy(null);
       }}
       title={
-        shape === "picker" || comparing
-          ? (STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "Plan")
-          : focusedToken === SLEEVE_ID
+        !comparing && isSleeveSelection(focusedToken)
+          ? focusedToken === SLEEVE_ID
             ? "RWA vault sleeve"
-            : focusedToken?.startsWith(VAULT_SLICE_PREFIX)
-              ? (IXS_VAULT_BY_ID[focusedToken.slice(VAULT_SLICE_PREFIX.length)]?.name ??
-                "RWA vault")
-              : (focusedToken ?? "Slice")
+            : (IXS_VAULT_BY_ID[focusedToken!.slice(VAULT_SLICE_PREFIX.length)]?.name ??
+              "RWA vault")
+          : shape === "picker" || comparing
+            ? (STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "Plan")
+            : (focusedToken ?? "Slice")
       }
     >
-      {shape !== "picker" && !comparing && sleeveOpen && (
+      {sleeveOpen && (
         <RwaVaultSleeve
           allocations={rwa.allocations}
           summary={rwa.summary}
@@ -1003,6 +1017,19 @@ export default function ProtectionTab({
       </div>
     </div>
   );
+
+  if (!address && !isDemo) {
+    // The deep-linked sleeve (?sleeve=rwa) still opens its inspector on
+    // this morph — the doorway works walletless. Everything else about
+    // the unconnected object is unchanged.
+    return (
+      <ProtectionNotConnected
+        experienceMode={experienceMode}
+        onEnableDemo={enableDemoMode}
+        inspector={sleeveOpen ? inspector : undefined}
+      />
+    );
+  }
 
   return (
     <div className="relative">

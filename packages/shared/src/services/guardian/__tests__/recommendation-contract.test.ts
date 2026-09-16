@@ -51,8 +51,8 @@ describe('recommendation-contract builders', () => {
   it('yield alert contract forwards chainId into the typed action payload', () => {
     // Symmetric coverage with buildPortfolioSwapContract: when the
     // producer passes chainId, the typed action payload carries it
-    // so the drawer's handler (or any future BestYieldCard
-    // affordance) can drive a chain-aware filter or swap route.
+    // so the drawer's handler can land the swap ticket on the right
+    // network.
     const c = buildYieldAlertContract({
       protocol: 'GMX',
       chain: 'Arbitrum',

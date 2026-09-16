@@ -12,6 +12,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/router";
 import type { TabId } from "@/constants/tabs";
 import { getVisibleTabIds } from "@/constants/tabs";
 
@@ -177,6 +178,25 @@ export default function TabContentRouter() {
       .map((id: string) => id as TabId)
       .filter((id: TabId) => validIds.has(id) && visible.has(id));
   }, [adaptiveConfig, experienceMode]);
+
+  // URL hand-off: ?tab=<id> activates a tab directly — the contract
+  // deep-link doorways like /rwa-vaults use to land inside the
+  // instrument. One-shot once the router is ready; each tab's own
+  // effects consume the rest of the query (e.g. ?sleeve=rwa&serv=1).
+  const router = useRouter();
+  useEffect(() => {
+    if (!router.isReady) return;
+    const tab = router.query.tab;
+    if (
+      typeof tab === "string" &&
+      tabOrder.includes(tab as TabId) &&
+      tab !== activeTab
+    ) {
+      setActiveTab(tab as TabId);
+    }
+    // One-shot URL consumption — activeTab/tabOrder must not retrigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
 
   useEffect(() => {
     if (tabOrder.length === 0 || tabOrder.includes(activeTab)) return;

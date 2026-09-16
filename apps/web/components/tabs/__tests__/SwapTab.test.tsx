@@ -40,8 +40,6 @@ vi.mock("@/context/app/NavigationContext", () => ({
     initializeFromStorage: vi.fn(),
     focusedCycleId: null,
     setFocusedCycleId: vi.fn(),
-    focusedYieldKey: null,
-    setFocusedYieldKey: vi.fn(),
     navigateToSwap: vi.fn(),
   }),
   FOCUS_HIGHLIGHT_MS: 1500,

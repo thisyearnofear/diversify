@@ -44,6 +44,10 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
+vi.mock("next/router", () => ({
+  useRouter: () => ({ isReady: true, query: {} }),
+}));
+
 vi.mock("@/components/app/AppHeader", () => ({
   default: () => React.createElement("div", { "data-testid": "app-header" }),
 }));

@@ -3,6 +3,11 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
+let mockRouterQuery: Record<string, string> = {};
+vi.mock("next/router", () => ({
+  useRouter: () => ({ isReady: true, query: mockRouterQuery }),
+}));
+
 let mockFinancialStrategy: string | null = null;
 let mockMoneyPurpose = "inflation_protection";
 let mockGuardianState = "idle";
@@ -433,6 +438,7 @@ describe("ProtectionTab — instrument shapes", () => {
     mockGuardianState = "idle";
     demoState.isActive = false;
     navState.compareRequested = false;
+    mockRouterQuery = {};
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
       chainId: null,
@@ -811,6 +817,29 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("leg-why")).toHaveTextContent(
       "Kenyan shilling — wealth stays home",
     );
+  });
+
+  it("?sleeve=rwa&serv=1 opens the sleeve inspector with SERV armed — the /rwa-vaults doorway lands walletless", () => {
+    mockRouterQuery = { sleeve: "rwa", serv: "1" };
+    // No wallet, no plan — the doorway still opens the sleeve inspector.
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
+    // SERV armed: the rail is in-flight or honestly degraded — never the
+    // "Enhance with SERV Reasoning →" opt-in affordance.
+    expect(screen.getByTestId("serv-rail").textContent).toMatch(
+      /weighing|unavailable|SERV-enhanced/,
+    );
+  });
+
+  it("?sleeve=rwa alone opens the sleeve with SERV off — free heuristic first", () => {
+    mockRouterQuery = { sleeve: "rwa" };
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
+    expect(screen.getByTestId("serv-enhance")).toBeInTheDocument();
   });
 
   it("tapping the ring centre enters compare mode without committing", () => {

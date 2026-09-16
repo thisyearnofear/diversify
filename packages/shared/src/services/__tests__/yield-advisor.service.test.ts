@@ -11,9 +11,8 @@ import {
 /**
  * Helpers used by the three yield producers to stamp typed top-level
  * `chain` (name) and `chainId` (number) fields consistently, so the
- * focus-key helper (`deriveYieldFocusKey`) and the drawer's
- * `open_yield_review.chain` directly agree on the key shape across
- * vaults.fyi / GMX / free LI.FI rows.
+ * drawer's `open_yield_review` handoff lands the swap ticket on the
+ * right asset and network across vaults.fyi / GMX / free LI.FI rows.
  */
 describe('yield-advisor helpers', () => {
   describe('mapVaultsFyiNetworkToChainId', () => {

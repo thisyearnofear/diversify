@@ -26,7 +26,8 @@ export const FUNNEL_EVENTS = [
   'waitlist_joined',
   'cycle_report_run',
   'cycle_monitoring_enabled',
-  // BestYieldCard chain-pill filter — coarse utility signal.
+  // Retired yield surface chain-pill filter — kept in the union so
+  // historical events still validate.
   'yield_chain_filter_toggled',
   // Phase 4 graduation funnel — retail→business prompt lifecycle.
   // Coarse: server emits `graduation_signal_detected` with composite

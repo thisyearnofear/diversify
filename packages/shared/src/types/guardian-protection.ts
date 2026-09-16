@@ -114,11 +114,9 @@ export type GuardianRecommendationAction =
        * `targetToken` is informational only (the pool's settlement token).
        *
        * `chain` is the display-friendly name (say "Arbitrum" not "42161")
-       * so the drawer's `${chain}:${marketSymbol}` focus-key stays
-       * directly comparable with the surface (`BestYieldCard`). `chainId`
-       * is the numeric EVM identifier — emit it whenever known so
-       * chain-aware UI (filter pills, swap execution) has it on hand
-       * without re-resolving the name later.
+       * for display copy. `chainId` is the numeric EVM identifier — emit
+       * it whenever known so the drawer's handoff lands the swap ticket
+       * on the right network without re-resolving the name later.
        */
       type: 'open_yield_review';
       protocol: string;

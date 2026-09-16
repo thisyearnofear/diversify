@@ -28,7 +28,7 @@ vi.mock("framer-motion", () => {
 
 // Mock the chain-loading onramp and wallet button so we don't need full app context.
 vi.mock("../../onramp", () => ({
-  NetworkOptimizedOnramp: ({ className }: any) => (
+  SmartBuyCryptoButton: ({ className }: any) => (
     <div data-testid="onramp" className={className} />
   ),
 }));
