@@ -48,10 +48,10 @@ describe('RwaVaultSleeve', () => {
     expect(links[0]).toHaveAttribute('href', 'https://ixs.finance');
   });
 
-  it('offers the SERV upgrade as a quiet rail, not a gate', () => {
+  it('offers the deeper allocation as a quiet rail, not a gate', () => {
     const onToggleServ = vi.fn();
     render(<RwaVaultSleeve {...baseProps({ onToggleServ })} />);
-    expect(screen.getByText(/Free heuristic/)).toBeInTheDocument();
+    expect(screen.getByText(/Instant estimate/)).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('serv-enhance'));
     expect(onToggleServ).toHaveBeenCalledWith(true);
   });
@@ -62,7 +62,7 @@ describe('RwaVaultSleeve', () => {
         {...baseProps({ servOn: true, degradedReason: 'serv_not_configured' })}
       />,
     );
-    expect(screen.getByText(/SERV unavailable \(serv_not_configured\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Deeper allocation unavailable/)).toBeInTheDocument();
     // The heuristic rows are still there — the free path never regresses.
     expect(screen.getByTestId('vault-row-ixs-usd-mmf')).toBeInTheDocument();
   });
@@ -83,8 +83,8 @@ describe('RwaVaultSleeve', () => {
         })}
       />,
     );
-    expect(screen.getByText(/SERV-enhanced · gpt-5\.4-mini · 7\.7s/)).toBeInTheDocument();
-    expect(screen.getByText('← free heuristic')).toBeInTheDocument();
+    expect(screen.getByText(/reasoned by SERV · gpt-5\.4-mini · 7\.7s/)).toBeInTheDocument();
+    expect(screen.getByText('← instant estimate')).toBeInTheDocument();
   });
 
   it('expands the focused vault row with rationale + provenance', () => {

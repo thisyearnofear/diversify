@@ -2,10 +2,11 @@
  * RwaVaultSleeve — inspector body for the Shield ring's RWA sleeve fan.
  *
  * Rows, not cards: each IXS vault is a quiet row carrying its weight bar,
- * one-line rationale, and indicative APY. The SERV rail is the
- * status/transition line — free heuristic by default, SERV Reasoning as the
- * opt-in upgrade (the membership-tier seam). One CTA: review the deposit on
- * IXS — advisory only, nothing executes here.
+ * one-line rationale, and indicative APY. The rail is the status/transition
+ * line — the instant local estimate by default, a deeper SERV-reasoned
+ * allocation as the opt-in upgrade (the membership-tier seam). The
+ * affordance speaks user language; SERV stays in the provenance. One CTA:
+ * review the deposit on IXS — advisory only, nothing executes here.
  */
 import React from 'react';
 import { IXS_VAULT_BY_ID } from '@diversifi/shared/src/services/serv/ixs-vault-catalog';
@@ -129,14 +130,15 @@ export function RwaVaultSleeve({
         ))}
       </div>
 
-      {/* SERV rail — the status/transition line. Free is the default;
-          enhancement is one tap and always reversible. */}
+      {/* Enhancement rail — the status/transition line. The local estimate
+          is instant and free; a deeper allocation is one tap and always
+          reversible. SERV lives in the provenance, not the vocabulary. */}
       <p data-testid="serv-rail" className="text-[11px] text-gray-500 dark:text-gray-400">
         {loading ? (
-          'SERV Reasoning is weighing the vaults…'
+          'Weighing a deeper allocation…'
         ) : source === 'serv' ? (
           <>
-            SERV-enhanced
+            Deeper allocation · reasoned by SERV
             {receipt &&
               ` · ${receipt.model} · ${(receipt.latencyMs / 1000).toFixed(1)}s`}
             {' · '}
@@ -145,12 +147,15 @@ export function RwaVaultSleeve({
               onClick={() => onToggleServ(false)}
               className="font-semibold text-blue-600 dark:text-blue-400"
             >
-              ← free heuristic
+              ← instant estimate
             </button>
           </>
         ) : servOn && degradedReason ? (
           <>
-            SERV unavailable ({degradedReason}) — free heuristic shown ·{' '}
+            {degradedReason === 'serv_timeout'
+              ? 'Reasoning timed out'
+              : 'Deeper allocation unavailable'}
+            {' — instant estimate shown · '}
             <button
               type="button"
               onClick={() => onToggleServ(false)}
@@ -161,14 +166,14 @@ export function RwaVaultSleeve({
           </>
         ) : (
           <>
-            Free heuristic ·{' '}
+            Instant estimate ·{' '}
             <button
               type="button"
               data-testid="serv-enhance"
               onClick={() => onToggleServ(true)}
               className="font-semibold text-blue-600 dark:text-blue-400"
             >
-              Enhance with SERV Reasoning →
+              Get a deeper allocation →
             </button>
           </>
         )}

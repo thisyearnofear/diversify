@@ -827,9 +827,9 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
     // SERV armed: the rail is in-flight or honestly degraded — never the
-    // "Enhance with SERV Reasoning →" opt-in affordance.
+    // "Get a deeper allocation →" opt-in affordance.
     expect(screen.getByTestId("serv-rail").textContent).toMatch(
-      /weighing|unavailable|SERV-enhanced/,
+      /deeper|unavailable/i,
     );
   });
 
