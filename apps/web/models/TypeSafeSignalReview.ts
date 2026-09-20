@@ -17,7 +17,7 @@ export interface ITypeSafeSignalReview extends Document {
     actionable: boolean;
   };
   assessment?: {
-    provider: 'typesafe';
+    provider: 'vercel-ai-gateway' | 'typesafe-direct';
     model: string;
     evaluatedAt: string;
     materiality: number;

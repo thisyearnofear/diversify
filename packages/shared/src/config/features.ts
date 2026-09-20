@@ -34,7 +34,8 @@ export const AI_FEATURES = {
    * This cannot alter Guardian execution policy; it is shadow-mode telemetry
    * until an explicit product rollout enables a user-facing experience.
    */
-  TYPESAFE_SIGNAL_LENS: process.env.ENABLE_TYPESAFE_SIGNAL_LENS === 'true' && !!process.env.TYPESAFE_API_KEY,
+  TYPESAFE_SIGNAL_LENS: process.env.ENABLE_TYPESAFE_SIGNAL_LENS === 'true'
+    && !!(process.env.AI_GATEWAY_API_KEY || process.env.TYPESAFE_API_KEY || process.env.TYPESAFE_AI_API_KEY),
 } as const;
 
 // Autonomous/Blockchain features (optional, experimental)

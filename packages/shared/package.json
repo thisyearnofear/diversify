@@ -25,6 +25,7 @@
     "@lifi/sdk": "3.15.3",
     "@metamask/smart-accounts-kit": "1.6.0",
     "abitype": "1.0.6",
+    "ai": "^7.0.107",
     "axios": "1.13.2",
     "ethers": "^5.7",
     "ethers6": "npm:ethers@^6.16.0",
