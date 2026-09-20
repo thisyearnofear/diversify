@@ -231,7 +231,7 @@ The `useProactiveAgent` monitoring loop is mounted once at the app root via `com
 moves (Celo for savings, Arbitrum for yield); 0G holds the tamper-proof
 reasoning evidence that those ledger entries reference. This separation
 serves both the Celo grant (verifiable settlement on Celo) and the 0G
-buildathon (deep Storage/Compute/DA integration) without forcing a
+buildathon (deep Storage/Compute integration) without forcing a
 single canonical chain.
 
 Every AI recommendation traces through the full 0G pipeline:
@@ -239,8 +239,8 @@ Every AI recommendation traces through the full 0G pipeline:
 | 0G Component | Purpose |
 |---|---|
 | **0G Serving** | Decentralized inference via 0G Router (part of AI fallback chain) |
-| **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID. The CID is referenced by the chain-aware ledger entry. |
-| **0G DA** | Agent context / preferences serialized for cross-invocation resilience |
+| **0G Storage** | Evidence bundles (prompt, reasoning, data sources) hashed → CID. The CID is referenced by the chain-aware ledger entry. Also used to persist agent context/preferences for cross-invocation resilience. |
+| **0G DA** | Not integrated. Agent context/preference persistence above runs on 0G Storage, not the 0G DA layer — the two are separate products and this doc previously conflated them. Real DA integration is a scoped next-wave item ([roadmap](./roadmap.md)). |
 | **0G Compute Direct** | TEE-verified inference for high-impact Guardian decisions (`confidence > 0.8`). Uses the 0G Router `verify_tee: true` extension — fail-closed, 15s timeout — then falls through to the normal Router chain. |
 
 **Chain-aware ledger (the ledger of record follows the money):**
@@ -301,7 +301,7 @@ diversifi/
   models/                   # Mongoose models (Permission, Vault, etc.)
   packages/
     shared/                 # Core business logic (33K+ lines) — AI, swaps, Guardian, data
-    shared-0g/              # 0G Storage + DA integration
+    shared-0g/              # 0G Storage integration (evidence anchoring + persistence)
     mento-utils/            # Mento Protocol helpers
   scripts/                  # Firecrawl setup, wallet creation, volume generation
   scripts/smoke/            # x402 smoke harnesses
