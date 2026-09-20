@@ -3,7 +3,7 @@
  * Interface to upload evidence bundles to 0G Storage.
  */
 
-import { areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
+import { areMockFallbacksAllowed, shouldFailLoudly, getZeroGStorageSignerKey } from "../../../shared/src/utils/environment";
 
 export interface StorageResult {
     cid: string;
@@ -64,20 +64,20 @@ export class ZeroGStorageService {
         const { Indexer, Blob: ZgBlob } = SDK;
         const ethers6 = eval('require("ethers6")');
 
-        const privateKey = process.env.VAULT_PRIVATE_KEY;
+        const privateKey = getZeroGStorageSignerKey();
         if (!privateKey) {
             if (shouldFailLoudly()) {
-                throw new Error('VAULT_PRIVATE_KEY missing for 0G Storage upload — CI mode requires real 0G credentials');
+                throw new Error('VAULT_PRIVATE_KEY or LEDGER_PRIVATE_KEY missing for 0G Storage upload — CI mode requires real 0G credentials');
             }
             if (areMockFallbacksAllowed()) {
-                console.warn('[0G Storage] VAULT_PRIVATE_KEY missing, returning mock CID for development/demo stability');
+                console.warn('[0G Storage] VAULT_PRIVATE_KEY/LEDGER_PRIVATE_KEY missing, returning mock CID for development/demo stability');
                 const mockCid = `bafybeih${Math.random().toString(36).substring(2, 15)}`;
                 return {
                     cid: mockCid,
                     url: `${this.storageUrl}/ipfs/${mockCid}`
                 };
             }
-            throw new Error('VAULT_PRIVATE_KEY missing for 0G Storage upload — production mode requires real 0G credentials');
+            throw new Error('VAULT_PRIVATE_KEY or LEDGER_PRIVATE_KEY missing for 0G Storage upload — production mode requires real 0G credentials');
         }
 
         try {

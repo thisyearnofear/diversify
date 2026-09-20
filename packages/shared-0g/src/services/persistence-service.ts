@@ -1,4 +1,4 @@
-import { areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
+import { areMockFallbacksAllowed, shouldFailLoudly, getZeroGStorageSignerKey } from "../../../shared/src/utils/environment";
 /**
  * 0G Storage Persistence Service
  * Stores agent context and state in 0G Storage. Note: this is 0G Storage,
@@ -116,15 +116,15 @@ export class ZeroGPersistenceService {
     }
 
     /**
-     * Persists agent state to 0G Storage
-     * Using Storage as a verifiable state anchor (pseudo-DA)
+     * Persists agent state to 0G Storage.
+     * This is 0G Storage, not 0G DA — see the class-level docstring.
      */
     async persistState(context: AgentContext): Promise<string> {
         const { allowMock, failLoud } = this.getFallbackBehavior();
-        const privateKey = process.env.VAULT_PRIVATE_KEY;
+        const privateKey = getZeroGStorageSignerKey();
         
         if (!privateKey) {
-            const msg = '[0G Persistence] VAULT_PRIVATE_KEY missing';
+            const msg = '[0G Persistence] VAULT_PRIVATE_KEY/LEDGER_PRIVATE_KEY missing';
             if (failLoud) {
                 throw new Error(`${msg} — CI mode requires real 0G credentials`);
             }

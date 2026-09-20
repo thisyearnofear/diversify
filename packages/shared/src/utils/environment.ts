@@ -61,3 +61,19 @@ export function isMiniPayEnvironment(): boolean {
   return typeof window !== 'undefined' && 
     (window as any).minipay !== undefined;
 }
+
+/**
+ * Resolves the signer key used for 0G Storage writes (evidence upload,
+ * state persistence).
+ *
+ * `VAULT_PRIVATE_KEY` is the historical default. `LEDGER_PRIVATE_KEY` is
+ * accepted as a fallback because `recommendation-ledger.service.ts`
+ * already treats the two as interchangeable write-authority keys
+ * (`docs/integrations.md` § Write authority) — without this fallback, a
+ * deploy that only sets `LEDGER_PRIVATE_KEY` boots green (ledger writes
+ * work) but every 0G Storage evidence upload silently degrades (mock in
+ * dev, throws in production) with no indication of what's missing.
+ */
+export function getZeroGStorageSignerKey(): string | undefined {
+  return process.env.VAULT_PRIVATE_KEY || process.env.LEDGER_PRIVATE_KEY;
+}
