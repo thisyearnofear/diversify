@@ -74,6 +74,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 | External services, env, security | `docs/integrations.md` |
 | Setup, env vars, test drive | `docs/setup.md` |
 | Alibaba deployment | `docs/ops.md` |
+| Capture playbook (public wallet, consented-user track, honesty tiers) | `docs/demo-capture.md` |
 | Exploratory/design drafts | `docs/internal/` |
 
 ## Tool Notes
