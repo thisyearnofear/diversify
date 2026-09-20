@@ -20,6 +20,11 @@ const nextConfig = {
     "@stable-station/mento-utils",
   ],
 
+  // `ai` is ESM-only and is loaded at runtime by the server-only TypeSafe
+  // Signal Lens gateway adapter. Keep it external to the CommonJS shared
+  // package transform while ensuring Next traces it into standalone output.
+  serverExternalPackages: ['ai'],
+
   // NOTE (2026-09-11): outputFileTracingExcludes REMOVED entirely. Both
   // attempts broke ALL /api/* lambdas in production with MODULE_NOT_FOUND for
   // next/dist/server/lib/… files. NFT's exclude globs match path SEGMENTS, so

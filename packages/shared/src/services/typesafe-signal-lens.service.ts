@@ -1,4 +1,3 @@
-import { experimental_evaluate } from 'ai';
 import { fetchWithTimeout } from '../utils/promise-utils';
 
 const TYPESAFE_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
@@ -80,6 +79,26 @@ type GatewayEvaluate = (request: {
   questions: Record<string, unknown>;
   abortSignal: AbortSignal;
 }) => Promise<GatewayResult>;
+
+/**
+ * AI SDK is ESM-only while this shared package intentionally compiles to
+ * CommonJS for the existing Next.js server bundle. Keep the Gateway evaluator
+ * behind a native runtime import so webpack does not try to require `ai` from
+ * the shared barrel; this branch only loads when Gateway is configured.
+ * NOTE: `new Function` needs an eval-allowed Node runtime — this loader will
+ * throw on edge/no-eval CSP hosts. The Gateway call is inside a try/catch, so
+ * that path degrades to the direct TypeSafe REST fallback below.
+ */
+async function loadGatewayEvaluate(): Promise<GatewayEvaluate> {
+  const loadModule = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<{
+    experimental_evaluate?: GatewayEvaluate;
+  }>;
+  const sdk = await loadModule('ai');
+  if (!sdk.experimental_evaluate) {
+    throw new Error('AI SDK experimental_evaluate is unavailable');
+  }
+  return sdk.experimental_evaluate;
+}
 
 function isChoice(value: unknown, choices: readonly string[]): value is ChoiceAnswer {
   return !!value
@@ -219,7 +238,7 @@ export async function assessMacroSignalWithTypeSafe(
       // The SDK reads AI_GATEWAY_API_KEY from the server environment. This
       // branch is intentionally Gateway-first for spend controls, logs, and
       // promotional access; direct TypeSafe remains available below.
-      const evaluate = options.evaluateGateway ?? (experimental_evaluate as unknown as GatewayEvaluate);
+      const evaluate = options.evaluateGateway ?? await loadGatewayEvaluate();
       const assessment = normalizeGatewayResult(await evaluate({
         model: 'typesafe-ai/jev',
         state,
