@@ -75,6 +75,14 @@ export interface GuardianAnchorRecord {
   id?: number;
   error?: string;
   capturedAt: string;
+  /**
+   * True only when a real 0G Storage evidence CID backed this on-chain
+   * write. `anchored`/`pending` reflect the tx itself — a real tx can
+   * still have `evidenceUploaded: false` if the 0G Storage upload failed
+   * beforehand. The proof-feed UI must not present that combination as
+   * fully verified.
+   */
+  evidenceUploaded?: boolean;
 }
 
 /**

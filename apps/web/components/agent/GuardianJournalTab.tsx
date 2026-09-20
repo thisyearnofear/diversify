@@ -26,6 +26,12 @@ type AnchorInfo = {
   id?: number;
   explorerUrl?: string;
   error?: string;
+  /**
+   * True only when a real 0G Storage evidence CID backed this on-chain
+   * write. A real tx can still have this false — render that combination
+   * distinctly rather than as a fully verified anchor.
+   */
+  evidenceUploaded?: boolean;
 };
 
 export const GuardianJournalTab: React.FC<{
@@ -126,7 +132,7 @@ export const GuardianJournalTab: React.FC<{
                       {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  {anchor && anchor.status === 'anchored' && (
+                  {anchor && anchor.status === 'anchored' && anchor.evidenceUploaded !== false && (
                     <a
                       href={anchor.explorerUrl ?? event.explorerUrl}
                       target="_blank"
@@ -137,6 +143,19 @@ export const GuardianJournalTab: React.FC<{
                     >
                       <span className="w-1 h-1 rounded-full bg-emerald-500" />
                       {anchor.id && anchor.id > 0 ? `0G #${anchor.id}` : '0G anchored'}
+                    </a>
+                  )}
+                  {anchor && anchor.status === 'anchored' && anchor.evidenceUploaded === false && (
+                    <a
+                      href={anchor.explorerUrl ?? event.explorerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-testid="anchor-chip-no-evidence"
+                      className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
+                      title="On-chain record is real, but the 0G Storage evidence upload did not complete"
+                    >
+                      <span className="w-1 h-1 rounded-full bg-amber-500" />
+                      0G recorded (no evidence)
                     </a>
                   )}
                   {anchor && anchor.status === 'pending' && (

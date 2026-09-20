@@ -1,7 +1,9 @@
-import { getOperationMode, areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
+import { areMockFallbacksAllowed, shouldFailLoudly } from "../../../shared/src/utils/environment";
 /**
- * 0G DA Persistence Service
- * Stores agent context and state in 0G Storage (serving as a verifiable DA layer).
+ * 0G Storage Persistence Service
+ * Stores agent context and state in 0G Storage. Note: this is 0G Storage,
+ * not 0G DA (Data Availability) — the two are distinct 0G products and this
+ * service does not integrate with 0G DA.
  */
 
 import { zeroGStorageService } from './storage-service';
@@ -39,24 +41,17 @@ export class ZeroGPersistenceService {
     }
 
     /**
-     * Get operation mode for fallback behavior
+     * Get operation mode for fallback behavior.
+     *
+     * Delegates to the shared `environment.ts` utilities (also used by
+     * `storage-service.ts`) instead of reimplementing the same policy —
+     * two independent implementations of the same NODE_ENV/CI/dev-fallback
+     * logic will drift over time.
      */
     private getFallbackBehavior(): { allowMock: boolean; failLoud: boolean } {
-        const envOverride = process.env.DIVERSIFI_DEV_FALLBACK;
-        
-        if (envOverride === 'enabled') {
-            return { allowMock: true, failLoud: false };
-        }
-        if (envOverride === 'disabled') {
-            return { allowMock: false, failLoud: true };
-        }
-        
-        const isCI = process.env.CI === 'true' || process.env.NODE_ENV === 'test';
-        const isDev = process.env.NODE_ENV === 'development' || !process.env.NODE_ENV;
-        
         return {
-            allowMock: isDev && !isCI,
-            failLoud: isCI,
+            allowMock: areMockFallbacksAllowed(),
+            failLoud: shouldFailLoudly(),
         };
     }
 

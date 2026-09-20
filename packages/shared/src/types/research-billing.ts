@@ -59,5 +59,13 @@ export interface ResearchReceipt {
     explorerUrl?: string;
     id?: number;
     error?: string;
+    /**
+     * True only when a real 0G Storage evidence CID was uploaded and
+     * attached to this on-chain record. `anchored`/`pending` can still be
+     * true on-chain (the tx itself is real) while this is false — that
+     * combination means "real tx, no evidence attached," which the UI
+     * must not present as fully verified.
+     */
+    evidenceUploaded?: boolean;
   };
 }

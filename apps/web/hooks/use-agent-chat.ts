@@ -619,6 +619,7 @@ export function useAgentChat({
                         explorerUrl: anchor.status === "failed" ? undefined : anchor.explorerUrl,
                         id: anchor.status === "anchored" ? anchor.id : undefined,
                         error: anchor.status === "failed" ? anchor.error : undefined,
+                        evidenceUploaded: anchor.status === "failed" ? undefined : anchor.evidenceUploaded,
                       },
                     },
                   },

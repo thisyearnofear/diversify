@@ -30,16 +30,24 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
   // be absent (older receipts), pending (broadcast but not yet confirmed),
   // anchored (event parsed), or failed (revert or RPC error).
   const anchor = receipt.anchor;
+  // A real on-chain tx can still lack evidence (0G Storage upload failed
+  // before the ledger write). Never present that combination as a fully
+  // verified anchor — label it distinctly so the trust tier stays honest.
+  const anchorHasNoEvidence = anchor?.status !== 'failed' && anchor?.evidenceUploaded === false;
   const anchorLabel = anchor
     ? anchor.status === 'anchored'
-      ? `0G anchored${anchor.id && anchor.id > 0 ? ` #${anchor.id}` : ''}`
+      ? anchorHasNoEvidence
+        ? `0G recorded (no evidence)${anchor.id && anchor.id > 0 ? ` #${anchor.id}` : ''}`
+        : `0G anchored${anchor.id && anchor.id > 0 ? ` #${anchor.id}` : ''}`
       : anchor.status === 'pending'
         ? '0G anchor pending'
         : '0G anchor failed'
     : null;
   const anchorColor = anchor
     ? anchor.status === 'anchored'
-      ? 'text-emerald-600 dark:text-emerald-400'
+      ? anchorHasNoEvidence
+        ? 'text-amber-600 dark:text-amber-400'
+        : 'text-emerald-600 dark:text-emerald-400'
       : anchor.status === 'pending'
         ? 'text-amber-600 dark:text-amber-400'
         : 'text-rose-600 dark:text-rose-400'
@@ -123,6 +131,11 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                   </div>
                   {anchor.status === 'failed' && anchor.error && (
                     <p className="text-[10px] text-rose-400">{anchor.error}</p>
+                  )}
+                  {anchorHasNoEvidence && (
+                    <p className="text-[10px] text-amber-500 dark:text-amber-400">
+                      On-chain record is real, but the 0G Storage evidence upload did not complete — no reasoning CID is attached.
+                    </p>
                   )}
                   {anchor.txHash && anchor.explorerUrl && (
                     <a

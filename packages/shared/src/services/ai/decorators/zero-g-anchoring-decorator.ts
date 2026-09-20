@@ -198,9 +198,16 @@ export class ZeroGAnchoringDecorator {
       if (anchor.status === 'failed') {
         console.warn('[ZeroG Anchoring] Ledger anchor failed:', anchor.error);
       } else if (anchor.status === 'pending') {
-        console.warn('[ZeroG Anchoring] Ledger anchor pending confirmation:', anchor.txHash);
+        console.warn('[ZeroG Anchoring] Ledger anchor pending confirmation:', anchor.txHash, 'evidenceUploaded:', anchor.evidenceUploaded);
       } else {
-        console.log('[ZeroG Anchoring] Ledger anchor success:', anchor.txHash, 'id:', anchor.id);
+        if (!anchor.evidenceUploaded) {
+          // The on-chain tx is real, but the 0G Storage evidence upload
+          // failed earlier (params.evidenceCid was empty) — surface this
+          // distinctly so it isn't mistaken for a fully-verified anchor.
+          console.warn('[ZeroG Anchoring] Ledger anchor recorded WITHOUT evidence CID:', anchor.txHash, 'id:', anchor.id);
+        } else {
+          console.log('[ZeroG Anchoring] Ledger anchor success:', anchor.txHash, 'id:', anchor.id);
+        }
       }
     } catch (error: any) {
       console.warn('[ZeroG Anchoring] Failed to record recommendation:', error);

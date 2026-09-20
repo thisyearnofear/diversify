@@ -59,12 +59,18 @@ export interface LedgerConfig {
  * - `failed`   — the tx reverted, the write contract was unavailable
  *   (no signer / no contract address), or the RPC threw. The `error`
  *   field carries the reason.
+ *
+ * `evidenceUploaded` on `anchored`/`pending` is true only when a non-empty
+ * `evidenceCid` was passed in — i.e. the 0G Storage upload actually
+ * succeeded before this on-chain write. An on-chain tx recording without
+ * evidence still gets `status: 'anchored'` (the tx itself is real), but
+ * `evidenceUploaded: false` tells callers not to claim full verifiability.
  */
 export type AnchorStatus = 'anchored' | 'pending' | 'failed';
 
 export type AnchorResult =
-    | { status: 'anchored'; id: number; txHash: string; chainId: number; explorerUrl: string }
-    | { status: 'pending'; txHash: string; chainId: number; explorerUrl: string }
+    | { status: 'anchored'; id: number; txHash: string; chainId: number; explorerUrl: string; evidenceUploaded: boolean }
+    | { status: 'pending'; txHash: string; chainId: number; explorerUrl: string; evidenceUploaded: boolean }
     | { status: 'failed'; error: string; chainId: number };
 
 /**
@@ -553,7 +559,7 @@ export async function recordRecommendation(params: {
         receipt = await tx.wait(1, 60_000);
     } catch (error: any) {
         console.warn(`[RecommendationLedger] ⏳ Broadcast but receipt not confirmed for ${params.user} on chain ${chainId}: ${tx.hash} — ${error.message}`);
-        return emitAnchor(params, { status: 'pending', txHash: tx.hash, chainId, explorerUrl });
+        return emitAnchor(params, { status: 'pending', txHash: tx.hash, chainId, explorerUrl, evidenceUploaded: Boolean(params.evidenceCid) });
     }
 
     if (receipt && receipt.status === 0) {
@@ -590,11 +596,11 @@ export async function recordRecommendation(params: {
     if (id < 1) {
         // Tx was mined but the event was not parseable. Still treat the
         // anchor as resolved — the receipt is on-chain proof.
-        return emitAnchor(params, { status: 'anchored', id: -1, txHash: tx.hash, chainId, explorerUrl });
+        return emitAnchor(params, { status: 'anchored', id: -1, txHash: tx.hash, chainId, explorerUrl, evidenceUploaded: Boolean(params.evidenceCid) });
     }
 
     console.log(`[RecommendationLedger] ✅ Recorded #${id} for ${params.user} on chain ${chainId}: ${params.action} → ${params.targetToken} (tx: ${tx.hash})`);
-    return emitAnchor(params, { status: 'anchored', id, txHash: tx.hash, chainId, explorerUrl });
+    return emitAnchor(params, { status: 'anchored', id, txHash: tx.hash, chainId, explorerUrl, evidenceUploaded: Boolean(params.evidenceCid) });
 }
 
 /**
