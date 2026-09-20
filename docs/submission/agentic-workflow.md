@@ -70,7 +70,7 @@ flowchart TD
 | FX / price data | fawazahmed0 open currency dataset (live), Mento stablecoin rates, curated 28-currency risk dataset (World Bank/IMF-style series) |
 | Yield/market context | vaults.fyi, DefiLlama, LI.FI Earn |
 | LLM providers | Venice, Gemini, AI·ML API, NVIDIA, Featherless, 0G Serving, Modal (failover orchestration, circuit breakers) |
-| Chains | Celo (Caribbean/Africa settlement rail), Arbitrum (yield rail), HashKey (APAC rail), 0G (evidence anchor via 0G Storage — DA integration not yet built) |
+| Chains | Celo (Caribbean/Africa settlement rail), Arbitrum (yield rail), HashKey (APAC rail), 0G (durable evidence anchor via 0G Storage; DA is intentionally not used for this archival workload) |
 | Identity/auth | Privy (email/social/wallet login — walletless exploration supported) |
 | Storage/infra | MongoDB (intent pool — amounts/deadlines only), Hetzner (API runtime), Vercel (frontend) |
 | Engineering | Next.js, TypeScript, pnpm/turbo, Vitest (1,169 tests), Foundry (contract tests) |

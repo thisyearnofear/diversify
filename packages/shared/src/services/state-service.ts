@@ -30,7 +30,9 @@ export class StateService {
     }
 
     /**
-     * Persist agent state to 0G DA
+     * Persist agent state to 0G Storage.
+     * This wrapper delegates to ZeroGPersistenceService; it does not use
+     * the distinct 0G Data Availability product.
      */
     async persistAgentState(preferences: any = {}, riskProfile: string = 'MEDIUM'): Promise<void> {
         const typedRiskProfile = riskProfile as 'LOW' | 'MEDIUM' | 'HIGH';
@@ -48,13 +50,13 @@ export class StateService {
                 timestamp: Date.now()
             });
         } catch (e) {
-            console.error('[State Service] Persistence to 0G DA failed:', e);
+            console.error('[State Service] Persistence to 0G Storage failed:', e);
             // Don't throw - persistence failure shouldn't break agent operation
         }
     }
 
     /**
-     * Restore agent state from 0G DA
+     * Restore agent state from 0G Storage.
      */
     async restoreAgentState(): Promise<AgentContext | null> {
         if (!this.userId) {
@@ -65,14 +67,14 @@ export class StateService {
         try {
             const state = await zeroGPersistenceService.restoreState(this.userId);
             if (state) {
-                console.log('[State Service] State restored successfully from 0G DA');
+                console.log('[State Service] State restored successfully from 0G Storage');
                 return state;
             }
             
             console.log('[State Service] No persisted state found for user');
             return null;
         } catch (e) {
-            console.error('[State Service] Failed to restore state from 0G DA:', e);
+            console.error('[State Service] Failed to restore state from 0G Storage:', e);
             return null;
         }
     }

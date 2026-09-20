@@ -202,7 +202,7 @@ export class AgentService {
     }
 
     /**
-     * Persist agent state to 0G DA
+     * Persist agent state to 0G Storage through StateService.
      */
     async persistAgentState() {
         if (!this.walletService.getUserId()) return;
@@ -213,12 +213,12 @@ export class AgentService {
                 riskProfile: 'MEDIUM'
             });
         } catch (e) {
-            console.error('[AgentService] Persistence to 0G DA failed:', e);
+            console.error('[AgentService] Persistence to 0G Storage failed:', e);
         }
     }
 
     /**
-     * Restore agent state from 0G DA
+     * Restore agent state from 0G Storage through StateService.
      */
     async restoreAgentState() {
         return await this.stateService.restoreAgentState();
@@ -387,7 +387,7 @@ export class AgentService {
                 }
             });
 
-            // Phase 5F: Persist state to 0G DA
+            // Phase 5F: Persist state to 0G Storage.
             await this.persistAgentState();
 
             // Phase 5C: Execution Receipts — Record successful autonomous analysis on-chain
