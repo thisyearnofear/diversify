@@ -45,6 +45,13 @@ async function warmBrightData() {
 
 export function startBrightDataWarming() {
   if (warmInterval) return;
+  // Parked by default (2026-09): the hackathon-era Bright Data credits are
+  // spent, so the 5-min loop just logs 401s against an expired token.
+  // Set BRIGHT_DATA_WARMING_ENABLED=true to bring the warm cycle back live.
+  if (process.env.BRIGHT_DATA_WARMING_ENABLED !== "true") {
+    console.log("[BrightData Warmer] Warming disabled (set BRIGHT_DATA_WARMING_ENABLED=true to enable)");
+    return;
+  }
   console.log("[BrightData Warmer] Starting background pre-fetch cycle");
 
   // First warm on startup (fire and forget so server boots fast)

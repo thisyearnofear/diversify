@@ -24,7 +24,10 @@ import dbConnect from '../../lib/mongodb';
 import { AIService } from '@diversifi/shared';
 
 const STARTED_AT = Date.now();
-const VENICE_PROBE_TIMEOUT_MS = 6000;
+// 10s, not 6s: Venice completions on the probe model routinely take ~7s under
+// upstream load, and a failing venice check degrades healthz to 503 — which
+// trips the deploy gate and blocks every release (2026-09-20 incident).
+const VENICE_PROBE_TIMEOUT_MS = 10000;
 const VENICE_PROMPT = 'Reply with the single word: ok';
 // The current default Venice model (deepseek-v4-flash) emits chain-of-thought
 // tokens before any visible content. A 5-token cap is consumed by thinking and
