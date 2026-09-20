@@ -20,6 +20,28 @@ import {
 import { LiveProofCard, LiveProofTicker } from '../LiveProofCard';
 import type { ProofFeedData } from '@/hooks/use-proof-feed';
 
+// Guardian cadence line rides the visibility preference + telemetry read —
+// default quiet here so existing card-state tests see the classic surfaces;
+// cadence-specific tests flip the hoisted mock.
+const cadenceMock = vi.hoisted(() => ({
+    visibility: 'quiet' as 'quiet' | 'informed',
+    data: null as null | { guardian: Record<string, unknown> | null; signalLens: Record<string, unknown> | null },
+}));
+vi.mock('@/context/app/GuardianVisibilityContext', () => ({
+    useGuardianVisibility: () => ({
+        visibility: cadenceMock.visibility,
+        origin: 'persona',
+        setVisibility: vi.fn(),
+    }),
+}));
+vi.mock('@/hooks/use-guardian-telemetry', () => ({
+    useGuardianTelemetry: (enabled: boolean) => ({
+        data: enabled ? cadenceMock.data : null,
+        isStale: false,
+        refresh: vi.fn(),
+    }),
+}));
+
 const SAMPLE_DATA: ProofFeedData = {
     stats: {
         totalRecommendations: 247,
@@ -251,5 +273,86 @@ describe('LiveProofTicker', () => {
         expect(ticker.textContent).not.toContain('HashKey');
         expect(ticker.textContent).not.toContain('Arbitrum');
         expect(ticker.textContent).not.toContain('Celo');
+    });
+});
+
+describe('Guardian cadence line (informed mode)', () => {
+    const WEEK = {
+        week: '2026-W39',
+        checks: 412,
+        executions: 6,
+        declines: 9,
+        medianDecisionMs: 1180,
+        timedSampleCount: 50,
+    };
+    const LENS = {
+        reviews: 137,
+        medianMs: 96,
+        timedSampleCount: 120,
+        window: 'rolling_30d' as const,
+        note: 'advisory_shadow' as const,
+    };
+
+    afterEach(() => {
+        cleanup();
+        cadenceMock.visibility = 'quiet';
+        cadenceMock.data = null;
+    });
+
+    it('shows measured weekly checks and median decision time, lens labeled separately', async () => {
+        cadenceMock.visibility = 'informed';
+        cadenceMock.data = { guardian: WEEK, signalLens: LENS };
+        render(
+            <CtxWrap value={{ data: SAMPLE_DATA }}>
+                <LiveProofCard />
+            </CtxWrap>,
+        );
+        const cadence = await screen.findByTestId('guardian-cadence');
+        expect(cadence.textContent).toContain('checks this week');
+        expect(cadence.textContent).toContain('6 executed');
+        expect(cadence.textContent).toContain('median decision 1.2 s');
+        expect(cadence.textContent).toContain('Signal Lens: 137 advisory shadow reviews');
+        expect(cadence.textContent).toContain('median 96 ms');
+    });
+
+    it('omits unmeasured medians instead of zero-filling', async () => {
+        cadenceMock.visibility = 'informed';
+        cadenceMock.data = {
+            guardian: { ...WEEK, medianDecisionMs: null, timedSampleCount: 0 },
+            signalLens: { ...LENS, medianMs: null },
+        };
+        render(
+            <CtxWrap value={{ data: SAMPLE_DATA }}>
+                <LiveProofCard />
+            </CtxWrap>,
+        );
+        const cadence = await screen.findByTestId('guardian-cadence');
+        expect(cadence.textContent).toContain('checks this week');
+        expect(cadence.textContent).not.toContain('median decision');
+        expect(cadence.textContent).not.toContain('median 0');
+    });
+
+    it('renders nothing in quiet mode', async () => {
+        cadenceMock.visibility = 'quiet';
+        cadenceMock.data = { guardian: WEEK, signalLens: LENS };
+        render(
+            <CtxWrap value={{ data: SAMPLE_DATA }}>
+                <LiveProofCard />
+            </CtxWrap>,
+        );
+        await screen.findByTestId('live-proof-card');
+        expect(screen.queryByTestId('guardian-cadence')).not.toBeInTheDocument();
+    });
+
+    it('renders nothing when telemetry is absent', async () => {
+        cadenceMock.visibility = 'informed';
+        cadenceMock.data = { guardian: null, signalLens: null };
+        render(
+            <CtxWrap value={{ data: SAMPLE_DATA }}>
+                <LiveProofCard />
+            </CtxWrap>,
+        );
+        await screen.findByTestId('live-proof-card');
+        expect(screen.queryByTestId('guardian-cadence')).not.toBeInTheDocument();
     });
 });

@@ -188,6 +188,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         latestAnchor: guardianState?.latestAnchor || null,
         latestAnchors: guardianState?.latestAnchors || [],
         decisionLog: guardianState?.decisionLog || [],
+        activityStats: guardianState?.activityStats || null,
       });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });

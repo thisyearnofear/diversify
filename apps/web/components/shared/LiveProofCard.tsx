@@ -26,6 +26,10 @@
 import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { useProofFeed, type LedgerRecommendation } from '@/hooks/use-proof-feed';
+import { useGuardianTelemetry } from '@/hooks/use-guardian-telemetry';
+import { useCountUp } from '@/hooks/use-count-up';
+import { useGuardianVisibility } from '@/context/app/GuardianVisibilityContext';
+import { formatDuration } from '@/lib/format-duration';
 import { useVerifiedTxs } from '@/hooks/use-verify-tx';
 import StatusBadge from './StatusBadge';
 import {
@@ -75,6 +79,44 @@ function timeAgo(iso: string, nowMs: number = Date.now()): string {
 
 export interface LiveProofCardProps {
     variant?: 'full' | 'compact';
+}
+
+/**
+ * GuardianCadenceLine — informed-mode cadence: this week's measured
+ * check count (count-up) and median decision time, plus a separately
+ * labeled Signal Lens line. Every number is server-measured; telemetry
+ * absent (endpoint down, no week recorded, nothing timed yet) → the
+ * matching fragment renders nothing. Quiet mode renders nothing at all.
+ * Lens counts are advisory shadow reviews — never merged with Guardian
+ * totals, which would imply the lens acts on user portfolios.
+ */
+export function GuardianCadenceLine() {
+    const { visibility } = useGuardianVisibility();
+    const { data } = useGuardianTelemetry(visibility === 'informed');
+    const guardian = data?.guardian ?? null;
+    const lens = data?.signalLens ?? null;
+    const checks = useCountUp(guardian?.checks ?? 0);
+    if (visibility !== 'informed') return null;
+    if (!guardian && !(lens && lens.reviews > 0)) return null;
+    const median = formatDuration(guardian?.medianDecisionMs);
+    const lensMedian = formatDuration(lens?.medianMs);
+    return (
+        <div className="mt-3 space-y-1" data-testid="guardian-cadence">
+            {guardian && (
+                <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 tabular-nums">
+                    <motion.span>{checks}</motion.span> checks this week
+                    {guardian.executions > 0 ? ` · ${guardian.executions} executed` : ''}
+                    {median ? ` · median decision ${median}` : ''}
+                </p>
+            )}
+            {lens && lens.reviews > 0 && (
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Signal Lens: {lens.reviews.toLocaleString()} advisory shadow reviews
+                    {lensMedian ? ` · median ${lensMedian}` : ''}
+                </p>
+            )}
+        </div>
+    );
 }
 
 export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
@@ -165,6 +207,7 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                                 See proof →
                             </a>
                         )}
+                        <GuardianCadenceLine />
                     </div>
                 </div>
             </motion.div>
@@ -235,6 +278,8 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                     )}
                 </div>
             </details>
+
+            <GuardianCadenceLine />
 
             {isStale && data?.capturedAt && (
                 <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold" role="status">

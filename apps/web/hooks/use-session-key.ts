@@ -117,6 +117,8 @@ export interface GuardianSessionInfo {
         id?: number;
         error?: string;
         capturedAt: string;
+        /** Measured execution-attempt ms; absent on pre-instrumentation anchors. */
+        durationMs?: number;
     };
     /**
      * Rolling history of the last N anchor records, newest-first. The
@@ -130,6 +132,8 @@ export interface GuardianSessionInfo {
         id?: number;
         error?: string;
         capturedAt: string;
+        /** Measured execution-attempt ms; absent on pre-instrumentation anchors. */
+        durationMs?: number;
     }>;
     /**
      * Recent Guardian declines — why the loop chose NOT to act, newest-first.
@@ -144,7 +148,18 @@ export interface GuardianSessionInfo {
         source?: string;
         targetToken?: string;
         identityKey?: string;
+        durationMs?: number;
     }>;
+    /**
+     * Per-user weekly counters maintained by the loop. Absent on legacy
+     * documents — consumers must omit, never zero-fill.
+     */
+    activityStats?: {
+        week: string;
+        evaluated: number;
+        executed: number;
+        declined: number;
+    } | null;
     latestRecommendation?: {
         capturedAt: string;
         source: string;

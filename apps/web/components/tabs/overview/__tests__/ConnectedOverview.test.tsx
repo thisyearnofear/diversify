@@ -164,6 +164,21 @@ vi.mock("@/hooks/use-home-sections", () => ({
 // ──────────────────────────────────────────────────────────────────────────
 
 vi.mock("@/components/wallet/WalletButton", () => ({ default: () => null }));
+// Guardian visibility surfaces ride these reads — default quiet so the
+// existing tier assertions see the classic layout.
+vi.mock("@/context/app/GuardianVisibilityContext", () => ({
+  useGuardianVisibility: () => ({
+    visibility: "quiet",
+    origin: "persona",
+    setVisibility: vi.fn(),
+  }),
+}));
+vi.mock("@/hooks/use-guardian-telemetry", () => ({
+  useGuardianTelemetry: () => ({ data: null, isStale: false, refresh: vi.fn() }),
+}));
+vi.mock("@/hooks/use-guardian-session-info", () => ({
+  useGuardianSessionInfo: () => null,
+}));
 vi.mock("@/components/rewards/StreakRewardsCard", () => ({
   StreakRewardsCard: () => null,
   RewardsStats: () => null,

@@ -26,6 +26,8 @@ export interface StructuredSignalAssessment {
   urgencyConfidence: number;
   sourceQuality: number;
   sourceQualityConfidence: number;
+  /** Wall-clock ms measured server-side for this assessment call only. */
+  durationMs?: number;
 }
 
 type ChoiceAnswer = {
@@ -239,13 +241,14 @@ export async function assessMacroSignalWithTypeSafe(
       // branch is intentionally Gateway-first for spend controls, logs, and
       // promotional access; direct TypeSafe remains available below.
       const evaluate = options.evaluateGateway ?? await loadGatewayEvaluate();
+      const startedAt = Date.now();
       const assessment = normalizeGatewayResult(await evaluate({
         model: 'typesafe-ai/jev',
         state,
         questions: questions(),
         abortSignal: controller.signal,
       }));
-      if (assessment) return assessment;
+      if (assessment) return { ...assessment, durationMs: Date.now() - startedAt };
       console.warn('[TypeSafe Signal Lens] Gateway returned an invalid structured response');
     } catch (error: unknown) {
       console.warn('[TypeSafe Signal Lens] Gateway evaluation unavailable:', error instanceof Error ? error.message : error);
@@ -257,6 +260,7 @@ export async function assessMacroSignalWithTypeSafe(
   if (!directApiKey) return null;
 
   try {
+    const startedAt = Date.now();
     const response = await fetchWithTimeout(
       TYPESAFE_ENDPOINT,
       {
@@ -308,6 +312,7 @@ export async function assessMacroSignalWithTypeSafe(
       urgencyConfidence: clamp(urgency.confidence, 0, 1),
       sourceQuality: clamp(sourceQuality.score, 0, 2),
       sourceQualityConfidence: clamp(sourceQuality.confidence, 0, 1),
+      durationMs: Date.now() - startedAt,
     };
   } catch (error: unknown) {
     console.warn('[TypeSafe Signal Lens] Direct evaluation unavailable:', error instanceof Error ? error.message : error);

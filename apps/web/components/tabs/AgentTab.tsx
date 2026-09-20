@@ -25,6 +25,7 @@ import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
+import { formatDuration } from "@/lib/format-duration";
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -139,11 +140,38 @@ export default function AgentTab({
           <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
             {guardianContext.summary}
           </p>
+          {guardianContext.decisionRef && (() => {
+            const ref = guardianContext.decisionRef;
+            const kindLabel =
+              ref.kind === "execution" ? "Execution" : ref.kind === "proposal" ? "Proposal" : "Decision";
+            const duration = formatDuration(ref.durationMs);
+            const when = new Date(ref.capturedAt);
+            return (
+              <div
+                data-testid="guardian-decision-ref"
+                className="mt-2 rounded-lg bg-white/70 dark:bg-gray-900/40 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-300 space-y-0.5"
+              >
+                <p className="font-bold text-gray-900 dark:text-white">
+                  {kindLabel}
+                  {ref.targetToken ? ` · ${ref.targetToken}` : ""}
+                </p>
+                <p className="tabular-nums">
+                  {Number.isNaN(when.getTime()) ? ref.capturedAt : when.toLocaleString()}
+                  {ref.status ? ` · ${ref.status}` : ""}
+                  {duration ? ` · took ${duration}` : ""}
+                </p>
+                {ref.reason && <p>{ref.reason}</p>}
+                {ref.source && (
+                  <p className="text-gray-400 dark:text-gray-500">Source: {ref.source}</p>
+                )}
+              </div>
+            );
+          })()}
           <div className="mt-2 flex items-center gap-3">
             <button
               type="button"
               onClick={() => {
-                askAdvisor(guardianContext.prompt);
+                askAdvisor(guardianContext.prompt, { decisionRef: guardianContext.decisionRef });
                 clearGuardianContext();
               }}
               className="min-h-[44px] flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 transition-colors"

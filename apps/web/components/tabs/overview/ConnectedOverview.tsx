@@ -29,6 +29,7 @@ import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
 import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
+import { GuardianCadenceLine } from "../../shared/LiveProofCard";
 
 interface ConnectedOverviewProps {
   portfolio: MultichainPortfolio;
@@ -293,7 +294,12 @@ export function ConnectedOverview({
           error={chainErrors.length > 0 ? chainErrors[0] : null}
           onRefresh={refreshBalances ? handleRefresh : undefined}
         />
-        <VerifiedEvidence />
+        <div className="flex flex-col items-end gap-1">
+          <VerifiedEvidence />
+          {/* Informed mode only: the same measured cadence the compact proof
+              card carries, kept right under the trust line it quantifies. */}
+          <GuardianCadenceLine />
+        </div>
       </div>
       {philosophyName && (
         <button

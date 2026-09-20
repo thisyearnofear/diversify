@@ -8,6 +8,15 @@ vi.mock("next/router", () => ({
   useRouter: () => ({ isReady: true, query: mockRouterQuery }),
 }));
 
+const mockVisibility = vi.hoisted(() => ({ current: "quiet" as "quiet" | "informed" }));
+vi.mock("@/context/app/GuardianVisibilityContext", () => ({
+  useGuardianVisibility: () => ({
+    visibility: mockVisibility.current,
+    origin: "persona",
+    setVisibility: vi.fn(),
+  }),
+}));
+
 let mockFinancialStrategy: string | null = null;
 let mockMoneyPurpose = "inflation_protection";
 let mockGuardianState = "idle";
@@ -148,11 +157,12 @@ vi.mock("@/hooks/use-vault", () => ({
   }),
 }));
 
+const mockSessionInfo = vi.hoisted(() => ({ current: null as unknown }));
 vi.mock("@/hooks/use-session-key", () => ({
   useSessionKey: () => ({
     requestPermission: vi.fn(),
     signedPermission: null,
-    sessionInfo: null,
+    sessionInfo: mockSessionInfo.current,
     deriveGuardianState: vi.fn(),
   }),
 }));
@@ -439,6 +449,8 @@ describe("ProtectionTab — instrument shapes", () => {
     demoState.isActive = false;
     navState.compareRequested = false;
     mockRouterQuery = {};
+    mockSessionInfo.current = null;
+    mockVisibility.current = "quiet";
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
       chainId: null,
@@ -1063,5 +1075,117 @@ describe("ProtectionTab — instrument shapes", () => {
     } finally {
       reducedMotionState.on = false;
     }
+  });
+
+  describe("F1 — Guardian attribution (informed mode)", () => {
+    const connected = () => {
+      mockFinancialStrategy = "africapitalism";
+      vi.mocked(useWalletContext).mockReturnValue({
+        address: "0xabc",
+        chainId: 42220,
+      } as any);
+    };
+
+    it("shows the token-matched decline with its measured duration and hands the record to Ask Guardian", () => {
+      mockVisibility.current = "informed";
+      mockSessionInfo.current = {
+        decisionLog: [
+          {
+            capturedAt: new Date(Date.now() - 5 * 60_000).toISOString(),
+            status: "daily_limit_reached",
+            reason: "Daily budget spent",
+            targetToken: "KESm",
+            source: "guardian-loop",
+            durationMs: 1180,
+          },
+        ],
+      };
+      connected();
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("ring-select-kesm"));
+
+      const line = screen.getByTestId("guardian-attribution");
+      expect(line.textContent).toContain("stood down on KESm");
+      expect(line.textContent).toContain("5m ago");
+      expect(line.textContent).toContain("decided in 1.2 s");
+
+      fireEvent.click(line);
+      const payload = mockNavigateToGuardian.mock.calls[0][0];
+      expect(payload.summary).toContain("stood down on KESm");
+      expect(payload.decisionRef).toMatchObject({
+        kind: "decision",
+        status: "daily_limit_reached",
+        targetToken: "KESm",
+        durationMs: 1180,
+      });
+    });
+
+    it("stays silent in quiet mode even when a record exists", () => {
+      mockSessionInfo.current = {
+        decisionLog: [
+          {
+            capturedAt: new Date(Date.now() - 60_000).toISOString(),
+            status: "daily_limit_reached",
+            reason: "Daily budget spent",
+            targetToken: "KESm",
+          },
+        ],
+      };
+      connected();
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("ring-select-kesm"));
+      expect(screen.queryByTestId("guardian-attribution")).not.toBeInTheDocument();
+    });
+
+    it("falls back to the last execution with its on-chain receipt when no record names the token", () => {
+      mockVisibility.current = "informed";
+      mockSessionInfo.current = {
+        latestAnchors: [
+          {
+            capturedAt: new Date(Date.now() - 2 * 3_600_000).toISOString(),
+            status: "confirmed",
+            txHash: "0xfeed",
+            explorerUrl: "https://celoscan.io/tx/0xfeed",
+            durationMs: 4300,
+          },
+        ],
+      };
+      connected();
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("ring-select-kesm"));
+
+      const line = screen.getByTestId("guardian-attribution");
+      expect(line.textContent).toContain("Guardian's last execution");
+      expect(line.textContent).toContain("2h ago");
+      expect(line.textContent).toContain("took 4.3 s");
+      const receipt = screen.getByTestId("guardian-attribution-receipt");
+      expect(receipt).toHaveAttribute("href", "https://celoscan.io/tx/0xfeed");
+
+      fireEvent.click(line);
+      expect(mockNavigateToGuardian.mock.calls[0][0].decisionRef).toMatchObject({
+        kind: "execution",
+        txHash: "0xfeed",
+        durationMs: 4300,
+      });
+    });
+
+    it("omits the duration when the record predates instrumentation — never a fabricated 0", () => {
+      mockVisibility.current = "informed";
+      mockSessionInfo.current = {
+        decisionLog: [
+          {
+            capturedAt: new Date(Date.now() - 60_000).toISOString(),
+            status: "awaiting_confirmation",
+            reason: "Waiting for first confirmation",
+            targetToken: "KESm",
+          },
+        ],
+      };
+      connected();
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("ring-select-kesm"));
+      const line = screen.getByTestId("guardian-attribution");
+      expect(line.textContent).not.toContain("decided in");
+    });
   });
 });

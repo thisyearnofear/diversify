@@ -83,6 +83,12 @@ export interface GuardianAnchorRecord {
    * fully verified.
    */
   evidenceUploaded?: boolean;
+  /**
+   * Measured wall-clock ms for the execution attempt this anchor records.
+   * Optional: anchors written before instrumentation carry no timing, and
+   * the UI must omit rather than interpolate 0.
+   */
+  durationMs?: number;
 }
 
 /**
@@ -115,9 +121,33 @@ export interface GuardianDecisionEntry {
    * the candidate they declined.
    */
   identityKey?: string;
+  /**
+   * Measured wall-clock ms for executions (rebalance attempt duration).
+   * Optional: entries journaled before instrumentation carry no timing,
+   * and the UI must omit rather than interpolate 0.
+   */
+  durationMs?: number;
+}
+
+export interface GuardianActivityStats {
+  /** ISO week the counters belong to; stale week means "reset on next write". */
+  week: string;
+  /** Recommendation candidates the loop evaluated for this user. */
+  evaluated: number;
+  /** Executions attempted (success/failure lives on the anchor records). */
+  executed: number;
+  /** Declines journaled to `decisionLog`. */
+  declined: number;
 }
 
 export interface GuardianStateRecord {
+  /**
+   * Per-user weekly activity counters maintained by the Guardian loop
+   * (`bumpUserActivity`). Reset when the ISO week rolls over; the
+   * while-you-were-away line only renders same-week deltas from this.
+   * Absent on legacy documents — the UI omits the line, never zeros.
+   */
+  activityStats?: GuardianActivityStats;
   /**
    * Head of `recommendationQueue` — kept for backward-compatible readers
    * (permission API, AgentTierStatus, rebalance). Prefer enqueue/dequeue
@@ -183,6 +213,7 @@ function normalizeUserAddress(userAddress: string): string {
 
 /** Fields persisted on the GuardianState document that we project back out. */
 const STATE_FIELDS: Array<keyof GuardianStateRecord> = [
+  'activityStats',
   'latestRecommendation',
   'recommendationQueue',
   'latestAnchor',
@@ -340,6 +371,44 @@ export async function appendDecisionLog(
     ],
     { upsert: true },
   ).lean();
+}
+
+/**
+ * Atomically bump a user's weekly activity counters. Single aggregation
+ * `findOneAndUpdate`: when the stored week differs from `week`, each counter
+ * starts from 0 instead of the stale value (reset-on-week-mismatch), so the
+ * read-modify-write race the old file store had cannot resurrect last week's
+ * totals.
+ */
+export async function bumpUserActivity(
+  userAddress: string,
+  patch: { evaluated?: number; executed?: number; declined?: number },
+  week: string,
+): Promise<void> {
+  const sameWeek = (field: 'evaluated' | 'executed' | 'declined') => ({
+    $cond: [
+      { $eq: ['$activityStats.week', week] },
+      { $ifNull: [`$activityStats.${field}`, 0] },
+      0,
+    ],
+  });
+  await dbConnect();
+  await GuardianState.findOneAndUpdate(
+    { userAddress: normalizeUserAddress(userAddress) },
+    [
+      {
+        $set: {
+          activityStats: {
+            week,
+            evaluated: { $add: [sameWeek('evaluated'), patch.evaluated ?? 0] },
+            executed: { $add: [sameWeek('executed'), patch.executed ?? 0] },
+            declined: { $add: [sameWeek('declined'), patch.declined ?? 0] },
+          },
+        },
+      },
+    ],
+    { upsert: true },
+  ).lean().catch(() => undefined);
 }
 
 export async function getGuardianState(userAddress: string): Promise<GuardianStateRecord | null> {

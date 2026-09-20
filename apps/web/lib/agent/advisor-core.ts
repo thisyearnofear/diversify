@@ -40,6 +40,10 @@ type ConversationRequest = {
   financialStrategy?: FinancialStrategy;
   /** Research evidence from the gateway (macro data, Bright Data scrapes, etc.) */
   macroData?: Record<string, any>;
+  /** Guardian decision/execution records attached to a drill-down — the
+   *  answer should be grounded in the actual journaled record, not the
+   *  user's paraphrase of it. */
+  contextRecords?: Array<Record<string, unknown>>;
 };
 
 type AnalysisRequest = {
@@ -361,6 +365,35 @@ function buildResearchEvidenceSummary(macroData?: Record<string, any>): Research
   };
 }
 
+/**
+ * Render drill-down Guardian decision records as readable evidence lines.
+ * Field-whitelist + flatten + length cap: these arrive from the client, so
+ * arbitrary payload shapes must not leak into the system prompt verbatim.
+ */
+const DECISION_RECORD_FIELDS = [
+  'capturedAt', 'kind', 'source', 'status', 'reason', 'targetToken', 'txHash', 'durationMs',
+] as const;
+
+export function formatDecisionRecords(records?: Array<Record<string, unknown>>): string {
+  if (!Array.isArray(records) || records.length === 0) return '';
+  const entries = records.slice(0, 5)
+    .map((rec) => {
+      if (!rec || typeof rec !== 'object') return null;
+      const fields = DECISION_RECORD_FIELDS
+        .map((key) => {
+          const value = (rec as Record<string, unknown>)[key];
+          if (typeof value !== 'string' && typeof value !== 'number') return null;
+          const flat = String(value).replace(/[\r\n]+/g, ' ').slice(0, 240);
+          return `${key}: ${flat}`;
+        })
+        .filter(Boolean);
+      return fields.length > 0 ? `- ${fields.join(' · ')}` : null;
+    })
+    .filter((line): line is string => line !== null);
+  if (entries.length === 0) return '';
+  return `\nGUARDIAN DECISION RECORDS (journaled by the Guardian loop — ground your answer in these, quote times and reasons as recorded):\n${entries.join('\n')}\n`;
+}
+
 function getPortfolioContext(portfolio?: ConversationRequest['portfolio']): string {
   if (!portfolio) return '';
 
@@ -494,6 +527,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     portfolioContext +
     strategyContext +
     brightDataContext +
+    formatDecisionRecords(input.contextRecords) +
     memoryContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
@@ -748,6 +782,7 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
     portfolioContext +
     strategyContext +
     brightDataContext +
+    formatDecisionRecords(input.contextRecords) +
     memoryContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [

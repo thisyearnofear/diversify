@@ -5,6 +5,7 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import { usePrivy } from "@privy-io/react-auth";
 import { useVoiceEnabled } from "../ui/VoiceButton";
 import { useToast } from "../ui/Toast";
+import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
 
 const isDev = process.env.NODE_ENV === "development";
 const AUTOMATION_STORAGE_KEY = "diversifi-automation-prefs";
@@ -110,6 +111,11 @@ export default function AutomationSettings({
     disable: disableVoice,
   } = useVoiceEnabled();
   const { showToast } = useToast();
+  const {
+    visibility,
+    origin,
+    setVisibility,
+  } = useGuardianVisibility();
   const [preferences, setPreferences] = useState<AutomationPreferences | null>(
     null,
   );
@@ -623,6 +629,59 @@ export default function AutomationSettings({
           </div>
         </motion.div>
       )}
+
+      {/* Guardian Updates Visibility */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <span className="text-2xl">🛡️</span>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white">
+              Guardian Updates
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              How much of the Guardian's work the app shows you
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(["quiet", "informed"] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => setVisibility(mode, "user")}
+              aria-pressed={visibility === mode}
+              className={`flex flex-col p-4 rounded-xl border-2 transition-colors text-left ${
+                visibility === mode
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20"
+                  : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
+              }`}
+            >
+              <span className="font-black text-sm uppercase tracking-tight">
+                {mode === "quiet" ? "Quiet" : "Informed"}
+              </span>
+              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight mt-1">
+                {mode === "quiet"
+                  ? "Decisions stay behind Ask Guardian — surfaces stay minimal."
+                  : "Attribution lines, activity counts, and cadence stats on Home and Shield."}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <p className="mt-3 text-[10px] text-gray-400 dark:text-gray-500">
+          {origin === "persona"
+            ? "Following your Simple/Advanced mode. Choose above to decide independently."
+            : origin === "agent"
+              ? "Set by Guardian from a conversation — change it back here anytime."
+              : "Set manually here."}{" "}
+          You can also just tell Guardian: "show me less" or "explain every change".
+        </p>
+      </motion.div>
 
       {/* Email Notifications */}
       <motion.div

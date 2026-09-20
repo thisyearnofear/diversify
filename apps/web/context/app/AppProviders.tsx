@@ -9,6 +9,7 @@ import { WalletProvider } from '@/components/wallet/WalletProvider';
 import { DemoModeProvider } from './DemoModeContext';
 import { PortfolioProvider } from './PortfolioContext';
 import { AgentChatProvider } from './AgentChatContext';
+import { GuardianVisibilityProvider } from './GuardianVisibilityContext';
 
 /**
  * AppProviders
@@ -25,6 +26,8 @@ import { AgentChatProvider } from './AgentChatContext';
  *   instead of once per consumer (AgentTierStatus, useAgentChat, SwapTab, etc.)
  * - AgentChatProvider shares isChatting/thinkingStep state across
  *   components without a module-level pub-sub.
+ * - GuardianVisibilityProvider reads both useExperience() and
+ *   useWalletContext(), so it must sit below both providers.
  *
  * MotionConfig is the global reduced-motion backstop: any framer-motion
  * animation not explicitly gated still respects prefers-reduced-motion
@@ -43,7 +46,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                 <DemoModeProvider>
                   <PortfolioProvider>
                     <AgentChatProvider>
-                      <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                      <GuardianVisibilityProvider>
+                        <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                      </GuardianVisibilityProvider>
                     </AgentChatProvider>
                   </PortfolioProvider>
                 </DemoModeProvider>

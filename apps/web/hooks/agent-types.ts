@@ -417,7 +417,15 @@ export interface AgentChatState {
 }
 
 export interface AgentChatActions {
-  sendChatMessage: (content: string) => Promise<void>;
+  /**
+   * `decisionRef` attaches a journaled Guardian record to the message —
+   * the advisor answers grounded in that record (drill-down path from the
+   * Shield inspector / Home activity line).
+   */
+  sendChatMessage: (
+    content: string,
+    options?: { decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef },
+  ) => Promise<void>;
   addMessage: (message: AIMessage) => void;
   clearMessages: () => void;
   /**

@@ -27,6 +27,7 @@ export interface ITypeSafeSignalReview extends Document {
     urgencyConfidence: number;
     sourceQuality: number;
     sourceQualityConfidence: number;
+    durationMs?: number;
   };
   /** Shadow records are comparative telemetry, not an audit system. */
   expiresAt: Date;

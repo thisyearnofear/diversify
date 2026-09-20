@@ -28,11 +28,13 @@ export function useAdvisor() {
       message: string,
       options?: {
         includeVoiceInsights?: boolean;
+        /** Journaled Guardian record attached for a grounded drill-down. */
+        decisionRef?: import('../context/app/NavigationContext').GuardianDecisionRef;
       },
     ) => {
       addUserMessage(message);
       setDrawerOpen(true);
-      sendChatMessage(message);
+      sendChatMessage(message, options?.decisionRef ? { decisionRef: options.decisionRef } : undefined);
 
       if (!options?.includeVoiceInsights) {
         return;

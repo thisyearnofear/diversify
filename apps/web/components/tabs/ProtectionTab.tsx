@@ -21,6 +21,12 @@ import { useToast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
+import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
+import { findTokenAttribution, newestExecutionAnchor } from "@/lib/agent/decision-attribution";
+import { formatDuration, timeAgo } from "@/lib/format-duration";
+import type { GuardianDecisionRef } from "@/context/app/NavigationContext";
+import { motion, useReducedMotion } from "framer-motion";
+import { springPop } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
@@ -93,6 +99,8 @@ export default function ProtectionTab({
   const { navigateToSwap, navigateToGuardian, compareRequested, consumeCompareRequest } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
+  const { visibility } = useGuardianVisibility();
+  const reducedMotion = useReducedMotion();
   const { askAdvisor } = useAdvisor();
   const isDemo = demoMode.isActive;
 
@@ -768,6 +776,68 @@ export default function ProtectionTab({
               <p data-testid="leg-why" className="text-xs text-gray-500 dark:text-gray-400">
                 {leg.why}
               </p>
+            );
+          })()}
+          {/* F1 attribution — informed mode surfaces the Guardian's own
+              user-scoped record for this slice (decline / proposal), or its
+              last execution. Quiet mode and pre-instrumentation sessions
+              render nothing; unmeasured durations are omitted, never 0. */}
+          {visibility === "informed" && (() => {
+            const attr = findTokenAttribution(sessionInfo, focusedToken);
+            const anchor = newestExecutionAnchor(sessionInfo);
+            if (!attr && !anchor) return null;
+            const ms = formatDuration(attr?.durationMs ?? anchor?.durationMs);
+            const line = attr
+              ? `Guardian ${attr.kind === "decline" ? `stood down on ${focusedToken}` : `proposed a move for ${focusedToken}`} · ${timeAgo(attr.capturedAt)}${ms ? ` · decided in ${ms}` : ""}`
+              : `Guardian's last execution · ${timeAgo(anchor!.capturedAt)}${ms ? ` · took ${ms}` : ""}`;
+            const prompt = attr
+              ? `Guardian, you ${attr.kind === "decline" ? "stood down" : "made a proposal"} on my ${focusedToken} position (${attr.status}${attr.reason ? ` — ${attr.reason}` : ""}). Explain what you saw and what would change your mind.`
+              : `Guardian, walk me through your most recent execution for me (${anchor!.status}). What moved and why?`;
+            const decisionRef: GuardianDecisionRef = attr
+              ? {
+                  capturedAt: attr.capturedAt,
+                  kind: attr.kind === "decline" ? "decision" : "proposal",
+                  source: attr.source,
+                  status: attr.status,
+                  reason: attr.reason,
+                  targetToken: attr.targetToken,
+                  durationMs: attr.durationMs,
+                }
+              : {
+                  capturedAt: anchor!.capturedAt,
+                  kind: "execution",
+                  status: anchor!.status,
+                  txHash: anchor!.txHash,
+                  durationMs: anchor!.durationMs,
+                };
+            return (
+              <motion.div
+                key={focusedToken}
+                initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={springPop}
+                className="space-y-1"
+              >
+                <button
+                  type="button"
+                  data-testid="guardian-attribution"
+                  onClick={() => navigateToGuardian({ summary: line, prompt, decisionRef })}
+                  className="min-h-[36px] text-left text-xs font-semibold text-blue-600 dark:text-blue-400"
+                >
+                  {line} →
+                </button>
+                {anchor?.explorerUrl && (
+                  <a
+                    data-testid="guardian-attribution-receipt"
+                    href={anchor.explorerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block text-[11px] text-gray-500 dark:text-gray-400 underline decoration-gray-300 dark:decoration-gray-600"
+                  >
+                    On-chain receipt ({anchor.status})
+                  </a>
+                )}
+              </motion.div>
             );
           })()}
           {!isLegFillable(focusedToken, chainId) && (

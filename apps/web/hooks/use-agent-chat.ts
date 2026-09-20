@@ -17,6 +17,11 @@ import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
 import { trackFunnelEvent } from "../lib/analytics";
 import { buildWalletPortfolioView } from "../lib/wallet-portfolio-view";
+import { useGuardianVisibilityOptional } from "../context/app/GuardianVisibilityContext";
+import {
+  classifyVisibilityIntent,
+  visibilityConfirmation,
+} from "../lib/guardian-visibility-intent";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -73,6 +78,7 @@ export function useAgentChat({
   const { fetchPaidSource } = useX402Payment();
   const { addActivity } = useAgentActivities();
   const { deductCredits, status: creditsStatus } = useCredits();
+  const visibilityCtx = useGuardianVisibilityOptional();
 
   // Shared chat state via React Context (replaces module-level pub-sub).
   // Falls back to local state if no provider is present (tests).
@@ -144,7 +150,12 @@ export function useAgentChat({
   );
 
   const sendChatMessage = useCallback(
-    async (content: string) => {
+    async (
+      content: string,
+      options?: {
+        decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef;
+      },
+    ) => {
       if (!capabilities.chat) {
         addMessage({
           role: "assistant",
@@ -153,6 +164,23 @@ export function useAgentChat({
           type: "text",
         });
         updateChatState({ isChatting: false, thinkingStep: "" });
+        return;
+      }
+
+      // Legibility preference flips are a fixed utterance class handled
+      // locally — zero LLM cost, works offline, and the confirmation names
+      // where to reverse it. Inert when no visibility provider is mounted.
+      const visibilityIntent = visibilityCtx
+        ? classifyVisibilityIntent(content)
+        : null;
+      if (visibilityIntent && visibilityCtx) {
+        visibilityCtx.setVisibility(visibilityIntent, "agent");
+        addMessage({
+          role: "assistant",
+          content: visibilityConfirmation(visibilityIntent),
+          timestamp: new Date(),
+          type: "text",
+        });
         return;
       }
 
@@ -464,6 +492,7 @@ export function useAgentChat({
             portfolio: portfolioSnapshot,
             financialStrategy: getPersistedStrategy(),
             macroData: Object.keys(macroData).length > 0 ? macroData : undefined,
+            contextRecords: options?.decisionRef ? [{ ...options.decisionRef }] : undefined,
           }),
         });
 
@@ -761,6 +790,7 @@ export function useAgentChat({
       patchMessage,
       deductCredits,
       updateChatState,
+      visibilityCtx,
     ],
   );
 

@@ -139,4 +139,58 @@ describe('assessMacroSignalWithTypeSafe', () => {
       fetchImpl,
     })).resolves.toBeNull();
   });
+
+  it('stamps a measured durationMs on the gateway path', async () => {
+    const nowSpy = vi.spyOn(Date, 'now')
+      .mockReturnValueOnce(1_000)
+      .mockReturnValueOnce(1_750);
+    const evaluateGateway = vi.fn().mockResolvedValue({
+      modelId: 'typesafe-ai/jev',
+      answers: {
+        materiality: { type: 'boolean', probability: 0.94 },
+        category: { type: 'choice', choice: 'rate_hike' },
+        urgency: { type: 'choice', choice: 'review' },
+        source_quality: { type: 'score', score: 1.6 },
+      },
+    });
+
+    const result = await assessMacroSignalWithTypeSafe(input, {
+      enabled: true,
+      aiGatewayApiKey: 'gateway-key',
+      evaluateGateway,
+      fetchImpl: vi.fn(),
+    });
+
+    expect(result?.durationMs).toBe(750);
+    nowSpy.mockRestore();
+  });
+
+  it('stamps a measured durationMs on the direct path', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(500);
+    try {
+      const fetchImpl = vi.fn(async () => {
+        vi.advanceTimersByTime(700);
+        return jsonResponse({
+          model: 'jev-1.13.0',
+          answers: {
+            materiality: { type: 'noul', noul: 0.91 },
+            category: { type: 'choice', choice: 'rate_hike', confidence: 0.88, probabilities: { rate_hike: 0.88 } },
+            urgency: { type: 'choice', choice: 'review', confidence: 0.77, probabilities: { review: 0.77 } },
+            source_quality: { type: 'score', score: 1.8, confidence: 0.82, probabilities: { '2': 0.8 } },
+          },
+        });
+      });
+
+      const result = await assessMacroSignalWithTypeSafe(input, {
+        enabled: true,
+        apiKey: 'test-key',
+        fetchImpl,
+      });
+
+      expect(result?.durationMs).toBe(700);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -23,6 +23,23 @@ export interface GuardianContext {
   summary: string;
   /** Prefilled Ask-Guardian prompt carrying the same context. */
   prompt: string;
+  /**
+   * The actual journaled record behind an attribution line, carried so the
+   * Guardian tab can render it verbatim and ground the answer in what was
+   * measured — not a paraphrase.
+   */
+  decisionRef?: GuardianDecisionRef;
+}
+
+export interface GuardianDecisionRef {
+  capturedAt: string;
+  kind: 'decision' | 'execution' | 'proposal';
+  source?: string;
+  status?: string;
+  reason?: string;
+  targetToken?: string;
+  txHash?: string;
+  durationMs?: number;
 }
 
 type NavigationContextValue = NavigationState & {

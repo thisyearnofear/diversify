@@ -24,6 +24,10 @@ import { springSoft } from "@/lib/motion-tokens";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import FlickScrollRow, { useDidDrag } from "@/components/shared/FlickScrollRow";
+import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
+import { useNavigation } from "@/context/app/NavigationContext";
+import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
+import { timeAgo } from "@/lib/format-duration";
 
 interface RegionDatum {
   region: string;
@@ -134,6 +138,75 @@ export function HomeRiskTheater({
       return `${moment.currencyCode} steady vs ${moment.benchmark} since your last visit (${elapsed})`;
     }
     return `Since your last visit (${elapsed}): ${moment.currencyCode} moved ${diff > 0 ? "+" : ""}${diff} pts vs ${moment.benchmark}`;
+  })();
+
+  // "While you were away" — the Guardian's own weekly counters (server-side,
+  // so a capped in-memory log can't inflate them) rendered only in informed
+  // mode. Same-week deltas against the last visit's snapshot; across a week
+  // boundary the counters reset, so we quote "this week" instead. Missing
+  // activityStats (legacy session doc) → the line is omitted, never
+  // zero-filled, and decisionLog detail is always labeled "recent".
+  const { visibility } = useGuardianVisibility();
+  const { navigateToGuardian } = useNavigation();
+  const sessionInfo = useGuardianSessionInfo(visibility === "informed" && !isDemo);
+  const activityStats = sessionInfo?.activityStats ?? null;
+  const previousActivity = useSinceLastVisit(
+    "guardian-activity",
+    activityStats
+      ? `${activityStats.week}|${activityStats.evaluated}|${activityStats.executed}|${activityStats.declined}`
+      : null,
+  );
+  const guardianAway = (() => {
+    if (visibility !== "informed" || !activityStats) return null;
+    const now = Date.now();
+    let prev: { week: string; evaluated: number; executed: number; declined: number } | null = null;
+    if (previousActivity) {
+      const [week, ev, ex, de] = previousActivity.value.split("|");
+      const parsed = { week: week ?? "", evaluated: Number(ev), executed: Number(ex), declined: Number(de) };
+      if ([parsed.evaluated, parsed.executed, parsed.declined].every(Number.isFinite)) {
+        prev = parsed;
+      }
+    }
+    const sameWeek = prev && prev.week === activityStats.week;
+    const elapsed = prev && previousActivity ? formatElapsed(previousActivity.at, now) : null;
+    // Same rule as the currency line: a snapshot younger than 6h is the
+    // same session, not a visit — no "while you were away" story to tell.
+    if (previousActivity && now - previousActivity.at < MIN_SNAPSHOT_AGE_MS) return null;
+    const counts = sameWeek
+      ? {
+          evaluated: Math.max(0, activityStats.evaluated - prev!.evaluated),
+          executed: Math.max(0, activityStats.executed - prev!.executed),
+          declined: Math.max(0, activityStats.declined - prev!.declined),
+        }
+      : {
+          evaluated: activityStats.evaluated,
+          executed: activityStats.executed,
+          declined: activityStats.declined,
+        };
+    if (!sameWeek && !elapsed && counts.evaluated === 0) return null;
+    if (sameWeek && counts.evaluated === 0 && counts.executed === 0 && counts.declined === 0) {
+      return null;
+    }
+    const lead = sameWeek
+      ? `Since your last visit (${elapsed ?? "recently"}):`
+      : "This week:";
+    const parts = [
+      `Guardian ran ${counts.evaluated} check${counts.evaluated === 1 ? "" : "s"}`,
+      counts.executed > 0 ? `${counts.executed} move${counts.executed === 1 ? "" : "s"}` : null,
+      counts.declined > 0 ? `${counts.declined} stand-down${counts.declined === 1 ? "" : "s"}` : null,
+      (sessionInfo?.decisionLog?.length ?? 0) > 0 ? "recent decisions in Ask Guardian" : null,
+    ].filter(Boolean);
+    const line = `${lead} ${parts.join(" · ")}`;
+    const recentDecisions = (sessionInfo?.decisionLog ?? [])
+      .slice(0, 3)
+      .map((d) => `- ${timeAgo(d.capturedAt)}: ${d.reason}`)
+      .join("\n");
+    const prompt =
+      `Guardian, ${lead.toLowerCase()} you ran ${counts.evaluated} checks, ` +
+      `${counts.executed} moves and ${counts.declined} stand-downs for me. ` +
+      `Walk me through what you did and why.` +
+      (recentDecisions ? `\nRecent decisions:\n${recentDecisions}` : "");
+    return { line, summary: line, prompt };
   })();
 
   const largest = useMemo(
@@ -341,6 +414,18 @@ export function HomeRiskTheater({
           <p data-testid="since-last-visit" className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">
             {sinceLine}
           </p>
+        )}
+        {guardianAway && (
+          <button
+            type="button"
+            data-testid="guardian-since-visit"
+            onClick={() =>
+              navigateToGuardian({ summary: guardianAway.summary, prompt: guardianAway.prompt })
+            }
+            className="mt-1 block w-full text-center text-[11px] font-semibold text-blue-600 dark:text-blue-400"
+          >
+            {guardianAway.line} →
+          </button>
         )}
         {holdingsStrip}
       </section>

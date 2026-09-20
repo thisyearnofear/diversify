@@ -37,7 +37,8 @@ import {
   releaseCycleExecutionClaim,
   type CycleExecutionContext,
 } from '../../../lib/guardian/cycle-execution';
-import { appendDecisionLog, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '@/lib/vault/guardian-state';
+import { appendDecisionLog, bumpUserActivity, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '@/lib/vault/guardian-state';
+import { bumpGlobalActivity, isoWeekKey } from '@/lib/guardian-activity-counter';
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { circleExecutor } from '@/lib/vault/executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
@@ -274,6 +275,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
    * surfaced in the journal alongside executed moves).
    */
   const pendingDecisions = new Map<string, GuardianDecisionEntry>();
+  /** Candidates examined per user this tick — feeds weekly activityStats. */
+  const evaluatedByUser = new Map<string, number>();
   const trackDecline = (
     userAddress: string,
     status: string,
@@ -314,6 +317,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const userAddress = perm.userAddress;
       const guardianState = await getGuardianState(userAddress);
       const queue = resolveRecommendationQueue(guardianState);
+      evaluatedByUser.set(userAddress, queue.length);
 
       // Skip if no pending recommendation
       if (queue.length === 0) {
@@ -623,6 +627,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // is always released — including the wei math and rec construction
       // below, which would otherwise leak the lock until the staleness
       // window if they threw.
+      const execStartedAt = Date.now();
       try {
         // cUSD is 18 decimals. Convert the USD notional to wei via integer
         // micro-USD math (6 dp) to keep cent precision without float drift at
@@ -739,8 +744,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             error: anchor.status === 'failed' ? anchor.error : undefined,
             evidenceUploaded: anchor.status === 'failed' ? undefined : anchor.evidenceUploaded,
             capturedAt: new Date().toISOString(),
+            durationMs: Date.now() - execStartedAt,
           };
           await persistAnchorRecord(userAddress, newAnchor);
+          // Global weekly telemetry: one attempted execution + its measured
+          // duration. Fire-and-forget; telemetry never gates the loop.
+          bumpGlobalActivity({
+            executions: 1,
+            durationMs: newAnchor.durationMs,
+          }).catch(() => {});
 
           // Per-cycle 0G DA snapshot of the full Guardian state.
           // Awaited so the checkpoint result is recorded, not fire-and-forget.
@@ -807,6 +819,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             status: 'failed',
             error: failureReason,
             capturedAt: new Date().toISOString(),
+            durationMs: Date.now() - execStartedAt,
           }).catch(() => {});
         }
       } catch (execError: any) {
@@ -829,6 +842,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           status: 'failed',
           error: execError.message,
           capturedAt: new Date().toISOString(),
+          durationMs: Date.now() - execStartedAt,
         }).catch(() => {});
       } finally {
         // Always release the lock so a failed tick doesn't wedge the user
@@ -857,6 +871,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         ),
       );
     }
+
+    // Weekly per-user counters (while-you-were-away line) + global tick
+    // telemetry. Both are fire-and-forget: a counter failure never wedges
+    // the loop, and a never-bumped user simply sees no activity line.
+    const activityWeek = isoWeekKey();
+    await Promise.allSettled(
+      [...evaluatedByUser.entries()].map(([userAddress, evaluated]) => {
+        const executed = results.filter(
+          (r) => r.userAddress === userAddress && (r.action === 'executed' || r.action === 'attempted'),
+        ).length;
+        const declined = pendingDecisions.has(userAddress) ? 1 : 0;
+        if (evaluated === 0 && executed === 0 && declined === 0) return Promise.resolve();
+        return Promise.resolve().then(() =>
+          bumpUserActivity(userAddress, { evaluated, executed, declined }, activityWeek),
+        );
+      }),
+    );
+    bumpGlobalActivity({
+      checks: activePermissions.length,
+      declines: declinesJournaled,
+    }).catch(() => {});
 
     let cycleMonitor: Awaited<ReturnType<typeof runCycleMonitor>> | null = null;
     try {
