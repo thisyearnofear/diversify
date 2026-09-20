@@ -88,6 +88,44 @@ Strategy. Still open:
 
 ---
 
+## Standing discipline — claims vs. implementation audit
+
+**Why:** three separate instances of the same failure shape have surfaced
+so far — docs/UI claiming more verifiability than the code guarantees:
+(1) 0G Storage labeled "DA" in docs when no DA SDK integration exists
+(fixed 2026-09-20, see `roadmap-log.md`); (2) `AnchorResult.status ===
+'anchored'` presented in the UI as fully verified evidence when the 0G
+Storage upload could have silently failed first, leaving `evidenceCid: ''`
+on a real on-chain tx (fixed 2026-09-20); (3) "on-chain ERC-7715
+enforcement" implied by old comments/docs when spending bounds are
+enforced only in application code (self-caught and documented in
+`guardian.md`, on-chain ERC-7710 redemption still deferred). Given that
+**verifiability is the product's core differentiator** (per `product.md`
+— "every high-impact recommendation leaves something a user can
+inspect"), a claims-outrunning-implementation gap is not generic tech
+debt; it directly undercuts the moat. This needs to become a standing
+check, not a one-off fix each time a reviewer catches it.
+
+**The check (run before any release/submission touching verifiability
+surfaces, and periodically otherwise):** for every "verified" /
+"anchored" / "enforced" / "live" claim in docs or UI copy, trace the
+actual code path and ask — does it guarantee the claim, or can it degrade
+silently to something weaker? Specifically:
+- Does a UI badge/label ever render the same way for "fully backed" and
+  "partially degraded" outcomes? (the evidenceUploaded gap's shape)
+- Does a doc name a specific product/component (DA, TEE, on-chain
+  enforcement) that the code doesn't actually call? (the 0G DA gap's shape)
+- Does "mock fallback allowed" ever apply outside dev/CI in a real
+  deploy path? (the environment-gating thread from this audit)
+
+**Open follow-up, larger scope (not bundled with the discipline above):**
+ERC-7710 on-chain enforcement (`guardian.md` § Target flow) is the
+single biggest latent gap of this shape — the Guardian is a *trusted*
+agent today, not a *constrained* one. Worth its own roadmap slot once
+the current wave's verifiability fixes are settled.
+
+---
+
 ## Post-9/10 — full-stack fintech infrastructure
 
 DiversiFi's product today is savings protection (hold → protect → monitor).
