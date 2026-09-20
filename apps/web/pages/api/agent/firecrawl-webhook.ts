@@ -19,12 +19,20 @@
  *   - Major stablecoin depeg trackers
  */
 
+import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateChatCompletion, cogneeMemoryService, recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
+import {
+  assessMacroSignalWithTypeSafe,
+  cogneeMemoryService,
+  constantTimeEqual,
+  generateChatCompletion,
+  recommendationLedgerService,
+} from '@diversifi/shared';
 import { enqueueRecommendation } from '@/lib/vault/guardian-state';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { Permission } from '../../../models/Permission';
 import { Vault } from '../../../models/Vault';
+import { TypeSafeSignalReview } from '../../../models/TypeSafeSignalReview';
 import dbConnect from '../../../lib/mongodb';
 
 // Webhook secret is mandatory in production: this endpoint fans a signal into
@@ -92,6 +100,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    // Shadow-only structured review of minimized public source material.
+    // It runs alongside the existing extractor and is recorded for later
+    // comparison, but cannot suppress, create, or modify any recommendation.
+    const typeSafeAssessmentPromise = assessMacroSignalWithTypeSafe({
+      sourceUrl: url,
+      sourceSummary: summary,
+      changeContent,
+    });
+
     const analysis = await generateChatCompletion({
       messages: [
         {
@@ -127,12 +144,53 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       return res.status(200).json({ acknowledged: true, action: 'parse_failed' });
     }
 
+    // Shadow telemetry is intentionally detached from the primary path: the
+    // optional vendor must neither delay macro-signal propagation nor influence
+    // whether the Guardian queues or executes a recommendation. Persist only a
+    // public-source fingerprint plus baseline/structured outputs — never users,
+    // wallet state, permissions, raw excerpts, or chat content.
+    const sourceFingerprint = createHash('sha256').update(`${url || ''}\n${changeContent}`).digest('hex');
+    const baseline = {
+      signal: parsed.signal || 'none',
+      confidence: Number(parsed.confidence) || 0,
+      actionable: Boolean(parsed.actionable),
+    };
+    void (async () => {
+      // Upsert the local baseline first so a fast vendor result cannot race an
+      // absent document. This detached task is telemetry only and is never
+      // awaited by the webhook's recommendation or execution path.
+      await dbConnect();
+      await TypeSafeSignalReview.findOneAndUpdate(
+        { sourceFingerprint },
+        {
+          $set: { sourceUrl: url, baseline },
+          $setOnInsert: {
+            sourceFingerprint,
+            // Shadow-mode comparison data expires after 30 days; it is not a
+            // user-facing audit record and must not become retained history.
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        },
+        { upsert: true },
+      ).exec();
+
+      const assessment = await typeSafeAssessmentPromise;
+      if (!assessment) return;
+      await TypeSafeSignalReview.findOneAndUpdate(
+        { sourceFingerprint },
+        { $set: { assessment } },
+      ).exec();
+    })().catch((error: unknown) =>
+      console.warn('[firecrawl-webhook] Could not record Signal Lens telemetry:', error),
+    );
+
     if (!parsed.actionable || parsed.confidence < 0.6) {
       return res.status(200).json({
         acknowledged: true,
         action: 'not_actionable',
         signal: parsed.signal,
         confidence: parsed.confidence,
+        signalLens: { status: 'shadow_started' },
       });
     }
 
@@ -228,6 +286,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       targetToken,
       usersUpdated,
       usersSkipped: skipped.length,
+      signalLens: { status: 'shadow_started' },
       anchor: {
         status: anchor.status,
         txHash: anchor.status === 'failed' ? undefined : anchor.txHash,

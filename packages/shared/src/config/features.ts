@@ -28,6 +28,13 @@ export const AI_FEATURES = {
 
   /** Real-time web / news / research search — TinyFish (free) or Venice web-enrich */
   WEB_SEARCH: !!(process.env.TINYFISH_API_KEY || process.env.VENICE_API_KEY),
+
+  /**
+   * Optional advisory-only structured review of public macro-source changes.
+   * This cannot alter Guardian execution policy; it is shadow-mode telemetry
+   * until an explicit product rollout enables a user-facing experience.
+   */
+  TYPESAFE_SIGNAL_LENS: process.env.ENABLE_TYPESAFE_SIGNAL_LENS === 'true' && !!process.env.TYPESAFE_API_KEY,
 } as const;
 
 // Autonomous/Blockchain features (optional, experimental)

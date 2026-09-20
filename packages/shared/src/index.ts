@@ -112,6 +112,12 @@ export { TokenVaultClient, type TokenVaultConfig } from './services/auth0-token-
 export { getOnrampSystemPrompt, getOnrampRecommendation } from './services/ai/onramp-agent-context';
 export { IntelligenceService } from './services/ai/intelligence.service';
 export {
+  assessMacroSignalWithTypeSafe,
+  type StructuredSignalAssessment,
+  type TypeSafeSignalCategory,
+  type TypeSafeSignalUrgency,
+} from './services/typesafe-signal-lens.service';
+export {
   recommendationLedgerService,
   setLedgerContractAddress,
   getLedgerContractAddress,
