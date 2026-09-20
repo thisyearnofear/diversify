@@ -113,6 +113,13 @@ export function GuardianCadenceLine() {
                 <p className="text-[10px] text-gray-500 dark:text-gray-400">
                     Signal Lens: {lens.reviews.toLocaleString()} advisory shadow reviews
                     {lensMedian ? ` · median ${lensMedian}` : ''}
+                    {lens.agreement && lens.agreement.compared >= 5 && (
+                        <span data-testid="guardian-lens-agreement">
+                            {' '}· agreed with our detector in{' '}
+                            {lens.agreement.agreeSignal + lens.agreement.agreeNone} of{' '}
+                            {lens.agreement.compared}
+                        </span>
+                    )}
                 </p>
             )}
         </div>

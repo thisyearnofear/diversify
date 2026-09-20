@@ -355,4 +355,47 @@ describe('Guardian cadence line (informed mode)', () => {
         await screen.findByTestId('live-proof-card');
         expect(screen.queryByTestId('guardian-cadence')).not.toBeInTheDocument();
     });
+
+    it('shows lens-vs-detector agreement once there is a meaningful sample', async () => {
+        cadenceMock.visibility = 'informed';
+        cadenceMock.data = {
+            guardian: WEEK,
+            signalLens: {
+                ...LENS,
+                agreement: {
+                    compared: 12,
+                    agreeSignal: 5,
+                    agreeNone: 6,
+                    lensOnly: 0,
+                    baselineOnly: 1,
+                    sameCategory: 4,
+                },
+            },
+        };
+        render(
+            <CtxWrap value={{ data: SAMPLE_DATA }}>
+                <LiveProofCard />
+            </CtxWrap>,
+        );
+        const line = await screen.findByTestId('guardian-lens-agreement');
+        expect(line.textContent).toContain('agreed with our detector in 11 of 12');
+    });
+
+    it('omits agreement for tiny samples and when no pair is comparable', async () => {
+        cadenceMock.visibility = 'informed';
+        for (const agreement of [
+            { compared: 3, agreeSignal: 2, agreeNone: 1, lensOnly: 0, baselineOnly: 0, sameCategory: 2 },
+            null,
+        ]) {
+            cadenceMock.data = { guardian: null, signalLens: { ...LENS, agreement } };
+            const { unmount } = render(
+                <CtxWrap value={{ data: SAMPLE_DATA }}>
+                    <LiveProofCard />
+                </CtxWrap>,
+            );
+            await screen.findByTestId('guardian-cadence');
+            expect(screen.queryByTestId('guardian-lens-agreement')).not.toBeInTheDocument();
+            unmount();
+        }
+    });
 });

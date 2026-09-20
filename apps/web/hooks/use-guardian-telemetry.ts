@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { LensAgreementSummary } from '@/lib/agent/lens-agreement';
 
 const CACHE_KEY = 'diversifi:guardian-telemetry:v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -31,6 +32,8 @@ export interface SignalLensTelemetryView {
     timedSampleCount: number;
     window: 'rolling_30d';
     note: 'advisory_shadow';
+    /** Detector agreement over comparable shadow pairs; null until any exist. */
+    agreement: LensAgreementSummary | null;
 }
 
 export interface GuardianTelemetryData {

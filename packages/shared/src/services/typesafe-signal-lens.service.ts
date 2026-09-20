@@ -261,6 +261,7 @@ export async function assessMacroSignalWithTypeSafe(
 
   try {
     const startedAt = Date.now();
+    const q = questions();
     const response = await fetchWithTimeout(
       TYPESAFE_ENDPOINT,
       {
@@ -273,10 +274,10 @@ export async function assessMacroSignalWithTypeSafe(
           state,
           model: 'jev-latest',
           questions: {
-            materiality: { type: 'noul', instructions: questions().materiality.instructions },
-            category: { ...questions().category, type: 'choice' },
-            urgency: { ...questions().urgency, type: 'choice' },
-            source_quality: { ...questions().source_quality, type: 'score' },
+            materiality: { type: 'noul', instructions: q.materiality.instructions },
+            category: { ...q.category, type: 'choice' },
+            urgency: { ...q.urgency, type: 'choice' },
+            source_quality: { ...q.source_quality, type: 'score' },
           },
         }),
       },
