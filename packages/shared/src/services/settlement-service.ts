@@ -13,6 +13,7 @@
 
 import { ethers } from 'ethers';
 import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS, ARBITRUM_TOKENS, ARBITRUM_SEPOLIA_TOKENS, HASHKEY_TOKENS, HASHKEY_TESTNET_TOKENS } from '../config';
+import { withTimeout } from '../utils/promise-utils';
 
 // Minimal ERC-20 ABI — transfer only
 const ERC20_TRANSFER_ABI = [
@@ -289,6 +290,10 @@ export const DEFAULT_SETTLEMENT_NETWORK: SettlementNetwork =
     (process.env.SETTLEMENT_NETWORK as SettlementNetwork) || 'ZERO_G';
 
 const SETTLEMENT_CACHE_TTL_MS = 30_000;
+// An unavailable RPC must not stall x402 settlement, Guardian work, or the
+// metrics endpoint indefinitely. Eight seconds matches the shared timeout
+// convention for chain-facing Guardian/vault operations.
+const SETTLEMENT_RPC_TIMEOUT_MS = 8_000;
 const SETTLEMENT_LOG_CHUNK_SIZE = 20_000;
 const SETTLEMENT_RECENT_LIMIT = 10;
 const MIN_LOG_CHUNK_SIZE = 500;
@@ -458,12 +463,16 @@ async function fetchTransferLogs(
         const end = Math.min(start + chunkSize - 1, toBlock);
 
         try {
-            const logs = await provider.getLogs({
-                address: usdcAddress,
-                fromBlock: start,
-                toBlock: end,
-                topics,
-            });
+            const logs = await withTimeout(
+                provider.getLogs({
+                    address: usdcAddress,
+                    fromBlock: start,
+                    toBlock: end,
+                    topics,
+                }),
+                SETTLEMENT_RPC_TIMEOUT_MS,
+                `[SettlementService] ${network} Transfer-log RPC timed out`,
+            );
             allLogs.push(...logs);
             start = end + 1;
         } catch (error) {
@@ -526,7 +535,11 @@ async function scanSettlementRange(
     }, {});
     const recentTransfers = sortRecentTransfers(transferRecords).slice(0, maxRecentTransfers);
     const uniqueBlocks = [...new Set(recentTransfers.map((transfer) => transfer.blockNumber))];
-    const blocks = await Promise.all(uniqueBlocks.map((blockNumber) => provider.getBlock(blockNumber)));
+    const blocks = await Promise.all(uniqueBlocks.map((blockNumber) => withTimeout(
+        provider.getBlock(blockNumber),
+        SETTLEMENT_RPC_TIMEOUT_MS,
+        `[SettlementService] ${network} block RPC timed out`,
+    )));
     const blockTimestamps = new Map(blocks.map((block) => [block.number, new Date(block.timestamp * 1000).toISOString()]));
     const recentTransfersWithTimestamps = recentTransfers.map((transfer) => ({
         ...transfer,
@@ -554,7 +567,11 @@ export async function getAgentUSDCBalance(network: SettlementNetwork = 'ZERO_G')
     try {
         const c = getContracts(network);
         if (!c) return null;
-        const raw: ethers.BigNumber = await c.usdc.balanceOf(c.signer.address);
+        const raw: ethers.BigNumber = await withTimeout(
+            c.usdc.balanceOf(c.signer.address),
+            SETTLEMENT_RPC_TIMEOUT_MS,
+            `[SettlementService] ${network} USDC-balance RPC timed out`,
+        );
         return ethers.utils.formatUnits(raw, 6);
     } catch {
         return null;
@@ -587,7 +604,11 @@ export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SE
     // Attempt to get block number, fallback to 0 if network is down
     let latestBlock = 0;
     try {
-        latestBlock = await provider.getBlockNumber();
+        latestBlock = await withTimeout(
+            provider.getBlockNumber(),
+            SETTLEMENT_RPC_TIMEOUT_MS,
+            `[SettlementService] ${network} block-number RPC timed out`,
+        );
     } catch (err) {
         console.warn(`[SettlementService] Failed to get block number for ${network}:`, err);
         return createEmptySettlementStats(network, agentAddress, recipientAddress);

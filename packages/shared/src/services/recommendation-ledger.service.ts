@@ -20,7 +20,7 @@
 
 import { ethers } from 'ethers6';
 import { isApacRailProfile, isCaribbeanRailProfile } from '../types/strategy';
-import { fetchWithTimeout } from '../utils/promise-utils';
+import { fetchWithTimeout, withTimeout } from '../utils/promise-utils';
 
 // ============================================================================
 // TYPES
@@ -711,8 +711,11 @@ export async function getLedgerStats(chainId?: number): Promise<{
     try {
         const resolvedChainId = chainId ?? getDefaultLedgerChainId();
         const contract = getReadOnlyContract(resolvedChainId);
-        const total = await contract.totalRecommendations();
-        const actualOwner = await contract.owner();
+        const total = await withTimeout(
+            contract.totalRecommendations(),
+            8_000,
+            `[RecommendationLedger] Stats RPC timed out for chain ${resolvedChainId}`,
+        );
         const config = getLedgerConfig(resolvedChainId);
 
         return {

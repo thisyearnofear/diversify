@@ -9,7 +9,18 @@ import {
   getSettlementConfig,
   SETTLEMENT_ENV,
   getLedgerStats,
+  withTimeout,
 } from '@diversifi/shared';
+
+const METRICS_RPC_TIMEOUT_MS = 5_000;
+
+function readMetricsRpc<T>(promise: Promise<T>, label: string): Promise<T | null> {
+  return withTimeout(promise, METRICS_RPC_TIMEOUT_MS, `${label} timed out`)
+    .catch((error: unknown) => {
+      console.warn(`[x402-metrics] ${label} unavailable:`, error instanceof Error ? error.message : error);
+      return null;
+    });
+}
 
 const JUDGE_SAFE_SOURCE_LABELS: Record<string, string> = {
   '0.001000': 'Premium Micro Source',
@@ -38,10 +49,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   // Agent wallet info — lets judges verify the on-chain settlement address
   const settlementConfig = getSettlementConfig();
   const agentAddress = getAgentAddress();
-  const agentBalance = agentAddress ? await getAgentUSDCBalance(DEFAULT_SETTLEMENT_NETWORK) : null;
-  const chainSettlement = agentAddress
-    ? await getSettlementStats(DEFAULT_SETTLEMENT_NETWORK, { agentAddress, maxRecentTransfers: 10 }).catch(() => null)
-    : null;
+  // These chain reads are observability only. Run them concurrently and bound
+  // each one so an unavailable RPC returns degraded-but-honest metrics rather
+  // than leaving this public endpoint without an HTTP response.
+  const [agentBalance, chainSettlement, ledgerStats] = await Promise.all([
+    agentAddress
+      ? readMetricsRpc(getAgentUSDCBalance(DEFAULT_SETTLEMENT_NETWORK), 'agent USDC balance')
+      : Promise.resolve(null),
+    agentAddress
+      ? readMetricsRpc(
+          getSettlementStats(DEFAULT_SETTLEMENT_NETWORK, { agentAddress, maxRecentTransfers: 10 }),
+          'settlement history',
+        )
+      : Promise.resolve(null),
+    readMetricsRpc(getLedgerStats(), 'recommendation ledger stats'),
+  ]);
   const settlementAnalytics = chainSettlement as (typeof chainSettlement & {
     amountBreakdown?: Record<string, number>;
     recentTransfers?: Array<{ amountUSDC: string; blockTimestamp?: string | null }>;
@@ -82,14 +104,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     : shouldUseChainDerivedAnalytics
       ? [`Durable app-level analytics are now inferred from ${settlementConfig.name} settlement history while persistent telemetry is finalized`]
       : [];
-
-  // Fetch 0G Recommendation Ledger stats (non-blocking — graceful fallback)
-  let ledgerStats = null;
-  try {
-    ledgerStats = await getLedgerStats();
-  } catch {
-    // Ledger not deployed or unreachable
-  }
 
   const settlementPayload = {
     network: DEFAULT_SETTLEMENT_NETWORK,
