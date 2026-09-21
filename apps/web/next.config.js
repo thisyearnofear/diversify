@@ -21,9 +21,34 @@ const nextConfig = {
   ],
 
   // `ai` is ESM-only and is loaded at runtime by the server-only TypeSafe
-  // Signal Lens gateway adapter. Keep it external to the CommonJS shared
-  // package transform while ensuring Next traces it into standalone output.
+  // Gateway adapters (Signal Lens + Ask-the-World). Keep it external to the
+  // CommonJS shared package transform. The loaders use `new Function(…import…)`
+  // so NFT cannot see the dependency — force-include it (and its @ai-sdk/*
+  // peers) into the standalone trace for the routes that call Gateway.
   serverExternalPackages: ['ai'],
+  outputFileTracingIncludes: {
+    // Full Gateway runtime graph — dynamic `import('ai')` hides these from NFT.
+    '/api/agent/ask-world-spike': [
+      './node_modules/ai/**/*',
+      './node_modules/@ai-sdk/**/*',
+      './node_modules/@vercel/oidc/**/*',
+      './node_modules/@standard-schema/spec/**/*',
+      './node_modules/@workflow/serde/**/*',
+      './node_modules/eventsource-parser/**/*',
+      './node_modules/json-schema/**/*',
+      './node_modules/undici/**/*',
+    ],
+    '/api/agent/firecrawl-webhook': [
+      './node_modules/ai/**/*',
+      './node_modules/@ai-sdk/**/*',
+      './node_modules/@vercel/oidc/**/*',
+      './node_modules/@standard-schema/spec/**/*',
+      './node_modules/@workflow/serde/**/*',
+      './node_modules/eventsource-parser/**/*',
+      './node_modules/json-schema/**/*',
+      './node_modules/undici/**/*',
+    ],
+  },
 
   // NOTE (2026-09-11): outputFileTracingExcludes REMOVED entirely. Both
   // attempts broke ALL /api/* lambdas in production with MODULE_NOT_FOUND for
