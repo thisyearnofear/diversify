@@ -28,7 +28,7 @@ const cadenceMock = vi.hoisted(() => ({
     data: null as null | {
         guardian: Record<string, unknown> | null;
         signalLens: Record<string, unknown> | null;
-        askWorldSpike: Record<string, unknown> | null;
+        askWorldSpike?: Record<string, unknown> | null;
     },
 }));
 vi.mock('@/context/app/GuardianVisibilityContext', () => ({
@@ -324,6 +324,7 @@ describe('Guardian cadence line (informed mode)', () => {
         cadenceMock.data = {
             guardian: { ...WEEK, medianDecisionMs: null, timedSampleCount: 0 },
             signalLens: { ...LENS, medianMs: null },
+            askWorldSpike: null,
         };
         render(
             <CtxWrap value={{ data: SAMPLE_DATA }}>
@@ -350,7 +351,7 @@ describe('Guardian cadence line (informed mode)', () => {
 
     it('renders nothing when telemetry is absent', async () => {
         cadenceMock.visibility = 'informed';
-        cadenceMock.data = { guardian: null, signalLens: null };
+        cadenceMock.data = { guardian: null, signalLens: null, askWorldSpike: null };
         render(
             <CtxWrap value={{ data: SAMPLE_DATA }}>
                 <LiveProofCard />
@@ -375,6 +376,7 @@ describe('Guardian cadence line (informed mode)', () => {
                     sameCategory: 4,
                 },
             },
+            askWorldSpike: null,
         };
         render(
             <CtxWrap value={{ data: SAMPLE_DATA }}>
@@ -391,7 +393,7 @@ describe('Guardian cadence line (informed mode)', () => {
             { compared: 3, agreeSignal: 2, agreeNone: 1, lensOnly: 0, baselineOnly: 0, sameCategory: 2 },
             null,
         ]) {
-            cadenceMock.data = { guardian: null, signalLens: { ...LENS, agreement } };
+            cadenceMock.data = { guardian: null, signalLens: { ...LENS, agreement }, askWorldSpike: null };
             const { unmount } = render(
                 <CtxWrap value={{ data: SAMPLE_DATA }}>
                     <LiveProofCard />

@@ -10,8 +10,8 @@ import {
 } from '../ask-world-facts';
 import type { WorldFactsResponse } from '@/pages/api/agent/world-facts';
 
-const imfFeed = (rows: InflationFeed['countries'], source = 'imf'): InflationFeed => ({
-    countries: rows.map((r) => ({ source, ...r })) as InflationFeed['countries'],
+const imfFeed = (rows: Array<Partial<InflationFeed['countries'][number]> & Pick<InflationFeed['countries'][number], 'country' | 'countryCode' | 'value' | 'year'>>, source = 'imf'): InflationFeed => ({
+    countries: rows.map((r) => ({ ...r, source: r.source ?? source })),
     source,
     lastUpdated: '2026-09-20T00:00:00.000Z',
 });
