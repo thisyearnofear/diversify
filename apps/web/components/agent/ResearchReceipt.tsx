@@ -12,13 +12,13 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
   const reducedMotion = useReducedMotion();
   const hasSpend = Number.parseFloat(receipt.amount || '0') > 0;
   const statusLabel =
-    receipt.status === 'failed' ? 'Research skipped' :
-    receipt.status === 'skipped' ? 'Research skipped' :
-    receipt.status === 'quoted' ? 'Research quote' :
-    receipt.status === 'paid' ? 'Paid research' :
-    receipt.status === 'credit' ? 'Credits used' :
-    hasSpend ? 'Research' :
-    'Free research';
+    receipt.status === 'failed' ? 'Review skipped' :
+    receipt.status === 'skipped' ? 'Review skipped' :
+    receipt.status === 'quoted' ? 'Review quote' :
+    receipt.status === 'paid' ? 'Review funded' :
+    receipt.status === 'credit' ? 'Balance used' :
+    hasSpend ? 'Review' :
+    'Free review';
   const statusColor =
     receipt.status === 'failed' || receipt.status === 'skipped' || receipt.status === 'quoted'
       ? 'text-amber-600 dark:text-amber-400'
@@ -53,11 +53,16 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
         : 'text-rose-600 dark:text-rose-400'
     : null;
 
+  // Settlement proof link: a mandate payment has no buyer-side txHash — the
+  // merchant's settlement tx comes back in _billing instead.
+  const settlementTxHash = receipt.txHash ?? receipt.settlementTxHashes?.[0];
+  const settlementExplorer = receipt.explorer ?? receipt.settlementExplorers?.[0];
+
   return (
     <div className="mt-2">
       <button
         onClick={() => setOpen(!open)}
-        aria-label={open ? 'Hide research receipt' : 'Show research receipt'}
+        aria-label={open ? 'Hide review receipt' : 'Show review receipt'}
         className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${statusColor} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
       >
         <span>{receipt.status === 'failed' ? '!' : '⛓'}</span>
@@ -91,7 +96,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
             <div className="bg-white/5 dark:bg-white/5 border border-white/10 rounded-xl p-3 space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                  Research receipt
+                  Protection review
                 </span>
                 <span className={`text-[10px] font-mono ${statusColor}`}>
                   ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC
@@ -156,13 +161,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                     {receipt.status === 'failed' ? '!' : '✓'}
                   </span>
                   <span className={`${statusColor} font-bold text-[10px]`}>
-                    {receipt.txHash
-                      ? `Verified on ${
-                          receipt.explorer?.includes('hashkey') || receipt.settlementNetwork === 'HASHKEY'
-                            ? 'HashKey'
-                            : 'Arc'
-                        }`
-                      : statusLabel}
+                    {settlementTxHash ? 'Verified on-chain' : statusLabel}
                   </span>
                 </div>
                 {provider && (
@@ -172,20 +171,27 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                 )}
               </div>
 
-              {receipt.remainingCredit && (
+              {receipt.fundedAmount &&
+                Number.parseFloat(receipt.fundedAmount) > Number.parseFloat(receipt.amount || '0') && (
                 <div className="text-[10px] text-slate-500">
-                  Gateway credit left: <span className="font-mono">${receipt.remainingCredit}</span>
+                  Balance funded: <span className="font-mono">${receipt.fundedAmount}</span>
                 </div>
               )}
 
-              {receipt.txHash && receipt.explorer && (
+              {receipt.remainingCredit && (
+                <div className="text-[10px] text-slate-500">
+                  Balance left: <span className="font-mono">${receipt.remainingCredit}</span>
+                </div>
+              )}
+
+              {settlementTxHash && settlementExplorer && (
                 <a
-                  href={receipt.explorer}
+                  href={settlementExplorer}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="block text-[10px] font-mono text-blue-400 hover:text-blue-300 truncate"
                 >
-                  {receipt.txHash.slice(0, 18)}...{receipt.txHash.slice(-6)} ↗
+                  {settlementTxHash.slice(0, 18)}...{settlementTxHash.slice(-6)} ↗
                 </a>
               )}
             </div>

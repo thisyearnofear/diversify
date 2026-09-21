@@ -64,7 +64,7 @@ const NATIVE_GAS_SYMBOLS: Record<number, string> = {
     [NETWORKS.ARBITRUM_ONE.chainId]: 'ETH',
     [NETWORKS.ARBITRUM_SEPOLIA.chainId]: 'ETH',
     [NETWORKS.ARC_TESTNET.chainId]: 'USDC',
-    5042001: 'USDC', // Arc mainnet
+    [NETWORKS.ARC_MAINNET.chainId]: 'USDC',
 };
 
 export function useSwap() {

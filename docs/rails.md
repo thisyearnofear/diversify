@@ -191,6 +191,30 @@ BUIDL copy, demo script, and checklist: see the go-live runbook above.
 
 ---
 
+## Arc Rail — commerce & settlement (mainnet live 2026-09-16)
+
+**Arc's job is to be invisible to retail.** It is the money-movement and billing layer under the intelligence product — not a place users hold savings, and not a chain the consumer surface ever asks anyone to visit.
+
+What Arc does for us:
+
+- **x402 settlement for decision artifacts.** Buyer signs an EIP-3009 `transferWithAuthorization` mandate (no transaction, no gas, no chain switch); the merchant settles it on-chain. Raw-transfer proofs remain the fallback for external agents. The billing unit is the Protection Review artifact — per-source data prices are COGS bundled inside it (`docs/product.md` § The product object).
+- **Protection Balance funding (planned).** Circle Gateway is live on Arc mainnet: a user deposits USDC once on whatever chain they already hold funds on, and the balance is spendable on Arc. This is the chosen funding model for the prepaid balance that powers reviews — funding is the one signature moment; Guardian draws within user-set bounds.
+- **Treasury mobility.** Arc is CCTP domain 26 — native burn/mint USDC movement between the settlement rail and Arbitrum/Celo without third-party bridge risk.
+
+Why Arc (not Celo/Arb/0G):
+
+- USDC is the native gas token — ~$0.004 fees make sub-cent intelligence tolls economically real (Nanopayments batch settlement goes down to $0.000001).
+- Sub-second deterministic finality — payments confirm inside the request latency budget.
+- Arc is Circle's canonical agentic-commerce chain; being payable there is positioning, not just plumbing.
+- Validator set = institutions a B2B buyer's compliance team recognizes (Visa, DTCC, BlackRock, ICE).
+
+What Arc does NOT do:
+
+- **No user savings.** Permissioned PoA validator set at launch — right-sized for billing tolls, not for custodying saver balances.
+- **No regional stables.** Arc's fiat roster (JPYC/KRW1/TRYB/EURC) is institutional corridor coverage, not M2 consumer stables — complementary to Mento, not a replacement.
+- **No user-facing chain surface.** Arc is excluded from wallet chain lists and swap-executable sets by design — settlement rail only.
+- **StableFX parked.** Arc's RFQ fiat-FX venue is a Phase 3+ inquiry — revisit when corridor execution needs it.
+
 ## Caribbean Rail — Future Caribbean 2026
 
 **Status:** Drafted 2026-07-03. Updated 2026-08-04 — Caribbean rail shipped (FX netting engine + currency-risk data + API routes).

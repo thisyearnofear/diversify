@@ -31,7 +31,7 @@ export default function IntelligenceHistory() {
           No intelligence history yet.
         </p>
         <p className="text-xs text-gray-400 dark:text-gray-500 max-w-[200px]">
-          Research receipts, spend history, and voice insights will appear here across sessions.
+          Review receipts, spend history, and voice insights will appear here across sessions.
         </p>
       </div>
     );
@@ -42,7 +42,7 @@ export default function IntelligenceHistory() {
       <div className="sticky top-0 z-10 -mx-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur pb-2">
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="rounded-xl border border-purple-100 dark:border-purple-800/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-2">
-            <p className="text-[10px] font-black uppercase tracking-wider text-purple-500">Research balance</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-purple-500">Funding wallet</p>
             <p className="text-xs font-black text-purple-800 dark:text-purple-200">
               ${Number.parseFloat(researchAccount.arcWalletBalance || "0").toFixed(3)}
             </p>
@@ -54,7 +54,7 @@ export default function IntelligenceHistory() {
             </p>
           </div>
           <div className="rounded-xl border border-emerald-100 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Research credits</p>
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Earned credits</p>
             <p className="text-xs font-black text-emerald-800 dark:text-emerald-200">
               ${researchAccount.bonusCredits.toFixed(3)}
             </p>
@@ -65,7 +65,7 @@ export default function IntelligenceHistory() {
             onClick={() => setView('research')}
             className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-colors ${view === 'research' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
           >
-            Research Ledger
+            Review Ledger
           </button>
           <button
             onClick={() => setView('insights')}
@@ -79,8 +79,8 @@ export default function IntelligenceHistory() {
       <AnimatePresence>
         {view === 'research' && researchPayments.length === 0 && (
           <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-8 text-center">
-            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No research payments yet.</p>
-            <p className="mt-1 text-xs text-gray-400">Run or quote a paid research bundle from chat.</p>
+            <p className="text-sm font-bold text-gray-500 dark:text-gray-400">No review draws yet.</p>
+            <p className="mt-1 text-xs text-gray-400">Funded reviews appear here when the Guardian spends from your balance.</p>
           </div>
         )}
 
@@ -121,11 +121,9 @@ export default function IntelligenceHistory() {
             {item.details?.sources && item.details.sources.length > 0 && (
               <div className="mt-3 space-y-1.5">
                 {item.details.sources.map((source) => (
-                  <div key={`${item.id}-${source.label}`} className="flex items-center justify-between gap-3 text-[11px]">
+                  <div key={`${item.id}-${source.label}`} className="flex items-center gap-2 text-[11px]">
+                    <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${source.tier === 'paid' ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
                     <span className="truncate text-gray-500 dark:text-gray-400">{source.label}</span>
-                    <span className={source.tier === 'paid' ? 'font-mono font-bold text-emerald-600 dark:text-emerald-400' : 'font-mono text-gray-400'}>
-                      ${source.cost.toFixed(3)}
-                    </span>
                   </div>
                 ))}
               </div>

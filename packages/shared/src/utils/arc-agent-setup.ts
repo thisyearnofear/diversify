@@ -4,6 +4,7 @@
  */
 
 import { ethers } from 'ethers';
+import { NETWORKS, ARC_TOKENS, ARC_TESTNET_TOKENS } from '../config';
 
 /**
  * Generate a disposable session keypair for the Guardian agent.
@@ -60,8 +61,8 @@ export function validateAgentConfig(): {
     // Check network configuration
     const isTestnet = process.env.ARC_AGENT_TESTNET !== 'false';
     const rpcUrl = isTestnet
-        ? (process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network')
-        : 'https://rpc.arc.network';
+        ? (process.env.NEXT_PUBLIC_ARC_RPC || NETWORKS.ARC_TESTNET.rpcUrl)
+        : (process.env.ARC_MAINNET_RPC_URL || NETWORKS.ARC_MAINNET.rpcUrl);
 
     if (!rpcUrl.startsWith('https://')) {
         warnings.push('RPC URL should use HTTPS for security');
@@ -165,19 +166,15 @@ export function validateAgentConfig(): {
  */
 export function getArcNetworkConfig() {
     const isTestnet = process.env.ARC_AGENT_TESTNET !== 'false';
+    const network = isTestnet ? NETWORKS.ARC_TESTNET : NETWORKS.ARC_MAINNET;
+    const tokens = isTestnet ? ARC_TESTNET_TOKENS : ARC_TOKENS;
 
     return {
         isTestnet,
-        rpcUrl: isTestnet
-            ? (process.env.NEXT_PUBLIC_ARC_RPC || 'https://rpc.testnet.arc.network')
-            : 'https://rpc.arc.network',
-        chainId: isTestnet ? 5042002 : 5042001,
-        usdcAddress: isTestnet
-            ? '0x2F25deB3848C207fc8E0c34035B3Ba7fC157602B'
-            : '0xA0b86a33E6441b8435b662f0E2c8A0E1B8B8F8B8', // Placeholder for mainnet
-        explorerUrl: isTestnet
-            ? 'https://testnet.arcscan.app'
-            : 'https://arcscan.app'
+        rpcUrl: process.env.ARC_AGENT_RPC || network.rpcUrl,
+        chainId: network.chainId,
+        usdcAddress: tokens.USDC,
+        explorerUrl: network.explorerUrl
     };
 }
 

@@ -26,12 +26,13 @@ export const NETWORKS = {
         devOnly: true, // Only show in development
     },
     ARC_MAINNET: {
-        chainId: 5042001,
+        chainId: 5042,
         name: 'Arc',
-        rpcUrl: process.env.NEXT_PUBLIC_ARC_MAINNET_RPC || 'https://rpc.arc.network',
-        explorerUrl: 'https://arcscan.app',
-        // Mainnet beta expected 2026. Not devOnly — this is the production nanopayment rail.
-        // See docs/0g-bridge-plan.md §0 for the four-layer architecture.
+        rpcUrl: process.env.NEXT_PUBLIC_ARC_MAINNET_RPC || 'https://rpc.mainnet.arc.io',
+        explorerUrl: 'https://explorer.arc.io',
+        // Live since 2026-09-16. Settlement rail for x402 paid intelligence —
+        // deliberately NOT a user-facing chain (no savings custody, no swap
+        // execution surface). See docs/rails.md § Arc Rail.
     },
     ZERO_G_TESTNET: {
         chainId: 16602,
@@ -426,18 +427,46 @@ export const TX_CONFIG = {
 // Circle Configuration
 export const CIRCLE_CONFIG = {
     CCTP: {
-        DOMAINS: { ETHEREUM: 0, AVALANCHE: 1, OPTIMISM: 2, ARBITRUM: 3, BASE: 6, POLYGON: 7 },
+        // Arc is CCTP domain 26 on both mainnet and testnet.
+        DOMAINS: { ETHEREUM: 0, AVALANCHE: 1, OPTIMISM: 2, ARBITRUM: 3, BASE: 6, POLYGON: 7, ARC: 26 },
         TOKEN_MESSENGER: {
             ETHEREUM: '0xbd3fa81b58ba92a821df2201e99602b9e6e87292',
             ARBITRUM: '0x19330d10D9Cc8751218eaf51E8885D058642E08A',
             BASE: '0x1682Ae6375C4009baf3d690757d822C92fc556aE',
+            // TokenMessengerV2 — docs.arc.io/arc/references/contract-addresses
+            ARC: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            ARC_TESTNET: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
         },
+        MESSAGE_TRANSMITTER: {
+            // MessageTransmitterV2 — docs.arc.io/arc/references/contract-addresses
+            ARC: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            ARC_TESTNET: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
+        },
+    },
+    // Circle Gateway — chain-abstracted USDC balance (deposit once on any
+    // supported chain, spendable on Arc). Planned funding layer for the
+    // "Protection Balance" — see docs/rails.md § Arc Rail.
+    GATEWAY: {
+        WALLET: {
+            ARC: '0x77777777Dcc4d5A8B6E418Fd04D8997ef11000eE',
+            ARC_TESTNET: '0x0077777d7EBA4688BDeF3E311b846F25870A19B9',
+        },
+        MINTER: {
+            ARC: '0x2222222d7164433c4C09B0b0D809a9b52C04C205',
+            ARC_TESTNET: '0x0022222ABE238Cc2C7Bb1f21003F0a260052475B',
+        },
+    },
+    // StableFX FxEscrow — institutional RFQ stablecoin FX venue. Parked:
+    // partnership/onboarding-gated, not a code path (docs/roadmap.md § payment-rail phases).
+    STABLEFX_ESCROW: {
+        ARC: '0xe2E5F173576B513d994073CCbDaCBE027d43DFe6',
+        ARC_TESTNET: '0x867650F5eAe8df91445971f14d89fd84F0C9a9f8',
     },
     WALLET: { 
         API_BASE_URL: 'https://api.circle.com/v1/w3s', 
         USER_ID_PREFIX: 'diversifi_agent_' 
     },
-    USDC_TOKEN_ID_ARC: '0x3600000000000000000000000000000000000000', // Actual token ID for Arc testnet USDC
+    USDC_TOKEN_ID_ARC: '0x3600000000000000000000000000000000000000', // USDC ERC-20 predeploy — same address on Arc mainnet and testnet
 };
 
 export const ARBITRUM_TOKENS = {
@@ -589,7 +618,16 @@ export const CELO_SEPOLIA_TOKENS = {
     USDT: '0xd077A400968890Eacc75cdc901F0356c943e4fDb',
 } as const;
 
+// Arc mainnet tokens — live 2026-09-16 (chain ID 5042). Verified against
+// docs.arc.io/arc/references/contract-addresses and on-chain symbol() calls.
+// USDC is the native gas token; the ERC-20 interface lives at the 0x3600…
+// predeploy on BOTH networks. EURC differs between mainnet and testnet.
 export const ARC_TOKENS = {
+    USDC: '0x3600000000000000000000000000000000000000',
+    EURC: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1',
+} as const;
+
+export const ARC_TESTNET_TOKENS = {
     USDC: '0x3600000000000000000000000000000000000000',
     EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
 } as const;
@@ -646,7 +684,8 @@ export const BROKER_ADDRESSES = {
 export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
     if (chainId === NETWORKS.RH_MAINNET.chainId) return RH_MAINNET_TOKENS;
-    if (chainId === NETWORKS.ARC_TESTNET.chainId || chainId === NETWORKS.ARC_MAINNET.chainId) return ARC_TOKENS;
+    if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TESTNET_TOKENS;
+    if (chainId === NETWORKS.ARC_MAINNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return ARBITRUM_SEPOLIA_TOKENS;
     if (chainId === NETWORKS.HASHKEY_MAINNET.chainId) return HASHKEY_TOKENS;

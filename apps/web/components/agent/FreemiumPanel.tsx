@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCredits } from "../../hooks/use-credits";
+import { useResearchPaymentSettings } from "../../hooks/use-research-account";
 import { REWARD_ACTIONS } from "../../constants/credits";
 import type { RewardActionKey } from "../../constants/credits";
 
@@ -10,6 +11,8 @@ interface FreemiumPanelProps {
 
 export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps) {
   const { status: creditsStatus, claimReward, shareApp } = useCredits();
+  const { settings: paymentSettings, updateSettings: updatePaymentSettings } =
+    useResearchPaymentSettings();
   const [showFreemium, setShowFreemium] = useState(false);
   const [proofInput, setProofInput] = useState("");
   const [claimingKey, setClaimingKey] = useState<string | null>(null);
@@ -46,7 +49,7 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
       >
         <span className="flex items-center gap-2">
           <span className={`font-bold ${isLow ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>
-            Research Credits: ${creditsStatus.credits.bonus.toFixed(3)} USDC
+            Protection Balance: ${creditsStatus.credits.bonus.toFixed(3)} USDC
           </span>
           {isLow && creditsStatus.credits.bonus > 0 && (
             <span className="bg-amber-400 text-amber-900 font-bold px-1.5 py-0.5 rounded-full text-[10px]">
@@ -75,13 +78,13 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
               {/* Credits summary */}
               <div className="px-3 py-2">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-bold text-gray-800 dark:text-gray-100">Research Credits</span>
+                  <span className="text-xs font-bold text-gray-800 dark:text-gray-100">Protection Balance</span>
                   <span className={`text-xs font-bold ${isLow ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`}>
                     ${creditsStatus.credits.bonus.toFixed(3)} USDC
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2">
-                  Each research query costs ~$0.015. You have ~{Math.floor(creditsStatus.credits.bonus / 0.015)} queries remaining.
+                  Reviews draw from this balance only when the Guardian finds something worth a decision — every draw is itemized in your activity feed.
                   {creditsStatus.referral.totalEarned > 0 && (
                     <span className="ml-1 text-amber-600 dark:text-amber-400">(+${creditsStatus.referral.totalEarned.toFixed(2)} earned)</span>
                   )}
@@ -89,11 +92,66 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
                 {creditsStatus.credits.bonus <= 0 && (
                   <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-lg p-2 mb-2">
                     <p className="text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                      Research paused — no credits remaining.
+                      Reviews paused — Protection Balance is empty.
                     </p>
                     <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                      Earn credits below or add funds to resume evidence-backed responses.
+                      Earn credits below or add funds to resume evidence-backed reviews.
                     </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Auto-fund bound — reviews under the cap go straight to
+                  funding consent; above it you approve first */}
+              <div className="px-3 py-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                      Auto-fund reviews
+                    </p>
+                    <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                      {paymentSettings.autoPayEnabled
+                        ? `Reviews under $${paymentSettings.autoPayMaxUSDC.toFixed(2)} go straight to funding — your wallet signature is still the consent.`
+                        : "Every funded review asks you first."}
+                    </p>
+                  </div>
+                  <button
+                    role="switch"
+                    aria-checked={paymentSettings.autoPayEnabled}
+                    onClick={() =>
+                      updatePaymentSettings({
+                        autoPayEnabled: !paymentSettings.autoPayEnabled,
+                      })
+                    }
+                    className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${
+                      paymentSettings.autoPayEnabled
+                        ? "bg-emerald-500"
+                        : "bg-gray-300 dark:bg-gray-600"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                        paymentSettings.autoPayEnabled ? "translate-x-[18px]" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+                {paymentSettings.autoPayEnabled && (
+                  <div className="mt-2 flex items-center gap-1.5">
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500">Cap per review:</span>
+                    {[0.02, 0.05, 0.1, 0.25].map((cap) => (
+                      <button
+                        key={cap}
+                        onClick={() => updatePaymentSettings({ autoPayMaxUSDC: cap })}
+                        className={`px-1.5 py-0.5 text-[10px] font-bold rounded-md transition-colors ${
+                          paymentSettings.autoPayMaxUSDC === cap
+                            ? "bg-emerald-500 text-white"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }`}
+                      >
+                        ${cap.toFixed(2)}
+                      </button>
+                    ))}
                   </div>
                 )}
               </div>
@@ -101,7 +159,7 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
               {/* Available actions */}
               {creditsStatus.referral.availableActions.length > 0 && (
                 <div className="px-3 py-2">
-                  <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">Earn research credits:</p>
+                  <p className="text-xs font-bold text-gray-600 dark:text-gray-300 mb-2">Earn balance credits:</p>
                   <div className="flex flex-col gap-1.5">
                     {creditsStatus.referral.availableActions.map(action => (
                       <div key={action.key} className="flex items-center justify-between gap-2">

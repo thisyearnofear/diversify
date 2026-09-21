@@ -4,7 +4,7 @@
  * Uses centralized token addresses from config to maintain single source of truth
  */
 
-import { NETWORKS, MAINNET_TOKENS, CELO_SEPOLIA_TOKENS, ARBITRUM_TOKENS, ARC_TOKENS, RH_TESTNET_TOKENS } from '../config';
+import { NETWORKS, MAINNET_TOKENS, CELO_SEPOLIA_TOKENS, ARBITRUM_TOKENS, ARC_TESTNET_TOKENS, RH_TESTNET_TOKENS } from '../config';
 
 export interface CrossChainToken {
     symbol: string;
@@ -31,7 +31,7 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
             },
             {
                 chainId: NETWORKS.ARC_TESTNET.chainId,
-                address: ARC_TOKENS.USDC,
+                address: ARC_TESTNET_TOKENS.USDC,
                 decimals: 6,
             },
         ],
@@ -43,7 +43,7 @@ export const CROSS_CHAIN_TOKENS: CrossChainToken[] = [
         chains: [
             {
                 chainId: NETWORKS.ARC_TESTNET.chainId,
-                address: ARC_TOKENS.EURC,
+                address: ARC_TESTNET_TOKENS.EURC,
                 decimals: 6,
             },
         ],

@@ -10,6 +10,7 @@ import {
     getArcResearchSource,
     normalizeArcResearchSource,
     settleOnChain,
+    settleWithAuthorization,
     DEFAULT_SETTLEMENT_NETWORK,
     getSettlementConfig,
     getHspRailConfig,
@@ -293,9 +294,15 @@ type SourcePayload = {
 };
 
 type PaymentMandatePayload = {
+    sender: string;
+    recipient: string;
     amount: string;
-    nonce?: string;
-    [key: string]: unknown;
+    nonce: string;
+    validAfter: number;
+    validBefore: number;
+    signature: string;
+    chainId: number;
+    tokenAddress: string;
 };
 
 function toMicroUSDC(amount: number | string): number {
@@ -464,6 +471,12 @@ export default async function handler(
         }
     }
 
+    // Mandate-first payment path (EIP-3009): the buyer signs a
+    // TransferWithAuthorization off-chain; we verify the signature AND settle it
+    // on-chain via transferWithAuthorization before crediting — a mandate is
+    // never credited unsettled. settleWithAuthorization binds chainId/token/
+    // recipient/validity-window to the active rail, so a mandate signed for a
+    // different chain or token can never grant credit.
     if (paymentMandate) {
         try {
             const mandate = JSON.parse(paymentMandate) as PaymentMandatePayload;
@@ -471,23 +484,33 @@ export default async function handler(
                 return res.status(400).json({ error: 'Missing nonce in payment mandate' });
             }
 
-            const nonceCheck = UserManager.consumeNonce(user, mandate.nonce);
-            if (!nonceCheck.valid) {
-                return res.status(401).json({ error: nonceCheck.reason });
-            }
-
-            const isValid = await circleService.verifyNanopaymentMandate(mandate as any);
-
-            if (isValid) {
-                const amount = parseFloat(mandate.amount);
-                UserManager.addCredit(user, toMicroUSDC(amount));
-                console.log(`[Data Hub] Nanopayment Mandate verified: $${amount}`);
-                x402Analytics.recordPayment(requestedSourceLabel, amount, Date.now() - start, 'CIRCLE_NANOPAYMENT');
+            const mandateProofId = `mandate:${mandate.nonce}`;
+            if (await isProofProcessed(mandateProofId)) {
+                // This mandate already settled on a previous request — fall
+                // through to the credit drawdown (idempotent replay of a lost
+                // response; the nonce was consumed and the authorization spent).
             } else {
-                return res.status(401).json({ error: 'Invalid Nanopayment Mandate signature' });
+                const nonceCheck = UserManager.consumeNonce(user, mandate.nonce);
+                if (!nonceCheck.valid) {
+                    return res.status(401).json({ error: nonceCheck.reason });
+                }
+
+                const isValid = await circleService.verifyNanopaymentMandate(mandate as any);
+                if (!isValid) {
+                    return res.status(401).json({ error: 'Invalid Nanopayment Mandate signature' });
+                }
+
+                const settled = await settleWithAuthorization(mandate as any, DEFAULT_SETTLEMENT_NETWORK);
+                UserManager.addCredit(user, toMicroUSDC(settled.amountUSDC));
+                await markProofProcessed(mandateProofId, settled.amountUSDC);
+                settlementPayer = mandate.sender;
+                settlementTxHash = settled.txHash;
+                console.log(`[Data Hub] EIP-3009 mandate settled on-chain: $${settled.amountUSDC} → ${settled.txHash}`);
+                x402Analytics.recordPayment(requestedSourceLabel, settled.amountUSDC, Date.now() - start, 'EIP3009_MANDATE');
             }
         } catch (error) {
-            return res.status(400).json({ error: 'Malformed Nanopayment Mandate' });
+            const msg = error instanceof Error ? error.message : String(error);
+            return res.status(401).json({ error: `Mandate settlement failed: ${msg}` });
         }
     }
 
@@ -699,8 +722,8 @@ export default async function handler(
                 cost: totalCost,
                 remaining_credit: formatMicroUSDC(user.creditBalanceMicros, 4),
                 reason: totalCost > 0
-                    ? 'Multiple paid sources unlocked through a single research bundle'
-                    : 'All requested bundle sources were within free tier',
+                    ? 'Protection Review funded from your balance'
+                    : 'All requested inputs covered by the free tier',
                 evidenceCids: Array.from(evidenceCidsBySource.values()),
                 ...settlementMeta,
             },
@@ -722,7 +745,7 @@ export default async function handler(
             remaining_credit: formatMicroUSDC(user.creditBalanceMicros, 4),
             reason: singlePlan.isFreeEligible
                 ? `Free tier (${singlePlan.freeLimit - (singlePlan.currentUsage + 1)} remaining today)`
-                : 'Premium insight unlocked — daily free limit reached',
+                : 'Protection Review funded from your balance',
             evidenceCids: Array.from(evidenceCidsBySource.values()),
             ...settlementMeta,
         },
@@ -780,13 +803,15 @@ function sendResearchQuote(
     UserManager.issueNonce(user, nonce, expiresAt);
     const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
     const settlementConfig = getSettlementConfig();
-    const paidSourceCount = sourcePlans.filter(plan => plan.cost > 0).length;
 
     return res.status(200).json({
         status: totalCost > 0 ? 'quoted' : 'free',
         amount: totalCost > 0 ? paymentAmount.toFixed(3) : '0.000',
         currency: 'USDC',
         chainId: settlementConfig.chainId,
+        token: settlementConfig.usdcAddress,
+        explorer: settlementConfig.explorerBase,
+        mandate_supported: settlementConfig.eip3009,
         recipient: DATA_HUB_WALLET,
         nonce,
         expires: expiresAt,
@@ -798,8 +823,8 @@ function sendResearchQuote(
         settlement_env: SETTLEMENT_ENV,
         ...buildHspChallengeBlock(settlementConfig),
         reason: totalCost > 0
-            ? `Premium research will use ${totalCost.toFixed(3)} USDC on ${settlementConfig.name} for ${paidSourceCount} paid source${paidSourceCount === 1 ? '' : 's'}.`
-            : `This research is covered by the free tier. No USDC will be spent on ${settlementConfig.name}.`,
+            ? `This review costs ${totalCost.toFixed(3)} USDC — drawn from your Protection Balance.`
+            : 'This review is covered by the free tier — no balance spend needed.',
         sources: buildQuoteLineItems(sourcePlans),
     });
 }
@@ -818,14 +843,17 @@ function sendPaymentRequired(
     const settlementConfig = getSettlementConfig();
 
     return res.status(402).json({
-        error: bundleRequested ? 'Research Bundle Required' : 'Premium Source Required',
+        error: bundleRequested ? 'Protection Review Bundle Required' : 'Protection Review Required',
         reason: bundleRequested
-            ? `Accessing ${sourcePlans.length} sources requires ${totalCost.toFixed(3)} USDC in research credits on ${settlementConfig.name}.`
-            : `Accessing "${sourcePlans[0].source.label}" requires premium micro-credits ($${totalCost.toFixed(3)} USDC) on ${settlementConfig.name}`,
+            ? `This review costs ${totalCost.toFixed(3)} USDC — fund your Protection Balance (${BATCH_TOPUP_AMOUNT} USDC top-up) to unlock it.`
+            : `"${sourcePlans[0].source.label}" costs ${totalCost.toFixed(3)} USDC — fund your Protection Balance (${BATCH_TOPUP_AMOUNT} USDC top-up) to unlock it.`,
         recipient: DATA_HUB_WALLET,
         amount: paymentAmount.toFixed(3),
         currency: 'USDC',
         chainId: settlementConfig.chainId,
+        token: settlementConfig.usdcAddress,
+        explorer: settlementConfig.explorerBase,
+        mandate_supported: settlementConfig.eip3009,
         nonce,
         expires: expiresAt,
         suggested_topup_amount: BATCH_TOPUP_AMOUNT,

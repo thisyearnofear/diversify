@@ -1118,14 +1118,21 @@ export default function AIChat() {
                       )}
                       {msg.action?.type === 'confirm_research' && (
                         <div className="mt-3 rounded-xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/80 dark:bg-amber-900/10 p-2.5">
+                          {msg.action.fundingAmount &&
+                            Number.parseFloat(msg.action.fundingAmount) > Number.parseFloat(msg.action.quoteAmount || '0') && (
+                            <p className="text-[10px] text-amber-700/80 dark:text-amber-300/70 mb-2">
+                              Funds your Protection Balance with ${msg.action.fundingAmount} — this review draws ${msg.action.quoteAmount} USDC.
+                            </p>
+                          )}
                           {msg.action.quoteSources && msg.action.quoteSources.length > 0 && (
                             <div className="mb-2 space-y-1">
+                              <p className="text-[10px] text-amber-700/80 dark:text-amber-300/70 mb-1">
+                                Evidence that will inform this review:
+                              </p>
                               {msg.action.quoteSources.map((source) => (
-                                <div key={source.label} className="flex items-center justify-between gap-3 text-[10px]">
+                                <div key={source.label} className="flex items-center gap-2 text-[10px]">
+                                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${source.tier === "paid" ? "bg-amber-400" : "bg-gray-300 dark:bg-gray-600"}`} />
                                   <span className="truncate text-amber-800 dark:text-amber-200">{source.label}</span>
-                                  <span className={source.tier === "paid" ? "font-mono font-bold text-amber-700 dark:text-amber-300" : "font-mono text-amber-500"}>
-                                    ${source.cost.toFixed(3)}
-                                  </span>
                                 </div>
                               ))}
                             </div>
@@ -1136,7 +1143,10 @@ export default function AIChat() {
                               disabled={isChatting}
                               className="px-3 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
                             >
-                              Run ${Number.parseFloat(msg.action.quoteAmount || '0').toFixed(3)}
+                              {msg.action.fundingAmount &&
+                               Number.parseFloat(msg.action.fundingAmount) > Number.parseFloat(msg.action.quoteAmount || '0')
+                                ? `Fund & run · $${Number.parseFloat(msg.action.fundingAmount).toFixed(2)}`
+                                : `Run · $${Number.parseFloat(msg.action.quoteAmount || '0').toFixed(3)}`}
                             </button>
                             <button
                               onClick={() => submitPrompt("skip")}

@@ -50,19 +50,27 @@ CIDs those entries reference (current-state detail:
 | **Savings + Identity** | **Celo** | Regional Mento stablecoins (cUSD, cREAL, KESm, GHSm), SocialConnect ODIS, GoodDollar UBI | Agent execution (no EIP-7702), nanopayments |
 | **Execution + Yield** | **Arbitrum** | Deepest USDC + RWA liquidity (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC); EIP-7702-capable for true on-chain ERC-7710 enforcement | Regional stablecoins, nanopayments |
 | **Trust + Verifiability** | **0G** | Content-addressed Storage, TEE-verified Compute, DA | Payment settlement (gas-token friction), ledger of record |
-| **Money Movement** | **Arc** | USDC-native gas, sub-second finality, nanopayment economics, built-in FX engine, Circle Gateway/CCTP | Verifiable AI, regional stablecoins, deep DEX liquidity |
+| **Commerce / settlement** | **Arc** | x402 mandate-first settlement, Circle Gateway funding, CCTP domain 26 — invisible to retail; not a savings or execution chain | Verifiable AI, regional stablecoins, deep DEX liquidity |
 
 ### Payment-rail migration phases
 
-0G Pay is a stopgap while Arc is testnet-only (USDC-as-gas, Circle Gateway
-as the x402 standard, and Arc's stablecoin FX engine all argue for Arc
-owning the payment rail once mainnet lands).
+0G Pay is a stopgap for the settlement rail. Arc public mainnet landed
+2026-09-16 (chain ID 5042, USDC native gas, CCTP domain 26, Circle Gateway
++ Nanopayments live) — the conditions that argued for Arc owning this
+layer are now real. What remains is operational: fix the staged config,
+fund the vault wallet, then `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet`.
 
 | Phase | Trigger | Payment rail | Notes |
 |---|---|---|---|
-| **1 — Buildathon** | Now | 0G Pay (interim default) | `SETTLEMENT_NETWORK=ZERO_G`; Arc testnet-only |
-| **2 — Arc mainnet beta** | Arc mainnet lands | Arc | One-line config change; 0G Pay becomes fallback |
-| **3 — Arc stable** | Post-beta | Arc canonical | Explore Arc FX engine (USDC/EURC) + CCTP bridge to Arbitrum |
+| **1 — Buildathon** | Now | 0G Pay (interim default) | `SETTLEMENT_NETWORK=ZERO_G`; Arc testnet for dev |
+| **2 — Arc mainnet** | ✅ Mainnet landed 2026-09-16 | Arc | Mandate-first (EIP-3009): buyer signs, merchant settles — no chain switch, no buyer gas. Flip once vault is funded |
+| **3 — Protection Balance** | Post-flip | Arc canonical | Circle Gateway funding: deposit USDC once on any supported chain → spendable on Arc; nanopayment batching makes sub-cent tolls honest |
+| **4 — Venue eval (parked)** | Corridor execution needs it | — | StableFX RFQ fiat-FX inquiry deferred; Arc fiat-stable roster complements Mento, not a rotation venue yet |
+
+Billing unit across all phases: the user funds a Protection Balance once
+and pays for **decision artifacts** (Protection Reviews), not per-source
+feeds — source prices are COGS inside the artifact. Doctrine:
+`docs/product.md` § The product object.
 
 **Codebase rule:** do not delete Arc infrastructure (`ArcAgent`, Curve/AeonDEX
 strategies, `use-arc-balance`) — it has long-term value at Arc mainnet.

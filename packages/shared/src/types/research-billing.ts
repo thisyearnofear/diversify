@@ -27,6 +27,8 @@ export interface ResearchQuote {
   expires: number;
   currentBalance: string;
   requiredCost: number;
+  /** Suggested Protection Balance top-up from the challenge (>= requiredCost). */
+  suggestedTopup?: string;
   requestedSources: string[];
   bundleRequested: boolean;
   reason: string;
@@ -41,6 +43,8 @@ export interface ResearchReceipt {
   txHash?: string;
   explorer?: string;
   nonce?: string;
+  /** Total funded into the Protection Balance by this payment (top-up >= amount). */
+  fundedAmount?: string;
   remainingCredit?: string;
   reason?: string;
   onChainSettled?: boolean;

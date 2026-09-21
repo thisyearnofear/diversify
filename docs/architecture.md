@@ -261,18 +261,61 @@ StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.ar
 
 ## Arc x402 Payment Loop
 
-Paid research flows through an HTTP 402 challenge/response:
+Decision-artifact generation (Protection Reviews — `docs/product.md` § The
+product object) is billed through an HTTP 402 challenge/response. Sources
+are cost-side inputs bundled inside the artifact; the user pays for the
+decision, never per feed. Buyer payment is
+**mandate-first**: the client signs an EIP-3009 `transferWithAuthorization`
+typed-data message — no transaction, no gas, no chain switch — and the
+merchant (gateway vault key) submits it on-chain. This is the same primitive
+Circle Nanopayments uses; our settlement is self-hosted today, Gateway-batched
+settlement is the Phase 3 upgrade.
+
+Consent model: the signature happens at **funding time**, not per call —
+the mandate tops up the buyer's credit balance (`suggested_topup_amount`,
+not the per-call price), and each request draws the balance down. For the
+Guardian's autonomous reviews there is no signer at call time at all: the
+authorization *was* the funding event plus the user's protection bounds.
+Escalation to an explicit user signature happens only on empty balance or
+out-of-bounds action.
+
+Retail consent ladder (`use-agent-chat`): a review-shaped question with an
+unfunded balance is **quoted first, never silently downgraded** — the
+advisor answers from free context, then a trailing `confirm_research`
+offer shows the review cost and the top-up amount up front ("Fund & run ·
+$1.00"). Confirm restores the original question and proceeds to the
+funding signature; skip keeps the free answer with a `skipped` receipt.
+The user-set auto-fund bound (`useResearchPaymentSettings`,
+default-off) is checked against the **authoritative gateway quote**, not
+the client estimate: at-or-under the cap goes straight to the funding
+signature, above it the offer is shown first. The wallet signature remains
+the consent moment in every path.
 
 ```
 Client → GET /api/agent/x402-gateway?source=macro_analysis
-       ← 402 { nonce, amount, currency: "USDC", recipient, expires }
+       ← 402 { nonce, amount, currency: "USDC", recipient,
+               chainId, token, mandate_supported, expires }
 
-Client → USDC.transfer on Arc (real on-chain tx)
+Client → signs TransferWithAuthorization(from=user, to=recipient,
+         value=amount, validBefore=expires, nonce=challenge_nonce)
 Client → GET /api/agent/x402-gateway?source=macro_analysis
-         + x-payment-proof: 0x{tx_hash}
-         + x-payment-nonce: {challenge_nonce}
-       ← 200 { data, _billing: { arcSettled: true, txHashes, explorer } }
+         + x-payment-mandate: {sender, recipient, amount, nonce,
+                               validAfter, validBefore, chainId,
+                               tokenAddress, signature}
+       ← gateway verifies the signature AND settles it on-chain via
+         transferWithAuthorization (vault key pays gas); credit = the
+         on-chain settled amount — a mandate is never credited unsettled
+       ← 200 { data, _billing: { onChainSettled, txHashes, explorer } }
+
+Agent fallback → x-payment-proof: 0x{tx_hash}   (raw USDC transfer on the
+                 active rail; for external agents / legacy clients)
 ```
+
+Settlement rail is env-switchable (`SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`):
+Arc (mainnet live 2026-09-16, chain ID 5042, USDC native gas) · 0G ·
+Arbitrum · HashKey (HSP). Arc's role is commerce only — it never custodies
+user savings and stays out of user-facing chain surfaces (`docs/rails.md`
+§ Arc Rail).
 
 Agent wallet: `0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8` (Arc Testnet)
 

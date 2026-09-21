@@ -109,9 +109,13 @@ The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio 
 - `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution
 - **ERC-7715 permission integrity:** `/api/vault/permission` POST verifies the EIP-712 typed-data signature against the user's wallet on the server (`ERC7715Service.verifySignedPermission`). Requests with a missing, malformed, or non-recovering signature are rejected with `400` before any permission is persisted. The `signature: 'unsigned'` fallback has been removed.
 
-## x402 Research Payments (Env-Gated Settlement Rail)
+## x402 Artifact Billing (Env-Gated Settlement Rail)
 
-DiversiFi’s x402 gateway is the single billing surface for premium intelligence.
+DiversiFi’s x402 gateway is the single billing surface for decision-artifact
+generation (Protection Reviews — `docs/product.md` § The product object).
+Users fund a Protection Balance once and reviews draw it down; the
+per-source prices below are internal cost accounting, never surfaced
+per-call.
 The underlying settlement rail is configurable: `ZERO_G` (interim default),
 `ARC`, `ARBITRUM`, or `HASHKEY`, in `testnet` or `mainnet` mode. This lets the
 same gateway serve hackathon judges on testnet and production consumers on
@@ -128,15 +132,18 @@ agent-side `settleOnChain` fire-and-forget tx. See
 |-----------|-----------------|
 | `apps/web/lib/agent/advisor-core.ts` | Decide what evidence is needed before recommending an action |
 | `pages/api/agent/x402-gateway.ts` | Issue payment challenge, verify payment, enforce credit drawdown, and return paid evidence |
-| `packages/shared/src/services/settlement-service.ts` | Configurable USDC micro-payment rail (`SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`) |
-| Shared source registry | Canonical source IDs, alias mapping, pricing, reputation, and freshness rules |
+| `packages/shared/src/services/settlement-service.ts` | Configurable USDC payment rail (`SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`) — settles balance top-ups |
+| Shared source registry | Canonical source IDs, alias mapping, pricing, reputation, and freshness rules (cost-side inputs to artifacts) |
 
 ### Payment Boundary
 
-- The live judge-facing path is: `402` challenge → buyer sends a real USDC transfer on the active settlement rail → gateway verifies the tx hash and nonce.
-- Per-action source prices are at or below `$0.01` in the registry — enforced at build time.
-- Nonce expiry and replay checks protect against double-spend on payment proofs.
-- Every paid request triggers a real `USDC.transfer` on the active rail via `settlement-service.ts`.
+- The primary buyer path is **mandate-first**: `402` challenge → buyer signs an EIP-3009 `transferWithAuthorization` (no tx, no gas, no chain switch) → gateway verifies the signature **and settles it on-chain** before crediting. A mandate is never credited unsettled.
+- The mandate is a **top-up**: the signature funds the buyer's credit balance (`suggested_topup_amount` in the challenge), and requests draw the balance down. Per-call signatures are not the retail UX — funding is the consent moment; the Guardian spends within the funded balance and user-set bounds.
+- Retail consent surface: when a review would need funding, the app quotes first and shows an in-app `confirm_research` offer (review cost + top-up amount + evidence provenance) **before** any wallet prompt — confirm proceeds to the signature, skip keeps the free answer. An optional auto-fund setting (`autoPayMaxUSDC`, default-off) skips the offer only when the authoritative quote is within the user's cap; it never bypasses the wallet signature.
+- The fallback path is `402` challenge → buyer sends a real USDC transfer on the active settlement rail → gateway verifies the tx hash and nonce. This remains for external agents and clients that prefer tx-hash proofs.
+- Data-source prices are at or below `$0.01`; artifact-level products (e.g. `fx_protection` at `$1.00`) are priced per decision, not per feed.
+- Nonce expiry and replay checks protect against double-spend on payment proofs and mandates (challenge nonce is consumed once; the EIP-3009 nonce is additionally spent on-chain).
+- Every paid request also triggers a real `USDC.transfer` mirror on the active rail via `settlement-service.ts`.
 - Opaque `circle-gateway-*` proof ids are intentionally not accepted in the judge-facing flow unless server-side verification is explicitly configured.
 
 ### Configuring the Rail
@@ -148,16 +155,16 @@ Set in `.env.local` or on the server (see `.env.example` → "MAINNET FLIP"):
 | `SETTLEMENT_NETWORK` | `ZERO_G` | Rail: `ZERO_G`, `ARC`, `ARBITRUM`, or `HASHKEY` |
 | `SETTLEMENT_ENV` | `testnet` | Environment: `testnet` or `mainnet` |
 | `ZERO_G_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet` |
-| `ARC_MAINNET_USDC` | — | Required when `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet` |
+| `ARC_MAINNET_USDC` | `0x3600000000000000000000000000000000000000` | Arc mainnet USDC predeploy — verified live (EIP-3009 `FiatTokenV2`, `version()` → `2`); override optional |
 | `ARBITRUM_MAINNET_USDC` | `0xaf88d065e77c8cC2239327C5EDb3A432268e5831` | Circle-native USDC on Arbitrum One (override optional) |
 | `ARBITRUM_TESTNET_USDC` | `0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d` | Arbitrum Sepolia USDC (override optional) |
 | `HSP_COORDINATOR_URL`, `HSP_API_KEY` | — | Required when `SETTLEMENT_NETWORK=HASHKEY` — from the HSP Coordinator's self-service `/register` |
 | `HASHKEY_TESTNET_USDC`, `HASHKEY_MAINNET_USDC` | — | Fallbacks only — the authoritative token address is read from the Coordinator's `GET /chains` at verify time |
 | `HASHKEY_PAY_RECIPIENT` | `DATA_HUB_RECIPIENT_ADDRESS` | Merchant payout wallet on HashKey |
 
-To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet USDC address, and set `SETTLEMENT_ENV=mainnet`.
+To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet USDC address (Arc's default is already correct — `0x3600…`), and set `SETTLEMENT_ENV=mainnet`.
 
-> **Buildathon recommendation:** For the Arbitrum Open House, use `SETTLEMENT_NETWORK=ARBITRUM` and `SETTLEMENT_ENV=mainnet`. Arbitrum already has a verified, live, Circle-issued USDC contract on chainId 42161, making it the only rail ready for real mainnet payments today. 0G mainnet and Arc mainnet lack a verified USDC contract for settlement.
+> **Arc mainnet status (2026-09-16):** Arc public mainnet is live — chain ID `5042`, RPC `https://rpc.mainnet.arc.io`, explorer `https://explorer.arc.io`, USDC native gas + ERC-20 at `0x3600…` (verified `symbol()`/`version()` on-chain), EURC at `0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1` (differs from testnet), CCTP domain `26`, Circle Gateway + Nanopayments live. Arc is the intended canonical rail once the vault is funded; Arbitrum remains a valid mainnet fallback. 0G mainnet still lacks a verified stablecoin for settlement.
 
 ### Evidence Bundles
 
@@ -172,7 +179,18 @@ To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet US
 ```text
 Client → GET /api/agent/x402-gateway?source=macro_analysis
        ← 402 { nonce, amount: "0.004", currency: "USDC", recipient, chainId,
-             settlement_network: "ARBITRUM", settlement_env: "mainnet", expires }
+             token, mandate_supported: true, settlement_network: "ARBITRUM",
+             settlement_env: "mainnet", expires }
+
+# Mandate-first (EIP-3009): buyer signs, merchant settles
+Client → signs TransferWithAuthorization over {from, to: recipient,
+         value: amount, validBefore: expires, nonce}
+Client → GET /api/agent/x402-gateway?source=macro_analysis
+         x-payment-mandate: <mandate json>
+       ← gateway verifies signature + submits transferWithAuthorization
+         on-chain (vault key pays gas); credit = settled amount
+
+# Fallback: raw transfer proof
 Client → GET /api/agent/x402-gateway?source=macro_analysis
          x-payment-proof: 0x<real_usdc_transfer_tx_hash>
          x-payment-nonce: <challenge_nonce>
@@ -252,11 +270,12 @@ The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stal
 | **Hyperliquid** | Perps DEX | Direct API |
 | **Robinhood Chain** | AMM | Built-in |
 
-## Circle (CCTP & MPC)
+## Circle (CCTP, Gateway & MPC)
 
-- **CCTP Domains**: Arc → Arbitrum, Arbitrum → Celo (via bridge)
+- **CCTP Domains**: Arc is domain `26` (mainnet TokenMessenger `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d`); Arbitrum ↔ Celo via bridge
+- **Gateway (planned funding layer)**: `GatewayWallet`/`GatewayMinter` live on Arc mainnet — chain-abstracted USDC balance (deposit once on any supported chain, spendable on Arc). Chosen model for "Protection Balance"; the custodial MPC sub-wallet path is evaluated against it before further investment.
+- **Nanopayments / EIP-3009**: the gateway accepts `x-payment-mandate` (signed `transferWithAuthorization`); settlement is self-hosted today — the merchant submits the authorization on-chain. Circle Gateway batched settlement (down to `$0.000001`) is the Phase 3 upgrade.
 - **MPC Wallets**: Circle MPC for agent fuel tank + Hyperliquid API keys
-- **EIP-3009**: USDC transfer with authorization for nanopayments
 - **Hackathon Default**: prefer the simplest externally verifiable proof path for judges; keep experimental payment variants out of the core demo unless they are fully verified end to end
 
 ## Wallet Integration

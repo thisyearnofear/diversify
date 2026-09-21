@@ -28,6 +28,14 @@ export const NETWORKS = {
         explorerUrl: 'https://testnet.arcscan.app',
         devOnly: true, // Only show in development
     },
+    ARC_MAINNET: {
+        chainId: 5042,
+        name: 'Arc',
+        rpcUrl: process.env.NEXT_PUBLIC_ARC_MAINNET_RPC || 'https://rpc.mainnet.arc.io',
+        explorerUrl: 'https://explorer.arc.io',
+        // Settlement rail for x402 paid intelligence — deliberately not a
+        // user-facing chain (docs/rails.md § Arc Rail).
+    },
     ARBITRUM_ONE: {
         chainId: 42161,
         name: 'Arbitrum',
@@ -338,6 +346,7 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.ARBITRUM_ONE.chainId]: ['USDC', 'MXNB', 'PAXG', 'USDY', 'SYRUPUSDC'],
     [NETWORKS.ARBITRUM_SEPOLIA.chainId]: ['USDC'],
     [NETWORKS.ARC_TESTNET.chainId]: ['USDC', 'EURC'],
+    [NETWORKS.ARC_MAINNET.chainId]: ['USDC', 'EURC'],
     [NETWORKS.RH_TESTNET.chainId]: ['ETH'],
     [NETWORKS.RH_MAINNET.chainId]: [
         'USDG', 'WETH', 'SPY', 'QQQ', 'SGOV', 'SLV',
@@ -570,7 +579,15 @@ export const ARBITRUM_SEPOLIA_TOKENS = {
     USDC: '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
 } as const;
 
+// Arc mainnet tokens — live 2026-09-16 (chain ID 5042). USDC is the native gas
+// token; the ERC-20 interface lives at the 0x3600… predeploy on BOTH networks.
+// EURC differs between mainnet and testnet (verified via docs.arc.io + on-chain).
 export const ARC_TOKENS = {
+    USDC: '0x3600000000000000000000000000000000000000',
+    EURC: '0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1',
+} as const;
+
+export const ARC_TESTNET_TOKENS = {
     USDC: '0x3600000000000000000000000000000000000000',
     EURC: '0x89B50855Aa3bE2F677cD6303Cec089B5F319D72a',
 } as const;
@@ -626,7 +643,8 @@ export const BROKER_ADDRESSES = {
 export function getTokenAddresses(chainId: number): Record<string, string> {
     if (chainId === NETWORKS.RH_TESTNET.chainId) return RH_TESTNET_TOKENS;
     if (chainId === NETWORKS.RH_MAINNET.chainId) return RH_MAINNET_TOKENS;
-    if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TOKENS;
+    if (chainId === NETWORKS.ARC_TESTNET.chainId) return ARC_TESTNET_TOKENS;
+    if (chainId === NETWORKS.ARC_MAINNET.chainId) return ARC_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_ONE.chainId) return ARBITRUM_TOKENS;
     if (chainId === NETWORKS.ARBITRUM_SEPOLIA.chainId) return ARBITRUM_SEPOLIA_TOKENS;
     if (chainId === NETWORKS.HASHKEY_MAINNET.chainId) return HASHKEY_TOKENS;

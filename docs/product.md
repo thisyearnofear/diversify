@@ -81,6 +81,35 @@ proof surface and top-of-funnel. External agents and rails players are
 consumers #2+. This is what makes DiversiFi infrastructure other teams
 depend on, not a consumer app with infrastructure framing.
 
+## The product object: the decision artifact
+
+Users do not buy research. They buy a decision they can approve. The unit
+that reaches the approval surface is a **Protection Review** — a single
+artifact carrying five things: the proposed action (hold / rotate /
+hedge), the quantified stakes ("unhedged, this exposure cost ~$18 last
+month"), the alignment note (why it fits the user's stated philosophy and
+goals), the evidence footnote (sources + freshness + on-chain receipt —
+one tap behind, never the headline), and the bounds state (within Guardian
+permissions or needs approval).
+
+- **Sources are COGS; artifacts are the product.** Per-source prices
+  ($0.001–$0.01) are internal cost accounting bundled into an artifact —
+  never surfaced. Retail and B2B license the same object (`fx_protection`
+  at $1 is the prototype); only presentation differs.
+- **Charge for decisions, not data.** Ambient monitoring is free; the
+  Protection Balance funds artifact generation only when there is
+  something worth deciding. "Nothing actionable" reviews stay free.
+- **Funding is the consent moment.** The user signs once at top-up; the
+  Guardian draws the funded balance within user-set bounds (per-call cap,
+  daily cap). Escalate to the user only on empty balance or out-of-bounds
+  action — never a signature per call. When a review needs funding, the
+  app quotes it and shows the price **in-app first** — "Fund & run ·
+  $1.00" with the evidence provenance listed — so the wallet prompt is
+  never the first place a number appears.
+- **Evidence is empirical first.** Social proof ("68% of Lagos savers
+  rotated") is staged behind real aggregate Guardian activity — per the
+  honesty contract, it does not ship hollow.
+
 ## Primary Persona (Guardian app)
 
 A stablecoin saver who wants to protect purchasing power but does not want

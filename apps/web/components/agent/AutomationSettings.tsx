@@ -374,7 +374,7 @@ export default function AutomationSettings({
                   Auto-Saver Wallet
                 </h3>
                 <p className="text-xs sm:text-xs text-purple-700 dark:text-purple-300">
-                  Pays for its own market data — you don't get charged for research.
+                  Pays for its own market data — reviews never charge you.
                 </p>
               </div>
             </div>
@@ -503,7 +503,7 @@ export default function AutomationSettings({
                   </span>
                 </div>
                 <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
-                  Hands-off wallet that pays gas + research fees in USDC. Powered by
+                  Hands-off wallet that pays gas + evidence fees in USDC. Powered by
                   Circle Programmable Wallets.
                 </p>
               </button>
@@ -1128,7 +1128,7 @@ export default function AutomationSettings({
               automations when it detects wealth protection opportunities that
               meet your configured thresholds.
               {isDev &&
-                " Paid research uses your Research Balance; Auto-Saver execution uses the configured Auto-Saver Wallet."}
+                " Paid reviews draw your Protection Balance; Auto-Saver execution uses the configured Auto-Saver Wallet."}
             </p>
           </div>
         </div>

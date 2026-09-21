@@ -1,15 +1,20 @@
 /**
  * useX402Payment — Client-side x402 payment hook
  *
- * Implements the full buyer side of the x402 protocol:
- *   1. Fetch 402 challenge from gateway (nonce, amount, recipient)
- *   2. Send real USDC transfer on Arc from user's connected wallet
- *   3. Return tx hash as x-payment-proof for the follow-up request
+ * Implements the full buyer side of the x402 protocol, mandate-first:
+ *   1. Fetch 402 challenge from gateway (nonce, amount, recipient, chainId, token)
+ *   2. Sign an EIP-3009 TransferWithAuthorization (no tx, no chain switch, no
+ *      gas) — the merchant settles it on-chain via transferWithAuthorization
+ *   3. Return x-payment-mandate for the follow-up request
+ *
+ * Fallbacks (in order): HashKey HSP mandate path when the challenge advertises
+ * it; raw USDC transfer + tx-hash proof when the rail lacks EIP-3009 or the
+ * wallet refuses to sign.
  *
  * Core Principles:
  * - ENHANCEMENT FIRST: Wraps existing providerRef from use-wallet, no new infra
  * - SINGLE RESPONSIBILITY: Only payment — data fetching stays in use-agent-chat
- * - DRY: ARC_TOKENS.USDC and ARC_TESTNET chainId from shared config
+ * - DRY: chainId/token/explorer all come from the challenge — no hardcoded rail
  */
 
 import { useCallback, useState } from 'react';
@@ -17,7 +22,14 @@ import { ethers } from 'ethers';
 import { createWalletClient, custom, parseUnits, type Hex, type Address } from 'viem';
 import { useWallets } from '@privy-io/react-auth';
 import { useWalletContext } from '../components/wallet/WalletProvider';
-import { ARC_TOKENS, NETWORKS } from '../config';
+import { getTokenAddresses, getNetworkConfig, NETWORKS } from '../config';
+import { getAddChainParameter } from '@diversifi/shared/src/modules/wallet/core/chains';
+import {
+    EIP3009_DOMAIN_NAME,
+    EIP3009_DOMAIN_VERSION,
+    EIP3009_TRANSFER_TYPES,
+    eip3009NonceBytes32,
+} from '@diversifi/shared/src/utils/eip3009';
 import {
     buildMandateMessage,
     buildDomain,
@@ -32,7 +44,6 @@ import {
 import type { ResearchQuote, ResearchReceipt, ResearchSourceLineItem } from '@diversifi/shared';
 
 const GATEWAY_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-const ARC_CHAIN_ID = NETWORKS.ARC_TESTNET.chainId; // 5042002
 const HSP_CHAIN_IDS: number[] = [NETWORKS.HASHKEY_TESTNET.chainId, NETWORKS.HASHKEY_MAINNET.chainId];
 
 // Minimal ERC-20 transfer ABI
@@ -80,7 +91,12 @@ async function payViaHsp(
     if (!info) throw new Error(`HSP chain "${hsp.chainName}" not found on the Coordinator`);
     const token = info.stablecoin as Address;
 
-    const amountBaseUnits = parseUnits(parseFloat(challenge.amount).toFixed(6), 6);
+    // Same funding-event semantics as the mandate path — one transfer tops up.
+    const fundAmount = Math.max(
+        parseFloat(challenge.amount),
+        parseFloat(challenge.suggested_topup_amount ?? '0'),
+    );
+    const amountBaseUnits = parseUnits(fundAmount.toFixed(6), 6);
     const deadline = Math.floor(Date.now() / 1000) + 3600;
 
     const message = buildMandateMessage({
@@ -119,6 +135,7 @@ async function payViaHsp(
     const payment: X402PaymentResult = {
         txHash: tx.hash,
         amount: challenge.amount,
+        fundedAmount: fundAmount.toFixed(3),
         nonce: challenge.nonce,
         explorer: `${explorerBase}/tx/${tx.hash}`,
     };
@@ -129,11 +146,90 @@ async function payViaHsp(
     };
 }
 
+/**
+ * EIP-3009 mandate path — the primary buyer flow. The user signs a
+ * TransferWithAuthorization typed-data message only; the gateway submits it
+ * on-chain (merchant pays gas) and credits the settled amount. No chain
+ * switch, no transaction, no buyer gas.
+ */
+async function signPaymentMandate(
+    challenge: X402Challenge,
+    rawProvider: unknown,
+    address: string,
+): Promise<{ headers: Record<string, string>; payment: X402PaymentResult }> {
+    if (!challenge.token) {
+        throw new Error('Challenge did not advertise a settlement token');
+    }
+
+    // Funding event, not per-call payment: sign the suggested top-up so one
+    // signature covers many reviews. The wallet prompt shows the real
+    // authorized amount — consent is the signature itself.
+    const fundAmount = Math.max(
+        parseFloat(challenge.amount),
+        parseFloat(challenge.suggested_topup_amount ?? '0'),
+    );
+
+    const validAfter = 0;
+    const validBefore = Math.floor(challenge.expires / 1000);
+
+    const walletClient = createWalletClient({ account: address as Hex, transport: custom(rawProvider as never) });
+    // Same runtime-built types caveat as the HSP path — the EIP-3009 shape is
+    // the canonical USDC TransferWithAuthorization, cast through.
+    const signature = await walletClient.signTypedData({
+        account: address as Hex,
+        domain: {
+            name: EIP3009_DOMAIN_NAME,
+            version: EIP3009_DOMAIN_VERSION,
+            chainId: challenge.chainId,
+            verifyingContract: challenge.token as Address,
+        },
+        types: EIP3009_TRANSFER_TYPES,
+        primaryType: 'TransferWithAuthorization',
+        message: {
+            from: address as Address,
+            to: challenge.recipient as Address,
+            value: parseUnits(fundAmount.toFixed(6), 6),
+            validAfter: BigInt(validAfter),
+            validBefore: BigInt(validBefore),
+            nonce: eip3009NonceBytes32(challenge.nonce) as Hex,
+        },
+    } as never);
+
+    const mandate = {
+        sender: address,
+        recipient: challenge.recipient,
+        amount: fundAmount.toFixed(6),
+        nonce: challenge.nonce,
+        validAfter,
+        validBefore,
+        signature,
+        chainId: challenge.chainId,
+        tokenAddress: challenge.token,
+    };
+
+    return {
+        headers: { 'x-payment-mandate': JSON.stringify(mandate) },
+        payment: {
+            // Display the review cost, not the top-up — the funded amount is
+            // visible separately so the receipt reads like a charge, not a load.
+            amount: challenge.amount,
+            fundedAmount: fundAmount.toFixed(3),
+            nonce: challenge.nonce,
+            method: 'mandate',
+        },
+    };
+}
+
 export interface X402PaymentResult {
-    txHash: string;
+    /** Present for on-chain transfer proofs; mandate payments settle server-side. */
+    txHash?: string;
+    /** Cost of this review — what the receipt displays. */
     amount: string;
-    explorer: string;
+    /** Total signed into the Protection Balance by a mandate/HSP top-up (>= amount). */
+    fundedAmount?: string;
+    explorer?: string;
     nonce: string;
+    method?: 'mandate' | 'transfer' | 'hsp';
 }
 
 type X402Challenge = {
@@ -143,9 +239,13 @@ type X402Challenge = {
     nonce: string;
     currency: 'USDC';
     chainId: number;
+    token?: string;
+    explorer?: string;
+    mandate_supported?: boolean;
     expires: number;
     current_balance?: string;
     required_cost?: number;
+    suggested_topup_amount?: string;
     requested_sources?: string[];
     bundle_requested?: boolean;
     reason?: string;
@@ -179,9 +279,10 @@ export function useX402Payment() {
         expires: challenge.expires,
         currentBalance: challenge.current_balance || '0.0000',
         requiredCost: challenge.required_cost ?? parseFloat(challenge.amount),
+        suggestedTopup: challenge.suggested_topup_amount,
         requestedSources: challenge.requested_sources || [],
         bundleRequested: Boolean(challenge.bundle_requested),
-        reason: challenge.reason || 'Premium research requires Arc USDC.',
+        reason: challenge.reason || 'This review needs Protection Balance funding.',
         sources: challenge.sources || [],
     });
 
@@ -218,6 +319,7 @@ export function useX402Payment() {
             txHash: payment?.txHash,
             explorer: payment?.explorer,
             nonce: payment?.nonce,
+            fundedAmount: payment?.fundedAmount,
             remainingCredit: billing.remaining_credit,
             reason: billing.reason,
             onChainSettled: Boolean(billing.onChainSettled),
@@ -237,7 +339,7 @@ export function useX402Payment() {
         }
 
         if (!address) {
-            throw new Error('Wallet not connected — connect your wallet to use premium research');
+            throw new Error('Wallet not connected — connect your wallet to fund your Protection Balance');
         }
 
         setState(s => ({ ...s, isPaying: true, error: null }));
@@ -254,26 +356,64 @@ export function useX402Payment() {
             const signer = web3Provider.getSigner();
 
             // HashKey settlement via HSP (chain 133 testnet / 177 mainnet) — distinct
-            // path from the Arc default below, which stays byte-for-byte unchanged.
+            // path from the EIP-3009/transfer paths below.
             if (challenge.hsp && HSP_CHAIN_IDS.includes(challenge.chainId)) {
                 const result = await payViaHsp(challenge, rawProvider, signer, address);
                 setState(s => ({ ...s, isPaying: false, lastPayment: result.payment }));
                 return result;
             }
 
-            // Step 3: switch to Arc testnet if needed
-            const network = await web3Provider.getNetwork();
-            if (network.chainId !== ARC_CHAIN_ID) {
-                await (rawProvider as any).request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: `0x${ARC_CHAIN_ID.toString(16)}` }],
-                });
+            // Mandate-first (EIP-3009): sign only — merchant settles on-chain.
+            // No chain switch or gas for the buyer. Falls back to the raw
+            // transfer proof if the wallet can't produce the signature.
+            if (challenge.mandate_supported && challenge.token) {
+                try {
+                    const result = await signPaymentMandate(challenge, rawProvider, address);
+                    setState(s => ({ ...s, isPaying: false, lastPayment: result.payment }));
+                    return result;
+                } catch (mandateErr: any) {
+                    // User rejection (4001) means "don't pay" — don't follow it
+                    // with an on-chain-transfer prompt. Only fall back when the
+                    // wallet can't produce the signature at all.
+                    if (mandateErr?.code === 4001 || /rejected|denied/i.test(mandateErr?.message ?? '')) {
+                        throw mandateErr;
+                    }
+                    console.warn('[x402] Mandate signing failed — falling back to on-chain transfer:', mandateErr);
+                }
             }
 
-            // Step 4: send the USDC transfer on Arc
-            const usdc = new ethers.Contract(ARC_TOKENS.USDC, USDC_ABI, signer);
+            // Fallback: raw USDC transfer on the challenge's settlement chain —
+            // for external agents / rails without EIP-3009.
+            const targetChainId = challenge.chainId;
+            const network = await web3Provider.getNetwork();
+            if (network.chainId !== targetChainId) {
+                try {
+                    await (rawProvider as any).request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: `0x${targetChainId.toString(16)}` }],
+                    });
+                } catch (switchErr: any) {
+                    if (switchErr?.code !== 4902) throw switchErr;
+                    // Unknown chain — add it if our registry knows the params.
+                    await (rawProvider as any).request({
+                        method: 'wallet_addEthereumChain',
+                        params: [getAddChainParameter(targetChainId)],
+                    });
+                }
+            }
+
+            const usdcAddress = challenge.token || getTokenAddresses(targetChainId).USDC;
+            if (!usdcAddress) {
+                throw new Error(`No settlement token configured for chain ${targetChainId}`);
+            }
+            const usdc = new ethers.Contract(usdcAddress, USDC_ABI, signer);
+            // Top-up semantics: one transfer funds many reviews.
+            const fundAmount = Math.max(
+                parseFloat(amount),
+                parseFloat(challenge.suggested_topup_amount ?? '0'),
+            );
             const amountRaw = ethers.utils.parseUnits(
-                parseFloat(amount).toFixed(6),
+                fundAmount.toFixed(6),
                 6, // USDC decimals
             );
 
@@ -281,11 +421,14 @@ export function useX402Payment() {
                 gasLimit: 80_000,
             });
 
+            const explorerBase = challenge.explorer || getNetworkConfig(targetChainId).explorerUrl;
             const payment: X402PaymentResult = {
                 txHash: tx.hash,
                 amount,
+                fundedAmount: fundAmount.toFixed(3),
                 nonce,
-                explorer: `https://testnet.arcscan.app/tx/${tx.hash}`,
+                explorer: `${explorerBase}/tx/${tx.hash}`,
+                method: 'transfer',
             };
 
             setState(s => ({ ...s, isPaying: false, lastPayment: payment }));

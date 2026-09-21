@@ -10,6 +10,7 @@
 
 import { ethers, providers, utils } from 'ethers';
 import { ARC_DATA_HUB_CONFIG, CIRCLE_CONFIG } from '../config';
+import { eip3009Domain, eip3009NonceBytes32, EIP3009_TRANSFER_TYPES } from '../utils/eip3009';
 
 // Unified Circle API Configuration
 const CIRCLE_API = {
@@ -177,6 +178,7 @@ export class CircleService {
         // Known USDC contract addresses per chain
         const USDC_CONTRACTS: Record<number, { address: string; rpc: string; name: string; decimals: number }> = {
             5042002: { address: ARC_DATA_HUB_CONFIG.USDC_TESTNET, rpc: process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network', name: 'Arc Testnet', decimals: 6 },
+            5042:    { address: ARC_DATA_HUB_CONFIG.USDC_TESTNET, rpc: process.env.ARC_MAINNET_RPC_URL || 'https://rpc.mainnet.arc.io', name: 'Arc', decimals: 6 },
             42161:   { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', rpc: process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc', name: 'Arbitrum', decimals: 6 },
             1:       { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', rpc: process.env.ETH_RPC_URL || 'https://eth.llamarpc.com', name: 'Ethereum', decimals: 6 },
         };
@@ -271,6 +273,7 @@ export class CircleService {
             // Map chainIds to Circle blockchain identifiers
             const CHAIN_MAP: Record<number, string> = {
                 5042002: 'ARC-TESTNET',
+                5042: 'ARC',
                 42161: 'ARB',
                 1: 'ETH',
                 42220: 'CELO',
@@ -331,30 +334,15 @@ export class CircleService {
     async createNanopaymentMandate(
         signer: any,
         intent: NanopaymentIntent,
-        chainId: number = 5042002,
+        chainId: number = ARC_DATA_HUB_CONFIG.CHAIN_ID,
         tokenAddress: string = ARC_DATA_HUB_CONFIG.USDC_TESTNET
     ): Promise<NanopaymentMandate> {
         console.log(`[Circle Service] Creating Nanopayment Mandate: ${intent.amount} USDC to ${intent.recipient}`);
 
         const sender = await signer.getAddress();
 
-        const domain = {
-            name: 'USD Coin',
-            version: '2',
-            chainId: chainId,
-            verifyingContract: tokenAddress
-        };
-
-        const types = {
-            TransferWithAuthorization: [
-                { name: 'from', type: 'address' },
-                { name: 'to', type: 'address' },
-                { name: 'value', type: 'uint256' },
-                { name: 'validAfter', type: 'uint256' },
-                { name: 'validBefore', type: 'uint256' },
-                { name: 'nonce', type: 'bytes32' }
-            ]
-        };
+        const domain = eip3009Domain(chainId, tokenAddress);
+        const types = EIP3009_TRANSFER_TYPES;
 
         const value = {
             from: sender,
@@ -362,7 +350,7 @@ export class CircleService {
             value: utils.parseUnits(intent.amount, 6),
             validAfter: intent.validAfter,
             validBefore: intent.validBefore,
-            nonce: intent.nonce.startsWith('0x') ? intent.nonce : utils.formatBytes32String(intent.nonce)
+            nonce: eip3009NonceBytes32(intent.nonce)
         };
 
         const signature = signer._signTypedData
@@ -383,23 +371,8 @@ export class CircleService {
      */
     async verifyNanopaymentMandate(mandate: NanopaymentMandate): Promise<boolean> {
         try {
-            const domain = {
-                name: 'USD Coin',
-                version: '2',
-                chainId: mandate.chainId,
-                verifyingContract: mandate.tokenAddress
-            };
-
-            const types = {
-                TransferWithAuthorization: [
-                    { name: 'from', type: 'address' },
-                    { name: 'to', type: 'address' },
-                    { name: 'value', type: 'uint256' },
-                    { name: 'validAfter', type: 'uint256' },
-                    { name: 'validBefore', type: 'uint256' },
-                    { name: 'nonce', type: 'bytes32' }
-                ]
-            };
+            const domain = eip3009Domain(mandate.chainId, mandate.tokenAddress);
+            const types = EIP3009_TRANSFER_TYPES;
 
             const value = {
                 from: mandate.sender,
@@ -407,7 +380,7 @@ export class CircleService {
                 value: utils.parseUnits(mandate.amount, 6),
                 validAfter: mandate.validAfter,
                 validBefore: mandate.validBefore,
-                nonce: mandate.nonce.startsWith('0x') ? mandate.nonce : utils.formatBytes32String(mandate.nonce)
+                nonce: eip3009NonceBytes32(mandate.nonce)
             };
 
             const recoveredAddress = utils.verifyTypedData(domain, types, value, mandate.signature);

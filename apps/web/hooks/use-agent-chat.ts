@@ -15,6 +15,7 @@ import { AgentActionService } from "@diversifi/shared/src/services/ai/agent-acti
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
+import { useResearchPaymentSettings } from "./use-research-account";
 import { trackFunnelEvent } from "../lib/analytics";
 import { buildWalletPortfolioView } from "../lib/wallet-portfolio-view";
 import { useGuardianVisibilityOptional } from "../context/app/GuardianVisibilityContext";
@@ -35,6 +36,7 @@ import type {
   AgentChatState,
   AIMessage,
 } from "./agent-types";
+import type { ResearchQuote } from "@diversifi/shared/src/types/research-billing";
 
 /**
  * Detect whether the user's input is a question (not a command).
@@ -82,9 +84,10 @@ export function useAgentChat({
   const { chainId, address } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useSharedMultichainBalances(address, config.goal);
-  const { fetchPaidSource } = useX402Payment();
+  const { fetchPaidSource, quoteResearch } = useX402Payment();
   const { addActivity } = useAgentActivities();
   const { deductCredits, status: creditsStatus } = useCredits();
+  const { settings: paymentSettings } = useResearchPaymentSettings();
   const visibilityCtx = useGuardianVisibilityOptional();
 
   // Shared chat state via React Context (replaces module-level pub-sub).
@@ -290,11 +293,11 @@ export function useAgentChat({
       }
 
       let effectiveContent = content;
-      const normalizedContent = content.trim().toLowerCase();
+      const rawNormalized = content.trim().toLowerCase();
       const lastAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant");
-      const isAffirmative = /^(yes|yeah|yep|sure|ok|okay|do it|go ahead|please do|confirm)$/i.test(normalizedContent);
+      const isAffirmative = /^(yes|yeah|yep|sure|ok|okay|do it|go ahead|please do|confirm)$/i.test(rawNormalized);
 
-      if (lastAssistantMessage?.action?.type === "confirm_research" && /^(no|nope|cancel|skip)$/i.test(normalizedContent)) {
+      if (lastAssistantMessage?.action?.type === "confirm_research" && /^(no|nope|cancel|skip)$/i.test(rawNormalized)) {
         addMessage({
           role: "assistant",
           content: "No problem. I can still answer with free context whenever you're ready.",
@@ -305,11 +308,24 @@ export function useAgentChat({
             amount: "0.000",
             currency: "USDC",
             sources: lastAssistantMessage.x402Receipt?.sources || [],
-            reason: "User skipped the quoted paid research bundle.",
+            reason: "User skipped the quoted review.",
           },
         });
         return;
       }
+
+      // User approved the quoted review (Fund & run / typed "yes") — restore
+      // the original question so intent + evidence fetch run against it, and
+      // let the paid fetch below proceed to the funding signature.
+      let confirmedReview = false;
+      if (isAffirmative && lastAssistantMessage?.action?.type === "confirm_research") {
+        const originalQuery = [...messages].reverse().find((m) => m.role === "user")?.content;
+        if (originalQuery) {
+          effectiveContent = originalQuery;
+          confirmedReview = true;
+        }
+      }
+      const normalizedContent = effectiveContent.trim().toLowerCase();
 
       if (isAffirmative && lastAssistantMessage?.action?.type === "guardian_review") {
         updateChatState({
@@ -494,53 +510,101 @@ export function useAgentChat({
       const isMarketQuery = false;
       let sosovalueData: any = undefined;
 
-      // Fetch research evidence from the Arc Data Hub gateway.
+      // Fetch research evidence from the Data Hub gateway (x402).
       // Uses fetchPaidSource which handles the full 402→pay→re-fetch cycle.
       // The returned data becomes macroData for the advisor (provides evidence context).
       let x402Receipt: AIMessage["x402Receipt"] = null;
       let macroData: Record<string, any> = {};
+      const bundleSources = "macro_analysis,portfolio_optimization,risk_assessment";
+      // When the review would require funding, the quote is stashed here and
+      // emitted as a confirm_research offer after the advisor answers.
+      let pendingReviewQuote: ResearchQuote | null = null;
 
       // Inject silently-fetched SoSoValue data as macro context for synthesis responses
       if (sosovalueData) {
         macroData.sosovalue = sosovalueData;
       }
 
-      // Gate paid research: only fetch when user wants data/action or explicitly requests research
+      // Gate paid evidence: only fetch when user wants data/action or explicitly
+      // requests it. The funding ladder: covered balance → serve silently;
+      // no balance + auto-fund within the user's cap or an explicit confirm →
+      // straight to the funding signature; otherwise offer the review first —
+      // never silently downgrade a paid-eligible question.
       const explicitResearchRequest = /\b(deep research|premium research|research bundle|run research|paid research|evidence backed|with evidence)\b/i.test(normalizedContent);
-      const shouldFetchResearch = (responseFormat === 'card' || responseFormat === 'action') || explicitResearchRequest;
+      const shouldFetchResearch = (responseFormat === 'card' || responseFormat === 'action') || explicitResearchRequest || confirmedReview;
       const currentCredits = creditsStatus?.credits.bonus ?? 0;
       const hasCredits = currentCredits >= RESEARCH_BUNDLE_PRICE;
 
-      if (!hasCredits || !shouldFetchResearch) {
-        // No credits or synthesis-only query — skip paid research, advisor uses
-        // built-in context only. Do NOT attach a "failed" receipt to normal
-        // free answers — that makes every free response look like an error.
+      const runFundedFetch = async () => {
+        updateChatState({ thinkingStep: "Gathering evidence..." });
+        const { data: bundleData, receipt } = await fetchPaidSource(bundleSources);
+        x402Receipt = receipt;
+        if (bundleData) {
+          macroData = { ...macroData, ...(bundleData.data || bundleData) };
+          if (bundleData.bundle) macroData._research = { bundle: bundleData.bundle };
+          if (bundleData.sources) macroData.sources = bundleData.sources;
+          if (bundleData._billing) macroData._billing = bundleData._billing;
+        }
+      };
+
+      if (!shouldFetchResearch) {
+        // Synthesis-only query — no paid fetch. Do NOT attach a "failed"
+        // receipt to normal free answers — that makes every free response
+        // look like an error.
         x402Receipt = null;
-      } else {
+      } else if (hasCredits || confirmedReview) {
         try {
-          updateChatState({ thinkingStep: "Gathering research evidence..." });
-
-          const bundleSources = "macro_analysis,portfolio_optimization,risk_assessment";
-          const { data: bundleData, receipt } = await fetchPaidSource(bundleSources);
-
-          x402Receipt = receipt;
-
-          if (bundleData) {
-            macroData = { ...macroData, ...(bundleData.data || bundleData) };
-            if (bundleData.bundle) macroData._research = { bundle: bundleData.bundle };
-            if (bundleData.sources) macroData.sources = bundleData.sources;
-            if (bundleData._billing) macroData._billing = bundleData._billing;
-          }
+          await runFundedFetch();
         } catch (error: any) {
-          const errorMessage = error?.message || "Research fetch failed";
+          const errorMessage = error?.message || "Evidence fetch failed";
+          const userDeclined = /reject|denied|4001|declined/i.test(errorMessage);
           x402Receipt = {
-            status: "failed",
+            status: userDeclined ? "skipped" : "failed",
             amount: "0.000",
             currency: "USDC",
             sources: [],
-            reason: "Advisor answered without research evidence.",
+            reason: userDeclined
+              ? "Funding declined — answered with free context."
+              : "Guardian answered without paid evidence.",
             error: errorMessage,
           };
+        }
+      } else {
+        // No funded balance — quote first. If the gateway would serve this
+        // from balance or free tier, just fetch; otherwise offer the review
+        // so the funding decision is the user's, with the price up front.
+        let quote: ResearchQuote | null = null;
+        try {
+          quote = await quoteResearch(bundleSources);
+        } catch {
+          // Quote probe failed — answer free, no offer.
+        }
+        if (quote) {
+          const requiredCost =
+            quote.requiredCost || Number.parseFloat(quote.amount || "0");
+          const balanceCovers =
+            Number.parseFloat(quote.currentBalance || "0") >= requiredCost;
+          // Auto-fund is a bound, so it checks the authoritative quote —
+          // not the client-side estimate — against the user's cap.
+          const withinAutoCap =
+            paymentSettings.autoPayEnabled && requiredCost <= paymentSettings.autoPayMaxUSDC;
+          if (quote.status === "free" || balanceCovers || withinAutoCap) {
+            try {
+              await runFundedFetch();
+            } catch (error: any) {
+              const errorMessage = error?.message || "Evidence fetch failed";
+              x402Receipt = {
+                status: "failed",
+                amount: "0.000",
+                currency: "USDC",
+                sources: [],
+                reason: "Guardian answered without paid evidence.",
+                error: errorMessage,
+              };
+            }
+          } else {
+            pendingReviewQuote = quote;
+          }
         }
       }
 
@@ -712,6 +776,36 @@ export function useAgentChat({
           });
           pendingAssistant = null;
 
+          // The free answer is on screen — now offer the funded review as a
+          // separate trailing message so its confirm_research action is the
+          // last assistant action next turn (Run → signature, Skip → pass).
+          if (pendingReviewQuote) {
+            const topup = pendingReviewQuote.suggestedTopup;
+            addMessage({
+              role: "assistant",
+              content: `I can pull live evidence for a deeper Protection Review — ${pendingReviewQuote.amount} USDC from your balance${topup ? ` (funded by a ${topup} USDC top-up)` : ""}.`,
+              timestamp: new Date(),
+              type: "text",
+              action: {
+                type: "confirm_research",
+                quoteAmount: pendingReviewQuote.amount,
+                fundingAmount: topup,
+                quoteSources: pendingReviewQuote.sources.map((s) => ({
+                  label: s.label,
+                  cost: s.cost,
+                  tier: s.tier,
+                })),
+              },
+              x402Receipt: {
+                status: "quoted",
+                amount: pendingReviewQuote.amount,
+                currency: "USDC",
+                sources: pendingReviewQuote.sources,
+                reason: pendingReviewQuote.reason,
+              },
+            });
+          }
+
           // Anchor this advice to the 0G RecommendationLedger so the user
           // sees verifiable on-chain state. Fire-and-patch: we don't block
           // the reply, but we DO update the message in place once the
@@ -795,8 +889,8 @@ export function useAgentChat({
                 tier: "ADVISOR",
                 status: x402Receipt.status === "failed" ? "failed" : "success",
                 description: x402Receipt.status === "failed"
-                  ? "Premium Arc research skipped"
-                  : `Premium Arc research ${x402Receipt.status === "credit" ? "used credits" : x402Receipt.status === "paid" ? "paid" : "from allowance"}`,
+                  ? "Protection review skipped"
+                  : `Protection review ${x402Receipt.status === "credit" ? "funded from balance" : x402Receipt.status === "paid" ? "funded" : "covered by free tier"}`,
                 details: {
                   query: effectiveContent,
                   cost: effectiveCost,
@@ -892,10 +986,13 @@ export function useAgentChat({
       addMessage,
       addActivity,
       fetchPaidSource,
+      quoteResearch,
       patchMessage,
       deductCredits,
       updateChatState,
       visibilityCtx,
+      paymentSettings.autoPayEnabled,
+      paymentSettings.autoPayMaxUSDC,
     ],
   );
 

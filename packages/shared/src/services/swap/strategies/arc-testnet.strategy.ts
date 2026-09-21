@@ -14,7 +14,7 @@ import {
 } from './base-swap.strategy';
 import { ProviderFactoryService } from '../provider-factory.service';
 import { ChainDetectionService } from '../chain-detection.service';
-import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG, ARC_TOKENS } from '../../../config';
+import { getTokenAddresses, TOKEN_METADATA, TX_CONFIG, ARC_TESTNET_TOKENS } from '../../../config';
 
 // Arc Testnet DEX Configuration
 const ARC_TESTNET_DEXS = {

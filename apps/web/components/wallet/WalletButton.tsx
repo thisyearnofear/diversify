@@ -461,7 +461,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
   ];
   
   const testnetChains = [
-    { id: NETWORKS.ARC_TESTNET.chainId, name: 'Arc', icon: '⚡', desc: 'High performance L2' },
+    { id: NETWORKS.ARC_TESTNET.chainId, name: 'Arc', icon: '⚡', desc: 'Circle L1 — USDC gas (testnet)' },
     { id: NETWORKS.RH_TESTNET.chainId, name: 'Robinhood', icon: '📈', desc: 'Stock tokenization' },
     { id: NETWORKS.CELO_SEPOLIA.chainId, name: 'Celo Sepolia', icon: '🧪', desc: 'Celo testnet' },
   ];

@@ -12,13 +12,16 @@
  */
 
 import { ethers } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS, ARBITRUM_TOKENS, ARBITRUM_SEPOLIA_TOKENS, HASHKEY_TOKENS, HASHKEY_TESTNET_TOKENS } from '../config';
+import { ARC_DATA_HUB_CONFIG, ZERO_G_DATA_HUB_CONFIG, NETWORKS, ARC_TOKENS, ARC_TESTNET_TOKENS, ARBITRUM_TOKENS, ARBITRUM_SEPOLIA_TOKENS, HASHKEY_TOKENS, HASHKEY_TESTNET_TOKENS } from '../config';
 import { withTimeout } from '../utils/promise-utils';
+import { eip3009NonceBytes32 } from '../utils/eip3009';
 
-// Minimal ERC-20 ABI — transfer only
+// ERC-20 transfer + EIP-3009 mandate settlement (FiatTokenV2 rails only)
 const ERC20_TRANSFER_ABI = [
     'function transfer(address to, uint256 amount) returns (bool)',
     'function balanceOf(address owner) view returns (uint256)',
+    'function transferWithAuthorization(address from, address to, uint256 value, uint256 validAfter, uint256 validBefore, bytes32 nonce, uint8 v, bytes32 r, bytes32 s)',
+    'function authorizationState(address authorizer, bytes32 nonce) view returns (bool)',
 ] as const;
 const TRANSFER_EVENT_ABI = [
     'event Transfer(address indexed from, address indexed to, uint256 value)',
@@ -37,6 +40,13 @@ export interface SettlementConfig {
     explorerBase: string;
     chainId: number;
     name: string;
+    /**
+     * Whether the rail's settlement token supports EIP-3009
+     * `transferWithAuthorization` (FiatTokenV2 — Arc/Arbitrum USDC yes,
+     * 0G token unknown, HashKey USDT no). Drives `mandate_supported` in the
+     * x402 challenge and gates the mandate settlement path.
+     */
+    eip3009: boolean;
 }
 
 /**
@@ -145,20 +155,23 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
         ARC: {
             testnet: {
                 rpcUrl: process.env.ARC_RPC_URL || NETWORKS.ARC_TESTNET.rpcUrl,
-                usdcAddress: process.env.ARC_TESTNET_USDC || ARC_TOKENS.USDC,
+                usdcAddress: process.env.ARC_TESTNET_USDC || ARC_TESTNET_TOKENS.USDC,
                 recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
                 explorerBase: NETWORKS.ARC_TESTNET.explorerUrl,
                 chainId: NETWORKS.ARC_TESTNET.chainId,
                 name: 'Arc Testnet',
+                eip3009: true,
             },
             mainnet: {
                 rpcUrl: process.env.ARC_MAINNET_RPC_URL || NETWORKS.ARC_MAINNET.rpcUrl,
-                // Arc USDC is a system predeploy (stable across Arc networks); override if it differs on mainnet.
+                // Arc USDC ERC-20 predeploy — same address on mainnet and testnet,
+                // verified live on chainId 5042 (FiatTokenV2, version() === '2').
                 usdcAddress: process.env.ARC_MAINNET_USDC || ARC_TOKENS.USDC,
                 recipientAddress: process.env.DATA_HUB_RECIPIENT_ADDRESS || ARC_DATA_HUB_CONFIG.RECIPIENT_ADDRESS,
                 explorerBase: NETWORKS.ARC_MAINNET.explorerUrl,
                 chainId: NETWORKS.ARC_MAINNET.chainId,
                 name: 'Arc',
+                eip3009: true,
             },
         },
         ZERO_G: {
@@ -169,6 +182,7 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 explorerBase: NETWORKS.ZERO_G_TESTNET.explorerUrl,
                 chainId: NETWORKS.ZERO_G_TESTNET.chainId,
                 name: '0G Galileo Testnet',
+                eip3009: false,
             },
             mainnet: {
                 rpcUrl: process.env.ZERO_G_MAINNET_RPC_URL || NETWORKS.ZERO_G_MAINNET.rpcUrl,
@@ -178,6 +192,7 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 explorerBase: NETWORKS.ZERO_G_MAINNET.explorerUrl,
                 chainId: NETWORKS.ZERO_G_MAINNET.chainId,
                 name: '0G',
+                eip3009: false,
             },
         },
         ARBITRUM: {
@@ -188,6 +203,7 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 explorerBase: NETWORKS.ARBITRUM_SEPOLIA.explorerUrl,
                 chainId: NETWORKS.ARBITRUM_SEPOLIA.chainId,
                 name: 'Arbitrum Sepolia',
+                eip3009: true,
             },
             mainnet: {
                 rpcUrl: process.env.ARBITRUM_ONE_RPC_URL || NETWORKS.ARBITRUM_ONE.rpcUrl,
@@ -197,6 +213,7 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 explorerBase: NETWORKS.ARBITRUM_ONE.explorerUrl,
                 chainId: NETWORKS.ARBITRUM_ONE.chainId,
                 name: 'Arbitrum',
+                eip3009: true,
             },
         },
         // HashKey Chain settlement rail — settled zero-custody via HSP (see hsp/).
@@ -213,6 +230,7 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 explorerBase: NETWORKS.HASHKEY_TESTNET.explorerUrl,
                 chainId: NETWORKS.HASHKEY_TESTNET.chainId,
                 name: 'HashKey Testnet',
+                eip3009: false,
             },
             mainnet: {
                 rpcUrl: process.env.HASHKEY_MAINNET_RPC_URL || NETWORKS.HASHKEY_MAINNET.rpcUrl,
@@ -221,6 +239,7 @@ function buildNetworkConfigs(env: SettlementEnv): Record<SettlementNetwork, Sett
                 explorerBase: NETWORKS.HASHKEY_MAINNET.explorerUrl,
                 chainId: NETWORKS.HASHKEY_MAINNET.chainId,
                 name: 'HashKey Chain',
+                eip3009: false,
             },
         },
     };
@@ -279,8 +298,8 @@ export function getSettlementConfig(network: SettlementNetwork = DEFAULT_SETTLEM
 /**
  * Default settlement network (which rail: ARC or ZERO_G).
  * Reads from SETTLEMENT_NETWORK env var so deploy-time config controls the rail
- * without code changes. Defaults to ZERO_G (interim) while Arc mainnet is pending.
- * Flip to 'ARC' once ARC_MAINNET is live and funded.
+ * without code changes. Defaults to ZERO_G (interim). Arc mainnet is live since
+ * 2026-09-16 — flip to 'ARC' once the vault wallet is funded on chainId 5042.
  *
  * Testnet vs mainnet for the chosen rail is controlled separately by
  * SETTLEMENT_ENV (see above) — so `SETTLEMENT_NETWORK=ZERO_G SETTLEMENT_ENV=mainnet`
@@ -722,6 +741,110 @@ export async function settleOnChain(
         console.error(`[SettlementService] ${network} transfer failed:`, err.message);
         return { settled: false, reason: err.message };
     }
+}
+
+/**
+ * EIP-3009 mandate settlement — the mandate-first x402 buyer path.
+ *
+ * The buyer signs a `TransferWithAuthorization` off-chain (no gas, no chain
+ * switch); the merchant (VAULT_PRIVATE_KEY) submits it on-chain and pays gas.
+ * A mandate is only credited AFTER the on-chain transfer succeeds — credit is
+ * the settled amount, not the claimed amount.
+ *
+ * Unlike settleOnChain (agent→hub mirror payments), this moves buyer→hub funds:
+ * the daily cap intentionally does not apply (it guards outflow, not inflow).
+ */
+export interface Eip3009MandateSettlement {
+    sender: string;
+    recipient: string;
+    amount: string;        // USDC decimal string
+    validAfter: number;
+    validBefore: number;
+    nonce: string;         // challenge nonce (string) or 0x-hex bytes32
+    signature: string;
+    chainId: number;
+    tokenAddress: string;
+}
+
+export async function settleWithAuthorization(
+    mandate: Eip3009MandateSettlement,
+    network: SettlementNetwork = DEFAULT_SETTLEMENT_NETWORK
+): Promise<{ txHash: string; amountUSDC: number; explorer: string }> {
+    const config = NETWORK_CONFIGS[network];
+    if (!config.eip3009) {
+        throw new Error(`EIP-3009 mandates are not supported on ${network} (${SETTLEMENT_ENV})`);
+    }
+    const c = getContracts(network);
+    if (!c) {
+        throw new Error(`No agent wallet configured for ${network} — cannot settle mandate`);
+    }
+
+    // Bind the mandate to THIS rail + merchant before touching the chain — a
+    // mandate signed for a different chain/token/recipient must never credit.
+    if (mandate.chainId !== config.chainId) {
+        throw new Error(`Mandate chainId ${mandate.chainId} does not match rail chainId ${config.chainId}`);
+    }
+    if (mandate.tokenAddress.toLowerCase() !== config.usdcAddress.toLowerCase()) {
+        throw new Error('Mandate token does not match the rail settlement token');
+    }
+    if (mandate.recipient.toLowerCase() !== config.recipientAddress.toLowerCase()) {
+        throw new Error('Mandate recipient is not the settlement wallet');
+    }
+    const nowSec = Math.floor(Date.now() / 1000);
+    if (Number(mandate.validAfter) > nowSec) {
+        throw new Error('Mandate is not yet valid');
+    }
+    if (Number(mandate.validBefore) <= nowSec) {
+        throw new Error('Mandate has expired');
+    }
+
+    const value = ethers.utils.parseUnits(String(mandate.amount), 6);
+    if (value.lte(0)) {
+        throw new Error('Mandate amount must be positive');
+    }
+    const nonce32 = eip3009NonceBytes32(mandate.nonce);
+    const { v, r, s } = ethers.utils.splitSignature(mandate.signature);
+
+    // Pre-check: a spent/canceled authorization would revert on-chain — fail
+    // cleanly before spending gas.
+    const alreadyUsed: boolean = await withTimeout(
+        c.usdc.authorizationState(mandate.sender, nonce32),
+        SETTLEMENT_RPC_TIMEOUT_MS,
+        `[SettlementService] ${network} authorizationState RPC timed out`,
+    );
+    if (alreadyUsed) {
+        throw new Error('Authorization already used or canceled');
+    }
+
+    const tx: ethers.providers.TransactionResponse = await c.usdc.transferWithAuthorization(
+        mandate.sender,
+        mandate.recipient,
+        value,
+        mandate.validAfter,
+        mandate.validBefore,
+        nonce32,
+        v,
+        r,
+        s,
+        { gasLimit: 150_000 },
+    );
+
+    const receipt = await withTimeout(
+        tx.wait(1),
+        30_000,
+        `[SettlementService] ${network} transferWithAuthorization confirmation timed out`,
+    );
+    if (!receipt.status) {
+        throw new Error('transferWithAuthorization reverted on-chain');
+    }
+
+    console.log(`[SettlementService] ✅ EIP-3009 mandate settled: ${mandate.amount} USDC ${mandate.sender}→${mandate.recipient} on ${network} → ${tx.hash}`);
+
+    return {
+        txHash: tx.hash,
+        amountUSDC: parseFloat(ethers.utils.formatUnits(value, 6)),
+        explorer: `${config.explorerBase}/tx/${tx.hash}`,
+    };
 }
 
 // No per-rail convenience wrappers. Use settleOnChain(network, ...) and

@@ -51,9 +51,24 @@ export function getAddChainParameter(targetChainId: number): AddEthereumChainPar
     return {
       chainId: '0x4cef52',
       chainName: 'Arc Testnet',
-      nativeCurrency: { name: 'ARC', symbol: 'ARC', decimals: 18 },
+      // Arc's native gas asset is USDC (18-decimal native accounting; the
+      // ERC-20 interface at 0x3600… is 6 decimals).
+      nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
       rpcUrls: [NETWORKS.ARC_TESTNET.rpcUrl],
       blockExplorerUrls: [NETWORKS.ARC_TESTNET.explorerUrl],
+    };
+  }
+
+  // Arc mainnet (5042) — settlement rail only. Included here so the x402
+  // transfer-fallback path can add the chain when needed; it is deliberately
+  // NOT in SUPPORTED_CHAIN_IDS (not a user savings/execution venue).
+  if (targetChainId === NETWORKS.ARC_MAINNET.chainId) {
+    return {
+      chainId: toHexChainId(NETWORKS.ARC_MAINNET.chainId),
+      chainName: NETWORKS.ARC_MAINNET.name,
+      nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+      rpcUrls: [NETWORKS.ARC_MAINNET.rpcUrl],
+      blockExplorerUrls: [NETWORKS.ARC_MAINNET.explorerUrl],
     };
   }
 

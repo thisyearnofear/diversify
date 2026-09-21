@@ -8,14 +8,17 @@ import { celo, celoSepolia, arbitrum, arbitrumSepolia } from 'viem/chains'
 import { createConfig, http } from 'wagmi'
 import { WALLET_FEATURES } from '../config/features'
 
-// Custom Arc Testnet chain
+// Custom Arc Testnet chain — USDC is the native gas asset on Arc (18-decimal
+// native accounting; the ERC-20 interface at 0x3600… is 6 decimals). Arc mainnet
+// (5042) is deliberately NOT a wagmi chain here — it's a settlement rail, not a
+// user-facing chain (docs/rails.md § Arc Rail).
 const arcTestnet = {
     id: 5042002,
     name: 'Arc Testnet',
     nativeCurrency: {
         decimals: 18,
-        name: 'ARC',
-        symbol: 'ARC',
+        name: 'USDC',
+        symbol: 'USDC',
     },
     rpcUrls: {
         default: {

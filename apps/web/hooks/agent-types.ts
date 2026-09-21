@@ -301,6 +301,8 @@ export interface AIMessage {
     reason?: string;
     prompt?: string;
     quoteAmount?: string;
+    /** Suggested Protection Balance top-up covering this review (>= quoteAmount). */
+    fundingAmount?: string;
     quoteSources?: Array<{ label: string; cost: number; tier: string }>;
     newsItem?: SoSoIntelligenceContent['data']['news'][0];
   };
