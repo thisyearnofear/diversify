@@ -36,6 +36,16 @@ export const AI_FEATURES = {
    */
   TYPESAFE_SIGNAL_LENS: process.env.ENABLE_TYPESAFE_SIGNAL_LENS === 'true'
     && !!(process.env.AI_GATEWAY_API_KEY || process.env.TYPESAFE_API_KEY || process.env.TYPESAFE_AI_API_KEY),
+
+  /**
+   * Confidence-gated Jev classification of Ask-the-World question SKELETONS.
+   * When enabled: regex misses may be routed by Jev into the same deterministic
+   * facts path (TypeSafe never invents numbers); regex hits are compared in
+   * shadow for the agreement report. Server-side gate; the client only calls
+   * when the paired NEXT_PUBLIC_TYPESAFE_ASK_WORLD_SPIKE flag is set.
+   */
+  TYPESAFE_ASK_WORLD_SPIKE: process.env.ENABLE_TYPESAFE_ASK_WORLD_SPIKE === 'true'
+    && !!(process.env.AI_GATEWAY_API_KEY || process.env.TYPESAFE_API_KEY || process.env.TYPESAFE_AI_API_KEY),
 } as const;
 
 // Autonomous/Blockchain features (optional, experimental)

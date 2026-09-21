@@ -261,7 +261,10 @@ export interface AIMessage {
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: Date;
-  type?: "text" | "recommendation" | "insight" | "sosovalue_intelligence";
+  type?: "text" | "recommendation" | "insight" | "sosovalue_intelligence" | "answer";
+  /** Deterministic "Ask the World" fast answer rendered as a data card.
+      content carries the plain-text twin for TTS/markdown fallback. */
+  answer?: import("../lib/agent/ask-world-types").WorldAnswer;
   provider?: "gemini" | "venice" | "modal" | "openai";
   /** Intent-derived recommended delivery format (card, text, action, clarify) */
   responseFormat?: "card" | "text" | "action" | "clarify";

@@ -25,7 +25,11 @@ import type { ProofFeedData } from '@/hooks/use-proof-feed';
 // cadence-specific tests flip the hoisted mock.
 const cadenceMock = vi.hoisted(() => ({
     visibility: 'quiet' as 'quiet' | 'informed',
-    data: null as null | { guardian: Record<string, unknown> | null; signalLens: Record<string, unknown> | null },
+    data: null as null | {
+        guardian: Record<string, unknown> | null;
+        signalLens: Record<string, unknown> | null;
+        askWorldSpike: Record<string, unknown> | null;
+    },
 }));
 vi.mock('@/context/app/GuardianVisibilityContext', () => ({
     useGuardianVisibility: () => ({
@@ -301,7 +305,7 @@ describe('Guardian cadence line (informed mode)', () => {
 
     it('shows measured weekly checks and median decision time, lens labeled separately', async () => {
         cadenceMock.visibility = 'informed';
-        cadenceMock.data = { guardian: WEEK, signalLens: LENS };
+        cadenceMock.data = { guardian: WEEK, signalLens: LENS, askWorldSpike: null };
         render(
             <CtxWrap value={{ data: SAMPLE_DATA }}>
                 <LiveProofCard />
@@ -334,7 +338,7 @@ describe('Guardian cadence line (informed mode)', () => {
 
     it('renders nothing in quiet mode', async () => {
         cadenceMock.visibility = 'quiet';
-        cadenceMock.data = { guardian: WEEK, signalLens: LENS };
+        cadenceMock.data = { guardian: WEEK, signalLens: LENS, askWorldSpike: null };
         render(
             <CtxWrap value={{ data: SAMPLE_DATA }}>
                 <LiveProofCard />

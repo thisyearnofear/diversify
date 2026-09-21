@@ -22,6 +22,13 @@ import {
   classifyVisibilityIntent,
   visibilityConfirmation,
 } from "../lib/guardian-visibility-intent";
+import { classifyAskWorldQuery } from "../lib/agent/ask-world-intent";
+import { fetchAndResolve, worldAnswerToText } from "../lib/agent/ask-world-facts";
+import {
+  parseQuestionSkeleton,
+  toQuestionSkeleton,
+} from "../lib/agent/ask-world-spike/minimize-question";
+import type { AskWorldQuery } from "../lib/agent/ask-world-types";
 import type {
   AgentChatActions,
   AgentChatDependencies,
@@ -156,17 +163,6 @@ export function useAgentChat({
         decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef;
       },
     ) => {
-      if (!capabilities.chat) {
-        addMessage({
-          role: "assistant",
-          content: "The Advisor is currently unavailable — no AI provider is configured. Please try again later or contact support.",
-          timestamp: new Date(),
-          type: "text",
-        });
-        updateChatState({ isChatting: false, thinkingStep: "" });
-        return;
-      }
-
       // Legibility preference flips are a fixed utterance class handled
       // locally — zero LLM cost, works offline, and the confirmation names
       // where to reverse it. Inert when no visibility provider is mounted.
@@ -181,6 +177,115 @@ export function useAgentChat({
           timestamp: new Date(),
           type: "text",
         });
+        return;
+      }
+
+      // "Ask the World": fixed factual macro questions get deterministic
+      // fast answers computed from real datasets — zero LLM tokens, no
+      // advisor POST, no credit spend. Advice, portfolio framings, and
+      // entities our data doesn't cover fall through to the advisor.
+      //
+      // TypeSafe/Jev (when flagged) only routes: on a regex miss it may
+      // classify a privacy-minimised skeleton; an accepted intent reuses
+      // the same facts path — Jev never invents numbers.
+      const askWorldQuery = classifyAskWorldQuery(content);
+      const spikeEnabled = process.env.NEXT_PUBLIC_TYPESAFE_ASK_WORLD_SPIKE === "true";
+
+      const answerFromWorld = async (
+        query: AskWorldQuery,
+        intentLabel: string,
+      ): Promise<"answered" | "unavailable" | "fall-through"> => {
+        updateChatState({ isChatting: true, thinkingStep: "Asking the world..." });
+        const startedAt = Date.now();
+        const outcome = await fetchAndResolve(query, {
+          startedAt,
+          urlPrefix: apiBase,
+        });
+        if (outcome.status === "answered") {
+          addMessage({
+            role: "assistant",
+            content: worldAnswerToText(outcome.answer),
+            timestamp: new Date(),
+            type: "answer",
+            answer: outcome.answer,
+          });
+          trackFunnelEvent("chat_done", {
+            latency: String(outcome.answer.badge.latencyMs),
+            intent: intentLabel,
+          });
+          updateChatState({ isChatting: false, thinkingStep: "" });
+          return "answered";
+        }
+        if (outcome.status === "unavailable") {
+          addMessage({
+            role: "assistant",
+            content:
+              "I couldn't reach the economic datasets behind that answer just now, and I won't guess numbers. Try again in a moment — or rephrase and I'll reason it through with my sources instead.",
+            timestamp: new Date(),
+            type: "text",
+          });
+          updateChatState({ isChatting: false, thinkingStep: "" });
+          return "unavailable";
+        }
+        updateChatState({ isChatting: false, thinkingStep: "" });
+        return "fall-through";
+      };
+
+      if (askWorldQuery) {
+        // Shadow agreement: when the regex already matched, still send a
+        // minimised skeleton so Jev can be compared — never blocks the answer.
+        if (spikeEnabled) {
+          const skeleton = toQuestionSkeleton(content);
+          if (skeleton) {
+            void fetch(`${apiBase}/api/agent/ask-world-spike`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ skeleton, regexKind: askWorldQuery.kind }),
+            }).catch(() => {});
+          }
+        }
+        const status = await answerFromWorld(askWorldQuery, "ASK_WORLD");
+        if (status !== "fall-through") return;
+      } else if (spikeEnabled) {
+        const skeleton = toQuestionSkeleton(content);
+        if (skeleton) {
+          updateChatState({ isChatting: true, thinkingStep: "Asking the world..." });
+          try {
+            const spikeResp = await fetch(`${apiBase}/api/agent/ask-world-spike`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ skeleton, regexKind: "none" }),
+            });
+            if (spikeResp.ok) {
+              const spike = (await spikeResp.json()) as {
+                accepted?: boolean;
+                intent?: string;
+              };
+              const query = parseQuestionSkeleton(skeleton);
+              // Jev must accept AND agree with the skeleton's own class —
+              // TypeSafe only routes; numbers still come from our datasets.
+              if (spike.accepted && query && query.kind === spike.intent) {
+                const status = await answerFromWorld(query, "ASK_WORLD_JEV");
+                if (status !== "fall-through") return;
+              }
+            }
+          } catch {
+            // Provider/network failure → advisor below; never invent numbers.
+          }
+          updateChatState({ isChatting: false, thinkingStep: "" });
+        }
+      }
+
+      // The advisor is the LLM path; the local fast paths above stay alive
+      // even when no provider is configured.
+      if (!capabilities.chat) {
+        addMessage({
+          role: "assistant",
+          content: "The Advisor is currently unavailable — no AI provider is configured. Please try again later or contact support.",
+          timestamp: new Date(),
+          type: "text",
+        });
+        updateChatState({ isChatting: false, thinkingStep: "" });
         return;
       }
 

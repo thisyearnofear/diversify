@@ -28,6 +28,7 @@ import { GuardianMascot } from "../shared/GuardianMascot";
 import { MaskedReveal } from "../shared/MaskedReveal";
 import { GUARDIAN_DRAWER_SUBTITLE } from "@/constants/guardian-copy";
 import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
+import { WorldAnswerCard } from "./WorldAnswerCard";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { useSharedMultichainBalances } from "@/context/app/PortfolioContext";
 import { useToast } from "../ui/Toast";
@@ -1009,7 +1010,9 @@ export default function AIChat() {
                         </p>
                       )}
 
-                      {msg.type === 'insight' && msg.insights ? (
+                      {msg.type === 'answer' && msg.answer ? (
+                        <WorldAnswerCard answer={msg.answer} />
+                      ) : msg.type === 'insight' && msg.insights ? (
                         <div className="space-y-3 py-1">
                           <p className="font-bold leading-tight">{msg.insights.summary}</p>
                           <div className="flex flex-wrap gap-1.5">

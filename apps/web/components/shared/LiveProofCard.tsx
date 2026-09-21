@@ -95,11 +95,13 @@ export function GuardianCadenceLine() {
     const { data } = useGuardianTelemetry(visibility === 'informed');
     const guardian = data?.guardian ?? null;
     const lens = data?.signalLens ?? null;
+    const askWorld = data?.askWorldSpike ?? null;
     const checks = useCountUp(guardian?.checks ?? 0);
     if (visibility !== 'informed') return null;
-    if (!guardian && !(lens && lens.reviews > 0)) return null;
+    if (!guardian && !(lens && lens.reviews > 0) && !(askWorld && askWorld.comparisons > 0)) return null;
     const median = formatDuration(guardian?.medianDecisionMs);
     const lensMedian = formatDuration(lens?.medianMs);
+    const askWorldMedian = formatDuration(askWorld?.medianMs);
     return (
         <div className="mt-3 space-y-1" data-testid="guardian-cadence">
             {guardian && (
@@ -118,6 +120,19 @@ export function GuardianCadenceLine() {
                             {' '}· agreed with our detector in{' '}
                             {lens.agreement.agreeSignal + lens.agreement.agreeNone} of{' '}
                             {lens.agreement.compared}
+                        </span>
+                    )}
+                </p>
+            )}
+            {askWorld && askWorld.comparisons > 0 && (
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Ask the World: {askWorld.comparisons.toLocaleString()} TypeSafe router comparisons
+                    {askWorldMedian ? ` · median ${askWorldMedian}` : ''}
+                    {askWorld.agreement && askWorld.agreement.compared >= 5 && (
+                        <span data-testid="guardian-ask-world-agreement">
+                            {' '}· agreed with our detector in{' '}
+                            {askWorld.agreement.agreeIntent + askWorld.agreement.agreeNone} of{' '}
+                            {askWorld.agreement.compared}
                         </span>
                     )}
                 </p>

@@ -11,6 +11,9 @@
  *    median duration, and lens-vs-baseline agreement over its rolling 30-day
  *    retention window — labeled `advisory_shadow` because these reviews never
  *    cause user actions.
+ *  - `askWorldSpike`: TypeSafe/Jev Ask-the-World router comparisons over the
+ *    same 30-day window — detector agreement only; numbers still come from
+ *    IMF/FX datasets when an accepted miss is routed.
  *
  * Each section degrades independently so one slow/broken store can't take the
  * whole read down (same posture as the x402 metrics RPC-hang fix).
@@ -19,9 +22,14 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '@/lib/mongodb';
 import { TypeSafeSignalReview } from '@/models/TypeSafeSignalReview';
+import { AskWorldSpikeLog } from '@/models/AskWorldSpikeLog';
 import { getGlobalActivitySummary, type GuardianActivitySummary } from '@/lib/guardian-activity-counter';
 import { median } from '@/lib/agent/guardian-telemetry-stats';
 import { summarizeLensAgreement, type LensAgreementSummary } from '@/lib/agent/lens-agreement';
+import {
+  summarizeSpikeAgreement,
+  type SpikeAgreementSummary,
+} from '@/lib/agent/ask-world-spike/agreement';
 
 export interface SignalLensTelemetry {
   reviews: number;
@@ -39,6 +47,15 @@ export interface SignalLensTelemetry {
   agreement: LensAgreementSummary | null;
 }
 
+export interface AskWorldSpikeTelemetry {
+  comparisons: number;
+  medianMs: number | null;
+  timedSampleCount: number;
+  window: 'rolling_30d';
+  note: 'advisory_router';
+  agreement: SpikeAgreementSummary | null;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -48,7 +65,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await dbConnect();
   } catch {
-    return res.status(200).json({ guardian: null, signalLens: null });
+    return res.status(200).json({ guardian: null, signalLens: null, askWorldSpike: null });
   }
 
   let guardian: GuardianActivitySummary | null = null;
@@ -92,5 +109,32 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     console.warn('[guardian-telemetry] signal lens stats failed:', err instanceof Error ? err.message : err);
   }
 
-  return res.status(200).json({ guardian, signalLens });
+  let askWorldSpike: AskWorldSpikeTelemetry | null = null;
+  try {
+    const docs = await AskWorldSpikeLog.find(
+      {},
+      { regexKind: 1, 'jev.intent': 1, 'jev.accepted': 1, 'jev.durationMs': 1, _id: 0 },
+    ).lean();
+    const samples = docs
+      .map((doc: any) => Number(doc?.jev?.durationMs))
+      .filter((value: number) => Number.isFinite(value) && value > 0);
+    const agreement = summarizeSpikeAgreement(
+      docs.map((doc: any) => ({
+        regexKind: doc?.regexKind ?? null,
+        jev: doc?.jev ?? null,
+      })),
+    );
+    askWorldSpike = {
+      comparisons: docs.length,
+      medianMs: median(samples),
+      timedSampleCount: samples.length,
+      window: 'rolling_30d',
+      note: 'advisory_router',
+      agreement: agreement.compared > 0 ? agreement : null,
+    };
+  } catch (err: unknown) {
+    console.warn('[guardian-telemetry] ask-world spike stats failed:', err instanceof Error ? err.message : err);
+  }
+
+  return res.status(200).json({ guardian, signalLens, askWorldSpike });
 }

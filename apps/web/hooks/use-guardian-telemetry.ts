@@ -11,8 +11,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LensAgreementSummary } from '@/lib/agent/lens-agreement';
+import type { SpikeAgreementSummary } from '@/lib/agent/ask-world-spike/agreement';
 
-const CACHE_KEY = 'diversifi:guardian-telemetry:v1';
+const CACHE_KEY = 'diversifi:guardian-telemetry:v2';
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 /** Mirrors GuardianActivitySummary (lib/guardian-activity-counter). */
@@ -36,9 +37,20 @@ export interface SignalLensTelemetryView {
     agreement: LensAgreementSummary | null;
 }
 
+/** Mirrors AskWorldSpikeTelemetry (pages/api/agent/guardian-telemetry). */
+export interface AskWorldSpikeTelemetryView {
+    comparisons: number;
+    medianMs: number | null;
+    timedSampleCount: number;
+    window: 'rolling_30d';
+    note: 'advisory_router';
+    agreement: SpikeAgreementSummary | null;
+}
+
 export interface GuardianTelemetryData {
     guardian: GuardianTelemetryWeek | null;
     signalLens: SignalLensTelemetryView | null;
+    askWorldSpike: AskWorldSpikeTelemetryView | null;
 }
 
 export interface UseGuardianTelemetryResult {
@@ -76,6 +88,7 @@ async function fetchFromApi(signal: AbortSignal): Promise<GuardianTelemetryData>
     return {
         guardian: json.guardian ?? null,
         signalLens: json.signalLens ?? null,
+        askWorldSpike: json.askWorldSpike ?? null,
     };
 }
 

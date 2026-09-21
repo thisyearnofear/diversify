@@ -331,3 +331,35 @@ export async function getLiveDepreciation(
 
   return result;
 }
+
+/**
+ * Depreciation for a single horizon — the cheap read the world-facts
+ * ranking route needs (one historical date, not the full 1/3/5 sweep).
+ * Same formula and sign convention as getLiveDepreciation: negative =
+ * the currency weakened vs USD. Returns value: null when the dataset
+ * doesn't cover the horizon (pre-2024 dates) or the rate won't resolve,
+ * so callers merge with curated reference data instead of guessing.
+ */
+export async function getLiveDepreciationAtHorizon(
+  currency: string,
+  horizon: '1yr' | '3yr' | '5yr',
+): Promise<{ value: number | null; asOf: string }> {
+  const today = new Date();
+  const todayIso = today.toISOString().slice(0, 10);
+  if (currency.toUpperCase() === 'USD') return { value: 0, asOf: todayIso };
+
+  const years = horizon === '1yr' ? 1 : horizon === '3yr' ? 3 : 5;
+  const pastDate = new Date(today);
+  pastDate.setFullYear(pastDate.getFullYear() - years);
+  const pastIso = pastDate.toISOString().slice(0, 10);
+  if (pastIso < DATASET_MIN_DATE) return { value: null, asOf: todayIso };
+
+  const [currentRate, pastRate] = await Promise.all([
+    resolveRate(currency, todayIso),
+    resolveRate(currency, pastIso),
+  ]);
+  if (currentRate == null || pastRate == null) return { value: null, asOf: todayIso };
+
+  const dep = ((pastRate / currentRate) - 1) * 100;
+  return { value: Math.round(dep * 10) / 10, asOf: todayIso };
+}
