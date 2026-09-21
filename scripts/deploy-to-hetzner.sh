@@ -201,6 +201,34 @@ if [ -d "$WEB_NEXT/standalone/packages" ]; then
         "$REMOTE:$RUNTIME_DIR/packages/" 2>&1 | tail -3
 fi
 
+# TypeSafe Gateway SDK (ai + peers) is loaded via dynamic import() from
+# ask-world-spike / firecrawl-webhook, so NFT often omits it from standalone.
+# Overlay these packages after the --delete sync so Signal Lens + Ask-the-World
+# keep working on Hetzner. Follow symlinks (-L) for the pnpm store layout.
+info "Overlaying AI Gateway SDK packages for TypeSafe routes..."
+ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules/@ai-sdk' '$RUNTIME_DIR/node_modules/@vercel' '$RUNTIME_DIR/node_modules/@standard-schema' '$RUNTIME_DIR/node_modules/@workflow'"
+for pkg_path in \
+    ai \
+    @ai-sdk/gateway \
+    @ai-sdk/provider \
+    @ai-sdk/provider-utils \
+    @vercel/oidc \
+    @standard-schema/spec \
+    @workflow/serde \
+    eventsource-parser \
+    json-schema \
+    undici
+do
+    if [ -d "node_modules/$pkg_path" ]; then
+        rsync -azL --delete --no-owner --no-group \
+            "node_modules/$pkg_path/" \
+            "$REMOTE:$RUNTIME_DIR/node_modules/$pkg_path/" >/dev/null
+    else
+        warn "AI Gateway overlay missing locally: node_modules/$pkg_path"
+    fi
+done
+ok "AI Gateway SDK overlayed"
+
 # Static assets live inside .next/static/ which standalone doesn't include
 info "Syncing static assets..."
 rsync -az --delete --no-owner --no-group \
