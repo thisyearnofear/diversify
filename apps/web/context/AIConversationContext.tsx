@@ -3,9 +3,19 @@ import { AIMessage } from '../hooks/agent-types';
 import type { GuardianRecommendationContract } from '@diversifi/shared/src/types/guardian-protection';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 
-// Conversation persistence key
-const CONVERSATION_STORAGE_KEY = 'diversifi-conversation';
-const LAST_READ_KEY = 'diversifi-conversation-last-read';
+/**
+ * Ask Guardian transcript stance (session thread):
+ *  - The visible chat is in-memory for the open drawer only.
+ *  - Closing the drawer or "New conversation" clears the transcript.
+ *  - We do NOT persist the transcript to localStorage (legacy keys are scrubbed).
+ *  - Server-side memory (Cognee/Tablestore) is separate — it may still shape
+ *    advice until the user explicitly "forgets what it remembers".
+ *
+ * Guardian *updates* (inbox tray) remain durable in localStorage — they are
+ * not the chat transcript.
+ */
+const LEGACY_CONVERSATION_STORAGE_KEY = 'diversifi-conversation';
+const LEGACY_LAST_READ_KEY = 'diversifi-conversation-last-read';
 const GUARDIAN_UPDATES_KEY = 'diversifi-guardian-updates';
 const MUTED_UPDATE_TYPES_KEY = 'diversifi-guardian-muted-types';
 
@@ -66,12 +76,12 @@ interface AIConversationContextType {
   mutedUpdateTypes: GuardianUpdateType[];
   activeGuardianReview: GuardianUpdate | null;
   setActiveGuardianReview: (update: GuardianUpdate | null) => void;
-  
+
   // Unread tracking
   unreadCount: number;
   markAsRead: () => void;
   hasUnread: boolean;
-  
+
   // Active conversation metadata
   lastMessageTimestamp: Date | null;
   isConversationActive: boolean;
@@ -83,41 +93,43 @@ interface AIConversationContextType {
 
 const AIConversationContext = createContext<AIConversationContextType | undefined>(undefined);
 
+/** Remove legacy durable transcript keys (scoped + unscoped). */
+function scrubLegacyTranscriptKeys(scopedKey: (base: string) => string) {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(scopedKey(LEGACY_CONVERSATION_STORAGE_KEY));
+    localStorage.removeItem(scopedKey(LEGACY_LAST_READ_KEY));
+    localStorage.removeItem(LEGACY_CONVERSATION_STORAGE_KEY);
+    localStorage.removeItem(LEGACY_LAST_READ_KEY);
+  } catch {
+    // best-effort
+  }
+}
+
 export function AIConversationProvider({ children }: { children: ReactNode }) {
   const { address } = useWalletContext();
   const storageScope = address?.toLowerCase() ?? 'anonymous';
   const scopedKey = useCallback((base: string) => `${base}:${storageScope}`, [storageScope]);
   const [hydratedScope, setHydratedScope] = useState<string | null>(null);
-  // Initialize from localStorage if available
   const [messages, setMessages] = useState<AIMessage[]>([]);
-  
   const [lastReadTimestamp, setLastReadTimestamp] = useState<Date | null>(null);
-
-  const [isDrawerOpen, setDrawerOpen] = useState(false);
-
+  const [isDrawerOpen, setDrawerOpenState] = useState(false);
   const [guardianUpdates, setGuardianUpdates] = useState<GuardianUpdate[]>([]);
   const [activeGuardianReview, setActiveGuardianReview] = useState<GuardianUpdate | null>(null);
-
   const [mutedUpdateTypes, setMutedUpdateTypes] = useState<GuardianUpdateType[]>([]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      const storedMessages = localStorage.getItem(scopedKey(CONVERSATION_STORAGE_KEY));
+      scrubLegacyTranscriptKeys(scopedKey);
       const storedUpdates = localStorage.getItem(scopedKey(GUARDIAN_UPDATES_KEY));
       const storedMuted = localStorage.getItem(scopedKey(MUTED_UPDATE_TYPES_KEY));
-      const storedLastRead = localStorage.getItem(scopedKey(LAST_READ_KEY));
-      setMessages(storedMessages
-        ? (JSON.parse(storedMessages) as AIMessage[]).map((m) => ({ ...m, timestamp: new Date(m.timestamp) }))
-        : []);
+      // Session thread: never rehydrate a transcript. Start empty each scope.
+      setMessages([]);
+      setLastReadTimestamp(null);
       const now = Date.now();
       setGuardianUpdates(storedUpdates
         ? (JSON.parse(storedUpdates) as GuardianUpdate[])
-            // Rehydrate every Date field. JSON.parse yields strings (or
-            // null), but the filter and the GuardianUpdates tray both call
-            // .getTime() on these — a stored "snoozedUntil" string would
-            // throw after a page reload. Validate with Number.isNaN so a
-            // malformed string clears the field rather than thrown-ing.
             .map((u) => {
               const expiresAt = new Date(u.expiresAt);
               const timestamp = new Date(u.timestamp);
@@ -132,12 +144,10 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
             .filter((u) => u.expiresAt.getTime() > now)
         : []);
       setMutedUpdateTypes(storedMuted ? JSON.parse(storedMuted) : []);
-      setLastReadTimestamp(storedLastRead ? new Date(storedLastRead) : null);
       setActiveGuardianReview(null);
-      localStorage.removeItem(CONVERSATION_STORAGE_KEY);
+      // One-time migration: drop unscoped inbox keys if present.
       localStorage.removeItem(GUARDIAN_UPDATES_KEY);
       localStorage.removeItem(MUTED_UPDATE_TYPES_KEY);
-      localStorage.removeItem(LAST_READ_KEY);
     } catch {
       setMessages([]);
       setGuardianUpdates([]);
@@ -212,19 +222,6 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  // Persist messages to localStorage (capped to last 100 to prevent
-  // unbounded growth — the server only uses the last 10 for context anyway)
-  useEffect(() => {
-    if (typeof window !== 'undefined' && hydratedScope === storageScope) {
-      try {
-        const capped = messages.slice(-100);
-        localStorage.setItem(scopedKey(CONVERSATION_STORAGE_KEY), JSON.stringify(capped));
-      } catch (e) {
-        console.warn('[AIConversation] Failed to save to storage:', e);
-      }
-    }
-  }, [messages, hydratedScope, scopedKey, storageScope]);
-
   const addMessage = useCallback((message: AIMessage) => {
     setMessages(prev => [...prev, message]);
   }, []);
@@ -264,28 +261,32 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
   const clearMessages = useCallback(() => {
     setMessages([]);
     setLastReadTimestamp(null);
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem(scopedKey(CONVERSATION_STORAGE_KEY));
-      localStorage.removeItem(scopedKey(LAST_READ_KEY));
+    setActiveGuardianReview(null);
+    scrubLegacyTranscriptKeys(scopedKey);
+  }, [scopedKey]);
+
+  /** Closing Ask Guardian ends the visible thread — next open is empty. */
+  const setDrawerOpen = useCallback((open: boolean) => {
+    if (!open) {
+      setMessages([]);
+      setLastReadTimestamp(null);
+      setActiveGuardianReview(null);
+      scrubLegacyTranscriptKeys(scopedKey);
     }
+    setDrawerOpenState(open);
   }, [scopedKey]);
 
   const markAsRead = useCallback(() => {
-    const now = new Date();
-    setLastReadTimestamp(now);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(scopedKey(LAST_READ_KEY), now.toISOString());
-    }
-  }, [scopedKey]);
+    setLastReadTimestamp(new Date());
+  }, []);
 
-  // Calculate unread count
-  const unreadCount = lastReadTimestamp 
+  const unreadCount = lastReadTimestamp
     ? messages.filter(m => m.role === 'assistant' && new Date(m.timestamp) > lastReadTimestamp).length
     : messages.filter(m => m.role === 'assistant').length;
 
   const hasUnread = unreadCount > 0;
-  const lastMessageTimestamp = messages.length > 0 
-    ? new Date(messages[messages.length - 1].timestamp) 
+  const lastMessageTimestamp = messages.length > 0
+    ? new Date(messages[messages.length - 1].timestamp)
     : null;
   const isConversationActive = messages.length > 0;
 
@@ -311,7 +312,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
     lastMessageTimestamp,
     isConversationActive,
     isDrawerOpen,
-    setDrawerOpen
+    setDrawerOpen,
   };
 
   return (

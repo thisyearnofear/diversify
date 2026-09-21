@@ -173,7 +173,7 @@ describe('AIChat — New conversation', () => {
 
     expect(screen.getByText('New conversation?')).toBeInTheDocument();
     expect(
-      screen.getByText('Clears this thread. The Guardian still remembers your goals and past advice.'),
+      screen.getByText(/Starts a fresh thread\. Closing Ask Guardian does the same/),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New conversation' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
@@ -191,6 +191,10 @@ describe('AIChat — New conversation', () => {
 
     expect(mocks.clearMessages).toHaveBeenCalledTimes(1);
     expect(mocks.fetch).not.toHaveBeenCalled();
+    expect(mocks.showToast).toHaveBeenCalledWith(
+      expect.stringContaining('Thread cleared'),
+      'success',
+    );
     expect(screen.queryByText('New conversation?')).not.toBeInTheDocument();
   });
 

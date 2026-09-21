@@ -3,10 +3,11 @@
  * the signed-in wallet.
  *
  * Clears the server-side memory backends: the Cognee dataset
- * `user_<address>` and the Tablestore scope for the wallet. The local
- * transcript (`diversifi-conversation:<address>` in localStorage) is NOT
- * touched here — the client clears that itself as part of "New
- * conversation".
+ * `user_<address>` and the Tablestore scope for the wallet. The Ask
+ * Guardian *transcript* is a session thread (in-memory only; cleared when
+ * the drawer closes or on "New conversation") — this route does not touch
+ * it. Call "Also forget what it remembers" when the user wants server
+ * memory wiped too.
  *
  * Auth: wallet-signed via X-Wallet-Auth-Message / X-Wallet-Auth-Signature
  * (same session proof as /api/agent/business/cycles). The address is

@@ -529,6 +529,10 @@ export default function AIChat() {
   const handleConfirmClear = () => {
     clearMessages();
     setShowClearConfirm(false);
+    showToast(
+      "Thread cleared. Past advice may still shape answers — forget memory to wipe that.",
+      "success",
+    );
   };
 
   // "Also forget what it remembers" — clears the SERVER-side long-term
@@ -604,7 +608,8 @@ export default function AIChat() {
               New conversation?
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
-              Clears this thread. The Guardian still remembers your goals and past advice.
+              Starts a fresh thread. Closing Ask Guardian does the same.
+              Remembered advice may still shape answers until you forget memory.
             </p>
             <div className="flex gap-2">
               <button
@@ -951,17 +956,8 @@ export default function AIChat() {
                         delay={0.15}
                         lineClassName="text-base font-bold text-blue-900 dark:text-blue-100"
                       />
-                      <p className="max-w-[300px] text-sm text-gray-600 dark:text-gray-300">
-                        Start with a portfolio summary, currency risk check, or a payment-readiness plan — with verifiable evidence when it matters.
-                      </p>
-                    </div>
-
-                    <div className="w-full max-w-[320px] rounded-2xl border border-blue-200/70 dark:border-blue-800/40 bg-blue-50/70 dark:bg-blue-900/10 p-3 text-left">
-                      <p className="text-[11px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
-                        Verifiable protection
-                      </p>
-                      <p className="mt-1 text-xs text-blue-900 dark:text-blue-100">
-                        High-impact recommendations are anchored with evidence so you can audit what Guardian used and why.
+                      <p className="max-w-[280px] text-sm text-gray-600 dark:text-gray-300">
+                        Risk, a plan, or a payment question — one ask at a time.
                       </p>
                     </div>
 

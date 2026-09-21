@@ -174,6 +174,16 @@ Each tab is an **instrument**, not a feed of cards:
    quiet). Persona retargets the object; it does not reorder a module
    list. Leftover jobs go to Ask Guardian, not a basement of features.
 
+**Ask Guardian is a session thread, not a durable journal.** The visible
+chat lives only while the drawer is open: closing it or choosing "New
+conversation" clears the transcript so the next open is empty — matching
+the triad's reset-to-instrument feel. Server-side memory (Cognee /
+Tablestore) may still shape *advice* until the user explicitly forgets
+it; that is separate from the bubbles on screen. Do not reintroduce
+`localStorage` transcript persistence without a product decision to
+revert this stance. Empty state stays quiet (one line + starters) —
+trust footnotes belong behind recommendations, not in the first paint.
+
 `DisclosureSection` is not IA. Accordion rows are a density tactic.
 Disclosure is allowed only for **trust footnotes** (data source, method).
 

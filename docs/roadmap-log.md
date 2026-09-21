@@ -2,6 +2,10 @@
 
 > Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](./roadmap.md).
 
+### Ask Guardian — session-thread transcript (2026-09-21)
+
+User feedback: reopening the drawer restored a long prior chat, "New conversation" felt ineffective, and the surface read as the densest / least delightful of the product. Product stance (design-language §5): **session thread, not durable journal**. Closing Ask Guardian or confirming "New conversation" clears the visible transcript; legacy `diversifi-conversation*` localStorage keys are scrubbed and no longer written. Server memory remains opt-out via "Also forget what it remembers" — the modal and toast name that split honestly. Empty state loses the first-paint "Verifiable protection" box (trust footnotes stay on recommendations). Files: `AIConversationContext.tsx`, `AIChat.tsx`, `pages/api/agent/memory.ts` comment, `docs/design-language.md`.
+
 ### Ask the World — deterministic macro facts + TypeSafe/Jev router (2026-09-21)
 
 Chat now answers a closed set of factual macro questions ("which countries above X% inflation", "which currency lost the most vs USD over N years") from live/reference datasets with **zero LLM tokens**. Flow: regex classifier → `/api/inflation` or `/api/agent/world-facts` → `WorldAnswerCard` (Coin chips + honesty badge). Advice, portfolio framings, unknown entities, and compound sentences fall through to the advisor. Live vs reference never mixes in a ranking; omitted rows are counted, never zero-filled; the word "live" never appears on reference answers. A cheap `getLiveDepreciationAtHorizon` read powers 1yr rankings without the sparkline tax of `/api/currency-risk/live`.
