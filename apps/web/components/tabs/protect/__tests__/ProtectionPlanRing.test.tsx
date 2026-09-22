@@ -563,7 +563,7 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.getByRole('button', { name: /cUSD — preview target: 40%/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cEUR — preview target: 12%/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /wallet holding/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Preview your balance')).toBeInTheDocument();
+    expect(screen.getByText('Your shield plan')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Protection armed' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();

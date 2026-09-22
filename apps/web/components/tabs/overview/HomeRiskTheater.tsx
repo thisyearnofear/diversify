@@ -2,25 +2,26 @@
  * HomeRiskTheater — Home's Tier-1 marquee, coin motif restored.
  *
  * The coin stage (CurrencyMomentCard) is the one expressive object.
- * Holdings are a quiet contextual strip beneath it — a thin stacked bar
- * plus tappable region chips — never a second ring. This keeps Home
- * (coins) distinct from Shield (AllocationRing + ghost/hatch) and
- * Exchange (ticket) per design-language §5.
+ * Holdings are a quiet coin row beneath it — one coin per region, sized
+ * by share — never a second ring. This keeps Home (coins) distinct from
+ * Shield (AllocationRing + ghost/hatch) and Exchange (ticket) per
+ * design-language §5.
  *
- * Selection rewrites the strip's highlight and the inspector; the coin
- * stage itself never swaps out. The strip is 0px when there are no
- * holdings.
+ * Selection dims the other coins and opens the region inspector; the
+ * coin stage itself never swaps out. The strip is 0px when there are
+ * no holdings.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { NarrativeMoment, InflationMoment } from "@/lib/narrative/currency-moment";
 import type { MomentFrame } from "@/lib/narrative/moment-framing";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
+import { Coin } from "@/components/shared/FloatingCoins";
 import { haptics } from "@/lib/haptics";
-import { springSoft } from "@/lib/motion-tokens";
+import { springSoft, STAGGER_STEP_S } from "@/lib/motion-tokens";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import FlickScrollRow, { useDidDrag } from "@/components/shared/FlickScrollRow";
@@ -35,42 +36,76 @@ interface RegionDatum {
   color: string;
 }
 
+function regionGlyph(region: string): string {
+  const r = region.toLowerCase();
+  if (r === "usa" || r === "us" || r === "united states") return "$";
+  if (r === "europe" || r === "eu") return "€";
+  if (r === "commodities" || r === "gold") return "Au";
+  if (r === "uk") return "£";
+  if (r === "japan") return "¥";
+  return region.slice(0, 3).toUpperCase();
+}
+
 /**
- * One region chip. A CHILD COMPONENT — useDidDrag() must be called inside
- * the FlickScrollRow provider's tree; a hook call in the theater body
- * would read the default (never-dragged) ref and silently no-op.
+ * One region coin — a CHILD COMPONENT because useDidDrag() must be called
+ * inside the FlickScrollRow provider's tree; a hook call in the theater
+ * body would read the default (never-dragged) ref and silently no-op.
  */
-function RegionChip({
+function RegionCoin({
   region,
   pct,
   isSelected,
+  isDimmed,
+  index,
+  reducedMotion,
   onSelect,
 }: {
   region: RegionDatum;
   pct: number;
   isSelected: boolean;
+  isDimmed: boolean;
+  index: number;
+  reducedMotion: boolean;
   onSelect: () => void;
 }) {
   const didDragRef = useDidDrag();
+  const arrived = React.useRef(false);
+  React.useEffect(() => {
+    arrived.current = true;
+  }, []);
+  const share = pct / 100;
+  const size = Math.round(28 + 28 * Math.sqrt(Math.max(0, Math.min(1, share))));
   return (
-    <button
+    <motion.button
       type="button"
       aria-pressed={isSelected}
+      aria-label={`${region.region} ${Math.round(pct)}%`}
       onClick={() => {
         if (didDragRef.current) return; // release after a drag is not a choice
         haptics.tap();
         onSelect();
       }}
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-colors min-h-[32px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-        isSelected
-          ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-          : "bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/15"
-      }`}
+      initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+      animate={{
+        opacity: isDimmed ? 0.35 : 1,
+        y: 0,
+        scale: reducedMotion ? 1 : isSelected ? 1.08 : 1,
+      }}
+      transition={
+        reducedMotion
+          ? { duration: 0 }
+          : { ...springSoft, delay: arrived.current ? 0 : index * STAGGER_STEP_S }
+      }
+      className="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
     >
-      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: region.color }} />
-      <span className="truncate max-w-[80px]">{region.region}</span>
-      <span className="tabular-nums opacity-70">{Math.round(pct)}%</span>
-    </button>
+      <Coin variant="asset" size={size} symbol={regionGlyph(region.region)} color={region.color} />
+      <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[72px]">
+        {region.region}
+      </span>
+      <span className="text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+        {Math.round(pct)}%
+      </span>
+    </motion.button>
   );
 }
 
@@ -116,24 +151,7 @@ export function HomeRiskTheater({
   isActive = true,
 }: HomeRiskTheaterProps) {
   const reducedMotion = useReducedMotion();
-  const [flipped, setFlipped] = useState(false);
   const hasHoldings = totalValue > 0 && regionData.length > 0;
-  const showingHoldings = flipped && hasHoldings;
-  const frontFaceRef = useRef<HTMLDivElement>(null);
-  const backButtonRef = useRef<HTMLButtonElement>(null);
-  const previousFace = useRef(false);
-  useEffect(() => {
-    if (!hasHoldings) setFlipped(false);
-  }, [hasHoldings]);
-  useEffect(() => {
-    if (previousFace.current === showingHoldings) return;
-    previousFace.current = showingHoldings;
-    if (!isActive) return;
-    const target = showingHoldings
-      ? backButtonRef.current
-      : frontFaceRef.current?.querySelector<HTMLButtonElement>('[aria-label="Show holdings stack"]');
-    target?.focus();
-  }, [showingHoldings, isActive]);
 
   // "While you were away" — the Guardian's own weekly counters (server-side,
   // so a capped in-memory log can't inflate them) rendered only in informed
@@ -204,19 +222,11 @@ export function HomeRiskTheater({
     return { line, summary: line, prompt };
   })();
 
-  const largest = useMemo(
-    () =>
-      regionData.reduce(
-        (lead, r) => (r.value > lead.value ? r : lead),
-        regionData[0] ?? { region: "", value: 0, color: "" },
-      ),
-    [regionData],
-  );
-
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
-  // Holdings strip is part of the same object — quiet, not colored,
-  // just a bar and chips that echo the coin stage's story.
+  // Holdings strip is part of the same object — one coin per region,
+  // sized by share, echoing the coin stage's motif. Selection dims the
+  // rest and opens the region inspector.
   const holdingsStrip = hasHoldings ? (
     <div
       data-testid="holdings-strip"
@@ -224,7 +234,7 @@ export function HomeRiskTheater({
     >
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-          Your savings · <span className="font-bold text-gray-900 dark:text-white tabular-nums">{fmt(totalValue)}</span> across {regionData.length} region{regionData.length !== 1 ? "s" : ""}
+          Your savings · <span className="font-bold text-gray-900 dark:text-white tabular-nums">{fmt(totalValue)}</span>
         </p>
         {isDemo && (
           <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
@@ -233,57 +243,24 @@ export function HomeRiskTheater({
         )}
       </div>
 
-      {/* Stacked bar — quiet, 6px, segments tappable, selected undimmed.
-          Segments draw in left-to-right when the strip arrives (§5: the
-          reveal IS the data arriving); selection still undims at 0.18s. */}
-      <div className="mt-2 flex h-1.5 rounded-full overflow-hidden bg-gray-100 dark:bg-white/10">
-        {regionData.map((r, idx) => {
-          const pct = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
-          const isSelected = focusedRegion === r.region;
-          const isDimmed = focusedRegion !== null && !isSelected;
-          return (
-            <motion.button
-              key={r.region}
-              type="button"
-              aria-label={`${r.region} ${Math.round(pct)}% — tap for details`}
-              aria-pressed={isSelected}
-              onClick={() => {
-                haptics.tap();
-                onSelectRegion(focusedRegion === r.region ? null : r.region);
-              }}
-              className="h-full min-w-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-              style={{ backgroundColor: r.color }}
-              initial={reducedMotion ? false : { width: 0, opacity: 1 }}
-              animate={{
-                width: `${pct}%`,
-                opacity: isDimmed ? 0.35 : 1,
-              }}
-              transition={
-                reducedMotion
-                  ? { duration: 0 }
-                  : { width: { ...springSoft, delay: idx * 0.05 }, opacity: { duration: 0.18 } }
-              }
-            />
-          );
-        })}
-      </div>
-
-      {/* Region chips — same selection surface as bar, in row form.
-          FlickScrollRow: drag/flick when many regions overflow. */}
       <FlickScrollRow
-        className="mt-2 gap-1.5 pb-1"
+        className="mt-3 gap-3 pb-1 items-end"
         chevrons={false}
         role="group"
         aria-label="Holdings by region"
       >
-        {regionData.map((r) => {
+        {regionData.map((r, idx) => {
           const pct = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
+          const isSelected = focusedRegion === r.region;
           return (
-            <RegionChip
+            <RegionCoin
               key={r.region}
               region={r}
               pct={pct}
-              isSelected={focusedRegion === r.region}
+              isSelected={isSelected}
+              isDimmed={focusedRegion !== null && !isSelected}
+              index={idx}
+              reducedMotion={Boolean(reducedMotion)}
               onSelect={() =>
                 onSelectRegion(focusedRegion === r.region ? null : r.region)
               }
@@ -291,31 +268,6 @@ export function HomeRiskTheater({
           );
         })}
       </FlickScrollRow>
-
-      {/* Quiet hint when a region is focused — selected region's share */}
-      {focusedRegion && (
-        <motion.p
-          key={focusedRegion}
-          initial={reducedMotion ? false : { opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.18 }}
-          className="mt-1 text-[11px] text-gray-500 dark:text-gray-400"
-        >
-          {(() => {
-            const sel = regionData.find((x) => x.region === focusedRegion);
-            if (!sel) return null;
-            const pct = totalValue > 0 ? (sel.value / totalValue) * 100 : 0;
-            return (
-              <>
-                <span className="font-bold text-gray-900 dark:text-white">{sel.region}</span> holds {Math.round(pct)}% ({fmt(sel.value)}) — tap again to clear
-              </>
-            );
-          })()}
-        </motion.p>
-      )}
-      {!focusedRegion && hasHoldings && (
-        <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">Tap a region to inspect — Shield can rebalance this</p>
-      )}
     </div>
   ) : null;
 
@@ -326,86 +278,19 @@ export function HomeRiskTheater({
         {isDemo && !hasHoldings && (
           <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
         )}
-        {/* Tap the local coin to flip between the currency stage and a fanned holdings stack — same flick/flip motif as LensCoinSelector */}
-        <div>
-          <motion.div
-            animate={{ rotateY: reducedMotion ? 0 : showingHoldings ? 180 : 0 }}
-            transition={reducedMotion ? { duration: 0 } : springSoft}
-            style={{ transformStyle: "preserve-3d", perspective: 900 }}
-          >
-            <motion.div
-              ref={frontFaceRef}
-              style={{ backfaceVisibility: "hidden", visibility: showingHoldings ? "hidden" : undefined }}
-              animate={{ opacity: showingHoldings ? 0 : 1 }}
-              transition={reducedMotion ? { duration: 0 } : { duration: 0.15 }}
-              aria-hidden={showingHoldings}
-            >
-              <CurrencyMomentCard
-                moment={moment}
-                benchmarks={benchmarks}
-                horizons={horizons}
-                onSelectBenchmark={onSelectBenchmark}
-                onSelectHorizon={onSelectHorizon}
-                onAmountChange={onAmountChange}
-                onProtect={onProtect}
-                protectLabel={protectLabel}
-                onChangeCountry={onChangeCountry}
-                frame={frame}
-                rememberVisit={isActive && !isDemo}
-                onInspectHoldings={
-                  hasHoldings
-                    ? () => {
-                        haptics.tap();
-                        setFlipped(true);
-                      }
-                    : undefined
-                }
-              />
-            </motion.div>
-            {hasHoldings && (
-              <motion.div
-                className="absolute inset-0"
-                style={{ backfaceVisibility: "hidden", transform: reducedMotion ? "none" : "rotateY(180deg)", visibility: showingHoldings ? undefined : "hidden" }}
-                animate={{ opacity: showingHoldings ? 1 : 0 }}
-                transition={reducedMotion ? { duration: 0 } : { duration: 0.15, delay: showingHoldings ? 0.08 : 0 }}
-                aria-hidden={!showingHoldings}
-              >
-                <button
-                  ref={backButtonRef}
-                  type="button"
-                  aria-label="Show currency stage"
-                  onClick={() => {
-                    haptics.tap();
-                    setFlipped(false);
-                  }}
-                  className="h-full w-full flex flex-col items-center justify-center gap-3 py-4 text-center min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded-2xl"
-                >
-                  <span className="flex -space-x-2">
-                    {regionData.slice(0, 4).map((r) => (
-                      <span
-                        key={r.region}
-                        className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-sm"
-                        style={{ backgroundColor: r.color }}
-                        title={`${r.region} ${Math.round((r.value / totalValue) * 100)}%`}
-                      >
-                        {r.region.slice(0, 2).toUpperCase()}
-                      </span>
-                    ))}
-                    {regionData.length > 4 && (
-                      <span className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-[10px] font-black">+{regionData.length - 4}</span>
-                    )}
-                  </span>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">Your holdings — {fmt(totalValue)}</span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 px-4 leading-relaxed">Fanned by region · tap to flip back to the currency stage</span>
-                  <span className="text-[11px] text-gray-400 dark:text-gray-500">Tap any chip below for details — Shield can rebalance this</span>
-                </button>
-              </motion.div>
-            )}
-          </motion.div>
-        </div>
-        {hasHoldings && !showingHoldings && (
-          <p className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">Tap the coin to see holdings</p>
-        )}
+        <CurrencyMomentCard
+          moment={moment}
+          benchmarks={benchmarks}
+          horizons={horizons}
+          onSelectBenchmark={onSelectBenchmark}
+          onSelectHorizon={onSelectHorizon}
+          onAmountChange={onAmountChange}
+          onProtect={onProtect}
+          protectLabel={protectLabel}
+          onChangeCountry={onChangeCountry}
+          frame={frame}
+          rememberVisit={isActive && !isDemo}
+        />
         {guardianAway && (
           <button
             type="button"
@@ -413,9 +298,9 @@ export function HomeRiskTheater({
             onClick={() =>
               navigateToGuardian({ summary: guardianAway.summary, prompt: guardianAway.prompt })
             }
-            className="mt-1 block w-full text-center text-[11px] font-semibold text-blue-600 dark:text-blue-400"
+            className="mt-1 block w-full text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400"
           >
-            {guardianAway.line} →
+            {guardianAway.line} <span className="text-blue-600 dark:text-blue-400">→</span>
           </button>
         )}
         {holdingsStrip}

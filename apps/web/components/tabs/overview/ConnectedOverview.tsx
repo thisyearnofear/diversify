@@ -304,7 +304,18 @@ export function ConnectedOverview({
           <GuardianCadenceLine />
         </div>
       </div>
-      {philosophyName && (
+      {/* One transition line — the context decides which. */}
+      {home.isPaymentCycle ? (
+        <button
+          type="button"
+          onClick={navigateToNetting}
+          className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+        >
+          Match this payment against a counterparty →
+        </button>
+      ) : home.primaryTip && hasHoldings ? (
+        <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
+      ) : philosophyName ? (
         <button
           type="button"
           onClick={navigateToCompare}
@@ -313,19 +324,7 @@ export function ConnectedOverview({
         >
           Compare philosophies →
         </button>
-      )}
-      {home.primaryTip && hasHoldings && (
-        <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
-      )}
-      {home.isPaymentCycle && (
-        <button
-          type="button"
-          onClick={navigateToNetting}
-          className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
-        >
-          Match this payment against a counterparty →
-        </button>
-      )}
+      ) : null}
       <ContextualBanner
         placement="status"
         kind={home.banner}

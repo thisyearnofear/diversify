@@ -553,7 +553,6 @@ export default function ProtectionTab({
                   value={balance.risk}
                   legs={balance.isPreviewing ? balanceAllocations : allocations}
                   savedLegs={allocations}
-                  philosophy={strategyKey}
                   isPreviewing={balance.isPreviewing}
                   accent={(() => {
                     const id = strategyToArchetype(strategyKey);

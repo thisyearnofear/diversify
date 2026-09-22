@@ -203,7 +203,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
       expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
       expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
-        "Dollar reserve 25% → 40% · other exposure 75% → 60%",
+        "Dollar reserve 25% → 40%",
       );
       expect(screen.queryByTestId("plan-gallery")).not.toBeInTheDocument();
       expect(screen.queryByRole("button", { name: "Connect wallet" })).not.toBeInTheDocument();
@@ -212,7 +212,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
       expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
       expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
-        "Dollar reserve · 25%",
+        "Dollar reserve · 25% — dollar-pegged, not risk-free",
       );
       expect(screen.getByTestId("plan-gallery")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();

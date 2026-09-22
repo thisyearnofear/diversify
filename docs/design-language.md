@@ -123,7 +123,7 @@ the bundle):
 - **Blur-swap** (`phaseVariants`/`staggerChild` in onboarding): content
   swaps through a 6px blur, never a y-jump.
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
-- **Flick scroll row** (`FlickScrollRow`, powered by `useDragToScroll`): the ONLY sanctioned horizontal scroll row — new rows compose the primitive instead of re-rolling `overflow-x-auto`. Native touch, pointer drag with momentum on mouse/pen, chevron buttons; `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Interactive children guard with `useDidDrag()` inside a child component (a body-level call reads the never-drag default and silently no-ops); drag-release swallows exactly one click, a new press revokes the trap. Live users: philosophy picker, Home region chips, BestYield chain toolbar, onboarding ArchetypeStrip.
+- **Flick scroll row** (`FlickScrollRow`, powered by `useDragToScroll`): the ONLY sanctioned horizontal scroll row — new rows compose the primitive instead of re-rolling `overflow-x-auto`. Native touch, pointer drag with momentum on mouse/pen, chevron buttons; `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Interactive children guard with `useDidDrag()` inside a child component (a body-level call reads the never-drag default and silently no-ops); drag-release swallows exactly one click, a new press revokes the trap. Live users: philosophy picker, Home holdings coins, BestYield chain toolbar, onboarding ArchetypeStrip.
 
 **Rive objects (scoped exception).** A self-contained interactive object —
 a coin that flips, lands, and shines on claim; a celebration artefact — may
@@ -228,8 +228,8 @@ A tab change that fails any of these is the old stack. Do not ship it.
 Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
 picker (and optionally Home amount-inspect) — not a peer tab until Advanced.
 Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
-the one expressive object; tap the coin to flip to a fanned holdings stack (same flick/flip motif as `LensCoinSelector`);
-holdings are also a quiet strip (stacked bar + chips) beneath it, never a second `AllocationRing`. Shield alone owns the
+the one expressive object; holdings are a quiet coin row beneath it — one `Coin` per region, sized by share — never
+a second `AllocationRing`; tapping a coin dims the others and opens the region `InspectorSheet`. Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring.
 

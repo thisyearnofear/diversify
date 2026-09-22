@@ -335,7 +335,7 @@ export function ProtectionPlanRing({
     <div className="w-full">
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          {balancePreview ? 'Preview your balance' : 'Your shield plan'}
+          Your shield plan
         </h3>
         {/* Armed-state seal — stamps once per mount (keyed to the plan),
             then holds. The §5 confirm artefact for committing a plan. */}

@@ -47,7 +47,6 @@ interface Props {
   /** Philosophy-aware frame (accent + consequence reframe). null → neutral. */
   frame?: MomentFrame | null;
   rememberVisit?: boolean;
-  onInspectHoldings?: () => void;
   className?: string;
 }
 
@@ -101,12 +100,14 @@ export function CurrencyMomentCard({
   onChangeCountry,
   frame,
   rememberVisit = true,
-  onInspectHoldings,
 }: Props) {
   const reducedMotion = useReducedMotion();
   const comparison = useCurrencyVisit(moment, rememberVisit);
+  // The Last visit view exists only when the reading moved — same-date or
+  // unchanged data renders exactly like a first visit.
+  const changed = comparison && (comparison.kind === 'updated' || comparison.kind === 'revised') ? comparison : null;
   const [view, setView] = React.useState<'visit' | 'history' | null>(null);
-  const showVisit = Boolean(comparison) && view !== 'history';
+  const showVisit = Boolean(changed) && view !== 'history';
   // The stage leans toward the cursor — Sylva's pointer-responsive scene,
   // damped through a spring. Dead under reduced motion.
   const tilt = usePointerTilt(!reducedMotion);
@@ -125,7 +126,7 @@ export function CurrencyMomentCard({
         <span aria-hidden="true">{moment.flag}</span> {moment.countryName} · {moment.currencyCode}
       </p>
 
-      {comparison && (
+      {changed && (
         <motion.div
           role="group"
           aria-label="Home view"
@@ -162,12 +163,11 @@ export function CurrencyMomentCard({
         animate={{ opacity: 1, y: 0 }}
         transition={reducedMotion ? { duration: 0 } : reveal}
       >
-        {showVisit && comparison ? (
+        {showVisit && changed ? (
           <CurrencyVisitReview
-            comparison={comparison}
+            comparison={changed}
             moment={moment}
             accent={accent}
-            onInspectHoldings={onInspectHoldings}
           />
         ) : (
           <>
@@ -182,18 +182,7 @@ export function CurrencyMomentCard({
                 transition={{ type: 'spring', stiffness: 120, damping: 20 }}
                 className="shrink-0"
               >
-                {onInspectHoldings ? (
-                  <button
-                    type="button"
-                    aria-label="Show holdings stack"
-                    onClick={onInspectHoldings}
-                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-                  >
-                    <Coin size={92} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
-                  </button>
-                ) : (
-                  <Coin size={92} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
-                )}
+                <Coin size={92} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
               </motion.div>
               <div className="text-gray-300 dark:text-gray-600 text-lg font-bold select-none" aria-hidden="true">
                 →
@@ -212,7 +201,7 @@ export function CurrencyMomentCard({
               className="mt-3"
             >
               <DeltaNumber delta={moment.delta} accent={accent} />
-              <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
+              <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mt-1">
                 buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
               </div>
             </motion.div>
@@ -328,9 +317,9 @@ export function CurrencyMomentCard({
           progressive-blur TrustFootnote keeps the first clause readable and
           expands on hover/tap — never a hide. */}
       <TrustFootnote className="mt-2">
-        {showVisit && comparison ? (
+        {showVisit && changed ? (
           <>
-            Readings as of {comparison.previous.value.dataAsOf} and {comparison.current.dataAsOf} · {comparison.current.source === 'feed' ? 'FX feed' : 'curated history'}
+            Readings as of {changed.previous.value.dataAsOf} and {changed.current.dataAsOf} · {changed.current.source === 'feed' ? 'FX feed' : 'curated history'} · trailing comparison, not your return
           </>
         ) : (
           <>

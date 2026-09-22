@@ -73,8 +73,13 @@ vi.mock("@/hooks/use-market-regime", () => ({
 }));
 
 const mockNavigateToCompare = vi.fn();
+const mockNavigateToNetting = vi.fn();
 vi.mock("@/context/app/NavigationContext", () => ({
-  useNavigation: () => ({ navigateToSwap: vi.fn(), navigateToCompare: mockNavigateToCompare }),
+  useNavigation: () => ({
+    navigateToSwap: vi.fn(),
+    navigateToCompare: mockNavigateToCompare,
+    navigateToNetting: mockNavigateToNetting,
+  }),
 }));
 
 vi.mock("@/lib/market-regime", () => ({
@@ -504,6 +509,7 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
     mockHomeSections = defaultHomeSections;
     mockMoment = null;
     mockNavigateToCompare.mockClear();
+    mockNavigateToNetting.mockClear();
   });
 
   it("fallback shows the country picker — the same actionable affordance as the unconnected morph", () => {
@@ -552,5 +558,28 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     renderOverview();
     expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
+  });
+
+  it("a payment cycle wins the one transition line — compare link steps aside", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = { ...defaultHomeSections, isPaymentCycle: true };
+    renderOverview();
+
+    const link = screen.getByRole("button", { name: /Match this payment against a counterparty/ });
+    expect(link).toBeInTheDocument();
+    expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
+    fireEvent.click(link);
+    expect(mockNavigateToNetting).toHaveBeenCalledTimes(1);
+  });
+
+  it("with no payment cycle and no tip, the compare link is the one transition line", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = { ...defaultHomeSections, isPaymentCycle: false, primaryTip: null };
+    renderOverview();
+
+    expect(screen.getByTestId("home-compare-link")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Match this payment/ })).not.toBeInTheDocument();
   });
 });

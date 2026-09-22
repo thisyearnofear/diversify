@@ -219,15 +219,14 @@ describe('CurrencyMomentCard — returning visit', () => {
     window.localStorage.setItem(KEY, JSON.stringify(baseline()));
     render(<CurrencyMomentCard {...baseProps} onProtect={() => {}} />);
     const review = await screen.findByTestId('currency-visit-review');
-    expect(review.textContent).toContain('Since you last checked');
-    expect(review.textContent).toContain('The comparison changed');
-    expect(review.textContent).toContain('Last checked');
-    expect(review.textContent).toContain('Latest reading');
+    expect(review.textContent).not.toContain('Since you last checked');
+    expect(within(review).getByRole('heading').textContent).toMatch(/1 pts higher than/);
+    expect(review.textContent).toContain('Now');
     expect(review.textContent).toContain('−19%');
     expect(review.textContent).toContain('−18%');
     expect(screen.getAllByTestId('currency-visit-review')).toHaveLength(1);
     expect(document.querySelector('[data-testid="inspector-sheet"]')).toBeNull();
-    expect(within(review).getByText(/not your return since visiting/)).toBeInTheDocument();
+    expect(screen.getByText(/trailing comparison, not your return/)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Protect this' })).toHaveLength(1);
     expect(screen.queryByLabelText('Your savings amount')).not.toBeInTheDocument();
   });
@@ -248,33 +247,43 @@ describe('CurrencyMomentCard — returning visit', () => {
     expect(await screen.findByTestId('currency-visit-review')).toBeInTheDocument();
   });
 
-  it('distinguishes an unchanged rounded reading from a source that has not advanced', async () => {
+  it('an unchanged rounded reading renders the longer view, no toggle', async () => {
     window.localStorage.setItem(
       KEY,
       JSON.stringify(baseline({ delta: -18.04, dataAsOf: '2025-06-30' })),
     );
-    const { unmount } = render(<CurrencyMomentCard {...baseProps} />);
-    expect((await screen.findByTestId('currency-visit-review')).textContent).toContain(
-      'New data, same rounded reading',
-    );
-    unmount();
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(await screen.findByText('−18%')).toBeInTheDocument();
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Last visit' })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Your savings amount')).toBeInTheDocument();
+  });
 
+  it('a same-date reading renders the longer view, no toggle', async () => {
     window.localStorage.setItem(
       KEY,
       JSON.stringify(baseline({ delta: -18, dataAsOf: '2025-07-01' })),
     );
     render(<CurrencyMomentCard {...baseProps} />);
-    expect((await screen.findByTestId('currency-visit-review')).textContent).toContain(
-      'No newer comparison yet',
-    );
+    expect(await screen.findByText('−18%')).toBeInTheDocument();
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Home view' })).not.toBeInTheDocument();
   });
 
   it('labels a revised same-date reading as a revision', async () => {
     window.localStorage.setItem(KEY, JSON.stringify(baseline({ dataAsOf: '2025-07-01' })));
     render(<CurrencyMomentCard {...baseProps} />);
-    expect((await screen.findByTestId('currency-visit-review')).textContent).toContain(
-      'The published reading was revised',
-    );
+    const review = await screen.findByTestId('currency-visit-review');
+    expect(review.textContent).toContain('source revised this reading');
+  });
+
+  it('a moved reading defaults to the visit view with the change as the headline', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify(baseline({ delta: -18.7 })));
+    render(<CurrencyMomentCard {...baseProps} />);
+    const review = await screen.findByTestId('currency-visit-review');
+    expect(within(review).getByRole('heading').textContent).toMatch(/0\.7 pts higher than/);
+    expect(review.textContent).not.toContain('Since you last checked');
+    expect(screen.getByRole('button', { name: 'Last visit' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('fabricates nothing on the first visit, a legacy scalar, or a different source/context', async () => {
@@ -306,9 +315,8 @@ describe('CurrencyMomentCard — returning visit', () => {
     window.localStorage.setItem(KEY, JSON.stringify(baseline()));
     const { container } = render(<CurrencyMomentCard {...baseProps} />);
     const review = await screen.findByTestId('currency-visit-review');
-    expect(review.textContent).toContain('The comparison changed');
-    expect(within(review).getByText(/Last checked/)).toBeInTheDocument();
-    expect(within(review).getByText('Latest reading')).toBeInTheDocument();
+    expect(within(review).getByRole('heading').textContent).toMatch(/1 pts higher than/);
+    expect(within(review).getByText('Now')).toBeInTheDocument();
     expect(container.querySelector('.coin-shine')).toBeNull();
     expect(container.querySelector('.coin-shine-once')).toBeNull();
   });

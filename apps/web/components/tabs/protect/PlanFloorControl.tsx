@@ -3,8 +3,9 @@
  * between the plan's dollar legs and its identity legs; the ring, score,
  * learn mix and Guardian all read the same adjusted legs (one truth).
  *
- * A control, not a CTA — same selection grammar as ProfileWizard's risk
- * step, quiet styling, selected option tinted with the archetype accent.
+ * A control, not a CTA — reuses the Home segmented track (the selection
+ * grammar learned once, applied everywhere); the selected option tints
+ * with the archetype accent.
  */
 
 import React from "react";
@@ -22,16 +23,6 @@ const LABELS: Record<RiskTolerance, string> = {
   Aggressive: "More exposure",
 };
 
-const FRAMING: Record<string, string> = {
-  africapitalism: "Balance Kenyan-shilling and euro exposure against a dollar reserve.",
-  buen_vivir: "Balance Brazilian-real and Colombian-peso exposure against a dollar reserve.",
-  pan_caribbean: "Balance gold and euro exposure against dollar-pegged reserves.",
-  confucian: "Balance the dollar reserve against USDY exposure.",
-  gotong_royong: "Balance Philippine-peso and USDY exposure against a dollar reserve.",
-  islamic: "Balance gold exposure against non-yielding dollar-pegged reserves.",
-  global: "Balance the currency mix against a dollar reserve.",
-};
-
 interface Props {
   /** Current tolerance; null behaves as Balanced. */
   value: RiskTolerance | null;
@@ -39,7 +30,6 @@ interface Props {
   legs: PlanLeg[];
   savedLegs: PlanLeg[];
   isPreviewing: boolean;
-  philosophy: string | null;
   onApply?: () => void;
   onCancel: () => void;
   accent?: string;
@@ -51,7 +41,6 @@ export function PlanFloorControl({
   legs,
   savedLegs,
   isPreviewing,
-  philosophy,
   onApply,
   onCancel,
   accent,
@@ -70,8 +59,8 @@ export function PlanFloorControl({
   const floor = floorPercent(legs);
   const savedFloor = floorPercent(savedLegs);
   const caption = isPreviewing
-    ? `Dollar reserve ${savedFloor}% → ${floor}% · other exposure ${100 - savedFloor}% → ${100 - floor}%`
-    : `Dollar reserve · ${floor}%`;
+    ? `Dollar reserve ${savedFloor}% → ${floor}%`
+    : `Dollar reserve · ${floor}% — dollar-pegged, not risk-free`;
 
   const focusOption = (index: number) => {
     groupRef.current
@@ -101,15 +90,11 @@ export function PlanFloorControl({
 
   return (
     <div data-testid="plan-floor-control">
-      <p className="mb-2 text-xs text-gray-600 dark:text-gray-300">
-        {FRAMING[philosophy ?? ""] ??
-          "Explore the balance between dollar reserves and the other plan assets."}
-      </p>
       <div
         ref={groupRef}
         role="radiogroup"
         aria-label="Plan balance"
-        className="grid grid-cols-3 gap-2"
+        className="grid grid-cols-3 gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-1"
         onKeyDown={onKeyDown}
       >
         {OPTIONS.map((opt) => {
@@ -122,16 +107,14 @@ export function PlanFloorControl({
               aria-checked={isSelected}
               tabIndex={isSelected ? 0 : -1}
               onClick={() => onChange(opt)}
-              className={`min-h-[44px] px-2 py-2 border-2 rounded-xl text-center transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              className={`min-h-[44px] px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected
-                  ? "bg-gray-50 dark:bg-white/5"
-                  : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700"
+                  ? `bg-white dark:bg-gray-900 shadow-sm ${accent ? "" : "text-gray-900 dark:text-white"}`
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
-              style={isSelected ? { borderColor: accent ?? "#2563eb" } : undefined}
+              style={isSelected && accent ? { color: accent } : undefined}
             >
-              <span className="text-[11px] font-bold leading-tight text-gray-700 dark:text-gray-300">
-                {LABELS[opt]}
-              </span>
+              {LABELS[opt]}
             </button>
           );
         })}
@@ -142,12 +125,6 @@ export function PlanFloorControl({
         className="mt-2 text-xs text-gray-600 dark:text-gray-300"
       >
         {caption}
-      </p>
-      <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
-        Dollar-pegged is not risk-free.{" "}
-        {isPreviewing
-          ? "Unsaved targets; your holdings have not moved."
-          : "Explore without changing your saved plan."}
       </p>
       {isPreviewing && (
         <div className="mt-2 space-y-1.5">

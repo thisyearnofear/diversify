@@ -111,7 +111,6 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
                   value={balance.risk}
                   legs={balance.isPreviewing ? balanceLegs : ringLegs}
                   savedLegs={ringLegs}
-                  philosophy={ringKey}
                   isPreviewing={balance.isPreviewing}
                   accent={ARCHETYPES[ringArchetype].accent}
                   onChange={(risk) => {

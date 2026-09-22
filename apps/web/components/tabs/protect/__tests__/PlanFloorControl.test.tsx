@@ -20,7 +20,6 @@ function renderControl(overrides: Partial<React.ComponentProps<typeof PlanFloorC
     legs: SAVED,
     savedLegs: SAVED,
     isPreviewing: false,
-    philosophy: "africapitalism",
     onCancel: vi.fn(),
     ...overrides,
     onChange,
@@ -30,22 +29,17 @@ function renderControl(overrides: Partial<React.ComponentProps<typeof PlanFloorC
 }
 
 describe("PlanFloorControl — balance preview", () => {
-  it("idle: names the saved floor and offers no forward action", () => {
+  it("idle: one caption names the saved floor and the honesty caveat", () => {
     renderControl();
     expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
-      "Dollar reserve · 25%",
+      "Dollar reserve · 25% — dollar-pegged, not risk-free",
     );
-    expect(
-      screen.getByText(/Explore without changing your saved plan\./),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/Explore without/)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Use this balance" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Keep current balance" })).not.toBeInTheDocument();
-    expect(
-      screen.getByText("Balance Kenyan-shilling and euro exposure against a dollar reserve."),
-    ).toBeInTheDocument();
   });
 
-  it("preview: caption compares saved vs draft floors to one honest line", () => {
+  it("preview: caption compares saved vs draft floors", () => {
     renderControl({
       value: "Conservative",
       legs: CONSERVATIVE,
@@ -53,12 +47,8 @@ describe("PlanFloorControl — balance preview", () => {
       onApply: vi.fn(),
     });
     expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
-      "Dollar reserve 25% → 40% · other exposure 75% → 60%",
+      "Dollar reserve 25% → 40%",
     );
-    expect(
-      screen.getByText(/Unsaved targets; your holdings have not moved\./),
-    ).toBeInTheDocument();
-    expect(screen.getByText(/Dollar-pegged is not risk-free\./)).toBeInTheDocument();
   });
 
   it("radio labels read as choices; selecting fires onChange only — never apply", () => {
@@ -118,20 +108,6 @@ describe("PlanFloorControl — balance preview", () => {
     expect(screen.getByRole("button", { name: "Keep current balance" })).toBeInTheDocument();
   });
 
-  it("islamic framing names gold, never a guarantee", () => {
-    renderControl({ philosophy: "islamic" });
-    const line = screen.getByText(/non-yielding dollar-pegged reserves\./);
-    expect(line.textContent).toContain("gold");
-    expect(line.textContent).not.toMatch(/guarantee|safe/i);
-  });
-
-  it("unknown philosophy falls back to the generic framing", () => {
-    renderControl({ philosophy: null });
-    expect(
-      screen.getByText("Explore the balance between dollar reserves and the other plan assets."),
-    ).toBeInTheDocument();
-  });
-
   function Harness() {
     const [savedRisk, setSavedRisk] = React.useState<RiskTolerance>("Balanced");
     const balance = usePlanBalancePreview({
@@ -145,7 +121,6 @@ describe("PlanFloorControl — balance preview", () => {
         legs={legsForRisk(getArchetypeAllocations("africapitalism"), balance.risk)}
         savedLegs={legsForRisk(getArchetypeAllocations("africapitalism"), savedRisk)}
         isPreviewing={balance.isPreviewing}
-        philosophy="africapitalism"
         onApply={() => balance.commit()}
         onCancel={balance.cancel}
         onChange={balance.select}

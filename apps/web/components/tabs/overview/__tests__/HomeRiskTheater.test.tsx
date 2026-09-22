@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { HomeRiskTheater } from "../HomeRiskTheater";
@@ -77,18 +77,39 @@ function renderTheater(overrides: Partial<React.ComponentProps<typeof HomeRiskTh
   );
 }
 
-describe("HomeRiskTheater — holdings strip draw-in", () => {
-  it("renders one tappable segment per region, sized by share", () => {
+describe("HomeRiskTheater — holdings coin row", () => {
+  it("renders one tappable coin per region, sized by share", () => {
     renderTheater();
     const strip = screen.getByTestId("holdings-strip");
     expect(strip).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Africa 60%/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /LatAm 40%/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Africa 60%" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "LatAm 40%" })).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("clicking an unfocused coin selects it; clicking the focused one clears", () => {
+    const onSelectRegion = vi.fn();
+    renderTheater({ onSelectRegion });
+    fireEvent.click(screen.getByRole("button", { name: "Africa 60%" }));
+    expect(onSelectRegion).toHaveBeenCalledWith("Africa");
+
+    cleanup();
+    onSelectRegion.mockClear();
+    renderTheater({ onSelectRegion, focusedRegion: "Africa" });
+    expect(screen.getByRole("button", { name: "Africa 60%" })).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Africa 60%" }));
+    expect(onSelectRegion).toHaveBeenCalledWith(null);
   });
 
   it("renders no strip when there are no holdings", () => {
     renderTheater({ regionData: [], totalValue: 0 });
     expect(screen.queryByTestId("holdings-strip")).not.toBeInTheDocument();
+  });
+
+  it("has no holdings-stack flip and no tap hints", () => {
+    renderTheater();
+    expect(screen.queryByRole("button", { name: "Show holdings stack" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Show currency stage" })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Tap (the|a) /)).not.toBeInTheDocument();
   });
 });
 
@@ -115,21 +136,21 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     );
     renderTheater();
     const review = await screen.findByTestId("currency-visit-review");
-    expect(review.textContent).toContain("The comparison changed");
-    expect(review.textContent).toContain("0.7 percentage points higher");
-    expect(within(review).getByText(/Last checked/)).toBeInTheDocument();
-    expect(within(review).getByText("Latest reading")).toBeInTheDocument();
+    expect(within(review).getByRole("heading").textContent).toMatch(/0\.7 pts higher than/);
+    expect(review.textContent).not.toContain("Since you last checked");
+    expect(within(review).getByText("Now")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Home view" })).toBeInTheDocument();
   });
 
-  it("says 'No newer comparison yet' when the source date has not advanced", async () => {
+  it("stays on the longer view when the source date has not advanced", async () => {
     window.localStorage.setItem(
       KEY,
       JSON.stringify({ value: { ...READING, delta: -8.4, dataAsOf: "2026-09-11" }, at: NOW - 3 * 24 * 3600 * 1000 }),
     );
     renderTheater();
-    const review = await screen.findByTestId("currency-visit-review");
-    expect(review.textContent).toContain("No newer comparison yet");
+    expect(await screen.findByLabelText("Your savings amount")).toBeInTheDocument();
+    expect(screen.queryByTestId("currency-visit-review")).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: "Home view" })).not.toBeInTheDocument();
   });
 
   it("stays on the historical view on the first visit (no snapshot, no toggle)", () => {
@@ -171,7 +192,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     expect(snap.at).toBe(NOW);
   });
 
-  it("flips to holdings only via the coin button — never the stage controls", async () => {
+  it("the visit/history toggle never swaps out the stage controls", async () => {
     window.localStorage.setItem(
       KEY,
       JSON.stringify({ value: READING, at: NOW - 3 * 24 * 3600 * 1000 }),
@@ -180,70 +201,11 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     await screen.findByTestId("currency-visit-review");
 
     fireEvent.click(screen.getByRole("button", { name: "Longer view" }));
-    expect(screen.queryByRole("button", { name: "Show currency stage" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "3Y" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Last visit" }));
-    expect(screen.queryByRole("button", { name: "Show currency stage" })).not.toBeInTheDocument();
-
+    await screen.findByTestId("currency-visit-review");
     fireEvent.click(screen.getByRole("button", { name: "Longer view" }));
-    fireEvent.click(screen.getByRole("button", { name: "3Y" }));
-    fireEvent.change(screen.getByLabelText("Your savings amount"), { target: { value: "2500" } });
-    fireEvent.click(screen.getByRole("button", { name: "Protect this" }));
-    expect(screen.queryByRole("button", { name: "Show currency stage" })).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getAllByRole("button", { name: "Show holdings stack" })[0]);
-    const back = await screen.findByRole("button", { name: "Show currency stage" });
-    expect(back).toBeInTheDocument();
-    expect(back).toHaveFocus();
-    expect(screen.queryByRole("button", { name: "3Y" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("spinbutton", { name: "Your savings amount" })).not.toBeInTheDocument();
-    fireEvent.click(back);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "3Y" })).toBeInTheDocument(),
-    );
-    expect(screen.getByRole("button", { name: "Show holdings stack" })).toHaveFocus();
-  });
-
-  it("flips without rotation under reduced motion and returns", async () => {
-    mocks.reduced = true;
-    renderTheater();
-    const flip = screen.getByRole("button", { name: "Show holdings stack" });
-    fireEvent.click(flip);
-    const back = await screen.findByRole("button", { name: "Show currency stage" });
-    expect(back.parentElement).toHaveStyle({ transform: "none" });
-    expect(back).toHaveFocus();
-    expect(screen.queryByRole("button", { name: "3Y" })).not.toBeInTheDocument();
-    fireEvent.click(back);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Show holdings stack" })).toHaveFocus(),
-    );
-  });
-
-  it("reveals the front again when holdings disappear mid-flip", async () => {
-    const { rerender } = renderTheater();
-    fireEvent.click(screen.getByRole("button", { name: "Show holdings stack" }));
-    await screen.findByRole("button", { name: "Show currency stage" });
-
-    rerender(
-      <HomeRiskTheater
-        moment={MOMENT}
-        inflationMoment={null}
-        benchmarks={BENCHMARK_KEYS}
-        horizons={HORIZON_KEYS}
-        onSelectBenchmark={() => {}}
-        onSelectHorizon={() => {}}
-        onAmountChange={() => {}}
-        onProtect={() => {}}
-        frame={null}
-        regionData={[]}
-        totalValue={0}
-        focusedRegion={null}
-        onSelectRegion={() => {}}
-      />,
-    );
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "3Y" })).toBeInTheDocument(),
-    );
-    expect(screen.queryByRole("button", { name: "Show currency stage" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "3Y" })).toBeInTheDocument();
   });
 
   it("writes no visit memory while inactive, then compares once active", async () => {
@@ -273,7 +235,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
       />,
     );
     const review = await screen.findByTestId("currency-visit-review");
-    expect(review.textContent).toContain("0.7 percentage points higher");
+    expect(review.textContent).toMatch(/0\.7 pts higher than/);
   });
 
   it("never reads or writes visit memory in demo mode", async () => {
@@ -288,56 +250,6 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     expect(screen.queryByTestId("currency-visit-review")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Home view" })).not.toBeInTheDocument();
     expect(setItem.mock.calls.some(([k]) => String(k).includes("home-reading"))).toBe(false);
-  });
-
-  it("never paints over a hidden keep-mounted pane or steals its focus", async () => {
-    mocks.reduced = true;
-    const el = (hidden: boolean, overrides: Partial<React.ComponentProps<typeof HomeRiskTheater>> = {}) => (
-      <div>
-        <button type="button">outside</button>
-        <div style={{ visibility: hidden ? "hidden" : "visible" }}>
-          <HomeRiskTheater
-            moment={MOMENT}
-            inflationMoment={null}
-            benchmarks={BENCHMARK_KEYS}
-            horizons={HORIZON_KEYS}
-            onSelectBenchmark={() => {}}
-            onSelectHorizon={() => {}}
-            onAmountChange={() => {}}
-            onProtect={() => {}}
-            frame={null}
-            regionData={REGIONS}
-            totalValue={1000}
-            focusedRegion={null}
-            onSelectRegion={() => {}}
-            {...overrides}
-          />
-        </div>
-      </div>
-    );
-    const faces = () => {
-      const stage = screen.getByTestId("home-risk-theater").querySelector(":scope > div > div");
-      return { front: stage?.children[0] as HTMLElement, back: stage?.children[1] as HTMLElement | undefined };
-    };
-    const outside = () => screen.getByRole("button", { name: "outside" });
-
-    const { rerender } = render(el(true));
-    expect(screen.queryByRole("button", { name: "Show holdings stack" })).toBeNull();
-    expect(screen.queryByRole("spinbutton", { name: "Your savings amount" })).toBeNull();
-    expect(faces().front.style.visibility).toBe("");
-
-    rerender(el(false));
-    fireEvent.click(screen.getByRole("button", { name: "Show holdings stack" }));
-    const backButton = await screen.findByRole("button", { name: "Show currency stage" });
-    expect(backButton).toHaveFocus();
-
-    outside().focus();
-    rerender(el(true, { isActive: false }));
-    expect(screen.queryByRole("button", { name: "Show currency stage" })).toBeNull();
-    expect(faces().back?.style.visibility ?? "").toBe("");
-
-    rerender(el(true, { isActive: false, regionData: [], totalValue: 0 }));
-    await waitFor(() => expect(outside()).toHaveFocus());
   });
 });
 

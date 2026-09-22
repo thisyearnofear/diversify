@@ -1023,7 +1023,7 @@ describe("ProtectionTab — instrument shapes", () => {
       "data-legs",
       JSON.stringify([["KESm", 48], ["cUSD", 40], ["cEUR", 12]]),
     );
-    expect(dial).toHaveTextContent("Dollar reserve 25% → 40% · other exposure 75% → 60%");
+    expect(dial).toHaveTextContent("Dollar reserve 25% → 40%");
     expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
     expect(screen.queryByTestId("shield-fund")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
