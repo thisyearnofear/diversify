@@ -193,6 +193,115 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
+  it("walletless balance preview: draft re-slices targets, gallery and Connect step aside, Keep restores", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.riskTolerance = "Balanced";
+    mockState.setRiskTolerance.mockClear();
+    try {
+      render(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+
+      fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+      expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
+      expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
+        "Dollar reserve 25% → 40% · other exposure 75% → 60%",
+      );
+      expect(screen.queryByTestId("plan-gallery")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Connect wallet" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Use this balance" })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
+      expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
+      expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
+        "Dollar reserve · 25%",
+      );
+      expect(screen.getByTestId("plan-gallery")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("Use this balance commits the tolerance walletless — no wallet, no signature", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.riskTolerance = "Balanced";
+    mockState.setRiskTolerance.mockClear();
+    try {
+      render(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+      fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+      fireEvent.click(screen.getByRole("button", { name: "Use this balance" }));
+      expect(mockState.setRiskTolerance).toHaveBeenCalledTimes(1);
+      expect(mockState.setRiskTolerance).toHaveBeenCalledWith("Conservative");
+    } finally {
+      mockState.financialStrategy = null;
+      mockState.riskTolerance = "Balanced";
+    }
+  });
+
+  it("walletless slice selection answers the target in the hole — no held fiction", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.riskTolerance = "Balanced";
+    try {
+      render(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+      fireEvent.click(screen.getByRole("button", { name: /KESm — plan: 60%/ }));
+      expect(screen.getByText("60%")).toBeInTheDocument();
+      expect(screen.getByText("Target only · not funded")).toBeInTheDocument();
+      expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("changing philosophy discards the draft without mutating the profile", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.riskTolerance = "Balanced";
+    mockState.setRiskTolerance.mockClear();
+    try {
+      const { rerender } = render(
+        <ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />,
+      );
+      fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+      expect(screen.queryByTestId("plan-gallery")).not.toBeInTheDocument();
+
+      mockState.financialStrategy = "buen_vivir";
+      rerender(<ProtectionNotConnected experienceMode="beginner" onEnableDemo={vi.fn()} />);
+      expect(screen.getByTestId("plan-gallery")).toBeInTheDocument();
+      expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
+        "Dollar reserve · 20%",
+      );
+      expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("the external inspector steps aside during a draft and returns on Keep", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.riskTolerance = "Balanced";
+    mockState.setRiskTolerance.mockClear();
+    try {
+      render(
+        <ProtectionNotConnected
+          experienceMode="beginner"
+          onEnableDemo={vi.fn()}
+          inspector={<div data-testid="external-inspector">existing</div>}
+        />,
+      );
+      expect(screen.getByTestId("external-inspector")).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+      expect(screen.queryByTestId("external-inspector")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
+      expect(screen.getByTestId("external-inspector")).toBeInTheDocument();
+      expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
+        "Dollar reserve · 25%",
+      );
+      expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
   it("persona morphs the status tier: Caribbean philosophy shows the Caribbean banner", () => {
     mockState.financialStrategy = "pan_caribbean";
     mockState.userRegion = "caribbean";

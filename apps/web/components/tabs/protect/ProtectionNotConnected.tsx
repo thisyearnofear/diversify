@@ -36,6 +36,8 @@ import {
   getArchetypeAllocations,
   legsForRisk,
 } from "@/components/protection-cards/plan-preview";
+import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
+import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
 interface Props {
@@ -68,12 +70,25 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
   const ringKey = financialStrategy ?? profileConfig.philosophy ?? null;
   const ringArchetype = ringKey != null ? strategyToArchetype(ringKey) : null;
   const showRing = ringArchetype != null;
+  const balance = usePlanBalancePreview({
+    scopeKey: `walletless:${ringKey ?? 'none'}`,
+    savedRisk: profileConfig.riskTolerance,
+    onCommit: setRiskTolerance,
+  });
   const ringLegs = ringArchetype
     ? legsForRisk(
         getArchetypeAllocations(ringArchetype),
         profileConfig.riskTolerance,
       )
     : [];
+  const balanceLegs = ringArchetype
+    ? legsForRisk(getArchetypeAllocations(ringArchetype), balance.risk)
+    : [];
+  const [selectedToken, setSelectedToken] = React.useState<string | null>(null);
+  React.useEffect(() => setSelectedToken(null), [ringKey]);
+  const effectiveToken = ringLegs.some((leg) => leg.token === selectedToken)
+    ? selectedToken
+    : null;
 
   const object = (
     <div className="space-y-4" data-testid="shield-unconnected-object">
@@ -81,33 +96,57 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
         <div data-testid="shield-ring" data-walletless>
           <ProtectionPlanRing
             strategyKey={ringKey}
-            legs={ringLegs}
+            legs={balance.isPreviewing ? balanceLegs : ringLegs}
+            balancePreview={balance.isPreviewing}
+            savedLegs={ringLegs}
             portfolio={walletlessPortfolio}
-            selectedToken={null}
-            onSelectToken={() => {}}
+            selectedToken={effectiveToken}
+            onSelectToken={setSelectedToken}
             alignmentScore={null}
             empty
             emptyLabel="Connect to fund"
+            controls={
+              <div className="mt-3">
+                <PlanFloorControl
+                  value={balance.risk}
+                  legs={balance.isPreviewing ? balanceLegs : ringLegs}
+                  savedLegs={ringLegs}
+                  philosophy={ringKey}
+                  isPreviewing={balance.isPreviewing}
+                  accent={ARCHETYPES[ringArchetype].accent}
+                  onChange={(risk) => {
+                    setSelectedToken(null);
+                    balance.select(risk);
+                    haptics.tap();
+                  }}
+                  onApply={() => {
+                    if (balance.commit()) {
+                      setSelectedToken(null);
+                      haptics.confirm();
+                    }
+                  }}
+                  onCancel={() => {
+                    balance.cancel();
+                    setSelectedToken(null);
+                    haptics.tap();
+                  }}
+                />
+              </div>
+            }
           />
-          <div className="mt-3">
-            <PlanFloorControl
-              value={profileConfig.riskTolerance}
-              legs={ringLegs}
-              accent={ARCHETYPES[ringArchetype].accent}
-              onChange={setRiskTolerance}
-            />
-          </div>
         </div>
       )}
-      <div data-testid="shield-picker">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-          Choose a protection philosophy
-        </p>
-        <ProtectionPlanGallery />
-      </div>
+      {!balance.isPreviewing && (
+        <div data-testid="shield-picker">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            Choose a protection philosophy
+          </p>
+          <ProtectionPlanGallery />
+        </div>
+      )}
 
       {/* The one CTA — attaches to the object, no card wrapper. */}
-      <WalletButton variant="primary" className="w-full" />
+      {!balance.isPreviewing && <WalletButton variant="primary" className="w-full" />}
     </div>
   );
 
@@ -124,5 +163,5 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
     </div>
   );
 
-  return <InstrumentShell object={object} inspector={inspector} status={status} pattern={pattern} />;
+  return <InstrumentShell object={object} inspector={balance.isPreviewing ? undefined : inspector} status={status} pattern={pattern} />;
 }

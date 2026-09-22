@@ -20,6 +20,7 @@ import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategi
 import { useToast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
+import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
 import { findTokenAttribution, newestExecutionAnchor } from "@/lib/agent/decision-attribution";
@@ -123,6 +124,7 @@ export default function ProtectionTab({
   const { riskData } = useCurrencyRisk();
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const { showToast } = useToast();
+  const strategyKey = (selectedStrategy || financialStrategy) as string | null;
 
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
   const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
@@ -137,6 +139,12 @@ export default function ProtectionTab({
       previousAddress.current = address;
     }
   }, [address]);
+  const balance = usePlanBalancePreview({
+    scopeKey: `${address ?? 'walletless'}:${strategyKey ?? 'none'}:${comparing ? 'compare' : 'plan'}:${isDemo ? 'sample' : 'live'}`,
+    savedRisk: config.riskTolerance,
+    onCommit: setRiskTolerance,
+    canCommit: !isDemo,
+  });
   const handleMarqueeSelect = useCallback((token: string | null) => {
     // Re-tapping a vault wedge steps back to the sleeve, not out of it.
     setFocusedToken((prev) =>
@@ -164,7 +172,7 @@ export default function ProtectionTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
-  const sleeveOpen = !comparing && isSleeveSelection(focusedToken);
+  const sleeveOpen = !comparing && !balance.isPreviewing && isSleeveSelection(focusedToken);
   const rwa = useRwaAllocation(
     useMemo(
       () => ({
@@ -178,7 +186,6 @@ export default function ProtectionTab({
     rwaServOn && sleeveOpen,
   );
 
-  const strategyKey = (selectedStrategy || financialStrategy) as string | null;
   const hasPlan = Boolean(strategyKey);
   const planName =
     STRATEGIES.find((s) => s.id === strategyKey)?.name ?? currentGoalLabel;
@@ -194,6 +201,10 @@ export default function ProtectionTab({
     const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
     return legsForRisk(legs, config.riskTolerance);
   }, [strategyKey, config.riskTolerance]);
+  const balanceAllocations = useMemo(() => {
+    const id = strategyToArchetype(strategyKey);
+    return id ? legsForRisk(getArchetypeAllocations(id), balance.risk) : [];
+  }, [strategyKey, balance.risk]);
 
   const heldPctByToken = useMemo(() => {
     const map = new Map<string, number>();
@@ -522,32 +533,50 @@ export default function ProtectionTab({
         <div data-testid="shield-ring" data-comparing={comparing || undefined}>
           <ProtectionPlanRing
             strategyKey={previewKey}
-            legs={comparing ? previewAllocations : allocations}
+            legs={comparing ? previewAllocations : balance.isPreviewing ? balanceAllocations : allocations}
+            balancePreview={balance.isPreviewing}
+            savedLegs={allocations}
             portfolio={activePortfolio as MultichainPortfolio}
             selectedToken={focusedToken}
             onSelectToken={comparing ? handleCompareSliceSelect : handleMarqueeSelect}
             alignmentScore={comparing ? previewAlignment.score : alignment.score}
             empty={shape === "fund"}
-            onHoleTap={toggleCompare}
+            onHoleTap={balance.isPreviewing ? undefined : toggleCompare}
             holeHintOverride={
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
             sleeveOpen={sleeveOpen}
             sleeveVaults={rwa.allocations}
+            controls={!comparing ? (
+              <div className="mt-3">
+                <PlanFloorControl
+                  value={balance.risk}
+                  legs={balance.isPreviewing ? balanceAllocations : allocations}
+                  savedLegs={allocations}
+                  philosophy={strategyKey}
+                  isPreviewing={balance.isPreviewing}
+                  accent={(() => {
+                    const id = strategyToArchetype(strategyKey);
+                    return id ? ARCHETYPES[id].accent : undefined;
+                  })()}
+                  onChange={(risk) => {
+                    setFocusedToken(null);
+                    balance.select(risk);
+                    haptics.tap();
+                    trackFunnelEvent('marquee_select', { source: 'shield_balance', selection: risk });
+                  }}
+                  onApply={isDemo ? undefined : () => {
+                    if (balance.commit()) {
+                      setFocusedToken(null);
+                      haptics.confirm();
+                      showToast('Balance saved. Your holdings have not moved.', 'success');
+                    }
+                  }}
+                  onCancel={() => { balance.cancel(); setFocusedToken(null); haptics.tap(); }}
+                />
+              </div>
+            ) : undefined}
           />
-          {!comparing && (
-            <div className="mt-3">
-              <PlanFloorControl
-                value={config.riskTolerance}
-                legs={allocations}
-                accent={(() => {
-                  const id = strategyToArchetype(strategyKey);
-                  return id ? ARCHETYPES[id].accent : undefined;
-                })()}
-                onChange={setRiskTolerance}
-              />
-            </div>
-          )}
           {comparing && (
             <div data-testid="shield-compare" className="mt-3">
               <ProtectionPlanGallery
@@ -563,7 +592,7 @@ export default function ProtectionTab({
               />
             </div>
           )}
-          {!comparing && shape === "gap" && !focusedToken &&
+          {!comparing && !balance.isPreviewing && shape === "gap" && !focusedToken &&
             biggestGap && address &&
             guardianState !== "monitoring" && (
             <div data-testid="shield-gap-cta" className="mt-3">
@@ -578,7 +607,7 @@ export default function ProtectionTab({
               </button>
             </div>
           )}
-          {shape === "fund" && !comparing && (
+          {shape === "fund" && !comparing && !balance.isPreviewing && (
             <div data-testid="shield-fund" className="mt-3 space-y-2">
               {isMiniPay ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -611,7 +640,9 @@ export default function ProtectionTab({
   // The sleeve is shape-independent: a deep-link (?sleeve=rwa) or a vault
   // tap opens it even on the picker shape — the doorway must work
   // walletless and planless.
-  const inspectorSel = comparing
+  const inspectorSel = balance.isPreviewing
+    ? null
+    : comparing
     ? focusedPhilosophy
     : isSleeveSelection(focusedToken) || shape !== "picker"
       ? focusedToken
@@ -978,7 +1009,9 @@ export default function ProtectionTab({
     </InspectorSheet>
   );
 
-  const status = (
+  const status = balance.isPreviewing ? (
+    <VerifiedEvidence />
+  ) : (
     <div className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
       <div className="flex flex-wrap items-center gap-2">
         {guardianState === "monitoring" ? (

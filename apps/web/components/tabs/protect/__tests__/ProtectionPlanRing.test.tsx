@@ -1,15 +1,27 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { ProtectionPlanRing } from '../ProtectionPlanRing';
 import { DEMO_PORTFOLIO } from '@/lib/demo-data';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
+import {
+  getArchetypeAllocations,
+  legsForRisk,
+} from '@/components/protection-cards/plan-preview';
 
 vi.mock('@/lib/haptics', () => ({
   haptics: { tap: vi.fn(), confirm: vi.fn(), selection: vi.fn() },
 }));
 
+const reducedMotion = vi.hoisted(() => ({ on: false }));
+vi.mock('framer-motion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('framer-motion')>();
+  return { ...actual, useReducedMotion: () => reducedMotion.on };
+});
+
 afterEach(() => {
+  reducedMotion.on = false;
   cleanup();
 });
 
@@ -528,5 +540,184 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
     );
     expect(screen.getAllByText('Buen Vivir').length).toBeGreaterThan(0);
     expect(screen.queryByText('Africapitalism')).not.toBeInTheDocument();
+  });
+});
+
+describe('ProtectionPlanRing — balance preview', () => {
+  const SAVED_LEGS = legsForRisk(getArchetypeAllocations('africapitalism'), 'Balanced');
+  const DRAFT_LEGS = legsForRisk(getArchetypeAllocations('africapitalism'), 'Conservative');
+
+  it('draws proposed target wedges — never the held mix — while previewing', () => {
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        legs={DRAFT_LEGS}
+        savedLegs={SAVED_LEGS}
+        balancePreview
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /KESm — preview target: 48%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cUSD — preview target: 40%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cEUR — preview target: 12%/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /wallet holding/ })).not.toBeInTheDocument();
+    expect(screen.getByText('Preview your balance')).toBeInTheDocument();
+    expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Protection armed' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
+    expect(screen.getByText('Dollar reserve')).toBeInTheDocument();
+    expect(screen.getByText('Preview · not saved')).toBeInTheDocument();
+
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        legs={SAVED_LEGS}
+        savedLegs={SAVED_LEGS}
+        balancePreview={false}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /preview target/ })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /wallet holding/ }).length).toBeGreaterThan(0);
+    expect(screen.getByText(/3-year path/)).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Protection armed' })).toBeInTheDocument();
+  });
+
+  it('selected slice answers preview vs saved — not a gap, not a holding', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        legs={DRAFT_LEGS}
+        savedLegs={SAVED_LEGS}
+        balancePreview
+        selectedToken="KESm"
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.getAllByText('KESm').length).toBeGreaterThan(0);
+    expect(screen.getByText('48%')).toBeInTheDocument();
+    expect(screen.getByText('60% in saved plan')).toBeInTheDocument();
+    expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
+    expect(screen.getAllByText('48% preview').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('60% saved').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/held/)).not.toBeInTheDocument();
+  });
+
+  it('renders the controls slot between the geometry and the asset rows', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        controls={<div data-testid="ring-controls">dial</div>}
+      />,
+    );
+    const controls = screen.getByTestId('ring-controls');
+    const firstRow = screen.getByText('KESm').closest('button')!;
+    expect(controls.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      screen.getByRole('group', { name: 'Allocation ring' })
+        .compareDocumentPosition(controls) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('empty ring + selected slice says Target only — never funded', () => {
+    const empty = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 0,
+      tokens: [],
+      chains: [],
+    } as unknown as MultichainPortfolio;
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={empty}
+        selectedToken="KESm"
+        onSelectToken={() => {}}
+        empty
+      />,
+    );
+    expect(screen.getByText('60%')).toBeInTheDocument();
+    expect(screen.getByText('Target only · not funded')).toBeInTheDocument();
+    expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Not funded').length).toBeGreaterThan(0);
+  });
+
+  it('Other aggregates preview percentages, not max-held, for many-leg plans', () => {
+    const manyLegs = [
+      { token: 'KESm', region: 'Kenya', percent: 30, why: 'a' },
+      { token: 'cUSD', region: 'US', percent: 20, why: 'b' },
+      { token: 'cEUR', region: 'EU', percent: 10, why: 'c' },
+      { token: 'PAXG', region: 'Global', percent: 10, why: 'd' },
+      { token: 'cREAL', region: 'Brazil', percent: 10, why: 'e' },
+      { token: 'COPm', region: 'Colombia', percent: 10, why: 'f' },
+      { token: 'PHPm', region: 'Philippines', percent: 5, why: 'g' },
+      { token: 'USDY', region: 'Yield', percent: 5, why: 'h' },
+    ];
+    const funded = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42161,
+          chainName: 'Arbitrum',
+          totalValue: 1000,
+          tokenCount: 1,
+          balances: [{ symbol: 'WETH', value: 1000, balance: '1', formattedBalance: '1', name: 'WETH', chainId: 42161, chainName: 'Arbitrum' }],
+        },
+      ],
+    } as unknown as MultichainPortfolio;
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={funded}
+        legs={manyLegs}
+        savedLegs={manyLegs}
+        balancePreview
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Other — 3 small positions: 20%/ })).toBeInTheDocument();
+    expect(within(screen.getByTestId('shield-other')).getByText('20% preview')).toBeInTheDocument();
+    expect(screen.queryByText(/held/)).not.toBeInTheDocument();
+  });
+
+  it('reduced motion: preview still answers target vs saved in the hole', () => {
+    reducedMotion.on = true;
+    function Wrapper() {
+      const [sel, setSel] = useState<string | null>(null);
+      return (
+        <ProtectionPlanRing
+          strategyKey="africapitalism"
+          portfolio={portfolio}
+          legs={DRAFT_LEGS}
+          savedLegs={SAVED_LEGS}
+          balancePreview
+          selectedToken={sel}
+          onSelectToken={setSel}
+        />
+      );
+    }
+    render(<Wrapper />);
+    const kesm = screen.getByRole('button', { name: /KESm — preview target: 48%/ });
+    expect(kesm).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(kesm);
+    expect(screen.getByRole('button', { name: /KESm — preview target: 48%/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText('48%')).toBeInTheDocument();
+    expect(screen.getByText('60% in saved plan')).toBeInTheDocument();
+    expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Protection armed' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/held/)).not.toBeInTheDocument();
   });
 });

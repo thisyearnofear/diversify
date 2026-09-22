@@ -187,6 +187,10 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       alignmentScore,
       holeHintOverride,
       onHoleTap,
+      legs,
+      balancePreview,
+      savedLegs,
+      controls,
     }: {
       strategyKey: string | null;
       selectedToken: string | null;
@@ -194,6 +198,10 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       alignmentScore?: number | null;
       holeHintOverride?: string;
       onHoleTap?: () => void;
+      legs?: { token: string; percent: number }[];
+      balancePreview?: boolean;
+      savedLegs?: { token: string; percent: number }[];
+      controls?: React.ReactNode;
     }) => {
       const archetypeId = strategyToArchetype(strategyKey);
       const name = archetypeId ? ARCHETYPES[archetypeId].name : "";
@@ -239,7 +247,13 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
         : null;
       return React.createElement(
         "div",
-        { "data-testid": "protection-plan-ring" },
+        {
+          "data-testid": "protection-plan-ring",
+          "data-balance-preview": String(Boolean(balancePreview)),
+          "data-legs": JSON.stringify((legs ?? []).map((l) => [l.token, l.percent])),
+          "data-saved-legs": JSON.stringify((savedLegs ?? []).map((l) => [l.token, l.percent])),
+          "data-selected": selectedToken ?? "",
+        },
         badge,
         hole,
         React.createElement(
@@ -250,6 +264,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           selectButton("PAXG", "ring-select-paxg"),
           selectButton("cREAL", "ring-select-creal"),
         ),
+        controls,
       );
     },
   };
@@ -978,7 +993,7 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("shield-fund")).toBeInTheDocument();
   });
 
-  it("dollar-floor dial sits under the ring and drives setRiskTolerance", () => {
+  it("balance dial previews in the same ring; only Use this balance commits", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
@@ -988,23 +1003,236 @@ describe("ProtectionTab — instrument shapes", () => {
 
     const dial = screen.getByTestId("plan-floor-control");
     // Under the ring, above the status tier — inside the object column.
-    expect(screen.getByTestId("shield-ring").contains(dial)).toBe(true);
-    expect(dial).toHaveTextContent("Dollar floor · 25%");
+    expect(screen.getByTestId("protection-plan-ring").contains(dial)).toBe(true);
+    expect(dial).toHaveTextContent("Dollar reserve · 25%");
     expect(
       screen.getByRole("radio", { name: "Balanced" }),
     ).toHaveAttribute("aria-checked", "true");
+    const ring = screen.getByTestId("protection-plan-ring");
+    expect(ring).toHaveAttribute("data-balance-preview", "false");
+    expect(ring).toHaveAttribute(
+      "data-legs",
+      JSON.stringify([["KESm", 60], ["cUSD", 25], ["cEUR", 15]]),
+    );
 
-    fireEvent.click(screen.getByRole("radio", { name: "Conservative" }));
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    expect(profileState.riskTolerance).toBe("Balanced");
+    expect(ring).toHaveAttribute("data-balance-preview", "true");
+    expect(ring).toHaveAttribute(
+      "data-legs",
+      JSON.stringify([["KESm", 48], ["cUSD", 40], ["cEUR", 12]]),
+    );
+    expect(dial).toHaveTextContent("Dollar reserve 25% → 40% · other exposure 75% → 60%");
+    expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("shield-fund")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(mockNavigateToSwap).not.toHaveBeenCalled();
+    expect(mockNavigateToGuardian).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(ring).toHaveAttribute("data-selected", "KESm");
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(mockNavigateToSwap).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Use this balance" }));
+    expect(mockSetRiskTolerance).toHaveBeenCalledTimes(1);
     expect(mockSetRiskTolerance).toHaveBeenCalledWith("Conservative");
+    expect(mockShowToast).toHaveBeenCalledWith(
+      "Balance saved. Your holdings have not moved.",
+      "success",
+    );
     cleanup();
 
     // After the profile updates, the caption follows the adjusted legs.
     profileState.riskTolerance = "Conservative";
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-legs",
+      JSON.stringify([["KESm", 48], ["cUSD", 40], ["cEUR", 12]]),
+    );
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent(
-      "Dollar floor · 40%",
+      "Dollar reserve · 40%",
     );
     profileState.riskTolerance = "Balanced";
+  });
+
+  it("Keep current balance discards the draft and restores the saved ring", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "true",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    const ring = screen.getByTestId("protection-plan-ring");
+    expect(ring).toHaveAttribute("data-balance-preview", "false");
+    expect(ring).toHaveAttribute(
+      "data-legs",
+      JSON.stringify([["KESm", 60], ["cUSD", 25], ["cEUR", 15]]),
+    );
+    expect(screen.getByTestId("shield-biggest-gap-cta")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Use this balance" })).not.toBeInTheDocument();
+  });
+
+  it("an external saved balance discards the draft", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    const { rerender } = render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "true",
+    );
+
+    profileState.riskTolerance = "Conservative";
+    rerender(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    profileState.riskTolerance = "Balanced";
+  });
+
+  it("a wallet switch discards the draft — returning to the same wallet never resurrects it", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    const { rerender } = render(
+      <ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "true",
+    );
+
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xdef",
+      chainId: 42220,
+    } as any);
+    rerender(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
+    expect(screen.getByRole("radio", { name: "Balanced" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    rerender(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+  });
+
+  it("a philosophy switch discards the draft — switching back never resurrects it", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    const { rerender } = render(
+      <ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "true",
+    );
+
+    mockFinancialStrategy = "buen_vivir";
+    rerender(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
+    expect(screen.getByRole("radio", { name: "Balanced" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+
+    mockFinancialStrategy = "africapitalism";
+    rerender(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+  });
+
+  it("a draft never feeds the saved-alignment memory", () => {
+    window.localStorage.clear();
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    const key = "diversifi:last-visit:shield-alignment:africapitalism";
+    const savedSnapshot = window.localStorage.getItem(key);
+    expect(savedSnapshot).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(window.localStorage.getItem(key)).toBe(savedSnapshot);
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+    expect(mockNavigateToSwap).not.toHaveBeenCalled();
+    expect(mockNavigateToGuardian).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(window.localStorage.getItem(key)).toBe(savedSnapshot);
+  });
+
+  it("demo preview never offers a save action", () => {
+    demoState.isActive = true;
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "true",
+    );
+    expect(screen.queryByRole("button", { name: "Use this balance" })).not.toBeInTheDocument();
+    expect(screen.getByText("Sample preview only — nothing will be saved.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-balance-preview",
+      "false",
+    );
   });
 
   it("dial is hidden while comparing; delta + values + leg row in the inspector", () => {

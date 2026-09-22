@@ -18,7 +18,7 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
-import { getArchetypeAllocations, type PlanLeg } from '@/components/protection-cards/plan-preview';
+import { floorPercent, getArchetypeAllocations, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
@@ -80,6 +80,9 @@ interface Props {
   sleeveOpen?: boolean;
   /** Vault weights for the fan — the allocation rows sum to 100. */
   sleeveVaults?: VaultAllocation[] | null;
+  balancePreview?: boolean;
+  savedLegs?: PlanLeg[];
+  controls?: React.ReactNode;
 }
 
 export function ProtectionPlanRing({
@@ -95,6 +98,9 @@ export function ProtectionPlanRing({
   legs,
   sleeveOpen = false,
   sleeveVaults = null,
+  balancePreview = false,
+  savedLegs = [],
+  controls,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -117,7 +123,7 @@ export function ProtectionPlanRing({
   // Funded: ring is live holdings. Empty: ring is the plan waiting for funds.
   const slices: RingSlice[] = useMemo(() => {
     if (!archetype) return [];
-    if (walletView.holdings.length > 0) {
+    if (!balancePreview && walletView.holdings.length > 0) {
       return walletView.holdings.map((holding, i) => ({
         id: holding.symbol,
         label: `${holding.symbol} — wallet holding`,
@@ -130,14 +136,14 @@ export function ProtectionPlanRing({
     }
     return allocations.map((a, i) => ({
       id: a.token,
-      label: `${a.token} — plan`,
+      label: `${a.token} — ${balancePreview ? 'preview target' : 'plan'}`,
       percent: a.percent,
         color:
           TOKEN_COLORS[a.token] ??
           (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(a.token)),
     }));
-  }, [archetype, walletView.holdings, allocations]);
+  }, [archetype, walletView.holdings, allocations, balancePreview]);
 
   // Selection derivations feed the count-up hook below — and every hook
   // must run before the early return (rules of hooks): the ring simply
@@ -166,12 +172,12 @@ export function ProtectionPlanRing({
   const enriched = useMemo(() => {
     return slices.map((s) => {
       const a = allocations.find((alloc) => alloc.token === s.id) ?? { token: s.id, region: 'Wallet holding', percent: 0 };
-      const held = heldPctByToken.get(a.token) ?? s.percent;
+      const held = heldPctByToken.get(a.token) ?? 0;
       // Sort key: largest of plan target or actual holding — gap matters too
-      const rank = Math.max(a.percent, held);
+      const rank = balancePreview ? a.percent : Math.max(a.percent, held);
       return { slice: s, alloc: a, held, rank };
     }).sort((x, y) => y.rank - x.rank);
-  }, [slices, allocations, heldPctByToken]);
+  }, [slices, allocations, heldPctByToken, balancePreview]);
 
   const needsDisclosure = enriched.length > PRIMARY_ROWS + 1;
   const primary = useMemo(() => {
@@ -205,11 +211,11 @@ export function ProtectionPlanRing({
       {
         id: "__other__",
         label: `Other — ${dust.length} small positions`,
-        percent: Math.max(dustTotalHeld, dustTotalPlan, 0.5),
+        percent: balancePreview ? dustTotalPlan : Math.max(dustTotalHeld, dustTotalPlan, 0.5),
         color: QUIET_GRAY,
       },
     ];
-  }, [slices, primary, dust, dustTotalHeld, dustTotalPlan, needsDisclosure, showDust]);
+  }, [slices, primary, dust, dustTotalHeld, dustTotalPlan, needsDisclosure, showDust, balancePreview]);
 
   // RWA sleeve fan — selecting the sleeve re-slices the hatched wedge into
   // the IXS vault allocation (or appends a labelled preview sleeve when the
@@ -247,11 +253,19 @@ export function ProtectionPlanRing({
   const purchasingPowerPreserved =
     projections?.optimizedPath?.purchasingPowerPreserved ?? 0;
   const showProjections =
-    totalValue > 0 && (purchasingPowerLost > 0 || purchasingPowerPreserved > 0);
+    !balancePreview && totalValue > 0 && (purchasingPowerLost > 0 || purchasingPowerPreserved > 0);
 
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   const hole = (() => {
+    if (balancePreview) {
+      return selected
+        ? { number: `${selected.percent}%` as React.ReactNode, label: selected.token, hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
+        : { number: `${floorPercent(allocations)}%` as React.ReactNode, label: 'Dollar reserve', hint: 'Preview · not saved' };
+    }
+    if (empty && selected) {
+      return { number: `${selected.percent}%` as React.ReactNode, label: selected.token, hint: 'Target only · not funded' };
+    }
     if (empty) {
       return {
         number: null as React.ReactNode,
@@ -321,12 +335,14 @@ export function ProtectionPlanRing({
     <div className="w-full">
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          Your shield plan
+          {balancePreview ? 'Preview your balance' : 'Your shield plan'}
         </h3>
         {/* Armed-state seal — stamps once per mount (keyed to the plan),
             then holds. The §5 confirm artefact for committing a plan. */}
         <div className="flex items-center gap-2">
-          <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
+          {!balancePreview && (
+            <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
+          )}
         {onHoleTap ? (
           <motion.button
             key={archetype.id}
@@ -373,7 +389,7 @@ export function ProtectionPlanRing({
               onSelectToken(selectedToken === id ? null : id);
             }}
             ghost={
-              selected && !empty && !onTarget && Math.abs(gapPts) > 2
+              !balancePreview && selected && !empty && !onTarget && Math.abs(gapPts) > 2
                 ? { id: selected.token, extraPercent: gapPts }
                 : null
             }
@@ -431,6 +447,8 @@ export function ProtectionPlanRing({
         </motion.div>
       </div>
 
+      {controls}
+
       <div className="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
         {(showDust ? enriched : primary).map(({ slice, alloc: a, held }, idx) => {
           const isSelected = selectedToken === a.token;
@@ -457,16 +475,20 @@ export function ProtectionPlanRing({
                 </span>
               </span>
               <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">
-                {a.percent > 0 ? `${a.percent}% plan` : 'not in plan'}
+                {a.percent > 0 ? `${a.percent}% ${balancePreview ? 'preview' : 'plan'}` : 'not in plan'}
               </span>
               <span
                 className={`text-[11px] font-bold tabular-nums w-20 text-right ${
-                  held >= a.percent - 2
+                  !balancePreview && held >= a.percent - 2
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
-                {held.toFixed(0)}% held
+                {balancePreview
+                  ? `${savedLegs.find((leg) => leg.token === a.token)?.percent ?? 0}% saved`
+                  : totalValue > 0
+                    ? `${held.toFixed(0)}% held`
+                    : 'Not funded'}
               </span>
             </motion.button>
           );
@@ -487,7 +509,7 @@ export function ProtectionPlanRing({
               <span className="block text-sm font-bold text-gray-900 dark:text-white">Other</span>
               <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions · {dust.length > 1 ? `${dustTotalPlan.toFixed(0)}% plan` : dust[0]?.alloc.region ?? ""}</span>
             </span>
-            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{fmt(dustTotalHeld)} held</span>
+            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{balancePreview ? `${dustTotalPlan.toFixed(0)}% preview` : `${fmt(dustTotalHeld)} held`}</span>
           </motion.button>
         )}
         <AnimatePresence initial={false}>
