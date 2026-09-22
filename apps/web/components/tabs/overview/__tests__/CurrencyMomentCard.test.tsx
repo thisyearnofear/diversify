@@ -1,14 +1,21 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { CurrencyMomentCard } from '../CurrencyMomentCard';
 import type { NarrativeMoment } from '@/lib/narrative/currency-moment';
 import { momentFrameFor } from '@/lib/narrative/moment-framing';
 import type { Benchmark, Horizon } from '@/constants/currency-risk';
 
+const mocks = vi.hoisted(() => ({ reduced: false }));
+
 vi.mock('@/lib/haptics', () => ({
   haptics: { tap: vi.fn(), confirm: vi.fn(), selection: vi.fn() },
 }));
+
+vi.mock('framer-motion', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('framer-motion')>();
+  return { ...mod, useReducedMotion: () => mocks.reduced };
+});
 
 import { haptics } from '@/lib/haptics';
 
@@ -45,6 +52,8 @@ const baseProps = {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  window.localStorage.clear();
+  mocks.reduced = false;
 });
 
 describe('CurrencyMomentCard — Home opening artifact', () => {
@@ -196,5 +205,111 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     // One accent for the moment — state (the risk magnitude) changes the coin
     // SCALE, never the colour. The old red/amber/green is gone.
     expect(review?.getAttribute('style')).toBe(calm?.getAttribute('style'));
+  });
+});
+
+describe('CurrencyMomentCard — returning visit', () => {
+  const KEY = 'diversifi:last-visit:home-reading:v1:GH:GHS:USD:1yr:curated';
+  const baseline = (over: Record<string, unknown> = {}) => ({
+    value: { key: 'GH:GHS:USD:1yr', delta: -19, dataAsOf: '2025-06-30', source: 'curated', ...over },
+    at: Date.now() - 3 * 24 * 3600 * 1000,
+  });
+
+  it('shows the visit review with both labelled readings when a valid snapshot exists', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify(baseline()));
+    render(<CurrencyMomentCard {...baseProps} onProtect={() => {}} />);
+    const review = await screen.findByTestId('currency-visit-review');
+    expect(review.textContent).toContain('Since you last checked');
+    expect(review.textContent).toContain('The comparison changed');
+    expect(review.textContent).toContain('Last checked');
+    expect(review.textContent).toContain('Latest reading');
+    expect(review.textContent).toContain('−19%');
+    expect(review.textContent).toContain('−18%');
+    expect(screen.getAllByTestId('currency-visit-review')).toHaveLength(1);
+    expect(document.querySelector('[data-testid="inspector-sheet"]')).toBeNull();
+    expect(within(review).getByText(/not your return since visiting/)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Protect this' })).toHaveLength(1);
+    expect(screen.queryByLabelText('Your savings amount')).not.toBeInTheDocument();
+  });
+
+  it('defaults to the visit view and toggles to history and back', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify(baseline()));
+    render(<CurrencyMomentCard {...baseProps} />);
+    await screen.findByTestId('currency-visit-review');
+    expect(screen.getByRole('button', { name: 'Last visit' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Longer view' })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Longer view' }));
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Your savings amount')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3Y' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Last visit' }));
+    expect(await screen.findByTestId('currency-visit-review')).toBeInTheDocument();
+  });
+
+  it('distinguishes an unchanged rounded reading from a source that has not advanced', async () => {
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify(baseline({ delta: -18.04, dataAsOf: '2025-06-30' })),
+    );
+    const { unmount } = render(<CurrencyMomentCard {...baseProps} />);
+    expect((await screen.findByTestId('currency-visit-review')).textContent).toContain(
+      'New data, same rounded reading',
+    );
+    unmount();
+
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify(baseline({ delta: -18, dataAsOf: '2025-07-01' })),
+    );
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect((await screen.findByTestId('currency-visit-review')).textContent).toContain(
+      'No newer comparison yet',
+    );
+  });
+
+  it('labels a revised same-date reading as a revision', async () => {
+    window.localStorage.setItem(KEY, JSON.stringify(baseline({ dataAsOf: '2025-07-01' })));
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect((await screen.findByTestId('currency-visit-review')).textContent).toContain(
+      'The published reading was revised',
+    );
+  });
+
+  it('fabricates nothing on the first visit, a legacy scalar, or a different source/context', async () => {
+    const first = render(<CurrencyMomentCard {...baseProps} />);
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Your savings amount')).toBeInTheDocument();
+    first.unmount();
+
+    window.localStorage.setItem(KEY, JSON.stringify({ value: -19, at: Date.now() - 3 * 24 * 3600 * 1000 }));
+    const legacy = render(<CurrencyMomentCard {...baseProps} />);
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+    legacy.unmount();
+
+    window.localStorage.setItem(KEY, JSON.stringify(baseline({ source: 'feed' })));
+    const crossSource = render(<CurrencyMomentCard {...baseProps} />);
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+    crossSource.unmount();
+
+    window.localStorage.setItem(
+      'diversifi:last-visit:home-reading:v1:GH:GHS:USD:3yr:curated',
+      JSON.stringify(baseline({ key: 'GH:GHS:USD:3yr' })),
+    );
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
+  });
+
+  it('keeps the same labels under reduced motion, with no looping coin shine', async () => {
+    mocks.reduced = true;
+    window.localStorage.setItem(KEY, JSON.stringify(baseline()));
+    const { container } = render(<CurrencyMomentCard {...baseProps} />);
+    const review = await screen.findByTestId('currency-visit-review');
+    expect(review.textContent).toContain('The comparison changed');
+    expect(within(review).getByText(/Last checked/)).toBeInTheDocument();
+    expect(within(review).getByText('Latest reading')).toBeInTheDocument();
+    expect(container.querySelector('.coin-shine')).toBeNull();
+    expect(container.querySelector('.coin-shine-once')).toBeNull();
   });
 });

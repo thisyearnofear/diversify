@@ -31,7 +31,9 @@ vi.mock("@/hooks/use-currency-moment", () => ({
 }));
 
 vi.mock("@/components/tabs/overview/CurrencyMomentCard", () => ({
-  CurrencyMomentCard: () => <div data-testid="moment-card" />,
+  CurrencyMomentCard: ({ rememberVisit }: { rememberVisit?: boolean }) => (
+    <div data-testid="moment-card" data-remember-visit={String(rememberVisit)} />
+  ),
 }));
 vi.mock("@/components/tabs/overview/InflationMomentCard", () => ({
   InflationMomentCard: () => <div data-testid="inflation-card" />,
@@ -115,6 +117,21 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     // Placeholder state — no country silently pre-selected.
     expect(select).toHaveValue("");
     expect(screen.getByText("Choose a country…")).toBeInTheDocument();
+  });
+
+  it("forwards isActive to the moment card's visit memory", () => {
+    const { rerender } = render(
+      <NotConnectedState isActive={false} onEnableDemo={vi.fn()} />,
+    );
+    expect(screen.getByTestId("moment-card")).toHaveAttribute(
+      "data-remember-visit",
+      "false",
+    );
+    rerender(<NotConnectedState isActive={true} onEnableDemo={vi.fn()} />);
+    expect(screen.getByTestId("moment-card")).toHaveAttribute(
+      "data-remember-visit",
+      "true",
+    );
   });
 
   it("picking a country from the fallback re-points the moment (judge path: geo blocked → still lands on their currency)", () => {

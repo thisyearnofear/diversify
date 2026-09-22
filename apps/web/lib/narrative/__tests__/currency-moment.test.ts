@@ -8,7 +8,7 @@ import {
   buildInflationMoment,
   flagEmojiForIso2,
 } from '../currency-moment';
-import type { CurrencyRiskEntry } from '@/constants/currency-risk';
+import { CURRENCY_RISK_DATA_AS_OF, type CurrencyRiskEntry } from '@/constants/currency-risk';
 
 const GHS: CurrencyRiskEntry = {
   code: 'GHS',
@@ -76,6 +76,62 @@ describe('buildCurrencyMoment — narrative visual primitives', () => {
       liveDepreciation1yr: -22.4,
     });
     expect(m.delta).toBe(-30);
+  });
+
+  it('stamps the live feed date only on the live USD 1yr reading', () => {
+    const m = buildCurrencyMoment({
+      ...base,
+      benchmark: 'USD',
+      horizon: '1yr',
+      liveDepreciation1yr: -22.4,
+      isLive: true,
+      dataAsOf: '2026-09-22',
+    });
+    expect(m.delta).toBeCloseTo(-22.4);
+    expect(m.isLive).toBe(true);
+    expect(m.dataAsOf).toBe('2026-09-22');
+  });
+
+  it('keeps the curated date and isLive=false when gold is selected over a live USD feed', () => {
+    const m = buildCurrencyMoment({
+      ...base,
+      benchmark: 'XAU',
+      horizon: '1yr',
+      liveDepreciation1yr: -22.4,
+      isLive: true,
+      dataAsOf: '2026-09-22',
+    });
+    expect(m.delta).toBe(-30);
+    expect(m.isLive).toBe(false);
+    expect(m.dataAsOf).toBe(CURRENCY_RISK_DATA_AS_OF);
+  });
+
+  it('keeps the curated date and isLive=false on a non-1yr horizon with live data present', () => {
+    const m = buildCurrencyMoment({
+      ...base,
+      benchmark: 'USD',
+      horizon: '3yr',
+      liveDepreciation1yr: -22.4,
+      isLive: true,
+      dataAsOf: '2026-09-22',
+    });
+    expect(m.delta).toBe(-45);
+    expect(m.isLive).toBe(false);
+    expect(m.dataAsOf).toBe(CURRENCY_RISK_DATA_AS_OF);
+  });
+
+  it('falls back to the curated value and date when the live figure is not finite', () => {
+    const m = buildCurrencyMoment({
+      ...base,
+      benchmark: 'USD',
+      horizon: '1yr',
+      liveDepreciation1yr: NaN,
+      isLive: true,
+      dataAsOf: '2026-09-22',
+    });
+    expect(m.delta).toBe(-18);
+    expect(m.isLive).toBe(false);
+    expect(m.dataAsOf).toBe(CURRENCY_RISK_DATA_AS_OF);
   });
 
   it('derives goods framing from the currency staple (depreciation only)', () => {

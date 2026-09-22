@@ -12,6 +12,7 @@ import {
   type Benchmark,
   type Horizon,
   BENCHMARKS,
+  CURRENCY_RISK_DATA_AS_OF,
 } from '@/constants/currency-risk';
 
 export type MomentState = 'calm' | 'watch' | 'review';
@@ -88,10 +89,9 @@ export function buildCurrencyMoment(input: CurrencyMomentInput): NarrativeMoment
   const { entry, benchmark, horizon, savingsAmount, dataAsOf } = input;
   const live = input.liveDepreciation1yr ?? null;
 
-  const delta =
-    benchmark === 'USD' && horizon === '1yr' && live != null
-      ? live
-      : entry.depreciation[`vs${benchmark}`][horizon];
+  const usesLive = benchmark === 'USD' && horizon === '1yr'
+    && input.isLive === true && live != null && Number.isFinite(live);
+  const delta = usesLive ? live : entry.depreciation[`vs${benchmark}`][horizon];
 
   const personalImpact = savingsAmount * (Math.abs(delta) / 100);
   const retainedRatio = Math.max(0, 1 + Math.min(delta, 0) / 100);
@@ -120,8 +120,8 @@ export function buildCurrencyMoment(input: CurrencyMomentInput): NarrativeMoment
     personalImpact,
     retainedRatio,
     state: momentStateFromDelta(delta),
-    isLive: input.isLive ?? false,
-    dataAsOf,
+    isLive: usesLive,
+    dataAsOf: usesLive ? dataAsOf : CURRENCY_RISK_DATA_AS_OF,
     goods,
   };
 }

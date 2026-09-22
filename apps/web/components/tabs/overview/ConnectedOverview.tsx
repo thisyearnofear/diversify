@@ -32,6 +32,7 @@ import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import { GuardianCadenceLine } from "../../shared/LiveProofCard";
 
 interface ConnectedOverviewProps {
+  isActive?: boolean;
   portfolio: MultichainPortfolio;
   activePortfolio: MultichainPortfolio;
   address: string;
@@ -60,6 +61,7 @@ interface ConnectedOverviewProps {
 }
 
 export function ConnectedOverview({
+  isActive = true,
   portfolio,
   activePortfolio,
   address,
@@ -166,6 +168,7 @@ export function ConnectedOverview({
       focusedRegion={focusedRegion}
       onSelectRegion={handleDialSelect}
       isDemo={isDemo}
+      isActive={isActive}
     />
   ) : (
     // No card here — InstrumentShell owns the one surface; the fallback

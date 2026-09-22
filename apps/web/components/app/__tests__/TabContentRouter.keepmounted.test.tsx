@@ -44,7 +44,15 @@ vi.mock("next/dynamic", () => ({
           : src.includes("AgentTab")
             ? "agent-tab"
             : "info-tab";
-    const C = () => React.createElement("div", { "data-testid": name }, name);
+    const C = (props: { isActive?: boolean }) =>
+      React.createElement(
+        "div",
+        {
+          "data-testid": name,
+          ...(name === "overview-tab" ? { "data-active": String(props?.isActive) } : {}),
+        },
+        name,
+      );
     C.displayName = name;
     return C;
   },
@@ -142,6 +150,7 @@ describe("TabContentRouter — keep-mounted Home", () => {
     m.ctx.value = makeContext("overview");
     const { rerender } = render(<TabContentRouter />);
     expect(screen.getByTestId("overview-tab")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-tab")).toHaveAttribute("data-active", "true");
 
     m.ctx.value = makeContext("protect");
     rerender(<TabContentRouter />);
@@ -155,6 +164,7 @@ describe("TabContentRouter — keep-mounted Home", () => {
     expect(homePane).not.toBeNull();
     expect(homePane).toHaveAttribute("aria-hidden", "true");
     expect(homePane).toHaveStyle({ pointerEvents: "none" });
+    expect(screen.getByTestId("overview-tab")).toHaveAttribute("data-active", "false");
 
     // Coming back shows the SAME mounted instance (state preserved).
     m.ctx.value = makeContext("overview");
@@ -164,6 +174,15 @@ describe("TabContentRouter — keep-mounted Home", () => {
       "aria-hidden",
       "false",
     );
+    expect(homeAgain).toHaveAttribute("data-active", "true");
+  });
+
+  it("mounts Home inactive when the app opens on another tab (keep-mounted on)", () => {
+    env.NODE_ENV = "production";
+    m.ctx.value = makeContext("protect");
+    render(<TabContentRouter />);
+    expect(screen.getByTestId("protect-tab")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-tab")).toHaveAttribute("data-active", "false");
   });
 
   it("respects the NEXT_PUBLIC_KEEP_MOUNTED_HOME=false kill switch", () => {

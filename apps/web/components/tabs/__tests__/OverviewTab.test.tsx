@@ -30,14 +30,16 @@ vi.mock("@/context/app/DemoModeContext", () => ({
 }));
 
 vi.mock("@/components/tabs/overview/NotConnectedState", () => ({
-  NotConnectedState: () => <div data-testid="not-connected" />,
+  NotConnectedState: ({ isActive }: { isActive?: boolean }) => (
+    <div data-testid="not-connected" data-active={String(isActive)} />
+  ),
 }));
 vi.mock("@/components/tabs/overview/ConnectingState", () => ({
   ConnectingState: () => <div data-testid="connecting" />,
 }));
 vi.mock("@/components/tabs/overview/ConnectedOverview", () => ({
-  ConnectedOverview: ({ isDemo }: { isDemo: boolean }) => (
-    <div data-testid="connected-overview" data-demo={String(isDemo)} />
+  ConnectedOverview: ({ isDemo, isActive }: { isDemo: boolean; isActive?: boolean }) => (
+    <div data-testid="connected-overview" data-demo={String(isDemo)} data-active={String(isActive)} />
   ),
 }));
 vi.mock("@/components/ui/skeletons/OverviewSkeleton", () => ({
@@ -162,5 +164,29 @@ describe("OverviewTab — connected wallet vs preview", () => {
       />,
     );
     expect(screen.getByTestId("not-connected")).toBeInTheDocument();
+  });
+
+  it("forwards isActive=false to both connected and unconnected morphs", () => {
+    render(
+      <OverviewTab
+        {...baseProps}
+        isActive={false}
+        portfolio={emptyPortfolio({ lastUpdated: Date.now(), isLoading: false, totalValue: 10 })}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByTestId("connected-overview")).toHaveAttribute("data-active", "false");
+    cleanup();
+
+    mockAddress = null;
+    render(
+      <OverviewTab
+        {...baseProps}
+        isActive={false}
+        portfolio={emptyPortfolio()}
+        isLoading={false}
+      />,
+    );
+    expect(screen.getByTestId("not-connected")).toHaveAttribute("data-active", "false");
   });
 });

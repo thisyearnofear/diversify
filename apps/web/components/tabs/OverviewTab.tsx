@@ -10,6 +10,7 @@ import { ConnectedOverview } from "@/components/tabs/overview/ConnectedOverview"
 import OverviewSkeleton from "@/components/ui/skeletons/OverviewSkeleton";
 
 interface OverviewTabProps {
+  isActive?: boolean;
   portfolio: MultichainPortfolio;
   isLoading?: boolean;
   isRegionLoading: boolean;
@@ -34,6 +35,7 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({
+  isActive = true,
   portfolio,
   userRegion,
   setUserRegion,
@@ -75,6 +77,7 @@ export default function OverviewTab({
   if (!address && !isConnecting && !isDemo) {
     return (
       <NotConnectedState
+        isActive={isActive}
         onEnableDemo={enableDemoMode}
       />
     );
@@ -86,6 +89,7 @@ export default function OverviewTab({
 
   return (
     <ConnectedOverview
+      isActive={isActive}
       portfolio={portfolio}
       activePortfolio={activePortfolio as any}
       address={address || ""}

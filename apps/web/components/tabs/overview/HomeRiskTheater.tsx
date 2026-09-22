@@ -12,7 +12,7 @@
  * holdings.
  */
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { InflationMomentCard } from "./InflationMomentCard";
@@ -93,6 +93,7 @@ interface HomeRiskTheaterProps {
   focusedRegion: string | null;
   onSelectRegion: (region: string | null) => void;
   isDemo?: boolean;
+  isActive?: boolean;
 }
 
 export function HomeRiskTheater({
@@ -112,33 +113,27 @@ export function HomeRiskTheater({
   focusedRegion,
   onSelectRegion,
   isDemo,
+  isActive = true,
 }: HomeRiskTheaterProps) {
   const reducedMotion = useReducedMotion();
   const [flipped, setFlipped] = useState(false);
   const hasHoldings = totalValue > 0 && regionData.length > 0;
-
-  // Quiet memory: last session's delta for this exact moment (currency ×
-  // benchmark × horizon), so a returning visitor sees what moved without
-  // anyone claiming fresh insight. Rounded to 0.1 — sub-tenth noise is
-  // not a memory worth keeping.
-  const momentKey = moment
-    ? `home-moment:${moment.currencyCode}:${moment.benchmark}:${moment.horizon}`
-    : "home-moment:idle";
-  const previousMoment = useSinceLastVisit(
-    momentKey,
-    moment ? Math.round(moment.delta * 10) / 10 : null,
-  );
-  const sinceLine = (() => {
-    if (!moment || !previousMoment) return null;
-    const now = Date.now();
-    if (now - previousMoment.at < MIN_SNAPSHOT_AGE_MS) return null;
-    const diff = Math.round((moment.delta - previousMoment.value) * 10) / 10;
-    const elapsed = formatElapsed(previousMoment.at, now);
-    if (Math.abs(diff) < 0.05) {
-      return `${moment.currencyCode} steady vs ${moment.benchmark} since your last visit (${elapsed})`;
-    }
-    return `Since your last visit (${elapsed}): ${moment.currencyCode} moved ${diff > 0 ? "+" : ""}${diff} pts vs ${moment.benchmark}`;
-  })();
+  const showingHoldings = flipped && hasHoldings;
+  const frontFaceRef = useRef<HTMLDivElement>(null);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFace = useRef(false);
+  useEffect(() => {
+    if (!hasHoldings) setFlipped(false);
+  }, [hasHoldings]);
+  useEffect(() => {
+    if (previousFace.current === showingHoldings) return;
+    previousFace.current = showingHoldings;
+    if (!isActive) return;
+    const target = showingHoldings
+      ? backButtonRef.current
+      : frontFaceRef.current?.querySelector<HTMLButtonElement>('[aria-label="Show holdings stack"]');
+    target?.focus();
+  }, [showingHoldings, isActive]);
 
   // "While you were away" — the Guardian's own weekly counters (server-side,
   // so a capped in-memory log can't inflate them) rendered only in informed
@@ -332,35 +327,18 @@ export function HomeRiskTheater({
           <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
         )}
         {/* Tap the local coin to flip between the currency stage and a fanned holdings stack — same flick/flip motif as LensCoinSelector */}
-        <div
-          role="button"
-          tabIndex={hasHoldings ? 0 : -1}
-          aria-label={hasHoldings ? (flipped ? "Show currency stage" : "Show holdings stack") : undefined}
-          aria-pressed={hasHoldings ? flipped : undefined}
-          onClick={() => {
-            if (!hasHoldings) return;
-            haptics.tap();
-            setFlipped((v) => !v);
-          }}
-          onKeyDown={(e) => {
-            if (!hasHoldings) return;
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              haptics.tap();
-              setFlipped((v) => !v);
-            }
-          }}
-          className={hasHoldings ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-400 rounded-2xl" : undefined}
-        >
+        <div>
           <motion.div
-            animate={reducedMotion ? undefined : { rotateY: flipped ? 180 : 0 }}
-            transition={{ type: "spring", stiffness: 420, damping: 28 }}
+            animate={{ rotateY: reducedMotion ? 0 : showingHoldings ? 180 : 0 }}
+            transition={reducedMotion ? { duration: 0 } : springSoft}
             style={{ transformStyle: "preserve-3d", perspective: 900 }}
           >
             <motion.div
-              style={{ backfaceVisibility: "hidden" }}
-              animate={{ opacity: flipped ? 0 : 1 }}
-              transition={{ duration: 0.15 }}
+              ref={frontFaceRef}
+              style={{ backfaceVisibility: "hidden", visibility: showingHoldings ? "hidden" : undefined }}
+              animate={{ opacity: showingHoldings ? 0 : 1 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.15 }}
+              aria-hidden={showingHoldings}
             >
               <CurrencyMomentCard
                 moment={moment}
@@ -373,47 +351,60 @@ export function HomeRiskTheater({
                 protectLabel={protectLabel}
                 onChangeCountry={onChangeCountry}
                 frame={frame}
+                rememberVisit={isActive && !isDemo}
+                onInspectHoldings={
+                  hasHoldings
+                    ? () => {
+                        haptics.tap();
+                        setFlipped(true);
+                      }
+                    : undefined
+                }
               />
             </motion.div>
             {hasHoldings && (
               <motion.div
                 className="absolute inset-0"
-                style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-                animate={{ opacity: flipped ? 1 : 0 }}
-                transition={{ duration: 0.15, delay: flipped ? 0.08 : 0 }}
-                aria-hidden={!flipped}
+                style={{ backfaceVisibility: "hidden", transform: reducedMotion ? "none" : "rotateY(180deg)", visibility: showingHoldings ? undefined : "hidden" }}
+                animate={{ opacity: showingHoldings ? 1 : 0 }}
+                transition={reducedMotion ? { duration: 0 } : { duration: 0.15, delay: showingHoldings ? 0.08 : 0 }}
+                aria-hidden={!showingHoldings}
               >
-                <div className="h-full flex flex-col items-center justify-center gap-3 py-4 text-center">
-                  <div className="flex -space-x-2">
+                <button
+                  ref={backButtonRef}
+                  type="button"
+                  aria-label="Show currency stage"
+                  onClick={() => {
+                    haptics.tap();
+                    setFlipped(false);
+                  }}
+                  className="h-full w-full flex flex-col items-center justify-center gap-3 py-4 text-center min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded-2xl"
+                >
+                  <span className="flex -space-x-2">
                     {regionData.slice(0, 4).map((r) => (
-                      <div
+                      <span
                         key={r.region}
                         className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-[10px] font-black text-white shadow-sm"
                         style={{ backgroundColor: r.color }}
                         title={`${r.region} ${Math.round((r.value / totalValue) * 100)}%`}
                       >
                         {r.region.slice(0, 2).toUpperCase()}
-                      </div>
+                      </span>
                     ))}
                     {regionData.length > 4 && (
-                      <div className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-[10px] font-black">+{regionData.length - 4}</div>
+                      <span className="w-10 h-10 rounded-full border-2 border-white dark:border-gray-900 bg-gray-900 dark:bg-white text-white dark:text-gray-900 flex items-center justify-center text-[10px] font-black">+{regionData.length - 4}</span>
                     )}
-                  </div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">Your holdings — {fmt(totalValue)}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 px-4 leading-relaxed">Fanned by region · tap to flip back to the currency stage</p>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">Tap any chip below for details — Shield can rebalance this</p>
-                </div>
+                  </span>
+                  <span className="text-sm font-bold text-gray-900 dark:text-white">Your holdings — {fmt(totalValue)}</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400 px-4 leading-relaxed">Fanned by region · tap to flip back to the currency stage</span>
+                  <span className="text-[11px] text-gray-400 dark:text-gray-500">Tap any chip below for details — Shield can rebalance this</span>
+                </button>
               </motion.div>
             )}
           </motion.div>
         </div>
-        {hasHoldings && !flipped && (
+        {hasHoldings && !showingHoldings && (
           <p className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">Tap the coin to see holdings</p>
-        )}
-        {sinceLine && (
-          <p data-testid="since-last-visit" className="mt-1 text-center text-[11px] text-gray-400 dark:text-gray-500">
-            {sinceLine}
-          </p>
         )}
         {guardianAway && (
           <button

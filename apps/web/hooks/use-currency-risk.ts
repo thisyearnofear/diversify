@@ -173,10 +173,11 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
     };
   }, [currencyCode]);
 
-  const liveDepreciation1yr = liveDep?.depreciation?.['1yr'] ?? null;
+  const currentLiveDep = liveDep?.currency === currencyCode ? liveDep : null;
+  const liveDepreciation1yr = currentLiveDep?.depreciation?.['1yr'] ?? null;
   const isLive1yr = liveDepreciation1yr != null;
-  const dataAsOf = liveDep?.depreciation?.asOf ?? CURRENCY_RISK_DATA_AS_OF;
-  const liveSeries = liveDep?.series ?? null;
+  const dataAsOf = currentLiveDep?.depreciation?.asOf ?? CURRENCY_RISK_DATA_AS_OF;
+  const liveSeries = currentLiveDep?.series ?? null;
 
   const primaryDepreciation = riskData
     ? riskData.depreciation.vsUSD['5yr']

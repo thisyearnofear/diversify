@@ -25,7 +25,11 @@ import {
 } from '@/constants/currency-risk';
 import type { NarrativeMoment } from '@/lib/narrative/currency-moment';
 import { CountryOverrideSelect } from './CountryOverrideSelect';
+import { CurrencyVisitReview } from './CurrencyVisitReview';
 import type { MomentFrame } from '@/lib/narrative/moment-framing';
+import { useCurrencyVisit } from '@/hooks/use-currency-visit';
+import { reveal, springSoft } from '@/lib/motion-tokens';
+import { trackFunnelEvent } from '@/lib/analytics';
 
 interface Props {
   moment: NarrativeMoment;
@@ -42,6 +46,8 @@ interface Props {
   onChangeCountry?: (code: string) => void;
   /** Philosophy-aware frame (accent + consequence reframe). null → neutral. */
   frame?: MomentFrame | null;
+  rememberVisit?: boolean;
+  onInspectHoldings?: () => void;
   className?: string;
 }
 
@@ -94,8 +100,13 @@ export function CurrencyMomentCard({
   className = '',
   onChangeCountry,
   frame,
+  rememberVisit = true,
+  onInspectHoldings,
 }: Props) {
   const reducedMotion = useReducedMotion();
+  const comparison = useCurrencyVisit(moment, rememberVisit);
+  const [view, setView] = React.useState<'visit' | 'history' | null>(null);
+  const showVisit = Boolean(comparison) && view !== 'history';
   // The stage leans toward the cursor — Sylva's pointer-responsive scene,
   // damped through a spring. Dead under reduced motion.
   const tilt = usePointerTilt(!reducedMotion);
@@ -113,133 +124,194 @@ export function CurrencyMomentCard({
       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
         <span aria-hidden="true">{moment.flag}</span> {moment.countryName} · {moment.currencyCode}
       </p>
-      {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
-      <motion.div
-        className="flex items-center justify-center gap-5"
-        style={{ ...tilt.style, transformPerspective: 900 }}
-        {...tilt.props}
-      >
+
+      {comparison && (
         <motion.div
-          animate={{ scale: reducedMotion ? 1 : localScale }}
-          transition={{ type: 'spring', stiffness: 120, damping: 20 }}
-          className="shrink-0"
+          role="group"
+          aria-label="Home view"
+          className="mb-3 grid grid-cols-2 gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-1 max-w-[260px] mx-auto"
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={reducedMotion ? { duration: 0 } : springSoft}
         >
-          <Coin size={92} symbol={moment.currencyCode} color={accent} shine />
+          {(['visit', 'history'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={(showVisit && v === 'visit') || (!showVisit && v === 'history')}
+              onClick={() => {
+                haptics.tap();
+                setView(v);
+                trackFunnelEvent('marquee_select', { source: 'home_visit', view: v });
+              }}
+              className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                (showVisit && v === 'visit') || (!showVisit && v === 'history')
+                  ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              {v === 'visit' ? 'Last visit' : 'Longer view'}
+            </button>
+          ))}
         </motion.div>
-        <div className="text-gray-300 dark:text-gray-600 text-lg font-bold select-none" aria-hidden="true">
-          →
-        </div>
-        <div className="shrink-0">
-          <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
-        </div>
-      </motion.div>
-
-      {/* The number that carries the meaning */}
-      <motion.div
-        key={`${moment.benchmark}-${moment.horizon}`}
-        initial={reducedMotion ? false : { opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25 }}
-        className="mt-3"
-      >
-        <DeltaNumber delta={moment.delta} accent={accent} />
-        <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
-          buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
-        </div>
-      </motion.div>
-
-      {/* One personal consequence — the amount is theirs to change */}
-      <p className="text-sm text-gray-700 dark:text-gray-300 mt-3">
-        <label className="inline-flex items-baseline gap-1">
-          <span className="font-bold">{moment.currencyCode}</span>
-          <input
-            type="number"
-            min={0}
-            value={moment.savingsAmount}
-            aria-label="Your savings amount"
-            onChange={(e) => onAmountChange(Math.max(0, Number(e.target.value) || 0))}
-            className="w-24 text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
-          />
-        </label>{' '}
-        {/* Consequence is sign-aware: a depreciating currency buys less, an
-            appreciating one buys more, a flat one holds its value. The
-            philosophy reframe only applies to a loss (a gain has no risk). */}
-        {moment.delta < 0 ? (
-          <>
-            now buys{' '}
-            <strong className="tabular-nums" style={{ color: accent }}>
-              {moment.currencyCode} {fmt(moment.personalImpact)}
-            </strong>{' '}
-            less.
-            {reframe && <> {reframe}</>}
-          </>
-        ) : moment.delta > 0 ? (
-          <>
-            now buys{' '}
-            <strong className="tabular-nums" style={{ color: accent }}>
-              {moment.currencyCode} {fmt(moment.personalImpact)}
-            </strong>{' '}
-            more.
-          </>
-        ) : (
-          <>holds its buying power.</>
-        )}
-      </p>
-
-      {/* Goods framing — a percentage is abstract where people price risk in
-          goods. "≈ 51 fewer bags of rice" gives the number a body. Only
-          shown when the currency has a verified staple (honest by omission). */}
-      {moment.goods && (
-        <p className="mt-1 text-xs tabular-nums text-gray-500 dark:text-gray-400">
-          ≈ {fmt(moment.goods.count)} fewer {moment.goods.unit}
-        </p>
       )}
 
-      {/* Controls — the same segmented + coin motifs learned in onboarding */}
-      <div className="mt-4 flex items-center justify-center gap-2" role="group" aria-label="Time horizon">
-        {horizons.map((h) => (
-          <button
-            key={h}
-            type="button"
-            aria-pressed={moment.horizon === h}
-            onClick={() => {
-              haptics.tap();
-              onSelectHorizon(h);
-            }}
-            className={`min-h-[44px] min-w-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-              moment.horizon === h
-                ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-            }`}
-          >
-            {HORIZONS[h].short}
-          </button>
-        ))}
-        <span className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" aria-hidden="true" />
-        <div role="group" aria-label="Benchmark" className="flex items-center gap-1.5">
-          {benchmarks.map((b) => {
-            const c = BENCHMARK_COIN[b];
-            const selected = moment.benchmark === b;
-            return (
-              <button
-                key={b}
-                type="button"
-                aria-pressed={selected}
-                aria-label={`Compare against ${BENCHMARKS[b].label}`}
-                onClick={() => {
-                  haptics.tap();
-                  onSelectBenchmark(b);
-                }}
-                className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                  selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
-                }`}
+      <motion.div
+        key={showVisit ? 'visit' : 'history'}
+        initial={reducedMotion ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reducedMotion ? { duration: 0 } : reveal}
+      >
+        {showVisit && comparison ? (
+          <CurrencyVisitReview
+            comparison={comparison}
+            moment={moment}
+            accent={accent}
+            onInspectHoldings={onInspectHoldings}
+          />
+        ) : (
+          <>
+            {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
+            <motion.div
+              className="flex items-center justify-center gap-5"
+              style={{ ...tilt.style, transformPerspective: 900 }}
+              {...tilt.props}
+            >
+              <motion.div
+                animate={{ scale: reducedMotion ? 1 : localScale }}
+                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                className="shrink-0"
               >
-                <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
-              </button>
-            );
-          })}
-        </div>
-      </div>
+                {onInspectHoldings ? (
+                  <button
+                    type="button"
+                    aria-label="Show holdings stack"
+                    onClick={onInspectHoldings}
+                    className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                  >
+                    <Coin size={92} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
+                  </button>
+                ) : (
+                  <Coin size={92} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
+                )}
+              </motion.div>
+              <div className="text-gray-300 dark:text-gray-600 text-lg font-bold select-none" aria-hidden="true">
+                →
+              </div>
+              <div className="shrink-0">
+                <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
+              </div>
+            </motion.div>
+
+            {/* The number that carries the meaning */}
+            <motion.div
+              key={`${moment.benchmark}-${moment.horizon}`}
+              initial={reducedMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25 }}
+              className="mt-3"
+            >
+              <DeltaNumber delta={moment.delta} accent={accent} />
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
+                buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
+              </div>
+            </motion.div>
+
+            {/* One personal consequence — the amount is theirs to change */}
+            <p className="text-sm text-gray-700 dark:text-gray-300 mt-3">
+              <label className="inline-flex items-baseline gap-1">
+                <span className="font-bold">{moment.currencyCode}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={moment.savingsAmount}
+                  aria-label="Your savings amount"
+                  onChange={(e) => onAmountChange(Math.max(0, Number(e.target.value) || 0))}
+                  className="w-24 text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
+                />
+              </label>{' '}
+              {/* Consequence is sign-aware: a depreciating currency buys less, an
+                  appreciating one buys more, a flat one holds its value. The
+                  philosophy reframe only applies to a loss (a gain has no risk). */}
+              {moment.delta < 0 ? (
+                <>
+                  now buys{' '}
+                  <strong className="tabular-nums" style={{ color: accent }}>
+                    {moment.currencyCode} {fmt(moment.personalImpact)}
+                  </strong>{' '}
+                  less.
+                  {reframe && <> {reframe}</>}
+                </>
+              ) : moment.delta > 0 ? (
+                <>
+                  now buys{' '}
+                  <strong className="tabular-nums" style={{ color: accent }}>
+                    {moment.currencyCode} {fmt(moment.personalImpact)}
+                  </strong>{' '}
+                  more.
+                </>
+              ) : (
+                <>holds its buying power.</>
+              )}
+            </p>
+
+            {/* Goods framing — a percentage is abstract where people price risk in
+                goods. "≈ 51 fewer bags of rice" gives the number a body. Only
+                shown when the currency has a verified staple (honest by omission). */}
+            {moment.goods && (
+              <p className="mt-1 text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                ≈ {fmt(moment.goods.count)} fewer {moment.goods.unit}
+              </p>
+            )}
+
+            {/* Controls — the same segmented + coin motifs learned in onboarding */}
+            <div className="mt-4 flex items-center justify-center gap-2" role="group" aria-label="Time horizon">
+              {horizons.map((h) => (
+                <button
+                  key={h}
+                  type="button"
+                  aria-pressed={moment.horizon === h}
+                  onClick={() => {
+                    haptics.tap();
+                    onSelectHorizon(h);
+                  }}
+                  className={`min-h-[44px] min-w-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                    moment.horizon === h
+                      ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {HORIZONS[h].short}
+                </button>
+              ))}
+              <span className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" aria-hidden="true" />
+              <div role="group" aria-label="Benchmark" className="flex items-center gap-1.5">
+                {benchmarks.map((b) => {
+                  const c = BENCHMARK_COIN[b];
+                  const selected = moment.benchmark === b;
+                  return (
+                    <button
+                      key={b}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={`Compare against ${BENCHMARKS[b].label}`}
+                      onClick={() => {
+                        haptics.tap();
+                        onSelectBenchmark(b);
+                      }}
+                      className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                        selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
+                      }`}
+                    >
+                      <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        )}
+      </motion.div>
 
       {/* The one action */}
       {onProtect && (
@@ -256,10 +328,18 @@ export function CurrencyMomentCard({
           progressive-blur TrustFootnote keeps the first clause readable and
           expands on hover/tap — never a hide. */}
       <TrustFootnote className="mt-2">
-        {moment.isLive && moment.horizon === '1yr' && moment.benchmark === 'USD' ? (
-          <><span className="text-emerald-500 font-bold">●</span><span> live 1Y · </span></>
-        ) : null}
-        as of {moment.dataAsOf} · curated FX, not advice
+        {showVisit && comparison ? (
+          <>
+            Readings as of {comparison.previous.value.dataAsOf} and {comparison.current.dataAsOf} · {comparison.current.source === 'feed' ? 'FX feed' : 'curated history'}
+          </>
+        ) : (
+          <>
+            {moment.isLive ? (
+              <><span className="text-emerald-500 font-bold">●</span><span> live 1Y · </span></>
+            ) : null}
+            as of {moment.dataAsOf} · {moment.isLive ? 'FX feed' : 'curated FX'}, not advice
+          </>
+        )}
       </TrustFootnote>
 
       {/* Whose savings — diaspora override. Detection is location, risk is

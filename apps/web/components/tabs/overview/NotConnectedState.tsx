@@ -20,10 +20,12 @@ import { InstrumentShell } from "../../shared/InstrumentShell";
 import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 
 interface NotConnectedStateProps {
+  isActive?: boolean;
   onEnableDemo: () => void;
 }
 
 export function NotConnectedState({
+  isActive = true,
   onEnableDemo,
 }: NotConnectedStateProps) {
   const {
@@ -61,6 +63,7 @@ export function NotConnectedState({
           onAmountChange={setSavingsAmount}
           onChangeCountry={onChangeCountry}
           frame={frame}
+          rememberVisit={isActive}
         />
       ) : inflationMoment ? (
         <InflationMomentCard

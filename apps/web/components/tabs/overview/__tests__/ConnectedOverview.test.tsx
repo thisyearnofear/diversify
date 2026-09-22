@@ -239,10 +239,10 @@ vi.mock("../HomeExposureDial", () => ({
   ),
 }));
 vi.mock("../HomeRiskTheater", () => ({
-  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null }) => {
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean }) => {
     if (moment) {
       return (
-        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0}>
+        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)}>
           <div data-testid="currency-moment-card" />
           {Array.isArray(regionData) && regionData.length > 0 && (
             <div data-testid="holdings-strip" />
@@ -433,6 +433,12 @@ describe("ConnectedOverview — currency-moment hero", () => {
     // Theater owns coins; dial is not a hero — strip is the holdings affordance
     expect(screen.getByTestId("holdings-strip")).toBeInTheDocument();
     expect(screen.queryByTestId("exposure-dial")).not.toBeInTheDocument();
+  });
+
+  it("forwards isActive to the Risk Theater's visit memory", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview({ isActive: false });
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-active", "false");
   });
 
   it("shows holdings strip as quiet bar with no pre-selected region", () => {

@@ -232,6 +232,7 @@ export default function TabContentRouter() {
       <div className="px-4">
         <ErrorBoundary moduleName="Overview Dashboard">
           <OverviewTab
+            isActive={activeTab === "overview"}
             portfolio={multichainPortfolio}
             isLoading={isMultichainLoading}
             isRegionLoading={isRegionLoading}
