@@ -74,6 +74,10 @@ export interface Corridor {
   to: CorridorSide;
   /** The one-line relationship for the ticket. */
   line: string;
+  /** Which side lost ground over 5y and by how much — feeds the pair
+   *  stage's beam tilt. `points` is the absolute unrounded percent lost;
+   *  null when the pair roughly held level or has no measurable spread. */
+  drift: { weaker: 'from' | 'to'; points: number } | null;
 }
 
 /**
@@ -96,13 +100,14 @@ export function corridorFor(fromToken: string | null, toToken: string | null): C
   if (from.entry && to.entry) {
     const cross = crossDepreciation(from.entry, to.entry);
     if (Math.abs(cross) < 5) {
-      return { from, to, line: `${pairLabel} — roughly held level for 5 years` };
+      return { from, to, line: `${pairLabel} — roughly held level for 5 years`, drift: null };
     }
     const [weaker, stronger] = cross < 0 ? [from, to] : [to, from];
     return {
       from,
       to,
       line: `${pairLabel} — ${weaker.code} lost ${pct(cross)} to ${stronger.code} in 5 years`,
+      drift: { weaker: cross < 0 ? 'from' : 'to', points: Math.abs(cross) },
     };
   }
 
@@ -111,12 +116,14 @@ export function corridorFor(fromToken: string | null, toToken: string | null): C
     return {
       from, to,
       line: `${pairLabel} — ${from.code} lost ${pct(from.entry.depreciation.vsXAU['5yr'])} to gold in 5 years`,
+      drift: { weaker: 'from', points: Math.abs(from.entry.depreciation.vsXAU['5yr']) },
     };
   }
   if (to.entry && from.code === 'XAU') {
     return {
       from, to,
       line: `${pairLabel} — ${to.code} lost ${pct(to.entry.depreciation.vsXAU['5yr'])} to gold in 5 years`,
+      drift: { weaker: 'to', points: Math.abs(to.entry.depreciation.vsXAU['5yr']) },
     };
   }
   return null;

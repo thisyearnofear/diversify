@@ -4,7 +4,8 @@ import { TokenIcon } from "../shared/TokenIcon";
 import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY, tokenColor } from "../shared/palette";
 import { springPop, springSoft } from "@/lib/motion-tokens";
-import TokenPickerSheet, { type TokenPickerItem } from "./TokenPickerSheet";
+import TokenPickerSheet from "./TokenPickerSheet";
+import { useTokenPickerItems } from "./token-picker-items";
 import { goodsEquivalentFor } from "@/lib/corridor-context";
 import { REGION_COLORS, TOKEN_METADATA, EXCHANGE_RATES } from "../../config";
 import type { UserExperienceMode } from "@/context/app/types";
@@ -43,6 +44,9 @@ interface TokenSelectorProps {
    *  destination coin pours full — the ticket answering the amount you
    *  typed (§5: motion confirms). Replays on each new quote. */
   receiveAmount?: string | null;
+  /** Shared-layout id for the pill's mint-flip coin — lets the pair
+   *  stage's end coin morph into this pill on wake. */
+  coinLayoutId?: string;
 }
 
 /**
@@ -95,6 +99,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   financialStrategy,
   hasWallet = true,
   receiveAmount = null,
+  coinLayoutId,
 }) => {
   const isBeginnerMode = experienceMode === "beginner";
   const reducedMotion = useReducedMotion();
@@ -117,80 +122,14 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     }
   }, [availableTokens, tokenBalances, selectedToken, onTokenChange]);
 
-  // --- compliance + badge helpers (unchanged logic, now feeds the picker) ---
-
   const getComplianceInfo = (tokenSymbol: string) => {
     if (!financialStrategy) return { isCompliant: true };
     return StrategyService.getAssetCompliance(financialStrategy, tokenSymbol);
   };
 
-  const isRecommended = (tokenSymbol: string): boolean => {
-    if (!financialStrategy) return false;
-    const recommended = StrategyService.getRecommendedAssets(financialStrategy);
-    return recommended.some(
-      (rec) =>
-        tokenSymbol.toUpperCase().includes(rec.toUpperCase()) ||
-        rec.toUpperCase().includes(tokenSymbol.toUpperCase()),
-    );
-  };
-
-  const getStrategyBadge = (tokenSymbol: string): { label: string } | null => {
-    if (!financialStrategy || !isRecommended(tokenSymbol)) return null;
-    switch (financialStrategy) {
-      case "africapitalism":
-        if (tokenSymbol.match(/KES|GHS|ZAR|NGN|XOF/i)) return { label: "Builds Africa" };
-        break;
-      case "buen_vivir":
-        if (tokenSymbol.match(/BRL|COP|MXN|ARS/i)) return { label: "LatAm Unity" };
-        break;
-      case "pan_caribbean":
-        if (tokenSymbol.match(/USDC|USDm|USDY|PAXG/i)) return { label: "Caribbean Hedge" };
-        break;
-      case "confucian":
-        if (tokenSymbol.match(/USD|EUR|USDY/i)) return { label: "Stable Wealth" };
-        break;
-      case "gotong_royong":
-        if (tokenSymbol.match(/PHP|IDR|THB|VND/i)) return { label: "Community" };
-        break;
-      case "islamic":
-        if (tokenSymbol.match(/PAXG|USDm|EURm/i)) return { label: "Halal" };
-        break;
-      case "global":
-      case "custom":
-      default:
-        return { label: "Aligned" };
-    }
-    return null;
-  };
-
-  const getYieldBadge = (symbol: string): { text: string; color: string } | null => {
-    if (symbol === "USDY") return { text: "+5% APY", color: "text-emerald-600 bg-emerald-100" };
-    if (symbol === "SYRUPUSDC") return { text: "+4.5% APY", color: "text-purple-600 bg-purple-100" };
-    if (symbol === "PAXG") return { text: "Gold", color: "text-amber-600 bg-amber-100" };
-    return null;
-  };
-
-  // Build picker items from available tokens
-  const pickerItems: TokenPickerItem[] = React.useMemo(
-    () =>
-      availableTokens.map((token) => {
-        const compliance = getComplianceInfo(token.symbol);
-        const metadata = TOKEN_METADATA[token.symbol];
-        return {
-          symbol: token.symbol,
-          name: metadata?.name || token.name || token.symbol,
-          region: token.region,
-          balance: tokenBalances[token.symbol]?.formattedBalance,
-          balanceValue: tokenBalances[token.symbol]?.value ?? 0,
-          compliant: compliance.isCompliant,
-          complianceReason: compliance.reason,
-          badge: getStrategyBadge(token.symbol),
-          yieldBadge: getYieldBadge(token.symbol),
-        };
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [availableTokens, tokenBalances, financialStrategy],
-  );
+  // Build picker items from available tokens (shared with the pair
+  // stage — both pickers read the same compliance/badge/balance list).
+  const pickerItems = useTokenPickerItems(availableTokens, tokenBalances, financialStrategy);
 
   // --- balance / cross-chain ---
   const isCrossChain = currentChainId && tokenChainId && currentChainId !== tokenChainId;
@@ -359,6 +298,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
                 motion swaps instantly. */}
             <motion.span
               key={selectedToken}
+              layoutId={coinLayoutId}
               className="inline-flex"
               initial={reducedMotion ? false : { rotateY: 90, opacity: 0.3 }}
               animate={{ rotateY: 0, opacity: 1 }}

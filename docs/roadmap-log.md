@@ -1182,3 +1182,19 @@ Live dry-run finding, stated plainly: across the five deployed ledgers
 EVIDENCE_MIRROR. Beats have never had a data source in production — the read
 path was fixed first, and the rehearsal script is how the write path gets
 exercised.
+
+#### Exchange resting state — the pair is the object, the ticket is the acting mode (2026-09-23)
+
+**1,756 tests passing** (204 files). Exchange no longer rests as a DEX-shaped form. At rest the object is the
+pair itself: `PairStage` weighs two currency coins on a balance beam whose
+tilt is the corridor's 5y drift (`Corridor.drift` — cross-rate, or the
+fiat's vs-gold track for gold pairs; capped at 10°, level under 5 pts).
+Coins drop in and the beam settles with a real scale's wobble; the ⇅
+fulcrum pivot swaps the sides; tapping a coin flips it to its shared
+`ProvenanceCoinBack`; labels open the same `TokenPickerSheet` the ticket
+uses (items now built by the shared `useTokenPickerItems` hook). One CTA
+("Move savings") wakes the ticket — coins morph into the token pills via
+`LayoutGroup` — and "← Pair" collapses back. Mode persists per session
+(`diversifi.exchange.mode`); amount/loading/leg-2/recipient force the
+ticket so prefills never land on the stage. The story strip now serves
+connected wallets too, leading with held tokens.

@@ -166,17 +166,23 @@ export default function ExchangeTab({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
+  const nettingButton = (
+    <button
+      type="button"
+      onClick={() => setInspectorSel({ kind: "netting" })}
+      className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+    >
+      FX netting: match currencies directly →
+    </button>
+  );
+
+  // Connected status rail — trust parity with Home and Shield (§7) plus
+  // the netting hand-off. Walletless, UnconnectedStatusTier already owns
+  // the Verified line, so it gets the button alone — never doubled.
   const nettingLink = (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      {/* Trust parity — Home and Shield carry the same quiet line (§7). */}
       <VerifiedEvidence />
-      <button
-        type="button"
-        onClick={() => setInspectorSel({ kind: "netting" })}
-        className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
-      >
-        FX netting: match currencies directly →
-      </button>
+      {nettingButton}
     </div>
   );
 
@@ -211,7 +217,7 @@ export default function ExchangeTab({
         }
         status={
           <UnconnectedStatusTier onEnableDemo={enableDemoMode}>
-            {nettingLink}
+            {nettingButton}
           </UnconnectedStatusTier>
         }
       />

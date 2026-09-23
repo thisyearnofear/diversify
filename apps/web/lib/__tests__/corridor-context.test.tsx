@@ -104,6 +104,37 @@ describe('corridorFor', () => {
   });
 });
 
+describe('corridor drift — which side lost ground (feeds the beam tilt)', () => {
+  it('names the weaker side from the cross-rate sign', () => {
+    // NGN fell far harder than KES → from side is weaker.
+    const c = corridorFor('NGNm', 'KESm');
+    expect(c!.drift).not.toBeNull();
+    expect(c!.drift!.weaker).toBe('from');
+    const ngn = CURRENCY_BY_CODE['NGN'].depreciation.vsUSD['5yr'];
+    const kes = CURRENCY_BY_CODE['KES'].depreciation.vsUSD['5yr'];
+    const cross = Math.abs(((1 + ngn / 100) / (1 + kes / 100) - 1) * 100);
+    expect(c!.drift!.points).toBeCloseTo(cross);
+  });
+
+  it('flips the weaker side when the pair order flips', () => {
+    const c = corridorFor('KESm', 'NGNm');
+    expect(c!.drift!.weaker).toBe('to');
+  });
+
+  it('is null when the pair roughly held level', () => {
+    // EUR vs GBP cross ≈ +4.5% — under the 5pt threshold.
+    expect(corridorFor('EURm', 'GBPm')!.drift).toBeNull();
+  });
+
+  it('uses the vs-gold track for fiat↔gold pairs, whichever side is fiat', () => {
+    const ngn = Math.abs(CURRENCY_BY_CODE['NGN'].depreciation.vsXAU['5yr']);
+    const fiatFirst = corridorFor('NGNm', 'PAXG')!;
+    expect(fiatFirst.drift).toEqual({ weaker: 'from', points: ngn });
+    const goldFirst = corridorFor('PAXG', 'NGNm')!;
+    expect(goldFirst.drift).toEqual({ weaker: 'to', points: ngn });
+  });
+});
+
 describe('CorridorLine', () => {
   it('renders the line as a tappable affordance when onInspect is provided', () => {
     const onInspect = vi.fn();

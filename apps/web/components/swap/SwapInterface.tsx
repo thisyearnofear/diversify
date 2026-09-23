@@ -1,5 +1,5 @@
-import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useState } from "react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
 import { useSwapController } from "../../hooks/use-swap-controller";
 // Deep leaf imports — NOT the barrel — keep the swap/ethers stack out of first-load.
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
@@ -11,6 +11,8 @@ import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import { CorridorLine, SIGNATURE_PAIRS, StoryPairStrip } from "./CorridorContext";
+import PairStage from "./PairStage";
+import { useTokenPickerItems } from "./token-picker-items";
 import { useCorridorSignals } from "../../hooks/use-corridor-signals";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { SocialContactPicker } from "./SocialContactPicker";
@@ -19,7 +21,7 @@ import SwapActionButton from "./SwapActionButton";
 import WalletButton from "../wallet/WalletButton";
 import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY } from "../shared/palette";
-import { springPop, springSoft } from "@/lib/motion-tokens";
+import { springPop, springSoft, STAGGER_STEP_S } from "@/lib/motion-tokens";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { configTokenFor } from "@/lib/plan-legs";
@@ -162,30 +164,42 @@ const SwapInterface = forwardRef<
     preferredToRegion,
   });
 
-  // Walletless story strip: signature pairs the ticket can flip between.
-  // Lead with the visitor's own region token when it has a story; the
-  // rest are the curated pairs. Only pairs whose tokens are actually in
-  // the list AND have provenance on both sides are offered — no chip
-  // ever selects a pair that can't tell its story.
+  // The story strip under the stage: pairs whose coins can tell their
+  // story. Connected leads with what the wallet actually holds (each
+  // held token vs USDm — EURm when the held token IS USDm); walletless
+  // leads with the visitor's own region token. Only pairs whose tokens
+  // are in the list AND have provenance on both sides — no chip ever
+  // selects a pair that can't tell its story.
   const storyPairs = useMemo(() => {
-    if (address) return [] as ReadonlyArray<readonly [string, string]>;
     const hasStory = (symbol: string) =>
       availableTokens.some((t) => t.symbol === symbol) && provenanceFor(symbol);
-    const regionToken = preferredFromRegion
-      ? availableTokens.find((t) => t.region === preferredFromRegion)?.symbol
-      : undefined;
     const pairs: [string, string][] = [];
-    if (regionToken && regionToken !== "USDm" && hasStory(regionToken) && hasStory("USDm")) {
-      pairs.push([regionToken, "USDm"]);
-    }
-    for (const [f, t] of SIGNATURE_PAIRS) {
-      if (pairs.length >= 4) break;
-      if (f === t || !hasStory(f) || !hasStory(t)) continue;
-      if (pairs.some(([pf, pt]) => pf === f && pt === t)) continue;
+    const push = (f: string, t: string) => {
+      if (pairs.length >= 4 || f === t) return;
+      if (!hasStory(f) || !hasStory(t)) return;
+      if (pairs.some(([pf, pt]) => pf === f && pt === t)) return;
       pairs.push([f, t]);
+    };
+    if (address) {
+      const held = Object.entries(tokenBalances)
+        .filter(([, b]) => b.value > 0)
+        .sort((a, b) => b[1].value - a[1].value)
+        .map(([symbol]) => symbol)
+        .slice(0, 2);
+      for (const symbol of held) {
+        push(symbol, symbol === "USDm" ? "EURm" : "USDm");
+      }
+    } else {
+      const regionToken = preferredFromRegion
+        ? availableTokens.find((t) => t.region === preferredFromRegion)?.symbol
+        : undefined;
+      if (regionToken && regionToken !== "USDm") {
+        push(regionToken, "USDm");
+      }
     }
+    for (const [f, t] of SIGNATURE_PAIRS) push(f, t);
     return pairs;
-  }, [address, availableTokens, preferredFromRegion]);
+  }, [address, availableTokens, preferredFromRegion, tokenBalances]);
 
   const { data: yieldData } = useBestYield(address ?? null);
   const resolvedYieldHint =
@@ -195,16 +209,48 @@ const SwapInterface = forwardRef<
   const parsedAmount = Number.parseFloat(amount || "0");
   const isCrossChainRoute = ChainDetectionService.isCrossChain(fromChainId, toChainId);
 
-  // Motion is a state function (§5): while the user is browsing — no
-  // amount typed, no quote or execution in flight — the ticket breathes
-  // (the ⇅ coin's shine loop, the corridor line's beat rotation). The
-  // moment they act, `isBrowsing` drops and everything stills.
-  const isBrowsing = !amount && !isLoading;
-
   // Fresh dated beats from the anchored ledger — a real central-bank
   // signal supersedes the standing watch cadence for that side. Reads
   // the shared proof feed (sessionStorage-cached, zero Firecrawl cost).
   const corridorSignals = useCorridorSignals(fromToken, toToken);
+
+  // The pair is the resting object; the ticket is its acting mode.
+  // Session memory keeps a returning user in the mode they left; any
+  // real intent (an amount, a quote in flight, a leg-2 hint, a phone
+  // recipient) forces the ticket so a prefill never lands on the stage.
+  const [mode, setMode] = useState<"stage" | "ticket">(() =>
+    typeof window !== "undefined" &&
+    window.sessionStorage.getItem("diversifi.exchange.mode") === "ticket"
+      ? "ticket"
+      : "stage",
+  );
+  const forcedTicket =
+    Boolean(amount) ||
+    isLoading ||
+    status !== "idle" ||
+    Boolean(leg2Hint) ||
+    Boolean(phoneNumber);
+  useEffect(() => {
+    if (forcedTicket) setMode("ticket");
+  }, [forcedTicket]);
+  const inTicket = mode === "ticket" || forcedTicket;
+
+  const wakeTicket = () => {
+    setMode("ticket");
+    try {
+      window.sessionStorage.setItem("diversifi.exchange.mode", "ticket");
+    } catch {}
+  };
+  const collapseToStage = () => {
+    setAmount("");
+    setMode("stage");
+    try {
+      window.sessionStorage.removeItem("diversifi.exchange.mode");
+    } catch {}
+  };
+
+  const stageFromItems = useTokenPickerItems(availableFromTokens, tokenBalances, financialStrategy ?? undefined);
+  const stageToItems = useTokenPickerItems(availableToTokens, tokenBalances, financialStrategy ?? undefined);
 
   const getChainName = (selectedChainId?: number | null) =>
     Object.values(NETWORKS).find((network) => network.chainId === selectedChainId)?.name;
@@ -294,6 +340,48 @@ const SwapInterface = forwardRef<
           </div>
         )}
 
+        <LayoutGroup id="exchange-pair">
+        {!inTicket ? (
+          <>
+            <PairStage
+              fromToken={fromToken}
+              toToken={toToken}
+              fromItems={stageFromItems}
+              toItems={stageToItems}
+              onFromChange={setFromToken}
+              onToChange={setToToken}
+              onSwitch={handleSwitchTokens}
+              onWake={wakeTicket}
+              onInspect={
+                onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+              }
+              signals={corridorSignals}
+              ctaLabel="Move savings"
+            />
+            {storyPairs.length > 0 && (
+              <StoryPairStrip
+                pairs={storyPairs}
+                active={{ from: fromToken, to: toToken }}
+                onPick={(from, to) => {
+                  setFromToken(from);
+                  setToToken(to);
+                }}
+              />
+            )}
+          </>
+        ) : (
+          <>
+        {!isLoading && status === "idle" && !leg2Hint && !phoneNumber && (
+          <button
+            type="button"
+            aria-label="Back to pair view"
+            onClick={collapseToStage}
+            className="mb-1 -ml-1 px-1 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
+          >
+            ← Pair
+          </button>
+        )}
+
         {/* Cross-chain panel — only when a bridge route is active (not idle
             advanced chrome). Draws itself in when the route becomes
             cross-chain (§5: motion reveals the state change). */}
@@ -353,10 +441,17 @@ const SwapInterface = forwardRef<
           </div>
         )}
 
-        {/* Main form */}
+        {/* Main form — the ticket. Fields stagger in on wake; the stage's
+            coins morph into the pills via the shared layoutIds. */}
         <div className="space-y-1">
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={springSoft}
+          >
           <TokenSelector
             label="From"
+            coinLayoutId={reducedMotion ? undefined : "pair-coin-from"}
             selectedToken={fromToken}
             onTokenChange={setFromToken}
             amount={amount}
@@ -372,14 +467,21 @@ const SwapInterface = forwardRef<
             financialStrategy={financialStrategy ?? undefined}
             hasWallet={Boolean(address)}
           />
+          </motion.div>
 
           {/* Direction switch — a coin, because coins decide (§4). Tap
               flips it (the LensCoinSelector mint-flip doing real work:
               direction reversal IS the flip). Reduced motion swaps
               instantly below; no spin. */}
-          <div className="flex justify-center -my-1 relative z-10">
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springSoft, delay: STAGGER_STEP_S }}
+            className="flex justify-center -my-1 relative z-10"
+          >
             <motion.button
               type="button"
+              layoutId={reducedMotion ? undefined : "pair-pivot"}
               onClick={handleSwitch}
               animate={reducedMotion ? undefined : { rotateY: switchRotated ? 180 : 0 }}
               transition={springPop}
@@ -389,22 +491,27 @@ const SwapInterface = forwardRef<
               disabled={isLoading}
               aria-label="Switch tokens"
             >
-              {/* While browsing, the coin glints — metal catching light
-                  is the ambient life, not decoration (§5 state rule).
-                  Reduced-motion is CSS-gated on the shine itself. */}
+              {/* The ticket is the acting state — still by construction;
+                  the pivot's shine lives on the stage. */}
               <Coin
                 size={40}
                 symbol="⇅"
                 color={QUIET_GRAY}
                 variant="asset"
-                shine={isBrowsing}
+                shine={false}
                 shineDuration={5.5}
               />
             </motion.button>
-          </div>
+          </motion.div>
 
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springSoft, delay: STAGGER_STEP_S * 2 }}
+          >
           <TokenSelector
             label="To"
+            coinLayoutId={reducedMotion ? undefined : "pair-coin-to"}
             selectedToken={toToken}
             onTokenChange={setToToken}
             availableTokens={availableToTokens}
@@ -420,6 +527,7 @@ const SwapInterface = forwardRef<
             hasWallet={Boolean(address)}
             receiveAmount={expectedOutput}
           />
+          </motion.div>
 
           {/* Compact live quote row — hidden walletless: no wallet, no quote
               can ever arrive, so showing the shimmer would read as broken. */}
@@ -449,49 +557,18 @@ const SwapInterface = forwardRef<
 
           {/* Corridor context — the two currencies behind this pair:
               the provenance sentence over the 5y track, tappable into
-              the pair inspector. Walletless, it arrives once with a
-              small entrance — the story feels found, not printed — and
-              the signature-pair strip below lets visitors flip between
-              stories. Connected, the line is status and stays still.
+              the pair inspector. The ticket is the acting state — the
+              line is status and stays still (alive lives on the stage).
               Absent (never padded) when the pair has no story. */}
-          {!address ? (
-            <motion.div
-              initial={reducedMotion ? false : { opacity: 0, y: 6, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={springSoft}
-            >
-              <CorridorLine
-                fromToken={fromToken}
-                toToken={toToken}
-                alive={isBrowsing}
-                signals={corridorSignals}
-                onInspect={
-                  onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
-                }
-              />
-            </motion.div>
-          ) : (
-            <CorridorLine
-              fromToken={fromToken}
-              toToken={toToken}
-              alive={isBrowsing}
-              signals={corridorSignals}
-              onInspect={
-                onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
-              }
-            />
-          )}
-
-          {!address && storyPairs.length > 0 && (
-            <StoryPairStrip
-              pairs={storyPairs}
-              active={{ from: fromToken, to: toToken }}
-              onPick={(from, to) => {
-                setFromToken(from);
-                setToToken(to);
-              }}
-            />
-          )}
+          <CorridorLine
+            fromToken={fromToken}
+            toToken={toToken}
+            alive={false}
+            signals={corridorSignals}
+            onInspect={
+              onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+            }
+          />
 
           {/* Recipient — the destination can be a person, not just a
               wallet. A quiet affordance on the ticket, not a separate
@@ -608,6 +685,9 @@ const SwapInterface = forwardRef<
             <WalletButton variant="primary" className="w-full" />
           )}
         </div>
+          </>
+        )}
+        </LayoutGroup>
       </div>
     </div>
   );

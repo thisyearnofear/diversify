@@ -165,18 +165,18 @@ rises once via `MaskedReveal`. One occurrence each, then still.
 
 The tabs are not museums. While the user is *browsing* — reading,
 flicking, weighing a pair — the one expressive object may breathe:
-Exchange's ⇅ coin carries a slow shine loop (metal catching light; the
-motion IS the material, not decoration on it) and the corridor line
-rotates its beats — the provenance sentence, then each side's watch
-cadence — on a 7-second dwell. This is the difference from a DEX: the
-ticket feels inhabited before it's used.
+on Exchange's pair stage the ⇅ pivot coin carries a slow shine loop
+(metal catching light; the motion IS the material, not decoration on
+it) and the corridor line rotates its beats — the provenance sentence,
+then each side's watch cadence — on a 7-second dwell. This is the
+difference from a DEX: the pair feels weighed before it's moved.
 
 The moment the user *acts* — an amount typed, a preview open, a quote or
 execution in flight — the object stills completely. Stillness is how the
 instrument says "I'm listening"; ambient motion during an action reads
-as the app talking over you. `SwapInterface` derives `isBrowsing` (no
-amount, not loading) and passes `alive` down; `CorridorLine` settles
-back on the story beat when it drops.
+as the app talking over you. On Exchange the split is structural: the
+stage breathes (`alive`), the ticket renders `alive={false}` — the
+acting mode is still by construction, not by a flag the user tripped.
 
 Rules for ambient life:
 
@@ -203,7 +203,8 @@ onto an existing verb; adding a gesture requires retiring one. Nouns
 are infinite — any artefact may carry the verbs.
 
 **Motifs have owners.** Home owns the coin stage + holdings row, Shield
-the ring, Exchange the ticket + story strip, Guardian the mark. A new
+the ring, Exchange the pair stage (balance beam + coins) + story strip,
+Guardian the mark. A new
 motif needs an owner and displaces nothing else's claim — otherwise
 every surface wears every motif, which is the cards problem in a nicer
 costume.
@@ -284,7 +285,41 @@ a second `AllocationRing`; tapping a coin dims the others and opens the region `
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring.
 
-Exchange's story is provenance: the swap ticket teaches tokens as money
+Exchange's resting object is the PAIR — two currency coins weighed on a
+money-changer's balance beam (`PairStage`). The beam is data, not
+decoration: it tilts toward the weaker side by the corridor's 5y drift
+(`Corridor.drift` — the cross-rate between the two fiats, or the fiat's
+vs-gold track for a gold pair), mapped `min(14, 14·√(points/100))` and
+perfectly level when the pair roughly held level (<5 pts) or has
+nothing to say. The coins
+drop onto the beam ends on mount, then the beam settles like a real
+scale — an underdamped spring with a small overshoot and wobble, then
+rest. The ⇅ pivot coin sits on its fulcrum at center and carries the
+shine loop; tapping it swaps the sides and the beam swings across. Tap
+a coin with a story to flip it — the label beneath rewrites to its
+provenance back (flag + phrase, issuer + keys, `ProvenanceCoinBack`),
+one coin at a time; a coin with no back is just an icon. Tap a label
+(`KESm ▾`) to change that side — the stage opens `TokenPickerSheet`
+itself, fed by the shared `useTokenPickerItems` hook so both pickers
+read the same compliance/badge/balance list. Below the beam the
+corridor line rotates its beats (alive); a `StoryPairStrip` of
+signature pairs sits under the stage — connected, it leads with what
+the wallet holds (each held token vs USDm, EURm when the held token IS
+USDm); walletless, with the visitor's region token. Only pairs with
+provenance on both sides are offered; no chip ever selects a story
+that isn't there.
+
+The ticket is the stage's acting mode — reached by one CTA ("Move
+savings") and still by construction (no shine, no beat rotation). The
+stage→ticket morph is the showpiece: inside `LayoutGroup` the end coins
+fly into the token pills (`coinLayoutId` `pair-coin-from/to`), the pivot
+becomes the ⇅ switch, the beam fades, and the fields stagger in. "←
+Pair" collapses back and clears the amount. The mode persists per
+session (`sessionStorage` `diversifi.exchange.mode`); any real intent —
+an amount, a quote in flight, a leg-2 hint, a phone recipient — forces
+the ticket, so Guardian/Home prefills never land on the stage.
+
+Exchange's story is provenance: the pair teaches tokens as money
 with an origin. The corridor line leads with the provenance sentence
 ("from Kenya's floating shilling to allocated gold in a London vault")
 over the 5y corridor track, both tappable into the pair inspector where
@@ -296,36 +331,28 @@ and pairs with no fiat meaning still tell a story (USDC vs USDm is
 governance, not FX). The persona picks which line leads — the same
 three facts, reordered: Islamic finance reads Backing first
 (interest-bearing or not), Buen Vivir reads Keys first (who governs),
-everything else reads Origin first (`leadForStrategy`). Walletless, the
-ticket is also the pitch: the sentence arrives once with a small
-entrance, and a `StoryPairStrip` of signature pairs sits under it —
-tapping a chip rewrites the pair (selection rewrites the artefact).
-Only pairs with provenance on both sides are offered; no chip ever
-selects a story that isn't there. The coin-back gesture teaches
-provenance at the moment of choice: in `TokenPickerSheet`, tapping a
-token's icon flips the row to its reverse — flag + phrase on top,
-issuer + keys underneath — while the row body still selects. Tokens
-with no provenance entry get no flip; a coin with no back is just an
-icon. The inspector tells the story in three tenses: past (the dated
-`riskEvents` trail under each side, newest first), present (origin,
-backing, keys), future (`watch` — the cadence and mechanism that will
-decide what happens next, e.g. "CBN Monetary Policy Committee — how the
-float is defended is decided there", never an invented date or a
-predicted direction). While the ticket is browsed rather than used it
-stays alive (§5 state rule): the ⇅ switch coin carries a slow shine
-loop and the corridor line rotates between the story and each side's
-beat — a standing `watch` cadence, superseded by a fresh dated macro
-signal when the anchored ledger holds one (`corridorSignalsFor` reads
-the shared proof feed and renders rows that carry readable text; an
-on-chain row whose reasoning has no off-chain echo leaves the standing
-`watch` in place rather than showing a hash — Firecrawl credits are
-spent only when a watched page changes, so a live beat costs nothing
-extra); the first keystroke
-in the amount field stills it. The ticket answers in staples before
-dollars: the From row's ≈ equivalent leads with the fiat's curated
-`goodsAnchor` ("6 bags of rice · $292.80"), and the To row names what
-a real quote buys where it lands — the remittance reading a DEX can't
-give. Currencies without a staple keep the plain ≈ $; absence is honest.
+everything else reads Origin first (`leadForStrategy`). The coin-back
+gesture teaches provenance at the moment of choice: in
+`TokenPickerSheet`, tapping a token's icon flips the row to its
+reverse — the same `ProvenanceCoinBack` the stage's coins show — while
+the row body still selects. The inspector tells the story in three
+tenses: past (the dated `riskEvents` trail under each side, newest
+first), present (origin, backing, keys), future (`watch` — the cadence
+and mechanism that will decide what happens next, e.g. "CBN Monetary
+Policy Committee — how the float is defended is decided there", never
+an invented date or a predicted direction). On the stage the corridor
+line rotates between the story and each side's beat — a standing
+`watch` cadence, superseded by a fresh dated macro signal when the
+anchored ledger holds one (`corridorSignalsFor` reads the shared proof
+feed and renders rows that carry readable text; an on-chain row whose
+reasoning has no off-chain echo leaves the standing `watch` in place
+rather than showing a hash — Firecrawl credits are spent only when a
+watched page changes, so a live beat costs nothing extra). The ticket
+answers in staples before dollars: the From row's ≈ equivalent leads
+with the fiat's curated `goodsAnchor` ("6 bags of rice · $292.80"), and
+the To row names what a real quote buys where it lands — the remittance
+reading a DEX can't give. Currencies without a staple keep the plain
+≈ $; absence is honest.
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner

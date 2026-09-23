@@ -128,6 +128,18 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
   });
 
+  it("unconnected: the trust line renders exactly once — the tier owns it", () => {
+    mockAddress = null;
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    // UnconnectedStatusTier already renders VerifiedEvidence; the
+    // netting hand-off must not bring a second copy.
+    expect(screen.getAllByText("Verified")).toHaveLength(1);
+    expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+  });
+
   it("unconnected: demo entry is a quiet text link in the status tier", () => {
     mockAddress = null;
     render(

@@ -6,6 +6,7 @@ import { haptics } from "@/lib/haptics";
 import { springPop } from "@/lib/motion-tokens";
 // Deep leaf import — provenance facts are curated constants.
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
+import { ProvenanceCoinBack } from "./ProvenanceCoinBack";
 
 export interface TokenPickerItem {
   symbol: string;
@@ -262,12 +263,7 @@ export default function TokenPickerSheet({
                     >
                     {isFlipped && provenance ? (
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
-                          {provenance.origin.flag} {provenance.phrase}
-                        </div>
-                        <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
-                          {provenance.issuer} · {provenance.keys}
-                        </div>
+                        <ProvenanceCoinBack provenance={provenance} />
                       </div>
                     ) : (
                     <div className="flex-1 min-w-0">
