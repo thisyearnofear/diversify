@@ -35,6 +35,7 @@ import { useMobile } from "../../hooks/use-mobile";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
+import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -46,6 +47,12 @@ interface SwapTabProps {
   instrument?: boolean;
   onInspectQuote?: (fromToken: string, toToken: string) => void;
   quoteInspected?: boolean;
+  /** The wallet's on-chain capital history (journey rail + receipt refetch). */
+  capitalHistory?: {
+    data: CapitalHistory | null;
+    refresh(delayMs?: number): void;
+  } | null;
+  onInspectJourney?: () => void;
 }
 
 export default function SwapTab({
@@ -57,6 +64,8 @@ export default function SwapTab({
   instrument = false,
   onInspectQuote,
   quoteInspected = false,
+  capitalHistory,
+  onInspectJourney,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
@@ -482,6 +491,8 @@ export default function SwapTab({
             instrument={instrument}
             onInspectQuote={onInspectQuote}
             quoteInspected={quoteInspected}
+            capitalHistory={capitalHistory}
+            onInspectJourney={onInspectJourney}
             claim={
               canClaim
                 ? { label: `${estimatedReward} G$ ready`, onClaim: flow.handleClaim }

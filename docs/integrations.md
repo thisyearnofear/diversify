@@ -382,6 +382,7 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Hedging | Hyperliquid perps |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |
 | Database | MongoDB |
+| Chain history | Blockscout public API (`celo.blockscout.com`, ERC-20 transfers → capital journey) |
 | Agent Identity | ERC-8004 Identity Registry (8004scan, Celo mainnet, agentId 9654), Self Protocol Agent ID (Celo mainnet, agent `0xE8cDb7CA…f170`, real passport verified) |
 | Hosting | Vercel (frontend), Hetzner (agent runtime) |
 

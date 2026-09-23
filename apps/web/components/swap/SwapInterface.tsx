@@ -12,6 +12,8 @@ import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import { CorridorLine, SIGNATURE_PAIRS, StoryPairStrip } from "./CorridorContext";
 import PairStage, { type PairReceipt } from "./PairStage";
+import { CapitalJourney } from "./CapitalJourney";
+import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
 import { useTokenPickerItems } from "./token-picker-items";
 import { useCorridorSignals } from "../../hooks/use-corridor-signals";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
@@ -67,6 +69,12 @@ interface SwapInterfaceProps {
   };
   /** Claimable streak reward, shown on the settlement receipt. */
   claim?: { label: string; onClaim(): void } | null;
+  /** The wallet's on-chain capital history (journey rail), connected only. */
+  capitalHistory?: {
+    data: CapitalHistory | null;
+    refresh(delayMs?: number): void;
+  } | null;
+  onInspectJourney?: () => void;
 }
 
 const SwapInterface = forwardRef<
@@ -101,6 +109,8 @@ const SwapInterface = forwardRef<
     yieldHint = null,
     contractCall,
     claim,
+    capitalHistory,
+    onInspectJourney,
   },
   ref,
 ) {
@@ -258,6 +268,8 @@ const SwapInterface = forwardRef<
     setAmount("");
     acknowledgeCompletion();
     setMode("stage");
+    // The indexer lags — refetch the journey rail after settlement.
+    capitalHistory?.refresh(20000);
     try {
       window.sessionStorage.removeItem("diversifi.exchange.mode");
     } catch {}
@@ -272,6 +284,7 @@ const SwapInterface = forwardRef<
     fromChainId,
     setAmount,
     acknowledgeCompletion,
+    capitalHistory,
   ]);
 
   const wakeTicket = () => {
@@ -422,6 +435,14 @@ const SwapInterface = forwardRef<
                   setFromToken(from);
                   setToToken(to);
                 }}
+              />
+            )}
+            {address && (
+              <CapitalJourney
+                history={capitalHistory?.data ?? null}
+                tokenBalances={tokenBalances}
+                optimisticSymbol={receipt?.txHash ? receipt.toToken : null}
+                onInspectJourney={onInspectJourney}
               />
             )}
           </>

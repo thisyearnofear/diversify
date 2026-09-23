@@ -1220,3 +1220,25 @@ leg-1 completion stays in the ticket for leg 2 — no receipt. Streak,
 experience, activity and balance-refresh side-effects are unchanged; the
 claimable G$ line rides the receipt. `explorerTxUrl` moved to
 `apps/web/lib/explorer-url.ts`, shared by `SwapStatus` and the receipt.
+
+#### Capital journey rail — "where your savings have lived" (2026-09-23)
+
+**552 tests passing** in the affected suites (62 files; `components/swap`,
+`components/tabs`, `hooks`, `tests/api`, `capital-history`).
+
+Connected Exchange now carries the pair's memory under the stage: one
+station coin per currency the wallet has received, ordered by first
+arrival, held stations solid vs departed at 40% on dashes, one tap into
+a journey inspector of settled legs with explorer links. Everything is
+derived from Celo ERC-20 transfers (public Blockscout API, 4-page/200
+cap, 8s timeouts, 10-min in-memory + sessionStorage cache). On-chain
+symbols don't match ours — USDm reports `CUSD` — so mapping is by
+contract address only (`getTokenAddresses(42220)` reversed).
+`deriveCapitalHistory` in `packages/shared` is pure: stations are
+inbound arrivals, legs require exactly one-out/one-in currency in a
+single tx (multi-token txs and plain sends are skipped, never guessed),
+amounts are bigint-decimal strings with no floats. Truncated histories
+say "Recent history", never a "Since" date we didn't reach; a settled
+receipt schedules `refresh(20000)` for indexer lag and appends its
+destination optimistically, de-duped when the chain catches up.
+Walletless visitors see nothing — never a sample.

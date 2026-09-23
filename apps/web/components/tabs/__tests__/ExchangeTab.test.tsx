@@ -69,9 +69,11 @@ vi.mock("../SwapTab", () => ({
   default: ({
     instrument,
     onInspectQuote,
+    onInspectJourney,
   }: {
     instrument?: boolean;
     onInspectQuote?: (from: string, to: string) => void;
+    onInspectJourney?: () => void;
   }) =>
     React.createElement(
       "div",
@@ -86,7 +88,29 @@ vi.mock("../SwapTab", () => ({
         },
         "quote",
       ),
+      onInspectJourney
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "journey-row",
+              onClick: onInspectJourney,
+            },
+            "journey",
+          )
+        : null,
     ),
+}));
+
+import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
+
+const journeyState: { data: CapitalHistory | null } = { data: null };
+vi.mock("@/hooks/use-capital-history", () => ({
+  useCapitalHistory: () => ({
+    data: journeyState.data,
+    isLoading: false,
+    refresh: vi.fn(),
+  }),
 }));
 
 import ExchangeTab from "../ExchangeTab";
@@ -100,6 +124,7 @@ describe("ExchangeTab — instrument", () => {
     vi.clearAllMocks();
     mockAddress = "0xabc";
     mockNettingRequested = false;
+    journeyState.data = null;
   });
 
   it("mounts the ticket as the object, with no extra inspect button", () => {
@@ -158,6 +183,74 @@ describe("ExchangeTab — instrument", () => {
     fireEvent.click(screen.getByTestId("quote-row"));
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("route-schematic")).toHaveTextContent("cUSD-USDC");
+  });
+
+  it("renders the journey inspector with settled legs and explorer links", () => {
+    journeyState.data = {
+      address: "0xabc",
+      chainId: 42220,
+      stations: [
+        { symbol: "USDm", firstSeen: "2023-01-01T00:00:00.000Z", lastSeen: "2024-01-01T00:00:00.000Z" },
+        { symbol: "KESm", firstSeen: "2024-02-01T00:00:00.000Z", lastSeen: "2024-03-01T00:00:00.000Z" },
+      ],
+      legs: [
+        {
+          from: "USDm",
+          to: "KESm",
+          txHash: "0xdeadbeef",
+          at: "2024-03-01T00:00:00.000Z",
+          amountIn: "50",
+          amountOut: "6450.25",
+        },
+      ],
+      complete: true,
+      asOf: "2026-09-23T12:00:00.000Z",
+    };
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("journey-row"));
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(sheet).toHaveTextContent("Your capital's journey");
+    const inspector = screen.getByTestId("journey-inspector");
+    expect(inspector).toHaveTextContent("Mar 1, 2024 · 50 USDm → 6,450.25 KESm");
+    const link = screen.getByRole("link", { name: "View ↗" });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://celo.blockscout.com/tx/0xdeadbeef",
+    );
+    expect(inspector).toHaveTextContent("Read from Celo via Blockscout");
+    expect(inspector).not.toHaveTextContent("Showing your most recent transfers");
+  });
+
+  it("journey inspector: empty state and the truncated-history footer", () => {
+    journeyState.data = {
+      address: "0xabc",
+      chainId: 42220,
+      stations: [],
+      legs: [],
+      complete: false,
+      asOf: "2026-09-23T12:00:00.000Z",
+    };
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("journey-row"));
+    const inspector = screen.getByTestId("journey-inspector");
+    expect(inspector).toHaveTextContent(
+      "No swaps between currencies found in this history.",
+    );
+    expect(inspector).toHaveTextContent("Showing your most recent transfers");
+  });
+
+  it("walletless gets no journey row", () => {
+    mockAddress = null;
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+    expect(screen.queryByTestId("journey-row")).not.toBeInTheDocument();
   });
 
   it("connected: the status rail carries the same quiet trust line as Home and Shield", () => {

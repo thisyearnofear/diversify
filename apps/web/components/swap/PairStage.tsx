@@ -20,6 +20,7 @@ import { corridorFor, corridorSideFor, type CorridorSignal } from '@/lib/corrido
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import TokenPickerSheet, { type TokenPickerItem } from './TokenPickerSheet';
 import { ProvenanceCoinBack } from './ProvenanceCoinBack';
+import { MintMark } from './MintMark';
 import { CorridorLine } from './CorridorContext';
 import { goodsEquivalentFor } from '@/lib/corridor-context';
 import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
@@ -82,20 +83,14 @@ function BeamCoin({
           />
         )}
         {sealed ? (
-          <span
-            aria-hidden
-            className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-[13px] leading-none text-white ring-1 ring-emerald-600 dark:bg-emerald-600"
-          >
+          <MintMark className="h-6 w-6 bg-emerald-500 text-[13px] leading-none text-white ring-emerald-600 dark:bg-emerald-600">
             ✓
-          </span>
+          </MintMark>
         ) : (
           flag && (
-            <span
-              aria-hidden
-              className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[13px] leading-none ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700"
-            >
+            <MintMark className="h-6 w-6 bg-white text-[13px] leading-none ring-gray-200 dark:bg-gray-900 dark:ring-gray-700">
               {flag}
-            </span>
+            </MintMark>
           )
         )}
       </span>

@@ -345,3 +345,65 @@ describe('SwapInterface — settlement receipt', () => {
     expect(onClaim).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('SwapInterface — journey rail', () => {
+  const HISTORY = {
+    address: '0xabc',
+    chainId: 42220 as const,
+    stations: [
+      { symbol: 'USDm', firstSeen: '2023-05-01T00:00:00.000Z', lastSeen: '2024-01-01T00:00:00.000Z' },
+      { symbol: 'KESm', firstSeen: '2024-02-01T00:00:00.000Z', lastSeen: '2024-06-01T00:00:00.000Z' },
+    ],
+    legs: [],
+    complete: true,
+    asOf: '2026-09-23T00:00:00.000Z',
+  };
+
+  it('connected with history shows the rail under the stage', () => {
+    renderSwap({
+      address: '0xabc',
+      capitalHistory: { data: HISTORY, refresh: vi.fn() },
+    });
+    expect(screen.getByTestId('capital-journey')).toBeInTheDocument();
+  });
+
+  it('walletless renders no rail, even with data', () => {
+    renderSwap({
+      address: null,
+      capitalHistory: { data: HISTORY, refresh: vi.fn() },
+    });
+    expect(screen.queryByTestId('capital-journey')).not.toBeInTheDocument();
+  });
+
+  it('a settled receipt schedules a delayed history refresh', () => {
+    resetCtrl({
+      status: 'completed',
+      amount: '25',
+      expectedOutput: '24.90',
+      localTxHash: '0xabc123',
+      fromChainId: 42220,
+    });
+    const refresh = vi.fn();
+    renderSwap({
+      address: '0xabc',
+      capitalHistory: { data: HISTORY, refresh },
+    });
+    expect(refresh).toHaveBeenCalledWith(20000);
+  });
+
+  it('the receipt destination appends to the rail optimistically', () => {
+    resetCtrl({
+      status: 'completed',
+      amount: '25',
+      expectedOutput: '24.90',
+      localTxHash: '0xabc123',
+      fromChainId: 42220,
+      toToken: 'NGNm',
+    });
+    renderSwap({
+      address: '0xabc',
+      capitalHistory: { data: HISTORY, refresh: vi.fn() },
+    });
+    expect(screen.getByTestId('journey-station-NGNm')).toBeInTheDocument();
+  });
+});

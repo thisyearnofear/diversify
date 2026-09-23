@@ -22,14 +22,77 @@ import {
 } from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
+import { useCapitalHistory } from "@/hooks/use-capital-history";
+import { explorerTxUrl } from "@/lib/explorer-url";
+import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
 
 /** What the inspector is bound to: a selected pair (route + corridor +
- *  the netting rail prefilled from the pair's fiat legs) or the netting
- *  rail alone when the user came to match currencies directly. */
+ *  the netting rail prefilled from the pair's fiat legs), the netting
+ *  rail alone when the user came to match currencies directly, or the
+ *  wallet's capital journey (settled legs, read from the chain). */
 type InspectorSel =
   | { kind: "pair"; fromToken: string; toToken: string }
   | { kind: "netting" }
+  | { kind: "journey" }
   | null;
+
+function fmtAmount(v: string): string {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return v;
+  return n.toLocaleString("en-US", { maximumFractionDigits: 4 });
+}
+
+function fmtDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+/** The journey inspector body — settled legs, newest first, each linked
+ *  to the explorer. Amounts are settled on-chain, so no "at quote". */
+function JourneyBody({ history }: { history: CapitalHistory | null }) {
+  const legs = history?.legs ?? [];
+  return (
+    <div data-testid="journey-inspector">
+      {legs.length === 0 ? (
+        <p className="text-xs text-gray-600 dark:text-gray-300">
+          No swaps between currencies found in this history.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {legs.map((leg) => (
+            <li
+              key={leg.txHash}
+              className="flex items-center justify-between gap-3 text-xs text-gray-700 dark:text-gray-300"
+            >
+              <span className="tabular-nums">
+                {fmtDay(leg.at)} · {fmtAmount(leg.amountIn)} {leg.from} →{" "}
+                {fmtAmount(leg.amountOut)} {leg.to}
+              </span>
+              <a
+                href={explorerTxUrl(42220, leg.txHash)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-blue-600 hover:underline dark:text-blue-400"
+              >
+                View ↗
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 text-[11px] text-gray-400 dark:text-gray-500">
+        Read from Celo via Blockscout · as of{" "}
+        {history ? new Date(history.asOf).toLocaleString("en-US") : "—"}
+        {history && !history.complete
+          ? " · Showing your most recent transfers"
+          : ""}
+      </p>
+    </div>
+  );
+}
 
 /** The pair inspector — route schematic plus the corridor context: what
  *  these two currencies are and how they've treated each other. The
@@ -40,13 +103,16 @@ function PairInspector({
   userRegion,
   onClose,
   lead,
+  journey,
 }: {
   selection: InspectorSel;
   userRegion: Region;
   onClose: () => void;
   lead: ProvenanceLead;
+  journey: CapitalHistory | null;
 }) {
   const pair = selection?.kind === "pair" ? selection : null;
+  const isJourney = selection?.kind === "journey";
   // The pair's fiat legs prefill the intent form when they exist —
   // USDm→KESm becomes USD→KES. Tokens without a fiat mirror leave the
   // rail on its own defaults.
@@ -60,11 +126,20 @@ function PairInspector({
           ? `${selection.fromToken}-${selection.toToken}`
           : selection?.kind === "netting"
             ? "netting"
-            : null
+            : selection?.kind === "journey"
+              ? "journey"
+              : null
       }
       onClose={onClose}
-      title={pair ? "Route and settlement" : "Counterparty matching"}
+      title={
+        pair
+          ? "Route and settlement"
+          : isJourney
+            ? "Your capital's journey"
+            : "Counterparty matching"
+      }
     >
+      {isJourney ? <JourneyBody history={journey} /> : null}
       {pair ? (
         <>
           <RouteSchematic
@@ -79,6 +154,7 @@ function PairInspector({
           />
         </>
       ) : null}
+      {!isJourney && (
       <FxNettingRail
         initialSell={sellCode}
         initialBuy={buyCode}
@@ -88,6 +164,7 @@ function PairInspector({
             : undefined
         }
       />
+      )}
     </InspectorSheet>
   );
 }
@@ -118,6 +195,9 @@ export default function ExchangeTab({
   const sharedPortfolio = usePortfolio();
   const previousAddress = useRef(address);
   const [inspectorSel, setInspectorSel] = useState<InspectorSel>(null);
+  // One fetch per address — the journey rail reads it and a settled
+  // receipt triggers refresh(20000) because the indexer lags.
+  const capitalHistory = useCapitalHistory(address ?? null);
 
   useEffect(() => {
     if (previousAddress.current !== address) {
@@ -213,6 +293,7 @@ export default function ExchangeTab({
             userRegion={userRegion}
             onClose={() => setInspectorSel(null)}
             lead={leadForStrategy(financialStrategy)}
+            journey={capitalHistory.data}
           />
         }
         status={
@@ -247,6 +328,8 @@ export default function ExchangeTab({
               setInspectorSel({ kind: "pair", fromToken, toToken })
             }
             quoteInspected={inspectorSel?.kind === "pair"}
+            capitalHistory={capitalHistory}
+            onInspectJourney={() => setInspectorSel({ kind: "journey" })}
           />
         </div>
       }
@@ -256,6 +339,7 @@ export default function ExchangeTab({
           userRegion={userRegion}
           onClose={() => setInspectorSel(null)}
           lead={leadForStrategy(financialStrategy)}
+          journey={capitalHistory.data}
         />
       }
       portfolio={freshness}

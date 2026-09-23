@@ -203,8 +203,8 @@ onto an existing verb; adding a gesture requires retiring one. Nouns
 are infinite — any artefact may carry the verbs.
 
 **Motifs have owners.** Home owns the coin stage + holdings row, Shield
-the ring, Exchange the pair stage (balance beam + coins) + story strip,
-Guardian the mark. A new
+the ring, Exchange the pair stage (balance beam + coins) + story strip +
+journey rail, Guardian the mark. A new
 motif needs an owner and displaces nothing else's claim — otherwise
 every surface wears every motif, which is the cards problem in a nicer
 costume.
@@ -335,6 +335,21 @@ fabricated "+5% Protection Score", and an "Annual Savings" estimate
 presented as fact all broke the honesty contract. A via-hub leg-1
 completion is the exception: it advances the ticket to leg 2 in place,
 with no receipt.
+
+Under the stage sits the pair's memory: the journey rail, "Where your
+savings have lived". It is derived only from the wallet's Celo ERC-20
+transfers, mapped by contract address (on-chain symbols lie — USDm
+reports `CUSD`, so `token.symbol` is never read). Each station is a
+currency the wallet has received, in order of first arrival; settled
+legs are only transactions with exactly one outbound and one inbound
+currency token — anything more ambiguous is skipped, never guessed.
+Stations the wallet still holds sit full opacity on solid connectors;
+departed ones dim to 40% on dashes. When pagination didn't reach the
+wallet's first transfer the rail says "Recent history", not "Since" —
+we can't claim a start date we didn't reach. Tapping it opens the
+journey inspector: settled legs newest first with real explorer links,
+no "at quote" because these amounts already settled. The rail is
+connected-only — walletless visitors get nothing, never a sample.
 
 Exchange's story is provenance: the pair teaches tokens as money
 with an origin. The corridor line leads with the provenance sentence
