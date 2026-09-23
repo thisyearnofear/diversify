@@ -9,7 +9,7 @@
  * Design language: the ring is the one object that gets color; everything
  * around it is quiet. Motion reveals the reallocation, never loops.
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
 import { TokenIcon } from '@/components/shared/TokenIcon';
@@ -165,6 +165,20 @@ export function ProtectionPlanRing({
   // when a wallet holds 10+ tokens — the ring and legend never exceed
   // 5 primary rows + one Other rewrites-artefact row (taps expand in place).
   const [showDust, setShowDust] = useState(false);
+  const [isStressTesting, setIsStressTesting] = useState(false);
+  const stressTestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (stressTestTimer.current) clearTimeout(stressTestTimer.current);
+  }, []);
+  const handleStressTest = () => {
+    if (isStressTesting) return;
+    setIsStressTesting(true);
+    haptics.confirm();
+    stressTestTimer.current = setTimeout(() => {
+      stressTestTimer.current = null;
+      setIsStressTesting(false);
+    }, 2800);
+  };
   const PRIMARY_ROWS = 5;
   const DUST_THRESHOLD_PCT = 2;
 
@@ -258,6 +272,23 @@ export function ProtectionPlanRing({
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   const hole = (() => {
+    if (isStressTesting) {
+      return {
+        number: (
+          <motion.span
+            key="stress-score"
+            initial={reducedMotion ? false : { scale: 0.8 }}
+            animate={reducedMotion ? {} : { scale: [0.8, 1.15, 1] }}
+            transition={{ duration: 0.4 }}
+            className="text-emerald-600 dark:text-emerald-400 font-black"
+          >
+            Reserve ready
+          </motion.span>
+        ),
+        label: "Illustrative 30% shock",
+        hint: `${floorPercent(allocations)}% dollar reserve remains available`,
+      };
+    }
     if (balancePreview) {
       return selected
         ? { number: `${selected.percent}%` as React.ReactNode, label: selected.token, hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
@@ -340,6 +371,30 @@ export function ProtectionPlanRing({
         {/* Armed-state seal — stamps once per mount (keyed to the plan),
             then holds. The §5 confirm artefact for committing a plan. */}
         <div className="flex items-center gap-2">
+          {!balancePreview && !empty && (
+            <>
+              <button
+                type="button"
+                data-testid="stress-test-btn"
+                aria-label="Preview illustrative 30 percent currency shock"
+                aria-describedby="stress-test-description"
+                onClick={handleStressTest}
+                disabled={isStressTesting}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+                  isStressTesting
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ring-2 ring-emerald-500/30"
+                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                }`}
+                title="Preview an illustrative 30% macro currency shock"
+              >
+                <span aria-hidden="true">{isStressTesting ? "🛡️" : "⚡"}</span>
+                <span>{isStressTesting ? "Previewing" : "Test defense"}</span>
+              </button>
+              <span id="stress-test-description" className="sr-only">
+                This is an illustrative resilience preview, not a forecast or settlement quote.
+              </span>
+            </>
+          )}
           {!balancePreview && (
             <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
           )}
@@ -377,7 +432,19 @@ export function ProtectionPlanRing({
       </div>
 
       <div className="flex justify-center">
-        <motion.div style={{ ...tilt.style, transformPerspective: 900 }} {...tilt.props}>
+        <motion.div
+          animate={
+            isStressTesting && !reducedMotion
+              ? {
+                  scale: [1, 1.04, 0.97, 1.01, 1],
+                  rotate: [0, -1, 1, -0.5, 0],
+                }
+              : {}
+          }
+          transition={{ duration: 0.6, ease: "easeInOut" }}
+          style={{ ...tilt.style, transformPerspective: 900 }}
+          {...tilt.props}
+        >
           <AllocationRing
             slices={displaySlices}
             selectedId={selectedToken === SLEEVE_ID ? null : selectedToken}
@@ -407,7 +474,10 @@ export function ProtectionPlanRing({
                   <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
                     {hole.label}
                   </span>
-                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  <span
+                    className="text-[11px] text-gray-500 dark:text-gray-400"
+                    aria-live={isStressTesting ? "polite" : undefined}
+                  >
                     {hole.hint}
                   </span>
                   {onHoleTap && !holeHintOverride && (
@@ -461,7 +531,7 @@ export function ProtectionPlanRing({
               initial={reducedMotion ? false : { opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, delay: idx * STAGGER_STEP_S, ease: "easeOut" }}
-              className={`w-full min-h-[44px] flex items-center gap-3 py-2.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              className={`w-full min-h-[44px] lg:min-h-[38px] flex items-center gap-3 py-2.5 lg:py-1.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
             >

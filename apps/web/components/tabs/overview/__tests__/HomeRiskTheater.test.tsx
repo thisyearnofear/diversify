@@ -5,7 +5,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { HomeRiskTheater } from "../HomeRiskTheater";
 import { BENCHMARK_KEYS, HORIZON_KEYS } from "@/constants/currency-risk";
-import type { NarrativeMoment } from "@/lib/narrative/currency-moment";
+import type { InflationMoment, NarrativeMoment } from "@/lib/narrative/currency-moment";
 
 const mocks = vi.hoisted(() => ({
   visibility: "quiet" as "quiet" | "informed",
@@ -76,6 +76,34 @@ function renderTheater(overrides: Partial<React.ComponentProps<typeof HomeRiskTh
     />,
   );
 }
+
+describe("HomeRiskTheater — purchasing-power horizon", () => {
+  it("grounds a currency moment with its corridor reading", () => {
+    renderTheater();
+    expect(screen.getByTestId("home-horizon-baseplate")).toHaveTextContent(
+      "JMD vs US Dollar · −8.4%",
+    );
+  });
+
+  it("uses the real inflation-moment fields", () => {
+    const inflationMoment: InflationMoment = {
+      kind: "inflation",
+      countryName: "Jamaica",
+      countryCode: "JM",
+      flag: "🇯🇲",
+      region: "Caribbean",
+      inflationRate: 5.2,
+      savingsAmount: 1000,
+      annualImpact: 52,
+      dataAsOf: "2026-09-11",
+      isLive: true,
+    };
+    renderTheater({ moment: null, inflationMoment });
+    expect(screen.getByTestId("home-horizon-baseplate")).toHaveTextContent(
+      "Jamaica · 5.2% annual rate",
+    );
+  });
+});
 
 describe("HomeRiskTheater — holdings coin row", () => {
   it("renders one tappable coin per region, sized by share", () => {

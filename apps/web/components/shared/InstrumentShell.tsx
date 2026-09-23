@@ -38,6 +38,8 @@ export interface FreshnessInfo {
 }
 
 interface InstrumentShellProps {
+  /** Desktop resting instruments use a calibrated vertical budget; all other states retain natural flow. */
+  layout?: "natural" | "calibrated";
   /** The manipulable object — ring, dial, ticket, picker. */
   object: React.ReactNode;
   /** Selection-bound inspector. Render `InspectorSheet`; closed when idle. */
@@ -58,6 +60,7 @@ interface InstrumentShellProps {
 
 export function InstrumentShell({
   object,
+  layout = "natural",
   inspector,
   status,
   portfolio,
@@ -66,7 +69,11 @@ export function InstrumentShell({
   className = "",
 }: InstrumentShellProps) {
   return (
-    <div className={`relative ${SURFACE} ${className}`.trim()}>
+    <div
+      className={`relative ${SURFACE} ${
+        layout === "calibrated" ? "lg:min-h-[580px] lg:flex lg:flex-col" : ""
+      } ${className}`.trim()}
+    >
       {pattern ? (
         <div
           className={`shields-pattern-layer rounded-2xl ${pattern.className}`}
@@ -75,23 +82,25 @@ export function InstrumentShell({
         />
       ) : null}
       {/* Positioned so the content always paints above the pattern layer. */}
-      <div className="relative">
-        <div className="min-h-0">{object}</div>
+      <div className={`relative ${layout === "calibrated" ? "lg:flex-1 lg:flex lg:flex-col lg:justify-between" : ""}`}>
+        <div className={`min-h-0 ${layout === "calibrated" ? "lg:flex-1 lg:flex lg:flex-col lg:justify-center" : ""}`}>{object}</div>
         {inspector}
-        {portfolio ? (
-          <div className="mt-3">
-            <DataFreshnessIndicator
-              lastUpdated={portfolio.lastUpdated}
-              isStale={portfolio.isStale}
-              hasEstimates={portfolio.hasEstimates}
-              isDemo={portfolio.isDemo}
-              isLoading={portfolio.isLoading}
-              error={portfolio.errors?.[0] ?? null}
-              onRefresh={onRefresh}
-            />
-          </div>
-        ) : null}
-        {status ? <div className="mt-3">{status}</div> : null}
+        <div className="mt-auto">
+          {portfolio ? (
+            <div className="mt-3">
+              <DataFreshnessIndicator
+                lastUpdated={portfolio.lastUpdated}
+                isStale={portfolio.isStale}
+                hasEstimates={portfolio.hasEstimates}
+                isDemo={portfolio.isDemo}
+                isLoading={portfolio.isLoading}
+                error={portfolio.errors?.[0] ?? null}
+                onRefresh={onRefresh}
+              />
+            </div>
+          ) : null}
+          {status ? <div className="mt-3">{status}</div> : null}
+        </div>
       </div>
     </div>
   );

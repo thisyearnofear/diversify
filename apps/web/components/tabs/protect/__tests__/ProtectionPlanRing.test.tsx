@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useState } from 'react';
-import { render, screen, cleanup, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { ProtectionPlanRing } from '../ProtectionPlanRing';
 import { DEMO_PORTFOLIO } from '@/lib/demo-data';
@@ -60,6 +60,40 @@ describe('ProtectionPlanRing — projections shape', () => {
     ).not.toThrow();
     expect(screen.getByText('Your shield plan')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
+  });
+
+  it('shows a clearly labelled illustrative resilience preview, then resets', async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <ProtectionPlanRing
+          strategyKey="africapitalism"
+          portfolio={portfolio}
+          selectedToken={null}
+          onSelectToken={() => {}}
+        />,
+      );
+      const btn = screen.getByTestId('stress-test-btn');
+      expect(btn).toHaveAccessibleName('Preview illustrative 30 percent currency shock');
+      expect(btn).toHaveTextContent('Test defense');
+
+      fireEvent.click(btn);
+
+      expect(screen.getByText('Reserve ready')).toBeInTheDocument();
+      expect(screen.getByText('Illustrative 30% shock')).toBeInTheDocument();
+      expect(screen.getByText(/dollar reserve remains available/)).toBeInTheDocument();
+      expect(btn).toBeDisabled();
+
+      await act(async () => {
+        vi.advanceTimersByTime(2800);
+      });
+
+      expect(screen.queryByText('Reserve ready')).not.toBeInTheDocument();
+      expect(btn).toHaveTextContent('Test defense');
+      expect(btn).not.toBeDisabled();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('does not crash when projections is missing entirely', () => {

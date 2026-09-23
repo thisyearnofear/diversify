@@ -30,6 +30,18 @@ describe("InstrumentShell", () => {
     expect(shell.className).toContain("dark:bg-gray-900");
   });
 
+  it("uses the calibrated desktop budget only when requested", () => {
+    const { container, rerender } = render(
+      <InstrumentShell object={<div data-testid="object">ring</div>} />,
+    );
+    expect(container.firstElementChild).not.toHaveClass("lg:min-h-[580px]");
+
+    rerender(
+      <InstrumentShell layout="calibrated" object={<div data-testid="object">ring</div>} />,
+    );
+    expect(container.firstElementChild).toHaveClass("lg:min-h-[580px]");
+  });
+
   it("tints the surface with the archetype pattern INSIDE the card, content above it (design-language §1/§4)", () => {
     const { container } = render(
       <InstrumentShell

@@ -1136,6 +1136,7 @@ export default function ProtectionTab({
   return (
     <div className="relative">
       <InstrumentShell
+        layout={inspectorSel === null && !balance.isPreviewing ? "calibrated" : "natural"}
         pattern={pattern}
         object={object}
         inspector={inspector}

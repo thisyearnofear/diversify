@@ -304,6 +304,18 @@ export function HomeRiskTheater({
           </button>
         )}
         {holdingsStrip}
+        <div
+          data-testid="home-horizon-baseplate"
+          className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400"
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true" />
+            <span>Purchasing power horizon</span>
+          </span>
+          <span className="tabular-nums font-semibold text-gray-700 dark:text-gray-300">
+            {moment.currencyCode} vs {moment.benchmarkLabel} · {moment.delta > 0 ? "+" : "−"}{Math.abs(moment.delta).toFixed(1)}%
+          </span>
+        </div>
       </section>
     );
   }
@@ -320,6 +332,18 @@ export function HomeRiskTheater({
           protectLabel={protectLabel}
         />
         {holdingsStrip}
+        <div
+          data-testid="home-horizon-baseplate"
+          className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400"
+        >
+          <span className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true" />
+            <span>Purchasing power horizon</span>
+          </span>
+          <span className="tabular-nums font-semibold text-gray-700 dark:text-gray-300">
+            {inflationMoment.countryName} · {inflationMoment.inflationRate.toFixed(1)}% annual rate
+          </span>
+        </div>
       </section>
     );
   }

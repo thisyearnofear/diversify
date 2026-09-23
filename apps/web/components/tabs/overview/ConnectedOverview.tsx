@@ -356,7 +356,12 @@ export function ConnectedOverview({
           ))}
         </div>
       )}
-      <InstrumentShell object={object} inspector={inspector} status={status} />
+      <InstrumentShell
+        layout={focusedRegion === null ? "calibrated" : "natural"}
+        object={object}
+        inspector={inspector}
+        status={status}
+      />
     </div>
   );
 }
