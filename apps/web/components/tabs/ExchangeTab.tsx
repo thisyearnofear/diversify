@@ -12,6 +12,7 @@ import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { FxNettingRail } from "@/components/business/FxNettingRail";
 import { corridorSideFor } from "@/lib/corridor-context";
+import { pairCardContent } from "@/lib/pair-card";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
@@ -101,6 +102,45 @@ function JourneyBody({
   );
 }
 
+/** The pair is public knowledge — shareable via a card whose numbers
+ *  are derived from the symbols alone. Receipts and journeys are
+ *  personal and never get this affordance. */
+function PairShareLine({ from, to }: { from: string; to: string }) {
+  const [copied, setCopied] = useState(false);
+  const content = pairCardContent(from, to);
+  if (!content) return null;
+
+  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/pair/${content.from}/${content.to}`;
+  const headline = content.headline;
+  const share = async () => {
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({ title: headline, url });
+        return;
+      } catch {
+        return; // dismissed sheet — nothing to copy
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable — quiet no-op
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="mt-2 min-h-11 px-1 text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+    >
+      {copied ? "Link copied" : "Share this pair ↗"}
+    </button>
+  );
+}
+
 /** The pair inspector — route schematic plus the corridor context: what
  *  these two currencies are and how they've treated each other. The
  *  netting rail rides here too: counterparty matching is a settlement
@@ -164,6 +204,7 @@ function PairInspector({
             toToken={pair.toToken}
             lead={lead}
           />
+          <PairShareLine from={pair.fromToken} to={pair.toToken} />
         </>
       ) : null}
       {!isJourney && (

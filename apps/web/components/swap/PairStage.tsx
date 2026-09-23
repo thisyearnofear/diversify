@@ -16,7 +16,7 @@ import { TokenIcon } from '../shared/TokenIcon';
 import { QUIET_GRAY } from '../shared/palette';
 import { springPop, springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { haptics } from '@/lib/haptics';
-import { corridorFor, corridorSideFor, pairWhatIfFor, type CorridorSignal, type Horizon } from '@/lib/corridor-context';
+import { corridorFor, corridorSideFor, pairWhatIfFor, tiltForDrift, type CorridorSignal, type Horizon } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import TokenPickerSheet, { type TokenPickerItem } from './TokenPickerSheet';
 import { ProvenanceCoinBack } from './ProvenanceCoinBack';
@@ -196,9 +196,8 @@ export function PairStage({
   const whatIf = pairWhatIfFor(fromToken, toToken, horizon);
   const drift = corridor?.drift ?? null;
   // Square-root curve: 8pts ≈ 4°, 38pts ≈ 8.6°, 57pts ≈ 10.6°, capped 14°.
-  const tiltDeg = drift ? Math.min(14, 14 * Math.sqrt(drift.points / 100)) : 0;
   // The weaker side sits lower: left/from weaker → negative rotation.
-  const tilt = drift ? (drift.weaker === 'from' ? -tiltDeg : tiltDeg) : 0;
+  const tilt = tiltForDrift(drift);
 
   const [flipped, setFlipped] = useState<'from' | 'to' | null>(null);
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);

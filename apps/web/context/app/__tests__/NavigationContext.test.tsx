@@ -119,6 +119,19 @@ describe("NavigationContext — ?tab= doorway", () => {
     expect(seen!.activeTab).toBe("protect");
   });
 
+  it("?tab=exchange lands on Exchange — the shared-pair doorway", () => {
+    window.localStorage.setItem("activeTab", "protect");
+    window.history.replaceState({}, "", "/?tab=exchange&from=NGNm&to=USDm");
+
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    expect(seen!.activeTab).toBe("exchange");
+  });
+
   it("an unknown ?tab= falls back to the saved tab", () => {
     window.localStorage.setItem("activeTab", "exchange");
     window.history.replaceState({}, "", "/?tab=bogus");

@@ -2,6 +2,10 @@
 
 > Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](./roadmap.md).
 
+### Exchange — shareable pair cards; fabricated share page retired (2026-09-23)
+
+The pair became linkable: `pages/pair/[from]/[to].tsx` serves OG/Twitter/Farcaster meta whose headline, what-if and card image are derived server-side from the two symbols alone (`lib/pair-card.ts` → `corridorFor`/`pairWhatIfFor`, shared `tiltForDrift`/`whatIfSentence`/`moneyNameFor` helpers extracted into `corridor-context.ts` so the card weighs the pair identically to the stage). Unknown symbols or null corridors 404 / render the neutral brand card — no numeric params are ever read. `/api/og/pair-card` (edge, 1200×630, twemoji flags, `s-maxage=86400`) draws the tilted beam. People hitting the page are `router.replace`d to `/?tab=exchange&from=…&to=…` (the existing `?tab=` doorway + prefill); crawlers keep the meta. The pair inspector gained a quiet "Share this pair ↗" (navigator.share, clipboard fallback with "Link copied") — receipts and journeys never get it. The old `/share/[id]` percentile page is retired to a redirect and `/api/og/share-card` ignores all params. Files: new `lib/pair-card.ts`, `pages/api/og/pair-card.tsx`, `pages/pair/[from]/[to].tsx`, `tests/api/og-cards.test.tsx`, `tests/api/pair-page.test.tsx`, `lib/__tests__/pair-card.test.ts`; touched `share-card.tsx`, `share/[id].tsx`, `corridor-context.ts`, `PairStage.tsx`, `CorridorContext.tsx`, `ExchangeTab.tsx`, `NavigationContext.test.tsx`. 782 tests pass (swap/tabs/hooks/lib/context + og/pair-page suites).
+
 ### Exchange — walletless read-only lookup + session pair carry-over (2026-09-23)
 
 The journey rail's slot now works walletless: a quiet invite line ("Your own journey appears here when you connect · View any wallet →") unfolds a single-line address input in place — validated client-side (viem `isAddress`), Escape/Cancel collapses, never persisted to localStorage. A pasted public address renders `CapitalJourney` in `readOnly` dress — labelled, no held/departed guessing, no `data-held`, no "still held" — plus "Is this your wallet? Connect to act on it →" on the shared connect action; the inspector footer gains "· read-only view of a public address", and empty/failed fetches get honest one-liners instead of partial data. Connecting clears the lookup. The explored pair itself persists to `sessionStorage['diversifi.exchange.pair']` and is restored on controller init (canonical casing, invalid pairs ignored, prefill/`setTokens` always win, sync effect preserves it). Files: `ExchangeTab.tsx`, `SwapTab.tsx`, `SwapInterface.tsx`, new `JourneyLookup.tsx`, `CapitalJourney.tsx` (`readOnly` prop + `shortAddress`), `use-capital-history.ts` (+`error`), `use-swap-controller.ts`, `design-language.md`, `AGENTS.md`. 513 tests pass (swap/tabs/hooks/corridor suites).
@@ -1262,3 +1266,42 @@ that never rotates away; a pair change resets both. `pairWhatIfFor`
 computes from curated depreciation ratios only — no FX rate — and is
 honest both directions (USD→NGN ≈ 0.4). The control renders only where
 a what-if exists; held-level and uncovered pairs show the plain line.
+
+#### Read-only wallet lookup + pair carry-over (2026-09-23)
+
+**513 tests passing** in the affected suites (44 files; `components/swap`,
+`components/tabs`, `hooks`, `corridor-context`).
+
+Walletless Exchange now uses the journey rail's own slot for public
+history: one quiet invite ("Your own journey appears here when you
+connect · View any wallet →") reveals an in-place address input —
+no card, no modal. A valid address renders `CapitalJourney` in
+`readOnly` mode: "Viewing 0x… · read-only", every station neutral on
+solid connectors (no held/departed guess — we don't know that wallet's
+balances), plus "Is this your wallet? Connect to act on it →".
+Under two stations or a failed fetch get honest one-liners, never
+partial data. Looked-up addresses are never persisted and connecting
+clears the lookup. The selected pair persists per session
+(`sessionStorage['diversifi.exchange.pair']`, canonical casing),
+restored on init and surviving walletless→connected; `swapPrefill`/
+`setTokens` always beat it.
+
+#### Shareable pair cards — the pair is public, the journey is not (2026-09-23)
+
+**782 tests passing** (75 files, full suite).
+
+The pair inspector gained one quiet line — "Share this pair ↗" —
+linking `/pair/{from}/{to}`: an SSR page whose og:title/og:description/
+og:image are derived from the two canonical symbols alone. The edge OG
+card (`/api/og/pair-card`) renders the beam itself — two coin-tinted
+circles on a tilted rule (the shared `tiltForDrift`), the corridor
+headline, the labelled what-if, and "Curated data to Jul 2025 · Not
+live FX". Every number is computed server-side from the curated
+dataset; unknown symbols or null corridors get the neutral brand card
+or 404 — never a guess. The page deep-links to
+`/?tab=exchange&from=…&to=…`, and the first-run tour no longer hijacks
+a `?tab=` doorway. `/share/[id]` is retired to a redirect and
+`/api/og/share-card` ignores all params — it rendered
+user-supplied percentiles and scores, which broke the honesty
+contract. Receipts and journeys stay personal; only the pair is
+shareable.

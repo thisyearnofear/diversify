@@ -366,6 +366,17 @@ itself persists the same way (`diversifi.exchange.pair`), so what a
 visitor explored survives into the connected tab; a prefill always
 beats the stored pair.
 
+The pair is public knowledge, so it's shareable — receipts and
+journeys never are (they're personal). The pair inspector carries one
+quiet "Share this pair ↗" that links `/pair/{from}/{to}`: a page whose
+meta and OG card are computed server-side from the two symbols alone —
+headline, what-if, beam tilt all come from the curated corridor
+dataset, and an unknown symbol or an unmeasurable corridor 404s or
+renders the neutral brand card. The card takes no numeric params, so a
+link can't carry a fabricated score. The old `/share/[id]` page did the
+opposite — percentiles and ratings straight from query strings — and is
+retired to a redirect; its OG endpoint now ignores params entirely.
+
 The beam is also a time machine. The corridor line's trailing "in 5
 years" is a segmented control — `1y · 3y · 5y` — that re-weighs the
 scale to that window's drift (the tilt literally recomputes, settling

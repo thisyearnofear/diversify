@@ -42,6 +42,9 @@ export default function TourTrigger() {
         if (address) return;
         if (userActivity.swapCount > 0) return;
         if (isTourDismissed(FIRST_RUN_TOUR_ID)) return;
+        // A ?tab=… deep link (e.g. a shared pair) is intent — the tour
+        // must not drag the visitor away from the doorway they opened.
+        if (new URLSearchParams(window.location.search).get('tab')) return;
 
         const timer = setTimeout(() => {
             startTour(FIRST_RUN_TOUR_ID, FIRST_RUN_TOUR_STEP_COUNT, "overview", "welcome");

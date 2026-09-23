@@ -16,6 +16,7 @@ import {
   corridorFor,
   corridorSideFor,
   pairWhatIfFor,
+  whatIfSentence,
   HORIZON_LINE,
   type CorridorSide,
   type CorridorSignal,
@@ -53,9 +54,7 @@ const HORIZONS: { key: Horizon; label: string }[] = [
 
 /** The pinned what-if statement — labelled, dated, honest both ways. */
 function WhatIfStatement({ whatIf }: { whatIf: PairWhatIf }) {
-  const sentence = whatIf.goods
-    ? `Moved to ${whatIf.toName} in ${whatIf.startYear}, savings that buy ${whatIf.goods.today} ${whatIf.goods.unit} today would buy ~${whatIf.goods.moved}.`
-    : `Moved to ${whatIf.toName} in ${whatIf.startYear}, every 100 ${whatIf.fromCode} would be ~${Math.round(100 * whatIf.multiplier)} ${whatIf.fromCode} today.`;
+  const sentence = whatIfSentence(whatIf);
   return (
     <span className="block" data-testid="pair-whatif">
       <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">

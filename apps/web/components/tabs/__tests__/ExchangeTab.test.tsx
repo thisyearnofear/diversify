@@ -93,6 +93,15 @@ vi.mock("../SwapTab", () => ({
         },
         "quote",
       ),
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          "data-testid": "pair-row",
+          onClick: () => onInspectQuote?.("NGNm", "USDm"),
+        },
+        "pair",
+      ),
       onLookupAddress
         ? React.createElement(
             "button",
@@ -310,6 +319,38 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByTestId("journey-inspector")).toHaveTextContent(
       "read-only view of a public address",
     );
+  });
+
+  it("pair inspector: share line copies the pair URL and confirms inline", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("pair-row")); // NGNm→USDm has a corridor
+    const btn = await screen.findByRole("button", { name: "Share this pair ↗" });
+    fireEvent.click(btn);
+    await screen.findByRole("button", { name: "Link copied" });
+    expect(writeText).toHaveBeenCalledWith(
+      expect.stringContaining("/pair/NGNm/USDm"),
+    );
+  });
+
+  it("pair inspector: no share line when the corridor has nothing to say", async () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    // cUSD→USDC both mirror USD — no corridor, no share affordance.
+    fireEvent.click(screen.getByTestId("quote-row"));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Share this pair ↗" }),
+    ).not.toBeInTheDocument();
   });
 
   it("connecting a wallet clears the lookup — the hook sees the real address", () => {

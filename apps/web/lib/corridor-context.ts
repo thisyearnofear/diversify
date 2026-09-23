@@ -96,6 +96,24 @@ function pct(n: number): string {
   return `~${Math.abs(Math.round(n))}%`;
 }
 
+/** The beam's tilt for a corridor drift — square-root curve (8pts ≈ 4°,
+ *  38pts ≈ 8.6°, 57pts ≈ 10.6°), capped at 14°, negative when the
+ *  from/left side is the weaker one. Shared by the stage and the
+ *  shareable pair card so both weigh the pair identically. */
+export function tiltForDrift(drift: Corridor['drift']): number {
+  if (!drift) return 0;
+  const deg = Math.min(14, 14 * Math.sqrt(drift.points / 100));
+  return drift.weaker === 'from' ? -deg : deg;
+}
+
+/** The dataset's as-of as a short label — "Jul 2025". */
+export function currencyRiskAsOfLabel(): string {
+  return new Date(`${CURRENCY_RISK_DATA_AS_OF}T00:00:00Z`).toLocaleDateString(
+    'en-US',
+    { month: 'short', year: 'numeric', timeZone: 'UTC' },
+  );
+}
+
 export interface Corridor {
   from: CorridorSide;
   to: CorridorSide;
@@ -262,15 +280,27 @@ export function pairWhatIfFor(
   return {
     horizon,
     startYear: Number(CURRENCY_RISK_DATA_AS_OF.slice(0, 4)) - HORIZON_YEARS[horizon],
-    dataAsOfLabel: new Date(`${CURRENCY_RISK_DATA_AS_OF}T00:00:00Z`).toLocaleDateString(
-      'en-US',
-      { month: 'short', year: 'numeric', timeZone: 'UTC' },
-    ),
+    dataAsOfLabel: currencyRiskAsOfLabel(),
     multiplier,
     fromCode: from.code,
-    toName: TO_NAME[to.code] ?? to.code,
+    toName: moneyNameFor(to.code),
     goods,
   };
+}
+
+/** Plain-language name for a currency ("the naira") or its code when
+ *  the map doesn't cover it. Shared by the what-if line and the
+ *  shareable pair card's headline. */
+export function moneyNameFor(code: string): string {
+  return TO_NAME[code] ?? code;
+}
+
+/** The what-if sentence in one place — the corridor pin and the pair
+ *  card must never drift apart. */
+export function whatIfSentence(whatIf: PairWhatIf): string {
+  return whatIf.goods
+    ? `Moved to ${whatIf.toName} in ${whatIf.startYear}, savings that buy ${whatIf.goods.today} ${whatIf.goods.unit} today would buy ~${whatIf.goods.moved}.`
+    : `Moved to ${whatIf.toName} in ${whatIf.startYear}, every 100 ${whatIf.fromCode} would be ~${Math.round(100 * whatIf.multiplier)} ${whatIf.fromCode} today.`;
 }
 
 // ── Fresh dated beats ────────────────────────────────────────────────
