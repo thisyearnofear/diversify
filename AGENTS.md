@@ -61,6 +61,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Token provenance is curated, never generated:** `packages/shared/src/constants/token-provenance.ts` holds hand-sourced, dated claims about issuers, reserves and freeze powers (the Exchange "origin story"). Re-verify every entry by its `asOf` + 90 days; a token with no entry renders nothing — never fabricate a provenance line.
 - **Test-env tripwire:** `vitest.setup.ts` scrubs signer keys via `packages/shared/src/utils/signer-env-keys.ts`; `apps/web/lib/__tests__/signer-env-leak.test.ts` fails naming offending keys. If a test reaches a real network call, a key leaked — fix the scrub list, don't mock the test.
 - **Honesty contract:** fallback data must disclose itself ("Includes estimates", "Sample data"); observer/dry-run paths never persist; rates validate against the live table before writing (no silent 1:1); declines and stale cron runs are recorded, not hidden. Numbers carry their own meaning — never a signed "−0%" or a fabricated "Balance: 0.0000".
+- **Cross-tab intent:** hand-offs that carry a question use `navigateWithIntent(tab, TreasuryIntent)` (consumed once, never persisted); Shield resolves region/asset to a slice via `resolveIntentFocus`. Status tiers go through `StatusTier` (trust + one transition + one rail).
 - **Mascot:** the Digital Guardian is settled (heraldic shield, visor face, gold belly coin). Geometry/palette single source: `components/shared/guardian-mark.ts`; rasters are deterministic exports via `pnpm render-guardian-assets` — re-run after any mark change. Spec: `docs/design-language.md` §9.
 - **Share cards derive, never accept, numbers:** `/api/og/pair-card` and `/pair/[from]/[to]` take only the two symbols — every number is computed server-side from the curated corridor dataset (`lib/pair-card.ts` → `corridorFor`/`pairWhatIfFor`/`tiltForDrift`). Unknown symbols or null corridors render the neutral brand card / 404. `/share/[id]` is retired (it rendered fabricated percentiles); `/api/og/share-card` ignores all params.
 - **Exchange pair persistence:** the selected pair is stored per session in `sessionStorage['diversifi.exchange.pair']` and restored on controller init (canonical casing, invalid pairs ignored) — `swapPrefill`/`setTokens` always beat the stored pair. Walletless public-address lookup lives in the journey rail's slot (`JourneyLookup`, read-only `CapitalJourney`) — looked-up addresses are never persisted, and connecting clears the lookup.
@@ -81,6 +82,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 | System architecture | `docs/architecture.md` |
 | Guardian enforcement + security + identity | `docs/guardian.md` |
 | Surface/design contract | `docs/design-language.md` |
+| Exchange pair/ticket/receipt spec | `docs/exchange-instrument.md` |
 | External services, env, security | `docs/integrations.md` |
 | Setup, env vars, test drive | `docs/setup.md` |
 | Alibaba deployment | `docs/ops.md` |

@@ -31,6 +31,18 @@ export interface GuardianContext {
   decisionRef?: GuardianDecisionRef;
 }
 
+export type TreasuryIntentSource = 'home' | 'shield' | 'exchange' | 'guardian';
+
+/** Cross-tab hand-off: carries the question, not just the tab. Transient —
+ *  consumed once by the target tab, never persisted. */
+export interface TreasuryIntent {
+  source: TreasuryIntentSource;
+  /** Region label in the getTokenRegion vocabulary (Home's regionData), e.g. "Africa". */
+  region?: string;
+  /** Canonical mixed-case token symbol, e.g. "KESm". */
+  asset?: string;
+}
+
 export interface GuardianDecisionRef {
   capturedAt: string;
   kind: 'decision' | 'execution' | 'proposal';
@@ -69,6 +81,11 @@ type NavigationContextValue = NavigationState & {
   navigateToCompare: () => void;
   compareRequested: boolean;
   consumeCompareRequest: () => void;
+  /** Cross-tab hand-off that carries the question, not just the tab.
+   *  The target tab consumes `pendingIntent` once — never persisted. */
+  navigateWithIntent: (tab: TabId, intent: TreasuryIntent) => void;
+  pendingIntent: { tab: TabId; intent: TreasuryIntent } | null;
+  consumeIntent: () => void;
   initializeFromStorage: () => void;
   /**
    * Cycle to focus in `PaymentCycleReport`. Set when the drawer's
@@ -103,6 +120,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Transient Shield-compare hand-off — the Shield tab consumes it once.
   const [compareRequested, setCompareRequested] = useState(false);
   const [nettingRequested, setNettingRequested] = useState(false);
+  const [pendingIntent, setPendingIntent] = useState<{ tab: TabId; intent: TreasuryIntent } | null>(null);
 
   // init from storage (active tab). A deep-link doorway (?tab=…) wins
   // over the saved tab — read straight from the URL, no router.isReady
@@ -193,6 +211,20 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setCompareRequested(false);
   }, []);
 
+  const navigateWithIntent = useCallback((tab: TabId, intent: TreasuryIntent) => {
+    setPendingIntent({ tab, intent });
+    setState((prev) => ({
+      ...prev,
+      activeTab: tab,
+      swapPrefill: null,
+      visitedTabs: prev.visitedTabs.includes(tab) ? prev.visitedTabs : [...prev.visitedTabs, tab],
+    }));
+  }, []);
+
+  const consumeIntent = useCallback(() => {
+    setPendingIntent(null);
+  }, []);
+
   const initializeFromStorage = useCallback(() => {
     const urlTab =
       typeof window !== 'undefined'
@@ -227,11 +259,14 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navigateToCompare,
       compareRequested,
       consumeCompareRequest,
+      navigateWithIntent,
+      pendingIntent,
+      consumeIntent,
       initializeFromStorage,
       focusedCycleId,
       setFocusedCycleId,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, nettingRequested, consumeNettingRequest, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, initializeFromStorage, focusedCycleId],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, nettingRequested, consumeNettingRequest, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, navigateWithIntent, pendingIntent, consumeIntent, initializeFromStorage, focusedCycleId],
   );
 
   // The consuming surface (PaymentCycleReport) already auto-clears the

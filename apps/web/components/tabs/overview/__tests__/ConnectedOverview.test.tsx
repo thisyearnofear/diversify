@@ -74,11 +74,13 @@ vi.mock("@/hooks/use-market-regime", () => ({
 
 const mockNavigateToCompare = vi.fn();
 const mockNavigateToNetting = vi.fn();
+const mockNavigateWithIntent = vi.fn();
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToSwap: vi.fn(),
     navigateToCompare: mockNavigateToCompare,
     navigateToNetting: mockNavigateToNetting,
+    navigateWithIntent: mockNavigateWithIntent,
   }),
 }));
 
@@ -208,7 +210,10 @@ vi.mock("@/components/agent/AgentTierStatus", () => ({
 vi.mock("@/components/shared/Tooltip", () => ({
   Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
-vi.mock("@/components/shared/ContextualBanner", () => ({ ContextualBanner: () => null }));
+vi.mock("@/components/shared/ContextualBanner", () => ({
+  ContextualBanner: ({ kind }: { kind: string | null }) =>
+    kind ? <div data-testid="contextual-banner" data-kind={kind} /> : null,
+}));
 vi.mock("@/components/shared/DataFreshnessIndicator", () => ({
   DataFreshnessIndicator: (props: { lastUpdated: number | null; isStale?: boolean; isLoading?: boolean; onRefresh?: () => void }) => (
     <div data-testid="freshness-indicator" data-stale={String(Boolean(props.isStale))} data-loading={String(Boolean(props.isLoading))}>
@@ -221,7 +226,6 @@ vi.mock("@/components/shared/HomeSection", () => ({
 }));
 vi.mock("@/components/shared/HomeNav", () => ({ HomeNav: () => null }));
 vi.mock("@/components/shared/MoreOptions", () => ({ MoreOptions: () => null }));
-vi.mock("@/components/tabs/overview/ProtectionScorecard", () => ({ ProtectionScorecard: () => null }));
 vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({ PaymentCycleReport: () => null }));
 vi.mock("@/components/portfolio/ZakatCalculator", () => ({ default: () => null }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
@@ -244,7 +248,7 @@ vi.mock("../HomeExposureDial", () => ({
   ),
 }));
 vi.mock("../HomeRiskTheater", () => ({
-  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean }) => {
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void }) => {
     if (moment) {
       return (
         <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)}>
@@ -252,6 +256,7 @@ vi.mock("../HomeRiskTheater", () => ({
           {Array.isArray(regionData) && regionData.length > 0 && (
             <div data-testid="holdings-strip" />
           )}
+          <button type="button" data-testid="select-region" onClick={() => onSelectRegion?.("Africa")} />
         </div>
       );
     }
@@ -581,5 +586,81 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
 
     expect(screen.getByTestId("home-compare-link")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Match this payment/ })).not.toBeInTheDocument();
+  });
+});
+
+// ──────────────────────────────────────────────────────────────────────────
+// StatusTier budget + Home→Shield region intent
+// ──────────────────────────────────────────────────────────────────────────
+
+describe("ConnectedOverview — status tier budget and region intent", () => {
+  afterEach(() => {
+    cleanup();
+    mockExperienceMode = "standard";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+    mockNavigateToCompare.mockClear();
+    mockNavigateToNetting.mockClear();
+    mockNavigateWithIntent.mockClear();
+  });
+
+  it("when banner + payment-cycle + tip + philosophy all apply, exactly one transition slot renders and it's the banner", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = {
+      ...defaultHomeSections,
+      banner: "currency-risk",
+      isPaymentCycle: true,
+      primaryTip: "Add BRLm for LatAm coverage.",
+    };
+    renderOverview();
+
+    const slots = document.querySelectorAll('[data-status-slot="transition"]');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].querySelector('[data-testid="contextual-banner"]')).not.toBeNull();
+    expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Match this payment/ })).not.toBeInTheDocument();
+    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
+  });
+
+  it("with no banner and a payment cycle, the netting button wins the transition slot", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = {
+      ...defaultHomeSections,
+      banner: null,
+      isPaymentCycle: true,
+      primaryTip: "Add BRLm for LatAm coverage.",
+    };
+    renderOverview();
+
+    const slots = document.querySelectorAll('[data-status-slot="transition"]');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].textContent).toContain("Match this payment against a counterparty");
+    expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
+  });
+
+  it("never renders more than three status slots", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = { ...defaultHomeSections, banner: "currency-risk", isPaymentCycle: true };
+    renderOverview();
+    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
+    expect(document.querySelector('[data-status-slot="trust"]')).not.toBeNull();
+  });
+
+  it("the region inspector CTA hands the region to Shield via navigateWithIntent", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+
+    fireEvent.click(screen.getByTestId("select-region"));
+    const cta = screen.getByRole("button", { name: /Strengthen Africa coverage in Shield/ });
+    fireEvent.click(cta);
+    expect(mockNavigateWithIntent).toHaveBeenCalledWith("protect", {
+      source: "home",
+      region: "Africa",
+    });
   });
 });

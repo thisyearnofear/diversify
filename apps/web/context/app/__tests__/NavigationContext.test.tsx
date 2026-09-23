@@ -100,6 +100,73 @@ describe("NavigationContext — compare deep link", () => {
   });
 });
 
+describe("NavigationContext — navigateWithIntent", () => {
+  it("switches the tab, stamps visitedTabs, and carries the intent", () => {
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    act(() => {
+      seen!.navigateToSwap({
+        fromToken: "cUSD",
+        toToken: "cEUR",
+        reason: "test",
+      });
+    });
+    act(() => {
+      seen!.navigateWithIntent("protect", { source: "home", region: "Africa" });
+    });
+
+    expect(seen!.activeTab).toBe("protect");
+    expect(seen!.visitedTabs).toContain("protect");
+    expect(seen!.pendingIntent).toEqual({
+      tab: "protect",
+      intent: { source: "home", region: "Africa" },
+    });
+    // An intent hand-off is not a swap — any queued prefill is dropped.
+    expect(seen!.swapPrefill).toBeNull();
+  });
+
+  it("consumeIntent clears the pending hand-off once", () => {
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    act(() => {
+      seen!.navigateWithIntent("protect", { source: "home", region: "Africa" });
+    });
+    expect(seen!.pendingIntent).not.toBeNull();
+
+    act(() => {
+      seen!.consumeIntent();
+    });
+    expect(seen!.pendingIntent).toBeNull();
+    expect(seen!.activeTab).toBe("protect");
+  });
+
+  it("never persists the intent — a reload cannot resurrect it", () => {
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    act(() => {
+      seen!.navigateWithIntent("protect", { source: "home", region: "Africa" });
+    });
+
+    for (const [key, value] of Object.entries(window.localStorage)) {
+      expect(value, `localStorage["${key}"]`).not.toContain("pendingIntent");
+      expect(value, `localStorage["${key}"]`).not.toContain("Africa");
+      expect(key).not.toBe("pendingIntent");
+    }
+  });
+});
+
 describe("NavigationContext — ?tab= doorway", () => {
   afterEach(() => {
     cleanup();

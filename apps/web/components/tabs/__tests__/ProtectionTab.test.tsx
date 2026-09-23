@@ -125,13 +125,19 @@ vi.mock("@/hooks/use-agent-status", () => ({
 const mockNavigateToSwap = vi.fn();
 const mockNavigateToGuardian = vi.fn();
 const mockConsumeCompareRequest = vi.fn();
-const navState = { compareRequested: false };
+const mockConsumeIntent = vi.fn();
+const navState: {
+  compareRequested: boolean;
+  pendingIntent: { tab: string; intent: { source: string; region?: string; asset?: string } } | null;
+} = { compareRequested: false, pendingIntent: null };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToSwap: mockNavigateToSwap,
     navigateToGuardian: mockNavigateToGuardian,
     compareRequested: navState.compareRequested,
     consumeCompareRequest: mockConsumeCompareRequest,
+    pendingIntent: navState.pendingIntent,
+    consumeIntent: mockConsumeIntent,
   }),
 }));
 
@@ -190,6 +196,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       legs,
       balancePreview,
       savedLegs,
+      sinceHint,
       controls,
     }: {
       strategyKey: string | null;
@@ -201,6 +208,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       legs?: { token: string; percent: number }[];
       balancePreview?: boolean;
       savedLegs?: { token: string; percent: number }[];
+      sinceHint?: string;
       controls?: React.ReactNode;
     }) => {
       const archetypeId = strategyToArchetype(strategyKey);
@@ -256,6 +264,13 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
         },
         badge,
         hole,
+        sinceHint
+          ? React.createElement(
+              "span",
+              { "data-testid": "shield-since-last-visit" },
+              sinceHint,
+            )
+          : null,
         React.createElement(
           "div",
           null,
@@ -363,23 +378,6 @@ vi.mock("@/components/agent/GuardianMobileWizard", () => ({
     React.createElement("div", { "data-testid": "guardian-mobile-wizard" }),
 }));
 
-vi.mock("@/components/tabs/protect/ProfileWizard", () => ({
-  default: () => React.createElement("div", { "data-testid": "profile-wizard" }),
-}));
-
-vi.mock("@/components/tabs/protect/RwaAssetCards", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/components/tabs/protect/RwaAssetCards")>();
-  return {
-    ...actual,
-    default: () => React.createElement("div", { "data-testid": "rwa-cards" }),
-  };
-});
-
-vi.mock("@/components/tabs/protect/OptimizationInsight", () => ({
-  default: () =>
-    React.createElement("div", { "data-testid": "optimization-insight" }),
-}));
-
 vi.mock("@/components/ui/EmptyState", () => ({
   default: () => React.createElement("div", { "data-testid": "empty-state" }),
 }));
@@ -463,6 +461,7 @@ describe("ProtectionTab — instrument shapes", () => {
     mockGuardianState = "idle";
     demoState.isActive = false;
     navState.compareRequested = false;
+    navState.pendingIntent = null;
     mockRouterQuery = {};
     mockSessionInfo.current = null;
     mockVisibility.current = "quiet";
@@ -1415,5 +1414,87 @@ describe("ProtectionTab — instrument shapes", () => {
       const line = screen.getByTestId("guardian-attribution");
       expect(line.textContent).not.toContain("decided in");
     });
+  });
+});
+
+describe("ProtectionTab — status tier budget + treasury intent", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = "africapitalism";
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.compareRequested = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    mockSessionInfo.current = null;
+    mockVisibility.current = "quiet";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("the status tier never exceeds three slots", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("status-tier")).toBeInTheDocument();
+    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
+    expect(document.querySelector('[data-status-slot="trust"]')).not.toBeNull();
+  });
+
+  it("sleeve open: the back button owns the transition slot, the rail entry steps aside", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("rwa-sleeve-entry"));
+    const transition = document.querySelector('[data-status-slot="transition"]');
+    expect(transition?.querySelector('[data-testid="rwa-sleeve-back"]')).not.toBeNull();
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+  });
+
+  it("region intent resolves to the in-region slice and consumes the intent", () => {
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", region: "Africa" },
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    // africapitalism's only Africa leg is KESm — the slice inspector opens.
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-selected", "KESm");
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it("consumes the intent without focusing while a balance preview is open", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    // Arm the intent, then open the preview — the effect consumes on the
+    // same render without touching the draft's focus.
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", region: "Africa" },
+    };
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+
+    expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-balance-preview", "true");
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-selected", "");
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+  });
+
+  it("consumes the intent without focusing on the picker shape (no plan)", () => {
+    mockFinancialStrategy = null;
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", region: "Africa" },
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
   });
 });

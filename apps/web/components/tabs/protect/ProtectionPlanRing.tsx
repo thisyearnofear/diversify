@@ -23,7 +23,7 @@ import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
-import { rwaLegFor } from './RwaAssetCards';
+import { rwaLegFor } from './rwa-assets';
 import { IXS_VAULT_BY_ID } from '@diversifi/shared/src/services/serv/ixs-vault-catalog';
 import type { VaultAllocation } from '@diversifi/shared/src/services/serv/rwa-allocator';
 
@@ -82,6 +82,8 @@ interface Props {
   sleeveVaults?: VaultAllocation[] | null;
   balancePreview?: boolean;
   savedLegs?: PlanLeg[];
+  /** Quiet memory — alignment change since the last visit; idle hole only. */
+  sinceHint?: string;
   controls?: React.ReactNode;
 }
 
@@ -100,6 +102,7 @@ export function ProtectionPlanRing({
   sleeveVaults = null,
   balancePreview = false,
   savedLegs = [],
+  sinceHint,
   controls,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
@@ -480,6 +483,19 @@ export function ProtectionPlanRing({
                   >
                     {hole.hint}
                   </span>
+                  {sinceHint &&
+                    !selectedToken &&
+                    !empty &&
+                    !balancePreview &&
+                    !sleeveOpen &&
+                    holeHintOverride === undefined && (
+                      <span
+                        data-testid="shield-since-last-visit"
+                        className="text-[10px] text-gray-400 dark:text-gray-500"
+                      >
+                        {sinceHint}
+                      </span>
+                    )}
                   {onHoleTap && !holeHintOverride && (
                     <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       Compare plans ▾

@@ -335,8 +335,9 @@ export function isTokenInflationHedge(symbol: string): boolean {
 
 // Helper to get token region (normalized)
 export function getTokenRegion(symbol: string): RegionValue {
-    const normalized = symbol.toUpperCase();
-    return TOKEN_METADATA[normalized]?.region ?? REGIONS.GLOBAL;
+    return TOKEN_METADATA[symbol]?.region
+        ?? TOKEN_METADATA[symbol.toUpperCase()]?.region
+        ?? REGIONS.GLOBAL;
 }
 
 // Single Source of Truth for Network Assets

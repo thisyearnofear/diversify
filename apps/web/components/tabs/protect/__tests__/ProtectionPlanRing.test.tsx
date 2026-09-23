@@ -755,3 +755,65 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.queryByText(/held/)).not.toBeInTheDocument();
   });
 });
+
+describe('ProtectionPlanRing — sinceHint (quiet memory in the hole)', () => {
+  it('shows the since-last-visit hint in the idle hole', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        sinceHint="up from 60% · 2d ago"
+      />,
+    );
+    expect(screen.getByTestId('shield-since-last-visit')).toHaveTextContent(
+      'up from 60% · 2d ago',
+    );
+  });
+
+  it('hides it when a token is selected', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken="cUSD"
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        sinceHint="steady · 2d ago"
+      />,
+    );
+    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
+  });
+
+  it('hides it while comparing (holeHintOverride set)', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+        holeHintOverride="under this plan"
+        sinceHint="steady · 2d ago"
+      />,
+    );
+    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
+  });
+
+  it('hides it during a balance preview', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        legs={legsForRisk(getArchetypeAllocations('africapitalism'), 'Conservative')}
+        balancePreview
+        selectedToken={null}
+        onSelectToken={() => {}}
+        sinceHint="steady · 2d ago"
+      />,
+    );
+    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
+  });
+});

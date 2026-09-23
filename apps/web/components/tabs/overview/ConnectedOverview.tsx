@@ -27,9 +27,9 @@ import { InspectorSheet } from "../../shared/InspectorSheet";
 import { InstrumentWait } from "../../shared/InstrumentWait";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
-import { DataFreshnessIndicator } from "../../shared/DataFreshnessIndicator";
 import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import { GuardianCadenceLine } from "../../shared/LiveProofCard";
+import { StatusTier } from "../../shared/StatusTier";
 
 interface ConnectedOverviewProps {
   isActive?: boolean;
@@ -96,7 +96,7 @@ export function ConnectedOverview({
     countryCode,
     frame,
   } = useCurrencyMoment();
-  const { navigateToCompare, navigateToNetting } = useNavigation();
+  const { navigateToCompare, navigateToNetting, navigateWithIntent } = useNavigation();
   const { config: profileConfig } = useProtectionProfile();
   const philosophyName = profileConfig.philosophy
     ? STRATEGIES.find((s) => s.id === profileConfig.philosophy)?.name ?? null
@@ -263,7 +263,12 @@ export function ConnectedOverview({
           </p>
           <button
             type="button"
-            onClick={() => setActiveTab("protect")}
+            onClick={() =>
+              navigateWithIntent("protect", {
+                source: "home",
+                region: selected.region,
+              })
+            }
             className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
           >
             Strengthen {selected.region} coverage in Shield
@@ -285,66 +290,57 @@ export function ConnectedOverview({
     </InspectorSheet>
   );
 
+  const transition = home.banner ? (
+    <ContextualBanner
+      placement="status"
+      kind={home.banner}
+      isDemo={isDemo}
+      demoValue={hasHoldings ? liveTotalValue : undefined}
+      userRegion={userRegion}
+      chainId={chainId}
+      address={address}
+      setActiveTab={setActiveTab}
+      onDisableDemo={onDisableDemo}
+      onEnableDemo={onEnableDemo}
+      onDismissFxCorridorHint={() => {
+        home.dismissFxCorridorHint();
+        navigateToNetting();
+      }}
+    />
+  ) : home.isPaymentCycle ? (
+    <button
+      type="button"
+      onClick={navigateToNetting}
+      className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+    >
+      Match this payment against a counterparty →
+    </button>
+  ) : home.primaryTip && hasHoldings ? (
+    <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
+  ) : philosophyName ? (
+    <button
+      type="button"
+      onClick={navigateToCompare}
+      className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+      data-testid="home-compare-link"
+    >
+      Compare philosophies →
+    </button>
+  ) : undefined;
+
   const status = (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-3">
-        <DataFreshnessIndicator
-          lastUpdated={portfolio.lastUpdated}
-          isStale={portfolio.isStale}
-          hasEstimates={portfolio.hasEstimates}
-          isDemo={isDemo}
-          isLoading={portfolio.isLoading}
-          error={chainErrors.length > 0 ? chainErrors[0] : null}
-          onRefresh={refreshBalances ? handleRefresh : undefined}
-        />
+    <StatusTier
+      trust={
         <div className="flex flex-col items-end gap-1">
           <VerifiedEvidence />
           {/* Informed mode only: the same measured cadence the compact proof
               card carries, kept right under the trust line it quantifies. */}
           <GuardianCadenceLine />
         </div>
-      </div>
-      {/* One transition line — the context decides which. */}
-      {home.isPaymentCycle ? (
-        <button
-          type="button"
-          onClick={navigateToNetting}
-          className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
-        >
-          Match this payment against a counterparty →
-        </button>
-      ) : home.primaryTip && hasHoldings ? (
-        <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
-      ) : philosophyName ? (
-        <button
-          type="button"
-          onClick={navigateToCompare}
-          className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
-          data-testid="home-compare-link"
-        >
-          Compare philosophies →
-        </button>
-      ) : null}
-      <ContextualBanner
-        placement="status"
-        kind={home.banner}
-        isDemo={isDemo}
-        demoValue={hasHoldings ? liveTotalValue : undefined}
-        userRegion={userRegion}
-        chainId={chainId}
-        address={address}
-        setActiveTab={setActiveTab}
-        onDisableDemo={onDisableDemo}
-        onEnableDemo={onEnableDemo}
-        onDismissFxCorridorHint={() => {
-          home.dismissFxCorridorHint();
-          navigateToNetting();
-        }}
-      />
-      {/* The persistent daily-G$ rail — morphs through claim states
-          (ready / verify / unlock / claimed); null when nothing to say. */}
-      <ClaimRail />
-    </div>
+      }
+      transition={transition}
+      rail={<ClaimRail />}
+    />
   );
 
   return (
@@ -361,6 +357,15 @@ export function ConnectedOverview({
         object={object}
         inspector={inspector}
         status={status}
+        portfolio={{
+          lastUpdated: portfolio.lastUpdated,
+          isStale: portfolio.isStale,
+          hasEstimates: portfolio.hasEstimates,
+          isDemo,
+          isLoading: portfolio.isLoading,
+          errors: chainErrors.length ? chainErrors : null,
+        }}
+        onRefresh={refreshBalances ? handleRefresh : undefined}
       />
     </div>
   );

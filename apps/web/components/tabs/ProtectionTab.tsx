@@ -71,8 +71,10 @@ import { InspectorSheet } from "../shared/InspectorSheet";
 import { TokenIcon } from "../shared/TokenIcon";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 import StatusBadge from "../shared/StatusBadge";
+import { StatusTier } from "../shared/StatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
-import { rwaLegFor } from "./protect/RwaAssetCards";
+import { resolveIntentFocus } from "@/lib/resolve-intent-focus";
+import { rwaLegFor } from "./protect/rwa-assets";
 import { RwaVaultSleeve } from "./protect/RwaVaultSleeve";
 import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
@@ -97,7 +99,7 @@ export default function ProtectionTab({
   refreshBalances,
 }: ProtectionTabProps) {
   const { address, chainId, isMiniPay } = useWalletContext();
-  const { navigateToSwap, navigateToGuardian, compareRequested, consumeCompareRequest } = useNavigation();
+  const { navigateToSwap, navigateToGuardian, compareRequested, consumeCompareRequest, pendingIntent, consumeIntent } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { visibility } = useGuardianVisibility();
@@ -397,16 +399,15 @@ export default function ProtectionTab({
     `shield-alignment:${strategyKey ?? "none"}`,
     hasPlan && alignment.score != null ? Math.round(alignment.score) : null,
   );
-  const alignmentSinceLine = (() => {
+  const alignmentSinceHint = (() => {
     if (!hasPlan || !previousAlignment || alignment.score == null) return null;
     const now = Date.now();
     if (now - previousAlignment.at < MIN_SNAPSHOT_AGE_MS) return null;
     const current = Math.round(alignment.score);
     const elapsed = formatElapsed(previousAlignment.at, now);
-    if (previousAlignment.value === current) {
-      return `Alignment steady at ${current}% since your last visit (${elapsed})`;
-    }
-    return `Since you were here (${elapsed}): alignment ${previousAlignment.value}% → ${current}%`;
+    if (previousAlignment.value === current) return `steady · ${elapsed}`;
+    const dir = current > previousAlignment.value ? "up" : "down";
+    return `${dir} from ${previousAlignment.value}% · ${elapsed}`;
   })();
 
   const shape = deriveShieldShape({
@@ -441,6 +442,39 @@ export default function ProtectionTab({
     }
     consumeCompareRequest();
   }, [compareRequested, hasPlan, shape, consumeCompareRequest]);
+
+  // Cross-tab intent (e.g. Home's "Strengthen {region} coverage in Shield"):
+  // resolve the question to a slice once the wallet has settled. Transient —
+  // consumed exactly once, never persisted. A balance-preview draft is never
+  // silently discarded: consume without focusing while previewing.
+  useEffect(() => {
+    if (pendingIntent?.tab !== "protect") return;
+    if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) return;
+    if (!balance.isPreviewing && hasPlan && shape !== "picker") {
+      const token = resolveIntentFocus(
+        pendingIntent.intent,
+        allocations,
+        heldPctByToken,
+      );
+      if (token) {
+        setComparing(false);
+        setFocusedToken(token);
+      }
+    }
+    consumeIntent();
+  }, [
+    pendingIntent,
+    address,
+    isDemo,
+    isLoading,
+    portfolio,
+    balance.isPreviewing,
+    hasPlan,
+    shape,
+    allocations,
+    heldPctByToken,
+    consumeIntent,
+  ]);
 
   const learnMix = useMemo(() => {
     const archetypeId = focusedPhilosophy
@@ -547,6 +581,7 @@ export default function ProtectionTab({
             }
             sleeveOpen={sleeveOpen}
             sleeveVaults={rwa.allocations}
+            sinceHint={alignmentSinceHint ?? undefined}
             controls={!comparing ? (
               <div className="mt-3">
                 <PlanFloorControl
@@ -1008,56 +1043,46 @@ export default function ProtectionTab({
     </InspectorSheet>
   );
 
+  // The compare/quiet/monitoring row is empty in the gap+biggestGap case
+  // (the CTA beneath the ring names the job) — don't burn the slot on it.
+  const statusRowEmpty =
+    !comparing &&
+    guardianState !== "monitoring" &&
+    shape === "gap" &&
+    !focusedToken &&
+    Boolean(biggestGap);
+
   const status = balance.isPreviewing ? (
-    <VerifiedEvidence />
+    <StatusTier trust={<VerifiedEvidence />} />
   ) : (
-    <div className="space-y-2 text-xs text-gray-600 dark:text-gray-300">
-      <div className="flex flex-wrap items-center gap-2">
-        {guardianState === "monitoring" ? (
-          <StatusBadge label="Guardian monitoring" tone="ready" compact />
-        ) : shape === "fund" ? (
-          <StatusBadge label="Wallet needs funds" tone="warning" compact />
-        ) : shape === "gap" ? (
-          <StatusBadge label="Plan needs review" tone="info" compact />
-        ) : (
-          <StatusBadge label="Choose a plan" tone="neutral" compact />
-        )}
-        <VerifiedEvidence className="ml-auto" />
-      </div>
-      {alignmentSinceLine && (
-        <p data-testid="shield-since-last-visit" className="text-[11px] text-gray-400 dark:text-gray-500">
-          {alignmentSinceLine}
-        </p>
-      )}
-      {/* RWA sleeve rail — the status/transition grammar (§5 rail 4). Plans
-          with an RWA leg reach the sleeve through the hatched wedge; every
-          other persona reaches it here. */}
-      {sleeveOpen ? (
-        <button
-          type="button"
-          data-testid="rwa-sleeve-back"
-          onClick={() => setFocusedToken(null)}
-          className="font-semibold text-blue-600 dark:text-blue-400"
-        >
-          ← Back to plan
-        </button>
-      ) : (
-        !comparing &&
-        planRingVisible &&
-        !sleeveHostSymbol &&
-        !focusedToken && (
+    <StatusTier
+      trust={
+        <div className="flex flex-wrap items-center gap-2">
+          {guardianState === "monitoring" ? (
+            <StatusBadge label="Guardian monitoring" tone="ready" compact />
+          ) : shape === "fund" ? (
+            <StatusBadge label="Wallet needs funds" tone="warning" compact />
+          ) : shape === "gap" ? (
+            <StatusBadge label="Plan needs review" tone="info" compact />
+          ) : (
+            <StatusBadge label="Choose a plan" tone="neutral" compact />
+          )}
+          <VerifiedEvidence className="ml-auto" />
+        </div>
+      }
+      transition={
+        sleeveOpen ? (
           <button
             type="button"
-            data-testid="rwa-sleeve-entry"
-            onClick={() => setFocusedToken(SLEEVE_ID)}
-            className="font-semibold text-blue-600 dark:text-blue-400"
+            data-testid="rwa-sleeve-back"
+            onClick={() => setFocusedToken(null)}
+            className="text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
-            RWA vaults: preview a yield sleeve →
+            ← Back to plan
           </button>
-        )
-      )}
-      <div className="flex items-center justify-between gap-3">
-      {comparing ? (
+        ) : statusRowEmpty ? undefined : (
+          <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
+          {comparing ? (
         <p data-testid="shield-compare-status">
           Comparing philosophies against your wallet ·{" "}
           <button
@@ -1116,8 +1141,30 @@ export default function ProtectionTab({
           Set up Guardian
         </button>
       )}
-      </div>
-    </div>
+          </div>
+        )
+      }
+      rail={
+        // RWA sleeve rail — the status/transition grammar (§5 rail 4). Plans
+        // with an RWA leg reach the sleeve through the hatched wedge; every
+        // other persona reaches it here. Never while the sleeve is open —
+        // its exit lives in the transition slot.
+        !sleeveOpen &&
+        !comparing &&
+        planRingVisible &&
+        !sleeveHostSymbol &&
+        !focusedToken ? (
+          <button
+            type="button"
+            data-testid="rwa-sleeve-entry"
+            onClick={() => setFocusedToken(SLEEVE_ID)}
+            className="text-xs font-semibold text-blue-600 dark:text-blue-400"
+          >
+            RWA vaults: preview a yield sleeve →
+          </button>
+        ) : undefined
+      }
+    />
   );
 
   if (!address && !isDemo) {
