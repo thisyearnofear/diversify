@@ -143,3 +143,93 @@ export function goodsEquivalentFor(
       : (Math.round(count * 10) / 10).toString();
   return `${n} ${anchor.unit}`;
 }
+
+// ── Fresh dated beats ────────────────────────────────────────────────
+//
+// The Firecrawl monitors spend credits only when a watched page CHANGES;
+// the webhook then anchors an AI-extracted MACRO_SIGNAL:* record to the
+// on-chain RecommendationLedger. The ticket reads those anchored records
+// through the shared proof feed (sessionStorage-cached, one fetch per
+// page) — so a corridor beat that reacts to the world costs zero
+// additional Firecrawl credits.
+
+/** A dated macro beat — supersedes a side's standing watch cadence
+ *  while fresh. The calendar produced a real event. */
+export interface CorridorSignal {
+  /** "Sep 18" */
+  dateLabel: string;
+  /** The extracted one-liner, source URL stripped, length-capped. */
+  text: string;
+}
+
+/** Minimal structural shape of a ledger record — decoupled from the
+ *  proof-feed response type so the selector stays pure. */
+export interface CorridorSignalRecord {
+  action: string;
+  targetToken: string;
+  reasoning: string;
+  /** Unix seconds. */
+  timestamp: number;
+}
+
+const MACRO_SIGNAL_PREFIX = 'MACRO_SIGNAL:';
+/** A beat stays "fresh" for two weeks — recent development, not flash. */
+export const SIGNAL_FRESH_MS = 14 * 24 * 60 * 60 * 1000;
+const MAX_BEAT_LEN = 110;
+
+function extractOneLiner(reasoning: string): string | null {
+  // The webhook stores `${oneLiner}. Source: ${url}` — split to recover
+  // the line without leaking the URL into the ticket.
+  const text = reasoning.includes('. Source:')
+    ? reasoning.split('. Source:')[0].trim()
+    : reasoning.trim();
+  if (!text) return null;
+  return text.length > MAX_BEAT_LEN
+    ? `${text.slice(0, MAX_BEAT_LEN - 1).trimEnd()}…`
+    : text;
+}
+
+function dateLabelFor(unixSeconds: number): string {
+  return new Date(unixSeconds * 1000).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+/**
+ * The freshest dated macro signal for each side of a pair, matched by
+ * fiat code (a Fed signal anchored as cUSD is about the dollar — it
+ * belongs to USDC/USDm/USDT pairs too). Newest-first; a same-fiat pair
+ * can take two different events of its shared currency. Returns null
+ * sides when nothing fresh exists — the standing watch cadence covers.
+ */
+export function corridorSignalsFor(
+  records: CorridorSignalRecord[] | null | undefined,
+  fromToken: string | null | undefined,
+  toToken: string | null | undefined,
+  nowMs: number = Date.now(),
+): { from: CorridorSignal | null; to: CorridorSignal | null } {
+  const fromCode = corridorSideFor(fromToken)?.code;
+  const toCode = corridorSideFor(toToken)?.code;
+  const out: { from: CorridorSignal | null; to: CorridorSignal | null } = {
+    from: null,
+    to: null,
+  };
+  if (!fromCode && !toCode) return out;
+
+  const sorted = [...(records ?? [])].sort((a, b) => b.timestamp - a.timestamp);
+  for (const rec of sorted) {
+    if (!rec.action.startsWith(MACRO_SIGNAL_PREFIX)) continue;
+    const age = nowMs - rec.timestamp * 1000;
+    if (age < 0 || age > SIGNAL_FRESH_MS) continue;
+    const code = corridorSideFor(rec.targetToken)?.code;
+    if (!code) continue;
+    const text = extractOneLiner(rec.reasoning);
+    if (!text) continue;
+    const signal = { dateLabel: dateLabelFor(rec.timestamp), text };
+    if (!out.from && code === fromCode) out.from = signal;
+    else if (!out.to && code === toCode) out.to = signal;
+    if (out.from && out.to) break;
+  }
+  return out;
+}

@@ -12,7 +12,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { corridorFor, type CorridorSide } from '@/lib/corridor-context';
+import { corridorFor, corridorSideFor, type CorridorSide, type CorridorSignal } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
 import { TokenIcon } from '../shared/TokenIcon';
@@ -41,28 +41,42 @@ export function CorridorLine({
   toToken,
   onInspect,
   alive = false,
+  signals,
 }: {
   fromToken: string;
   toToken: string;
   onInspect?: () => void;
   /** Browsing state (no amount typed, nothing loading). While true the
    *  top line breathes — it rotates between the provenance sentence and
-   *  each side's watch beat on a long dwell. The moment the user acts it
-   *  drops false and the line stills on the story: stillness is the
-   *  action state's privilege (§5). Reduced motion stays on beat 0. */
+   *  each side's beat on a long dwell. The moment the user acts it drops
+   *  false and the line stills on the story: stillness is the action
+   *  state's privilege (§5). Reduced motion stays on beat 0. */
   alive?: boolean;
+  /** Fresh dated macro beats from the anchored ledger (useCorridorSignals).
+   *  A live signal supersedes that side's standing watch cadence — the
+   *  calendar produced a real event. Null/absent → the cadence carries. */
+  signals?: { from: CorridorSignal | null; to: CorridorSignal | null } | null;
 }) {
   const corridor = corridorFor(fromToken, toToken);
   const a = provenanceFor(fromToken);
   const b = provenanceFor(toToken);
   const reduced = useReducedMotion();
   const story = a && b && a.symbol !== b.symbol ? `From ${a.phrase} to ${b.phrase}` : null;
-  // The beats only re-surface facts that already exist — the sentence,
-  // then each side's watch cadence. Rotation never invents a text block.
+  // A live signal reads like a dateline ("Sep 18 🇳🇬: CBN held…"); the
+  // standing cadence reads "Watch 🇳🇬: …". Same slot, different tense —
+  // rotation only ever re-surfaces facts that already exist.
+  const liveBeat = (token: string, sig: CorridorSignal | null): string | null =>
+    sig ? `${sig.dateLabel} ${corridorSideFor(token)?.flag ?? ''}: ${sig.text}` : null;
+  const fromBeat =
+    liveBeat(fromToken, signals?.from ?? null) ??
+    (a?.watch ? `Watch ${a.origin.flag}: ${a.watch.event} · ${a.watch.cadence}` : null);
+  const toBeat =
+    liveBeat(toToken, signals?.to ?? null) ??
+    (b?.watch ? `Watch ${b.origin.flag}: ${b.watch.event} · ${b.watch.cadence}` : null);
   const beats = [
     ...(story ? [story] : []),
-    ...(a?.watch ? [`Watch ${a.origin.flag}: ${a.watch.event} · ${a.watch.cadence}`] : []),
-    ...(b?.watch ? [`Watch ${b.origin.flag}: ${b.watch.event} · ${b.watch.cadence}`] : []),
+    ...(fromBeat ? [fromBeat] : []),
+    ...(toBeat ? [toBeat] : []),
   ];
   const [beat, setBeat] = useState(0);
   const rotating = alive && !reduced && beats.length > 1;

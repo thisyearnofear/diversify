@@ -11,6 +11,7 @@ import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import { CorridorLine, SIGNATURE_PAIRS, StoryPairStrip } from "./CorridorContext";
+import { useCorridorSignals } from "../../hooks/use-corridor-signals";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { SocialContactPicker } from "./SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
@@ -199,6 +200,11 @@ const SwapInterface = forwardRef<
   // (the ⇅ coin's shine loop, the corridor line's beat rotation). The
   // moment they act, `isBrowsing` drops and everything stills.
   const isBrowsing = !amount && !isLoading;
+
+  // Fresh dated beats from the anchored ledger — a real central-bank
+  // signal supersedes the standing watch cadence for that side. Reads
+  // the shared proof feed (sessionStorage-cached, zero Firecrawl cost).
+  const corridorSignals = useCorridorSignals(fromToken, toToken);
 
   const getChainName = (selectedChainId?: number | null) =>
     Object.values(NETWORKS).find((network) => network.chainId === selectedChainId)?.name;
@@ -458,6 +464,7 @@ const SwapInterface = forwardRef<
                 fromToken={fromToken}
                 toToken={toToken}
                 alive={isBrowsing}
+                signals={corridorSignals}
                 onInspect={
                   onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
                 }
@@ -468,6 +475,7 @@ const SwapInterface = forwardRef<
               fromToken={fromToken}
               toToken={toToken}
               alive={isBrowsing}
+              signals={corridorSignals}
               onInspect={
                 onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
               }

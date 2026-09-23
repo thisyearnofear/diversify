@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { corridorFor, corridorSideFor, goodsEquivalentFor } from '../corridor-context';
+import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 
@@ -179,6 +179,112 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
       .textContent!.split(/\s+/)
       .filter(Boolean);
     expect(words.length).toBeLessThanOrEqual(45);
+  });
+
+  it('rotates a live dated signal in place of the standing watch cadence', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <CorridorLine
+          fromToken="NGNm"
+          toToken="USDC"
+          alive
+          signals={{
+            from: { dateLabel: 'Sep 18', text: 'CBN held the benchmark rate' },
+            to: null,
+          }}
+        />,
+      );
+      const line = screen.getByTestId('corridor-line');
+      act(() => { vi.advanceTimersByTime(7000); });
+      // The dated event beat — dateline-led, not "Watch"-led.
+      expect(line).toHaveTextContent('Sep 18 🇳🇬: CBN held the benchmark rate');
+      // The NGN watch cadence is superseded; the USDC one still rotates in.
+      expect(line.textContent).not.toContain('CBN Monetary Policy Committee');
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(line).toHaveTextContent('Circle reserve attestations');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe('corridorSignalsFor — fresh dated beats from the anchored ledger', () => {
+  const NOW = Date.parse('2026-09-23T12:00:00Z');
+  const daysAgo = (d: number) => Math.floor((NOW - d * 86_400_000) / 1000);
+  const signal = (
+    targetToken: string,
+    oneLiner: string,
+    days: number,
+    action = 'MACRO_SIGNAL:RATE_HIKE',
+  ) => ({
+    action,
+    targetToken,
+    reasoning: `${oneLiner}. Source: https://cb.example/page`,
+    timestamp: daysAgo(days),
+  });
+
+  it('matches a signal to a side by fiat code, not token symbol', () => {
+    // A cUSD-anchored Fed signal belongs to the USDC side of KESm→USDC.
+    const out = corridorSignalsFor(
+      [signal('cUSD', 'The Fed held the benchmark rate steady', 2)],
+      'KESm',
+      'USDC',
+      NOW,
+    );
+    expect(out.from).toBeNull();
+    expect(out.to?.text).toBe('The Fed held the benchmark rate steady');
+    expect(out.to?.dateLabel).toMatch(/^[A-Z][a-z]{2} \d{1,2}$/);
+  });
+
+  it('takes the freshest matching signal per side', () => {
+    const out = corridorSignalsFor(
+      [
+        signal('KESm', 'Older CBK signal', 9),
+        signal('KESm', 'Newer CBK signal', 1),
+      ],
+      'KESm',
+      'PAXG',
+      NOW,
+    );
+    expect(out.from?.text).toBe('Newer CBK signal');
+    expect(out.to).toBeNull(); // gold has no fiat-mapped signal source
+  });
+
+  it('drops signals outside the freshness window and non-macro actions', () => {
+    const out = corridorSignalsFor(
+      [
+        signal('KESm', 'Too old to be a beat', 20),
+        signal('KESm', 'A rebalance, not a macro signal', 1, 'REBALANCE'),
+      ],
+      'KESm',
+      'USDC',
+      NOW,
+    );
+    expect(out.from).toBeNull();
+    expect(out.to).toBeNull();
+  });
+
+  it('lets a same-fiat pair take two different events of its currency', () => {
+    const out = corridorSignalsFor(
+      [
+        signal('USDC', 'Fed held rates', 1),
+        signal('USDm', 'CPI print cooled', 4),
+      ],
+      'USDC',
+      'USDm',
+      NOW,
+    );
+    expect(out.from?.text).toBe('Fed held rates');
+    expect(out.to?.text).toBe('CPI print cooled');
+  });
+
+  it('returns nulls when the feed is empty or the pair has no fiat side', () => {
+    expect(corridorSignalsFor([], 'KESm', 'USDC', NOW)).toEqual({ from: null, to: null });
+    expect(corridorSignalsFor(null, 'KESm', 'USDC', NOW)).toEqual({ from: null, to: null });
+    expect(
+      corridorSignalsFor([signal('KESm', 'CBK moved', 1)], 'ETH', 'CELO', NOW),
+    ).toEqual({ from: null, to: null });
   });
 });
 
