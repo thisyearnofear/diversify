@@ -164,6 +164,9 @@ export function useAgentChat({
       content: string,
       options?: {
         decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef;
+        /** The pair being asked about — symbols only; the server rebuilds
+         *  the facts from its curated registry. */
+        pair?: { from: string; to: string };
       },
     ) => {
       // Legibility preference flips are a fixed utterance class handled
@@ -662,6 +665,7 @@ export function useAgentChat({
             financialStrategy: getPersistedStrategy(),
             macroData: Object.keys(macroData).length > 0 ? macroData : undefined,
             contextRecords: options?.decisionRef ? [{ ...options.decisionRef }] : undefined,
+            pairContext: options?.pair ? { from: options.pair.from, to: options.pair.to } : undefined,
           }),
         });
 

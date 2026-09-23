@@ -377,6 +377,19 @@ link can't carry a fabricated score. The old `/share/[id]` page did the
 opposite — percentiles and ratings straight from query strings — and is
 retired to a redirect; its OG endpoint now ignores params entirely.
 
+The same inspector answers questions about the pair. "Ask Guardian
+about this pair →" sits next to the share line (only where a corridor
+or provenance exists) and sends exactly two things: the question and
+the two symbols. No fact text travels from the client — the server
+rebuilds the grounding itself in `formatPairFacts`, from the same
+curated registry the screen renders (token provenance, corridor,
+what-if), capped at 2,000 chars on line boundaries. The appended rules
+forbid claims outside the record ("say it isn't in DiversiFi's curated
+record rather than guessing"), forbid treating the figures as live FX,
+and forbid predictions — watch items are mechanisms and cadences, and
+the reverse direction is part of the same story. Walletless visitors
+get the same affordance: asking is free of wallet state.
+
 The beam is also a time machine. The corridor line's trailing "in 5
 years" is a segmented control — `1y · 3y · 5y` — that re-weighs the
 scale to that window's drift (the tilt literally recomputes, settling

@@ -30,11 +30,19 @@ export function useAdvisor() {
         includeVoiceInsights?: boolean;
         /** Journaled Guardian record attached for a grounded drill-down. */
         decisionRef?: import('../context/app/NavigationContext').GuardianDecisionRef;
+        /** The pair being asked about — symbols only, facts are
+         *  rebuilt server-side from the curated registry. */
+        pair?: { from: string; to: string };
       },
     ) => {
       addUserMessage(message);
       setDrawerOpen(true);
-      sendChatMessage(message, options?.decisionRef ? { decisionRef: options.decisionRef } : undefined);
+      sendChatMessage(
+        message,
+        options?.decisionRef || options?.pair
+          ? { ...(options.decisionRef ? { decisionRef: options.decisionRef } : {}), ...(options.pair ? { pair: options.pair } : {}) }
+          : undefined,
+      );
 
       if (!options?.includeVoiceInsights) {
         return;

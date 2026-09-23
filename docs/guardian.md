@@ -206,6 +206,25 @@ records which data sources were live (`defillama` / `coingecko` / `worldBank`)
 and whether inflation was quoted, so an advisory's evidential basis is
 reconstructible from the run log even after the fact.
 
+### Pair-grounded answers
+
+"Ask Guardian about this pair" (the pair inspector's second quiet line)
+grounds the advisor in the same curated facts the screen shows. The
+client sends only the two symbols (`pairContext: {from, to}`); the
+server rebuilds everything else in `formatPairFacts`
+(`apps/web/lib/agent/advisor-core.ts`), appended to the system prompt of
+both `runAdvisorConversation` and `runAdvisorConversationStream`:
+provenance (issuer / backing / keys / watch / checked-as-of), up to three
+dated risk events per side, the 5-year corridor line, and the labelled
+what-if — all from `token-provenance.ts` and `corridor-context.ts`, the
+modules the UI itself reads. Symbols must resolve to real Celo/Arbitrum
+list members; anything else yields no block. The rules text is fixed:
+the facts are authoritative for issuers, freeze powers, governance and
+dates; uncovered questions get "not in DiversiFi's curated record"; the
+figures are curated to the dataset's as-of label, never live FX; watch
+items are mechanisms and cadences, not direction calls; the reverse
+direction is part of the same story.
+
 ### Boundary note (two Guardians, one name)
 
 The autonomous-execution Guardian (this doc: `guardian-loop` + heartbeat +

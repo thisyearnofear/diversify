@@ -11,8 +11,10 @@ import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { FxNettingRail } from "@/components/business/FxNettingRail";
-import { corridorSideFor } from "@/lib/corridor-context";
+import { corridorFor, corridorSideFor } from "@/lib/corridor-context";
 import { pairCardContent } from "@/lib/pair-card";
+import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
+import { useAdvisor } from "@/hooks/use-advisor";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
@@ -141,6 +143,42 @@ function PairShareLine({ from, to }: { from: string; to: string }) {
   );
 }
 
+/** The pair is public knowledge — the question travels as two symbols
+ *  and the server grounds the answer in the same curated registry the
+ *  screen renders. Journeys and receipts never get this affordance. */
+function PairAskLine({
+  from,
+  to,
+  onClose,
+}: {
+  from: string;
+  to: string;
+  onClose: () => void;
+}) {
+  const { askAdvisor } = useAdvisor();
+  if (!corridorFor(from, to) && !provenanceFor(from) && !provenanceFor(to)) {
+    return null;
+  }
+
+  const ask = () => {
+    onClose();
+    askAdvisor(
+      `Tell me the story of ${from} → ${to}: what has happened between these currencies, who controls each token, and what should I watch?`,
+      { pair: { from, to } },
+    );
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={ask}
+      className="mt-2 min-h-11 px-1 text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+    >
+      Ask Guardian about this pair →
+    </button>
+  );
+}
+
 /** The pair inspector — route schematic plus the corridor context: what
  *  these two currencies are and how they've treated each other. The
  *  netting rail rides here too: counterparty matching is a settlement
@@ -205,6 +243,11 @@ function PairInspector({
             lead={lead}
           />
           <PairShareLine from={pair.fromToken} to={pair.toToken} />
+          <PairAskLine
+            from={pair.fromToken}
+            to={pair.toToken}
+            onClose={onClose}
+          />
         </>
       ) : null}
       {!isJourney && (

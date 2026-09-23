@@ -1,6 +1,8 @@
 import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
-import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS } from '@/config';
+import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
+import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS, NETWORK_TOKENS } from '@/config';
 import { isTabId, LEGACY_TAB_MAP } from '@/constants/tabs';
+import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
 
 /**
  * Resolve a raw [ACTION:NAVIGATE:xxx] tab name from the LLM into a real
@@ -44,6 +46,10 @@ type ConversationRequest = {
    *  answer should be grounded in the actual journaled record, not the
    *  user's paraphrase of it. */
   contextRecords?: Array<Record<string, unknown>>;
+  /** The pair the user asked about — two symbols only. Every fact is
+   *  rebuilt server-side from the curated registry; the client never
+   *  sends fact text. */
+  pairContext?: { from?: unknown; to?: unknown };
 };
 
 type AnalysisRequest = {
@@ -394,6 +400,105 @@ export function formatDecisionRecords(records?: Array<Record<string, unknown>>):
   return `\nGUARDIAN DECISION RECORDS (journaled by the Guardian loop — ground your answer in these, quote times and reasons as recorded):\n${entries.join('\n')}\n`;
 }
 
+// ── Pair facts ──────────────────────────────────────────────────────
+//
+// "Ask Guardian about this pair" sends only the two symbols; every fact
+// below is rebuilt server-side from the same curated modules the screen
+// renders (token-provenance + corridor-context), so the answer can never
+// carry client-supplied claims. Unknown or uncovered pairs yield ''.
+
+const PAIR_FACT_MAX_CHARS = 2000;
+const PAIR_FACT_NETWORKS = [42220, 42161];
+
+/** Canonical list spelling for a client-supplied symbol — only real
+ *  token-list members resolve; anything else (non-string, over-long,
+ *  unknown) is null. */
+function canonicalPairSymbol(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length === 0 || value.length > 12) return null;
+  const upper = value.toUpperCase();
+  for (const chainId of PAIR_FACT_NETWORKS) {
+    const hit = (NETWORK_TOKENS[chainId] ?? []).find((s) => s.toUpperCase() === upper);
+    if (hit) return hit;
+  }
+  return null;
+}
+
+/** Strip the flag/dingbat emoji from a corridor line for prompt text. */
+function stripEmoji(text: string): string {
+  return text
+    .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{1F3FB}-\u{1F3FF}\u{200D}]/gu, '')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+}
+
+function flatten(text: string): string {
+  return text.replace(/[\r\n]+/g, ' ');
+}
+
+export function formatPairFacts(pair?: { from?: unknown; to?: unknown }): string {
+  const from = canonicalPairSymbol(pair?.from);
+  const to = canonicalPairSymbol(pair?.to);
+  if (!from || !to) return '';
+
+  const symbols = [from, to];
+  // At least one side must have curated coverage — provenance or a
+  // corridor side — otherwise there is nothing honest to ground on.
+  if (!symbols.some((s) => provenanceFor(s) || corridorSideFor(s))) return '';
+
+  const lines: string[] = [];
+
+  for (const symbol of symbols) {
+    const prov = provenanceFor(symbol);
+    if (prov) {
+      const parts: string[] = [`${symbol}: ${prov.phrase}.`];
+      if (prov.issuer) parts.push(`Issuer: ${prov.issuer}.`);
+      if (prov.backing) parts.push(`Backing: ${prov.backing}.`);
+      if (prov.keys) parts.push(`Keys: ${prov.keys}.`);
+      if (prov.watch) parts.push(`Watch: ${prov.watch.event} (${prov.watch.cadence}).`);
+      if (prov.asOf) parts.push(`Checked ${prov.asOf}.`);
+      lines.push(flatten(parts.join(' ')));
+    }
+  }
+
+  const corridor = corridorFor(from, to);
+  if (corridor) lines.push(stripEmoji(corridor.line));
+
+  const whatIf = pairWhatIfFor(from, to, '5yr');
+  if (whatIf) {
+    lines.push(`What if (data to ${whatIf.dataAsOfLabel}): ${whatIfSentence(whatIf)}`);
+  }
+
+  // Dated events last — they're the most verbose lines, so the 2,000-char
+  // cap drops these before the pair-level corridor and what-if.
+  for (const symbol of symbols) {
+    const events = corridorSideFor(symbol)?.entry?.riskEvents;
+    if (events && events.length > 0) {
+      lines.push(`${symbol} — dated events:`);
+      for (const e of [...events].sort((a, b) => b.year - a.year).slice(0, 3)) {
+        lines.push(`- ${e.year}: ${flatten(e.event)} — ${flatten(e.impact)}`);
+      }
+    }
+  }
+
+  if (lines.length === 0) return '';
+
+  const asOf = currencyRiskAsOfLabel();
+  const header = `\nPAIR FACTS — ${from} → ${to} (DiversiFi's curated registry; the same facts shown on the user's screen):\n`;
+  const rules = `\nRules for answering about this pair: treat these facts as authoritative for issuers, backing, freeze powers, governance, dated events and the 5-year figures. Do not state any issuer, reserve, freeze-power, governance or date claim about these tokens that is not in these facts — if the user asks something they don't cover, say it isn't in DiversiFi's curated record rather than guessing. The figures are curated to ${asOf} and are not live exchange rates; say so whenever you quote one. Describe what to watch as mechanisms and cadences, never as predictions of direction. Do not present the move as a sure thing — the reverse direction is part of the same story.\n`;
+
+  // Cap the whole block at 2,000 chars on line boundaries — drop fact
+  // lines from the tail rather than splitting a claim mid-sentence.
+  const kept: string[] = [];
+  let used = header.length + rules.length;
+  for (const line of lines) {
+    if (used + line.length + 1 > PAIR_FACT_MAX_CHARS) break;
+    kept.push(line);
+    used += line.length + 1;
+  }
+  if (kept.length === 0) return '';
+  return `${header}${kept.join('\n')}${rules}`;
+}
+
 function getPortfolioContext(portfolio?: ConversationRequest['portfolio']): string {
   if (!portfolio) return '';
 
@@ -528,6 +633,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     strategyContext +
     brightDataContext +
     formatDecisionRecords(input.contextRecords) +
+    formatPairFacts(input.pairContext) +
     memoryContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
@@ -783,6 +889,7 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
     strategyContext +
     brightDataContext +
     formatDecisionRecords(input.contextRecords) +
+    formatPairFacts(input.pairContext) +
     memoryContext;
 
   const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [

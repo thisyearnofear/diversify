@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
@@ -16,6 +16,11 @@ vi.mock("@/components/wallet/WalletProvider", () => ({
 
 let mockNettingRequested = false;
 const mockConsumeNetting = vi.fn();
+const mockAskAdvisor = vi.fn();
+
+vi.mock("@/hooks/use-advisor", () => ({
+  useAdvisor: () => ({ askAdvisor: mockAskAdvisor }),
+}));
 
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
@@ -338,6 +343,42 @@ describe("ExchangeTab — instrument", () => {
     expect(writeText).toHaveBeenCalledWith(
       expect.stringContaining("/pair/NGNm/USDm"),
     );
+  });
+
+  it("pair inspector: the ask line calls askAdvisor with the pair question and closes the inspector", async () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("pair-row"));
+    const btn = await screen.findByRole("button", {
+      name: "Ask Guardian about this pair →",
+    });
+    fireEvent.click(btn);
+
+    expect(mockAskAdvisor).toHaveBeenCalledWith(
+      "Tell me the story of NGNm → USDm: what has happened between these currencies, who controls each token, and what should I watch?",
+      { pair: { from: "NGNm", to: "USDm" } },
+    );
+    // the inspector is closed — jsdom leaves the exiting node mid-fold,
+    // so assert the fold-out state rather than DOM removal
+    await waitFor(() =>
+      expect(screen.getByTestId("inspector-sheet")).toHaveStyle({
+        opacity: 0,
+      }),
+    );
+  });
+
+  it("pair inspector: the ask line renders on provenance alone — no corridor needed", async () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    // cUSD→USDC has no corridor, but USDC has curated provenance.
+    fireEvent.click(screen.getByTestId("quote-row"));
+    expect(
+      await screen.findByRole("button", { name: "Ask Guardian about this pair →" }),
+    ).toBeInTheDocument();
   });
 
   it("pair inspector: no share line when the corridor has nothing to say", async () => {

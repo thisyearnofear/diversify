@@ -1305,3 +1305,24 @@ a `?tab=` doorway. `/share/[id]` is retired to a redirect and
 user-supplied percentiles and scores, which broke the honesty
 contract. Receipts and journeys stay personal; only the pair is
 shareable.
+
+#### Ask Guardian about the pair — grounded in the same registry (2026-09-23)
+
+**840 tests passing** in the affected suites (89 files; `lib/agent`,
+`components/tabs`, `components/swap`, `hooks`, `lib`, `tests`).
+
+The pair inspector's second quiet line — "Ask Guardian about this pair
+→" — asks the story question with `pairContext: {from, to}` and nothing
+else; no fact text ever leaves the client. The server rebuilds the
+grounding in `formatPairFacts` (`lib/agent/advisor-core.ts`, appended to
+both conversation paths): provenance per side, up to three dated events
+per side, the 5-year corridor line, and the labelled what-if — the same
+curated modules the stage and card read, capped at 2,000 chars on line
+boundaries (dated events drop first). Symbols must resolve to real
+Celo/Arbitrum list members; unknown, non-string, or over-long input
+yields no block. The fixed rules text makes the facts authoritative,
+forbids claims outside the record and predictions of direction, and
+discloses the curated as-of label whenever a figure is quoted. Live
+check (Gemini): the NGNm→USDm answer named the Mento Reserve 1.42×
+backing, MENTO-holder governance, the CBN MPC cadence, and closed with
+"figures are curated to July 2025 and are not live exchange rates".
