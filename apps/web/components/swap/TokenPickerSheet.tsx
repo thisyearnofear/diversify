@@ -3,6 +3,9 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
 import Scrim from "../shared/Scrim";
 import { haptics } from "@/lib/haptics";
+import { springPop } from "@/lib/motion-tokens";
+// Deep leaf import — provenance facts are curated constants.
+import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 
 export interface TokenPickerItem {
   symbol: string;
@@ -98,8 +101,14 @@ export default function TokenPickerSheet({
   // "Show N more" — selection still rewrites the ticket, search still
   // covers all tokens. Resets when sheet opens.
   const [showAll, setShowAll] = useState(false);
+  // Coin-back flip: one row at a time shows its provenance (tapping the
+  // token's coin reveals its back — who issued it, who holds the keys).
+  const [flippedSymbol, setFlippedSymbol] = useState<string | null>(null);
   useEffect(() => {
-    if (isOpen) setShowAll(false);
+    if (isOpen) {
+      setShowAll(false);
+      setFlippedSymbol(null);
+    }
   }, [isOpen]);
   const hasQuery = query.trim().length > 0;
   const displayed = useMemo(() => {
@@ -200,27 +209,67 @@ export default function TokenPickerSheet({
               {displayed.map((item, idx) => {
                 const isSelected = item.symbol === selectedToken;
                 const hasBalance = (item.balanceValue || 0) > 0;
+                const provenance = provenanceFor(item.symbol);
+                const isFlipped = flippedSymbol === item.symbol;
                 return (
-                  <motion.button
+                  <motion.div
                     key={item.symbol}
-                    type="button"
-                    disabled={!item.compliant}
                     initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.18, delay: Math.min(idx * 0.03, 0.18) }}
-                    onClick={() => {
-                      onSelect(item.symbol);
-                      onClose();
-                    }}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors ${
                       isSelected
                         ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"
                         : item.compliant
-                          ? "hover:bg-gray-50 dark:hover:bg-gray-800 border border-transparent"
-                          : "opacity-45 cursor-not-allowed border border-transparent"
+                          ? "border border-transparent"
+                          : "opacity-45 border border-transparent"
                     }`}
                   >
-                    <TokenIcon symbol={item.symbol} size={36} className="shrink-0" />
+                    {/* The coin: tap to see its back (provenance). Only
+                        exists when there's a story — a coin with no back
+                        is just an icon. */}
+                    {provenance ? (
+                      <button
+                        type="button"
+                        aria-label={`About ${item.symbol}`}
+                        aria-pressed={isFlipped}
+                        onClick={() => setFlippedSymbol(isFlipped ? null : item.symbol)}
+                        className="shrink-0 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      >
+                        <motion.span
+                          key={String(isFlipped)}
+                          className="inline-flex"
+                          initial={reducedMotion ? false : { rotateY: 90, opacity: 0.3 }}
+                          animate={{ rotateY: 0, opacity: 1 }}
+                          transition={springPop}
+                        >
+                          <TokenIcon symbol={item.symbol} size={36} className="shrink-0" />
+                        </motion.span>
+                      </button>
+                    ) : (
+                      <TokenIcon symbol={item.symbol} size={36} className="shrink-0" />
+                    )}
+                    <button
+                      type="button"
+                      disabled={!item.compliant}
+                      onClick={() => {
+                        onSelect(item.symbol);
+                        onClose();
+                      }}
+                      className={`flex-1 min-w-0 flex items-center gap-3 text-left rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                        item.compliant && !isSelected ? "hover:bg-gray-50 dark:hover:bg-gray-800" : ""
+                      } ${!item.compliant ? "cursor-not-allowed" : ""}`}
+                    >
+                    {isFlipped && provenance ? (
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
+                          {provenance.origin.flag} {provenance.phrase}
+                        </div>
+                        <div className="text-xs text-gray-400 dark:text-gray-500 truncate">
+                          {provenance.issuer} · {provenance.keys}
+                        </div>
+                      </div>
+                    ) : (
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-1.5">
                         <span className="text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
@@ -251,6 +300,7 @@ export default function TokenPickerSheet({
                           : ""}
                       </div>
                     </div>
+                    )}
                     <div className="shrink-0 text-right flex flex-col items-end gap-1">
                       {isSelected && (
                         <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -266,7 +316,8 @@ export default function TokenPickerSheet({
                         </>
                       )}
                     </div>
-                  </motion.button>
+                    </button>
+                  </motion.div>
                 );
               })}
               {!hasQuery && hiddenCount > 0 && (

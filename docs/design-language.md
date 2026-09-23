@@ -250,7 +250,12 @@ ticket is also the pitch: the sentence arrives once with a small
 entrance, and a `StoryPairStrip` of signature pairs sits under it —
 tapping a chip rewrites the pair (selection rewrites the artefact).
 Only pairs with provenance on both sides are offered; no chip ever
-selects a story that isn't there.
+selects a story that isn't there. The coin-back gesture teaches
+provenance at the moment of choice: in `TokenPickerSheet`, tapping a
+token's icon flips the row to its reverse — flag + phrase on top,
+issuer + keys underneath — while the row body still selects. Tokens
+with no provenance entry get no flip; a coin with no back is just an
+icon.
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner
