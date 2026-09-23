@@ -11,7 +11,7 @@ import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
 import { CorridorLine, SIGNATURE_PAIRS, StoryPairStrip } from "./CorridorContext";
-import PairStage from "./PairStage";
+import PairStage, { type PairReceipt } from "./PairStage";
 import { useTokenPickerItems } from "./token-picker-items";
 import { useCorridorSignals } from "../../hooks/use-corridor-signals";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
@@ -65,6 +65,8 @@ interface SwapInterfaceProps {
       toContractCallData: string;
       toContractGasLimit: string;
   };
+  /** Claimable streak reward, shown on the settlement receipt. */
+  claim?: { label: string; onClaim(): void } | null;
 }
 
 const SwapInterface = forwardRef<
@@ -98,6 +100,7 @@ const SwapInterface = forwardRef<
     instrument = false,
     yieldHint = null,
     contractCall,
+    claim,
   },
   ref,
 ) {
@@ -139,6 +142,7 @@ const SwapInterface = forwardRef<
     viaHub,
     applyViaHub,
     leg2Hint,
+    acknowledgeCompletion,
     availableFromTokens,
     availableToTokens,
     tokenBalances,
@@ -234,6 +238,41 @@ const SwapInterface = forwardRef<
     if (forcedTicket) setMode("ticket");
   }, [forcedTicket]);
   const inTicket = mode === "ticket" || forcedTicket;
+
+  // Settlement receipt: the ticket hands a completed swap back to the
+  // stage as a sealed record instead of a modal. A via-hub leg-1
+  // completion carries leg2Hint and stays in the ticket for leg 2 —
+  // no receipt there.
+  const [receipt, setReceipt] = useState<PairReceipt | null>(null);
+  useEffect(() => {
+    if (status !== "completed" || leg2Hint) return;
+    setReceipt({
+      fromToken,
+      toToken,
+      amountIn: amount,
+      quotedOut: expectedOutput ?? null,
+      txHash: localTxHash,
+      chainId: fromChainId,
+      settledAt: Date.now(),
+    });
+    setAmount("");
+    acknowledgeCompletion();
+    setMode("stage");
+    try {
+      window.sessionStorage.removeItem("diversifi.exchange.mode");
+    } catch {}
+  }, [
+    status,
+    leg2Hint,
+    fromToken,
+    toToken,
+    amount,
+    expectedOutput,
+    localTxHash,
+    fromChainId,
+    setAmount,
+    acknowledgeCompletion,
+  ]);
 
   const wakeTicket = () => {
     setMode("ticket");
@@ -348,21 +387,38 @@ const SwapInterface = forwardRef<
               toToken={toToken}
               fromItems={stageFromItems}
               toItems={stageToItems}
-              onFromChange={setFromToken}
-              onToChange={setToToken}
-              onSwitch={handleSwitchTokens}
+              onFromChange={(v) => {
+                setReceipt(null);
+                setFromToken(v);
+              }}
+              onToChange={(v) => {
+                setReceipt(null);
+                setToToken(v);
+              }}
+              onSwitch={() => {
+                setReceipt(null);
+                handleSwitchTokens();
+              }}
               onWake={wakeTicket}
               onInspect={
                 onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
               }
               signals={corridorSignals}
               ctaLabel="Move savings"
+              receipt={receipt}
+              onDismissReceipt={() => setReceipt(null)}
+              onMoveMore={() => {
+                setReceipt(null);
+                wakeTicket();
+              }}
+              claim={claim}
             />
-            {storyPairs.length > 0 && (
+            {!receipt && storyPairs.length > 0 && (
               <StoryPairStrip
                 pairs={storyPairs}
                 active={{ from: fromToken, to: toToken }}
                 onPick={(from, to) => {
+                  setReceipt(null);
                   setFromToken(from);
                   setToToken(to);
                 }}

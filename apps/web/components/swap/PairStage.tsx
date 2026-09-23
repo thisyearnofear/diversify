@@ -21,8 +21,22 @@ import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/const
 import TokenPickerSheet, { type TokenPickerItem } from './TokenPickerSheet';
 import { ProvenanceCoinBack } from './ProvenanceCoinBack';
 import { CorridorLine } from './CorridorContext';
+import { goodsEquivalentFor } from '@/lib/corridor-context';
+import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
+
+/** What the ticket hands back to the pair on settlement — a snapshot of
+ *  the swap as it was quoted, never the modal's invented numbers. */
+export type PairReceipt = {
+  fromToken: string;
+  toToken: string;
+  amountIn: string;
+  quotedOut: string | null;
+  txHash: string | null;
+  chainId: number;
+  settledAt: number;
+};
 
 /** One end of the beam — the coin drops in on mount, then its wrapper
  *  counter-rotates against the beam so the flag stays upright. */
@@ -33,6 +47,7 @@ function BeamCoin({
   index,
   flipped,
   onFlip,
+  sealed = false,
 }: {
   symbol: string;
   layoutId: string;
@@ -40,6 +55,8 @@ function BeamCoin({
   index: number;
   flipped: boolean;
   onFlip: () => void;
+  /** Settlement seal — the mint-mark becomes a persistent emerald ✓. */
+  sealed?: boolean;
 }) {
   const reduced = useReducedMotion();
   const provenance = provenanceFor(symbol);
@@ -54,13 +71,32 @@ function BeamCoin({
     >
       <span className="relative inline-flex drop-shadow-md">
         <TokenIcon symbol={symbol} size={72} />
-        {flag && (
+        {sealed && !reduced && (
+          <motion.span
+            data-testid="receipt-seal"
+            aria-hidden
+            className="absolute inset-0 rounded-full border-2 border-emerald-500"
+            initial={{ scale: 0.9, opacity: 0.9 }}
+            animate={{ scale: 1.25, opacity: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut', delay: 1.25 }}
+          />
+        )}
+        {sealed ? (
           <span
             aria-hidden
-            className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[13px] leading-none ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700"
+            className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-[13px] leading-none text-white ring-1 ring-emerald-600 dark:bg-emerald-600"
           >
-            {flag}
+            ✓
           </span>
+        ) : (
+          flag && (
+            <span
+              aria-hidden
+              className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-white text-[13px] leading-none ring-1 ring-gray-200 dark:bg-gray-900 dark:ring-gray-700"
+            >
+              {flag}
+            </span>
+          )
         )}
       </span>
     </motion.span>
@@ -134,6 +170,10 @@ export function PairStage({
   onInspect,
   signals,
   ctaLabel,
+  receipt = null,
+  onDismissReceipt,
+  onMoveMore,
+  claim = null,
 }: {
   fromToken: string;
   toToken: string;
@@ -146,6 +186,10 @@ export function PairStage({
   onInspect?: () => void;
   signals: { from: CorridorSignal | null; to: CorridorSignal | null } | null;
   ctaLabel: string;
+  receipt?: PairReceipt | null;
+  onDismissReceipt?(): void;
+  onMoveMore?(): void;
+  claim?: { label: string; onClaim(): void } | null;
 }) {
   const reduced = useReducedMotion();
   const corridor = corridorFor(fromToken, toToken);
@@ -166,6 +210,29 @@ export function PairStage({
 
   const fromProvenance = provenanceFor(fromToken);
   const toProvenance = provenanceFor(toToken);
+
+  // Receipt copy — the quote is quoted, never presented as settled.
+  const receiptTitle =
+    receipt && fromProvenance && toProvenance
+      ? `Moved from ${fromProvenance.phrase} to ${toProvenance.phrase}`
+      : receipt
+        ? `Moved ${receipt.fromToken} → ${receipt.toToken}`
+        : null;
+  const fmtAmount = (s: string) => {
+    const n = Number.parseFloat(s);
+    const decimals = Math.min(6, s.split('.')[1]?.length ?? 0);
+    return Number.isFinite(n)
+      ? n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals })
+      : s;
+  };
+  const receiptAmounts = receipt
+    ? receipt.quotedOut
+      ? `${fmtAmount(receipt.amountIn)} ${receipt.fromToken} → ≈ ${fmtAmount(receipt.quotedOut)} ${receipt.toToken} at quote`
+      : `${fmtAmount(receipt.amountIn)} ${receipt.fromToken} → ${receipt.toToken}`
+    : null;
+  const receiptGoods = receipt?.quotedOut
+    ? goodsEquivalentFor(receipt.toToken, Number.parseFloat(receipt.quotedOut))
+    : null;
 
   return (
     <div data-testid="pair-stage" className="mx-auto w-full max-w-[340px]">
@@ -189,6 +256,24 @@ export function PairStage({
             aria-hidden
             className="absolute inset-x-[44px] top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-gray-400 dark:bg-white/25"
           />
+          {/* The receipt's one-shot confirm: the spent coin travels the
+              beam into the destination and fades — then the seal pulses. */}
+          {receipt && !reduced && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-x-[44px] top-1/2 h-0"
+            >
+              <motion.span
+                data-testid="receipt-travel"
+                className="absolute -ml-[10px] -mt-[10px] inline-flex"
+                initial={{ left: '0%', opacity: 0 }}
+                animate={{ left: '100%', opacity: [0, 1, 1, 0] }}
+                transition={{ duration: 0.9, ease: 'easeInOut', delay: 0.35 }}
+              >
+                <TokenIcon symbol={receipt.fromToken} size={20} />
+              </motion.span>
+            </div>
+          )}
           <BeamCoin
             symbol={fromToken}
             layoutId="pair-coin-from"
@@ -232,6 +317,7 @@ export function PairStage({
             index={1}
             flipped={flipped === 'to'}
             onFlip={() => setFlipped(flipped === 'to' ? null : 'to')}
+            sealed={Boolean(receipt)}
           />
         </motion.div>
 
@@ -267,25 +353,100 @@ export function PairStage({
         </div>
       </div>
 
-      <CorridorLine
-        fromToken={fromToken}
-        toToken={toToken}
-        alive
-        signals={signals}
-        onInspect={onInspect}
-      />
+      {receipt ? (
+        // Settlement receipt — the pair's record of the swap. Nothing
+        // rotates here; the travel + seal above were the confirm.
+        <div
+          data-testid="pair-receipt"
+          aria-live="polite"
+          className="mt-3 text-center"
+        >
+          <span className="sr-only">
+            Settled: {receipt.amountIn} {receipt.fromToken} to {receipt.toToken}
+          </span>
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+            {receiptTitle}
+          </p>
+          <p className="mt-1 text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
+            {receiptAmounts}
+          </p>
+          {receiptGoods && (
+            <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+              ≈ {receiptGoods} where it lands
+            </p>
+          )}
+          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            Settled on {chainDisplayName(receipt.chainId)}
+            {receipt.txHash && (
+              <>
+                {' · '}
+                <a
+                  href={explorerTxUrl(receipt.chainId, receipt.txHash)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline dark:text-blue-400"
+                >
+                  View transaction ↗
+                </a>
+              </>
+            )}
+          </p>
+          {claim && (
+            <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+              {claim.label}
+              {' · '}
+              <button
+                type="button"
+                onClick={claim.onClaim}
+                className="font-semibold hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+              >
+                Claim →
+              </button>
+            </p>
+          )}
+          <button
+            type="button"
+            data-testid="receipt-done"
+            onClick={() => {
+              haptics.tap();
+              onDismissReceipt?.();
+            }}
+            className="mt-3 w-full min-h-[48px] rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            Done
+          </button>
+          <button
+            type="button"
+            data-testid="receipt-move-more"
+            onClick={onMoveMore}
+            className="mt-1 w-full min-h-[32px] text-[11px] text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            Move more
+          </button>
+        </div>
+      ) : (
+        <>
+          <CorridorLine
+            fromToken={fromToken}
+            toToken={toToken}
+            alive
+            signals={signals}
+            onInspect={onInspect}
+          />
 
-      <button
-        type="button"
-        data-testid="pair-stage-wake"
-        onClick={() => {
-          haptics.tap();
-          onWake();
-        }}
-        className="mt-3 w-full min-h-[48px] rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-      >
-        {ctaLabel}
-      </button>
+          <button
+            type="button"
+            data-testid="pair-stage-wake"
+            onClick={() => {
+              haptics.tap();
+              onWake();
+            }}
+            className="mt-3 w-full min-h-[48px] rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            {ctaLabel}
+          </button>
+        </>
+      )}
 
       <TokenPickerSheet
         isOpen={pickerSide !== null}

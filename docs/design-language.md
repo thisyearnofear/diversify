@@ -319,6 +319,23 @@ session (`sessionStorage` `diversifi.exchange.mode`); any real intent —
 an amount, a quote in flight, a leg-2 hint, a phone recipient — forces
 the ticket, so Guardian/Home prefills never land on the stage.
 
+Settlement returns to the pair. A completed swap clears the amount,
+acknowledges the controller back to idle, and reopens the stage holding
+a `PairReceipt` — the spent coin travels the beam into the destination
+and a single emerald seal ring pulses once; the destination's mint-mark
+becomes a persistent ✓ for the receipt's life. That travel + seal is
+the one confirm — no confetti, nothing loops, the beam keeps its tilt
+because the history hasn't changed. The receipt's numbers are honest:
+the quoted output is labelled "at quote", never presented as the settled
+amount; a null quote shows no number at all. The goods line and the
+"Settled on {chain} · View transaction ↗" link carry the same provenance
+authority as the corridor line; a claimable reward gets one quiet
+emerald line. The casino modal is retired — "Swap Successful!", a
+fabricated "+5% Protection Score", and an "Annual Savings" estimate
+presented as fact all broke the honesty contract. A via-hub leg-1
+completion is the exception: it advances the ticket to leg 2 in place,
+with no receipt.
+
 Exchange's story is provenance: the pair teaches tokens as money
 with an origin. The corridor line leads with the provenance sentence
 ("from Kenya's floating shilling to allocated gold in a London vault")

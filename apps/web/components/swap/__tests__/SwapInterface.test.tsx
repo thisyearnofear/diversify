@@ -62,6 +62,12 @@ function resetCtrl(overrides: Record<string, unknown> = {}) {
     viaHub: null,
     applyViaHub: vi.fn(),
     leg2Hint: null,
+    // Mirrors the real controller: acknowledgement resets status AND the
+    // underlying step, so the sync effect can't bounce it back.
+    acknowledgeCompletion: vi.fn(() => {
+      ctrl.status = 'idle';
+      (ctrl.__tick as (() => void) | undefined)?.();
+    }),
     availableFromTokens: TOKENS,
     availableToTokens: TOKENS,
     tokenBalances: {},
@@ -241,5 +247,101 @@ describe('SwapInterface — story strip', () => {
     expect(screen.getByRole('button', { name: 'KESm to USDm' })).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('pair-stage-wake'));
     expect(screen.queryByRole('button', { name: 'KESm to USDm' })).not.toBeInTheDocument();
+  });
+});
+
+describe('SwapInterface — settlement receipt', () => {
+  const complete = (overrides: Record<string, unknown> = {}) =>
+    resetCtrl({
+      status: 'completed',
+      amount: '25',
+      expectedOutput: '24.90',
+      localTxHash: '0xabc123',
+      fromChainId: 42220,
+      ...overrides,
+    });
+
+  it('a completed swap returns to the stage with a receipt', () => {
+    complete();
+    renderSwap({ address: '0xabc' });
+    const receipt = screen.getByTestId('pair-receipt');
+    expect(receipt).toHaveTextContent('25 KESm → ≈ 24.90 USDm at quote');
+    expect(ctrl.acknowledgeCompletion).toHaveBeenCalled();
+    expect(ctrl.setAmount).toHaveBeenCalledWith('');
+    // The ticket is gone — the pair stage is the resting surface again.
+    expect(screen.queryByLabelText('From amount')).not.toBeInTheDocument();
+  });
+
+  it('a leg-2 completion stays in the ticket — no receipt', () => {
+    complete({ leg2Hint: 'Final step — swap USDm to KESm to finish the route' });
+    renderSwap({ address: '0xabc' });
+    expect(screen.queryByTestId('pair-receipt')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('From amount')).toBeInTheDocument();
+  });
+
+  it('acknowledgement does not bounce — the stage holds across rerenders', () => {
+    complete();
+    const { rerender } = renderSwap({ address: '0xabc' });
+    rerender(
+      <SwapInterface availableTokens={TOKENS} instrument address="0xabc" />,
+    );
+    expect(screen.getByTestId('pair-receipt')).toBeInTheDocument();
+    expect(screen.queryByLabelText('From amount')).not.toBeInTheDocument();
+  });
+
+  it('Done clears the receipt and returns to the normal stage', () => {
+    complete();
+    renderSwap({ address: '0xabc' });
+    fireEvent.click(screen.getByTestId('receipt-done'));
+    expect(screen.queryByTestId('pair-receipt')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pair-stage-wake')).toBeInTheDocument();
+  });
+
+  it('Move more wakes an empty ticket', () => {
+    complete();
+    renderSwap({ address: '0xabc' });
+    fireEvent.click(screen.getByTestId('receipt-move-more'));
+    const input = screen.getByLabelText('From amount') as HTMLInputElement;
+    expect(input.value).toBe('');
+    expect(sessionStorage.getItem('diversifi.exchange.mode')).toBe('ticket');
+  });
+
+  it('the transaction link uses the chain explorer', () => {
+    complete();
+    renderSwap({ address: '0xabc' });
+    const link = screen.getByRole('link', { name: /View transaction/ });
+    expect(link).toHaveAttribute('href', 'https://celo.blockscout.com/tx/0xabc123');
+    expect(link).toHaveAttribute('target', '_blank');
+  });
+
+  it('a null quote renders the no-quote line — never a settled amount', () => {
+    complete({ expectedOutput: null, localTxHash: null });
+    renderSwap({ address: '0xabc' });
+    const receipt = screen.getByTestId('pair-receipt');
+    expect(receipt).toHaveTextContent('25 KESm → USDm');
+    expect(receipt).not.toHaveTextContent('at quote');
+    expect(screen.queryByRole('link', { name: /View transaction/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the goods line for a goods-anchored destination', () => {
+    complete({ toToken: 'NGNm', expectedOutput: '1000000' });
+    renderSwap({ address: '0xabc' });
+    expect(screen.getByTestId('pair-receipt')).toHaveTextContent('where it lands');
+  });
+
+  it('omits the goods line when the destination has no goods anchor', () => {
+    complete({ toToken: 'USDC' });
+    renderSwap({ address: '0xabc' });
+    expect(screen.getByTestId('pair-receipt')).not.toHaveTextContent('where it lands');
+  });
+
+  it('passes a claim through to the receipt', () => {
+    complete();
+    const onClaim = vi.fn();
+    renderSwap({ address: '0xabc', claim: { label: '5 G$ ready', onClaim } });
+    const receipt = screen.getByTestId('pair-receipt');
+    expect(receipt).toHaveTextContent('5 G$ ready');
+    fireEvent.click(screen.getByRole('button', { name: 'Claim →' }));
+    expect(onClaim).toHaveBeenCalledTimes(1);
   });
 });

@@ -30,7 +30,6 @@ import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
 import ExperienceModeNotification from "../ui/ExperienceModeNotification";
-import SwapSuccessCelebration from "../swap/SwapSuccessCelebration";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { useMobile } from "../../hooks/use-mobile";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
@@ -63,7 +62,12 @@ export default function SwapTab({
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
-  const { recordSwap: recordStreakSwap, recordActivity } = useStreakRewards();
+  const {
+    recordSwap: recordStreakSwap,
+    recordActivity,
+    canClaim,
+    estimatedReward,
+  } = useStreakRewards();
   const flow = useClaimFlowContext();
   const { config: profileConfig, isComplete: profileComplete } =
     useProtectionProfile();
@@ -100,12 +104,9 @@ export default function SwapTab({
     targetChainId: number;
   } | null>(null);
 
-  // Success celebration state
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [previousGoalScore, setPreviousGoalScore] = useState<
-    number | undefined
-  >(undefined);
-  const [celebrationData, setCelebrationData] = useState<{
+  // The last submitted swap — feeds the completion side-effects below
+  // (streak, activity). The receipt itself lives in SwapInterface.
+  const [lastSwap, setLastSwap] = useState<{
     fromToken: string;
     toToken: string;
     amount: string;
@@ -128,12 +129,11 @@ export default function SwapTab({
     ) => void;
   }>(null);
 
-  // Get multichain balances for the header (also provides goalScores for celebration modal)
+  // Get multichain balances for the header
   const sharedPortfolio = usePortfolio();
   const {
     chains,
     allTokens,
-    goalScores,
     isLoading: isMultichainLoading,
     isStale: isMultichainStale,
     errors: multichainErrors,
@@ -248,13 +248,6 @@ export default function SwapTab({
   }, [tradeableTokens, searchQuery]);
 
   // Memoize handlers to prevent unnecessary re-renders in child components
-  const handleSwapSuccess = useCallback(() => {
-    setShowCelebration(false);
-    setCelebrationData(null);
-    setPreviousGoalScore(undefined);
-  }, []);
-
-  const handleClaimG = flow.handleClaim;
 
   const targetRegion = profileConfig.userRegion;
 
@@ -346,9 +339,9 @@ export default function SwapTab({
       setAutoSwitchNotice(null);
     }
   }, [walletChainId, autoSwitchNotice]);
-  // Completion side-effects (streak, experience, activity, celebration).
-  // The status surface itself lives in the ticket — SwapStatus inside
-  // SwapInterface owns every status moment now.
+  // Completion side-effects (streak, experience, activity). The
+  // settlement surface is the pair receipt — the celebration modal is
+  // retired; SwapStatus inside SwapInterface owns status moments.
   useEffect(() => {
     if (swapError) return;
 
@@ -357,30 +350,25 @@ export default function SwapTab({
       recordExperienceSwap();
 
       // Record streak activity for GoodDollar UBI if amount >= $1
-      if (celebrationData?.amount) {
-        const amountNum = parseFloat(celebrationData.amount);
+      if (lastSwap?.amount) {
+        const amountNum = parseFloat(lastSwap.amount);
         if (amountNum >= 1) {
           recordStreakSwap(amountNum);
         }
       }
 
       // Record cross-chain activity for testnet tracking
-      if (walletChainId && celebrationData) {
+      if (walletChainId && lastSwap) {
         recordActivity({
           action: "swap",
           chainId: walletChainId,
           networkType: isTestnetChain(walletChainId) ? "testnet" : "mainnet",
-          usdValue: parseFloat(celebrationData.amount),
+          usdValue: parseFloat(lastSwap.amount),
           txHash: swapTxHash || undefined,
         });
       }
 
       refreshWithRetries();
-
-      // Show celebration if we have swap data
-      if (celebrationData) {
-        setShowCelebration(true);
-      }
     }
   }, [
     swapError,
@@ -389,7 +377,7 @@ export default function SwapTab({
     refreshWithRetries,
     recordExperienceSwap,
     recordStreakSwap,
-    celebrationData,
+    lastSwap,
     recordActivity,
     walletChainId,
   ]);
@@ -412,21 +400,8 @@ export default function SwapTab({
       };
     }
 
-    // ENHANCEMENT: Store current goal score before swap for impact calculation
-    if (profileConfig.userGoal && goalScores) {
-      const currentScore =
-        profileConfig.userGoal === "inflation_protection"
-          ? goalScores.hedge
-          : profileConfig.userGoal === "geographic_diversification"
-            ? goalScores.diversify
-            : profileConfig.userGoal === "rwa_access"
-              ? goalScores.rwa
-              : 0;
-      setPreviousGoalScore(Math.round(currentScore));
-    }
-
-    // Store swap data for celebration (including inflation rates for savings calculation)
-    setCelebrationData({
+    // Remember the submitted swap for the completion side-effects.
+    setLastSwap({
       fromToken,
       toToken,
       amount,
@@ -507,6 +482,11 @@ export default function SwapTab({
             instrument={instrument}
             onInspectQuote={onInspectQuote}
             quoteInspected={quoteInspected}
+            claim={
+              canClaim
+                ? { label: `${estimatedReward} G$ ready`, onClaim: flow.handleClaim }
+                : null
+            }
           />
         </div>
       )}
@@ -673,41 +653,6 @@ export default function SwapTab({
           </>
         )}
       </div>
-
-      {/* Success Celebration Modal — passes user goal and live goal score for personalised display */}
-      {celebrationData && (
-        <SwapSuccessCelebration
-          isVisible={showCelebration}
-          onClose={handleSwapSuccess}
-          fromToken={celebrationData.fromToken}
-          toToken={celebrationData.toToken}
-          amount={celebrationData.amount}
-          chainId={celebrationData.chainId}
-          protectionScoreIncrease={5}
-          annualSavings={
-            parseFloat(celebrationData.amount) *
-            ((celebrationData.fromTokenInflation -
-              celebrationData.toTokenInflation) /
-              100)
-          }
-          userGoal={profileComplete ? profileConfig.userGoal : null}
-          goalScore={
-            goalScores
-              ? Math.round(
-                  profileConfig.userGoal === "inflation_protection"
-                    ? goalScores.hedge
-                    : profileConfig.userGoal === "geographic_diversification"
-                      ? goalScores.diversify
-                      : profileConfig.userGoal === "rwa_access"
-                        ? goalScores.rwa
-                        : 0,
-                )
-              : undefined
-          }
-          previousGoalScore={previousGoalScore}
-          onClaimG={handleClaimG}
-        />
-      )}
 
     </div>
   );

@@ -11,16 +11,24 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, renderHook } from "@testing-library/react";
 import { useSwapController } from "../use-swap-controller";
+
+// The underlying hook's step is mutable so tests can drive the
+// controller's status-sync effect through its real code path.
+let mockSwapStep = "idle";
+const mockSwapReset = vi.fn(() => {
+  mockSwapStep = "idle";
+});
 
 vi.mock("../use-swap", () => ({
   useSwap: () => ({
     swap: vi.fn(),
     error: null,
     txHash: null,
-    step: "idle",
+    step: mockSwapStep,
+    reset: mockSwapReset,
   }),
 }));
 
@@ -47,6 +55,11 @@ vi.mock("../use-streak-rewards", () => ({
   useStreakRewards: () => ({ recordSwap: vi.fn() }),
 }));
 
+beforeEach(() => {
+  mockSwapStep = "idle";
+  mockSwapReset.mockClear();
+});
+
 const CELO_CHAIN_ID = 42220;
 
 // CELO first — mirroring the held-first ordering real wallets produce
@@ -68,6 +81,38 @@ function renderController(overrides: Partial<Parameters<typeof useSwapController
     }),
   );
 }
+
+describe("useSwapController — initial amount + completion", () => {
+  it("starts with an empty amount — any amount forces the ticket", () => {
+    // Regression: the "10" default meant forcedTicket in SwapInterface
+    // was true for every visitor, so nobody ever saw the pair stage.
+    const { result } = renderController();
+    expect(result.current.amount).toBe("");
+  });
+
+  it("acknowledgeCompletion holds idle — the hook step is reset, not just status", () => {
+    const { result, rerender } = renderController();
+
+    // Drive the real sync path: hook step 'completed' → status completed.
+    act(() => {
+      mockSwapStep = "completed";
+    });
+    rerender();
+    expect(result.current.status).toBe("completed");
+
+    act(() => {
+      result.current.acknowledgeCompletion();
+    });
+    rerender();
+    expect(result.current.status).toBe("idle");
+    expect(mockSwapReset).toHaveBeenCalled();
+
+    // The hook no longer reports 'completed', so the sync effect cannot
+    // bounce the controller back on the next render.
+    rerender();
+    expect(result.current.status).toBe("idle");
+  });
+});
 
 describe("useSwapController — token sync", () => {
   it("heals uppercased prefill symbols to canonical list casing", () => {

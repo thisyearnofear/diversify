@@ -80,7 +80,10 @@ export function useSwapController({
 
   const [fromToken, setFromToken] = useState<string>(defaultFromToken);
   const [toToken, setToToken] = useState<string>(defaultToToken);
-  const [amount, setAmount] = useState<string>("10");
+  // Empty by default — any amount forces the ticket (SwapInterface's
+  // forcedTicket), so a prefilled "10" would hide the pair stage from
+  // every visitor.
+  const [amount, setAmount] = useState<string>("");
   const [slippageTolerance, setSlippageTolerance] = useState<number>(0.5);
   const [recipientAddress, setRecipientAddress] = useState<string | null>(null);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
@@ -139,6 +142,7 @@ export function useSwapController({
     errorClass: swapErrorClass,
     txHash: swapTxHash,
     step: swapStep,
+    reset: resetSwap,
   } = useSwap();
   const { expectedOutput, isLoading: isExpectedOutputLoading, quotedAt, refreshQuote } =
     useExpectedAmountOut({ fromToken, toToken, amount });
@@ -456,6 +460,16 @@ export function useSwapController({
     return HUB_TOKEN;
   }, [status, localErrorClass, fromChainId, toChainId, fromToken, toToken]);
 
+  // Dismiss a completed swap: a plain setStatus("idle") would bounce —
+  // the sync effect below re-maps the hook's still-"completed" step —
+  // so the underlying hook must be reset too.
+  const acknowledgeCompletion = useCallback(() => {
+    resetSwap();
+    setStatus("idle");
+    setLocalError(null);
+    setLocalErrorClass(null);
+  }, [resetSwap]);
+
   const applyViaHub = useCallback(() => {
     if (!viaHub) return;
     // Leg 1: X -> USDm. The original destination is remembered so a
@@ -568,6 +582,7 @@ export function useSwapController({
     viaHub,
     applyViaHub,
     leg2Hint,
+    acknowledgeCompletion,
 
     // items
     availableFromTokens,

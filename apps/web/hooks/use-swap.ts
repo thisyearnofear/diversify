@@ -398,6 +398,18 @@ export function useSwap() {
         }
     };
 
+    // Reset to idle — lets the controller dismiss a completed swap
+    // without its sync effect re-asserting "completed".
+    const reset = useCallback(() => {
+        setState({
+            step: 'idle',
+            isLoading: false,
+            error: null,
+            txHash: null,
+            approvalTxHash: null,
+        });
+    }, []);
+
     // Helper function to get estimated time
     const getEstimatedTime = (params: OrchestratorSwapParams): string => {
         if (ChainDetectionService.isCrossChain(params.fromChainId, params.toChainId)) {
@@ -470,5 +482,6 @@ export function useSwap() {
         chainId,
         isMiniPay,
         refreshChainId,
+        reset,
     };
 }

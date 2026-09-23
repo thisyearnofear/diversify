@@ -63,15 +63,21 @@ vi.mock("@/components/wallet/WalletProvider", () => ({
   }),
 }));
 
+let mockSwapTxHash: string | null = null;
+let mockSwapStep = "idle";
+
 vi.mock("@/hooks/use-swap", () => ({
   useSwap: () => ({
     swap: vi.fn(),
     isLoading: false,
     error: null,
-    txHash: null,
-    step: "idle",
+    txHash: mockSwapTxHash,
+    step: mockSwapStep,
   }),
 }));
+
+const mockRecordStreakSwap = vi.fn();
+const mockRecordActivity = vi.fn();
 
 vi.mock("@/hooks/use-streak-rewards", () => ({
   useStreakRewards: () => ({
@@ -79,8 +85,8 @@ vi.mock("@/hooks/use-streak-rewards", () => ({
     canClaim: false,
     isWhitelisted: false,
     estimatedReward: "0",
-    recordSwap: vi.fn(),
-    recordActivity: vi.fn(),
+    recordSwap: mockRecordStreakSwap,
+    recordActivity: mockRecordActivity,
   }),
 }));
 
@@ -103,10 +109,12 @@ vi.mock("@/hooks/use-protection-profile", () => ({
   }),
 }));
 
+const mockRecordExperienceSwap = vi.fn();
+
 vi.mock("@/context/app/ExperienceContext", () => ({
   useExperience: () => ({
     experienceMode: "advanced",
-    recordSwap: vi.fn(),
+    recordSwap: mockRecordExperienceSwap,
     shouldShowAdvancedFeatures: () => true,
     shouldShowIntermediateFeatures: () => true,
   }),
@@ -229,10 +237,6 @@ vi.mock("@/components/swap/SocialContactPicker", () => ({
   SocialContactPicker: () => null,
 }));
 
-vi.mock("@/components/swap/SwapSuccessCelebration", () => ({
-  default: () => null,
-}));
-
 vi.mock("@/components/rewards/StreakRewardsCard", () => ({
   StreakRewardsSection: () => null,
 }));
@@ -285,6 +289,8 @@ describe("SwapTab prefill — wallet auto-switch", () => {
     mockIsMiniPay = false;
     mockAddress = "0xtest";
     mockSwitchNetworkEnabled = true;
+    mockSwapTxHash = null;
+    mockSwapStep = "idle";
   });
 
   afterEach(() => {
@@ -508,5 +514,30 @@ describe("SwapTab prefill — wallet auto-switch", () => {
     const notice = screen.getByTestId("auto-switch-notice");
     expect(notice).toBeInTheDocument();
     expect(notice).toHaveTextContent(AUTO_SWITCH_NOTICE_COPY);
+  });
+});
+
+describe("SwapTab — settlement", () => {
+  beforeEach(() => {
+    mockSwapPrefill = null;
+    mockWalletChainId = 42220;
+    mockAddress = "0xtest";
+  });
+
+  afterEach(() => {
+    cleanup();
+    mockSwapTxHash = null;
+    mockSwapStep = "idle";
+  });
+
+  it("no celebration modal renders after completion — the receipt owns settlement", () => {
+    // The retired modal said "Swap Successful!" plus a fabricated score
+    // bump; settlement now returns to the pair as a receipt.
+    mockSwapTxHash = "0xabc";
+    mockSwapStep = "swapping";
+    render(<SwapTab userRegion="USA" inflationData={{}} />);
+    expect(document.body).not.toHaveTextContent("Swap Successful");
+    // The completion side-effect still runs.
+    expect(mockRecordExperienceSwap).toHaveBeenCalled();
   });
 });

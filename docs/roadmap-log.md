@@ -1188,7 +1188,7 @@ exercised.
 **1,756 tests passing** (204 files). Exchange no longer rests as a DEX-shaped form. At rest the object is the
 pair itself: `PairStage` weighs two currency coins on a balance beam whose
 tilt is the corridor's 5y drift (`Corridor.drift` — cross-rate, or the
-fiat's vs-gold track for gold pairs; capped at 10°, level under 5 pts).
+fiat's vs-gold track for gold pairs; √-scaled, capped at 14°, level under 5 pts).
 Coins drop in and the beam settles with a real scale's wobble; the ⇅
 fulcrum pivot swaps the sides; tapping a coin flips it to its shared
 `ProvenanceCoinBack`; labels open the same `TokenPickerSheet` the ticket
@@ -1198,3 +1198,25 @@ uses (items now built by the shared `useTokenPickerItems` hook). One CTA
 (`diversifi.exchange.mode`); amount/loading/leg-2/recipient force the
 ticket so prefills never land on the stage. The story strip now serves
 connected wallets too, leading with held tokens.
+
+#### Settlement receipt + the pair-stage entry fix (2026-09-23)
+
+**451 tests passing** in the affected suites (41 files; `components/swap`,
+`components/tabs`, `hooks`, `corridor-context`).
+
+The controller's `"10"` default amount made `forcedTicket` true for every
+visitor — nobody ever saw the stage. It's now `""` (any amount forces the
+ticket; an empty ticket is what the stage is for). `use-swap-controller`
+gains `acknowledgeCompletion()` — a plain `setStatus("idle")` bounced back
+because the sync effect re-read the swap hook's still-`completed` step;
+`useSwap` grew a `reset()`. `SwapSuccessCelebration` is deleted: "Swap
+Successful!", a fabricated "+5% Protection Score" fallback and an "Annual
+Savings" estimate all broke the honesty contract. Settlement now returns
+to the pair as a `PairReceipt` — the spent coin travels the beam, one
+emerald seal pulses, the destination mint-mark becomes a persistent ✓,
+and the text is quote-honest ("≈ {out} at quote", never a settled
+amount), with the goods equivalent and a real explorer link. A via-hub
+leg-1 completion stays in the ticket for leg 2 — no receipt. Streak,
+experience, activity and balance-refresh side-effects are unchanged; the
+claimable G$ line rides the receipt. `explorerTxUrl` moved to
+`apps/web/lib/explorer-url.ts`, shared by `SwapStatus` and the receipt.

@@ -1,6 +1,6 @@
 import React from "react";
-import { NETWORKS } from "../../config";
 import RiveNetPair from "../shared/RiveNetPair";
+import { explorerTxUrl } from "../../lib/explorer-url";
 import { codeCoinTint } from "../shared/palette";
 import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strategies/base-swap.strategy";
 
@@ -16,15 +16,6 @@ interface SwapStatusProps {
     /** Recovery offer: hub symbol (e.g. USDm) + handler refills the ticket. */
     viaHubSymbol?: string | null;
     onViaHub?: () => void;
-}
-
-const EXPLORER_BY_CHAIN: Record<number, string> = Object.fromEntries(
-    Object.values(NETWORKS).map((n) => [n.chainId, n.explorerUrl]),
-);
-
-function explorerTxUrl(chainId: number, txHash: string): string {
-    const base = EXPLORER_BY_CHAIN[chainId] ?? NETWORKS.CELO_MAINNET.explorerUrl;
-    return `${base}/tx/${txHash}`;
 }
 
 /** Per-class title/body — the number/line carries the meaning (§6). */

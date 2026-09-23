@@ -12,8 +12,16 @@
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import PairStage from '../PairStage';
+import PairStage, { type PairReceipt } from '../PairStage';
 import type { TokenPickerItem } from '../TokenPickerSheet';
+
+// framer-motion reads prefers-reduced-motion once via a cached
+// matchMedia — drive it through useReducedMotion instead.
+const reducedMotionState = { on: false };
+vi.mock('framer-motion', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('framer-motion')>();
+  return { ...actual, useReducedMotion: () => reducedMotionState.on };
+});
 
 afterEach(() => cleanup());
 beforeEach(() => sessionStorage.clear());
@@ -133,5 +141,126 @@ describe('PairStage', () => {
       .split(/\s+/)
       .filter(Boolean);
     expect(words.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('PairStage — settlement receipt', () => {
+  const receiptFor = (over: Partial<PairReceipt> = {}): PairReceipt => ({
+    fromToken: 'USDm',
+    toToken: 'NGNm',
+    amountIn: '100',
+    quotedOut: '61.20',
+    txHash: '0xabc123',
+    chainId: 42220,
+    settledAt: 1,
+    ...over,
+  });
+
+  const renderReceipt = (
+    receipt: Partial<PairReceipt> | null = {},
+    props: Partial<Parameters<typeof PairStage>[0]> = {},
+  ) =>
+    renderStage({
+      fromToken: 'USDm',
+      toToken: 'NGNm',
+      receipt: receipt === null ? null : receiptFor(receipt),
+      onDismissReceipt: vi.fn(),
+      onMoveMore: vi.fn(),
+      ...props,
+    });
+
+  it('replaces the corridor line with the sealed record', () => {
+    renderReceipt();
+    const receipt = screen.getByTestId('pair-receipt');
+    expect(receipt).toHaveTextContent('Moved from');
+    expect(receipt).toHaveTextContent('100 USDm → ≈ 61.20 NGNm at quote');
+    expect(receipt).toHaveTextContent('Settled on Celo');
+    expect(screen.queryByTestId('corridor-line')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('pair-stage-wake')).not.toBeInTheDocument();
+  });
+
+  it('announces the settlement politely', () => {
+    renderReceipt();
+    const live = screen.getByTestId('pair-receipt');
+    expect(live).toHaveAttribute('aria-live', 'polite');
+    expect(live).toHaveTextContent('Settled: 100 USDm to NGNm');
+  });
+
+  it('links the transaction to the chain explorer', () => {
+    renderReceipt();
+    const link = screen.getByRole('link', { name: /View transaction/ });
+    expect(link).toHaveAttribute('href', 'https://celo.blockscout.com/tx/0xabc123');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
+  });
+
+  it('renders the no-quote line when quotedOut is null — never a settled amount', () => {
+    renderReceipt({ quotedOut: null, txHash: null });
+    const receipt = screen.getByTestId('pair-receipt');
+    expect(receipt).toHaveTextContent('100 USDm → NGNm');
+    expect(receipt).not.toHaveTextContent('at quote');
+    expect(screen.queryByRole('link', { name: /View transaction/ })).not.toBeInTheDocument();
+  });
+
+  it.each(['NGNm', 'GHSm', 'KESm'])(
+    'shows the goods line for the %s destination',
+    (toToken) => {
+      renderStage({
+        fromToken: 'USDm',
+        toToken,
+        receipt: receiptFor({ toToken, quotedOut: '1000000' }),
+      });
+      expect(screen.getByTestId('pair-receipt')).toHaveTextContent('where it lands');
+    },
+  );
+
+  it('omits the goods line when the destination has no goods anchor', () => {
+    renderStage({
+      fromToken: 'NGNm',
+      toToken: 'USDC',
+      receipt: receiptFor({ toToken: 'USDC' }),
+    });
+    expect(screen.getByTestId('pair-receipt')).not.toHaveTextContent('where it lands');
+  });
+
+  it('shows the claim line and its action when claimable', () => {
+    const onClaim = vi.fn();
+    renderReceipt({}, { claim: { label: '5 G$ ready', onClaim } });
+    expect(screen.getByTestId('pair-receipt')).toHaveTextContent('5 G$ ready');
+    fireEvent.click(screen.getByRole('button', { name: 'Claim →' }));
+    expect(onClaim).toHaveBeenCalledTimes(1);
+  });
+
+  it('seals the destination coin — the mint-mark becomes a persistent ✓', () => {
+    renderReceipt();
+    // The flag mint-mark is swapped for the emerald check for the
+    // receipt's lifetime; the travel coin + seal ring play once.
+    expect(screen.getByTestId('pair-stage')).toHaveTextContent('✓');
+    expect(screen.getByTestId('receipt-travel')).toBeInTheDocument();
+    expect(screen.getByTestId('receipt-seal')).toBeInTheDocument();
+  });
+
+  it('reduced motion: the ✓ shows immediately with no travel or pulse', () => {
+    reducedMotionState.on = true;
+    renderReceipt();
+    expect(screen.getByTestId('pair-stage')).toHaveTextContent('✓');
+    expect(screen.queryByTestId('receipt-travel')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('receipt-seal')).not.toBeInTheDocument();
+    reducedMotionState.on = false;
+  });
+
+  it('Done dismisses; Move more hands back to the ticket', () => {
+    const props = renderReceipt();
+    fireEvent.click(screen.getByTestId('receipt-done'));
+    expect(props.onDismissReceipt).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByTestId('receipt-move-more'));
+    expect(props.onMoveMore).toHaveBeenCalledTimes(1);
+  });
+
+  it('the receipt stays under its 45-word budget', () => {
+    renderReceipt({}, { claim: { label: '5 G$ ready', onClaim: vi.fn() } });
+    const words = (screen.getByTestId('pair-receipt').textContent ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(45);
   });
 });
