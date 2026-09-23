@@ -194,6 +194,12 @@ const SwapInterface = forwardRef<
   const parsedAmount = Number.parseFloat(amount || "0");
   const isCrossChainRoute = ChainDetectionService.isCrossChain(fromChainId, toChainId);
 
+  // Motion is a state function (§5): while the user is browsing — no
+  // amount typed, no quote or execution in flight — the ticket breathes
+  // (the ⇅ coin's shine loop, the corridor line's beat rotation). The
+  // moment they act, `isBrowsing` drops and everything stills.
+  const isBrowsing = !amount && !isLoading;
+
   const getChainName = (selectedChainId?: number | null) =>
     Object.values(NETWORKS).find((network) => network.chainId === selectedChainId)?.name;
 
@@ -377,7 +383,17 @@ const SwapInterface = forwardRef<
               disabled={isLoading}
               aria-label="Switch tokens"
             >
-              <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" />
+              {/* While browsing, the coin glints — metal catching light
+                  is the ambient life, not decoration (§5 state rule).
+                  Reduced-motion is CSS-gated on the shine itself. */}
+              <Coin
+                size={40}
+                symbol="⇅"
+                color={QUIET_GRAY}
+                variant="asset"
+                shine={isBrowsing}
+                shineDuration={5.5}
+              />
             </motion.button>
           </div>
 
@@ -441,6 +457,7 @@ const SwapInterface = forwardRef<
               <CorridorLine
                 fromToken={fromToken}
                 toToken={toToken}
+                alive={isBrowsing}
                 onInspect={
                   onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
                 }
@@ -450,6 +467,7 @@ const SwapInterface = forwardRef<
             <CorridorLine
               fromToken={fromToken}
               toToken={toToken}
+              alive={isBrowsing}
               onInspect={
                 onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
               }

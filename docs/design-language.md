@@ -107,7 +107,8 @@ already paid for once.
 ## 5. Motion does work; tabs are instruments
 
 Animation budget goes to motion that *reveals, selects, or confirms* —
-not to ambient freshness.
+plus one ambient behaviour while the user is browsing (see the state
+rule below). What it never goes to is decoration during an action.
 
 Working motion (all framer-motion, **no GSAP** — one runtime, already in
 the bundle):
@@ -159,6 +160,56 @@ the motion budget. The field's one hero coin plays a single shine sweep
 after it lands (`shine="once"` delayed past its settle — the
 `InstrumentWait` grammar), and the AIChat empty-state greeting headline
 rises once via `MaskedReveal`. One occurrence each, then still.
+
+### Motion is a state function — browsing is alive, acting is still
+
+The tabs are not museums. While the user is *browsing* — reading,
+flicking, weighing a pair — the one expressive object may breathe:
+Exchange's ⇅ coin carries a slow shine loop (metal catching light; the
+motion IS the material, not decoration on it) and the corridor line
+rotates its beats — the provenance sentence, then each side's watch
+cadence — on a 7-second dwell. This is the difference from a DEX: the
+ticket feels inhabited before it's used.
+
+The moment the user *acts* — an amount typed, a preview open, a quote or
+execution in flight — the object stills completely. Stillness is how the
+instrument says "I'm listening"; ambient motion during an action reads
+as the app talking over you. `SwapInterface` derives `isBrowsing` (no
+amount, not loading) and passes `alive` down; `CorridorLine` settles
+back on the story beat when it drops.
+
+Rules for ambient life:
+
+- One ambient behaviour per object, long dwell (≥5s), never a pulsing CTA.
+- Ambient motion may only re-surface existing facts (a shine, a beat
+  rotation) — never introduce a new text block or a decorative loop.
+- Reduced motion gets identical content, static: the shine is CSS-gated
+  under `prefers-reduced-motion`, beat rotation is JS-gated.
+
+### The density contract — depth layers, finite verbs, owned motifs
+
+Each new primitive is cheap; the risk is the sum. Three rules keep it:
+
+**Depth layers.** Every fact lives at a layer: L0 the object itself, L1
+one line (the corridor sentence, the status tier), L2 the inspector
+(origin / backing / keys + event trail + watch), L3 Ask Guardian. New
+information *enters* at L2 or L3; promotion to L1 requires evicting
+what's already there. Verbosity is allowed behind a tap, never at rest.
+
+**Verbs are finite.** The gesture set is closed: tap selects or
+inspects, flip reveals the coin's back, flick browses a
+`FlickScrollRow`, preview drafts, commit persists. A new feature maps
+onto an existing verb; adding a gesture requires retiring one. Nouns
+are infinite — any artefact may carry the verbs.
+
+**Motifs have owners.** Home owns the coin stage + holdings row, Shield
+the ring, Exchange the ticket + story strip, Guardian the mark. A new
+motif needs an owner and displaces nothing else's claim — otherwise
+every surface wears every motif, which is the cards problem in a nicer
+costume.
+
+Tripwire: `corridor-context.test.tsx` asserts the resting corridor line
+stays under a word budget — sediment fails CI, not review.
 
 Each tab is an **instrument**, not a feed of cards:
 
@@ -260,7 +311,10 @@ icon. The inspector tells the story in three tenses: past (the dated
 backing, keys), future (`watch` — the cadence and mechanism that will
 decide what happens next, e.g. "CBN Monetary Policy Committee — how the
 float is defended is decided there", never an invented date or a
-predicted direction).
+predicted direction). While the ticket is browsed rather than used it
+stays alive (§5 state rule): the ⇅ switch coin carries a slow shine
+loop and the corridor line rotates between the story and each side's
+watch beat; the first keystroke in the amount field stills it.
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner
@@ -318,7 +372,11 @@ truthfully somewhere verifiable.
 - [ ] Name the object, what selection opens, the one CTA, and which
       persona morphs the object. A new `*Card` or `DisclosureSection`
       as a tab sibling is out of contract.
-- [ ] Motion reveals/selects/confirms; no ambient decoration.
+- [ ] Motion reveals/selects/confirms, or is the object's ONE ambient
+      browsing behaviour (shine loop, beat rotation) — total stillness
+      once the user acts.
+- [ ] New facts name their depth layer (L0 object / L1 line / L2
+      inspector / L3 Guardian); an L1 addition evicts, never stacks.
 - [ ] Reduced-motion path verified.
 - [ ] Disclaimers/honesty copy appear exactly once, in plain words.
 - [ ] No email form or input interrupting an emotional beat.

@@ -11,7 +11,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
@@ -137,6 +137,48 @@ describe('CorridorLine', () => {
   it('renders nothing for a pair with no fiat meaning and no story', () => {
     const { container } = render(<CorridorLine fromToken="ETH" toToken="CELO" />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('CorridorLine browsing state (§5: alive while browsing, still while acting)', () => {
+  it('rotates the top line through the story then each side\u2019s watch beat', () => {
+    vi.useFakeTimers();
+    try {
+      render(<CorridorLine fromToken="NGNm" toToken="USDC" alive />);
+      const line = screen.getByTestId('corridor-line');
+      expect(line).toHaveTextContent("From Nigeria's naira to Circle's");
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(line).toHaveTextContent('Watch');
+      expect(line).toHaveTextContent('CBN Monetary Policy Committee');
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(line).toHaveTextContent('Circle reserve attestations');
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(line).toHaveTextContent("From Nigeria's naira");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('stays on the story when not alive — stillness is the action state', () => {
+    vi.useFakeTimers();
+    try {
+      render(<CorridorLine fromToken="NGNm" toToken="USDC" />);
+      const line = screen.getByTestId('corridor-line');
+      act(() => { vi.advanceTimersByTime(30000); });
+      expect(line).toHaveTextContent("From Nigeria's naira");
+      expect(line.textContent).not.toContain('Watch');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('keeps the resting line inside the word budget (density contract)', () => {
+    render(<CorridorLine fromToken="NGNm" toToken="USDC" alive />);
+    const words = screen
+      .getByTestId('corridor-line')
+      .textContent!.split(/\s+/)
+      .filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(45);
   });
 });
 

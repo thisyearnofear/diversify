@@ -10,8 +10,8 @@
  * Both render nothing when the pair has no story to tell — absence is
  * honest.
  */
-import React from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import React, { useEffect, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { corridorFor, type CorridorSide } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
@@ -33,33 +33,82 @@ export const SIGNATURE_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['USDC', 'USDm'],
 ];
 
+/** Dwell per beat while the corridor line breathes (§5 state rule). */
+const BEAT_DWELL_MS = 7000;
+
 export function CorridorLine({
   fromToken,
   toToken,
   onInspect,
+  alive = false,
 }: {
   fromToken: string;
   toToken: string;
   onInspect?: () => void;
+  /** Browsing state (no amount typed, nothing loading). While true the
+   *  top line breathes — it rotates between the provenance sentence and
+   *  each side's watch beat on a long dwell. The moment the user acts it
+   *  drops false and the line stills on the story: stillness is the
+   *  action state's privilege (§5). Reduced motion stays on beat 0. */
+  alive?: boolean;
 }) {
   const corridor = corridorFor(fromToken, toToken);
   const a = provenanceFor(fromToken);
   const b = provenanceFor(toToken);
+  const reduced = useReducedMotion();
   const story = a && b && a.symbol !== b.symbol ? `From ${a.phrase} to ${b.phrase}` : null;
+  // The beats only re-surface facts that already exist — the sentence,
+  // then each side's watch cadence. Rotation never invents a text block.
+  const beats = [
+    ...(story ? [story] : []),
+    ...(a?.watch ? [`Watch ${a.origin.flag}: ${a.watch.event} · ${a.watch.cadence}`] : []),
+    ...(b?.watch ? [`Watch ${b.origin.flag}: ${b.watch.event} · ${b.watch.cadence}`] : []),
+  ];
+  const [beat, setBeat] = useState(0);
+  const rotating = alive && !reduced && beats.length > 1;
+  useEffect(() => {
+    if (!rotating) {
+      setBeat(0);
+      return;
+    }
+    const id = setInterval(() => {
+      // Cheap guard: a hidden tab doesn't cycle beats nobody can see.
+      if (document.visibilityState === 'visible') {
+        setBeat((i) => (i + 1) % beats.length);
+      }
+    }, BEAT_DWELL_MS);
+    return () => clearInterval(id);
+  }, [rotating, beats.length]);
   if (!story && !corridor) return null;
 
   const arrow = onInspect ? (
     <span className="font-semibold text-blue-600 dark:text-blue-400">→</span>
   ) : null;
+  const topLine = rotating ? (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.span
+        key={beat}
+        className="block text-xs font-semibold text-gray-700 dark:text-gray-300"
+        initial={{ opacity: 0, filter: 'blur(4px)' }}
+        animate={{ opacity: 1, filter: 'blur(0px)' }}
+        exit={{ opacity: 0, filter: 'blur(4px)' }}
+        transition={{ duration: 0.35 }}
+      >
+        {beats[beat]} {!corridor && arrow}
+      </motion.span>
+    </AnimatePresence>
+  ) : (
+    beats.length > 0 && (
+      <span className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+        {beats[0]} {!corridor && arrow}
+      </span>
+    )
+  );
   const body = (
     <>
-      {story && (
-        <span className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-          {story} {!corridor && arrow}
-        </span>
-      )}
+      {topLine}
       {corridor && (
-        <span className={`block text-[11px] text-gray-500 dark:text-gray-400${story ? ' mt-0.5' : ''}`}>
+        <span className={`block text-[11px] text-gray-500 dark:text-gray-400${beats.length > 0 ? ' mt-0.5' : ''}`}>
           {corridor.line} {arrow}
         </span>
       )}
