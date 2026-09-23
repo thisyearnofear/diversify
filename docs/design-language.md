@@ -245,7 +245,12 @@ and pairs with no fiat meaning still tell a story (USDC vs USDm is
 governance, not FX). The persona picks which line leads — the same
 three facts, reordered: Islamic finance reads Backing first
 (interest-bearing or not), Buen Vivir reads Keys first (who governs),
-everything else reads Origin first (`leadForStrategy`).
+everything else reads Origin first (`leadForStrategy`). Walletless, the
+ticket is also the pitch: the sentence arrives once with a small
+entrance, and a `StoryPairStrip` of signature pairs sits under it —
+tapping a chip rewrites the pair (selection rewrites the artefact).
+Only pairs with provenance on both sides are offered; no chip ever
+selects a story that isn't there.
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner

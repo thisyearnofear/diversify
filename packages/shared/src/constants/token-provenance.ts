@@ -187,6 +187,28 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
     asOf: '2026-09-23',
   },
   {
+    symbol: 'NGNm',
+    phrase: "Nigeria's naira",
+    origin: {
+      flag: '🇳🇬',
+      place: 'Nigeria',
+      authority: 'Central Bank of Nigeria',
+      regime: 'Floated in June 2023 when the FX windows were unified',
+    },
+    issuer: 'Mento',
+    backing: MENTO_RESERVE_BACKING,
+    keys: MENTO_KEYS,
+    moment: {
+      year: 2023,
+      text: 'The Tinubu government unified the exchange rates; the naira devalued about 40% as it floated, with more losses into 2024',
+    },
+    sources: [
+      ...MENTO_SOURCES,
+      { label: 'Central Bank of Nigeria', url: 'https://www.cbn.gov.ng/' },
+    ],
+    asOf: '2026-09-23',
+  },
+  {
     symbol: 'EURm',
     phrase: 'the euro',
     origin: {
@@ -262,6 +284,28 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
     backing: 'Cash and short-dated US Treasuries, mostly in a BlackRock-managed money market fund; monthly Big Four assurance',
     keys: 'Circle can freeze addresses',
     sources: [{ label: 'Circle transparency', url: 'https://www.circle.com/transparency' }],
+    asOf: '2026-09-23',
+  },
+  {
+    symbol: 'USDT',
+    phrase: "Tether's attested dollar",
+    origin: {
+      flag: '🇺🇸',
+      place: 'United States dollar',
+      authority: 'Tether (BVI)',
+      regime: 'Dollar-pegged; quarterly attestations, not a full audit',
+    },
+    issuer: 'Tether',
+    backing: 'Reserves of mostly US Treasury bills, repos and cash, attested quarterly — no full audit to date',
+    keys: 'Tether can freeze and blacklist addresses, and has done so at law-enforcement requests',
+    moment: {
+      year: 2022,
+      text: 'During Terra\u2019s collapse USDT briefly slipped below $0.95; Tether honoured over $7bn of redemptions in days and the peg held',
+    },
+    sources: [
+      { label: 'Tether transparency', url: 'https://tether.to/en/transparency/' },
+      { label: 'BDO attestation, Q4 2022', url: 'https://assets.ctfassets.net/vyse88cgwfbl/53L8YRM4ZHCEeqlpKbc3Q8/2e6cbcd1593b3e5ea867718c5938d6c8/Std_ISAE_3000R_Opinion_BDO_31-12-2022_Tether_CRR.pdf' },
+    ],
     asOf: '2026-09-23',
   },
   {

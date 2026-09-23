@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useSwapController } from "../../hooks/use-swap-controller";
 // Deep leaf imports — NOT the barrel — keep the swap/ethers stack out of first-load.
@@ -10,7 +10,8 @@ import ChainSelector from "./ChainSelector";
 import ExpectedOutputCard from "./ExpectedOutputCard";
 import InflationInsightRow from "./InflationInsightRow";
 import SwapStatus from "./SwapStatus";
-import { CorridorLine } from "./CorridorContext";
+import { CorridorLine, SIGNATURE_PAIRS, StoryPairStrip } from "./CorridorContext";
+import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { SocialContactPicker } from "./SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
 import SwapActionButton from "./SwapActionButton";
@@ -159,6 +160,31 @@ const SwapInterface = forwardRef<
     preferredFromRegion,
     preferredToRegion,
   });
+
+  // Walletless story strip: signature pairs the ticket can flip between.
+  // Lead with the visitor's own region token when it has a story; the
+  // rest are the curated pairs. Only pairs whose tokens are actually in
+  // the list AND have provenance on both sides are offered — no chip
+  // ever selects a pair that can't tell its story.
+  const storyPairs = useMemo(() => {
+    if (address) return [] as ReadonlyArray<readonly [string, string]>;
+    const hasStory = (symbol: string) =>
+      availableTokens.some((t) => t.symbol === symbol) && provenanceFor(symbol);
+    const regionToken = preferredFromRegion
+      ? availableTokens.find((t) => t.region === preferredFromRegion)?.symbol
+      : undefined;
+    const pairs: [string, string][] = [];
+    if (regionToken && regionToken !== "USDm" && hasStory(regionToken) && hasStory("USDm")) {
+      pairs.push([regionToken, "USDm"]);
+    }
+    for (const [f, t] of SIGNATURE_PAIRS) {
+      if (pairs.length >= 4) break;
+      if (f === t || !hasStory(f) || !hasStory(t)) continue;
+      if (pairs.some(([pf, pt]) => pf === f && pt === t)) continue;
+      pairs.push([f, t]);
+    }
+    return pairs;
+  }, [address, availableTokens, preferredFromRegion]);
 
   const { data: yieldData } = useBestYield(address ?? null);
   const resolvedYieldHint =
@@ -399,17 +425,47 @@ const SwapInterface = forwardRef<
             />
           )}
 
-          {/* Corridor context — the two currencies behind this pair and
-              their 5-year relationship. One quiet line; the full story is
-              one tap away in the pair inspector. Absent (never padded)
-              when the pair has no fiat meaning. */}
-          <CorridorLine
-            fromToken={fromToken}
-            toToken={toToken}
-            onInspect={
-              onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
-            }
-          />
+          {/* Corridor context — the two currencies behind this pair:
+              the provenance sentence over the 5y track, tappable into
+              the pair inspector. Walletless, it arrives once with a
+              small entrance — the story feels found, not printed — and
+              the signature-pair strip below lets visitors flip between
+              stories. Connected, the line is status and stays still.
+              Absent (never padded) when the pair has no story. */}
+          {!address ? (
+            <motion.div
+              initial={reducedMotion ? false : { opacity: 0, y: 6, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={springSoft}
+            >
+              <CorridorLine
+                fromToken={fromToken}
+                toToken={toToken}
+                onInspect={
+                  onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+                }
+              />
+            </motion.div>
+          ) : (
+            <CorridorLine
+              fromToken={fromToken}
+              toToken={toToken}
+              onInspect={
+                onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+              }
+            />
+          )}
+
+          {!address && storyPairs.length > 0 && (
+            <StoryPairStrip
+              pairs={storyPairs}
+              active={{ from: fromToken, to: toToken }}
+              onPick={(from, to) => {
+                setFromToken(from);
+                setToToken(to);
+              }}
+            />
+          )}
 
           {/* Recipient — the destination can be a person, not just a
               wallet. A quiet affordance on the ticket, not a separate

@@ -56,18 +56,27 @@ export function useSwapController({
   }, [preferredFromRegion, availableTokens]);
 
   const defaultToToken = useMemo(() => {
-    return preferredToRegion
+    const candidate = (preferredToRegion
       ? availableTokens.find((token) => token.region === preferredToRegion)
-        ?.symbol ||
+        ?.symbol
+      : undefined) ||
       availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")
         ?.symbol ||
       availableTokens[1]?.symbol ||
-      ""
-      : availableTokens.find((token) => token.symbol.toUpperCase() === "EURm")
-        ?.symbol ||
-      availableTokens[1]?.symbol ||
       "";
-  }, [preferredToRegion, availableTokens]);
+    // A destination equal to the source dead-ends the ticket (and its
+    // provenance story) — fall back to USDm, then any other token.
+    if (candidate === defaultFromToken) {
+      return (
+        availableTokens.find(
+          (token) => token.symbol === "USDm" && token.symbol !== candidate
+        )?.symbol ||
+        availableTokens.find((token) => token.symbol !== candidate)?.symbol ||
+        candidate
+      );
+    }
+    return candidate;
+  }, [preferredToRegion, availableTokens, defaultFromToken]);
 
   const [fromToken, setFromToken] = useState<string>(defaultFromToken);
   const [toToken, setToToken] = useState<string>(defaultToToken);

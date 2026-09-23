@@ -14,7 +14,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor } from '../corridor-context';
-import { CorridorLine, CorridorDetail, leadForStrategy } from '@/components/swap/CorridorContext';
+import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 
 afterEach(() => cleanup());
@@ -208,5 +208,28 @@ describe('CorridorDetail', () => {
   it('renders nothing for a pair with no fiat meaning', () => {
     const { container } = render(<CorridorDetail fromToken="ETH" toToken="CELO" />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('StoryPairStrip', () => {
+  it('marks the active pair and picking a chip rewrites the ticket', () => {
+    const onPick = vi.fn();
+    render(
+      <StoryPairStrip
+        pairs={[['NGNm', 'USDm'], ['XOFm', 'EURm']]}
+        active={{ from: 'NGNm', to: 'USDm' }}
+        onPick={onPick}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'NGNm to USDm' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'XOFm to EURm' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'XOFm to EURm' }));
+    expect(onPick).toHaveBeenCalledWith('XOFm', 'EURm');
   });
 });

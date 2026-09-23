@@ -11,8 +11,27 @@
  * honest.
  */
 import React from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { corridorFor, type CorridorSide } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
+import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
+import { TokenIcon } from '../shared/TokenIcon';
+import { springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
+
+/** Signature pairs for the walletless story strip — chosen to show the
+ *  range of stories (a floated currency, a colonial-era euro peg, an
+ *  attested dollar vs a reserve-governed one). Only pairs whose tokens
+ *  are in the wallet's list AND have provenance are rendered. */
+export const SIGNATURE_PAIRS: ReadonlyArray<readonly [string, string]> = [
+  ['NGNm', 'USDm'],
+  ['KESm', 'USDm'],
+  ['XOFm', 'EURm'],
+  ['BRLm', 'USDm'],
+  ['GBPm', 'USDm'],
+  ['COPm', 'USDm'],
+  ['USDT', 'USDm'],
+  ['USDC', 'USDm'],
+];
 
 export function CorridorLine({
   fromToken,
@@ -103,6 +122,84 @@ function SideTrack({ side }: { side: CorridorSide }) {
         </p>
       )}
     </div>
+  );
+}
+
+/** Walletless story strip — a quiet row of signature pairs under the
+ *  ticket; tapping one rewrites the ticket (selection rewrites the
+ *  artefact, §5) and its provenance sentence. Icons only plus symbols —
+ *  the sentence below is the explanation, so no captions. */
+export function StoryPairStrip({
+  pairs,
+  active,
+  onPick,
+}: {
+  pairs: ReadonlyArray<readonly [string, string]>;
+  active: { from: string; to: string };
+  onPick: (from: string, to: string) => void;
+}) {
+  return (
+    <FlickScrollRow
+      chevrons={false}
+      edgeSize={16}
+      fade="slate"
+      className="mt-2 gap-2 pb-1"
+      data-testid="story-pair-strip"
+    >
+      {pairs.map(([from, to], i) => (
+        <StoryPairChip
+          key={`${from}-${to}`}
+          from={from}
+          to={to}
+          index={i}
+          isActive={active.from === from && active.to === to}
+          onPick={onPick}
+        />
+      ))}
+    </FlickScrollRow>
+  );
+}
+
+function StoryPairChip({
+  from,
+  to,
+  index,
+  isActive,
+  onPick,
+}: {
+  from: string;
+  to: string;
+  index: number;
+  isActive: boolean;
+  onPick: (from: string, to: string) => void;
+}) {
+  const didDragRef = useDidDrag();
+  const reduced = useReducedMotion();
+  return (
+    <motion.button
+      type="button"
+      aria-pressed={isActive}
+      aria-label={`${from} to ${to}`}
+      initial={reduced ? false : { opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...springSoft, delay: reduced ? 0 : index * STAGGER_STEP_S }}
+      onClick={() => {
+        if (!didDragRef.current) onPick(from, to);
+      }}
+      className={`flex shrink-0 snap-start items-center rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+        isActive
+          ? 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200'
+          : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
+      }`}
+    >
+      <span className="flex -space-x-1">
+        <TokenIcon symbol={from} size={16} className="rounded-full ring-1 ring-white dark:ring-gray-900" />
+        <TokenIcon symbol={to} size={16} className="rounded-full ring-1 ring-white dark:ring-gray-900" />
+      </span>
+      <span className="ml-1.5">
+        {from} → {to}
+      </span>
+    </motion.button>
   );
 }
 
