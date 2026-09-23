@@ -27,6 +27,10 @@ export interface TokenProvenance {
   keys: string;
   /** One dated beat from the place's monetary story. */
   moment?: { year: number; text: string };
+  /** The next thing a holder should watch — a recurring cadence (never an
+   *  invented date): the mechanism that decides what happens next, not a
+   *  prediction of its direction. */
+  watch?: { cadence: string; event: string };
   sources: Array<{ label: string; url: string }>;
   /** Date the entry was last checked against its sources (YYYY-MM-DD). */
   asOf: string;
@@ -64,6 +68,10 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2024,
       text: 'The shilling hit a record low near KSh 161 per dollar in January, then rallied about 20% after a Eurobond buyback',
     },
+    watch: {
+      cadence: 'Roughly every two months',
+      event: 'CBK Monetary Policy Committee decisions — the float\u2019s stance is set there',
+    },
     sources: [
       ...MENTO_SOURCES,
       {
@@ -89,6 +97,10 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2019,
       text: 'A reform ended the rule to hold reserves at the French Treasury and withdrew French representatives from BCEAO bodies; the euro peg and guarantee stayed',
     },
+    watch: {
+      cadence: 'Quarterly',
+      event: 'BCEAO Monetary Policy Committee — and the euro peg\u2019s French guarantee, which periodically returns to political debate',
+    },
     sources: [
       ...MENTO_SOURCES,
       { label: 'BCEAO: CFA franc reform communiqué', url: 'https://bceao.int/fr/communique-presse/communique-de-presse-reforme-du-franc-cfa' },
@@ -112,6 +124,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2021,
       text: 'Complementary Law 179 made the central bank formally autonomous, with fixed terms for its board',
     },
+    watch: { cadence: '8\u00d7 a year', event: 'Copom rate decisions' },
     sources: [
       ...MENTO_SOURCES,
       { label: 'Complementary Law 179/2021', url: 'https://www.bcb.gov.br/content/about/legislation_norms_docs/complementary_law_179_24february2021.pdf' },
@@ -134,6 +147,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2025,
       text: 'The cedi appreciated about 24% against the dollar by May after the 2022 debt crisis drove record depreciation and 54% inflation',
     },
+    watch: { cadence: 'About 6\u00d7 a year', event: 'Bank of Ghana Monetary Policy Committee decisions' },
     sources: [
       ...MENTO_SOURCES,
       { label: 'BoG Monetary Policy Report, Nov 2022', url: 'https://www.bog.gov.gh/wp-content/uploads/2022/12/Monetary-Policy-Report-November-2022.pdf' },
@@ -157,6 +171,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2022,
       text: 'The peso depreciated sharply between late 2021 and early 2023 as volatility and the sovereign risk premium rose',
     },
+    watch: { cadence: 'Monthly', event: 'Banco de la Rep\u00fablica board rate decisions' },
     sources: [
       ...MENTO_SOURCES,
       { label: 'Banco de la República: FX intervention history', url: 'https://www.banrep.gov.co/en/publicaciones-investigaciones/espe/impact-foreign-exchange-intervention-and-duration' },
@@ -179,6 +194,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 1993,
       text: 'The New Central Bank Act created an independent BSP with price stability as its primary objective',
     },
+    watch: { cadence: 'About 6\u00d7 a year', event: 'BSP Monetary Board decisions' },
     sources: [
       ...MENTO_SOURCES,
       { label: 'RA 7653, the New Central Bank Act', url: 'https://elibrary.judiciary.gov.ph/thebookshelf/showdocs/2/2027' },
@@ -202,6 +218,10 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2023,
       text: 'The Tinubu government unified the exchange rates; the naira devalued about 40% as it floated, with more losses into 2024',
     },
+    watch: {
+      cadence: 'About 6\u00d7 a year',
+      event: 'CBN Monetary Policy Committee — how the float is defended is decided there',
+    },
     sources: [
       ...MENTO_SOURCES,
       { label: 'Central Bank of Nigeria', url: 'https://www.cbn.gov.ng/' },
@@ -224,6 +244,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 1999,
       text: 'The euro launched as a single currency with the ECB\u2019s independence written into the treaty',
     },
+    watch: { cadence: '8\u00d7 a year', event: 'ECB Governing Council decisions' },
     sources: [
       ...MENTO_SOURCES,
       { label: 'TFEU Article 130 (ECB independence)', url: 'https://eur-lex.europa.eu/eli/treaty/tfeu_2008/art_130/oj/eng' },
@@ -246,6 +267,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2022,
       text: 'The Bank of England stepped in with up to £65bn of gilt purchases after the mini-budget, days after the pound hit a 31-year low',
     },
+    watch: { cadence: '8\u00d7 a year', event: 'Bank of England MPC decisions' },
     sources: [
       ...MENTO_SOURCES,
       { label: 'BoE: how the Bank is independent', url: 'https://www.bankofengland.co.uk/explainers/how-is-the-bank-of-england-independent-of-the-government' },
@@ -265,6 +287,10 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
     issuer: 'Mento',
     backing: 'Mento Reserve on Celo, holding dollar stablecoins such as USDC, USDT and USDS',
     keys: MENTO_KEYS,
+    watch: {
+      cadence: 'Ongoing',
+      event: 'Mento governance (CGP) votes — they can change which stables stay reserve-backed',
+    },
     sources: [
       ...MENTO_SOURCES,
       { label: 'Mento docs: the Reserve', url: 'https://docs.mento.org/mento-v3/dive-deeper/the-reserve.md' },
@@ -283,6 +309,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
     issuer: 'Circle',
     backing: 'Cash and short-dated US Treasuries, mostly in a BlackRock-managed money market fund; monthly Big Four assurance',
     keys: 'Circle can freeze addresses',
+    watch: { cadence: 'Monthly', event: 'Circle reserve attestations' },
     sources: [{ label: 'Circle transparency', url: 'https://www.circle.com/transparency' }],
     asOf: '2026-09-23',
   },
@@ -302,6 +329,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2022,
       text: 'During Terra\u2019s collapse USDT briefly slipped below $0.95; Tether honoured over $7bn of redemptions in days and the peg held',
     },
+    watch: { cadence: 'Quarterly', event: 'Tether reserves attestations' },
     sources: [
       { label: 'Tether transparency', url: 'https://tether.to/en/transparency/' },
       { label: 'BDO attestation, Q4 2022', url: 'https://assets.ctfassets.net/vyse88cgwfbl/53L8YRM4ZHCEeqlpKbc3Q8/2e6cbcd1593b3e5ea867718c5938d6c8/Std_ISAE_3000R_Opinion_BDO_31-12-2022_Tether_CRR.pdf' },
@@ -320,6 +348,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
     issuer: 'Ondo Global Markets (BVI)',
     backing: 'Short-term US Treasuries, Treasury ETF shares or bank deposits; yield accrues daily',
     keys: 'Non-US persons only; Ondo controls the transfer allowlist',
+    watch: { cadence: 'Monthly', event: 'Ondo reports on the note\u2019s Treasury holdings' },
     sources: [
       { label: 'Ondo docs: USDY basics', url: 'https://docs.ondo.finance/general-access-products/usdy/basics' },
       { label: 'Ondo docs: important notes', url: 'https://docs.ondo.finance/general-access-products/usdy/important-notes' },
@@ -342,6 +371,10 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
       year: 2024,
       text: 'Maple expanded syrupUSDC from its institutional pools into general DeFi with dedicated segregated portfolios',
     },
+    watch: {
+      cadence: 'Ongoing',
+      event: 'Maple pool loan performance — borrowers carry the credit risk',
+    },
     sources: [
       { label: 'Maple docs: syrupUSDC for lenders', url: 'https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/introduction' },
       { label: 'Maple docs: FAQ', url: 'https://docs.maple.finance/syrupusdc-usdt-usdg-for-lenders/faq' },
@@ -360,6 +393,7 @@ export const TOKEN_PROVENANCE: TokenProvenance[] = [
     issuer: 'Paxos Trust Company',
     backing: 'One fine troy ounce of London Good Delivery gold per token, in LBMA-approved vaults; monthly attestation',
     keys: 'Paxos can freeze addresses; redeemable through Paxos for bars or dollars',
+    watch: { cadence: 'Monthly', event: 'Paxos attestations of the vaulted bars' },
     sources: [
       { label: 'Paxos docs: PAXG overview', url: 'https://docs.paxos.com/guides/stablecoin/paxg' },
       { label: 'PAXG attestations', url: 'https://www.paxos.com/paxg-transparency' },

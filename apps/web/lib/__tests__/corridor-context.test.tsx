@@ -156,6 +156,19 @@ describe('CorridorDetail', () => {
     expect(detail.textContent).not.toMatch(/(^|\s)0% vs USD/);
   });
 
+  it('renders the full dated event trail, newest first', () => {
+    render(<CorridorDetail fromToken="NGNm" toToken="USDC" />);
+    const detail = screen.getByTestId('corridor-detail');
+    // Nigeria has two curated events (2023 unification, 2024 FX windows) —
+    // both render, 2024 before 2023.
+    const t = detail.textContent!;
+    const y2024 = t.indexOf('2024: Multiple FX windows');
+    const y2023 = t.indexOf('2023: Tinubu unification');
+    expect(y2024).toBeGreaterThanOrEqual(0);
+    expect(y2023).toBeGreaterThanOrEqual(0);
+    expect(y2024).toBeLessThan(y2023);
+  });
+
   it('labels the gold side as the benchmark rather than inventing a track', () => {
     render(<CorridorDetail fromToken="PAXG" toToken="NGNm" />);
     expect(screen.getByTestId('corridor-detail')).toHaveTextContent(
@@ -171,6 +184,9 @@ describe('CorridorDetail', () => {
     expect(detail).toHaveTextContent('Origin');
     expect(detail).toHaveTextContent('Keys');
     expect(detail).toHaveTextContent('Paxos can freeze addresses');
+    // The forward-looking half: cadence + mechanism, no invented date.
+    expect(detail).toHaveTextContent('Watch');
+    expect(detail).toHaveTextContent('Paxos attestations of the vaulted bars (Monthly)');
     expect(detail).toHaveTextContent('Checked 2026-09-23');
     expect(
       screen.getByRole('link', { name: 'Mento Reserve' }),

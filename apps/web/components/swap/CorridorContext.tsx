@@ -99,7 +99,6 @@ function SideTrack({ side }: { side: CorridorSide }) {
     );
   }
   const e = side.entry;
-  const latest = e.riskEvents[e.riskEvents.length - 1];
   const isAnchor = e.depreciation.vsUSD['5yr'] === 0;
   return (
     <div>
@@ -111,10 +110,16 @@ function SideTrack({ side }: { side: CorridorSide }) {
           ? `The anchor — still ${e.depreciation.vsXAU['5yr']}% vs gold (5y)`
           : `${e.depreciation.vsUSD['5yr']}% vs USD · ${e.depreciation.vsXAU['5yr']}% vs gold (5y)`}
       </p>
-      {latest && (
-        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
-          {latest.year}: {latest.event} — {latest.impact}
-        </p>
+      {/* The dated trail — what geopolitics has already done to this
+          currency, newest first. Curated events, not a feed. */}
+      {e.riskEvents.length > 0 && (
+        <div className="mt-0.5 space-y-0.5">
+          {[...e.riskEvents].reverse().map((ev, i) => (
+            <p key={`${ev.year}-${i}`} className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+              {ev.year}: {ev.event} — {ev.impact}
+            </p>
+          ))}
+        </div>
       )}
       {e.goodsAnchor && (
         <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
@@ -242,6 +247,11 @@ function ProvenanceSide({
       {p.moment && (
         <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
           {p.moment.year}: {p.moment.text}
+        </p>
+      )}
+      {p.watch && (
+        <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+          <span className="font-semibold">Watch</span> {p.watch.event} ({p.watch.cadence})
         </p>
       )}
       <p className="mt-1 text-[10px] text-gray-400">

@@ -23,6 +23,16 @@ describe('TOKEN_PROVENANCE integrity', () => {
     }
   });
 
+  it('watch entries name a cadence and a mechanism, never a bare date', () => {
+    for (const p of TOKEN_PROVENANCE) {
+      if (!p.watch) continue;
+      expect(p.watch.cadence.trim().length, `${p.symbol} watch.cadence`).toBeGreaterThan(0);
+      expect(p.watch.event.trim().length, `${p.symbol} watch.event`).toBeGreaterThan(0);
+      // A bare date as the whole cadence would mean a fabricated schedule.
+      expect(p.watch.cadence, `${p.symbol} watch.cadence`).not.toMatch(/^\d{4}(-\d{2}(-\d{2})?)?$/);
+    }
+  });
+
   it('every entry cites at least one https source', () => {
     for (const p of TOKEN_PROVENANCE) {
       expect(p.sources.length, `${p.symbol} sources`).toBeGreaterThanOrEqual(1);

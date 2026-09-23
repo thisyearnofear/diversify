@@ -182,6 +182,8 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Simple mode (default) shows Shield, Home, Learn until the user opts into more.
 
+5. **Currencies as stories — the engagement layer is the literacy layer.** Every token carries a curated provenance answering three questions — who controls it (origin, backing, keys), what has happened to it (dated geopolitical events), and what might happen next (the cadence and mechanism to watch, never a prediction). The memetic/cultural/political texture of money is surfaced at the moment of choice: the ticket's pair sentence, the coin-back flip in the picker, the pair inspector's event trail and watch lines. Facts are hand-sourced and dated (`packages/shared/src/constants/token-provenance.ts`), re-verified on a 90-day cycle — engagement built on understanding, never on tickers, leaderboards, or invented forecasts. The timeline teaches mechanism, not prediction.
+
 ## Terminology Guide
 
 | Internal Term | User-Facing Term |

@@ -255,7 +255,12 @@ provenance at the moment of choice: in `TokenPickerSheet`, tapping a
 token's icon flips the row to its reverse — flag + phrase on top,
 issuer + keys underneath — while the row body still selects. Tokens
 with no provenance entry get no flip; a coin with no back is just an
-icon.
+icon. The inspector tells the story in three tenses: past (the dated
+`riskEvents` trail under each side, newest first), present (origin,
+backing, keys), future (`watch` — the cadence and mechanism that will
+decide what happens next, e.g. "CBN Monetary Policy Committee — how the
+float is defended is decided there", never an invented date or a
+predicted direction).
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner
