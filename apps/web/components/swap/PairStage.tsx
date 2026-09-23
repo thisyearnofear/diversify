@@ -16,7 +16,7 @@ import { TokenIcon } from '../shared/TokenIcon';
 import { QUIET_GRAY } from '../shared/palette';
 import { springPop, springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { haptics } from '@/lib/haptics';
-import { corridorFor, corridorSideFor, type CorridorSignal } from '@/lib/corridor-context';
+import { corridorFor, corridorSideFor, pairWhatIfFor, type CorridorSignal, type Horizon } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import TokenPickerSheet, { type TokenPickerItem } from './TokenPickerSheet';
 import { ProvenanceCoinBack } from './ProvenanceCoinBack';
@@ -187,7 +187,13 @@ export function PairStage({
   claim?: { label: string; onClaim(): void } | null;
 }) {
   const reduced = useReducedMotion();
-  const corridor = corridorFor(fromToken, toToken);
+  // The pair time machine: the corridor line's 1y/3y/5y control picks
+  // the horizon and the beam re-weighs to that window's drift. A pair
+  // change resets to the resting 5y view.
+  const [horizon, setHorizon] = useState<Horizon>('5yr');
+  useEffect(() => setHorizon('5yr'), [fromToken, toToken]);
+  const corridor = corridorFor(fromToken, toToken, horizon);
+  const whatIf = pairWhatIfFor(fromToken, toToken, horizon);
   const drift = corridor?.drift ?? null;
   // Square-root curve: 8pts ≈ 4°, 38pts ≈ 8.6°, 57pts ≈ 10.6°, capped 14°.
   const tiltDeg = drift ? Math.min(14, 14 * Math.sqrt(drift.points / 100)) : 0;
@@ -422,11 +428,15 @@ export function PairStage({
       ) : (
         <>
           <CorridorLine
+            key={`${fromToken}-${toToken}`}
             fromToken={fromToken}
             toToken={toToken}
             alive
             signals={signals}
             onInspect={onInspect}
+            horizon={horizon}
+            onHorizon={setHorizon}
+            whatIf={whatIf}
           />
 
           <button

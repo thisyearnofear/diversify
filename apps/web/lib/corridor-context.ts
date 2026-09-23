@@ -8,6 +8,7 @@
  */
 import {
   CURRENCY_BY_CODE,
+  CURRENCY_RISK_DATA_AS_OF,
   type CurrencyRiskEntry,
 } from '@/constants/currency-risk';
 
@@ -59,10 +60,36 @@ export function corridorSideFor(token: string | null | undefined): CorridorSide 
   return { token, code, flag: entry.flag, name: entry.countryName, entry };
 }
 
-/** 5yr cross-performance of a vs b via the shared USD anchor, in points.
- *  Negative → a weakened against b. */
-function crossDepreciation(a: CurrencyRiskEntry, b: CurrencyRiskEntry): number {
-  return ((1 + a.depreciation.vsUSD['5yr'] / 100) / (1 + b.depreciation.vsUSD['5yr'] / 100) - 1) * 100;
+/** The time-machine horizon — how far back the beam re-weighs. */
+export type Horizon = '1yr' | '3yr' | '5yr';
+
+export const HORIZON_YEARS: Record<Horizon, number> = {
+  '1yr': 1,
+  '3yr': 3,
+  '5yr': 5,
+};
+
+/** The trailing "in N years" phrase of a corridor line, per horizon —
+ *  exported so the stage can swap it for the segmented control. */
+export const HORIZON_LINE: Record<Horizon, string> = {
+  '1yr': 'in 1 year',
+  '3yr': 'in 3 years',
+  '5yr': 'in 5 years',
+};
+
+/** Cross-performance of a vs b via the shared USD anchor at the chosen
+ *  horizon, in points. Negative → a weakened against b. */
+function crossDepreciation(
+  a: CurrencyRiskEntry,
+  b: CurrencyRiskEntry,
+  horizon: Horizon,
+): number {
+  return (
+    ((1 + a.depreciation.vsUSD[horizon] / 100) /
+      (1 + b.depreciation.vsUSD[horizon] / 100) -
+      1) *
+    100
+  );
 }
 
 function pct(n: number): string {
@@ -90,24 +117,33 @@ export interface Corridor {
  *  - one side is gold → that side's vs-gold track
  *  - same fiat on both sides (cUSD→USDC) → null, nothing to say
  */
-export function corridorFor(fromToken: string | null, toToken: string | null): Corridor | null {
+export function corridorFor(
+  fromToken: string | null,
+  toToken: string | null,
+  horizon: Horizon = '5yr',
+): Corridor | null {
   const from = corridorSideFor(fromToken);
   const to = corridorSideFor(toToken);
   if (!from || !to || from.code === to.code) return null;
 
   const pairLabel = `${from.flag} ${from.code} ⇄ ${to.flag} ${to.code}`;
+  const span = HORIZON_LINE[horizon];
 
   if (from.entry && to.entry) {
-    const cross = crossDepreciation(from.entry, to.entry);
-    if (Math.abs(cross) < 5) {
-      return { from, to, line: `${pairLabel} — roughly held level for 5 years`, drift: null };
+    const cross = crossDepreciation(from.entry, to.entry, horizon);
+    // The weaker side's loss, whichever way round the pair is: `cross` is
+    // from-vs-to, so when `to` is weaker it reads as from's GAIN (+150%)
+    // and must be inverted into to's loss (~60%) — nothing loses >100%.
+    const loss = cross < 0 ? -cross : (1 - 1 / (1 + cross / 100)) * 100;
+    if (loss < 5) {
+      return { from, to, line: `${pairLabel} — roughly held level ${span.replace('in ', 'for ')}`, drift: null };
     }
     const [weaker, stronger] = cross < 0 ? [from, to] : [to, from];
     return {
       from,
       to,
-      line: `${pairLabel} — ${weaker.code} lost ${pct(cross)} to ${stronger.code} in 5 years`,
-      drift: { weaker: cross < 0 ? 'from' : 'to', points: Math.abs(cross) },
+      line: `${pairLabel} — ${weaker.code} lost ${pct(loss)} to ${stronger.code} ${span}`,
+      drift: { weaker: cross < 0 ? 'from' : 'to', points: loss },
     };
   }
 
@@ -115,15 +151,15 @@ export function corridorFor(fromToken: string | null, toToken: string | null): C
   if (from.entry && to.code === 'XAU') {
     return {
       from, to,
-      line: `${pairLabel} — ${from.code} lost ${pct(from.entry.depreciation.vsXAU['5yr'])} to gold in 5 years`,
-      drift: { weaker: 'from', points: Math.abs(from.entry.depreciation.vsXAU['5yr']) },
+      line: `${pairLabel} — ${from.code} lost ${pct(from.entry.depreciation.vsXAU[horizon])} to gold ${span}`,
+      drift: { weaker: 'from', points: Math.abs(from.entry.depreciation.vsXAU[horizon]) },
     };
   }
   if (to.entry && from.code === 'XAU') {
     return {
       from, to,
-      line: `${pairLabel} — ${to.code} lost ${pct(to.entry.depreciation.vsXAU['5yr'])} to gold in 5 years`,
-      drift: { weaker: 'to', points: Math.abs(to.entry.depreciation.vsXAU['5yr']) },
+      line: `${pairLabel} — ${to.code} lost ${pct(to.entry.depreciation.vsXAU[horizon])} to gold ${span}`,
+      drift: { weaker: 'to', points: Math.abs(to.entry.depreciation.vsXAU[horizon]) },
     };
   }
   return null;
@@ -149,6 +185,92 @@ export function goodsEquivalentFor(
       ? Math.round(count).toLocaleString('en-US')
       : (Math.round(count * 10) / 10).toString();
   return `${n} ${anchor.unit}`;
+}
+
+// ── The pair time machine ────────────────────────────────────────────
+//
+// "Had you made this move back then" — computed from the dataset's
+// depreciation ratios only. No FX rate is ever read: a multiplier
+// derived from two depreciation tracks is enough, and the goods count
+// prices today's staple in local units directly.
+
+/** Plain-language name for the destination money. */
+const TO_NAME: Record<string, string> = {
+  USD: 'the dollar',
+  EUR: 'the euro',
+  GBP: 'the pound',
+  XAU: 'gold',
+  NGN: 'the naira',
+  KES: 'the shilling',
+  GHS: 'the cedi',
+  BRL: 'the real',
+  COP: 'the peso',
+  PHP: 'the peso',
+  ZAR: 'the rand',
+  XOF: 'the CFA franc',
+};
+
+export interface PairWhatIf {
+  horizon: Horizon;
+  startYear: number;
+  /** "Jul 2025" — the dataset's as-of, always disclosed. */
+  dataAsOfLabel: string;
+  /** Value of from-currency savings had they moved to `to` at the start
+   *  of the horizon, in from-currency units. >1 the move gained, <1 it
+   *  lost — the tool is honest in both directions. */
+  multiplier: number;
+  fromCode: string;
+  toName: string;
+  /** When the from side has a curated staple: savings that buy `today`
+   *  units now would have bought `moved` had they been moved. */
+  goods: { unit: string; today: number; moved: number } | null;
+}
+
+export function pairWhatIfFor(
+  fromToken: string | null,
+  toToken: string | null,
+  horizon: Horizon,
+): PairWhatIf | null {
+  const corridor = corridorFor(fromToken, toToken, horizon);
+  if (!corridor?.drift) return null; // nothing honest to say
+  const { from, to } = corridor;
+
+  let multiplier: number;
+  if (from.entry && to.entry) {
+    multiplier =
+      (1 + to.entry.depreciation.vsUSD[horizon] / 100) /
+      (1 + from.entry.depreciation.vsUSD[horizon] / 100);
+  } else if (from.entry && to.code === 'XAU') {
+    multiplier = 1 / (1 + from.entry.depreciation.vsXAU[horizon] / 100);
+  } else if (from.code === 'XAU' && to.entry) {
+    multiplier = 1 + to.entry.depreciation.vsXAU[horizon] / 100;
+  } else {
+    return null;
+  }
+
+  const anchor = from.entry?.goodsAnchor;
+  let goods: PairWhatIf['goods'] = null;
+  if (anchor) {
+    const moved = 10 * multiplier;
+    goods = {
+      unit: anchor.unit,
+      today: 10,
+      moved: moved >= 10 ? Math.round(moved) : Math.round(moved * 10) / 10,
+    };
+  }
+
+  return {
+    horizon,
+    startYear: Number(CURRENCY_RISK_DATA_AS_OF.slice(0, 4)) - HORIZON_YEARS[horizon],
+    dataAsOfLabel: new Date(`${CURRENCY_RISK_DATA_AS_OF}T00:00:00Z`).toLocaleDateString(
+      'en-US',
+      { month: 'short', year: 'numeric', timeZone: 'UTC' },
+    ),
+    multiplier,
+    fromCode: from.code,
+    toName: TO_NAME[to.code] ?? to.code,
+    goods,
+  };
 }
 
 // ── Fresh dated beats ────────────────────────────────────────────────

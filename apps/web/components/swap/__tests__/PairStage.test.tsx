@@ -10,7 +10,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
-import { render, screen, cleanup, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import PairStage, { type PairReceipt } from '../PairStage';
 import type { TokenPickerItem } from '../TokenPickerSheet';
@@ -48,8 +48,8 @@ function renderStage(overrides: Partial<Parameters<typeof PairStage>[0]> = {}) {
     ctaLabel: 'Move savings',
     ...overrides,
   };
-  render(<PairStage {...props} />);
-  return props;
+  const view = render(<PairStage {...props} />);
+  return { ...props, rerender: view.rerender };
 }
 
 describe('PairStage', () => {
@@ -141,6 +141,98 @@ describe('PairStage', () => {
       .split(/\s+/)
       .filter(Boolean);
     expect(words.length).toBeLessThanOrEqual(60);
+  });
+});
+
+describe('PairStage — the pair time machine', () => {
+  it('renders the horizon control only when the pair has a what-if', () => {
+    renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+    expect(screen.getByTestId('horizon-control')).toBeInTheDocument();
+    cleanup();
+    // Held level at every horizon — nothing honest to say, no control.
+    renderStage({ fromToken: 'EURm', toToken: 'GBPm' });
+    expect(screen.queryByTestId('horizon-control')).not.toBeInTheDocument();
+  });
+
+  it('rests on 5y — the corridor line reads as before', () => {
+    renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+    const five = screen.getByRole('radio', { name: '5y' });
+    expect(five).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByTestId('corridor-line')).toHaveTextContent(
+      'NGN lost ~60% to USD',
+    );
+    expect(screen.queryByTestId('pair-whatif')).not.toBeInTheDocument();
+  });
+
+  it('tapping 3y re-weighs the beam to the 3y drift and pins the what-if', () => {
+    renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+    const before = screen.getByTestId('pair-beam').dataset.tilt;
+    fireEvent.click(screen.getByRole('radio', { name: '3y' }));
+    const after = Number(screen.getByTestId('pair-beam').dataset.tilt);
+    // 3y drift is ~55pts vs 5y's ~60pts — still tilted from, but less.
+    expect(after).toBeLessThan(0);
+    expect(String(after)).not.toBe(before);
+    const whatIf = screen.getByTestId('pair-whatif');
+    expect(whatIf).toHaveTextContent('in 2022');
+    expect(whatIf).toHaveTextContent('bags of rice');
+    expect(whatIf).toHaveTextContent('What if · data to Jul 2025');
+  });
+
+  it('the pinned what-if does not rotate away once explored', () => {
+    vi.useFakeTimers();
+    try {
+      renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+      fireEvent.click(screen.getByRole('radio', { name: '5y' }));
+      expect(screen.getByTestId('pair-whatif')).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(screen.getByTestId('pair-whatif')).toBeInTheDocument();
+      expect(screen.getByTestId('corridor-line').textContent).not.toContain(
+        'Watch',
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a pair change resets the horizon and the pin', () => {
+    const props = renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+    fireEvent.click(screen.getByRole('radio', { name: '3y' }));
+    expect(screen.getByTestId('pair-whatif')).toHaveTextContent('in 2022');
+    props.rerender(
+      <PairStage {...props} fromToken="KESm" toToken="USDm" />,
+    );
+    expect(screen.getByRole('radio', { name: '5y' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.queryByTestId('pair-whatif')).not.toBeInTheDocument();
+  });
+
+  it('the USD→NGN what-if is honest about losing — a smaller number', () => {
+    renderStage({ fromToken: 'USDm', toToken: 'NGNm' });
+    fireEvent.click(screen.getByRole('radio', { name: '5y' }));
+    expect(screen.getByTestId('pair-whatif')).toHaveTextContent(
+      'every 100 USD would be ~40 USD',
+    );
+  });
+
+  it('reduced motion shows the same pinned content', () => {
+    reducedMotionState.on = true;
+    renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+    fireEvent.click(screen.getByRole('radio', { name: '3y' }));
+    expect(screen.getByTestId('pair-whatif')).toHaveTextContent('in 2022');
+    reducedMotionState.on = false;
+  });
+
+  it('the explored stage stays inside a 70-word budget', () => {
+    renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+    fireEvent.click(screen.getByRole('radio', { name: '5y' }));
+    const words = (screen.getByTestId('pair-stage').textContent ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(70);
   });
 });
 

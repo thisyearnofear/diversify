@@ -1242,3 +1242,19 @@ say "Recent history", never a "Since" date we didn't reach; a settled
 receipt schedules `refresh(20000)` for indexer lag and appends its
 destination optimistically, de-duped when the chain catches up.
 Walletless visitors see nothing — never a sample.
+
+#### The pair time machine — the beam re-weighs (2026-09-23)
+
+**378 tests passing** in the affected suites (28 files; `components/swap`,
+`components/tabs`, `corridor-context`).
+
+The corridor line's "in N years" tail is now a segmented `1y · 3y · 5y`
+control (the Shield radio-group grammar, reused): picking a horizon
+recomputes `corridorFor` at that window and the beam re-weighs — tilt
+follows the drift for the chosen span. The first tap pins the top line
+to a labelled what-if ("What if · data to Jul 2025 — Moved to the
+dollar in 2020, savings that buy 10 bags of rice today would buy ~25")
+that never rotates away; a pair change resets both. `pairWhatIfFor`
+computes from curated depreciation ratios only — no FX rate — and is
+honest both directions (USD→NGN ≈ 0.4). The control renders only where
+a what-if exists; held-level and uncovered pairs show the plain line.

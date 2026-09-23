@@ -12,7 +12,16 @@
  */
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { corridorFor, corridorSideFor, type CorridorSide, type CorridorSignal } from '@/lib/corridor-context';
+import {
+  corridorFor,
+  corridorSideFor,
+  pairWhatIfFor,
+  HORIZON_LINE,
+  type CorridorSide,
+  type CorridorSignal,
+  type Horizon,
+  type PairWhatIf,
+} from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
 import { TokenIcon } from '../shared/TokenIcon';
@@ -36,12 +45,38 @@ export const SIGNATURE_PAIRS: ReadonlyArray<readonly [string, string]> = [
 /** Dwell per beat while the corridor line breathes (§5 state rule). */
 const BEAT_DWELL_MS = 7000;
 
+const HORIZONS: { key: Horizon; label: string }[] = [
+  { key: '1yr', label: '1y' },
+  { key: '3yr', label: '3y' },
+  { key: '5yr', label: '5y' },
+];
+
+/** The pinned what-if statement — labelled, dated, honest both ways. */
+function WhatIfStatement({ whatIf }: { whatIf: PairWhatIf }) {
+  const sentence = whatIf.goods
+    ? `Moved to ${whatIf.toName} in ${whatIf.startYear}, savings that buy ${whatIf.goods.today} ${whatIf.goods.unit} today would buy ~${whatIf.goods.moved}.`
+    : `Moved to ${whatIf.toName} in ${whatIf.startYear}, every 100 ${whatIf.fromCode} would be ~${Math.round(100 * whatIf.multiplier)} ${whatIf.fromCode} today.`;
+  return (
+    <span className="block" data-testid="pair-whatif">
+      <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        What if · data to {whatIf.dataAsOfLabel}
+      </span>
+      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+        {sentence}
+      </span>
+    </span>
+  );
+}
+
 export function CorridorLine({
   fromToken,
   toToken,
   onInspect,
   alive = false,
   signals,
+  horizon = '5yr',
+  onHorizon,
+  whatIf,
 }: {
   fromToken: string;
   toToken: string;
@@ -56,8 +91,14 @@ export function CorridorLine({
    *  A live signal supersedes that side's standing watch cadence — the
    *  calendar produced a real event. Null/absent → the cadence carries. */
   signals?: { from: CorridorSignal | null; to: CorridorSignal | null } | null;
+  /** The pair time machine — the stage owns the horizon and the beam
+   *  re-weighs with it. The first chip tap pins the top line to the
+   *  what-if statement; a chosen view never rotates away. */
+  horizon?: Horizon;
+  onHorizon?: (h: Horizon) => void;
+  whatIf?: PairWhatIf | null;
 }) {
-  const corridor = corridorFor(fromToken, toToken);
+  const corridor = corridorFor(fromToken, toToken, horizon);
   const a = provenanceFor(fromToken);
   const b = provenanceFor(toToken);
   const reduced = useReducedMotion();
@@ -79,7 +120,16 @@ export function CorridorLine({
     ...(toBeat ? [toBeat] : []),
   ];
   const [beat, setBeat] = useState(0);
-  const rotating = alive && !reduced && beats.length > 1;
+  // The time machine: the control appears only for pairs with something
+  // honest to say at 5y, and the first tap pins the what-if — a chosen
+  // view must not rotate away.
+  const [explored, setExplored] = useState(false);
+  useEffect(() => setExplored(false), [fromToken, toToken]);
+  const showControl =
+    onHorizon !== undefined &&
+    pairWhatIfFor(fromToken, toToken, '5yr') !== null;
+  const pinned = explored ? whatIf : null;
+  const rotating = alive && !reduced && !pinned && beats.length > 1;
   useEffect(() => {
     if (!rotating) {
       setBeat(0);
@@ -102,7 +152,20 @@ export function CorridorLine({
   const arrow = onInspect ? (
     <span className="font-semibold text-blue-600 dark:text-blue-400">→</span>
   ) : null;
-  const topLine = rotating ? (
+  const topLine = pinned ? (
+    <AnimatePresence mode="popLayout" initial={false}>
+      <motion.span
+        key={`whatif-${horizon}-${fromToken}-${toToken}`}
+        className="block"
+        initial={reduced ? false : { opacity: 0, filter: 'blur(4px)' }}
+        animate={{ opacity: 1, filter: 'blur(0px)' }}
+        exit={reduced ? undefined : { opacity: 0, filter: 'blur(4px)' }}
+        transition={{ duration: 0.35 }}
+      >
+        <WhatIfStatement whatIf={pinned} />
+      </motion.span>
+    </AnimatePresence>
+  ) : rotating ? (
     <AnimatePresence mode="popLayout" initial={false}>
       <motion.span
         key={shownBeat}
@@ -122,22 +185,103 @@ export function CorridorLine({
       </span>
     )
   );
+  // The "in N years" tail becomes the control when the pair has a
+  // time machine — the corridor line stays the same sentence minus
+  // its trailing span.
+  const spanTail = ` ${HORIZON_LINE[horizon]}`;
+  const spanTailHeld = ` ${HORIZON_LINE[horizon].replace('in ', 'for ')}`;
+  const corridorText =
+    showControl && corridor
+      ? corridor.line.endsWith(spanTail)
+        ? corridor.line.slice(0, -spanTail.length)
+        : corridor.line.endsWith(spanTailHeld)
+          ? corridor.line.slice(0, -spanTailHeld.length)
+          : corridor.line
+      : corridor?.line;
+  const control = showControl ? (
+    <span
+      role="radiogroup"
+      aria-label="How far back"
+      className="ml-1 inline-flex translate-y-[-2px] rounded-full bg-gray-100 p-0.5 align-middle dark:bg-gray-800"
+      data-testid="horizon-control"
+    >
+      {HORIZONS.map((h) => {
+        const selected = horizon === h.key;
+        return (
+          <button
+            key={h.key}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={(e) => {
+              e.stopPropagation();
+              setExplored(true);
+              onHorizon?.(h.key);
+            }}
+            className="-my-2 flex min-h-[44px] items-center px-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+          >
+            <span
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${
+                selected
+                  ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white'
+                  : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+              }`}
+            >
+              {h.label}
+            </span>
+          </button>
+        );
+      })}
+    </span>
+  ) : null;
   const body = (
     <>
       {topLine}
       {corridor && (
-        <span className={`block text-[11px] text-gray-500 dark:text-gray-400${beats.length > 0 ? ' mt-0.5' : ''}`}>
-          {corridor.line} {arrow}
+        <span className={`block text-[11px] text-gray-500 dark:text-gray-400${beats.length > 0 || pinned ? ' mt-0.5' : ''}`}>
+          {corridorText}
+          {control} {!control && arrow}
+          {control && onInspect && arrow}
         </span>
       )}
     </>
   );
 
-  if (!onInspect) {
+  if (!onInspect && !control) {
     return (
       <p data-testid="corridor-line" className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
         {body}
       </p>
+    );
+  }
+  if (!onInspect || control) {
+    // With the control, the chips can't nest inside a button — the
+    // wrapper is a div and the inspect tap lives on the line itself.
+    return (
+      <div
+        data-testid="corridor-line"
+        className="mt-1 text-left text-[11px] text-gray-500 dark:text-gray-400 min-h-[32px]"
+      >
+        {control && onInspect ? (
+          <>
+            {topLine}
+            {corridor && (
+              <span className="mt-0.5 block text-[11px] text-gray-500 dark:text-gray-400">
+                <button
+                  type="button"
+                  onClick={onInspect}
+                  className="text-left hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  {corridorText} {arrow}
+                </button>
+                {control}
+              </span>
+            )}
+          </>
+        ) : (
+          body
+        )}
+      </div>
     );
   }
   return (

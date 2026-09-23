@@ -351,6 +351,20 @@ journey inspector: settled legs newest first with real explorer links,
 no "at quote" because these amounts already settled. The rail is
 connected-only — walletless visitors get nothing, never a sample.
 
+The beam is also a time machine. The corridor line's trailing "in 5
+years" is a segmented control — `1y · 3y · 5y` — that re-weighs the
+scale to that window's drift (the tilt literally recomputes, settling
+with the same underdamped spring). The first tap pins the top line to
+the what-if: "Moved to the dollar in 2020, savings that buy 10 bags of
+rice today would buy ~25" — and a chosen view never rotates away. The
+math is ratios only, no FX rate: two depreciation tracks divided, and
+the goods count prices today's staple in local units. Every what-if is
+labelled "What if · data to Jul 2025" — the as-of is disclosed, and the
+multiplier is honest in both directions (dollars→naira shows ~0.4, not
+a sales pitch). It's about *the move*, not the currency — Home owns
+"your currency vs a benchmark", Exchange owns "had you made this move".
+A pair change resets to the resting 5y view.
+
 Exchange's story is provenance: the pair teaches tokens as money
 with an origin. The corridor line leads with the provenance sentence
 ("from Kenya's floating shilling to allocated gold in a London vault")

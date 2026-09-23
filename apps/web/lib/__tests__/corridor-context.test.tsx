@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor } from '../corridor-context';
+import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, pairWhatIfFor } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 
@@ -121,6 +121,16 @@ describe('corridor drift — which side lost ground (feeds the beam tilt)', () =
     expect(c!.drift!.weaker).toBe('to');
   });
 
+  it('reports the same loss either way round — never over 100%', () => {
+    for (const [a, b] of [['NGNm', 'USDm'], ['NGNm', 'KESm'], ['GHSm', 'EURm']] as const) {
+      const fwd = corridorFor(a, b)!;
+      const rev = corridorFor(b, a)!;
+      expect(rev.drift!.points).toBeCloseTo(fwd.drift!.points);
+      expect(rev.drift!.points).toBeLessThan(100);
+      expect(rev.line.match(/lost ~(\d+)%/)![1]).toBe(fwd.line.match(/lost ~(\d+)%/)![1]);
+    }
+  });
+
   it('is null when the pair roughly held level', () => {
     // EUR vs GBP cross ≈ +4.5% — under the 5pt threshold.
     expect(corridorFor('EURm', 'GBPm')!.drift).toBeNull();
@@ -132,6 +142,85 @@ describe('corridor drift — which side lost ground (feeds the beam tilt)', () =
     expect(fiatFirst.drift).toEqual({ weaker: 'from', points: ngn });
     const goldFirst = corridorFor('PAXG', 'NGNm')!;
     expect(goldFirst.drift).toEqual({ weaker: 'to', points: ngn });
+  });
+});
+
+describe('corridorFor horizons — the same weighing at other windows', () => {
+  it('uses the chosen horizon in the line and drift', () => {
+    const ngn = CURRENCY_BY_CODE['NGN'].depreciation.vsUSD;
+    const one = corridorFor('NGNm', 'USDC', '1yr')!;
+    expect(one.line).toContain(`~${Math.abs(Math.round(((1 + ngn['1yr'] / 100) - 1) * 100))}%`);
+    expect(one.line).toContain('in 1 year');
+    expect(one.drift).not.toBeNull();
+    const three = corridorFor('NGNm', 'USDC', '3yr')!;
+    expect(three.line).toContain('in 3 years');
+  });
+
+  it('keeps the default at 5 years', () => {
+    expect(corridorFor('NGNm', 'USDC')!.line).toContain('in 5 years');
+  });
+});
+
+describe('pairWhatIfFor — the pair time machine (ratios only, no FX)', () => {
+  it('multiplies the move: NGN→USD 5y grew naira savings ~2.5×', () => {
+    const w = pairWhatIfFor('NGNm', 'USDm', '5yr')!;
+    const ngn = CURRENCY_BY_CODE['NGN'].depreciation.vsUSD['5yr'];
+    expect(w.multiplier).toBeCloseTo(1 / (1 + ngn / 100)); // ≈ 2.5
+    expect(w.fromCode).toBe('NGN');
+    expect(w.toName).toBe('the dollar');
+  });
+
+  it('is honest in reverse: USD→NGN shows a multiplier below 1', () => {
+    const w = pairWhatIfFor('USDm', 'NGNm', '5yr')!;
+    expect(w.multiplier).toBeLessThan(1); // ~0.4 — leaving dollars cost you
+    expect(w.toName).toBe('the naira');
+  });
+
+  it('uses the vs-gold track for PAXG pairs both ways', () => {
+    const toGold = pairWhatIfFor('NGNm', 'PAXG', '5yr')!;
+    const vsXau = CURRENCY_BY_CODE['NGN'].depreciation.vsXAU['5yr'];
+    expect(toGold.multiplier).toBeCloseTo(1 / (1 + vsXau / 100)); // ≈ 3.57
+    expect(toGold.toName).toBe('gold');
+    const fromGold = pairWhatIfFor('PAXG', 'NGNm', '5yr')!;
+    expect(fromGold.multiplier).toBeCloseTo(1 + vsXau / 100); // ≈ 0.28
+  });
+
+  it('computes EUR↔USD through the shared USD anchor', () => {
+    const eur = CURRENCY_BY_CODE['EUR'].depreciation.vsUSD['5yr'];
+    expect(pairWhatIfFor('EURm', 'USDm', '5yr')!.multiplier).toBeCloseTo(
+      1 / (1 + eur / 100),
+    );
+    expect(pairWhatIfFor('USDm', 'EURm', '5yr')!.multiplier).toBeCloseTo(
+      1 + eur / 100,
+    );
+  });
+
+  it('dates each horizon from the dataset as-of', () => {
+    expect(pairWhatIfFor('NGNm', 'USDm', '1yr')!.startYear).toBe(2024);
+    expect(pairWhatIfFor('NGNm', 'USDm', '3yr')!.startYear).toBe(2022);
+    expect(pairWhatIfFor('NGNm', 'USDm', '5yr')!.startYear).toBe(2020);
+    expect(pairWhatIfFor('NGNm', 'USDm', '5yr')!.dataAsOfLabel).toBe('Jul 2025');
+  });
+
+  it('returns null where there is nothing honest to say', () => {
+    expect(pairWhatIfFor('USDC', 'USDm', '5yr')).toBeNull(); // same fiat
+    expect(pairWhatIfFor('XOFm', 'USDm', '5yr')).toBeNull(); // uncovered
+    expect(pairWhatIfFor('EURm', 'GBPm', '5yr')).toBeNull(); // held level
+    expect(pairWhatIfFor('ETH', 'CELO', '5yr')).toBeNull();
+  });
+
+  it('prices the what-if in the from-side staple, rounded by size', () => {
+    const w = pairWhatIfFor('NGNm', 'USDm', '5yr')!;
+    expect(w.goods).toEqual({
+      unit: 'bags of rice',
+      today: 10,
+      moved: 25, // 10 × 2.5
+    });
+    // Under 10 units keeps one decimal — 10 × ~0.556 ≈ 5.6.
+    const smaller = pairWhatIfFor('KESm', 'NGNm', '5yr')!;
+    expect(smaller.goods!.moved).toBeCloseTo(5.6, 1);
+    // No staple on the from side → no goods line.
+    expect(pairWhatIfFor('USDm', 'NGNm', '5yr')!.goods).toBeNull();
   });
 });
 
