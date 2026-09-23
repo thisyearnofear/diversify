@@ -316,8 +316,11 @@ stays alive (§5 state rule): the ⇅ switch coin carries a slow shine
 loop and the corridor line rotates between the story and each side's
 beat — a standing `watch` cadence, superseded by a fresh dated macro
 signal when the anchored ledger holds one (`corridorSignalsFor` reads
-the shared proof feed: Firecrawl credits are spent only when a watched
-page changes, so a live beat costs nothing extra); the first keystroke
+the shared proof feed and renders rows that carry readable text; an
+on-chain row whose reasoning has no off-chain echo leaves the standing
+`watch` in place rather than showing a hash — Firecrawl credits are
+spent only when a watched page changes, so a live beat costs nothing
+extra); the first keystroke
 in the amount field stills it. The ticket answers in staples before
 dollars: the From row's ≈ equivalent leads with the fiat's curated
 `goodsAnchor` ("6 bags of rice · $292.80"), and the To row names what

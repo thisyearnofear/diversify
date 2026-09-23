@@ -100,6 +100,9 @@ The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio 
 | Guardian Loop | `pages/api/agent/guardian-loop.ts` | Cron-driven autonomous execution |
 | Firecrawl Webhook | `pages/api/agent/firecrawl-webhook.ts` | Macro signal ingestion |
 | Firecrawl Setup | `scripts/setup-firecrawl-monitors.ts` | Register page watchers |
+| Macro Rehearsal | `scripts/send-test-macro-signal.ts` | Drive the macro path end to end on demand (local target by default; remote needs `--allow-remote`) |
+| Ledger Reasoning Echo | `apps/web/lib/ledger-reasoning-store.ts` + `apps/web/models/LedgerReasoning.ts` | Readable reasoning for hash-only ledger records (`record` by chainId+id, `pending` by keccak, 90-day TTL) |
+| Ledger Reasoning Backfill | `scripts/backfill-ledger-reasoning.ts` | Recover reasoning text for historical records, keccak-gated (dry-run by default) |
 | Guardian State | `apps/web/lib/vault/guardian-state.ts` | Pending recommendation store |
 | Cognee Memory | `packages/shared/src/services/cognee-memory-service.ts` | Cross-session learning (fallback) |
 | Tablestore Memory | `packages/shared/src/services/tablestore-memory-service.ts` | Alibaba Cloud Agent Memory (preferred when configured) |

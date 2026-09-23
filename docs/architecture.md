@@ -255,6 +255,26 @@ Sepolia/Galileo testnet predecessors: RecommendationLedger on Arbitrum Sepolia [
 
 StrategyVault: [`0xd83797702AE6ef15349e762B22bfe79322B46975`](https://sepolia.arbiscan.io/address/0xd83797702AE6ef15349e762B22bfe79322B46975), AgenticHub: [`0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92`](https://sepolia.arbiscan.io/address/0x72c78a27a47d07656bb6b606d7DB5Ae5F114bf92) (both Arbitrum Sepolia).
 
+### Readable reasoning (off-chain echo)
+
+The contract stores `reasoningHash` only — the words are never on-chain. The
+readable line lives in Mongo (`ledgerreasonings`,
+[`models/LedgerReasoning.ts`](../apps/web/models/LedgerReasoning.ts), 90-day
+TTL), written and read through
+[`lib/ledger-reasoning-store.ts`](../apps/web/lib/ledger-reasoning-store.ts),
+keyed two ways:
+
+| Kind | Key | Joined by |
+|---|---|---|
+| `record` | `(chainId, recordId)` | the identity the proof feed carries |
+| `pending` | `keccak256(text)` | the record's own `reasoningHash` — a *verified* join: the words hash to the commitment |
+
+Never join on `settlementTxHash`; that field is the caller-supplied swap tx,
+not the anchor tx. Both directions are best-effort — a missing echo renders
+hash-only, and text is only ever written when it hashes to the on-chain
+commitment (`pnpm backfill-ledger-reasoning` enforces exactly that for
+historical records, reporting what it cannot match instead of guessing).
+
 ### Anchor observability
 
 `recordRecommendation` returns a discriminated `AnchorResult` (`anchored` / `pending` / `failed`), patched into `AIMessage.x402Receipt.anchor` via `AIConversationContext.patchMessage` so the verifier surface lives in the receipt itself. The Guardian cron persists the same shape to `GuardianState.latestAnchor` for the proof feed. Status contract and caller obligations: [`integrations.md`](./integrations.md) § Anchor observability.

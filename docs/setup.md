@@ -79,6 +79,38 @@ The agent wallet (`VAULT_PRIVATE_KEY`) must hold USDC on the active settlement r
    - **ZERO_G / ARC testnet:** use the Circle Arc Faucet → select **Arc Testnet**, or the 0G Galileo faucet for the ZERO_G rail.
 3. Verify: `settlement.agentUSDCBalance` reflects the balance
 
+#### Macro path rehearsal
+
+Monitors fire when a watched central-bank page changes — not on a schedule you
+control. Drive the identical path on demand instead:
+
+```bash
+pnpm rehearse-macro-signal                        # print the payload, send nothing
+pnpm dev                                          # terminal 1
+pnpm rehearse-macro-signal --send                 # terminal 2 — local target
+pnpm rehearse-macro-signal --verify-only --url https://api.diversifi.famile.xyz
+```
+
+A rehearsal is a real signal: the webhook runs live model analysis, fans a
+rebalance intent to every relevant user, and anchors a permanent ledger record
+when the model judges it actionable (confidence ≥ 0.6). Remote targets are
+refused unless `--allow-remote` is passed, and the payload labels itself a
+rehearsal (marker URL + `[Rehearsal]` summary) so it is never mistaken for a
+market event. `--verify-only` reports per row whether the feed carries readable
+text or is hash-only.
+
+Records anchored before the reasoning echo shipped stay hash-only until
+recovered:
+
+```bash
+pnpm backfill-ledger-reasoning           # dry-run report
+pnpm backfill-ledger-reasoning --apply   # write the echoes
+```
+
+The backfill reconstructs the anchored line from the GuardianState queue and
+writes it **only** when `keccak256(candidate)` equals the record's on-chain
+`reasoningHash`; everything else is reported as unmatched.
+
 #### Generating Test Volume
 
 ```bash

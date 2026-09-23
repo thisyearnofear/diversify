@@ -81,6 +81,12 @@ caption-worthy entries, note the ISO week in the capture journal.
 - Webhook gate: `actionable && confidence >= 0.6` (see
   `firecrawl-webhook.ts`), then per-user relevance (allowed token + cUSD
   held). The rig is dimensioned in §1 to pass both.
+- Not every shoot day has a real event. `pnpm rehearse-macro-signal --send`
+  drives the identical entry point (signed POST → analysis → fan-out → anchor →
+  echo → feed), which is honest on camera because the anchored line carries the
+  rehearsal marker URL. Check readability first with
+  `pnpm rehearse-macro-signal --verify-only`: a hash-only row means that record
+  has no echo, so the corridor beat will show its standing `watch` instead.
 - Advisory layer (bonus material, no extra setup): the TypeSafe Signal Lens
   now runs on every event (`ENABLE_TYPESAFE_SIGNAL_LENS=true` on the
   backend). After ~2–3 weeks of accumulation,
