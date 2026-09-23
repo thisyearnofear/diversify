@@ -13,6 +13,7 @@ import SwapStatus from "./SwapStatus";
 import { CorridorLine, SIGNATURE_PAIRS, StoryPairStrip } from "./CorridorContext";
 import PairStage, { type PairReceipt } from "./PairStage";
 import { CapitalJourney } from "./CapitalJourney";
+import { JourneyLookup } from "./JourneyLookup";
 import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
 import { useTokenPickerItems } from "./token-picker-items";
 import { useCorridorSignals } from "../../hooks/use-corridor-signals";
@@ -69,12 +70,17 @@ interface SwapInterfaceProps {
   };
   /** Claimable streak reward, shown on the settlement receipt. */
   claim?: { label: string; onClaim(): void } | null;
-  /** The wallet's on-chain capital history (journey rail), connected only. */
+  /** The wallet's (or looked-up address's) on-chain capital history. */
   capitalHistory?: {
     data: CapitalHistory | null;
+    isLoading?: boolean;
+    error?: boolean;
     refresh(delayMs?: number): void;
   } | null;
   onInspectJourney?: () => void;
+  /** Walletless public-address lookup in the journey rail's slot. */
+  lookupAddress?: string | null;
+  onLookupAddress?: (address: string | null) => void;
 }
 
 const SwapInterface = forwardRef<
@@ -111,6 +117,8 @@ const SwapInterface = forwardRef<
     claim,
     capitalHistory,
     onInspectJourney,
+    lookupAddress = null,
+    onLookupAddress,
   },
   ref,
 ) {
@@ -437,13 +445,24 @@ const SwapInterface = forwardRef<
                 }}
               />
             )}
-            {address && (
+            {address ? (
               <CapitalJourney
                 history={capitalHistory?.data ?? null}
                 tokenBalances={tokenBalances}
                 optimisticSymbol={receipt?.txHash ? receipt.toToken : null}
                 onInspectJourney={onInspectJourney}
               />
+            ) : (
+              !receipt && (
+                <JourneyLookup
+                  lookupAddress={lookupAddress}
+                  history={capitalHistory?.data ?? null}
+                  isLoading={capitalHistory?.isLoading ?? false}
+                  error={capitalHistory?.error ?? false}
+                  onLookup={(a) => onLookupAddress?.(a)}
+                  onInspectJourney={onInspectJourney}
+                />
+              )
             )}
           </>
         ) : (

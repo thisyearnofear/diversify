@@ -58,6 +58,7 @@ vi.mock("../use-streak-rewards", () => ({
 beforeEach(() => {
   mockSwapStep = "idle";
   mockSwapReset.mockClear();
+  sessionStorage.clear();
 });
 
 const CELO_CHAIN_ID = 42220;
@@ -213,5 +214,93 @@ describe("useSwapController — unsupported wallet chain", () => {
 
     expect(result.current.fromChainId).toBe(42161);
     expect(result.current.toChainId).toBe(42161);
+  });
+});
+
+describe("useSwapController — session pair persistence", () => {
+  const KEY = "diversifi.exchange.pair";
+
+  it("restores a stored pair in canonical list casing", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "usdm", toToken: "brlm" }),
+    );
+    const { result } = renderController();
+
+    expect(result.current.fromToken).toBe("USDm");
+    expect(result.current.toToken).toBe("BRLm");
+  });
+
+  it("ignores a stored pair whose symbols aren't both in the list", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "USDm", toToken: "ZZZ" }),
+    );
+    const { result } = renderController();
+
+    // Falls back to the defaults and the sync effect repairs, not the
+    // stored pair.
+    expect(result.current.toToken).not.toBe("ZZZ");
+    expect(result.current.fromToken).not.toBe(result.current.toToken);
+  });
+
+  it("persists the pair on every change", () => {
+    const { result } = renderController();
+
+    act(() => {
+      result.current.setFromToken("BRLm");
+      result.current.setToToken("USDm");
+    });
+
+    expect(sessionStorage.getItem(KEY)).toBe(
+      JSON.stringify({ fromToken: "BRLm", toToken: "USDm" }),
+    );
+  });
+
+  it("a setTokens-style override beats the stored pair", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "USDm", toToken: "BRLm" }),
+    );
+    const { result } = renderController();
+
+    act(() => {
+      result.current.setFromToken("CELO");
+      result.current.setToToken("USDm");
+    });
+
+    expect(result.current.fromToken).toBe("CELO");
+    expect(result.current.toToken).toBe("USDm");
+  });
+
+  it("restores the stored pair when the token list arrives after mount", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "BRLm", toToken: "USDm" }),
+    );
+    const { result, rerender } = renderHook(
+      ({ tokens }: { tokens: typeof CELO_TOKENS }) =>
+        useSwapController({ address: "0xtest", chainId: CELO_CHAIN_ID, availableTokens: tokens }),
+      { initialProps: { tokens: [] as unknown as typeof CELO_TOKENS } },
+    );
+    // The empty first render must not overwrite the stored pair.
+    expect(JSON.parse(sessionStorage.getItem(KEY)!)).toEqual({ fromToken: "BRLm", toToken: "USDm" });
+
+    rerender({ tokens: CELO_TOKENS });
+    expect(result.current.fromToken).toBe("BRLm");
+    expect(result.current.toToken).toBe("USDm");
+  });
+
+  it("the sync effect keeps a valid restored pair across rerenders", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "USDm", toToken: "BRLm" }),
+    );
+    const { result, rerender } = renderController();
+
+    rerender();
+    rerender();
+    expect(result.current.fromToken).toBe("USDm");
+    expect(result.current.toToken).toBe("BRLm");
   });
 });

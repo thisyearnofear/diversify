@@ -47,12 +47,17 @@ interface SwapTabProps {
   instrument?: boolean;
   onInspectQuote?: (fromToken: string, toToken: string) => void;
   quoteInspected?: boolean;
-  /** The wallet's on-chain capital history (journey rail + receipt refetch). */
+  /** The wallet's (or looked-up address's) on-chain capital history. */
   capitalHistory?: {
     data: CapitalHistory | null;
+    isLoading?: boolean;
+    error?: boolean;
     refresh(delayMs?: number): void;
   } | null;
   onInspectJourney?: () => void;
+  /** Walletless public-address lookup in the journey rail's slot. */
+  lookupAddress?: string | null;
+  onLookupAddress?: (address: string | null) => void;
 }
 
 export default function SwapTab({
@@ -66,6 +71,8 @@ export default function SwapTab({
   quoteInspected = false,
   capitalHistory,
   onInspectJourney,
+  lookupAddress,
+  onLookupAddress,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
@@ -493,6 +500,8 @@ export default function SwapTab({
             quoteInspected={quoteInspected}
             capitalHistory={capitalHistory}
             onInspectJourney={onInspectJourney}
+            lookupAddress={lookupAddress}
+            onLookupAddress={onLookupAddress}
             claim={
               canClaim
                 ? { label: `${estimatedReward} G$ ready`, onClaim: flow.handleClaim }

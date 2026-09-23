@@ -17,10 +17,43 @@ import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strateg
 // token, so a failed X -> Y often decomposes into X -> USDm -> Y.
 const HUB_TOKEN = "USDm";
 
+// The explored pair survives tab remounts and reloads within the
+// session — walletless browsing carries into the connected state.
+// Prefill/setTokens always win over the stored pair.
+const PAIR_STORAGE_KEY = "diversifi.exchange.pair";
+
 interface Token {
   symbol: string;
   name: string;
   region: string;
+}
+
+/** Read the session-stored pair, canonicalizing to the list's spelling.
+ *  Returns null when the stored symbols aren't both available — an
+ *  invalid stored pair is ignored, never half-applied. */
+function readStoredPair(
+  list: Token[],
+): { fromToken: string; toToken: string } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PAIR_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as {
+      fromToken?: unknown;
+      toToken?: unknown;
+    };
+    const match = (sym: unknown) =>
+      typeof sym === "string"
+        ? list.find((t) => t.symbol.toUpperCase() === sym.toUpperCase())
+            ?.symbol
+        : undefined;
+    const fromToken = match(parsed?.fromToken);
+    const toToken = match(parsed?.toToken);
+    if (!fromToken || !toToken || fromToken === toToken) return null;
+    return { fromToken, toToken };
+  } catch {
+    return null;
+  }
 }
 
 interface UseSwapControllerParams {
@@ -78,8 +111,14 @@ export function useSwapController({
     return candidate;
   }, [preferredToRegion, availableTokens, defaultFromToken]);
 
-  const [fromToken, setFromToken] = useState<string>(defaultFromToken);
-  const [toToken, setToToken] = useState<string>(defaultToToken);
+  // Restore the session-stored pair when both symbols are still in the
+  // list (canonical spelling); region defaults otherwise.
+  const [fromToken, setFromToken] = useState<string>(
+    () => readStoredPair(availableTokens)?.fromToken ?? defaultFromToken,
+  );
+  const [toToken, setToToken] = useState<string>(
+    () => readStoredPair(availableTokens)?.toToken ?? defaultToToken,
+  );
   // Empty by default — any amount forces the ticket (SwapInterface's
   // forcedTicket), so a prefilled "10" would hide the pair stage from
   // every visitor.
@@ -132,6 +171,60 @@ export function useSwapController({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Late restore: if the token list wasn't ready at init, apply the
+  // stored pair once it is — but only while the pair still sits on the
+  // defaults, so a prefill or explicit setTokens always wins. Declared
+  // BEFORE the persist effect, which waits for this to settle: otherwise
+  // the first render would overwrite the stored pair with the defaults
+  // before an async token list arrived to restore it.
+  const pairRestoreDoneRef = useRef(false);
+  // Set only by explicit choices (the exported setters, the switch) —
+  // never by the internal sync effects — so "a caller already picked a
+  // pair" doesn't depend on defaults that themselves follow the list.
+  const pairTouchedRef = useRef(false);
+  // The pair a restore just queued — the sync effect runs in the same
+  // pass with pre-restore state and must reconcile against this instead.
+  const restoredPairRef = useRef<{ fromToken: string; toToken: string } | null>(null);
+  const setFromTokenByUser = useCallback((t: string) => {
+    pairTouchedRef.current = true;
+    setFromToken(t);
+  }, []);
+  const setToTokenByUser = useCallback((t: string) => {
+    pairTouchedRef.current = true;
+    setToToken(t);
+  }, []);
+  useEffect(() => {
+    if (pairRestoreDoneRef.current) return;
+    let hasStored = false;
+    try {
+      hasStored = Boolean(sessionStorage.getItem(PAIR_STORAGE_KEY));
+    } catch {}
+    if (!hasStored) {
+      pairRestoreDoneRef.current = true;
+      return;
+    }
+    if (availableTokens.length === 0) return; // wait for the list
+    pairRestoreDoneRef.current = true;
+    const stored = readStoredPair(availableTokens);
+    if (!stored || pairTouchedRef.current) return;
+    restoredPairRef.current = stored;
+    setFromToken(stored.fromToken);
+    setToToken(stored.toToken);
+  }, [availableTokens]);
+
+  // Persist the pair on every change — once the restore has settled.
+  useEffect(() => {
+    if (!pairRestoreDoneRef.current || !fromToken || !toToken) return;
+    try {
+      sessionStorage.setItem(
+        PAIR_STORAGE_KEY,
+        JSON.stringify({ fromToken, toToken }),
+      );
+    } catch {
+      // sessionStorage unavailable — the pair just doesn't persist
+    }
+  }, [fromToken, toToken, availableTokens]);
 
   // 2. Specialized Hooks
   const { tokenMap: tokenBalances, refresh: refreshBalances } =
@@ -206,16 +299,23 @@ export function useSwapController({
       list.find((t) => t.symbol.toUpperCase() === symbol.toUpperCase())
         ?.symbol;
 
-    const canonicalFrom = matchSymbol(targetFromTokens, fromToken);
+    const pending = restoredPairRef.current;
+    if (pending && pending.fromToken === fromToken && pending.toToken === toToken) {
+      restoredPairRef.current = null; // state caught up with the restore
+    }
+    const curFrom = restoredPairRef.current?.fromToken ?? fromToken;
+    const curTo = restoredPairRef.current?.toToken ?? toToken;
+
+    const canonicalFrom = matchSymbol(targetFromTokens, curFrom);
     const effectiveFrom =
       canonicalFrom ?? (targetFromTokens.length > 0 ? targetFromTokens[0].symbol : undefined);
-    if (effectiveFrom && effectiveFrom !== fromToken) {
+    if (effectiveFrom && effectiveFrom !== curFrom) {
       setFromToken(effectiveFrom);
     }
 
-    const canonicalTo = matchSymbol(targetToTokens, toToken);
+    const canonicalTo = matchSymbol(targetToTokens, curTo);
     if (canonicalTo) {
-      if (canonicalTo !== toToken) setToToken(canonicalTo);
+      if (canonicalTo !== curTo) setToToken(canonicalTo);
     } else if (targetToTokens.length > 0) {
       // Compare against the effective from-token, not the stale state value:
       // when both resets land in the same pass, picking ≠ the old fromToken
@@ -265,6 +365,7 @@ export function useSwapController({
 
   // 5. Actions
   const handleSwitchTokens = useCallback(() => {
+    pairTouchedRef.current = true;
     const temp = fromToken;
     setFromToken(toToken);
     setToToken(temp);
@@ -554,9 +655,9 @@ export function useSwapController({
   return {
     // state
     fromToken,
-    setFromToken,
+    setFromToken: setFromTokenByUser,
     toToken,
-    setToToken,
+    setToToken: setToTokenByUser,
     amount,
     setAmount,
     slippageTolerance,

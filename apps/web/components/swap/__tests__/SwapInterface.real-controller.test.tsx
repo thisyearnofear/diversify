@@ -81,6 +81,10 @@ vi.mock('../../../hooks/use-social-resolve', () => ({
   useSocialResolve: () => ({ resolveIdentifier: vi.fn() }),
 }));
 
+vi.mock('../../wallet/WalletProvider', () => ({
+  useWalletContext: () => ({ address: null, connect: vi.fn() }),
+}));
+
 import SwapInterface from '../SwapInterface';
 
 const TOKENS = [

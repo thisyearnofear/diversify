@@ -51,10 +51,14 @@ function writeCache(address: string, data: CapitalHistory): void {
 export function useCapitalHistory(address: string | null): {
     data: CapitalHistory | null;
     isLoading: boolean;
+    /** True when the last fetch failed (502/offline) — the caller shows
+     *  honest absence, never partial data. */
+    error: boolean;
     refresh: (delayMs?: number) => void;
 } {
     const [data, setData] = useState<CapitalHistory | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const abortRef = useRef<AbortController | null>(null);
 
@@ -68,12 +72,16 @@ export function useCapitalHistory(address: string | null): {
                 `/api/wallet/capital-history?address=${encodeURIComponent(addr)}`,
                 { signal: controller.signal },
             );
-            if (!resp.ok) return; // 502 etc. — absence, not an error state
+            if (!resp.ok) {
+                setError(true);
+                return; // 502 etc. — absence, never partial data
+            }
             const json = (await resp.json()) as CapitalHistory;
             writeCache(addr, json);
             setData(json);
+            setError(false);
         } catch {
-            // aborted or offline — absence is honest
+            if (!controller.signal.aborted) setError(true);
         } finally {
             if (!controller.signal.aborted) setIsLoading(false);
         }
@@ -98,8 +106,10 @@ export function useCapitalHistory(address: string | null): {
     useEffect(() => {
         if (!address) {
             setData(null);
+            setError(false);
             return;
         }
+        setError(false);
         const cached = readCache(address);
         if (cached && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
             setData(cached.data);
@@ -113,5 +123,5 @@ export function useCapitalHistory(address: string | null): {
         };
     }, [address, fetchNow]);
 
-    return { data: address ? data : null, isLoading, refresh };
+    return { data: address ? data : null, isLoading, error, refresh };
 }

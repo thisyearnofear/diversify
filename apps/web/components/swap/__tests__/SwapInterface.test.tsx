@@ -138,6 +138,9 @@ vi.mock('../SwapActionButton', () => ({
 vi.mock('../../wallet/WalletButton', () => ({
   default: () => React.createElement('button', { type: 'button' }, 'connect'),
 }));
+vi.mock('../../wallet/WalletProvider', () => ({
+  useWalletContext: () => ({ address: null, connect: vi.fn() }),
+}));
 
 import SwapInterface from '../SwapInterface';
 

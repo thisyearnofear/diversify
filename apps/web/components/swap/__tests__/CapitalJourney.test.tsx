@@ -19,6 +19,11 @@ vi.mock('framer-motion', async (importOriginal) => {
   return { ...actual, useReducedMotion: () => reducedMotionState.on };
 });
 
+const mockConnect = vi.fn();
+vi.mock('@/components/wallet/WalletProvider', () => ({
+  useWalletContext: () => ({ connect: mockConnect }),
+}));
+
 afterEach(() => {
   cleanup();
   reducedMotionState.on = false;
@@ -128,5 +133,53 @@ describe('CapitalJourney', () => {
       .split(/\s+/)
       .filter(Boolean);
     expect(words.length).toBeLessThanOrEqual(25);
+  });
+});
+
+describe('CapitalJourney — read-only public address', () => {
+  const READ_ONLY = {
+    address: '0x005177Fe16b3a88796C2dd36f35B19AE90E907b2',
+    onClear: vi.fn(),
+  };
+
+  it('labels the rail read-only and drops held status entirely', () => {
+    renderRail({ readOnly: READ_ONLY });
+    const rail = screen.getByTestId('capital-journey');
+    expect(rail).toHaveTextContent('Viewing 0x0051…b2 · read-only');
+    // We don't know that wallet's balances — no held guessing, no
+    // "still held" claim, no data-held marks.
+    expect(rail).not.toHaveTextContent('still held');
+    expect(rail.querySelectorAll('[data-held]')).toHaveLength(0);
+    expect(rail).toHaveTextContent('3 currencies');
+  });
+
+  it('Clear returns to the invite state', () => {
+    const onClear = vi.fn();
+    renderRail({ readOnly: { ...READ_ONLY, onClear } });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+
+  it('the connect line uses the shared connect action', () => {
+    renderRail({ readOnly: READ_ONLY });
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Connect to act on it →' }),
+    );
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+  });
+
+  it('still opens the journey inspector on tap', () => {
+    const onInspectJourney = vi.fn();
+    renderRail({ readOnly: READ_ONLY, onInspectJourney });
+    fireEvent.click(screen.getByTestId('capital-journey'));
+    expect(onInspectJourney).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays inside the 30-word read-only budget', () => {
+    renderRail({ readOnly: READ_ONLY });
+    const words = (screen.getByTestId('capital-journey').textContent ?? '')
+      .split(/\s+/)
+      .filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(30);
   });
 });

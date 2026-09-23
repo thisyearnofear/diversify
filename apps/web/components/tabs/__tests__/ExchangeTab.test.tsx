@@ -8,9 +8,10 @@ vi.mock("next/router", () => ({
 }));
 
 let mockAddress: string | null = "0xabc";
+const mockConnect = vi.fn();
 
 vi.mock("@/components/wallet/WalletProvider", () => ({
-  useWalletContext: () => ({ address: mockAddress }),
+  useWalletContext: () => ({ address: mockAddress, connect: mockConnect }),
 }));
 
 let mockNettingRequested = false;
@@ -70,10 +71,14 @@ vi.mock("../SwapTab", () => ({
     instrument,
     onInspectQuote,
     onInspectJourney,
+    lookupAddress,
+    onLookupAddress,
   }: {
     instrument?: boolean;
     onInspectQuote?: (from: string, to: string) => void;
     onInspectJourney?: () => void;
+    lookupAddress?: string | null;
+    onLookupAddress?: (a: string | null) => void;
   }) =>
     React.createElement(
       "div",
@@ -88,6 +93,20 @@ vi.mock("../SwapTab", () => ({
         },
         "quote",
       ),
+      onLookupAddress
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "lookup-trigger",
+              onClick: () =>
+                onLookupAddress(
+                  "0x005177Fe16b3a88796C2dd36f35B19AE90E907b2",
+                ),
+            },
+            lookupAddress ?? "no-lookup",
+          )
+        : null,
       onInspectJourney
         ? React.createElement(
             "button",
@@ -105,12 +124,17 @@ vi.mock("../SwapTab", () => ({
 import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
 
 const journeyState: { data: CapitalHistory | null } = { data: null };
+const capitalHistoryArgs: (string | null)[] = [];
 vi.mock("@/hooks/use-capital-history", () => ({
-  useCapitalHistory: () => ({
-    data: journeyState.data,
-    isLoading: false,
-    refresh: vi.fn(),
-  }),
+  useCapitalHistory: (a: string | null) => {
+    capitalHistoryArgs.push(a);
+    return {
+      data: journeyState.data,
+      isLoading: false,
+      error: false,
+      refresh: vi.fn(),
+    };
+  },
 }));
 
 import ExchangeTab from "../ExchangeTab";
@@ -125,6 +149,7 @@ describe("ExchangeTab — instrument", () => {
     mockAddress = "0xabc";
     mockNettingRequested = false;
     journeyState.data = null;
+    capitalHistoryArgs.length = 0;
   });
 
   it("mounts the ticket as the object, with no extra inspect button", () => {
@@ -245,12 +270,61 @@ describe("ExchangeTab — instrument", () => {
     expect(inspector).toHaveTextContent("Showing your most recent transfers");
   });
 
-  it("walletless gets no journey row", () => {
+  it("walletless: the history hook is called with no address until a lookup", () => {
     mockAddress = null;
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
-    expect(screen.queryByTestId("journey-row")).not.toBeInTheDocument();
+    expect(capitalHistoryArgs).toEqual([null]);
+  });
+
+  it("walletless lookup: one hook call carries the looked-up address", () => {
+    mockAddress = null;
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+    fireEvent.click(screen.getByTestId("lookup-trigger"));
+    expect(capitalHistoryArgs.at(-1)).toBe(
+      "0x005177Fe16b3a88796C2dd36f35B19AE90E907b2",
+    );
+  });
+
+  it("walletless lookup: the journey inspector footer labels the read-only view", () => {
+    mockAddress = null;
+    journeyState.data = {
+      address: "0x005177Fe16b3a88796C2dd36f35B19AE90E907b2",
+      chainId: 42220,
+      stations: [
+        { symbol: "USDm", firstSeen: "2023-01-01T00:00:00.000Z", lastSeen: "2024-01-01T00:00:00.000Z" },
+        { symbol: "KESm", firstSeen: "2024-02-01T00:00:00.000Z", lastSeen: "2024-03-01T00:00:00.000Z" },
+      ],
+      legs: [],
+      complete: true,
+      asOf: "2026-09-23T12:00:00.000Z",
+    };
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+    fireEvent.click(screen.getByTestId("lookup-trigger"));
+    fireEvent.click(screen.getByTestId("journey-row"));
+    expect(screen.getByTestId("journey-inspector")).toHaveTextContent(
+      "read-only view of a public address",
+    );
+  });
+
+  it("connecting a wallet clears the lookup — the hook sees the real address", () => {
+    mockAddress = null;
+    const { rerender } = render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+    fireEvent.click(screen.getByTestId("lookup-trigger"));
+    expect(capitalHistoryArgs.at(-1)).toBe(
+      "0x005177Fe16b3a88796C2dd36f35B19AE90E907b2",
+    );
+
+    mockAddress = "0xabc";
+    rerender(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    expect(capitalHistoryArgs.at(-1)).toBe("0xabc");
   });
 
   it("connected: the status rail carries the same quiet trust line as Home and Shield", () => {

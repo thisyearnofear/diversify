@@ -52,7 +52,13 @@ function fmtDay(iso: string): string {
 
 /** The journey inspector body — settled legs, newest first, each linked
  *  to the explorer. Amounts are settled on-chain, so no "at quote". */
-function JourneyBody({ history }: { history: CapitalHistory | null }) {
+function JourneyBody({
+  history,
+  readOnly = false,
+}: {
+  history: CapitalHistory | null;
+  readOnly?: boolean;
+}) {
   const legs = history?.legs ?? [];
   return (
     <div data-testid="journey-inspector">
@@ -89,6 +95,7 @@ function JourneyBody({ history }: { history: CapitalHistory | null }) {
         {history && !history.complete
           ? " · Showing your most recent transfers"
           : ""}
+        {readOnly ? " · read-only view of a public address" : ""}
       </p>
     </div>
   );
@@ -104,12 +111,15 @@ function PairInspector({
   onClose,
   lead,
   journey,
+  journeyReadOnly = false,
 }: {
   selection: InspectorSel;
   userRegion: Region;
   onClose: () => void;
   lead: ProvenanceLead;
   journey: CapitalHistory | null;
+  /** Walletless public-address lookup — labelled, never held-marked. */
+  journeyReadOnly?: boolean;
 }) {
   const pair = selection?.kind === "pair" ? selection : null;
   const isJourney = selection?.kind === "journey";
@@ -139,7 +149,9 @@ function PairInspector({
             : "Counterparty matching"
       }
     >
-      {isJourney ? <JourneyBody history={journey} /> : null}
+      {isJourney ? (
+        <JourneyBody history={journey} readOnly={journeyReadOnly} />
+      ) : null}
       {pair ? (
         <>
           <RouteSchematic
@@ -195,13 +207,17 @@ export default function ExchangeTab({
   const sharedPortfolio = usePortfolio();
   const previousAddress = useRef(address);
   const [inspectorSel, setInspectorSel] = useState<InspectorSel>(null);
+  // Walletless public-address lookup — never persisted, cleared the
+  // moment a wallet connects.
+  const [lookupAddress, setLookupAddress] = useState<string | null>(null);
   // One fetch per address — the journey rail reads it and a settled
   // receipt triggers refresh(20000) because the indexer lags.
-  const capitalHistory = useCapitalHistory(address ?? null);
+  const capitalHistory = useCapitalHistory(address ?? lookupAddress);
 
   useEffect(() => {
     if (previousAddress.current !== address) {
       setInspectorSel(null);
+      if (address) setLookupAddress(null);
       previousAddress.current = address;
     }
   }, [address]);
@@ -284,6 +300,10 @@ export default function ExchangeTab({
                 setInspectorSel({ kind: "pair", fromToken, toToken })
               }
               quoteInspected={inspectorSel?.kind === "pair"}
+              capitalHistory={capitalHistory}
+              onInspectJourney={() => setInspectorSel({ kind: "journey" })}
+              lookupAddress={lookupAddress}
+              onLookupAddress={setLookupAddress}
             />
           </div>
         }
@@ -294,6 +314,7 @@ export default function ExchangeTab({
             onClose={() => setInspectorSel(null)}
             lead={leadForStrategy(financialStrategy)}
             journey={capitalHistory.data}
+            journeyReadOnly={Boolean(lookupAddress)}
           />
         }
         status={

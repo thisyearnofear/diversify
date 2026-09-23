@@ -13,6 +13,7 @@ import { FlickScrollRow } from '../shared/FlickScrollRow';
 import { corridorSideFor } from '@/lib/corridor-context';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
+import { useWalletContext } from '../wallet/WalletProvider';
 import type { CapitalHistory } from '@diversifi/shared/src/services/capital-history';
 
 interface TokenBalanceLike {
@@ -27,11 +28,16 @@ function flagFor(symbol: string): string | null {
     );
 }
 
+export function shortAddress(a: string): string {
+    return a.length > 8 ? `${a.slice(0, 6)}…${a.slice(-2)}` : a;
+}
+
 export function CapitalJourney({
     history,
     tokenBalances,
     optimisticSymbol = null,
     onInspectJourney,
+    readOnly = null,
 }: {
     history: CapitalHistory | null;
     tokenBalances: Record<string, TokenBalanceLike>;
@@ -39,6 +45,9 @@ export function CapitalJourney({
      *  hasn't indexed it yet — de-duped once real data arrives. */
     optimisticSymbol?: string | null;
     onInspectJourney?: () => void;
+    /** Walletless lookup of a public address: no balances are known, so
+     *  nothing is marked held — all stations render neutral. */
+    readOnly?: { address: string; onClear(): void } | null;
 }) {
     const reduced = useReducedMotion();
     const stations = useMemo(() => {
@@ -58,16 +67,21 @@ export function CapitalJourney({
 
     if (stations.length < 2) return null;
 
+    // Read-only views never guess at someone else's balances — every
+    // station is neutral, no held/departed distinction.
     const held = (symbol: string) =>
-        (tokenBalances[symbol]?.value ?? 0) > 0;
+        !readOnly && (tokenBalances[symbol]?.value ?? 0) > 0;
     const heldCount = stations.filter((s) => held(s.symbol)).length;
     const since = new Date(stations[0].firstSeen).toLocaleDateString('en-US', {
         month: 'short',
         year: 'numeric',
     });
-    const line = history?.complete
-        ? `Since ${since} · ${stations.length} currencies · ${heldCount} still held`
-        : `Recent history · ${stations.length} currencies · ${heldCount} still held`;
+    const span = history?.complete
+        ? `Since ${since}`
+        : 'Recent history';
+    const line = readOnly
+        ? `${span} · ${stations.length} currencies`
+        : `${span} · ${stations.length} currencies · ${heldCount} still held`;
 
     return (
         <div
@@ -84,7 +98,24 @@ export function CapitalJourney({
             className="mt-3 w-full cursor-pointer rounded-xl px-1 py-2 text-left min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         >
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                Where your savings have lived
+                {readOnly ? (
+                    <>
+                        Viewing {shortAddress(readOnly.address)} · read-only
+                        {' · '}
+                        <button
+                            type="button"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                readOnly.onClear();
+                            }}
+                            className="font-semibold text-gray-600 underline decoration-dotted underline-offset-2 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
+                        >
+                            Clear
+                        </button>
+                    </>
+                ) : (
+                    'Where your savings have lived'
+                )}
             </p>
             <FlickScrollRow
                 className="mt-1.5 items-center gap-0"
@@ -99,7 +130,11 @@ export function CapitalJourney({
                             {i > 0 && (
                                 <motion.span
                                     aria-hidden
-                                    data-held={isHeld && held(stations[i - 1].symbol)}
+                                    data-held={
+                                        readOnly
+                                            ? undefined
+                                            : isHeld && held(stations[i - 1].symbol)
+                                    }
                                     initial={reduced ? false : { scaleX: 0 }}
                                     animate={{ scaleX: 1 }}
                                     transition={{
@@ -107,7 +142,7 @@ export function CapitalJourney({
                                         delay: reduced ? 0 : i * STAGGER_STEP_S,
                                     }}
                                     className={`h-[1.5px] w-4 shrink-0 origin-left ${
-                                        isHeld && held(stations[i - 1].symbol)
+                                        readOnly || (isHeld && held(stations[i - 1].symbol))
                                             ? 'bg-gray-400 dark:bg-white/25'
                                             : 'border-t-[1.5px] border-dashed border-gray-300 opacity-40 dark:border-gray-600'
                                     }`}
@@ -115,11 +150,11 @@ export function CapitalJourney({
                             )}
                             <motion.span
                                 data-testid={`journey-station-${s.symbol}`}
-                                data-held={isHeld}
+                                data-held={readOnly ? undefined : isHeld}
                                 initial={
                                     reduced ? false : { scale: 0, opacity: 0 }
                                 }
-                                animate={{ scale: 1, opacity: isHeld ? 1 : 0.4 }}
+                                animate={{ scale: 1, opacity: readOnly || isHeld ? 1 : 0.4 }}
                                 transition={{
                                     ...springPop,
                                     delay: reduced ? 0 : i * STAGGER_STEP_S,
@@ -140,7 +175,29 @@ export function CapitalJourney({
             <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
                 {line}
             </p>
+            {readOnly && <ReadOnlyConnectLine />}
         </div>
+    );
+}
+
+/** "Is this your wallet? Connect to act on it →" — the same connect
+ *  action WalletButton uses, reached through the shared context. */
+function ReadOnlyConnectLine() {
+    const { connect } = useWalletContext();
+    return (
+        <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            Is this your wallet?{' '}
+            <button
+                type="button"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    void connect();
+                }}
+                className="font-semibold text-blue-600 hover:underline dark:text-blue-400"
+            >
+                Connect to act on it →
+            </button>
+        </p>
     );
 }
 

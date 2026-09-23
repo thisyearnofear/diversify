@@ -348,8 +348,23 @@ departed ones dim to 40% on dashes. When pagination didn't reach the
 wallet's first transfer the rail says "Recent history", not "Since" —
 we can't claim a start date we didn't reach. Tapping it opens the
 journey inspector: settled legs newest first with real explorer links,
-no "at quote" because these amounts already settled. The rail is
-connected-only — walletless visitors get nothing, never a sample.
+no "at quote" because these amounts already settled.
+
+The slot has three states, and connecting adds you — it never unlocks
+the world. Connected, it is your own rail. Walletless, the same slot
+holds one quiet invite — "Your own journey appears here when you
+connect · View any wallet →" — whose second half unfolds a single-line
+address input in place (no card, no modal, Escape collapses). A pasted
+public address renders the same rail in read-only dress: labelled
+"Viewing 0x… · read-only", never marked held — we don't know that
+wallet's balances, so every station is neutral on solid connectors and
+the summary drops "still held". No history says so; a failed fetch says
+"Couldn't read that wallet right now" rather than showing partial data.
+The looked-up address lives in state alone — sessionStorage keeps only
+the derived-history cache, and connecting clears the lookup. The pair
+itself persists the same way (`diversifi.exchange.pair`), so what a
+visitor explored survives into the connected tab; a prefill always
+beats the stored pair.
 
 The beam is also a time machine. The corridor line's trailing "in 5
 years" is a segmented control — `1y · 3y · 5y` — that re-weighs the
