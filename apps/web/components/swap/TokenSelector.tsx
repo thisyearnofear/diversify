@@ -5,6 +5,7 @@ import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY, tokenColor } from "../shared/palette";
 import { springPop, springSoft } from "@/lib/motion-tokens";
 import TokenPickerSheet, { type TokenPickerItem } from "./TokenPickerSheet";
+import { goodsEquivalentFor } from "@/lib/corridor-context";
 import { REGION_COLORS, TOKEN_METADATA, EXCHANGE_RATES } from "../../config";
 import type { UserExperienceMode } from "@/context/app/types";
 // Deep leaf imports — NOT the barrel — keeps the strategy stack out of first-load.
@@ -219,6 +220,31 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
     return parsed * rate;
   }, [amount, selectedToken, showAmountInput]);
 
+  // Purchasing-power vocabulary, not DEX vocabulary: the equivalent leads
+  // with what the amount buys at home ("6 bags of rice") when the fiat has
+  // a curated staple; the dollar figure follows. A token with no anchor
+  // keeps the plain ≈ $ — absence is honest.
+  const goodsEquivalent = React.useMemo(() => {
+    if (!showAmountInput || !amount) return null;
+    return goodsEquivalentFor(selectedToken, parseFloat(amount));
+  }, [amount, selectedToken, showAmountInput]);
+
+  const equivalentText = React.useMemo(() => {
+    const usd =
+      usdEquivalent != null
+        ? `$${usdEquivalent < 1 ? usdEquivalent.toFixed(4) : usdEquivalent.toLocaleString("en-US", { maximumFractionDigits: 2 })}`
+        : null;
+    return [goodsEquivalent, usd].filter(Boolean).join(" · ") || null;
+  }, [goodsEquivalent, usdEquivalent]);
+
+  // The receive side answers the same way — what the quoted amount buys
+  // where it lands (the remittance reading). Only when a real quote
+  // exists and the destination fiat has a curated staple.
+  const destinationGoods = React.useMemo(() => {
+    if (showAmountInput || !receiveAmount) return null;
+    return goodsEquivalentFor(selectedToken, parseFloat(receiveAmount));
+  }, [showAmountInput, receiveAmount, selectedToken]);
+
   // Region color for the token pill border
   const regionColor =
     tokenRegion && tokenRegion !== "Unknown"
@@ -350,8 +376,10 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         </div>
 
         {/* Balance line — only with a connected wallet: no wallet, no
-            balances, and "0.0000" would be a fabricated number. */}
-        {hasWallet && (
+            balances, and "0.0000" would be a fabricated number. The
+            ≈ equivalent is display-rate + staple math, not balance —
+            walletless visitors get it too. */}
+        {hasWallet ? (
         <div className="flex items-center justify-between px-4 pb-2.5">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-400 dark:text-gray-500">
@@ -371,14 +399,31 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
               </button>
             )}
           </div>
-          {usdEquivalent != null && (
+          {equivalentText && (
             <span className="text-xs text-gray-400 dark:text-gray-500">
-              ≈ ${usdEquivalent < 1 ? usdEquivalent.toFixed(4) : usdEquivalent.toFixed(2)}
+              ≈ {equivalentText}
             </span>
           )}
         </div>
+        ) : (
+          equivalentText && (
+            <div className="flex justify-end px-4 pb-2.5">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
+                ≈ {equivalentText}
+              </span>
+            </div>
+          )
         )}
       </div>
+
+      {/* The receive side in staples — what the quote buys where it
+          lands. Remittance vocabulary: "6 bags of rice in Lagos", not
+          "500.12 USD". */}
+      {destinationGoods && (
+        <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+          ≈ {destinationGoods} where it lands
+        </p>
+      )}
 
       {/* Non-compliant inline warning (compact, one line) */}
       {isNonCompliant && selectedCompliance.reason && (

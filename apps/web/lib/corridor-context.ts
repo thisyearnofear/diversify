@@ -121,3 +121,25 @@ export function corridorFor(fromToken: string | null, toToken: string | null): C
   }
   return null;
 }
+
+/**
+ * What an amount of the token buys in its home economy — the goods
+ * anchor ("6 bags of rice"), not a dollar figure. The token is pegged
+ * to the fiat it mirrors, so token units price the staple directly.
+ * Only currencies with a curated staple answer (NGN/GHS rice, KES
+ * maize flour) — null elsewhere; absence is honest.
+ */
+export function goodsEquivalentFor(
+  symbol: string | null | undefined,
+  amount: number,
+): string | null {
+  const anchor = corridorSideFor(symbol)?.entry?.goodsAnchor;
+  if (!anchor || !Number.isFinite(amount) || amount <= 0) return null;
+  const count = amount / anchor.price;
+  if (count < 0.1) return null;
+  const n =
+    count >= 10
+      ? Math.round(count).toLocaleString('en-US')
+      : (Math.round(count * 10) / 10).toString();
+  return `${n} ${anchor.unit}`;
+}

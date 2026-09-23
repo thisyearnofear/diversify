@@ -314,7 +314,12 @@ float is defended is decided there", never an invented date or a
 predicted direction). While the ticket is browsed rather than used it
 stays alive (§5 state rule): the ⇅ switch coin carries a slow shine
 loop and the corridor line rotates between the story and each side's
-watch beat; the first keystroke in the amount field stills it.
+watch beat; the first keystroke in the amount field stills it. The
+ticket answers in staples before dollars: the From row's ≈ equivalent
+leads with the fiat's curated `goodsAnchor` ("6 bags of rice ·
+$292.80"), and the To row names what a real quote buys where it lands —
+the remittance reading a DEX can't give. Currencies without a staple
+keep the plain ≈ $; absence is honest.
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner

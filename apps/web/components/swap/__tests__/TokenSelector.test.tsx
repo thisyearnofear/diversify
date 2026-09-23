@@ -1,95 +1,91 @@
-import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
-import "@testing-library/jest-dom/vitest";
-import React from "react";
-
 /**
- * TokenSelector balance-line honesty:
- * a walletless visitor has no balances, so the balance line must not
- * render at all — "Balance: 0.0000 X" would fabricate a state that
- * cannot become true (§ honesty rails).
+ * TokenSelector — the ticket answers in staples, not just dollars.
+ *
+ * Pins the purchasing-power vocabulary:
+ *   - The From equivalent leads with the goods anchor ("6 bags of
+ *     rice") and follows with the dollar figure; tokens without a
+ *     curated staple keep the plain ≈ $.
+ *   - Walletless visitors see the equivalent too — it's display-rate
+ *     math, not balance.
+ *   - The To row translates a real quote into what it buys where it
+ *     lands ("≈ N bags of rice where it lands").
  */
 
-const { mockUseReducedMotion } = vi.hoisted(() => ({
-  mockUseReducedMotion: vi.fn(() => true),
-}));
+// @vitest-environment jsdom
 
-vi.mock("framer-motion", () => ({
-  motion: new Proxy({}, {
-    get: (_t, prop) =>
-      function MockedMotion({ children, ...rest }: { children?: React.ReactNode }) {
-        return React.createElement(prop as string, rest, children);
-      },
-  }),
-  AnimatePresence: ({ children }: { children?: React.ReactNode }) => (
-    <>{children}</>
-  ),
-  useReducedMotion: mockUseReducedMotion,
-}));
+import { describe, it, expect, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import TokenSelector from '../TokenSelector';
 
-vi.mock("../../config", () => ({
-  REGION_COLORS: {},
-  TOKEN_METADATA: {},
-  EXCHANGE_RATES: {},
-}));
-
-vi.mock("@diversifi/shared/src/services/strategy/strategy.service", () => ({
-  StrategyService: {
-    getCompliance: vi.fn(() => null),
-  },
-}));
-
-import TokenSelector from "../TokenSelector";
+afterEach(() => cleanup());
 
 const TOKENS = [
-  { symbol: "cUSD", name: "Celo Dollar", icon: "", region: "Africa" },
-  { symbol: "KESm", name: "Kenya Shilling (Mento)", icon: "", region: "Africa" },
+  { symbol: 'NGNm', name: 'Nigerian Naira (Mento)', region: 'Nigeria' },
+  { symbol: 'KESm', name: 'Kenyan Shilling (Mento)', region: 'Kenya' },
+  { symbol: 'USDC', name: 'USD Coin', region: 'United States' },
 ];
 
-const baseProps = {
-  label: "From" as const,
-  selectedToken: "cUSD",
-  onTokenChange: () => {},
-  amount: "10",
-  availableTokens: TOKENS,
-};
-
-describe("TokenSelector — walletless balance honesty", () => {
-  afterEach(() => {
-    cleanup();
-  });
-
-  it("shows the balance line when a wallet is connected", () => {
+describe('TokenSelector goods equivalents', () => {
+  it('leads the equivalent with the staple for an anchored token', () => {
     render(
       <TokenSelector
-        {...baseProps}
-        hasWallet
-        tokenBalances={{ cUSD: { formattedBalance: "12.5", value: 12.5 } }}
-      />,
-    );
-    expect(screen.getByText("Balance:")).toBeInTheDocument();
-    expect(screen.getByText(/12\.5000 cUSD/)).toBeInTheDocument();
-  });
-
-  it("suppresses the balance line entirely when no wallet is connected", () => {
-    render(
-      <TokenSelector
-        {...baseProps}
+        label="From"
+        selectedToken="NGNm"
+        onTokenChange={() => {}}
+        amount="480000"
+        onAmountChange={() => {}}
+        availableTokens={TOKENS}
         hasWallet={false}
-        tokenBalances={{}}
       />,
     );
-    expect(screen.queryByText("Balance:")).not.toBeInTheDocument();
-    expect(screen.queryByText(/0\.0000/)).not.toBeInTheDocument();
+    expect(screen.getByText(/6 bags of rice/)).toBeInTheDocument();
+    // The dollar figure follows the staple, not the other way around.
+    expect(screen.getByText(/≈ 6 bags of rice · \$/)).toBeInTheDocument();
   });
 
-  it("still defaults hasWallet=true so connected callers are unaffected", () => {
+  it('keeps the plain dollar equivalent when the fiat has no staple', () => {
     render(
       <TokenSelector
-        {...baseProps}
-        tokenBalances={{ cUSD: { formattedBalance: "3", value: 3 } }}
+        label="From"
+        selectedToken="USDC"
+        onTokenChange={() => {}}
+        amount="120"
+        onAmountChange={() => {}}
+        availableTokens={TOKENS}
+        hasWallet={false}
       />,
     );
-    expect(screen.getByText("Balance:")).toBeInTheDocument();
+    expect(screen.getByText('≈ $120')).toBeInTheDocument();
+    expect(screen.queryByText(/bags of/)).not.toBeInTheDocument();
+  });
+
+  it('translates a real quote into what it buys where it lands', () => {
+    render(
+      <TokenSelector
+        label="To"
+        selectedToken="NGNm"
+        onTokenChange={() => {}}
+        availableTokens={TOKENS}
+        showAmountInput={false}
+        hasWallet={false}
+        receiveAmount="480000"
+      />,
+    );
+    expect(screen.getByText(/≈ 6 bags of rice where it lands/)).toBeInTheDocument();
+  });
+
+  it('shows no destination line without a quote', () => {
+    render(
+      <TokenSelector
+        label="To"
+        selectedToken="NGNm"
+        onTokenChange={() => {}}
+        availableTokens={TOKENS}
+        showAmountInput={false}
+        hasWallet={false}
+      />,
+    );
+    expect(screen.queryByText(/where it lands/)).not.toBeInTheDocument();
   });
 });

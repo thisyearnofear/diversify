@@ -184,6 +184,8 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 5. **Currencies as stories — the engagement layer is the literacy layer.** Every token carries a curated provenance answering three questions — who controls it (origin, backing, keys), what has happened to it (dated geopolitical events), and what might happen next (the cadence and mechanism to watch, never a prediction). The memetic/cultural/political texture of money is surfaced at the moment of choice: the ticket's pair sentence, the coin-back flip in the picker, the pair inspector's event trail and watch lines. Facts are hand-sourced and dated (`packages/shared/src/constants/token-provenance.ts`), re-verified on a 90-day cycle — engagement built on understanding, never on tickers, leaderboards, or invented forecasts. The timeline teaches mechanism, not prediction.
 
+6. **Purchasing-power vocabulary, not trading vocabulary.** A DEX shows price impact in basis points and a dollar equivalent; this ticket answers in staples and drift — "≈ 6 bags of rice · $292.80" sending, "≈ 6 bags of rice where it lands" receiving — priced from the curated `goodsAnchor` staples in `currency-risk.ts` (NGN/GHS rice, KES maize flour; absent where none is curated). The same anti-DEX stack is the roadmap: fresh dated macro beats rotating into the corridor line from the Firecrawl pipeline, settlement sealed as a `net-pair` artifact carrying the story + verified tx rather than a toast, the wallet's own capital history as provenance ("your savings have lived in KES → USD → EUR"), Ask Guardian answering with the same registry facts the surface shows, and the inspector naming that Mento routes at the reserve oracle — no bonding curve.
+
 ## Terminology Guide
 
 | Internal Term | User-Facing Term |

@@ -2,6 +2,10 @@
 
 > Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](./roadmap.md).
 
+### Exchange — the ticket answers in staples, not just dollars (2026-09-23)
+
+Purchasing-power vocabulary replaces the DEX's `≈ $` equivalent. `goodsEquivalentFor` (new in `lib/corridor-context.ts`) prices a typed amount in the fiat's curated `goodsAnchor` — ₦480,000 → "6 bags of rice", KSh 2,200 → "10 2kg bags of maize flour" — leading the equivalent line, dollar figure following; tokens without a staple keep the plain ≈ $, and the equivalent now renders walletless (display-rate math, not balance). The To row translates a real quote into "≈ N bags of rice where it lands" when the destination fiat has an anchor — the remittance reading. The wider anti-DEX stack is recorded as the roadmap in `docs/product.md` #6 (fresh dated beats, artifact receipts, capital provenance, oracle-mid honesty). Files: `corridor-context.ts`, `TokenSelector.tsx`, new `TokenSelector.test.tsx` (4 tests), `corridor-context.test.tsx` (+5), `product.md`, `design-language.md`.
+
 ### Browsing is alive, acting is still — motion state rule + density contract (2026-09-23)
 
 The motion rule gained a state dimension. While the user browses Exchange — no amount typed, nothing loading — the ticket breathes: the ⇅ switch coin carries a slow shine loop (`Coin` `shine` prop, CSS-gated under `prefers-reduced-motion`) and the corridor line rotates its beats every 7s (provenance sentence → each side's watch cadence, `AnimatePresence` popLayout blur-swap). The first keystroke or a quote in flight drops `isBrowsing` and everything stills — stillness is the action state's privilege. The density contract is now written into design-language §5: depth layers (facts enter at L2 inspector / L3 Guardian; promotion to L1 evicts), a closed gesture-verb set (tap, flip, flick, preview, commit), and motif ownership per tab — plus a CI tripwire asserting the resting corridor line stays under a word budget. Files: `CorridorContext.tsx`, `SwapInterface.tsx`, `corridor-context.test.tsx` (+3 tests), `design-language.md`, `AGENTS.md`.

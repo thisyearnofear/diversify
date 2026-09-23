@@ -13,7 +13,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { corridorFor, corridorSideFor } from '../corridor-context';
+import { corridorFor, corridorSideFor, goodsEquivalentFor } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 
@@ -266,6 +266,40 @@ describe('CorridorDetail', () => {
   it('renders nothing for a pair with no fiat meaning', () => {
     const { container } = render(<CorridorDetail fromToken="ETH" toToken="CELO" />);
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+describe('goodsEquivalentFor — the ticket answers in staples, not just dollars', () => {
+  it('prices an amount in the fiat\u2019s curated staple', () => {
+    // ₦480,000 at ₦80,000/bag → 6 bags of rice.
+    expect(goodsEquivalentFor('NGNm', 480_000)).toBe('6 bags of rice');
+    // KSh 2,200 at KSh 220/2kg bag → 10 bags of maize flour.
+    expect(goodsEquivalentFor('KESm', 2_200)).toBe('10 2kg bags of maize flour');
+    expect(goodsEquivalentFor('GHSm', 1_750)).toBe('5 bags of rice');
+  });
+
+  it('keeps one decimal under 10 units and commas above', () => {
+    expect(goodsEquivalentFor('NGNm', 500_000)).toBe('6.3 bags of rice');
+    expect(goodsEquivalentFor('KESm', 500_000)).toBe('2,273 2kg bags of maize flour');
+  });
+
+  it('handles legacy tickers via the side lookup', () => {
+    expect(goodsEquivalentFor('cKES', 440)).toBe('2 2kg bags of maize flour');
+  });
+
+  it('returns null for tokens without a staple — absence is honest', () => {
+    expect(goodsEquivalentFor('USDC', 1_000)).toBeNull();
+    expect(goodsEquivalentFor('USDm', 1_000)).toBeNull();
+    expect(goodsEquivalentFor('PAXG', 1)).toBeNull();
+    expect(goodsEquivalentFor('ETH', 2)).toBeNull();
+    expect(goodsEquivalentFor('XOFm', 100_000)).toBeNull(); // XOF has no dataset entry
+  });
+
+  it('returns null for non-positive or non-finite amounts', () => {
+    expect(goodsEquivalentFor('NGNm', 0)).toBeNull();
+    expect(goodsEquivalentFor('NGNm', -5)).toBeNull();
+    expect(goodsEquivalentFor('NGNm', Number.NaN)).toBeNull();
+    expect(goodsEquivalentFor('NGNm', 5_000)).toBeNull(); // under 0.1 of a bag
   });
 });
 
