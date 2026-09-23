@@ -5,16 +5,29 @@ import mongoose, { Schema, Document } from 'mongoose';
  *
  * The RecommendationLedger contract stores only `reasoningHash` — the
  * readable line never comes back over RPC. Writers (the Firecrawl macro
- * webhook, the POST attestation path) persist the text here keyed by
- * (chainId, recordId) — the identity the proof feed actually carries. The
- * feed's `settlementTxHash` is the caller-supplied swap tx, not the anchor
- * tx, so it cannot serve as the join key. The on-chain hash remains the
- * tamper-proof anchor; this store is a readability mirror, never evidence.
+ * webhook, the POST attestation path) persist the text here. The on-chain
+ * hash remains the tamper-proof anchor; this store is a readability mirror,
+ * never evidence.
+ *
+ * Two kinds of echo, because an anchor can be broadcast before it has an id:
+ *   - `record`  — keyed by (chainId, recordId): the identity the proof feed
+ *                 carries. `settlementTxHash` is the caller-supplied swap tx,
+ *                 not the anchor tx, so it cannot serve as the join key.
+ *   - `pending` — keyed by the keccak `reasoningHash` of the text itself, for
+ *                 anchors still awaiting confirmation ("pending" has no id).
+ *                 The feed can join these by hash, which is a *verified* join:
+ *                 the words hash to the commitment stored on-chain.
  */
+export type LedgerReasoningKind = 'record' | 'pending';
+
 export interface ILedgerReasoning extends Document {
-  chainId: number;
-  /** On-chain recommendation id (1-based, per contract). */
-  recordId: number;
+  kind: LedgerReasoningKind;
+  chainId?: number;
+  /** On-chain recommendation id (1-based, per contract). `record` kind only. */
+  recordId?: number;
+  /** keccak256 of `reasoning` — the on-chain commitment. Effectively
+   *  always present; `pending` kind is keyed by it. */
+  reasoningHash?: string;
   /** Anchor transaction hash, kept for reference/debugging. */
   txHash?: string;
   action: string;
@@ -28,8 +41,10 @@ export interface ILedgerReasoning extends Document {
 
 const LedgerReasoningSchema = new Schema<ILedgerReasoning>(
   {
-    chainId: { type: Number, required: true },
-    recordId: { type: Number, required: true },
+    kind: { type: String, enum: ['record', 'pending'], required: true },
+    chainId: { type: Number, default: undefined },
+    recordId: { type: Number, default: undefined },
+    reasoningHash: { type: String, default: undefined },
     txHash: { type: String, default: undefined },
     action: { type: String, required: true },
     targetToken: { type: String, default: undefined },
@@ -39,7 +54,17 @@ const LedgerReasoningSchema = new Schema<ILedgerReasoning>(
   { timestamps: true, minimize: false },
 );
 
-LedgerReasoningSchema.index({ chainId: 1, recordId: 1 }, { unique: true });
+// Partial unique indexes: one identity space per kind. A plain compound
+// unique index on (chainId, recordId) would collide across `pending` rows
+// (which have neither field), so each kind carries its own.
+LedgerReasoningSchema.index(
+  { chainId: 1, recordId: 1 },
+  { unique: true, partialFilterExpression: { kind: 'record' }, name: 'record_identity' },
+);
+LedgerReasoningSchema.index(
+  { reasoningHash: 1 },
+  { unique: true, partialFilterExpression: { kind: 'pending' }, name: 'pending_reasoning_hash' },
+);
 
 export const LedgerReasoning =
   mongoose.models.LedgerReasoning ||

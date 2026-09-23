@@ -275,10 +275,10 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     });
 
     // The chain stores only the reasoning hash — echo the readable line
-    // off-chain keyed by (chainId, recordId) so the proof feed (and corridor
-    // beats) can render words. Best-effort: a missed echo degrades to
-    // hash-only; a 'pending' anchor has no record id yet, so it is skipped
-    // here and can be attached later by scripts/backfill-ledger-reasoning.ts.
+    // off-chain so the proof feed (and corridor beats) can render words.
+    // Best-effort: a missed echo degrades to hash-only. An anchor still
+    // 'pending' has no record id yet, so the store keeps the echo in its
+    // hash-keyed pending space and the feed joins it back once it lands.
     if (anchor.status !== 'failed') {
       await rememberLedgerReasoning({
         chainId: anchor.chainId,
@@ -308,6 +308,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       signalLens: { status: 'shadow_started' },
       anchor: {
         status: anchor.status,
+        chainId: anchor.status === 'failed' ? undefined : anchor.chainId,
         txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
         explorerUrl: anchor.status === 'failed' ? undefined : anchor.explorerUrl,
         id: anchor.status === 'anchored' ? anchor.id : undefined,

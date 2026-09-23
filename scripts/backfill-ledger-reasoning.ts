@@ -10,16 +10,22 @@
  * user's GuardianState recommendation queue at anchor time, which lets us
  * reconstruct the anchored line and backfill the echo.
  *
- * Matching is deliberately strict — a record is only echoed when a queue
- * entry shares its targetToken AND was captured within ±15 minutes of the
- * on-chain timestamp. Anything else is reported as unmatched, never guessed
- * (honesty contract: no fabricated provenance).
+ * Matching is two-stage and deliberately strict. Retrieval: a queue entry
+ * sharing the record's targetToken, captured within ±15 minutes of the
+ * on-chain timestamp. Proof: the reconstructed line must keccak256 to the
+ * record's own `reasoningHash` commitment — text that does not hash to the
+ * commitment is reported as unmatched, never written (honesty contract: no
+ * fabricated provenance).
+ *
+ * Pending echoes — written by the webhook while an anchor was still awaiting
+ * confirmation, which has no record id yet — are promoted to record-keyed
+ * echoes here on hash match.
  *
  * Coverage limits (reported honestly, not hidden):
  *   - The queue is bounded (entries roll off), so old signals may have no
  *     surviving candidate text.
- *   - 'pending' anchors written without an echo also surface here once
- *     their record id is visible on-chain — rerun after anchors confirm.
+ *   - A signal whose queue entry lost the source URL cannot be reconstructed
+ *     byte-exactly, so it stays hash-only.
  *
  * Usage:
  *   npx tsx scripts/backfill-ledger-reasoning.ts            # dry-run report
@@ -36,6 +42,7 @@ import mongoose from 'mongoose';
 import {
   recommendationLedgerService,
   getLedgerContractAddress,
+  computeReasoningHash,
 } from '@diversifi/shared/src/services/recommendation-ledger.service';
 
 const args = new Set(process.argv.slice(2));
@@ -126,6 +133,7 @@ async function main(): Promise<void> {
   let scanned = 0;
   let macroSignals = 0;
   let alreadyEchoed = 0;
+  let promoted = 0;
   let matched = 0;
   const unmatched: string[] = [];
 
@@ -146,13 +154,51 @@ async function main(): Promise<void> {
       if (!rec || !rec.action.startsWith('MACRO_SIGNAL:')) continue;
       macroSignals++;
 
-      const existing = await echoes.findOne({ chainId, recordId: rec.id });
+      const existing = await echoes.findOne({ kind: 'record', chainId, recordId: rec.id });
       if (existing) {
         alreadyEchoed++;
         continue;
       }
 
-      // Match by targetToken + time proximity; closest capture wins.
+      // A hash-keyed pending echo (anchor broadcast before its id existed)
+      // promotes to a record-keyed echo. This is the strongest join we have:
+      // the words hash to the commitment stored on-chain.
+      if (rec.reasoningHash) {
+        const pending = await echoes.findOne({
+          kind: 'pending',
+          reasoningHash: rec.reasoningHash,
+        });
+        if (pending) {
+          if (APPLY) {
+            await echoes.updateOne(
+              { kind: 'record', chainId, recordId: rec.id },
+              {
+                $set: {
+                  reasoningHash: rec.reasoningHash,
+                  txHash: pending.txHash,
+                  action: rec.action,
+                  targetToken: rec.targetToken,
+                  reasoning: pending.reasoning,
+                },
+                $setOnInsert: {
+                  kind: 'record',
+                  expiresAt: new Date(Date.now() + ECHO_TTL_MS),
+                },
+              },
+              { upsert: true },
+            );
+            await echoes.deleteOne({ _id: pending._id });
+          }
+          promoted++;
+          console.log(
+            `  ${APPLY ? '↗ promoted' : '→ would promote'} #${rec.id} ${rec.targetToken}: ${String(pending.reasoning).slice(0, 90)}…`,
+          );
+          continue;
+        }
+      }
+
+      // Match by targetToken + time proximity; closest capture wins. That
+      // match is only *retrieval* — the hash below is the *proof*.
       const blockMs = rec.timestamp * 1000;
       const pool = candidates
         .filter((c) => c.targetToken.toLowerCase() === rec.targetToken.toLowerCase())
@@ -161,25 +207,35 @@ async function main(): Promise<void> {
         .sort((a, b) => a.delta - b.delta);
       const best = pool[0]?.c;
       const text = best ? reconstructReasoning(best) : null;
+      const hashesToCommitment =
+        !!text && (!rec.reasoningHash || computeReasoningHash(text) === rec.reasoningHash);
 
-      if (!text) {
+      if (!text || !hashesToCommitment) {
         unmatched.push(
           `chain ${chainId} #${rec.id} ${rec.action} (${new Date(blockMs).toISOString()})` +
-            (best && !best.url ? ' — queue entry found but source URL not recoverable' : ' — no queue entry in window'),
+            (!text
+              ? best && !best.url
+                ? ' — queue entry found but source URL not recoverable'
+                : ' — no queue entry in window'
+              : ' — candidate text does not hash to the on-chain commitment'),
         );
         continue;
       }
 
       if (APPLY) {
         await echoes.updateOne(
-          { chainId, recordId: rec.id },
+          { kind: 'record', chainId, recordId: rec.id },
           {
             $set: {
+              reasoningHash: rec.reasoningHash,
               action: rec.action,
               targetToken: rec.targetToken,
               reasoning: text,
             },
-            $setOnInsert: { expiresAt: new Date(Date.now() + ECHO_TTL_MS) },
+            $setOnInsert: {
+              kind: 'record',
+              expiresAt: new Date(Date.now() + ECHO_TTL_MS),
+            },
           },
           { upsert: true },
         );
@@ -194,6 +250,7 @@ async function main(): Promise<void> {
   console.log(`Records scanned:  ${scanned}`);
   console.log(`MACRO_SIGNALs:    ${macroSignals}`);
   console.log(`Already echoed:   ${alreadyEchoed}`);
+  console.log(`Pending→record:   ${promoted}`);
   console.log(`${APPLY ? 'Echoed' : 'Matchable'}:        ${matched}`);
   console.log(`Unmatched:        ${unmatched.length}`);
   for (const line of unmatched) console.log(`  · ${line}`);

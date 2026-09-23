@@ -1151,3 +1151,34 @@ string from the GuardianState queue entry within ±15 min of the block timestamp
 and **reports** everything it cannot match instead of guessing. Mirror TTL: 90
 days.
 
+
+
+#### Beats backlog closed — pending echoes, hash-verified backfill, rehearsal (2026-09-23)
+
+**1,730 tests passing** (202 files; +9 store tests) after the three follow-ups:
+
+- **Pending anchors.** A broadcast-but-unconfirmed anchor has no record id, so
+  the echo had nothing to key on. The mirror now has two spaces — `record`
+  keyed by (chainId, recordId), and `pending` keyed by keccak256 of the text,
+  joined by the record's own `reasoningHash` (a *verified* join: the words hash
+  to the commitment stored on-chain). Both live in one collection under
+  partial unique indexes, so the pending space can't collide with record ids.
+- **Backfill is proof-carrying.** A GuardianState queue entry only ever
+  *retrieves* a candidate line; the write is gated on
+  `keccak256(candidate) === record.reasoningHash`. Mismatches are reported as
+  unmatched, never written, and pending echoes are promoted to record keys on
+  hash match. The timestamp/token window is now explicitly retrieval, not
+  evidence.
+- **Rehearsal path.** `pnpm rehearse-macro-signal` drives the real entry point
+  end to end (signed POST → model analysis → guardian fan-out → anchor → echo
+  → feed read) and reports every hop, because monitors fire on central-bank
+  schedules rather than demo schedules. Remote targets are refused unless
+  `--allow-remote` is passed with the money-movement warning spelled out; the
+  payload labels itself a rehearsal (marker URL + "[Rehearsal]" summary).
+
+Live dry-run finding, stated plainly: across the five deployed ledgers
+(Celo 205, Arbitrum 405, Robinhood 1, HashKey 380, 0G 619 records) there are
+**zero MACRO_SIGNAL records**. Recent families are only ADVISORY_HEARTBEAT and
+EVIDENCE_MIRROR. Beats have never had a data source in production — the read
+path was fixed first, and the rehearsal script is how the write path gets
+exercised.

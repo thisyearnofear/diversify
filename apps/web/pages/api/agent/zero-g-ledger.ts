@@ -222,10 +222,11 @@ export default async function handler(
 
       const id = result.status === 'anchored' ? result.id : -1;
 
-      // Echo the readable reasoning off-chain keyed by (chainId, recordId) —
-      // the chain stores only the hash, and the proof feed joins the text
-      // back. Pending anchors have no record id yet and are skipped (id -1
-      // is filtered inside the store).
+      // Echo the readable reasoning off-chain — the chain stores only the
+      // hash, and the proof feed joins the text back. A pending anchor has
+      // no record id yet: the store keeps it in the hash-keyed pending
+      // space, and the feed joins it by hash once the record lands.
+      // Best-effort throughout (id -1 is handled inside the store).
       if (typeof reasoning === 'string' && reasoning.trim()) {
         await rememberLedgerReasoning({
           chainId: result.chainId,
