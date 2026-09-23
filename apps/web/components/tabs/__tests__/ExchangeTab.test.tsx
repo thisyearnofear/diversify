@@ -417,6 +417,9 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByText("Verified")).toBeInTheDocument();
     expect(screen.getByText("· Evidence mirrored")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+    expect(
+      document.querySelectorAll("[data-status-slot]").length,
+    ).toBeLessThanOrEqual(3);
   });
 
   it("the FX netting link unfolds the rail inside the inspector — no object flip", () => {

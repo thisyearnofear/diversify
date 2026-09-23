@@ -280,8 +280,9 @@ A tab change that fails any of these is the old stack. Do not ship it.
    in `components/tabs/protect/rwa-assets.ts`. Do not recreate them.
 8. **Status tier budget.** Trust + one transition + one rail, via
    `StatusTier` (`components/shared/StatusTier.tsx`). A new prompt
-   competes for the transition slot by priority — it never stacks. Tests
-   assert ≤3 slots on Home and Shield.
+   competes for the transition slot by priority — it never stacks. All
+   five tabs route their connected status through it (walletless keeps
+   `UnconnectedStatusTier`); tests assert ≤3 slots on every tab.
 
 Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
 picker (and optionally Home amount-inspect) — not a peer tab until Advanced.

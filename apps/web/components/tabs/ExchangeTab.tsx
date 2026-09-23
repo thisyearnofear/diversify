@@ -24,6 +24,7 @@ import {
   type ProvenanceLead,
 } from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
+import { StatusTier } from "../shared/StatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { useCapitalHistory } from "@/hooks/use-capital-history";
 import { explorerTxUrl } from "@/lib/explorer-url";
@@ -359,13 +360,6 @@ export default function ExchangeTab({
   // Connected status rail — trust parity with Home and Shield (§7) plus
   // the netting hand-off. Walletless, UnconnectedStatusTier already owns
   // the Verified line, so it gets the button alone — never doubled.
-  const nettingLink = (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-      <VerifiedEvidence />
-      {nettingButton}
-    </div>
-  );
-
   if (!address) {
     // Unconnected morph (§5): the ticket stays the object — SwapTab
     // renders it walletless and its execute CTA becomes the connect button.
@@ -451,7 +445,7 @@ export default function ExchangeTab({
       onRefresh={refreshBalances}
       // The netting rail is reachable from the connected ticket too —
       // it lives inside the pair inspector, not behind an object flip.
-      status={nettingLink}
+      status={<StatusTier trust={<VerifiedEvidence />} transition={nettingButton} />}
     />
   );
 }

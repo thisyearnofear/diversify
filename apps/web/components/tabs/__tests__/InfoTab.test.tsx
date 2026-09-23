@@ -104,6 +104,16 @@ describe("InfoTab — Learn calculator", () => {
     expect(screen.getByText(/25% cUSD/)).toBeInTheDocument();
   });
 
+  it("keeps the status tier within the 3-slot budget", () => {
+    render(
+      <InfoTab userRegion="Africa" setActiveTab={setActiveTab} />,
+    );
+    expect(
+      document.querySelectorAll("[data-status-slot]").length,
+    ).toBeLessThanOrEqual(3);
+    expect(screen.getByText(/history,/)).toBeInTheDocument();
+  });
+
   it("shows the coin wait while balances load", () => {
     render(
       <InfoTab userRegion="Africa" isLoading setActiveTab={setActiveTab} />,

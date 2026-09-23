@@ -21,7 +21,7 @@ import { useDemoMode } from "../../context/app/DemoModeContext";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InstrumentWait } from "../shared/InstrumentWait";
 import { InspectorSheet } from "../shared/InspectorSheet";
-import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
+import { StatusTier } from "../shared/StatusTier";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
@@ -129,65 +129,6 @@ export default function AgentTab({
 
   const object = (
     <div data-testid="guardian-object">
-      {guardianContext && (
-        <div
-          data-testid="guardian-context"
-          className="mb-4 rounded-xl border border-blue-200 bg-blue-50/60 px-4 py-3 dark:border-blue-800/50 dark:bg-blue-950/30"
-        >
-          <p className="text-[10px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
-            From your Shield plan
-          </p>
-          <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
-            {guardianContext.summary}
-          </p>
-          {guardianContext.decisionRef && (() => {
-            const ref = guardianContext.decisionRef;
-            const kindLabel =
-              ref.kind === "execution" ? "Execution" : ref.kind === "proposal" ? "Proposal" : "Decision";
-            const duration = formatDuration(ref.durationMs);
-            const when = new Date(ref.capturedAt);
-            return (
-              <div
-                data-testid="guardian-decision-ref"
-                className="mt-2 rounded-lg bg-white/70 dark:bg-gray-900/40 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-300 space-y-0.5"
-              >
-                <p className="font-bold text-gray-900 dark:text-white">
-                  {kindLabel}
-                  {ref.targetToken ? ` · ${ref.targetToken}` : ""}
-                </p>
-                <p className="tabular-nums">
-                  {Number.isNaN(when.getTime()) ? ref.capturedAt : when.toLocaleString()}
-                  {ref.status ? ` · ${ref.status}` : ""}
-                  {duration ? ` · took ${duration}` : ""}
-                </p>
-                {ref.reason && <p>{ref.reason}</p>}
-                {ref.source && (
-                  <p className="text-gray-400 dark:text-gray-500">Source: {ref.source}</p>
-                )}
-              </div>
-            );
-          })()}
-          <div className="mt-2 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                askAdvisor(guardianContext.prompt, { decisionRef: guardianContext.decisionRef });
-                clearGuardianContext();
-              }}
-              className="min-h-[44px] flex-1 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 transition-colors"
-            >
-              Ask Guardian about this
-            </button>
-            <button
-              type="button"
-              onClick={clearGuardianContext}
-              className="min-h-[44px] px-3 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-        </div>
-      )}
       <div className="text-center mb-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {GUARDIAN_CONTROL_TITLE}
@@ -224,45 +165,82 @@ export default function AgentTab({
       object={object}
       inspector={
         <InspectorSheet
-          selectedId={boundsOpen ? "bounds" : null}
-          onClose={() => setBoundsOpen(false)}
-          title="Guardian bounds"
+          selectedId={guardianContext ? "context" : boundsOpen ? "bounds" : null}
+          onClose={() => (guardianContext ? clearGuardianContext() : setBoundsOpen(false))}
+          title={guardianContext ? "From your Shield plan" : "Guardian bounds"}
         >
-          <AutomationSettings
-            config={config}
-            onConfigChange={updateConfig}
-            autonomousStatus={autonomousStatus}
-          />
-        </InspectorSheet>
-      }
-      status={
-        <div className="space-y-2">
-          {portfolio && (
-            <DataFreshnessIndicator
-              lastUpdated={portfolio.lastUpdated}
-              isStale={portfolio.isStale}
-              hasEstimates={portfolio.hasEstimates}
-              isLoading={portfolio.isLoading}
-              error={portfolio.errors?.[0] ?? null}
-              onRefresh={refreshBalances}
+          {guardianContext ? (
+            <>
+              <p
+                data-testid="guardian-context"
+                className="text-sm font-semibold text-gray-900 dark:text-white"
+              >
+                {guardianContext.summary}
+              </p>
+              {guardianContext.decisionRef && (() => {
+                const ref = guardianContext.decisionRef;
+                const kindLabel =
+                  ref.kind === "execution" ? "Execution" : ref.kind === "proposal" ? "Proposal" : "Decision";
+                const duration = formatDuration(ref.durationMs);
+                const when = new Date(ref.capturedAt);
+                return (
+                  <div
+                    data-testid="guardian-decision-ref"
+                    className="mt-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-300 space-y-0.5"
+                  >
+                    <p className="font-bold text-gray-900 dark:text-white">
+                      {kindLabel}
+                      {ref.targetToken ? ` · ${ref.targetToken}` : ""}
+                    </p>
+                    <p className="tabular-nums">
+                      {Number.isNaN(when.getTime()) ? ref.capturedAt : when.toLocaleString()}
+                      {ref.status ? ` · ${ref.status}` : ""}
+                      {duration ? ` · took ${duration}` : ""}
+                    </p>
+                    {ref.reason && <p>{ref.reason}</p>}
+                    {ref.source && (
+                      <p className="text-gray-400 dark:text-gray-500">Source: {ref.source}</p>
+                    )}
+                  </div>
+                );
+              })()}
+              <button
+                type="button"
+                onClick={() => {
+                  askAdvisor(guardianContext.prompt, { decisionRef: guardianContext.decisionRef });
+                  clearGuardianContext();
+                }}
+                className="mt-2 min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 transition-colors"
+              >
+                Ask Guardian about this
+              </button>
+            </>
+          ) : (
+            <AutomationSettings
+              config={config}
+              onConfigChange={updateConfig}
+              autonomousStatus={autonomousStatus}
             />
           )}
-          <VerifiedEvidence />
-          <div className="flex items-center justify-between gap-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Ask Guardian for the timeline. Swaps live on Shield and Exchange.
-          </p>
-          {experienceMode !== "beginner" && (
-            <button
-              type="button"
-              onClick={() => setBoundsOpen(true)}
-              className="min-h-[44px] px-3 text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-            >
-              Change limits
-            </button>
-          )}
-          </div>
-        </div>
+        </InspectorSheet>
+      }
+      portfolio={portfolio ?? undefined}
+      onRefresh={refreshBalances}
+      status={
+        <StatusTier
+          trust={<VerifiedEvidence />}
+          transition={
+            experienceMode !== "beginner" ? (
+              <button
+                type="button"
+                onClick={() => setBoundsOpen(true)}
+                className="min-h-[44px] px-3 text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              >
+                Change limits
+              </button>
+            ) : undefined
+          }
+        />
       }
     />
   );

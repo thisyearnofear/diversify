@@ -771,7 +771,7 @@ export function analyzePortfolio(
   const tokens: TokenAllocation[] = [];
   portfolio.chains.forEach((chain) => {
     chain.balances.forEach((balance) => {
-      const symbol = balance.symbol.toUpperCase();
+      const symbol = balance.symbol;
       const value = balance.value;
       const percentage = (value / portfolio.totalValue) * 100;
       const region = getTokenRegion(symbol);

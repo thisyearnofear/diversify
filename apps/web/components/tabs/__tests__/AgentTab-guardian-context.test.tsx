@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 // F4 drill-down: the one-shot Guardian context card must show the attached
@@ -74,6 +74,34 @@ describe("AgentTab — Guardian context card drill-down", () => {
     mockGuardianContext = null;
   });
 
+  it("renders inside the inspector, not above the object", () => {
+    mockGuardianContext = {
+      summary: "Guardian stood down on KESm · 5m ago",
+      prompt: "Guardian, you stood down on my KESm position…",
+      decisionRef: DECISION_REF,
+    };
+    render(<AgentTab />);
+
+    const inspector = screen.getByTestId("inspector-sheet");
+    expect(inspector).toHaveAttribute("data-selected-id", "context");
+    expect(within(inspector).getByText("From your Shield plan")).toBeInTheDocument();
+    expect(within(inspector).getByTestId("guardian-context")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("guardian-object")).queryByTestId("guardian-context"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("closing the inspector clears the one-shot hand-off", () => {
+    mockGuardianContext = {
+      summary: "Plan gap on KESm",
+      prompt: "Guardian, fix it",
+    };
+    render(<AgentTab />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Close inspector" }));
+    expect(mockClearGuardianContext).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the attached decision record verbatim", () => {
     mockGuardianContext = {
       summary: "Guardian stood down on KESm · 5m ago · decided in 1.2 s",
@@ -106,6 +134,11 @@ describe("AgentTab — Guardian context card drill-down", () => {
       { decisionRef: DECISION_REF },
     );
     expect(mockClearGuardianContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the status tier within the 3-slot budget", () => {
+    render(<AgentTab />);
+    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
   });
 
   it("stays unchanged for plain hand-offs without a record", () => {

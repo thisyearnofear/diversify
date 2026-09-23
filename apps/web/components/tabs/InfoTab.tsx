@@ -32,7 +32,7 @@ import { TokenIcon } from "../shared/TokenIcon";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useSharedMultichainBalances } from "@/context/app/PortfolioContext";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
-import { DataFreshnessIndicator } from "../shared/DataFreshnessIndicator";
+import { StatusTier } from "../shared/StatusTier";
 
 const YEARS = 5;
 
@@ -195,21 +195,20 @@ export default function InfoTab({ userRegion, isLoading, setActiveTab, refreshBa
             </p>
           </InspectorSheet>
         }
+        portfolio={{
+          ...portfolio,
+          isLoading: portfolio.isLoading || Boolean(isLoading),
+        }}
+        onRefresh={refreshBalances}
         status={
-          <div className="space-y-2">
-            <DataFreshnessIndicator
-              lastUpdated={portfolio.lastUpdated}
-              isStale={portfolio.isStale}
-              hasEstimates={portfolio.hasEstimates}
-              isLoading={portfolio.isLoading || Boolean(isLoading)}
-              error={portfolio.errors?.[0] ?? null}
-              onRefresh={refreshBalances}
-            />
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">
-            ● {address && walletView.totalUsd > 0 ? `Based on your ${walletView.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} wallet value · ` : ""}{userRegion} {rates.local.toFixed(1)}% a year · {source} · history,
-            not advice.
-            </p>
-          </div>
+          <StatusTier
+            trust={
+              <p className="text-[11px] text-gray-400 dark:text-gray-500">
+              ● {address && walletView.totalUsd > 0 ? `Based on your ${walletView.totalUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })} wallet value · ` : ""}{userRegion} {rates.local.toFixed(1)}% a year · {source} · history,
+              not advice.
+              </p>
+            }
+          />
         }
       />
     </div>

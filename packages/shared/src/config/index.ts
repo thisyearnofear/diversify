@@ -322,22 +322,27 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
     SURA: { name: 'Sura Corporation', region: REGIONS.ASIA, decimals: 18, apy: 0 },
 };
 
+const TOKEN_METADATA_BY_LOWER: Record<string, TokenMetadata> = Object.fromEntries(
+    Object.entries(TOKEN_METADATA).map(([k, v]) => [k.toLowerCase(), v]),
+);
+
+export function tokenMetadataFor(symbol: string): TokenMetadata | undefined {
+    return TOKEN_METADATA[symbol] ?? TOKEN_METADATA_BY_LOWER[symbol.toLowerCase()];
+}
+
 // Helper to get token yield (0 if none)
 export function getTokenApy(symbol: string): number {
-    const normalized = symbol.toUpperCase();
-    return TOKEN_METADATA[normalized]?.apy ?? 0;
+    return tokenMetadataFor(symbol)?.apy ?? 0;
 }
 
 // Helper to check if token is an inflation hedge
 export function isTokenInflationHedge(symbol: string): boolean {
-    const normalized = symbol.toUpperCase();
-    return TOKEN_METADATA[normalized]?.isInflationHedge ?? false;
+    return tokenMetadataFor(symbol)?.isInflationHedge ?? false;
 }
 
 // Helper to get token region (normalized)
 export function getTokenRegion(symbol: string): RegionValue {
-    const normalized = symbol.toUpperCase();
-    return TOKEN_METADATA[normalized]?.region ?? REGIONS.GLOBAL;
+    return tokenMetadataFor(symbol)?.region ?? REGIONS.GLOBAL;
 }
 
 // Single Source of Truth for Network Assets
