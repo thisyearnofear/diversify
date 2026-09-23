@@ -25,6 +25,8 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - `pnpm validate-agent`: Checks configuration integrity.
 - `pnpm register-erc8004`: Mints the DiversiFi Guardian agent identity NFT on the ERC-8004 Identity Registry (see `docs/guardian.md`).
 - `pnpm register-agent`: Registers on the Celo AgentScan registry.
+- `pnpm rehearse-macro-signal`: Drives the Firecrawl macro path end to end (signed POST → model analysis → fan-out → on-chain anchor → reasoning echo → feed read) against localhost by default; remote targets require `--allow-remote`, and `--verify-only` just inspects the feed.
+- `pnpm backfill-ledger-reasoning`: Backfills readable reasoning echoes for historical on-chain records from the GuardianState queue, gated on a keccak match against the record's commitment (dry-run by default; `--apply` to write).
 
 ## Coding Style & Naming Conventions
 - **Enhancement First**: Prioritize extending existing components and shared services before creating new ones.
@@ -50,6 +52,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 ## Working Conventions (load-bearing, learned the hard way)
 
 - **Reusable primitives over one-offs:** `Coin`/`FloatingCoins`/`ShellCoinField`/`MaskedReveal` (`components/shared/FloatingCoins.tsx`), `TokenIcon` + `constants/token-logos.ts` (real logos, `Coin` fallback — never a broken image), `InstrumentShell` (owns the one card + `pattern`/`portfolio` slots), `InspectorSheet`, `UnconnectedStatusTier`, `FlickScrollRow` (the ONLY sanctioned horizontal row — compose it, don't roll a new scroller).
+- **Reasoning is hash-only on-chain:** `RecommendationLedger` stores `reasoningHash`; the readable line lives off-chain in `ledgerreasonings` (`models/LedgerReasoning.ts`) keyed `(chainId, recordId)` — or by `reasoningHash` for anchors still pending. Join on those two keys, never on `settlementTxHash` (that is the caller-supplied swap tx). Text is written only when it hashes to the on-chain commitment; surfaces render hash-only when there is no echo.
 - **Scroll rule:** the `StrategyModal` dialog is the single scroll container — never add `overflow-y-auto`/`justify-center` to WelcomeScreen's root; center via the `my-auto` wrapper.
 - **Bundle discipline:** never import the `@diversifi/shared` barrel in client code — deep leaf imports only (the barrel pulls openai/gemini/ethers/lifi/circle/web3 into first-load; `no-restricted-imports` lint enforces it).
 - **Swap chain safety:** the app's executable chains are narrower than wallet-capable chains — `ChainDetectionService.isSupported` is the contract (Celo, Celo Sepolia, Arbitrum, Arc in dev). Never adopt a raw wallet chain into swap state; `getTokenAddresses`/`getChainAssets` silently return Celo data for unknown chains — treat that as "display default," never "execution chain."
