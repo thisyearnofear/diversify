@@ -163,11 +163,13 @@ export interface CorridorSignal {
 }
 
 /** Minimal structural shape of a ledger record — decoupled from the
- *  proof-feed response type so the selector stays pure. */
+ *  proof-feed response type so the selector stays pure. `reasoning` is
+ *  optional on purpose: the chain stores only `reasoningHash`, and the
+ *  readable text arrives only when an off-chain echo exists. */
 export interface CorridorSignalRecord {
   action: string;
   targetToken: string;
-  reasoning: string;
+  reasoning?: string;
   /** Unix seconds. */
   timestamp: number;
 }
@@ -179,10 +181,13 @@ const MAX_BEAT_LEN = 110;
 
 function extractOneLiner(reasoning: string): string | null {
   // The webhook stores `${oneLiner}. Source: ${url}` — split to recover
-  // the line without leaking the URL into the ticket.
-  const text = reasoning.includes('. Source:')
-    ? reasoning.split('. Source:')[0].trim()
-    : reasoning.trim();
+  // the line without leaking the URL into the ticket. Records written
+  // without the marker still get a trailing URL stripped defensively.
+  const text = (
+    reasoning.includes('. Source:')
+      ? reasoning.split('. Source:')[0]
+      : reasoning.replace(/\s*https?:\/\/\S+\s*$/, '')
+  ).trim();
   if (!text) return null;
   return text.length > MAX_BEAT_LEN
     ? `${text.slice(0, MAX_BEAT_LEN - 1).trimEnd()}…`
@@ -224,6 +229,9 @@ export function corridorSignalsFor(
     if (age < 0 || age > SIGNAL_FRESH_MS) continue;
     const code = corridorSideFor(rec.targetToken)?.code;
     if (!code) continue;
+    // Hash-only records (no off-chain echo) carry no renderable text —
+    // skip them rather than crash or fabricate a beat.
+    if (typeof rec.reasoning !== 'string') continue;
     const text = extractOneLiner(rec.reasoning);
     if (!text) continue;
     const signal = { dateLabel: dateLabelFor(rec.timestamp), text };

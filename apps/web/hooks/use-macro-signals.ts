@@ -92,16 +92,24 @@ export function useMacroSignals(): UseMacroSignalsResult {
   const macroSignals = useMemo<IntelligenceItem[]>(() => {
     const recent = data?.recent ?? [];
     return recent
-      .filter((rec) => rec.action.startsWith(MACRO_SIGNAL_PREFIX))
+      .filter(
+        (rec) =>
+          rec.action.startsWith(MACRO_SIGNAL_PREFIX) &&
+          // The chain read path returns only `reasoningHash`; without an
+          // off-chain echo there is no readable line for the pill — honest
+          // absence beats rendering "undefined".
+          typeof rec.reasoning === "string",
+      )
       .map((rec): IntelligenceItem => {
         const signalType = rec.action.slice(MACRO_SIGNAL_PREFIX.length) || "UNKNOWN";
         const { type, impact } = mapSignalType(signalType);
+        const reasoning = rec.reasoning as string;
 
         return {
           id: rec.id.toString(),
           type,
-          title: extractTitle(rec.reasoning, humaniseSignalType(signalType)),
-          description: rec.reasoning,
+          title: extractTitle(reasoning, humaniseSignalType(signalType)),
+          description: reasoning,
           impact,
           // Universal: strip the asset filter so the signal surfaces for
           // every corridor audience. The user wants to know "should I

@@ -9,8 +9,9 @@
  *
  * A fresh signal supersedes that side's standing `watch` cadence in the
  * corridor beat rotation — the calendar produced a real event. When the
- * feed is empty, stale, or has nothing within the freshness window, both
- * sides return null and the cadences carry the rotation.
+ * feed is empty, stale, has nothing within the freshness window, or a
+ * record carries only its on-chain reasoning hash (no off-chain echo),
+ * both sides return null and the cadences carry the rotation.
  */
 import { useMemo } from 'react';
 import { useProofFeed } from './use-proof-feed';

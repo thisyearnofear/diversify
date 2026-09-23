@@ -45,7 +45,10 @@ export interface LedgerRecommendation {
     user: string;
     action: string;
     targetToken: string;
-    reasoning: string;
+    /** Readable reasoning text — only present when an off-chain echo exists
+     *  (macro signals, text-bearing attestations). The chain stores only a
+     *  `reasoningHash`, so most records omit this; never assume it. */
+    reasoning?: string;
     evidenceCid: string;
     servingModel: string;
     settlementTxHash: string;

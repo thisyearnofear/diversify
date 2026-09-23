@@ -212,14 +212,24 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
 describe('corridorSignalsFor — fresh dated beats from the anchored ledger', () => {
   const NOW = Date.parse('2026-09-23T12:00:00Z');
   const daysAgo = (d: number) => Math.floor((NOW - d * 86_400_000) / 1000);
+  // Fixtures mirror the real /api/agent/zero-g-ledger record shape: the
+  // chain read returns `reasoningHash`, and readable `reasoning` arrives
+  // only when an off-chain echo was joined by txHash.
   const signal = (
     targetToken: string,
     oneLiner: string,
     days: number,
     action = 'MACRO_SIGNAL:RATE_HIKE',
   ) => ({
+    id: 1,
+    user: '0x0000000000000000000000000000000000000000',
     action,
     targetToken,
+    reasoningHash: '0xabc123',
+    evidenceCid: '',
+    servingModel: 'firecrawl-monitor',
+    settlementTxHash: '0xdeadbeef',
+    confidence: 0.8,
     reasoning: `${oneLiner}. Source: https://cb.example/page`,
     timestamp: daysAgo(days),
   });
@@ -285,6 +295,26 @@ describe('corridorSignalsFor — fresh dated beats from the anchored ledger', ()
     expect(
       corridorSignalsFor([signal('KESm', 'CBK moved', 1)], 'ETH', 'CELO', NOW),
     ).toEqual({ from: null, to: null });
+  });
+
+  it('skips hash-only records (no off-chain echo) without crashing', () => {
+    // The chain read path returns only `reasoningHash` — a fresh, matching
+    // MACRO_SIGNAL with no echo must degrade to the standing cadence, not
+    // throw inside the render path.
+    const { reasoning: _echo, ...hashOnly } = signal('KESm', 'CBK moved', 1);
+    expect(_echo).toBeDefined(); // fixture sanity: the echo existed before removal
+    expect(
+      corridorSignalsFor([hashOnly], 'KESm', 'USDC', NOW),
+    ).toEqual({ from: null, to: null });
+  });
+
+  it('strips a trailing source URL even without the marker', () => {
+    const rec = {
+      ...signal('KESm', 'x', 1),
+      reasoning: 'CBK held the benchmark rate https://cbk.example/page',
+    };
+    const out = corridorSignalsFor([rec], 'KESm', 'USDC', NOW);
+    expect(out.from?.text).toBe('CBK held the benchmark rate');
   });
 });
 

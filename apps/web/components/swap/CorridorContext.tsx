@@ -93,6 +93,10 @@ export function CorridorLine({
     }, BEAT_DWELL_MS);
     return () => clearInterval(id);
   }, [rotating, beats.length]);
+  // Clamp defensively: if the beats array shrinks mid-rotation (a signal
+  // expires), the stored index can transiently exceed it — wrap, never
+  // render an empty beat.
+  const shownBeat = beats.length > 0 ? beat % beats.length : 0;
   if (!story && !corridor) return null;
 
   const arrow = onInspect ? (
@@ -101,14 +105,14 @@ export function CorridorLine({
   const topLine = rotating ? (
     <AnimatePresence mode="popLayout" initial={false}>
       <motion.span
-        key={beat}
+        key={shownBeat}
         className="block text-xs font-semibold text-gray-700 dark:text-gray-300"
         initial={{ opacity: 0, filter: 'blur(4px)' }}
         animate={{ opacity: 1, filter: 'blur(0px)' }}
         exit={{ opacity: 0, filter: 'blur(4px)' }}
         transition={{ duration: 0.35 }}
       >
-        {beats[beat]} {!corridor && arrow}
+        {beats[shownBeat]} {!corridor && arrow}
       </motion.span>
     </AnimatePresence>
   ) : (

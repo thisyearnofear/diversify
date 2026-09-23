@@ -23,6 +23,10 @@ import {
   PROOF_FEED_CHAIN_IDS,
   mergeProofFeedRecommendations,
 } from '@/constants/proof-feed';
+import {
+  attachLedgerReasoning,
+  rememberLedgerReasoning,
+} from '@/lib/ledger-reasoning-store';
 
 interface LedgerStats {
   totalRecommendations: number;
@@ -33,7 +37,13 @@ interface LedgerStats {
   chainIds?: number[];
 }
 
-type FeedRecommendation = LedgerRecommendation & { chainId?: number };
+type FeedRecommendation = LedgerRecommendation & {
+  chainId?: number;
+  /** Readable reasoning text, joined from the off-chain echo store — the
+   *  chain read path returns only `reasoningHash`. Absent when no echo
+   *  exists; consumers must treat it as optional. */
+  reasoning?: string;
+};
 
 interface LedgerResponse {
   stats: LedgerStats;
@@ -211,6 +221,22 @@ export default async function handler(
       }
 
       const id = result.status === 'anchored' ? result.id : -1;
+
+      // Echo the readable reasoning off-chain keyed by (chainId, recordId) —
+      // the chain stores only the hash, and the proof feed joins the text
+      // back. Pending anchors have no record id yet and are skipped (id -1
+      // is filtered inside the store).
+      if (typeof reasoning === 'string' && reasoning.trim()) {
+        await rememberLedgerReasoning({
+          chainId: result.chainId,
+          recordId: id,
+          txHash: result.txHash,
+          action,
+          targetToken: targetToken || '',
+          reasoning,
+        });
+      }
+
       console.log(`[0G Ledger API] User attestation ${result.status} for ${user}: ${action} (tx: ${result.txHash})`);
 
       return res.status(200).json({
@@ -269,6 +295,11 @@ export default async function handler(
             offset,
           )
         : await fetchMultiChainProofFeed(limit);
+
+    // Join readable reasoning text from the off-chain echo store — the
+    // chain read path returns only `reasoningHash`. Best-effort: records
+    // without an echo stay hash-only.
+    payload.recent = await attachLedgerReasoning(payload.recent);
 
     return res.status(200).json(payload satisfies LedgerResponse);
   } catch (error: any) {

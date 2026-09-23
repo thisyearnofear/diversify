@@ -30,6 +30,7 @@ import {
 } from '@diversifi/shared';
 import { enqueueRecommendation } from '@/lib/vault/guardian-state';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
+import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
 import { Permission } from '../../../models/Permission';
 import { Vault } from '../../../models/Vault';
 import { TypeSafeSignalReview } from '../../../models/TypeSafeSignalReview';
@@ -261,15 +262,33 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     // Anchor signal to 0G RecommendationLedger on-chain (verifiable evidence trail).
     // Awaited and surfaced in the response so the caller can see whether
     // the macro signal made it to the ledger.
+    const anchorAction = `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`;
+    const anchorReasoning = `${parsed.oneLiner}. Source: ${url}`;
     const anchor = await recommendationLedgerService.recordRecommendation({
       user: '0x0000000000000000000000000000000000000000', // System-level signal
-      action: `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`,
+      action: anchorAction,
       targetToken,
-      reasoning: `${parsed.oneLiner}. Source: ${url}`,
+      reasoning: anchorReasoning,
       evidenceCid: '', // Could store full page content in 0G Storage
       servingModel: 'firecrawl-monitor',
       confidence: Math.round((parsed.confidence || 0) * 10000),
     });
+
+    // The chain stores only the reasoning hash — echo the readable line
+    // off-chain keyed by (chainId, recordId) so the proof feed (and corridor
+    // beats) can render words. Best-effort: a missed echo degrades to
+    // hash-only; a 'pending' anchor has no record id yet, so it is skipped
+    // here and can be attached later by scripts/backfill-ledger-reasoning.ts.
+    if (anchor.status !== 'failed') {
+      await rememberLedgerReasoning({
+        chainId: anchor.chainId,
+        recordId: anchor.status === 'anchored' ? anchor.id : undefined,
+        txHash: anchor.txHash,
+        action: anchorAction,
+        targetToken,
+        reasoning: anchorReasoning,
+      });
+    }
 
     // Persist the signal to Cognee for long-term memory
     cogneeMemoryService.remember(

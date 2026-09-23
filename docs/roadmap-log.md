@@ -1126,3 +1126,28 @@ BLOAT):
   cache-capped, budget-capped paid calls for addresses that genuinely hold USDC
   — a bounded, low-value vector not worth a session layer + per-load signature.
 
+
+#### Corridor beats — readable reasoning echo (2026-09-23)
+
+**1,721 tests passing** (201 files) after the beats reason-to-render fix. Root
+cause: `RecommendationLedger.sol` stores `reasoningHash` only, so the read path
+could never hand a corridor beat its words — the first fresh matching
+MACRO_SIGNAL would have thrown on `undefined.includes()`, and the beat line
+could never render at all. The cure is a readability mirror, not a second
+evidence path: `models/LedgerReasoning.ts` + `lib/ledger-reasoning-store.ts`
+echo the anchored line into Mongo keyed by **(chainId, recordId)** — the
+identity the feed actually carries (`settlementTxHash` is the caller-supplied
+swap tx, never the anchor tx). Writers are `firecrawl-webhook.ts`
+(MACRO_SIGNAL) and the `zero-g-ledger.ts` POST attestation path; the GET feed
+joins the text back. Every echo read/write is best-effort: a miss degrades to
+hash-only rather than breaking the anchor flow. `corridor-context.ts` treats
+`reasoning` as optional and skips hash-only records, `use-macro-signals.ts`
+filters text-less records (a latent `undefined` render bug the honest type
+change surfaced), and `CorridorContext.tsx` clamps the beat index — a raw
+modulo can index past the end of the list. Records anchored before this shipped
+stay hash-only until backfilled: `scripts/backfill-ledger-reasoning.ts`
+(`pnpm backfill-ledger-reasoning [--apply]`) reconstructs the exact anchored
+string from the GuardianState queue entry within ±15 min of the block timestamp
+and **reports** everything it cannot match instead of guessing. Mirror TTL: 90
+days.
+
