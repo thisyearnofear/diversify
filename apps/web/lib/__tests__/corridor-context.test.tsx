@@ -14,7 +14,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor } from '../corridor-context';
-import { CorridorLine, CorridorDetail } from '@/components/swap/CorridorContext';
+import { CorridorLine, CorridorDetail, leadForStrategy } from '@/components/swap/CorridorContext';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 
 afterEach(() => cleanup());
@@ -177,6 +177,24 @@ describe('CorridorDetail', () => {
     ).toHaveAttribute('href', 'https://reserve.mento.org/');
     // The corridor track still renders above the provenance grid.
     expect(screen.getByTestId('corridor-detail')).toHaveTextContent('⇄');
+  });
+
+  it('reorders the provenance rows for the persona lead', () => {
+    render(<CorridorDetail fromToken="USDC" toToken="PAXG" lead="backing" />);
+    const detail = screen.getByTestId('provenance-detail');
+    const backingPos = detail.textContent!.indexOf('Backing');
+    const originPos = detail.textContent!.indexOf('Origin');
+    expect(backingPos).toBeGreaterThanOrEqual(0);
+    expect(backingPos).toBeLessThan(originPos);
+    // All three rows still render — the lead reorders, it doesn't hide.
+    expect(detail).toHaveTextContent('Keys');
+  });
+
+  it('maps philosophies to their provenance lead', () => {
+    expect(leadForStrategy('islamic')).toBe('backing');
+    expect(leadForStrategy('buen_vivir')).toBe('keys');
+    expect(leadForStrategy('africapitalism')).toBe('origin');
+    expect(leadForStrategy(null)).toBe('origin');
   });
 
   it('still renders provenance when the pair has no corridor', () => {

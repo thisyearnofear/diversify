@@ -15,7 +15,11 @@ import { corridorSideFor } from "@/lib/corridor-context";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
-import { CorridorDetail } from "../swap/CorridorContext";
+import {
+  CorridorDetail,
+  leadForStrategy,
+  type ProvenanceLead,
+} from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 
@@ -35,10 +39,12 @@ function PairInspector({
   selection,
   userRegion,
   onClose,
+  lead,
 }: {
   selection: InspectorSel;
   userRegion: Region;
   onClose: () => void;
+  lead: ProvenanceLead;
 }) {
   const pair = selection?.kind === "pair" ? selection : null;
   // The pair's fiat legs prefill the intent form when they exist —
@@ -69,6 +75,7 @@ function PairInspector({
           <CorridorDetail
             fromToken={pair.fromToken}
             toToken={pair.toToken}
+            lead={lead}
           />
         </>
       ) : null}
@@ -199,6 +206,7 @@ export default function ExchangeTab({
             selection={inspectorSel}
             userRegion={userRegion}
             onClose={() => setInspectorSel(null)}
+            lead={leadForStrategy(financialStrategy)}
           />
         }
         status={
@@ -241,6 +249,7 @@ export default function ExchangeTab({
           selection={inspectorSel}
           userRegion={userRegion}
           onClose={() => setInspectorSel(null)}
+          lead={leadForStrategy(financialStrategy)}
         />
       }
       portfolio={freshness}

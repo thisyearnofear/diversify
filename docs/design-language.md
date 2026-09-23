@@ -242,7 +242,10 @@ Backing (issuer + reserves), Keys (who can change the rules) — plus one
 dated moment and its sources. Copy comes from the curated
 `token-provenance.ts` registry; tokens without an entry render nothing,
 and pairs with no fiat meaning still tell a story (USDC vs USDm is
-governance, not FX).
+governance, not FX). The persona picks which line leads — the same
+three facts, reordered: Islamic finance reads Backing first
+(interest-bearing or not), Buen Vivir reads Keys first (who governs),
+everything else reads Origin first (`leadForStrategy`).
 
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner

@@ -106,22 +106,42 @@ function SideTrack({ side }: { side: CorridorSide }) {
   );
 }
 
-function ProvenanceSide({ provenance }: { provenance: TokenProvenance }) {
+/** Which provenance line a philosophy leads with. The facts are the same
+ *  for everyone; the persona reorders them (§5 rail 4). Islamic finance
+ *  reads backing first (interest-bearing or not), Buen Vivir reads keys
+ *  first (who governs), everything else reads origin first. */
+export type ProvenanceLead = 'origin' | 'backing' | 'keys';
+
+export function leadForStrategy(strategy: string | null | undefined): ProvenanceLead {
+  if (strategy === 'islamic') return 'backing';
+  if (strategy === 'buen_vivir') return 'keys';
+  return 'origin';
+}
+
+function ProvenanceSide({
+  provenance,
+  lead = 'origin',
+}: {
+  provenance: TokenProvenance;
+  lead?: ProvenanceLead;
+}) {
   const p = provenance;
+  const rows: { key: ProvenanceLead; label: string; text: string }[] = [
+    { key: 'origin', label: 'Origin', text: `${p.origin.authority} — ${p.origin.regime}` },
+    { key: 'backing', label: 'Backing', text: p.backing },
+    { key: 'keys', label: 'Keys', text: p.keys },
+  ];
+  rows.sort((a, b) => (a.key === lead ? -1 : b.key === lead ? 1 : 0));
   return (
     <div>
       <p className="text-xs font-semibold text-gray-900 dark:text-white">
         {p.origin.flag} {p.symbol} · {p.issuer}
       </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
-        <span className="font-semibold text-gray-900 dark:text-white">Origin</span> {p.origin.authority} — {p.origin.regime}
-      </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
-        <span className="font-semibold text-gray-900 dark:text-white">Backing</span> {p.backing}
-      </p>
-      <p className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
-        <span className="font-semibold text-gray-900 dark:text-white">Keys</span> {p.keys}
-      </p>
+      {rows.map((row) => (
+        <p key={row.key} className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+          <span className="font-semibold text-gray-900 dark:text-white">{row.label}</span> {row.text}
+        </p>
+      ))}
       {p.moment && (
         <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
           {p.moment.year}: {p.moment.text}
@@ -144,9 +164,11 @@ function ProvenanceSide({ provenance }: { provenance: TokenProvenance }) {
 export function CorridorDetail({
   fromToken,
   toToken,
+  lead = 'origin',
 }: {
   fromToken: string;
   toToken: string;
+  lead?: ProvenanceLead;
 }) {
   const corridor = corridorFor(fromToken, toToken);
   const a = provenanceFor(fromToken);
@@ -168,8 +190,8 @@ export function CorridorDetail({
       )}
       {(a || b) && (
         <div data-testid="provenance-detail" className="grid grid-cols-2 gap-3">
-          <div>{a && <ProvenanceSide provenance={a} />}</div>
-          <div>{b && <ProvenanceSide provenance={b} />}</div>
+          <div>{a && <ProvenanceSide provenance={a} lead={lead} />}</div>
+          <div>{b && <ProvenanceSide provenance={b} lead={lead} />}</div>
         </div>
       )}
     </div>
