@@ -233,6 +233,17 @@ a second `AllocationRing`; tapping a coin dims the others and opens the region `
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring.
 
+Exchange's story is provenance: the swap ticket teaches tokens as money
+with an origin. The corridor line leads with the provenance sentence
+("from Kenya's floating shilling to allocated gold in a London vault")
+over the 5y corridor track, both tappable into the pair inspector where
+each token answers the same three questions — Origin (place + authority),
+Backing (issuer + reserves), Keys (who can change the rules) — plus one
+dated moment and its sources. Copy comes from the curated
+`token-provenance.ts` registry; tokens without an entry render nothing,
+and pairs with no fiat meaning still tell a story (USDC vs USDm is
+governance, not FX).
+
 Header: `ChainPill` is **always visible** on `sm+` — including Simple
 mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner
 rule). "See the chain without hunting" beats mode-based hiding; the

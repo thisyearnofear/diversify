@@ -87,6 +87,10 @@ Files: `packages/shared/src/services/serv/{ixs-vault-catalog,rwa-allocator,serv-
 | **DashScope (Alibaba Cloud)** | Qwen long-context LLM for memory consolidation | API key |
 | **Function Compute (Alibaba Cloud)** | Serverless compute hosting the memory consolidation handler | Pay-as-you-go |
 
+### Token provenance (curated, not an API)
+
+`packages/shared/src/constants/token-provenance.ts` — hand-sourced issuer/reserve/governance facts rendered on the Exchange ticket and pair inspector. Each entry carries named https sources and an `asOf` check date; re-verify by `asOf` + 90 days. Sources: [reserve.mento.org](https://reserve.mento.org/), Celo governance (CGP-156), Circle transparency, Paxos attestations, Ondo USDY docs, BCEAO communiqué, Brazil LC 179/2021.
+
 ## Autonomous Guardian Loop
 
 The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio rebalancing within user-approved permission bounds. Loop mechanics (signal ingestion → permission validation → chain-aware execution → evidence anchor): [`architecture.md`](./architecture.md) § Guardian Autonomous Loop.

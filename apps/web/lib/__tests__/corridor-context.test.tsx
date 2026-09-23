@@ -114,13 +114,27 @@ describe('CorridorLine', () => {
     expect(onInspect).toHaveBeenCalledTimes(1);
   });
 
+  it('leads with the provenance story, corridor line underneath', () => {
+    render(<CorridorLine fromToken="KESm" toToken="PAXG" />);
+    const line = screen.getByTestId('corridor-line');
+    expect(line).toHaveTextContent("From Kenya's floating shilling to allocated gold in a London vault");
+    expect(line).toHaveTextContent('to gold in 5 years');
+  });
+
+  it('renders a story with no corridor for same-fiat pairs', () => {
+    render(<CorridorLine fromToken="USDC" toToken="USDm" />);
+    const line = screen.getByTestId('corridor-line');
+    expect(line).toHaveTextContent("From Circle's cash-and-Treasuries dollar to Mento's reserve-backed dollar");
+    expect(line.textContent).not.toContain('⇄');
+  });
+
   it('renders as plain text without an inspector', () => {
     render(<CorridorLine fromToken="KESm" toToken="USDC" />);
     const line = screen.getByTestId('corridor-line');
     expect(line.tagName).toBe('P');
   });
 
-  it('renders nothing for a pair with no fiat meaning', () => {
+  it('renders nothing for a pair with no fiat meaning and no story', () => {
     const { container } = render(<CorridorLine fromToken="ETH" toToken="CELO" />);
     expect(container).toBeEmptyDOMElement();
   });
@@ -147,6 +161,30 @@ describe('CorridorDetail', () => {
     expect(screen.getByTestId('corridor-detail')).toHaveTextContent(
       'The benchmark everything here is measured against.',
     );
+  });
+
+  it('shows provenance for both sides alongside the corridor', () => {
+    render(<CorridorDetail fromToken="KESm" toToken="PAXG" />);
+    const detail = screen.getByTestId('provenance-detail');
+    expect(detail).toHaveTextContent('KESm · Mento');
+    expect(detail).toHaveTextContent('PAXG · Paxos Trust Company');
+    expect(detail).toHaveTextContent('Origin');
+    expect(detail).toHaveTextContent('Keys');
+    expect(detail).toHaveTextContent('Paxos can freeze addresses');
+    expect(detail).toHaveTextContent('Checked 2026-09-23');
+    expect(
+      screen.getByRole('link', { name: 'Mento Reserve' }),
+    ).toHaveAttribute('href', 'https://reserve.mento.org/');
+    // The corridor track still renders above the provenance grid.
+    expect(screen.getByTestId('corridor-detail')).toHaveTextContent('⇄');
+  });
+
+  it('still renders provenance when the pair has no corridor', () => {
+    render(<CorridorDetail fromToken="USDC" toToken="USDm" />);
+    const detail = screen.getByTestId('provenance-detail');
+    expect(detail).toHaveTextContent('USDC · Circle');
+    expect(detail).toHaveTextContent('USDm · Mento');
+    expect(screen.getByTestId('corridor-detail').textContent).not.toContain('⇄');
   });
 
   it('renders nothing for a pair with no fiat meaning', () => {
