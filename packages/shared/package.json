@@ -13,10 +13,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@0gfoundation/0g-storage-ts-sdk": "1.2.9",
-    "@celo/blind-threshold-bls": "1.0.0-beta",
     "@celo/identity": "5.1.2",
-    "@celo/poprf": "0.1.9",
     "@circle-fin/developer-controlled-wallets": "10.8.0",
     "@circle-fin/x402-batching": "3.5.0",
     "@diversifi/shared-0g": "workspace:*",
@@ -25,9 +22,7 @@
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",
     "@metamask/smart-accounts-kit": "1.6.0",
-    "abitype": "1.0.6",
-    "ai": "^7.0.107",
-    "axios": "1.13.2",
+    "@privy-io/node": "0.11.0",
     "ethers": "^5.7",
     "ethers6": "npm:ethers@^6.16.0",
     "openai": "6.16.0",
