@@ -31,6 +31,15 @@ permission is enforced on-chain. It is not (yet).
   user vault transactions — with no configured provider, execution fails
   closed (`VaultExecutionUnavailableError`, journaled as a decline). The chain
   imposes **no** limit on what that account can sign.
+- The Privy path (`providers/privy-safe-provider.ts`) resolves the user by
+  wallet/smart-wallet address (`users().getBySmartWalletAddress` →
+  `getByWalletAddress`), then submits a UserOperation from the user's Safe
+  signed by their **delegated embedded wallet** — `createViemAccount` +
+  `authorization_context` (`PRIVY_AUTHORIZATION_PRIVATE_KEY`, a P-256 key whose
+  public half is registered in a Privy key quorum and granted via `addSigners`)
+  through an ERC-4337 bundler (`PRIVY_BUNDLER_URL`). Privy's server SDK has no
+  smart-wallet submit API, so the bundler path is required, and the provider
+  reports unconfigured unless every credential is present.
 - A real on-chain enforcement path exists in code
   (`providers/metamask-delegation-provider.ts`, ERC-7710 redemption via a
   DelegationManager) but is **dark**: it is not the active provider,
@@ -56,7 +65,8 @@ They do not, by themselves, remove server trust.
 User wallet ──signs EIP-712──▶ SessionPermission ──verified + stored──▶ MongoDB
                                                                           │
 guardian-loop (validateSwap + gates) ──signs via──▶ server-custodied      │
-                                                    Privy Safe / VAULT_KEY │
+                                                    Privy Safe (delegated  │
+                                                    embedded-wallet signer)│
                                                           │               │
                                                           ▼               │
                                                      Mento swap   ◀── bounds checked

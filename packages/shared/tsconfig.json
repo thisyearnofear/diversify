@@ -18,7 +18,8 @@
       "@/*": ["src/*"],
       "@circle-fin/x402-batching": ["../../node_modules/@circle-fin/x402-batching/dist/index.d.ts"],
       "@circle-fin/x402-batching/client": ["../../node_modules/@circle-fin/x402-batching/dist/client/index.d.ts"],
-      "@circle-fin/x402-batching/server": ["../../node_modules/@circle-fin/x402-batching/dist/server/index.d.ts"]
+      "@circle-fin/x402-batching/server": ["../../node_modules/@circle-fin/x402-batching/dist/server/index.d.ts"],
+      "permissionless/accounts": ["../../node_modules/permissionless/_types/accounts/index.d.ts"]
     },
     "skipLibCheck": true,
     "noEmit": false

@@ -374,7 +374,7 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Category | Technology |
 |----------|------------|
 | Frontend | Next.js 15, React 19, Tailwind CSS |
-| Smart Accounts | Privy + Safe (ERC-4337) |
+| Smart Accounts | Privy + Safe (ERC-4337); server execution signs as the user's delegated embedded wallet via `PRIVY_AUTHORIZATION_PRIVATE_KEY` and submits through a bundler (`PRIVY_BUNDLER_URL`) |
 | AI | Gemini (primary), Venice AI, AI/ML API, NVIDIA, Featherless, 0G Serving, Modal GLM (fallback chain) |
 | Agent Memory | Tablestore (Alibaba Cloud, preferred) → Cognee (fallback); Qwen long-context consolidation via DashScope |
 | Macro Monitoring | Firecrawl (event-driven page watching) |

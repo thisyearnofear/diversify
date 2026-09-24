@@ -1384,3 +1384,16 @@ batched settlement ids); `x402-metrics` counts buyer→recipient Transfer
 logs with the operator address excluded (Gateway batched settlements
 credit the merchant's Gateway balance and never appear as ERC-20
 transfers — noted in the response).
+
+#### Privy vault execution wired to the documented signer+bundler flow (2026-09-24)
+
+The `privy` smart-account provider previously called APIs that don't exist
+(`getUser({id})` on a wallet address, `wallets().sendTransaction` on an
+address) and silently dropped batch calls. It now resolves users by wallet
+address, signs UserOperations with the user's delegated embedded wallet via
+`createViemAccount` + `PRIVY_AUTHORIZATION_PRIVATE_KEY`, and submits the whole
+batch as one UserOp through `PRIVY_BUNDLER_URL` — the only documented
+server-side path, since Privy's server SDK does not submit smart-wallet ops.
+The provider reports unconfigured unless every credential is present, so
+execution keeps failing closed until the authorization key and bundler are
+provisioned in the Privy dashboard.

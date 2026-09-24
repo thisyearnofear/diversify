@@ -22,10 +22,6 @@ import { junoService, JunoService } from './services/juno-service';
 import { VaultService } from './services/vault/vault.service';
 import { FeeEngine, feeEngine } from './services/vault/fee-engine';
 import {
-  sendSmartAccountTransaction,
-  isPrivySmartAccountEnabled,
-} from './services/vault/privy-smart-account';
-import {
   getSmartAccountProvider,
   type SmartAccountProvider,
   type SmartAccountCall,
@@ -71,8 +67,6 @@ export {
   VaultService,
   FeeEngine,
   feeEngine,
-  sendSmartAccountTransaction,
-  isPrivySmartAccountEnabled,
   getSmartAccountProvider,
   SmartAccountProvider,
   SmartAccountCall,

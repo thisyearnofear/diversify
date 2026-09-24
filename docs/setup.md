@@ -135,9 +135,10 @@ Rules and the object inventory: [`design-language.md`](./design-language.md) §5
 ### Setup: Privy Smart Accounts
 
 1. **Privy Dashboard** → Enable smart wallets → Select "Safe"
-2. **Configure Celo chain** → Add bundler URL (Pimlico, Alchemy, etc.)
-3. **Enable session signers** → Create spending policy for the agent
-4. **Set env vars** → `PRIVY_APP_ID` + `PRIVY_APP_SECRET`
+2. **Create an app authorization key** → `openssl ecparam -name prime256v1 -genkey`, register the public key in a key quorum (Dashboard → Authorization keys)
+3. **Add the signer** → each user grants the quorum on their embedded wallet via `addSigners` (client-side `useSigners`)
+4. **Bundler** → an ERC-4337 bundler for Celo (e.g. Pimlico) — Privy's server SDK does not submit smart-wallet UserOps itself
+5. **Set env vars** → `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `PRIVY_AUTHORIZATION_PRIVATE_KEY`, `PRIVY_BUNDLER_URL` — the provider fails closed unless all are set
 
 ### Troubleshooting
 
