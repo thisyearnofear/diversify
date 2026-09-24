@@ -201,7 +201,7 @@ Registration, env vars, and the signing/verification API:
 
 | Provider | Scope |
 |----------|-------|
-| `NavigationProvider` | Active tab, tab history |
+| `NavigationProvider` | Active tab, tab history, and the transient cross-tab hand-offs: `navigateWithIntent(tab, TreasuryIntent)` (region / asset / `lens: compare \| netting`, consumed once), `SwapPrefill` (+ `origin` so the receipt can lead back), `lastSettlement` (Home's balance-derived seal), `guardianContext`. None of it is persisted. |
 | `ThemeProvider` | Dark/light mode |
 | `ExperienceProvider` | Simple/Standard/Advanced mode |
 | `ProtectionProfileProvider` | Profile goals, region, philosophy (`useStrategy` reads `config.philosophy`) |
@@ -214,11 +214,25 @@ Registration, env vars, and the signing/verification API:
 All 40+ hooks live in `/hooks/`. Key patterns:
 
 - **Data hooks** (`use-inflation-data`, `use-multichain-balances`, `use-currency-performance`) — fetch and cache external data
-- **Agent hooks** (`use-proactive-agent`, `use-agent-chat`, `use-agent-config`) — Guardian interaction
+- **Agent hooks** (`use-proactive-agent`, `use-agent-chat`, `use-agent-config`, `use-guardian-instrument`) — Guardian interaction; `use-guardian-instrument` owns all Guardian-tab state (session key, vault, journal events, loop runs)
 - **Wallet hooks** (`use-session-key`, `use-arc-balance`) — wallet operations
 - **UI hooks** (`use-mobile`, `use-in-view`, `use-animated-counter`) — responsive/UX helpers
 
 The `useProactiveAgent` monitoring loop is mounted once at the app root via `components/agent/ProactiveAgentRunner.tsx` (inside `ProviderTree` in `pages/_app.tsx`), so the 5-minute market + yield + UBI check survives chat-surface open/close transitions.
+
+### Instrument funnel events
+
+`trackFunnelEvent` (`lib/analytics.ts`, session-scoped, honours Do Not Track) carries the events that say whether the instruments work:
+
+| Event | Props | Fired when |
+|---|---|---|
+| `marquee_select` | `source`, selection | A selection on a tab's object (coin, slice, benchmark, horizon) |
+| `intent_handoff` | `source`, `target`, `outcome` | A cross-tab hand-off is consumed — Exchange `prefilled` / `netting`; Shield `compare` / `focused` / `unfocused` / `preview_kept` |
+| `handoff_settled` | `source` | A receipt settles the exact pair a hand-off prefilled |
+| `lens_offered` | `tab`, `lens` | A lens prompt actually renders in its slot — once per session per lens, never in demo |
+| `lens_open` | `tab`, `lens` | The user opens that lens (same demo gate, so open ÷ offered is an honest rate) |
+
+Lenses: `home:concentration`, `protect:floor`, `exchange:decision_window`.
 
 ### AppShell state
 
