@@ -72,6 +72,16 @@ export interface VaultPermission {
   totalSpentUSD: number;
   firstAutoExecutionConfirmed: boolean;
   autoExecuteCycleProtection?: boolean;
+  /**
+   * ERC-7715 grant context — the delegation authority the session account
+   * redeems on the user's own smart account. Absent when the user has not
+   * granted Advanced Permissions.
+   */
+  delegationContext?: {
+    context: string;
+    delegationManager: string;
+    dependencies: { factory: string; factoryData: string }[];
+  } | null;
   status: 'active' | 'expired' | 'revoked';
 }
 

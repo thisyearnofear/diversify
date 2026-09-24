@@ -223,6 +223,20 @@ export interface UseSessionKeyReturn {
     ) => Promise<SignedSessionPermission | null>;
     /** Resolves false (and sets `error`) if server-side revocation failed — the permission is still live. */
     revokePermission: () => Promise<boolean>;
+    /**
+     * Persist an ERC-7715 grant context (from wallet_requestExecutionPermissions)
+     * onto the active permission so the Guardian session account can redeem it.
+     * Resolves false when the server could not store it.
+     */
+    attachDelegationContext: (
+        userAddress: string,
+        chainId: number,
+        context: {
+            context: `0x${string}`;
+            delegationManager: `0x${string}`;
+            dependencies: { factory: `0x${string}`; factoryData: `0x${string}` }[];
+        }
+    ) => Promise<boolean>;
     isPermissionValid: () => boolean;
     triggerExecutionLoop: (dryRun?: boolean) => Promise<GuardianLoopResult>;
     /**
@@ -453,6 +467,37 @@ export function useSessionKey(): UseSessionKeyReturn {
         return true;
     }, [signedPermission, authHeadersFor]);
 
+    const attachDelegationContext = useCallback(async (
+        userAddress: string,
+        chainId: number,
+        context: {
+            context: `0x${string}`;
+            delegationManager: `0x${string}`;
+            dependencies: { factory: `0x${string}`; factoryData: `0x${string}` }[];
+        }
+    ): Promise<boolean> => {
+        try {
+            const resp = await fetchWithTimeout(
+                `${API_BASE}/api/vault/permission`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json', ...(await authHeadersFor(userAddress)) },
+                    body: JSON.stringify({ chainId, delegationContext: context }),
+                },
+                SESSION_FETCH_TIMEOUT_MS,
+            );
+            if (!resp.ok) {
+                const data = await resp.json().catch(() => ({}));
+                setError(data.error || 'Failed to register the on-chain permission');
+                return false;
+            }
+            return true;
+        } catch {
+            setError('Failed to register the on-chain permission');
+            return false;
+        }
+    }, [authHeadersFor]);
+
     const isPermissionValid = useCallback((): boolean => {
         if (!signedPermission) return false;
         const { expiresAt } = signedPermission.permission;
@@ -518,6 +563,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         sessionInfo,
         requestPermission,
         revokePermission,
+        attachDelegationContext,
         isPermissionValid,
         triggerExecutionLoop,
         deriveGuardianState,

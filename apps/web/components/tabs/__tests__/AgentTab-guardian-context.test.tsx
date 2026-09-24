@@ -69,6 +69,8 @@ const mockInstrument = {
   hasTokenVault: false,
   stableBalanceOnChain: { total: 0, tokens: [] as any[] },
   isOnArbitrum: true,
+  advancedGrantAvailable: true,
+  isOnGrantEligibleChain: true,
   grantStatus: "idle",
   grantError: null,
   setShowGrantConfirmModal: vi.fn(),

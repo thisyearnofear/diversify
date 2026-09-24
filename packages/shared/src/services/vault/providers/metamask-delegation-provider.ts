@@ -24,7 +24,7 @@
 
 import { createPublicClient, http, type Address, type Hex, type Chain } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
-import { arbitrum, base, optimism, polygon, mainnet } from 'viem/chains';
+import { arbitrum, base, celo, celoSepolia, optimism, polygon, mainnet } from 'viem/chains';
 import {
     toMetaMaskSmartAccount,
     Implementation,
@@ -65,22 +65,51 @@ export function setDelegationContextResolver(resolver: DelegationContextResolver
     contextResolver = resolver;
 }
 
-const SUPPORTED_CHAINS: Record<number, Chain> = {
-    [arbitrum.id]: arbitrum,
-    [base.id]: base,
-    [optimism.id]: optimism,
-    [polygon.id]: polygon,
-    [mainnet.id]: mainnet,
-};
+/**
+ * Candidate chains this provider can serve. Eligibility is decided by the
+ * installed @metamask/smart-accounts-kit — a chain absent from
+ * getSmartAccountsEnvironment() cannot redeem ERC-7710 permissions.
+ */
+const CANDIDATE_CHAINS: Chain[] = [
+    arbitrum,
+    base,
+    celo,
+    celoSepolia,
+    optimism,
+    polygon,
+    mainnet,
+];
+
+/**
+ * Chain IDs where the installed kit ships delegation environments.
+ * Derived at module load — never hardcoded.
+ */
+export const ERC7710_KIT_CHAIN_IDS: number[] = CANDIDATE_CHAINS
+    .filter((chain) => {
+        try {
+            getSmartAccountsEnvironment(chain.id);
+            return true;
+        } catch {
+            return false;
+        }
+    })
+    .map((chain) => chain.id);
+
+const SUPPORTED_CHAINS: Record<number, Chain> = Object.fromEntries(
+    CANDIDATE_CHAINS.filter((chain) => ERC7710_KIT_CHAIN_IDS.includes(chain.id)).map((chain) => [
+        chain.id,
+        chain,
+    ]),
+);
 
 const DEFAULT_CHAIN_ID = arbitrum.id;
 
 function getRpcUrl(chainId: number): string | undefined {
+    const chain = SUPPORTED_CHAINS[chainId];
     return (
         process.env[`AA_RPC_URL_${chainId}`] ||
-        (chainId === arbitrum.id
-            ? process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc'
-            : undefined)
+        chain?.rpcUrls?.default?.http?.[0] ||
+        undefined
     );
 }
 
@@ -155,6 +184,17 @@ export class MetaMaskDelegationProvider implements SmartAccountProvider {
         call: SmartAccountCall,
         chainId: number = DEFAULT_CHAIN_ID,
     ): Promise<SmartAccountTxResult> {
+        return this.sendBatch(userId, [call], chainId);
+    }
+
+    async sendBatch(
+        userId: string,
+        calls: SmartAccountCall[],
+        chainId: number = DEFAULT_CHAIN_ID,
+    ): Promise<SmartAccountTxResult> {
+        if (calls.length === 0) {
+            throw new Error('sendBatch requires at least one call');
+        }
         if (!contextResolver) {
             throw new Error(
                 'No DelegationContextResolver registered. Call setDelegationContextResolver() at API boot.',
@@ -180,36 +220,22 @@ export class MetaMaskDelegationProvider implements SmartAccountProvider {
             account: smartAccount,
         }).extend(erc7710BundlerActions());
 
+        // Every call rides a single UserOp under the granted permission — the
+        // batch is atomic, so an approve+swap pair can never half-land.
         const hash = await bundlerClient.sendUserOperationWithDelegation({
             publicClient,
             account: smartAccount,
-            calls: [
-                {
-                    to: call.to as Address,
-                    data: (call.data ?? '0x') as Hex,
-                    value: call.value ? BigInt(call.value) : 0n,
-                    permissionContext: resolved.context,
-                    delegationManager: resolved.delegationManager,
-                },
-            ],
+            calls: calls.map((call) => ({
+                to: call.to as Address,
+                data: (call.data ?? '0x') as Hex,
+                value: call.value ? BigInt(call.value) : 0n,
+                permissionContext: resolved.context,
+                delegationManager: resolved.delegationManager,
+            })),
             dependencies: resolved.dependencies,
         });
 
         return { hash, status: 'pending' };
-    }
-
-    async sendBatch(
-        userId: string,
-        calls: SmartAccountCall[],
-        chainId: number = DEFAULT_CHAIN_ID,
-    ): Promise<SmartAccountTxResult> {
-        // Each redemption is a discrete user-op; execute sequentially for clarity.
-        let lastHash = '';
-        for (const call of calls) {
-            const result = await this.sendTransaction(userId, call, chainId);
-            lastHash = result.hash;
-        }
-        return { hash: lastHash, status: 'pending' };
     }
 
     async getBalances(_userId: string, _chainId: number): Promise<SmartAccountBalance[]> {

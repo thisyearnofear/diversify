@@ -35,11 +35,12 @@ export function GuardianBoundsSheet({
   walletStableBalanceUSD,
   isMiniPay,
   onNavigateToFund,
-  isOnArbitrum,
+  isOnGrantEligibleChain,
+  grantAvailable,
   grantStatus,
   grantError,
   onOpenGrantModal,
-  onSwitchToArbitrum,
+  onSwitchToGrantChain,
   config,
   onConfigChange,
 }: {
@@ -61,11 +62,13 @@ export function GuardianBoundsSheet({
   walletStableBalanceUSD: number;
   isMiniPay?: boolean;
   onNavigateToFund?: () => void;
-  isOnArbitrum: boolean;
+  isOnGrantEligibleChain: boolean;
+  /** False when no Guardian session account is configured — hides the grant CTA. */
+  grantAvailable: boolean;
   grantStatus: 'idle' | 'requesting' | 'granted' | 'error';
   grantError: string | null;
   onOpenGrantModal: () => void;
-  onSwitchToArbitrum: () => void;
+  onSwitchToGrantChain: () => void;
   config?: Parameters<typeof AutomationSettings>[0]["config"];
   onConfigChange?: (config: any) => void;
 }) {
@@ -190,19 +193,22 @@ export function GuardianBoundsSheet({
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
           Have your wallet co-sign an on-chain spending cap via an ERC-7715 delegation. Best if you already use MetaMask.
-          {!isOnArbitrum && ' Available on Arbitrum.'}
         </p>
-        {grantStatus === 'granted' ? (
+        {!grantAvailable ? (
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            Stronger protection isn&apos;t enabled on this deployment yet.
+          </p>
+        ) : grantStatus === 'granted' ? (
           <div className="text-xs font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-3">
-            Stronger protection is active on Arbitrum
+            Stronger protection is active
           </div>
-        ) : !isOnArbitrum ? (
+        ) : !isOnGrantEligibleChain ? (
           <button
             type="button"
-            onClick={onSwitchToArbitrum}
+            onClick={onSwitchToGrantChain}
             className="w-full text-xs font-bold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 border border-orange-200 dark:border-orange-800 rounded-xl py-2.5 transition-colors"
           >
-            Switch to Arbitrum to enable
+            Switch to a supported network to enable
           </button>
         ) : (
           <>

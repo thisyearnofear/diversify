@@ -40,7 +40,7 @@ import {
 import { appendDecisionLog, bumpUserActivity, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '@/lib/vault/guardian-state';
 import { bumpGlobalActivity, isoWeekKey } from '@/lib/guardian-activity-counter';
 import { VaultService, VaultExecutionUnavailableError, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
-import { smartAccountExecutor } from '@/lib/vault/executor';
+import { smartAccountExecutor, getActiveProvider, isAutonomyEligibleChain } from '@/lib/vault/executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 // Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
 // their reasoning through the ONE shared builder so identical facts produce
@@ -350,8 +350,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         continue;
       }
       // Autonomy runs only on the ERC-7710 rail (MetaMask Advanced
-      // Permissions). When no provider is configured, execution fails closed
-      // at rebalance() and the decline is journaled — never a silent skip.
+      // Permissions), and only where that rail actually exists: app-supported
+      // ∩ kit-environment chains. When the provider is unconfigured or the
+      // permission's chain is ineligible, the proposal stays queued for
+      // one-tap review — journaled as pending, never a silent skip.
+      const autonomyProvider = getActiveProvider();
+      if (!autonomyProvider || !isAutonomyEligibleChain(perm.chainId)) {
+        const reason = !autonomyProvider
+          ? 'autonomous execution is not configured on this deployment'
+          : `chain ${perm.chainId} does not support on-chain-enforced autonomy`;
+        trackDecline(
+          userAddress,
+          'advisory_pending_user_review',
+          `Guardian proposed a move, but ${reason} — review and sign it in your wallet`,
+          queue[0],
+        );
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'advisory_pending_user_review',
+          reason: `Guardian proposed a move, but ${reason} — review and sign it in your wallet`,
+        });
+        continue;
+      }
       if (perm.totalSpentUSD === 0 && !perm.firstAutoExecutionConfirmed) {
         trackDecline(
           userAddress,

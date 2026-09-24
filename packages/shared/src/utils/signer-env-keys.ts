@@ -33,6 +33,9 @@ export const SIGNER_ENV_KEY_PATTERNS = [
   // must never reach test-time network calls.
   'BUYER_PRIVATE_KEY',
   'SIGNER_PRIVATE_KEY',
+  // ERC-7710 redemption key (GUARDIAN_SESSION_PRIVATE_KEY) — suffix-matched,
+  // catches prefixed variants too.
+  'SESSION_PRIVATE_KEY',
 ] as const;
 
 export type SignerEnvKeyPattern = (typeof SIGNER_ENV_KEY_PATTERNS)[number];

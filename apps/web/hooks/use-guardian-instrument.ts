@@ -28,6 +28,7 @@ import { useWDKAgent } from "./use-wdk-agent";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useNavigation } from "../context/app/NavigationContext";
 import { guardianProposalPrefill } from "../lib/guardian-proposal-prefill";
+import { GRANT_ELIGIBLE_CHAIN_IDS, guardianSessionAddress } from "../lib/erc7715-client-grant";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -112,6 +113,7 @@ export function useGuardianInstrument({
     permissionSummary,
     requestPermission,
     revokePermission,
+    attachDelegationContext,
     isPermissionValid,
     sessionInfo,
     triggerExecutionLoop,
@@ -148,6 +150,12 @@ export function useGuardianInstrument({
   const currentChainName = chainId ? CHAIN_DISPLAY_NAMES[chainId] : null;
   const isChainSupported = chainId ? SUPPORTED_AUTO_SAVER_CHAINS.includes(chainId) : false;
   const isOnArbitrum = chainId === ARBITRUM_CHAIN_ID;
+  // Advanced Permissions are only offerable when the deployment has a
+  // Guardian session account AND the wallet sits on a grant-eligible chain.
+  // No session address → hide the option (never fall back to the user's own
+  // address as the grant target).
+  const advancedGrantAvailable = guardianSessionAddress() !== null;
+  const isOnGrantEligibleChain = chainId ? GRANT_ELIGIBLE_CHAIN_IDS.includes(chainId) : false;
 
   const stableBalanceOnChain = useMemo(() => {
     if (!chainId || !portfolio.allTokens?.length) {
@@ -312,32 +320,54 @@ export function useGuardianInstrument({
         throw new Error('Install MetaMask to use Advanced Permissions.');
       }
 
+      const {
+        requestAdvancedPermission,
+        guardianSessionAddress,
+        grantTokenForChain,
+        GRANT_ELIGIBLE_CHAIN_IDS,
+      } = await import('../lib/erc7715-client-grant');
+      const sessionAddress = guardianSessionAddress();
+      if (!sessionAddress) {
+        // No self-address fallback — a permission granted to the user's own
+        // address is not autonomy, it's a silent mis-grant.
+        throw new Error('Advanced Permissions are not enabled on this deployment yet.');
+      }
+
       const currentChainHex = await ethereum.request({ method: 'eth_chainId' });
       const currentChainId = parseInt(currentChainHex, 16);
-      if (currentChainId !== 42161) {
+      // Grant on the wallet's current chain when it's grant-eligible;
+      // otherwise ask the wallet to switch to the first eligible chain.
+      const targetChainId = grantTokenForChain(currentChainId)
+        ? currentChainId
+        : GRANT_ELIGIBLE_CHAIN_IDS[0];
+      if (currentChainId !== targetChainId) {
         try {
           await ethereum.request({
             method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xa4b1' }],
+            params: [{ chainId: `0x${targetChainId.toString(16)}` }],
           });
         } catch {
-          throw new Error('Please switch to Arbitrum One in your wallet to grant Advanced Permissions.');
+          throw new Error('Please switch to a supported network in your wallet to grant Advanced Permissions.');
         }
       }
 
-      const { requestAdvancedPermission, ARBITRUM_USDC } = await import('../lib/erc7715-client-grant');
-      const sessionAddress = (process.env.NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS || address) as `0x${string}`;
       const periodAmount = BigInt(Math.round(dailyLimit * 1_000_000));
-      await requestAdvancedPermission({
+      const grant = await requestAdvancedPermission({
         sessionAccountAddress: sessionAddress,
-        tokenAddress: ARBITRUM_USDC,
+        chainId: targetChainId,
         periodAmount,
       });
+      // Persist the grant context — without it the session account has
+      // nothing to redeem and autonomy stays theoretical.
+      const attached = await attachDelegationContext(address, targetChainId, grant);
+      if (!attached) {
+        throw new Error('MetaMask granted the permission, but it could not be registered server-side. Try again.');
+      }
       setGrantStatus('granted');
       addActivity({
         type: 'execution',
         tier: 'GUARDIAN',
-        description: `Stronger protection is on — MetaMask is enforcing a $${dailyLimit}/day limit on Arbitrum`,
+        description: `Stronger protection is on — MetaMask is enforcing a $${dailyLimit}/day limit on ${CHAIN_DISPLAY_NAMES[targetChainId] ?? `chain ${targetChainId}`}`,
         status: 'success',
       });
     } catch (e: any) {
@@ -345,13 +375,13 @@ export function useGuardianInstrument({
       const msg = e?.message || '';
       if (e?.code === 4001 || msg.includes('rejected') || msg.includes('User rejected')) {
         setGrantError('Permission request was rejected. Try again when ready.');
-      } else if (msg.includes('switch to Arbitrum') || msg.includes('Install MetaMask')) {
+      } else if (msg.includes('supported network') || msg.includes('Install MetaMask') || msg.includes('not enabled')) {
         setGrantError(msg);
       } else {
-        setGrantError('Advanced Permission request failed. Make sure you are on Arbitrum One.');
+        setGrantError('Advanced Permission request failed. Make sure you are on a supported network.');
       }
     }
-  }, [address, dailyLimit, addActivity]);
+  }, [address, dailyLimit, addActivity, attachDelegationContext]);
 
   const guardianProofEvents = useMemo<GuardianProofEvent[]>(() => {
     const liveEvents = [
@@ -496,6 +526,8 @@ export function useGuardianInstrument({
     currentChainName,
     isChainSupported,
     isOnArbitrum,
+    advancedGrantAvailable,
+    isOnGrantEligibleChain,
     stableBalanceOnChain,
     isLowOnFunds,
     nonStableBalanceOnChain,

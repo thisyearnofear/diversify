@@ -38,6 +38,8 @@ export const ERC7715_SUPPORTED_CHAIN_IDS = [
     8453, // Base
     10, // Optimism
     137, // Polygon
+    42220, // Celo mainnet — kit ships delegation environments (verified via getSmartAccountsEnvironment)
+    11142220, // Celo Sepolia
 ] as const;
 
 /** The Guardian's preferred chain for Advanced Permissions (Arbitrum One). */

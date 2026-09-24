@@ -82,7 +82,7 @@ export const GuardianGrantModal: React.FC<{
           <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
             <li className="flex items-start gap-2">
               <span className="text-orange-500 mt-0.5">•</span>
-              <span>Allow Auto-Saver to spend up to <strong>${pendingDailyLimit}</strong> of your USDC per day on Arbitrum.</span>
+              <span>Allow Auto-Saver to spend up to <strong>${pendingDailyLimit}</strong> of your dollar tokens per day on a supported network.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-orange-500 mt-0.5">•</span>

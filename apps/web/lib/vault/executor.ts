@@ -27,13 +27,40 @@ import {
   type SmartAccountProvider,
 } from '@diversifi/shared/src/services/vault/smart-account-provider';
 import { CELO_TOKEN_ADDRESSES } from '@diversifi/shared/src/config/celo-tokens';
+import {
+  ERC7710_KIT_CHAIN_IDS,
+  setDelegationContextResolver,
+} from '@diversifi/shared/src/services/vault/providers/metamask-delegation-provider';
+import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
 import { NETWORKS } from '@/config';
+import dbConnect from '@/lib/mongodb';
+import { Permission } from '@/models/Permission';
 
 // Register providers (ensures they're available)
 import '@diversifi/shared/src/services/vault/providers';
 
+// The provider redeems the ERC-7715 grant the user's wallet issued — resolve
+// the stored delegation context for (user address, chain) from the signed
+// permission record. No context → no redemption → honest failure.
+setDelegationContextResolver(async (userId, chainId) => {
+  await dbConnect();
+  const doc = await Permission.findOne({
+    userAddress: userId.toLowerCase(),
+    chainId,
+    status: 'active',
+  }).lean();
+  const ctx = doc?.delegationContext;
+  if (!ctx?.context || !ctx?.delegationManager) return null;
+  return {
+    context: ctx.context as `0x${string}`,
+    delegationManager: ctx.delegationManager as `0x${string}`,
+    dependencies: (ctx.dependencies ?? []) as { factory: `0x${string}`; factoryData: `0x${string}` }[],
+  };
+});
+
 const NETWORK_RPCS: Record<number, string> = {
   [NETWORKS.CELO_MAINNET.chainId]: process.env.NEXT_PUBLIC_CELO_RPC || 'https://forno.celo.org',
+  [NETWORKS.CELO_SEPOLIA.chainId]: 'https://forno.celo-sepolia.celo-testnet.org',
   [NETWORKS.ARBITRUM_ONE.chainId]: process.env.NEXT_PUBLIC_ARBITRUM_RPC || 'https://arb1.arbitrum.io/rpc',
 };
 
@@ -64,6 +91,56 @@ const erc20Abi = [
   'function approve(address spender, uint256 amount) returns (bool)',
   'function allowance(address owner, address spender) view returns (uint256)',
 ];
+
+const erc20Iface = new ethers.utils.Interface(erc20Abi);
+
+/**
+ * Chains where the Mento broker is the routing venue.
+ */
+const CELO_CHAIN_IDS = new Set<number>([
+  NETWORKS.CELO_MAINNET.chainId,
+  NETWORKS.CELO_SEPOLIA.chainId,
+]);
+
+/**
+ * Token address tables for non-Celo autonomy chains (Celo resolves through
+ * CELO_TOKEN_ADDRESSES). Add a chain here when it becomes autonomy-eligible.
+ */
+const TOKEN_ADDRESS_BY_CHAIN: Record<number, Record<string, string>> = {
+  [NETWORKS.ARBITRUM_ONE.chainId]: {
+    USDC: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+    'USDC.E': '0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8',
+  },
+};
+
+export class AutonomyChainIneligibleError extends Error {
+  constructor(chainId: number) {
+    super(
+      `Chain ${chainId} is not eligible for on-chain-enforced autonomy ` +
+        `(ERC-7710 kit chains ∩ app-supported chains).`,
+    );
+    this.name = 'AutonomyChainIneligibleError';
+  }
+}
+
+/**
+ * Autonomy-eligible = app-supported ∩ MetaMask kit environments.
+ */
+export function isAutonomyEligibleChain(chainId: number): boolean {
+  return ChainDetectionService.isSupported(chainId) && ERC7710_KIT_CHAIN_IDS.includes(chainId);
+}
+
+function resolveTokenAddress(token: string, chainId: number): string {
+  if (token.startsWith('0x')) return token;
+  if (CELO_CHAIN_IDS.has(chainId)) {
+    const addr = CELO_TOKEN_ADDRESSES[token]?.address ?? CELO_TOKEN_ADDRESSES[token.toUpperCase()]?.address;
+    if (!addr) throw new Error(`Unknown token ${token} on Celo chain ${chainId}`);
+    return addr;
+  }
+  const addr = TOKEN_ADDRESS_BY_CHAIN[chainId]?.[token] ?? TOKEN_ADDRESS_BY_CHAIN[chainId]?.[token.toUpperCase()];
+  if (!addr) throw new Error(`Unknown token ${token} on chain ${chainId}`);
+  return addr;
+}
 
 function getProvider(chainId: number = NETWORKS.CELO_MAINNET.chainId): ethers.providers.JsonRpcProvider {
   const rpc = NETWORK_RPCS[chainId];
@@ -130,12 +207,17 @@ async function findMentoExchange(
   return null;
 }
 
-async function buildSwapParams(
+/**
+ * Celo path: approve the Mento broker + swapIn, batched into one UserOp by
+ * the provider. Never returns a partial call list — a missing exchange or
+ * quote throws rather than shipping a swap without its approval.
+ */
+async function buildMentoCalls(
   provider: ethers.providers.JsonRpcProvider,
   tokenIn: string,
   tokenOut: string,
   amountIn: string
-): Promise<{ data: string; minAmountOut: ethers.BigNumber }> {
+): Promise<{ calls: { to: string; data: string }[]; minAmountOut: ethers.BigNumber }> {
   const exchange = await findMentoExchange(provider, tokenIn, tokenOut);
   if (!exchange) throw new Error(`No Mento exchange for ${tokenIn}/${tokenOut}`);
 
@@ -145,11 +227,62 @@ async function buildSwapParams(
   );
   const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000));
 
-  const data = new ethers.utils.Interface(brokerAbi).encodeFunctionData('swapIn', [
+  const approveData = erc20Iface.encodeFunctionData('approve', [MENTO_BROKER, amountIn]);
+  const swapData = new ethers.utils.Interface(brokerAbi).encodeFunctionData('swapIn', [
     exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn, minAmountOut,
   ]);
 
-  return { data, minAmountOut };
+  return {
+    calls: [
+      { to: tokenIn, data: approveData },
+      { to: MENTO_BROKER, data: swapData },
+    ],
+    minAmountOut,
+  };
+}
+
+type FetchLike = (url: string) => Promise<{ ok: boolean; status: number; json(): Promise<any> }>;
+
+/**
+ * Non-Celo path: LI.FI HTTP quote API (no SDK). Returns the approval call
+ * (spender = estimate.approvalAddress) followed by the quote's
+ * transactionRequest. Both legs are always returned together or not at all.
+ */
+export async function buildLifiCalls(
+  userAddress: string,
+  tokenInAddress: string,
+  tokenOutAddress: string,
+  amountIn: string,
+  chainId: number,
+  fetcher: FetchLike = fetch
+): Promise<{ to: string; data: string; value?: string }[]> {
+  const url = new URL('https://li.quest/v1/quote');
+  url.searchParams.set('fromChain', String(chainId));
+  url.searchParams.set('toChain', String(chainId));
+  url.searchParams.set('fromToken', tokenInAddress);
+  url.searchParams.set('toToken', tokenOutAddress);
+  url.searchParams.set('fromAmount', amountIn);
+  url.searchParams.set('fromAddress', userAddress);
+  url.searchParams.set('toAddress', userAddress);
+
+  const resp = await fetcher(url.toString());
+  if (!resp.ok) throw new Error(`LI.FI quote failed (${resp.status})`);
+  const quote = await resp.json();
+
+  const tx = quote?.transactionRequest;
+  const approvalAddress = quote?.estimate?.approvalAddress;
+  if (!tx?.to || !tx?.data) throw new Error('LI.FI quote missing transactionRequest');
+  if (!approvalAddress) {
+    // ERC-20 inputs always need a spender — a quote without one would
+    // silently ship a swap that cannot execute.
+    throw new Error('LI.FI quote missing estimate.approvalAddress');
+  }
+
+  const approveData = erc20Iface.encodeFunctionData('approve', [approvalAddress, amountIn]);
+  return [
+    { to: tokenInAddress, data: approveData },
+    { to: tx.to, data: tx.data, value: tx.value ? BigInt(tx.value).toString() : '0' },
+  ];
 }
 
 // ─── Execution Mode Detection ──────────────────────────────────────────────
@@ -184,16 +317,27 @@ export const smartAccountExecutor: VaultExecutor = {
       throw new VaultExecutionUnavailableError();
     }
 
-    const provider = getProvider();
-    const { data, minAmountOut } = await buildSwapParams(provider, tokenInAddress, tokenOutAddress, amountIn);
-
     // The delegator smart account IS the user's own address — no custodial account.
     const userId = vault.userAddress;
-    const result = await smartAccount.sendTransaction(
-      userId,
-      { to: MENTO_BROKER, data },
-      chainId
-    );
-    return { txHash: result.hash, amountOut: minAmountOut.toString() };
+    const tokenIn = resolveTokenAddress(tokenInAddress, chainId);
+    const tokenOut = resolveTokenAddress(tokenOutAddress, chainId);
+
+    let calls: { to: string; data: string; value?: string }[];
+    let minAmountOut: string | undefined;
+
+    if (CELO_CHAIN_IDS.has(chainId)) {
+      const provider = getProvider(chainId);
+      const built = await buildMentoCalls(provider, tokenIn, tokenOut, amountIn);
+      calls = built.calls;
+      minAmountOut = built.minAmountOut.toString();
+    } else if (isAutonomyEligibleChain(chainId)) {
+      calls = await buildLifiCalls(userId, tokenIn, tokenOut, amountIn, chainId);
+    } else {
+      throw new AutonomyChainIneligibleError(chainId);
+    }
+
+    // Approve + swap ride one atomic UserOp — a leg is never dropped.
+    const result = await smartAccount.sendBatch(userId, calls, chainId);
+    return { txHash: result.hash, amountOut: minAmountOut };
   },
 };

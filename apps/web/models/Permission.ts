@@ -68,6 +68,18 @@ export interface IPermission extends Document {
    */
   autoExecuteCycleProtection?: boolean;
 
+  /**
+   * ERC-7715 grant context returned by wallet_requestExecutionPermissions —
+   * the authority the Guardian session account redeems via ERC-7710 on the
+   * user's own smart account. Absent on permissions granted before Advanced
+   * Permissions existed; those users keep one-tap proposals.
+   */
+  delegationContext?: {
+    context: string;
+    delegationManager: string;
+    dependencies: { factory: string; factoryData: string }[];
+  } | null;
+
   // Status
   status: PermissionStatus;
 
@@ -104,6 +116,23 @@ const PermissionSchema = new Schema<IPermission>(
     firstAutoExecutionConfirmed: { type: Boolean, default: false },
 
     autoExecuteCycleProtection: { type: Boolean, default: false },
+
+    delegationContext: {
+      type: new Schema(
+        {
+          context: { type: String, required: true },
+          delegationManager: { type: String, required: true },
+          dependencies: [
+            {
+              factory: { type: String, required: true },
+              factoryData: { type: String, required: true },
+            },
+          ],
+        },
+        { _id: false },
+      ),
+      default: null,
+    },
 
     status: {
       type: String,

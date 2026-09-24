@@ -71,7 +71,11 @@ vi.mock('@/models/Permission', () => ({
 }));
 
 vi.mock('@/lib/vault/store', () => ({ vaultStore: {} }));
-vi.mock('@/lib/vault/executor', () => ({ smartAccountExecutor: {}, getActiveProvider: () => null }));
+vi.mock('@/lib/vault/executor', () => ({
+  smartAccountExecutor: {},
+  getActiveProvider: () => null,
+  isAutonomyEligibleChain: () => true,
+}));
 vi.mock('@/lib/vault/guardian-state', () => ({
   getGuardianState: vi.fn().mockResolvedValue(null),
   updateGuardianState: vi.fn().mockResolvedValue(undefined),
@@ -239,6 +243,10 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     cycleDoc: CycleDoc;
     recommendationQueue: Array<Record<string, unknown>>;
     vaultAllocations?: Array<Record<string, unknown>>;
+    /** Pass null to simulate an unconfigured ERC-7710 provider. */
+    provider?: { name: string } | null;
+    /** Chains where isAutonomyEligibleChain returns true (default: all). */
+    eligibleChains?: number[];
   }) {
     const state = { cycleDoc: opts.cycleDoc };
 
@@ -306,7 +314,11 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
         }),
       },
     }));
-    vi.doMock('@/lib/vault/executor', () => ({ smartAccountExecutor: {}, getActiveProvider: () => null }));
+    vi.doMock('@/lib/vault/executor', () => ({
+      smartAccountExecutor: {},
+      getActiveProvider: () => (opts.provider === null ? null : { name: 'metamask-delegation' }),
+      isAutonomyEligibleChain: (chainId: number) => opts.eligibleChains?.includes(chainId) ?? true,
+    }));
     vi.doMock('@/lib/vault/guardian-state', () => ({
       getGuardianState: vi.fn().mockResolvedValue({
         recommendationQueue: opts.recommendationQueue,
@@ -512,6 +524,64 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     const stale = body.results.find((r: any) => r.status === 'cycle_unavailable');
     expect(stale).toBeDefined();
     expect(stale.reason).toMatch(/no longer active, monitoring disabled, or outside the 14-day/);
+    expect(body.declinesJournaled).toBe(1);
+  });
+
+  it('falls back to a one-tap proposal when the ERC-7710 provider is unconfigured', async () => {
+    const { rebalance } = setupTestMocks({
+      autoExecuteCycleProtection: false,
+      cycleDoc: null,
+      provider: null, // GUARDIAN_SESSION_PRIVATE_KEY / bundler absent
+      recommendationQueue: [
+        {
+          capturedAt: new Date().toISOString(),
+          source: 'advisor-analysis',
+          action: 'SWAP',
+          targetToken: 'cUSD',
+          tradeAmountUSD: 100,
+          confidence: 0.75,
+          executionEligibility: 'guardian_eligible',
+        },
+      ],
+    });
+
+    const mod = await import('@/pages/api/agent/guardian-loop');
+    const body = await runTick(mod);
+
+    expect(body.executionsSucceeded).toBe(0);
+    expect(rebalance).not.toHaveBeenCalled();
+    const pending = body.results.find((r: any) => r.status === 'advisory_pending_user_review');
+    expect(pending).toBeDefined();
+    expect(pending.reason).toMatch(/not configured/);
+    expect(body.declinesJournaled).toBe(1);
+  });
+
+  it('falls back to a one-tap proposal when the permission chain is not autonomy-eligible', async () => {
+    const { rebalance } = setupTestMocks({
+      autoExecuteCycleProtection: false,
+      cycleDoc: null,
+      eligibleChains: [], // permission sits on 42220; nothing eligible
+      recommendationQueue: [
+        {
+          capturedAt: new Date().toISOString(),
+          source: 'advisor-analysis',
+          action: 'SWAP',
+          targetToken: 'cUSD',
+          tradeAmountUSD: 100,
+          confidence: 0.75,
+          executionEligibility: 'guardian_eligible',
+        },
+      ],
+    });
+
+    const mod = await import('@/pages/api/agent/guardian-loop');
+    const body = await runTick(mod);
+
+    expect(body.executionsSucceeded).toBe(0);
+    expect(rebalance).not.toHaveBeenCalled();
+    const pending = body.results.find((r: any) => r.status === 'advisory_pending_user_review');
+    expect(pending).toBeDefined();
+    expect(pending.reason).toMatch(/does not support on-chain-enforced autonomy/);
     expect(body.declinesJournaled).toBe(1);
   });
 

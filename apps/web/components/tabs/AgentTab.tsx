@@ -24,6 +24,7 @@ import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { formatDuration } from "@/lib/format-duration";
 import { useGuardianInstrument } from "@/hooks/use-guardian-instrument";
+import { GRANT_ELIGIBLE_CHAIN_IDS } from "@/lib/erc7715-client-grant";
 import { GuardianObject } from "../agent/GuardianObject";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
@@ -333,11 +334,12 @@ function ConnectedAgent({
               walletStableBalanceUSD={g.stableBalanceOnChain.total}
               isMiniPay={isMiniPay}
               onNavigateToFund={onNavigateToFund}
-              isOnArbitrum={g.isOnArbitrum}
+              isOnGrantEligibleChain={g.isOnGrantEligibleChain}
+              grantAvailable={g.advancedGrantAvailable}
               grantStatus={g.grantStatus}
               grantError={g.grantError}
               onOpenGrantModal={() => g.setShowGrantConfirmModal(true)}
-              onSwitchToArbitrum={() => void g.switchToChain(42161)}
+              onSwitchToGrantChain={() => void g.switchToChain(GRANT_ELIGIBLE_CHAIN_IDS[0])}
               config={config}
               onConfigChange={updateConfig}
             />

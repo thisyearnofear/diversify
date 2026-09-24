@@ -215,9 +215,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PATCH') {
-    const { autoExecuteCycleProtection } = req.body ?? {};
-    if (typeof autoExecuteCycleProtection !== 'boolean') {
-      return res.status(400).json({ error: 'autoExecuteCycleProtection must be a boolean' });
+    const { autoExecuteCycleProtection, delegationContext, chainId } = req.body ?? {};
+    const hasCycleToggle = typeof autoExecuteCycleProtection === 'boolean';
+    const hasDelegationContext = delegationContext != null;
+    if (!hasCycleToggle && !hasDelegationContext) {
+      return res.status(400).json({ error: 'Provide autoExecuteCycleProtection (boolean) or delegationContext' });
+    }
+
+    // Shape-check the ERC-7715 grant context before persisting — the
+    // redemption path consumes it verbatim.
+    if (hasDelegationContext) {
+      const ctx = delegationContext;
+      const depsOk = Array.isArray(ctx.dependencies) &&
+        ctx.dependencies.every(
+          (d: any) => typeof d?.factory === 'string' && /^0x[0-9a-fA-F]{40}$/.test(d.factory) && typeof d?.factoryData === 'string',
+        );
+      if (
+        typeof ctx.context !== 'string' || !ctx.context.startsWith('0x') ||
+        typeof ctx.delegationManager !== 'string' || !/^0x[0-9a-fA-F]{40}$/.test(ctx.delegationManager) ||
+        !depsOk
+      ) {
+        return res.status(400).json({ error: 'Malformed delegationContext' });
+      }
+      if (typeof chainId !== 'number' || chainId <= 0) {
+        return res.status(400).json({ error: 'delegationContext requires a numeric chainId' });
+      }
     }
 
     try {
@@ -226,12 +248,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const permission = await vaultStore.findActivePermission(vault._id);
       if (!permission) return res.status(404).json({ error: 'No active Auto-Saver permission found' });
-      if (autoExecuteCycleProtection && permission.autonomyLevel !== 'GUARDIAN') {
+      if (hasCycleToggle && autoExecuteCycleProtection && permission.autonomyLevel !== 'GUARDIAN') {
         return res.status(409).json({ error: 'Cycle auto-execution requires a GUARDIAN permission' });
       }
+      // The ERC-7715 grant is only redeemable on the chain the signed
+      // permission authorizes — a mismatched grant would be dead weight.
+      if (hasDelegationContext && chainId !== permission.chainId) {
+        return res.status(409).json({
+          error: `delegationContext chainId ${chainId} does not match the permission's chain ${permission.chainId}`,
+        });
+      }
 
-      await vaultStore.updatePermission(permission._id, { autoExecuteCycleProtection });
-      return res.status(200).json({ success: true, autoExecuteCycleProtection });
+      const update: Record<string, unknown> = {};
+      if (hasCycleToggle) update.autoExecuteCycleProtection = autoExecuteCycleProtection;
+      if (hasDelegationContext) update.delegationContext = delegationContext;
+      await vaultStore.updatePermission(permission._id, update);
+      return res.status(200).json({ success: true, ...update });
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
