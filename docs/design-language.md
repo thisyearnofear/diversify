@@ -291,6 +291,20 @@ A tab change that fails any of these is the old stack. Do not ship it.
    five tabs route their connected status through it (walletless keeps
    `UnconnectedStatusTier`); tests assert ≤3 slots on every tab.
 
+**Lenses.** A lens is a state of the tab's existing object — same
+primitives, no new card — entered only through the transition slot and
+left via an in-object "←", always preview-only. Two are shipped:
+**Concentration** (Home) opens when one region carries ≥50% of the
+wallet — the same `RegionCoin`s staged larger, the fact as headline;
+**Stronger floor** (Shield) opens only when the wallet's dollar share
+sits ≥10 points above the plan floor — a stronger floor raises the
+dollar reserve, so it is never offered when the wallet is under-reserved
+(that's the gap CTA's job). Shield's floor lens IS the existing balance
+preview — ring re-slice, "Dollar reserve A% → B%", Use/Keep — nothing
+auto-commits. Home's transition order: banner > payment-cycle >
+concentration prompt > tip > compare. Shield's: sleeve back > compare
+row > floor prompt > status row.
+
 Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
 picker (and optionally Home amount-inspect) — not a peer tab until Advanced.
 Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is

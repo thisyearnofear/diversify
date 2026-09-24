@@ -30,6 +30,7 @@ import { useNavigation } from "@/context/app/NavigationContext";
 import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
 import { timeAgo } from "@/lib/format-duration";
 import { MintMark } from "@/components/swap/MintMark";
+import { concentrationOf } from "@/lib/home-lens";
 
 interface RegionDatum {
   region: string;
@@ -60,6 +61,7 @@ function RegionCoin({
   isSealed,
   index,
   reducedMotion,
+  scale = "strip",
   onSelect,
 }: {
   region: RegionDatum;
@@ -69,6 +71,8 @@ function RegionCoin({
   isSealed: boolean;
   index: number;
   reducedMotion: boolean;
+  /** "strip" is the quiet holdings row; "stage" is the concentration lens. */
+  scale?: "strip" | "stage";
   onSelect: () => void;
 }) {
   const didDragRef = useDidDrag();
@@ -77,10 +81,15 @@ function RegionCoin({
     arrived.current = true;
   }, []);
   const share = pct / 100;
-  const size = Math.round(28 + 28 * Math.sqrt(Math.max(0, Math.min(1, share))));
+  const clamped = Math.max(0, Math.min(1, share));
+  const size =
+    scale === "stage"
+      ? Math.round(40 + 56 * Math.sqrt(clamped))
+      : Math.round(28 + 28 * Math.sqrt(clamped));
   return (
     <motion.button
       type="button"
+      layoutId={reducedMotion ? undefined : `home-region-${region.region}`}
       aria-pressed={isSelected}
       aria-label={`${region.region} ${Math.round(pct)}%`}
       onClick={() => {
@@ -156,6 +165,10 @@ interface HomeRiskTheaterProps {
   /** Region whose destination token a settled swap landed in — the coin
    *  wears a seal until the user selects a coin. */
   sealedRegion?: string | null;
+  /** The object's lens — "moment" (default) or the concentration lens.
+   *  A lens is a state of the same object, preview-only (§5). */
+  lens?: "moment" | "concentration";
+  onLensBack?: () => void;
 }
 
 export function HomeRiskTheater({
@@ -177,6 +190,8 @@ export function HomeRiskTheater({
   isDemo,
   isActive = true,
   sealedRegion = null,
+  lens = "moment",
+  onLensBack,
 }: HomeRiskTheaterProps) {
   const reducedMotion = useReducedMotion();
   const hasHoldings = totalValue > 0 && regionData.length > 0;
@@ -299,6 +314,64 @@ export function HomeRiskTheater({
       </FlickScrollRow>
     </div>
   ) : null;
+
+  // Concentration lens — the same coins, staged larger, with the fact as
+  // the headline. Entered through the transition slot, left via the
+  // in-object ←. Same selection/dim/seal/inspector behaviour as the strip.
+  const concentration = concentrationOf(regionData, totalValue);
+  if (lens === "concentration" && hasHoldings && concentration) {
+    return (
+      <section
+        id="home-hero"
+        aria-labelledby="home-hero-title"
+        data-testid="home-risk-theater"
+        data-lens="concentration"
+      >
+        <h2 id="home-hero-title" className="sr-only">Your concentration</h2>
+        <button
+          type="button"
+          data-testid="home-lens-back"
+          onClick={onLensBack}
+          className="mb-3 min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+        >
+          ← Your currency
+        </button>
+        <p className="text-lg font-black text-gray-900 dark:text-white">
+          {Math.round(concentration.pct)}% of your savings sit in {concentration.region}
+        </p>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+          {fmt(concentration.value)} of {fmt(totalValue)}
+        </p>
+        <FlickScrollRow
+          className="mt-4 gap-4 pb-1 items-end"
+          chevrons={false}
+          role="group"
+          aria-label="Holdings by region"
+        >
+          {regionData.map((r, idx) => {
+            const pct = totalValue > 0 ? (r.value / totalValue) * 100 : 0;
+            const isSelected = focusedRegion === r.region;
+            return (
+              <RegionCoin
+                key={r.region}
+                region={r}
+                pct={pct}
+                isSelected={isSelected}
+                isDimmed={focusedRegion !== null && !isSelected}
+                isSealed={sealedRegion === r.region}
+                index={idx}
+                reducedMotion={Boolean(reducedMotion)}
+                scale="stage"
+                onSelect={() =>
+                  onSelectRegion(focusedRegion === r.region ? null : r.region)
+                }
+              />
+            );
+          })}
+        </FlickScrollRow>
+      </section>
+    );
+  }
 
   if (moment) {
     return (

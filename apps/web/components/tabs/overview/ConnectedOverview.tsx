@@ -30,6 +30,9 @@ import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import { GuardianCadenceLine } from "../../shared/LiveProofCard";
 import { StatusTier } from "../../shared/StatusTier";
+import { concentrationOf } from "@/lib/home-lens";
+
+const HOME_LENS_KEY = "diversifi.home.lens";
 
 interface ConnectedOverviewProps {
   isActive?: boolean;
@@ -78,6 +81,9 @@ export function ConnectedOverview({
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
   const { navigateToCompare, navigateToNetting, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
   const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
+  // The concentration lens is a state of the coin object — preview-only,
+  // entered through the transition slot, left via the in-object ←.
+  const [lens, setLens] = React.useState<"moment" | "concentration">("moment");
 
   const handleDialSelect = useCallback((region: string | null) => {
     setFocusedRegion(region);
@@ -152,6 +158,38 @@ export function ConnectedOverview({
   } = activePortfolio;
   const walletView = buildWalletPortfolioView(portfolio);
   const liveTotalValue = isDemo ? totalValue : walletView.totalUsd;
+  const concentration = React.useMemo(
+    () => concentrationOf(regionData, totalValue),
+    [regionData, totalValue],
+  );
+
+  // Session memory: restore the lens only while the trigger still holds —
+  // never resurrect a lens the balances no longer support. Demo never
+  // touches storage.
+  React.useEffect(() => {
+    if (isDemo) return;
+    if (
+      sessionStorage.getItem(HOME_LENS_KEY) === "concentration" &&
+      concentration
+    ) {
+      setLens("concentration");
+    }
+    // Mount-only restore.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  React.useEffect(() => {
+    if (lens === "concentration" && !concentration) setLens("moment");
+  }, [lens, concentration]);
+
+  React.useEffect(() => {
+    if (isDemo) return;
+    if (lens === "concentration") {
+      sessionStorage.setItem(HOME_LENS_KEY, "concentration");
+    } else {
+      sessionStorage.removeItem(HOME_LENS_KEY);
+    }
+  }, [lens, isDemo]);
 
   const home = useHomeSections({
     portfolio,
@@ -197,6 +235,8 @@ export function ConnectedOverview({
       isDemo={isDemo}
       isActive={isActive}
       sealedRegion={sealedRegion}
+      lens={lens}
+      onLensBack={() => setLens("moment")}
     />
   ) : (
     // No card here — InstrumentShell owns the one surface; the fallback
@@ -342,6 +382,18 @@ export function ConnectedOverview({
       className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
     >
       Match this payment against a counterparty →
+    </button>
+  ) : concentration && lens === "moment" ? (
+    <button
+      type="button"
+      data-testid="home-concentration-link"
+      onClick={() => {
+        setLens("concentration");
+        trackFunnelEvent("lens_open", { tab: "home", lens: "concentration" });
+      }}
+      className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+    >
+      See your concentration →
     </button>
   ) : home.primaryTip && hasHoldings ? (
     <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>

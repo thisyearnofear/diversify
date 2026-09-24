@@ -42,10 +42,20 @@ let mockProfileComplete = false;
 // regression tests below assert). Set to a moment to exercise the
 // currency-moment hero + dial-focus seeding.
 let mockMoment: import("@/lib/narrative/currency-moment").NarrativeMoment | null = null;
+const mockTrackFunnelEvent = vi.fn();
 
 // ──────────────────────────────────────────────────────────────────────────
 // Hook + context mocks
 // ──────────────────────────────────────────────────────────────────────────
+
+vi.mock("@/lib/analytics", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/analytics")>();
+  return {
+    ...mod,
+    trackFunnelEvent: (...args: unknown[]) =>
+      mockTrackFunnelEvent(...(args as [string, Record<string, string>?])),
+  };
+});
 
 vi.mock("@/hooks/use-analytics", () => ({
   useAnalytics: () => ({
@@ -254,10 +264,11 @@ vi.mock("../HomeExposureDial", () => ({
   ),
 }));
 vi.mock("../HomeRiskTheater", () => ({
-  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null }) => {
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion, lens, onLensBack }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null; lens?: string; onLensBack?: () => void }) => {
     if (moment) {
       return (
-        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)} data-sealed={sealedRegion ?? "none"}>
+        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)} data-sealed={sealedRegion ?? "none"} data-lens={lens ?? "moment"}>
+          <button type="button" data-testid="home-lens-back" onClick={() => onLensBack?.()} />
           <div data-testid="currency-moment-card" />
           {Array.isArray(regionData) && regionData.length > 0 && (
             <div data-testid="holdings-strip" />
@@ -291,7 +302,13 @@ function buildPortfolio(overrides: Partial<MultichainPortfolio> = {}): Multichai
   return {
     ...createEmptyPortfolio(),
     chainCount: 1,
-    regionData: [{ region: "Africa", value: 500, color: "#000", usdValue: 500 }],
+    // Three regions, top share 40% — below the concentration lens trigger
+    // so existing transition-slot tests aren't outranked by the prompt.
+    regionData: [
+      { region: "Africa", value: 400, color: "#000", usdValue: 400 },
+      { region: "USA", value: 350, color: "#111", usdValue: 350 },
+      { region: "Europe", value: 250, color: "#222", usdValue: 250 },
+    ],
     lastUpdated: Date.now(),
     totalValue: 1000,
     diversificationScore: 72,
@@ -723,5 +740,129 @@ describe("ConnectedOverview — the settled-move seal", () => {
     renderOverview({ portfolio: portfolioWithKESm(), isActive: false });
 
     expect(mockConsumeSettlement).not.toHaveBeenCalled();
+  });
+});
+
+describe("ConnectedOverview — concentration lens", () => {
+  const concentrated = () =>
+    buildPortfolio({
+      regionData: [
+        { region: "Africa", value: 700, color: "#000", usdValue: 700 },
+        { region: "USA", value: 300, color: "#111", usdValue: 300 },
+      ] as any,
+      totalValue: 1000,
+    });
+  const spread = () =>
+    buildPortfolio({
+      regionData: [
+        { region: "Africa", value: 400, color: "#000", usdValue: 400 },
+        { region: "USA", value: 350, color: "#111", usdValue: 350 },
+        { region: "Europe", value: 250, color: "#222", usdValue: 250 },
+      ] as any,
+      totalValue: 1000,
+    });
+
+  beforeEach(() => {
+    sessionStorage.clear();
+    mockMoment = GHANA_MOMENT;
+    mockTrackFunnelEvent.mockClear();
+  });
+
+  afterEach(() => {
+    cleanup();
+    sessionStorage.clear();
+    mockExperienceMode = "standard";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+  });
+
+  it("prompt appears only at ≥50% concentration, above the tip", () => {
+    mockHomeSections = { ...defaultHomeSections, primaryTip: "Add BRLm for LatAm coverage." };
+    renderOverview({ portfolio: concentrated() });
+    const slots = document.querySelectorAll('[data-status-slot="transition"]');
+    expect(slots).toHaveLength(1);
+    expect(slots[0].querySelector('[data-testid="home-concentration-link"]')).not.toBeNull();
+    cleanup();
+
+    renderOverview({ portfolio: spread() });
+    expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
+  });
+
+  it("banner and payment-cycle still outrank the prompt", () => {
+    mockHomeSections = { ...defaultHomeSections, banner: "currency-risk", isPaymentCycle: true };
+    renderOverview({ portfolio: concentrated() });
+    expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
+    expect(screen.getByTestId("contextual-banner")).toBeInTheDocument();
+  });
+
+  it("click opens the lens and fires lens_open; ← returns to the moment", () => {
+    renderOverview({ portfolio: concentrated() });
+    fireEvent.click(screen.getByTestId("home-concentration-link"));
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("lens_open", {
+      tab: "home",
+      lens: "concentration",
+    });
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "concentration");
+    expect(sessionStorage.getItem("diversifi.home.lens")).toBe("concentration");
+
+    fireEvent.click(screen.getByTestId("home-lens-back"));
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
+    expect(sessionStorage.getItem("diversifi.home.lens")).toBeNull();
+  });
+
+  it("restores the lens from sessionStorage only while the trigger holds", () => {
+    sessionStorage.setItem("diversifi.home.lens", "concentration");
+    renderOverview({ portfolio: concentrated() });
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "concentration");
+    cleanup();
+
+    renderOverview({ portfolio: spread() });
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
+  });
+
+  it("demo never touches sessionStorage", () => {
+    sessionStorage.setItem("diversifi.home.lens", "concentration");
+    renderOverview({ portfolio: concentrated(), isDemo: true });
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
+    expect(sessionStorage.getItem("diversifi.home.lens")).toBe("concentration");
+  });
+
+  it("the lens closes itself when the trigger drops", () => {
+    const { rerender } = render(
+      <ConnectedOverview
+        portfolio={concentrated()}
+        activePortfolio={concentrated()}
+        address="0xtest"
+        chainId={42220}
+        isDemo={false}
+        userRegion="USA"
+        setUserRegion={vi.fn()}
+        REGIONS={["USA", "Africa", "Europe"] as any}
+        setActiveTab={vi.fn()}
+        onDisableDemo={vi.fn()}
+        onEnableDemo={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("home-concentration-link"));
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "concentration");
+
+    rerender(
+      <ConnectedOverview
+        portfolio={spread()}
+        activePortfolio={spread()}
+        address="0xtest"
+        chainId={42220}
+        isDemo={false}
+        userRegion="USA"
+        setUserRegion={vi.fn()}
+        REGIONS={["USA", "Africa", "Europe"] as any}
+        setActiveTab={vi.fn()}
+        onDisableDemo={vi.fn()}
+        onEnableDemo={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
   });
 });

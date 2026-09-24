@@ -43,6 +43,7 @@ import {
 } from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { canonicalToken, configTokenFor, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
+import { strongerFloorOffer } from "@/lib/shield-lens";
 import { PlanFloorControl } from "./protect/PlanFloorControl";
 import { deriveShieldShape } from "./protect/shield-shape";
 import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
@@ -421,6 +422,29 @@ export default function ProtectionTab({
     () => buildWalletPortfolioView(activePortfolio, allocations),
     [activePortfolio, allocations],
   );
+
+  // "Try a stronger floor" lens — only helps when the wallet already holds
+  // MORE dollars than the plan asks for. Under-reserved is the gap CTA's
+  // job. The offer opens the existing balance preview — nothing commits.
+  const floorOffer = useMemo(
+    () =>
+      strongerFloorOffer({
+        savedRisk: config.riskTolerance,
+        planLegs: allocations,
+        heldPctByToken,
+      }),
+    [config.riskTolerance, allocations, heldPctByToken],
+  );
+  const showFloorPrompt =
+    floorOffer !== null &&
+    hasPlan &&
+    planRingVisible &&
+    shape !== "picker" &&
+    shape !== "fund" &&
+    !comparing &&
+    !balance.isPreviewing &&
+    !sleeveOpen &&
+    !focusedToken;
   const selectedAlloc = allocations.find((a) => a.token === focusedToken) ?? null;
   const selectedHeld = focusedToken ? heldPctByToken.get(focusedToken) ?? 0 : 0;
   const gapPct = selectedAlloc ? selectedAlloc.percent - selectedHeld : 0;
@@ -1084,6 +1108,19 @@ export default function ProtectionTab({
             className="text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
             ← Back to plan
+          </button>
+        ) : showFloorPrompt && floorOffer ? (
+          <button
+            type="button"
+            data-testid="shield-floor-prompt"
+            onClick={() => {
+              balance.select(floorOffer.next);
+              haptics.tap();
+              trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
+            }}
+            className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
+          >
+            Your wallet keeps {floorOffer.heldFloor}% in dollars — try a stronger floor →
           </button>
         ) : statusRowEmpty ? undefined : (
           <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">

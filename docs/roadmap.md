@@ -22,6 +22,16 @@ settlement rails: [`rails.md`](./rails.md).
 | **Macro signal write path — verify in production** | The read + echo path is fixed and tested, but all five deployed ledgers hold **zero** `MACRO_SIGNAL` records (1,610 records scanned; the only families present are `ADVISORY_HEARTBEAT` and `EVIDENCE_MIRROR`). So the beats engine currently has no data source. Check the Firecrawl key, registered monitors, and webhook deliveries on the server, then exercise the path on demand with `pnpm rehearse-macro-signal` ([`setup.md`](./setup.md) § Macro path rehearsal). | "Continuously reads macro signals" and the corridor beats are only demonstrable once a signal actually anchors; the capture playbook §2 depends on it. |
 | **SERV Hackathon Ed. 01 close-out** | RWA Vaults allocator shipped (free heuristic + opt-in SERV Reasoning over the IXS catalog; `roadmap-log.md` § SERV Hackathon). Remaining: `SERV_API_KEY` on the backend, data-collection toggle at console.openserv.ai, demo video, public X post + form. Submission package: [`submission/serv-edition-01.md`](./submission/serv-edition-01.md). | Deadline 28 Sep 00:00 UTC |
 
+### Instrument lenses
+
+A lens is a state of a tab's existing object, entered through the transition slot and left via an in-object "←" — preview-only (design-language §5).
+
+- **Concentration (Home)** — shipped. One region ≥50% of the wallet restages the same region coins larger with the fact as headline.
+- **Stronger floor (Shield)** — shipped. Offered only when the wallet's dollar share sits ≥10 points above the plan floor; opens the existing balance preview, nothing auto-commits.
+- **Decision window** — next. Triggers only on dated beats ≤14 days old via `corridorSignalsFor`; never a forward calendar.
+- **Reality (Exchange)** — only if the ticket's staples rows prove insufficient.
+- **Scenario** — needs a curated dated `scenarios.ts` registry (asOf + 90d re-verify) before any UI.
+
 ---
 
 ## Track status snapshot

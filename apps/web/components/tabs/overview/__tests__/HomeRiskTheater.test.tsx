@@ -397,3 +397,74 @@ describe("HomeRiskTheater — the settled-move seal", () => {
     }
   });
 });
+
+const CONCENTRATED = [
+  { region: "Africa", value: 700, color: "#0ea5e9" },
+  { region: "LatAm", value: 300, color: "#22c55e" },
+];
+
+describe("HomeRiskTheater — concentration lens", () => {
+  it("renders the headline, staged coins, and the ← back", () => {
+    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
+    const theater = screen.getByTestId("home-risk-theater");
+    expect(theater).toHaveAttribute("data-lens", "concentration");
+    expect(
+      screen.getByText("70% of your savings sit in Africa"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("$700 of $1,000")).toBeInTheDocument();
+    expect(screen.getByTestId("home-lens-back")).toBeInTheDocument();
+    // Coins keep their per-region identity.
+    expect(screen.getByRole("button", { name: /Africa 70%/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /LatAm 30%/ })).toBeInTheDocument();
+  });
+
+  it("hides the moment card, holdings strip, and baseplate", () => {
+    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
+    expect(screen.queryByTestId("holdings-strip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-horizon-baseplate")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-since-visit")).not.toBeInTheDocument();
+  });
+
+  it("the ← returns to the moment", () => {
+    const onLensBack = vi.fn();
+    renderTheater({ regionData: CONCENTRATED, lens: "concentration", onLensBack });
+    fireEvent.click(screen.getByTestId("home-lens-back"));
+    expect(onLensBack).toHaveBeenCalledTimes(1);
+  });
+
+  it("coin taps still select the region", () => {
+    const onSelectRegion = vi.fn();
+    renderTheater({
+      regionData: CONCENTRATED,
+      lens: "concentration",
+      onSelectRegion,
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Africa 70%/ }));
+    expect(onSelectRegion).toHaveBeenCalledWith("Africa");
+  });
+
+  it("stage coins are larger than strip coins for the same share", () => {
+    renderTheater({ regionData: CONCENTRATED });
+    const stripSvg = screen
+      .getByRole("button", { name: /Africa 70%/ })
+      .querySelector("svg");
+    const stripSize = Number(stripSvg?.getAttribute("width"));
+    cleanup();
+    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
+    const stageSvg = screen
+      .getByRole("button", { name: /Africa 70%/ })
+      .querySelector("svg");
+    const stageSize = Number(stageSvg?.getAttribute("width"));
+    expect(stageSize).toBeGreaterThan(stripSize);
+  });
+
+  it("stays under a 40-word visible budget", () => {
+    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
+    const words = (
+      screen.getByTestId("home-risk-theater").textContent ?? ""
+    )
+      .split(/\s+/)
+      .filter(Boolean);
+    expect(words.length).toBeLessThanOrEqual(40);
+  });
+});

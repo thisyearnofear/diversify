@@ -30,6 +30,15 @@ const profileState = {
   riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
 };
 const mockSetRiskTolerance = vi.fn();
+const mockTrackFunnelEvent = vi.fn();
+vi.mock("@/lib/analytics", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/analytics")>();
+  return {
+    ...mod,
+    trackFunnelEvent: (...args: unknown[]) =>
+      mockTrackFunnelEvent(...(args as [string, Record<string, string>?])),
+  };
+});
 vi.mock("@/hooks/use-protection-profile", () => ({
   consumeRetiredPhilosophyNotice: () => false,
   useProtectionProfile: () => ({
@@ -1508,5 +1517,99 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-selected", "KESm");
     expect(screen.getByText("KESm position")).toBeInTheDocument();
     expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("ProtectionTab — stronger-floor lens prompt", () => {
+  const underReserved = {
+    ...MOCK_PORTFOLIO,
+    chains: [
+      {
+        chainId: 42220,
+        chainName: "Celo",
+        totalValue: 5000,
+        tokenCount: 2,
+        balances: [
+          { symbol: "USDC", value: 1500, chainId: 42220 },
+          { symbol: "KESm", value: 3500, chainId: 42220 },
+        ],
+      },
+    ],
+  } as any;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = "africapitalism";
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    profileState.riskTolerance = "Balanced";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+    profileState.riskTolerance = "Balanced";
+  });
+
+  it("shows when the wallet's dollar share beats the plan floor by ≥10 points", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    const prompt = screen.getByTestId("shield-floor-prompt");
+    expect(prompt).toHaveTextContent(
+      "Your wallet keeps 64% in dollars — try a stronger floor",
+    );
+    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
+  });
+
+  it("stays hidden below the surplus, on Conservative, and while previewing", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={underReserved} />);
+    expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+    cleanup();
+
+    profileState.riskTolerance = "Conservative";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+    cleanup();
+    profileState.riskTolerance = "Balanced";
+
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+  });
+
+  it("hides while comparing and while a slice is focused", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+    cleanup();
+
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+  });
+
+  it("opens the existing balance preview — nothing commits", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("shield-floor-prompt"));
+
+    const ring = screen.getByTestId("protection-plan-ring");
+    expect(ring).toHaveAttribute("data-balance-preview", "true");
+    expect(ring).toHaveAttribute(
+      "data-legs",
+      JSON.stringify([["KESm", 48], ["cUSD", 40], ["cEUR", 12]]),
+    );
+    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent(
+      "Dollar reserve 25% → 40%",
+    );
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("lens_open", {
+      tab: "protect",
+      lens: "floor",
+    });
   });
 });
