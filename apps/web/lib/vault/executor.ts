@@ -6,7 +6,9 @@
  *   - 'privy' (default): Privy Safe smart accounts (production)
  *   - 'safe4337': Generic Safe + any signer (self-hosted/dev)
  *
- * Falls back to direct signing (VAULT_PRIVATE_KEY) when no smart account provider is configured.
+ * There is NO direct-signing fallback: VAULT_PRIVATE_KEY is the operator's
+ * settlement/ledger key and must never sign user vault transactions. With no
+ * configured provider, execution throws VaultExecutionUnavailableError.
  *
  * Follows Core Principles:
  *   - CLEAN: Executor doesn't know about Privy, Pimlico, or any vendor
@@ -20,6 +22,7 @@ import type {
   Vault,
   VaultAllocation,
 } from '@diversifi/shared/src/services/vault/vault.service';
+import { VaultExecutionUnavailableError } from '@diversifi/shared/src/services/vault/vault.service';
 import {
   getSmartAccountProvider,
   type SmartAccountProvider,
@@ -39,8 +42,6 @@ const NETWORK_EXPLORERS: Record<number, string> = {
   [NETWORKS.CELO_MAINNET.chainId]: 'https://celoscan.io',
   [NETWORKS.ARBITRUM_ONE.chainId]: 'https://arbiscan.io',
 };
-
-const VAULT_KEY = process.env.VAULT_PRIVATE_KEY;
 
 // CELO token metadata is sourced from the shared config so the executor
 // can never drift from the rest of the codebase.
@@ -165,7 +166,7 @@ function getActiveProvider(): SmartAccountProvider | null {
 
 // ─── Executor ──────────────────────────────────────────────────────────────
 
-export const circleExecutor: VaultExecutor = {
+export const smartAccountExecutor: VaultExecutor = {
   async getHoldings(vault: Vault): Promise<VaultAllocation[]> {
     const address = vault.circleWalletAddress;
     if (!address) return [];
@@ -179,39 +180,21 @@ export const circleExecutor: VaultExecutor = {
     amountIn: string,
     chainId: number
   ): Promise<{ txHash: string; amountOut?: string }> {
+    const smartAccount = getActiveProvider();
+    if (!smartAccount) {
+      throw new VaultExecutionUnavailableError();
+    }
+
     const provider = getProvider();
     const { data, minAmountOut } = await buildSwapParams(provider, tokenInAddress, tokenOutAddress, amountIn);
 
-    const smartAccount = getActiveProvider();
-    if (smartAccount) {
-      // ─── Smart Account Mode (Privy, Safe4337, etc.) ─────────────────
-      const userId = vault.circleWalletAddress || vault.userAddress;
-      const result = await smartAccount.sendTransaction(
-        userId,
-        { to: MENTO_BROKER, data },
-        chainId
-      );
-      return { txHash: result.hash, amountOut: minAmountOut.toString() };
-    }
-
-    // ─── Direct Signing Fallback ──────────────────────────────────────
-    if (!VAULT_KEY) throw new Error('No execution method configured. Set SMART_ACCOUNT_PROVIDER or VAULT_PRIVATE_KEY.');
-
-    const signer = new ethers.Wallet(VAULT_KEY, provider);
-    const exchange = await findMentoExchange(provider, tokenInAddress, tokenOutAddress);
-    if (!exchange) throw new Error(`No Mento exchange for ${tokenInAddress}/${tokenOutAddress}`);
-
-    const tokenIn = new ethers.Contract(tokenInAddress, erc20Abi, signer);
-    if ((await tokenIn.allowance(signer.address, MENTO_BROKER)).lt(amountIn)) {
-      await (await tokenIn.approve(MENTO_BROKER, amountIn)).wait();
-    }
-
-    const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, signer);
-    const receipt = await (await broker.swapIn(
-      exchange.provider, exchange.exchangeId, tokenInAddress, tokenOutAddress, amountIn, minAmountOut
-    )).wait();
-
-    return { txHash: receipt.transactionHash, amountOut: minAmountOut.toString() };
+    const userId = vault.circleWalletAddress || vault.userAddress;
+    const result = await smartAccount.sendTransaction(
+      userId,
+      { to: MENTO_BROKER, data },
+      chainId
+    );
+    return { txHash: result.hash, amountOut: minAmountOut.toString() };
   },
 
   async withdraw(
@@ -226,24 +209,16 @@ export const circleExecutor: VaultExecutor = {
     ]);
 
     const smartAccount = getActiveProvider();
-    if (smartAccount) {
-      const userId = vault.circleWalletAddress || vault.userAddress;
-      const result = await smartAccount.sendTransaction(
-        userId,
-        { to: cUSD.address, data: transferData },
-        chainId
-      );
-      return { txHash: result.hash, amountReceived: amountUSD };
+    if (!smartAccount) {
+      throw new VaultExecutionUnavailableError();
     }
 
-    if (!VAULT_KEY) throw new Error('No execution method configured');
-    const signer = new ethers.Wallet(VAULT_KEY, getProvider(chainId));
-    const cUSDContract = new ethers.Contract(cUSD.address, erc20Abi, signer);
-    const tx = await cUSDContract.transfer(
-      destinationAddress,
-      ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals)
+    const userId = vault.circleWalletAddress || vault.userAddress;
+    const result = await smartAccount.sendTransaction(
+      userId,
+      { to: cUSD.address, data: transferData },
+      chainId
     );
-    const receipt = await tx.wait();
-    return { txHash: receipt.transactionHash, amountReceived: amountUSD };
+    return { txHash: result.hash, amountReceived: amountUSD };
   },
 };

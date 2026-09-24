@@ -39,8 +39,8 @@ import {
 } from '../../../lib/guardian/cycle-execution';
 import { appendDecisionLog, bumpUserActivity, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '@/lib/vault/guardian-state';
 import { bumpGlobalActivity, isoWeekKey } from '@/lib/guardian-activity-counter';
-import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
-import { circleExecutor } from '@/lib/vault/executor';
+import { VaultService, VaultExecutionUnavailableError, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
+import { smartAccountExecutor } from '@/lib/vault/executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 // Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
 // their reasoning through the ONE shared builder so identical facts produce
@@ -84,6 +84,7 @@ const PERSISTED_DECISION_STATUSES = new Set([
   'cycle_outside_permission_bounds',
   'advisory_pending_user_review',
   'no_vault',
+  'execution_unavailable',
 ]);
 
 /**
@@ -558,7 +559,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const targetToken = recommendation.targetToken || 'cEUR';
 
       // ─── All checks passed — EXECUTE ─────────────────────────────────
-      const service = new VaultService(vaultStore, circleExecutor);
+      const service = new VaultService(vaultStore, smartAccountExecutor);
       // The vault ref was already resolved earlier (for cycle-aware routing).
       // Reuse it for the rebalance execution; only fall back to a fresh fetch
       // if it was never resolved (queue was empty at the top of the loop).
@@ -829,6 +830,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             error: execError.message,
           }).catch(() => {});
           cycleExecutionFinished = true;
+        }
+        if (execError instanceof VaultExecutionUnavailableError) {
+          // No user smart-account provider — a recorded decline, not a crash
+          // or a silent skip. The operator key never substitutes (fail closed).
+          trackDecline(
+            userAddress,
+            'execution_unavailable',
+            'Vault execution unavailable — no user smart-account provider configured',
+            recommendation,
+          );
+          results.push({
+            userAddress,
+            action: 'skip',
+            status: 'execution_unavailable',
+            reason: 'Vault execution unavailable — no smart-account provider configured',
+          });
+          continue;
         }
         results.push({
           userAddress,

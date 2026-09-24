@@ -81,7 +81,7 @@ export function useAgentChat({
   generateSpeech,
 }: AgentChatDependencies): AgentChatState & AgentChatActions {
   const globalConversation = useAIConversationOptional();
-  const { chainId, address } = useWalletContext();
+  const { chainId, address, signMessage } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useSharedMultichainBalances(address, config.goal);
   const { fetchPaidSource, quoteResearch } = useX402Payment();
@@ -347,9 +347,12 @@ export function useAgentChat({
             return;
           }
 
+          const { getWalletAuthHeaders } = await import("../lib/wallet-auth");
+          const authHeaders = (await getWalletAuthHeaders(address, signMessage).catch(() => null)) || {};
+
           const response = await fetch(`${apiBase}/api/vault/rebalance`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...authHeaders },
             body: JSON.stringify({
               userAddress: address,
               dryRun: true,
@@ -990,6 +993,7 @@ export function useAgentChat({
       addMessage,
       addActivity,
       fetchPaidSource,
+      signMessage,
       quoteResearch,
       patchMessage,
       deductCredits,

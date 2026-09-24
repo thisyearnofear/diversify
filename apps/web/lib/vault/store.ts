@@ -132,4 +132,19 @@ export const vaultStore: VaultStore = {
       createdAt: d.createdAt?.toISOString?.() || new Date().toISOString(),
     })) as VaultTransaction[];
   },
+
+  async findTransactionByTxHash(txHash: string) {
+    const d = await Transaction.findOne({ txHash }).lean();
+    if (!d) return null;
+    return {
+      vaultId: d.vaultId.toString(),
+      userAddress: d.userAddress,
+      type: d.type,
+      status: d.status,
+      chainId: d.chainId,
+      txHash: d.txHash,
+      amountUSD: d.amountUSD,
+      createdAt: d.createdAt?.toISOString?.() || new Date().toISOString(),
+    } as VaultTransaction;
+  },
 };

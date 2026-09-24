@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from '@/lib/vault/store';
-import { circleExecutor } from '@/lib/vault/executor';
+import { smartAccountExecutor } from '@/lib/vault/executor';
 import { VaultService } from '@diversifi/shared/src/services/vault/vault.service';
 
 /**
@@ -12,7 +12,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
   await dbConnect();
-  const service = new VaultService(vaultStore, circleExecutor);
+  const service = new VaultService(vaultStore, smartAccountExecutor);
 
   const { userAddress, vaultId } = req.query;
 

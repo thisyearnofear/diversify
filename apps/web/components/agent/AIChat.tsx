@@ -49,6 +49,7 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
   const [txHash, setTxHash] = useState<string | null>(null);
   const [explorerUrl, setExplorerUrl] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const { signMessage } = useWalletContext();
 
   const handleExecute = async () => {
     setStatus('executing');
@@ -67,10 +68,14 @@ const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (res
 
       const amountIn = action.amount?.toString() || '500';
 
-      // Route through vault system: permission check → fee calc → smart account execution
+      // Route through vault system: permission check → fee calc → smart account execution.
+      // The route requires wallet-auth proof the caller owns userAddress.
+      const { getWalletAuthHeaders } = await import("@/lib/wallet-auth");
+      const authHeaders = (await getWalletAuthHeaders(userAddress, signMessage)) || {};
+
       const response = await fetch('/api/vault/rebalance', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           userAddress,
           recommendations: [{

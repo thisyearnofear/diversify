@@ -26,8 +26,11 @@ permission is enforced on-chain. It is not (yet).
     the first manual rebalance), confidence threshold, daily-limit clamp,
     staleness, per-user execution lock, dequeue-before-execute idempotency.
 - Execution signs through a **server-custodied** smart account
-  (`SMART_ACCOUNT_PROVIDER=privy`, the default) or the `VAULT_PRIVATE_KEY`
-  fallback. The chain imposes **no** limit on what that account can sign.
+  (`SMART_ACCOUNT_PROVIDER=privy`, the default). There is **no** operator-key
+  fallback: `VAULT_PRIVATE_KEY` is the settlement/ledger key and never signs
+  user vault transactions — with no configured provider, execution fails
+  closed (`VaultExecutionUnavailableError`, journaled as a decline). The chain
+  imposes **no** limit on what that account can sign.
 - A real on-chain enforcement path exists in code
   (`providers/metamask-delegation-provider.ts`, ERC-7710 redemption via a
   DelegationManager) but is **dark**: it is not the active provider,
@@ -141,7 +144,7 @@ is the blocker, so:
 - `packages/shared/src/services/erc7715-grant.ts` — client-side grant counterpart.
 - `packages/shared/src/services/vault/providers/metamask-delegation-provider.ts` —
   the real (dark) ERC-7710 redemption path.
-- `apps/web/lib/vault/executor.ts` — current Privy/Safe/`VAULT_PRIVATE_KEY` execution.
+- `apps/web/lib/vault/executor.ts` — smart-account-only execution (Privy/Safe; fails closed without a provider).
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
 - `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
 

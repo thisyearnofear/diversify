@@ -153,6 +153,22 @@ export interface VaultStore {
   updatePermission(permissionId: string, update: Partial<VaultPermission>): Promise<void>;
   createTransaction(data: Omit<VaultTransaction, '_id'>): Promise<VaultTransaction>;
   findTransactions(vaultId: string, limit?: number): Promise<VaultTransaction[]>;
+  /** Optional idempotency lookup — reject a deposit txHash already recorded. */
+  findTransactionByTxHash?(txHash: string): Promise<VaultTransaction | null>;
+}
+
+/**
+ * Thrown when a user vault action needs a transaction signer and no user
+ * smart-account provider is configured. The operator key
+ * (VAULT_PRIVATE_KEY) is settlement/ledger infrastructure — it must never
+ * sign user vault transactions, so execution fails closed instead of
+ * falling back to it.
+ */
+export class VaultExecutionUnavailableError extends Error {
+  constructor(message = 'No user smart-account provider configured — set SMART_ACCOUNT_PROVIDER') {
+    super(message);
+    this.name = 'VaultExecutionUnavailableError';
+  }
 }
 
 // ─── Execution Bridge Interface ─────────────────────────────────────────
@@ -465,6 +481,10 @@ export class VaultService {
         executed++;
         totalFeesUSD += swapFee;
       } catch (error) {
+        // No configured smart-account provider is a global condition, not a
+        // per-swap failure — rethrow so callers record an "execution
+        // unavailable" decline instead of journaling N failed swaps.
+        if (error instanceof VaultExecutionUnavailableError) throw error;
         failed++;
         const failedTx = await this.store.createTransaction({
           vaultId,

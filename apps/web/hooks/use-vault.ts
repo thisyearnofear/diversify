@@ -10,6 +10,8 @@ import type { ethers } from 'ethers';
 // Deep leaf import — NOT the barrel — keeps the promise timeout helper
 // available without dragging in the AI/swap/ethers stack.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { useWalletContext } from '../components/wallet/WalletProvider';
+import { getWalletAuthHeaders } from '@/lib/wallet-auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
@@ -111,6 +113,18 @@ export function useVault(): UseVaultReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const { signMessage } = useWalletContext();
+
+  // Vault write routes verify the caller owns the wallet — attach a signed
+  // wallet-auth proof. When the wallet can't sign (not connected), the
+  // request still goes out and the server answers 401 — honest failure.
+  const authHeadersFor = useCallback(async (address: string) => {
+    try {
+      return (await getWalletAuthHeaders(address, signMessage)) ?? {};
+    } catch {
+      return {};
+    }
+  }, [signMessage]);
 
   const deriveStatus = useCallback((v: VaultData | null, p: VaultPermission | null): VaultStatus => {
     if (!v) return 'idle';
@@ -168,11 +182,12 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
+      const authHeaders = await authHeadersFor(userAddress);
       const resp = await fetchWithTimeout(
         `${API_BASE}/api/vault/create`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ userAddress, strategy }),
         },
         VAULT_FETCH_TIMEOUT_MS,
@@ -193,7 +208,7 @@ export function useVault(): UseVaultReturn {
     } finally {
       setLoading(false);
     }
-  }, [permission, deriveStatus]);
+  }, [permission, deriveStatus, authHeadersFor]);
 
   const grantPermission = useCallback(async (
     userAddress: string,
@@ -204,11 +219,12 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
+      const authHeaders = await authHeadersFor(userAddress);
       const resp = await fetchWithTimeout(
         `${API_BASE}/api/vault/permission`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ userAddress, permission: signedPermission }),
         },
         VAULT_FETCH_TIMEOUT_MS,
@@ -229,13 +245,14 @@ export function useVault(): UseVaultReturn {
     } finally {
       setLoading(false);
     }
-  }, [vault, deriveStatus]);
+  }, [vault, deriveStatus, authHeadersFor]);
 
   const revokePermission = useCallback(async (userAddress: string) => {
     try {
+      const authHeaders = await authHeadersFor(userAddress);
       const resp = await fetchWithTimeout(
         `${API_BASE}/api/vault/permission?userAddress=${encodeURIComponent(userAddress)}`,
-        { method: 'DELETE' },
+        { method: 'DELETE', headers: authHeaders },
         VAULT_FETCH_TIMEOUT_MS,
       );
       if (!resp.ok) {
@@ -247,20 +264,21 @@ export function useVault(): UseVaultReturn {
     } catch (e: any) {
       setError(e.message);
     }
-  }, [vault, deriveStatus]);
+  }, [vault, deriveStatus, authHeadersFor]);
 
   const triggerRebalance = useCallback(async (userAddress: string, dryRun = false) => {
+    const authHeaders = await authHeadersFor(userAddress);
     const resp = await fetchWithTimeout(
       `${API_BASE}/api/vault/rebalance`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ userAddress, dryRun }),
       },
       VAULT_FETCH_TIMEOUT_MS,
     );
     return resp.json();
-  }, []);
+  }, [authHeadersFor]);
 
   const updateStrategy = useCallback(async (userAddress: string, strategy: string): Promise<boolean> => {
     try {

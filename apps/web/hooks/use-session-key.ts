@@ -30,6 +30,8 @@ import {
 // Deep leaf import — NOT the barrel — keeps the timeout helper available
 // without dragging the AI/swap/ethers stack into first-load.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { useWalletContext } from '../components/wallet/WalletProvider';
+import { getWalletAuthHeaders } from '@/lib/wallet-auth';
 
 const service = new ERC7715Service();
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -230,6 +232,18 @@ export interface UseSessionKeyReturn {
 }
 
 export function useSessionKey(): UseSessionKeyReturn {
+    const { signMessage } = useWalletContext();
+    // Vault routes verify the caller owns the wallet — attach a signed
+    // wallet-auth proof. When signing isn't possible, the request still goes
+    // out and the server answers 401 — honest failure, never silent.
+    const authHeadersFor = useCallback(async (address: string) => {
+        try {
+            return (await getWalletAuthHeaders(address, signMessage)) ?? {};
+        } catch {
+            return {};
+        }
+    }, [signMessage]);
+
     const [status, setStatus] = useState<SessionKeyStatus>('idle');
     const [signedPermission, setSignedPermission] = useState<SignedSessionPermission | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -242,7 +256,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         try {
             const resp = await fetchWithTimeout(
                 `${API_BASE}/api/vault/permission?userAddress=${userAddress}`,
-                {},
+                { headers: await authHeadersFor(userAddress) },
                 SESSION_FETCH_TIMEOUT_MS,
             );
             if (resp.ok) {
@@ -255,7 +269,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         } catch {
             // Silently fail polling
         }
-    }, []);
+    }, [authHeadersFor]);
 
     // Start/stop polling based on session status
     useEffect(() => {
@@ -306,6 +320,30 @@ export function useSessionKey(): UseSessionKeyReturn {
         };
     }, [status, signedPermission, pollSession]);
 
+    const triggerExecutionLoopInternal = useCallback(async (userAddress: string, dryRun = false): Promise<GuardianLoopResult> => {
+        const authHeaders = await authHeadersFor(userAddress);
+        const resp = await fetchWithTimeout(
+            `${API_BASE}/api/vault/rebalance`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...authHeaders },
+                body: JSON.stringify({ userAddress, dryRun }),
+            },
+            SESSION_FETCH_TIMEOUT_MS,
+        );
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+            return {
+                dryRun,
+                status: 'failed',
+                message: data.error || 'Guardian request failed',
+                summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
+                ...data,
+            };
+        }
+        return data as GuardianLoopResult;
+    }, [authHeadersFor]);
+
     const requestPermission = useCallback(async (
         autonomyLevel: AutonomyLevel,
         userAddress: string,
@@ -333,11 +371,12 @@ export function useSessionKey(): UseSessionKeyReturn {
             const signed = await service.signPermission(permission, signer);
 
             // Register the session server-side so the Guardian can execute autonomously
+            const regAuthHeaders = await authHeadersFor(userAddress);
             const regResp = await fetchWithTimeout(
                 `${API_BASE}/api/vault/permission`,
                 {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'application/json', ...regAuthHeaders },
                     body: JSON.stringify({
                         userAddress,
                         permission: {
@@ -367,7 +406,7 @@ export function useSessionKey(): UseSessionKeyReturn {
             setStatus('error');
             return null;
         }
-    }, []);
+    }, [authHeadersFor, triggerExecutionLoopInternal]);
 
     const revokePermission = useCallback(async (): Promise<boolean> => {
         // Revoke server-side first — only clear local state once the server
@@ -378,7 +417,7 @@ export function useSessionKey(): UseSessionKeyReturn {
             try {
                 const resp = await fetchWithTimeout(
                     `${API_BASE}/api/vault/permission?userAddress=${userAddress}`,
-                    { method: 'DELETE' },
+                    { method: 'DELETE', headers: await authHeadersFor(userAddress) },
                     SESSION_FETCH_TIMEOUT_MS,
                 );
                 if (!resp.ok) {
@@ -399,7 +438,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         setStatus('idle');
         setError(null);
         return true;
-    }, [signedPermission]);
+    }, [signedPermission, authHeadersFor]);
 
     const isPermissionValid = useCallback((): boolean => {
         if (!signedPermission) return false;
@@ -410,29 +449,6 @@ export function useSessionKey(): UseSessionKeyReturn {
         }
         return status === 'active';
     }, [signedPermission, status]);
-
-    const triggerExecutionLoopInternal = async (userAddress: string, dryRun = false): Promise<GuardianLoopResult> => {
-        const resp = await fetchWithTimeout(
-            `${API_BASE}/api/vault/rebalance`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userAddress, dryRun }),
-            },
-            SESSION_FETCH_TIMEOUT_MS,
-        );
-        const data = await resp.json().catch(() => ({}));
-        if (!resp.ok) {
-            return {
-                dryRun,
-                status: 'failed',
-                message: data.error || 'Guardian request failed',
-                summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
-                ...data,
-            };
-        }
-        return data as GuardianLoopResult;
-    };
 
     const triggerExecutionLoop = useCallback(async (dryRun = false) => {
         if (!signedPermission) {
@@ -451,7 +467,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         const result = await triggerExecutionLoopInternal(userAddress, dryRun);
         await pollSession(userAddress);
         return result;
-    }, [signedPermission, pollSession]);
+    }, [signedPermission, pollSession, triggerExecutionLoopInternal]);
 
     const permissionSummary = signedPermission
         ? service.describePermission(signedPermission.permission)

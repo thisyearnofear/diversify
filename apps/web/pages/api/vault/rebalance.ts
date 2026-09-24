@@ -1,8 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from '@/lib/vault/store';
-import { circleExecutor } from '@/lib/vault/executor';
+import { smartAccountExecutor } from '@/lib/vault/executor';
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
+import { requireWalletAuth } from '@/lib/require-wallet-auth';
 import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '@diversifi/shared/src/config/celo-tokens';
 import {
   getGuardianState,
@@ -78,10 +79,22 @@ async function resolveRecommendations(
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
+  // User-invoked rebalance — the caller must prove they control the wallet.
+  // (The autonomous guardian-loop uses VaultService directly under
+  // GUARDIAN_LOOP_SECRET, not this route.)
+  const auth = requireWalletAuth(req);
+  if (!auth) {
+    return res.status(401).json({ error: 'Wallet signature required (x-wallet-auth-message / x-wallet-auth-signature headers)' });
+  }
+
   await dbConnect();
-  const service = new VaultService(vaultStore, circleExecutor);
+  const service = new VaultService(vaultStore, smartAccountExecutor);
 
   const { vaultId, userAddress, dryRun = false, recommendations = [] } = req.body || {};
+
+  if (userAddress && typeof userAddress === 'string' && userAddress.toLowerCase() !== auth) {
+    return res.status(403).json({ error: 'userAddress does not match the authenticated wallet' });
+  }
 
   // Rate limit: max 10 rebalance requests per minute per IP
   const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.socket.remoteAddress || 'unknown';
@@ -100,17 +113,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     let id: string;
 
     if (vaultId) {
+      // vaultId alone must not reach another user's vault — prove ownership.
+      const vault = await vaultStore.findVaultById(vaultId);
+      if (!vault) return res.status(404).json({ error: 'No vault found' });
+      if (vault.userAddress !== auth) {
+        return res.status(403).json({ error: 'vaultId belongs to a different wallet' });
+      }
       id = vaultId;
-    } else if (userAddress) {
-      const vault = await vaultStore.findVaultByUser(userAddress);
+    } else {
+      const vault = await vaultStore.findVaultByUser(auth);
       if (!vault) return res.status(404).json({ error: 'No vault found for this user' });
       id = vault._id;
-    } else {
-      return res.status(400).json({ error: 'Missing vaultId or userAddress' });
     }
 
     const resolvedRecommendations = await resolveRecommendations(
-      typeof userAddress === 'string' ? userAddress : undefined,
+      auth,
       recommendations as RebalanceRecommendation[],
       dryRun,
     );
@@ -151,9 +168,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     if (resolvedRecommendations.length === 0) {
-      const guardianState = typeof userAddress === 'string'
-        ? await getGuardianState(userAddress)
-        : null;
+      const guardianState = await getGuardianState(auth);
       const payload = {
         success: true,
         dryRun,
@@ -242,6 +257,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       timestamp,
     });
   } catch (error: any) {
+    if (error?.name === 'VaultExecutionUnavailableError') {
+      return res.status(503).json({
+        status: 'blocked',
+        reasonCode: 'execution_unavailable',
+        message: 'Vault execution is unavailable — no smart-account provider configured.',
+        error: error.message,
+      });
+    }
     return res.status(500).json({ status: 'failed', message: error.message, error: error.message });
   }
 }

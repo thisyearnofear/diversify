@@ -42,9 +42,11 @@ export default async function handler(
     detail: "Mento Protocol quotes + stablecoin swaps on Celo mainnet",
   };
 
-  // Check vault execution layer
+  // Check vault execution layer. Vault execution requires a user
+  // smart-account provider — VAULT_PRIVATE_KEY is the operator's
+  // settlement/ledger key and never signs user vault transactions.
   let providerName = 'none';
-  let providerDetail = 'Set SMART_ACCOUNT_PROVIDER or VAULT_PRIVATE_KEY';
+  let providerDetail = 'Set SMART_ACCOUNT_PROVIDER (vault execution requires a configured smart-account provider)';
   try {
     const provider = getSmartAccountProvider();
     if (provider.isConfigured()) {
@@ -52,12 +54,6 @@ export default async function handler(
       providerDetail = `${provider.name} smart account — policy-enforced execution`;
     }
   } catch {}
-
-  const hasDirectKey = !!(process.env.VAULT_PRIVATE_KEY && providerName === 'none');
-  if (hasDirectKey) {
-    providerName = 'direct';
-    providerDetail = 'Direct signing (Phase 1) — upgrade to smart account for production';
-  }
 
   checks.vault = {
     status: providerName !== 'none' ? providerName : 'not-configured',

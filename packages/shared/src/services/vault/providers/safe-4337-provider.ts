@@ -8,7 +8,11 @@
  *   SMART_ACCOUNT_PROVIDER=safe4337
  *   AA_BUNDLER_URL=https://api.pimlico.io/v2/celo/rpc?apikey=xxx
  *   AA_PAYMASTER_URL=https://api.pimlico.io/v2/celo/rpc?apikey=xxx (optional)
- *   VAULT_PRIVATE_KEY=0x... (the agent's signing key)
+ *   SAFE4337_SIGNER_PRIVATE_KEY=0x... (the key that owns the user Safes)
+ *
+ * NOTE: this provider deliberately does NOT read VAULT_PRIVATE_KEY — that is
+ * the operator's settlement/ledger key and must never sign user vault
+ * transactions. The Safe signer is a separate, explicitly named key.
  *
  * This provider is for:
  * - Local development (no Privy account needed)
@@ -45,7 +49,7 @@ export class Safe4337Provider implements SmartAccountProvider {
 
   isConfigured(): boolean {
     return !!(
-      process.env.VAULT_PRIVATE_KEY &&
+      process.env.SAFE4337_SIGNER_PRIVATE_KEY &&
       (process.env.AA_BUNDLER_URL || process.env.SMART_ACCOUNT_PROVIDER === 'safe4337')
     );
   }
@@ -109,8 +113,8 @@ export class Safe4337Provider implements SmartAccountProvider {
   }
 
   private getSigner(): ethers.Wallet {
-    const key = process.env.VAULT_PRIVATE_KEY;
-    if (!key) throw new Error('VAULT_PRIVATE_KEY not set for safe4337 provider');
+    const key = process.env.SAFE4337_SIGNER_PRIVATE_KEY;
+    if (!key) throw new Error('SAFE4337_SIGNER_PRIVATE_KEY not set for safe4337 provider');
     return new ethers.Wallet(key, new ethers.providers.JsonRpcProvider(CELO_RPC));
   }
 }
