@@ -142,6 +142,8 @@ function AppShellInner() {
         address={address}
         isWhitelisted={isWhitelisted}
         isFarcaster={isFarcaster}
+        isMiniPay={isMiniPay}
+        activeTab={activeTab}
         handleTranscription={handleTranscription}
       />
 

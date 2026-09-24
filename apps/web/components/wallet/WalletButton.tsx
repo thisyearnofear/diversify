@@ -35,12 +35,15 @@ interface WalletButtonProps {
   variant?: ButtonVariant;
   className?: string;
   onConnect?: (address: string) => void;
+  /** Overrides the unconnected label (e.g. "Connect to use Africapitalism"). */
+  connectLabel?: string;
 }
 
 export default function WalletButton({
   variant = 'primary',
   className = "",
-  onConnect
+  onConnect,
+  connectLabel,
 }: WalletButtonProps) {
   const {
     address,
@@ -431,8 +434,14 @@ export default function WalletButton({
             d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
           />
         </svg>
-        <span className="sm:hidden">Connect</span>
-        <span className="hidden sm:inline">Connect Wallet</span>
+        {connectLabel ? (
+          <span>{connectLabel}</span>
+        ) : (
+          <>
+            <span className="sm:hidden">Connect</span>
+            <span className="hidden sm:inline">Connect Wallet</span>
+          </>
+        )}
       </motion.button>
       {walletError && (
         <p className="text-red-500 text-xs mt-1 font-medium">{walletError}</p>

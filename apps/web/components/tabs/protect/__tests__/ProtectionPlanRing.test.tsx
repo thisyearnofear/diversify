@@ -166,7 +166,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
   });
 
-  it('merges a USDm holding into the cUSD legend row (one asset, one name)', () => {
+  it('merges a USDm holding into the plan leg row — rendered under the canonical USDm name', () => {
     const usdmWallet = {
       ...DEMO_PORTFOLIO,
       totalValue: 100,
@@ -198,9 +198,10 @@ describe('ProtectionPlanRing — projections shape', () => {
         onSelectToken={() => {}}
       />,
     );
-    // One row under the plan-facing name — never a stray "not in plan" USDm row.
-    expect(screen.getAllByText('cUSD').length).toBeGreaterThan(0);
-    expect(screen.queryByText('USDm')).not.toBeInTheDocument();
+    // One row under the canonical ticker — never a stray "not in plan" row,
+    // never the legacy cUSD spelling on the surface.
+    expect(screen.getAllByText('USDm').length).toBeGreaterThan(0);
+    expect(screen.queryByText('cUSD')).not.toBeInTheDocument();
     expect(screen.queryByText('not in plan')).not.toBeInTheDocument();
   });
 
@@ -297,7 +298,7 @@ describe('ProtectionPlanRing — RWA sleeve fan', () => {
       screen.queryByRole('button', { name: /^PAXG — plan/ }),
     ).not.toBeInTheDocument();
     // Other plan legs are untouched.
-    expect(screen.getByRole('button', { name: /^cUSD — plan/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^USDm — plan/ })).toBeInTheDocument();
     // Hole names the sleeve context.
     expect(screen.getByText('vault sleeve')).toBeInTheDocument();
     expect(screen.getByText('PAXG leg')).toBeInTheDocument();
@@ -594,8 +595,8 @@ describe('ProtectionPlanRing — balance preview', () => {
       />,
     );
     expect(screen.getByRole('button', { name: /KESm — preview target: 48%/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /cUSD — preview target: 40%/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /cEUR — preview target: 12%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /USDm — preview target: 40%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /EURm — preview target: 12%/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /wallet holding/ })).not.toBeInTheDocument();
     expect(screen.getByText('Your shield plan')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
@@ -680,7 +681,8 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.getByText('60%')).toBeInTheDocument();
     expect(screen.getByText('Target only · not funded')).toBeInTheDocument();
     expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
-    expect(screen.getAllByText('Not funded').length).toBeGreaterThan(0);
+    // Funding status is stated once — the hole, not per legend row.
+    expect(screen.queryByText('Not funded')).not.toBeInTheDocument();
   });
 
   it('Other aggregates preview percentages, not max-held, for many-leg plans', () => {

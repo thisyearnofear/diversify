@@ -4,6 +4,7 @@
  */
 import { useState } from "react";
 import type { UserExperienceMode } from "@/context/app/types";
+import type { TabId } from "@/constants/tabs";
 import VoiceButton from "@/components/ui/VoiceButton";
 import WalletButton from "@/components/wallet/WalletButton";
 import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
@@ -41,11 +42,22 @@ interface AppHeaderProps {
   address?: string | null;
   isWhitelisted: boolean;
   isFarcaster: boolean;
+  isMiniPay?: boolean;
+  activeTab?: TabId;
   handleTranscription: (text: string) => void;
 }
 
+// Tabs whose unconnected object already carries a connect CTA (§5: one
+// connect affordance per tab). Exchange's resting pair stage and Info
+// have none, so the header button stays there.
+const TABS_WITH_OWN_CONNECT: ReadonlySet<TabId> = new Set([
+  "overview",
+  "protect",
+  "agent",
+]);
+
 export default function AppHeader({
-  experienceMode, setExperienceMode, address, isWhitelisted, isFarcaster, handleTranscription,
+  experienceMode, setExperienceMode, address, isWhitelisted, isFarcaster, isMiniPay = false, activeTab, handleTranscription,
 }: AppHeaderProps) {
   const [activeHint, setActiveHint] = useState<"mode" | "voice" | null>(null);
   const [showModeTip, setShowModeTip] = useState(() => {
@@ -173,7 +185,23 @@ export default function AppHeader({
           <ChainPill />
         </div>
 
-        {isFarcaster ? <FarcasterWalletButton /> : <WalletButton />}
+        {isFarcaster ? (
+          <FarcasterWalletButton />
+        ) : (
+          // Below sm the tab's in-object CTA is the single connect
+          // affordance — the header chip survives on desktop, when
+          // connected (account menu), in MiniPay, and on tabs with no
+          // in-object connect (Exchange pair stage, Info).
+          <div
+            className={
+              !address && !isMiniPay && activeTab != null && TABS_WITH_OWN_CONNECT.has(activeTab)
+                ? "hidden sm:block"
+                : undefined
+            }
+          >
+            <WalletButton />
+          </div>
+        )}
       </div>
     </div>
   );

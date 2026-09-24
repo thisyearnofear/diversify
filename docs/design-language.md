@@ -272,6 +272,17 @@ A tab change that fails any of these is the old stack. Do not ship it.
    sanctioned third gaze surface). Never swap the object for a hero-card +
    proof-card + how-it-works stack. All four share one status tier:
    `UnconnectedStatusTier` (Verified evidence line + demo text link).
+   **One connect affordance per tab on mobile:** below `sm` the header
+   `WalletButton` yields to the in-object CTA on tabs that carry one
+   (Home, Shield, Guardian); it survives where the resting object has
+   none (Exchange's pair stage, Info), when connected, on desktop, and
+   in Farcaster/MiniPay contexts. **Shield morphs ring ↔ gallery in
+   place:** with a philosophy the ghost ring is the object and the plan
+   badge ("Africapitalism ▾") swaps the picker in; "← Your plan" or a
+   card commit returns to the re-sliced ring. Walletless honesty is
+   stated once (the hole: "Connect to fund" / "Target only · not
+   funded"), never per legend row; leg rows render canonical tickers
+   (USDm/EURm/BRLm) though leg ids stay wallet-facing internally.
 6. **Nothing sits above the object** except a real error. Banners,
    scorecards, honesty strips, and “next step” journeys are object /
    status / footnote — or they leave.

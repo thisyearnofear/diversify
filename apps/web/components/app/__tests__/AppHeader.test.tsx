@@ -101,3 +101,44 @@ describe('AppHeader mobile layout', () => {
     expect(screen.getByTestId('wallet-button')).toBeInTheDocument();
   });
 });
+
+describe('AppHeader — one connect affordance below sm', () => {
+  const walletWrapper = () => screen.getByTestId('wallet-button').parentElement!;
+
+  it('hides the wallet button below sm on tabs that carry their own connect CTA', () => {
+    for (const activeTab of ['overview', 'protect', 'agent'] as const) {
+      const { unmount } = render(
+        <AppHeader {...baseProps} address={null} activeTab={activeTab} />,
+      );
+      expect(walletWrapper().className).toContain('hidden');
+      expect(walletWrapper().className).toContain('sm:block');
+      unmount();
+    }
+  });
+
+  it('keeps the wallet button on tabs with no in-object connect CTA (Exchange, Info)', () => {
+    for (const activeTab of ['exchange', 'info'] as const) {
+      const { unmount } = render(
+        <AppHeader {...baseProps} address={null} activeTab={activeTab} />,
+      );
+      expect(walletWrapper().className).not.toContain('hidden');
+      unmount();
+    }
+  });
+
+  it('keeps the wallet button at every size once connected', () => {
+    render(<AppHeader {...baseProps} address="0xabc" activeTab="overview" />);
+    expect(walletWrapper().className).not.toContain('hidden');
+  });
+
+  it('keeps the wallet button in MiniPay even when unconnected', () => {
+    render(<AppHeader {...baseProps} address={null} isMiniPay activeTab="overview" />);
+    expect(walletWrapper().className).not.toContain('hidden');
+  });
+
+  it('keeps the Farcaster button regardless of tab or connection', () => {
+    render(<AppHeader {...baseProps} address={null} isFarcaster activeTab="overview" />);
+    expect(screen.getByTestId('farcaster-wallet-button')).toBeInTheDocument();
+    expect(screen.queryByTestId('wallet-button')).not.toBeInTheDocument();
+  });
+});

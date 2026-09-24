@@ -2,19 +2,21 @@
  * ProtectionNotConnected — Shield's unconnected morph.
  *
  * §5 rail 5 (unconnected is a morph too): when a philosophy is resolvable
- * the ghost plan ring leads the object — walletless, so it renders the
- * plan's slices with a "Connect to fund" hole — and the picker sits
- * beneath it; tapping a card commits and re-slices the ring. With no
- * philosophy the picker alone is the object. The connect CTA attaches
- * below; trust + demo live in the shared status tier. No hero card, no
- * proof card, no how-it-works stack.
+ * the ghost plan ring IS the object — walletless, so it renders the
+ * plan's slices with a "Connect to fund" hole. The plan badge morphs the
+ * object in place: tap "Africapitalism ▾" and the gallery replaces the
+ * ring; "← Your plan" or choosing a card returns to the ring re-sliced.
+ * With no philosophy the gallery alone is the object. The connect CTA
+ * attaches below; trust + demo live in the shared status tier. No hero
+ * card, no proof card, no how-it-works stack.
  *
  * Persona morphs the object (rail 4): an APAC philosophy shows the APAC
  * honesty banner in the status tier; a Caribbean philosophy shows the
- * Caribbean one. The live proof ticker rides along as a status-tier line.
+ * Caribbean one.
  */
 
 import React from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import WalletButton from "../../wallet/WalletButton";
 import type { UserExperienceMode } from "@/context/app/types";
 import { InstrumentShell } from "../../shared/InstrumentShell";
@@ -28,7 +30,6 @@ import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
 import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBanner";
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
-import { LiveProofTicker } from "../../shared/LiveProofCard";
 import { ProtectionPlanRing } from "./ProtectionPlanRing";
 import { PlanFloorControl } from "./PlanFloorControl";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
@@ -48,7 +49,8 @@ interface Props {
 }
 
 export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnableDemo, inspector }: Props) {
-  const { financialStrategy } = useStrategy();
+  const { financialStrategy, setFinancialStrategy } = useStrategy();
+  const reducedMotion = useReducedMotion();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
   // holdings, no loading shimmer. Fresh instance per mount — never a
   // shared mutable const.
@@ -90,9 +92,25 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
     ? selectedToken
     : null;
 
+  // Ring↔gallery morph: with a plan the ring is the object and the plan
+  // badge swaps the gallery in place; a card commit (or ← Your plan)
+  // returns to the ring. No plan → the gallery is the object outright.
+  const [galleryOpen, setGalleryOpen] = React.useState(false);
+  React.useEffect(() => setGalleryOpen(false), [ringKey]);
+  const showPicker = !balance.isPreviewing && (!showRing || galleryOpen);
+  const planName = ringArchetype ? ARCHETYPES[ringArchetype].name : null;
+
   const object = (
     <div className="space-y-4" data-testid="shield-unconnected-object">
-      {showRing && (
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={showPicker ? "picker" : "ring"}
+          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
+          transition={{ duration: 0.2, ease: "easeOut" }}
+        >
+      {showRing && !showPicker && (
         <div data-testid="shield-ring" data-walletless>
           <ProtectionPlanRing
             strategyKey={ringKey}
@@ -105,6 +123,14 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
             alignmentScore={null}
             empty
             emptyLabel="Connect to fund"
+            onHoleTap={
+              balance.isPreviewing
+                ? undefined
+                : () => {
+                    setGalleryOpen(true);
+                    haptics.tap();
+                  }
+            }
             controls={
               <div className="mt-3">
                 <PlanFloorControl
@@ -135,17 +161,45 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
           />
         </div>
       )}
-      {!balance.isPreviewing && (
+      {showPicker && (
         <div data-testid="shield-picker">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-            Choose a protection philosophy
-          </p>
-          <ProtectionPlanGallery />
+          {galleryOpen && showRing ? (
+            <button
+              type="button"
+              data-testid="back-to-plan"
+              onClick={() => {
+                setGalleryOpen(false);
+                haptics.tap();
+              }}
+              className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-3 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 rounded"
+            >
+              ← Your plan
+            </button>
+          ) : (
+            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              Choose a protection philosophy
+            </p>
+          )}
+          <ProtectionPlanGallery
+            onInspect={(id) => {
+              setFinancialStrategy(id);
+              setGalleryOpen(false);
+              haptics.confirm();
+            }}
+          />
         </div>
       )}
+        </motion.div>
+      </AnimatePresence>
 
       {/* The one CTA — attaches to the object, no card wrapper. */}
-      {!balance.isPreviewing && <WalletButton variant="primary" className="w-full" />}
+      {!balance.isPreviewing && (
+        <WalletButton
+          variant="primary"
+          className="w-full"
+          connectLabel={planName ? `Connect to use ${planName}` : undefined}
+        />
+      )}
     </div>
   );
 
@@ -157,7 +211,6 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
           {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
         </div>
       )}
-      <LiveProofTicker limit={3} />
       {onEnableDemo && <UnconnectedStatusTier onEnableDemo={onEnableDemo} />}
     </div>
   );

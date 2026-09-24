@@ -19,6 +19,7 @@ import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { floorPercent, getArchetypeAllocations, type PlanLeg } from '@/components/protection-cards/plan-preview';
+import { displayToken } from '@/lib/plan-legs';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
@@ -129,7 +130,7 @@ export function ProtectionPlanRing({
     if (!balancePreview && walletView.holdings.length > 0) {
       return walletView.holdings.map((holding, i) => ({
         id: holding.symbol,
-        label: `${holding.symbol} — wallet holding`,
+        label: `${displayToken(holding.symbol)} — wallet holding`,
         percent: holding.percent,
         color:
           TOKEN_COLORS[holding.symbol] ??
@@ -139,7 +140,7 @@ export function ProtectionPlanRing({
     }
     return allocations.map((a, i) => ({
       id: a.token,
-      label: `${a.token} — ${balancePreview ? 'preview target' : 'plan'}`,
+      label: `${displayToken(a.token)} — ${balancePreview ? 'preview target' : 'plan'}`,
       percent: a.percent,
         color:
           TOKEN_COLORS[a.token] ??
@@ -294,11 +295,11 @@ export function ProtectionPlanRing({
     }
     if (balancePreview) {
       return selected
-        ? { number: `${selected.percent}%` as React.ReactNode, label: selected.token, hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
+        ? { number: `${selected.percent}%` as React.ReactNode, label: displayToken(selected.token), hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
         : { number: `${floorPercent(allocations)}%` as React.ReactNode, label: 'Dollar reserve', hint: 'Preview · not saved' };
     }
     if (empty && selected) {
-      return { number: `${selected.percent}%` as React.ReactNode, label: selected.token, hint: 'Target only · not funded' };
+      return { number: `${selected.percent}%` as React.ReactNode, label: displayToken(selected.token), hint: 'Target only · not funded' };
     }
     if (empty) {
       return {
@@ -332,7 +333,7 @@ export function ProtectionPlanRing({
       if (!selected) {
         return {
           number: `${Math.round(selectedHeld)}%`,
-          label: selectedSymbol,
+          label: selectedSymbol ? displayToken(selectedSymbol) : selectedSymbol,
           hint: `outside plan${moneyHint(selectedHeld)}`,
         };
       }
@@ -340,7 +341,7 @@ export function ProtectionPlanRing({
         return {
           number: null as React.ReactNode,
           label: "On target",
-          hint: `${selectedSymbol}${moneyHint(selectedHeld)}`,
+          hint: `${selectedSymbol ? displayToken(selectedSymbol) : ''}${moneyHint(selectedHeld)}`,
         };
       }
       return {
@@ -348,7 +349,7 @@ export function ProtectionPlanRing({
           <motion.span>{gapFormatted}</motion.span>
         ),
         label: gapPts > 0 ? "pts light" : "pts over",
-        hint: `${selectedSymbol}${moneyHint(gapPts)}`,
+        hint: `${selectedSymbol ? displayToken(selectedSymbol) : ''}${moneyHint(gapPts)}`,
       };
     }
     if (alignmentScore === null) {
@@ -474,7 +475,7 @@ export function ProtectionPlanRing({
                       {hole.number}
                     </span>
                   )}
-                  <span className={`font-bold text-gray-900 dark:text-white max-w-[120px] truncate ${hole.number == null ? "text-lg" : "text-sm"}`}>
+                  <span className={`font-bold text-gray-900 dark:text-white max-w-[130px] text-center leading-tight ${hole.number == null ? "text-base" : "text-sm"}`}>
                     {hole.label}
                   </span>
                   <span
@@ -551,10 +552,10 @@ export function ProtectionPlanRing({
                 isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
             >
-              <TokenIcon symbol={a.token} size={22} />
+              <TokenIcon symbol={displayToken(a.token)} size={22} />
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-gray-900 dark:text-white">
-                  {a.token}
+                  {displayToken(a.token)}
                 </span>
                 <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">
                   {a.region}
@@ -574,7 +575,7 @@ export function ProtectionPlanRing({
                   ? `${savedLegs.find((leg) => leg.token === a.token)?.percent ?? 0}% saved`
                   : totalValue > 0
                     ? `${held.toFixed(0)}% held`
-                    : 'Not funded'}
+                    : null}
               </span>
             </motion.button>
           );

@@ -48,6 +48,16 @@ const CONFIG_TICKERS: Record<string, string> = {
 };
 
 /**
+ * Display symbol for a plan leg. Leg ids stay wallet-facing internally
+ * (cUSD/cEUR/cREAL) because selection, matching, and colors key on them,
+ * but surfaces render the canonical config tickers (USDm/EURm/BRLm).
+ */
+export function displayToken(symbol: string): string {
+  const canonical = canonicalToken(symbol);
+  return CONFIG_TICKERS[canonical] ?? canonical;
+}
+
+/**
  * The symbol the Exchange/TokenSelector expects for a plan leg on a chain —
  * the config (Mento) name. Falls back to the leg token when the chain is
  * unknown or the asset isn't listed there.
