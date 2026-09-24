@@ -158,3 +158,15 @@ with the fiat's curated `goodsAnchor` ("6 bags of rice · $292.80"), and
 the To row names what a real quote buys where it lands — the remittance
 reading a DEX can't give. Currencies without a staple keep the plain
 ≈ $; absence is honest.
+
+The corridor line also has a lens state — the **decision window** —
+offered only while a fresh dated macro beat exists on the live pair (the
+same ≤14-day, readable-echo rows `corridorSignalsFor` returns; never a
+forward calendar). The status tier's prompt ("New on this pair ·
+{dateLabel} — open the decision window →") takes the transition slot and
+netting drops to the rail; opening it turns the line still — no
+rotation, no what-if pin — and shows each fresh side's dated beat plus
+the standing mechanism that produced it ("Decided at {watch.event} ·
+{watch.cadence}"). Past event plus mechanism only, no forecast copy;
+"← Story" collapses back to the line, and the state closes itself when
+the pair changes or the signal expires.

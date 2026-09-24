@@ -76,6 +76,8 @@ export function CorridorLine({
   horizon = '5yr',
   onHorizon,
   whatIf,
+  decisionWindow = false,
+  onExitDecisionWindow,
 }: {
   fromToken: string;
   toToken: string;
@@ -96,6 +98,11 @@ export function CorridorLine({
   horizon?: Horizon;
   onHorizon?: (h: Horizon) => void;
   whatIf?: PairWhatIf | null;
+  /** Decision-window lens (§5): the top line becomes a still block —
+   *  each fresh dated beat with its standing mechanism, never a forecast.
+   *  Takes precedence over rotation and a pinned what-if. */
+  decisionWindow?: boolean;
+  onExitDecisionWindow?: () => void;
 }) {
   const corridor = corridorFor(fromToken, toToken, horizon);
   const a = provenanceFor(fromToken);
@@ -127,8 +134,18 @@ export function CorridorLine({
   const showControl =
     onHorizon !== undefined &&
     pairWhatIfFor(fromToken, toToken, '5yr') !== null;
-  const pinned = explored ? whatIf : null;
-  const rotating = alive && !reduced && !pinned && beats.length > 1;
+
+  // Decision window — the lens state of this same line: still, dated,
+  // past-tense. Each fresh side's beat plus the standing mechanism that
+  // produced it; a signal vanishing mid-view drops back to the line.
+  const decisionSides = [
+    { token: fromToken, sig: signals?.from ?? null, provenance: a },
+    { token: toToken, sig: signals?.to ?? null, provenance: b },
+  ].filter((s) => s.sig !== null);
+  const decisionOpen = decisionWindow && decisionSides.length > 0;
+
+  const pinned = !decisionOpen && explored ? whatIf : null;
+  const rotating = alive && !reduced && !pinned && !decisionOpen && beats.length > 1;
   useEffect(() => {
     if (!rotating) {
       setBeat(0);
@@ -151,7 +168,38 @@ export function CorridorLine({
   const arrow = onInspect ? (
     <span className="font-semibold text-blue-600 dark:text-blue-400">→</span>
   ) : null;
-  const topLine = pinned ? (
+  const topLine = decisionOpen ? (
+    <span className="block" data-testid="decision-window">
+      <span className="flex items-center justify-between gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+          Decision window
+        </span>
+        <button
+          type="button"
+          data-testid="decision-window-back"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExitDecisionWindow?.();
+          }}
+          className="min-h-[24px] text-[10px] font-semibold text-blue-600 dark:text-blue-400"
+        >
+          ← Story
+        </button>
+      </span>
+      {decisionSides.map((s) => (
+        <span key={s.token} className="block">
+          <span className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+            {s.sig!.dateLabel} {corridorSideFor(s.token)?.flag ?? ''}: {s.sig!.text}
+          </span>
+          {s.provenance?.watch && (
+            <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+              Decided at {s.provenance.watch.event} · {s.provenance.watch.cadence}
+            </span>
+          )}
+        </span>
+      ))}
+    </span>
+  ) : pinned ? (
     <AnimatePresence mode="popLayout" initial={false}>
       <motion.span
         key={`whatif-${horizon}-${fromToken}-${toToken}`}
@@ -253,15 +301,16 @@ export function CorridorLine({
       </p>
     );
   }
-  if (!onInspect || control) {
-    // With the control, the chips can't nest inside a button — the
-    // wrapper is a div and the inspect tap lives on the line itself.
+  if (!onInspect || control || decisionOpen) {
+    // With the control or the decision window, interactive children
+    // can't nest inside a button — the wrapper is a div and the inspect
+    // tap lives on the corridor line itself.
     return (
       <div
         data-testid="corridor-line"
         className="mt-1 text-left text-[11px] text-gray-500 dark:text-gray-400 min-h-[32px]"
       >
-        {control && onInspect ? (
+        {(control || decisionOpen) && onInspect ? (
           <>
             {topLine}
             {corridor && (

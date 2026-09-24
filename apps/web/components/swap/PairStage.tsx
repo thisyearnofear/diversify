@@ -169,6 +169,8 @@ export function PairStage({
   onWake,
   onInspect,
   signals,
+  decisionWindow = false,
+  onExitDecisionWindow,
   ctaLabel,
   receipt = null,
   onDismissReceipt,
@@ -185,6 +187,9 @@ export function PairStage({
   onWake(): void;
   onInspect?: () => void;
   signals: { from: CorridorSignal | null; to: CorridorSignal | null } | null;
+  /** Decision-window lens — the corridor line's pinned past-event view. */
+  decisionWindow?: boolean;
+  onExitDecisionWindow?: () => void;
   ctaLabel: string;
   receipt?: PairReceipt | null;
   onDismissReceipt?(): void;
@@ -457,6 +462,8 @@ export function PairStage({
             toToken={toToken}
             alive
             signals={signals}
+            decisionWindow={decisionWindow}
+            onExitDecisionWindow={onExitDecisionWindow}
             onInspect={onInspect}
             horizon={horizon}
             onHorizon={setHorizon}

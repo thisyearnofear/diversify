@@ -25,6 +25,7 @@ import {
   type ProvenanceLead,
 } from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
+import { useCorridorSignals } from "@/hooks/use-corridor-signals";
 import { StatusTier } from "../shared/StatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { useCapitalHistory } from "@/hooks/use-capital-history";
@@ -293,6 +294,20 @@ export default function ExchangeTab({
   const sharedPortfolio = usePortfolio();
   const previousAddress = useRef(address);
   const [inspectorSel, setInspectorSel] = useState<InspectorSel>(null);
+  // The live pair rides up from the swap object so the status tier can
+  // offer the decision-window lens (fresh dated macro beats only —
+  // never a forward calendar).
+  const [pair, setPair] = useState<{ from: string; to: string } | null>(null);
+  const [decisionWindow, setDecisionWindow] = useState(false);
+  const pairSignals = useCorridorSignals(pair?.from ?? "", pair?.to ?? "");
+  const freshSignal = pair ? pairSignals.from ?? pairSignals.to : null;
+  const hasFreshSignal = Boolean(freshSignal);
+  useEffect(() => {
+    setDecisionWindow(false);
+  }, [pair?.from, pair?.to]);
+  useEffect(() => {
+    if (!hasFreshSignal) setDecisionWindow(false);
+  }, [hasFreshSignal]);
   // Walletless public-address lookup — never persisted, cleared the
   // moment a wallet connects.
   const [lookupAddress, setLookupAddress] = useState<string | null>(null);
@@ -366,6 +381,26 @@ export default function ExchangeTab({
     </button>
   );
 
+  // Decision-window prompt — same quiet link grammar as the netting
+  // button. While it's offered it owns the transition slot and netting
+  // drops to the rail; nothing stacks.
+  const decisionPrompt = freshSignal ? (
+    <button
+      type="button"
+      data-testid="decision-window-prompt"
+      onClick={() => {
+        setDecisionWindow(true);
+        trackFunnelEvent("lens_open", {
+          tab: "exchange",
+          lens: "decision_window",
+        });
+      }}
+      className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+    >
+      New on this pair · {freshSignal.dateLabel} — open the decision window →
+    </button>
+  ) : null;
+
   // Connected status rail — trust parity with Home and Shield (§7) plus
   // the netting hand-off. Walletless, UnconnectedStatusTier already owns
   // the Verified line, so it gets the button alone — never doubled.
@@ -391,6 +426,9 @@ export default function ExchangeTab({
               onInspectJourney={() => setInspectorSel({ kind: "journey" })}
               lookupAddress={lookupAddress}
               onLookupAddress={setLookupAddress}
+              onPairChange={(from, to) => setPair({ from, to })}
+              decisionWindow={decisionWindow}
+              onExitDecisionWindow={() => setDecisionWindow(false)}
             />
           </div>
         }
@@ -406,7 +444,7 @@ export default function ExchangeTab({
         }
         status={
           <UnconnectedStatusTier onEnableDemo={enableDemoMode}>
-            {nettingButton}
+            {hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton}
           </UnconnectedStatusTier>
         }
       />
@@ -438,6 +476,9 @@ export default function ExchangeTab({
             quoteInspected={inspectorSel?.kind === "pair"}
             capitalHistory={capitalHistory}
             onInspectJourney={() => setInspectorSel({ kind: "journey" })}
+            onPairChange={(from, to) => setPair({ from, to })}
+            decisionWindow={decisionWindow}
+            onExitDecisionWindow={() => setDecisionWindow(false)}
           />
         </div>
       }
@@ -454,7 +495,17 @@ export default function ExchangeTab({
       onRefresh={refreshBalances}
       // The netting rail is reachable from the connected ticket too —
       // it lives inside the pair inspector, not behind an object flip.
-      status={<StatusTier trust={<VerifiedEvidence />} transition={nettingButton} />}
+      // While a fresh beat offers the decision window it owns the
+      // transition slot and netting drops to the rail — nothing stacks.
+      status={
+        <StatusTier
+          trust={<VerifiedEvidence />}
+          transition={
+            hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton
+          }
+          rail={hasFreshSignal && !decisionWindow ? nettingButton : undefined}
+        />
+      }
     />
   );
 }

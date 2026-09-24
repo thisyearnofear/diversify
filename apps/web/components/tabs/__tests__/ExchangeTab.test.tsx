@@ -73,6 +73,7 @@ vi.mock("@/components/swap/RouteSchematic", () => ({
     React.createElement("div", { "data-testid": "route-schematic" }, `${fromToken}-${toToken}`),
 }));
 
+let mockPairToggle = 0;
 vi.mock("../SwapTab", () => ({
   default: ({
     instrument,
@@ -80,12 +81,18 @@ vi.mock("../SwapTab", () => ({
     onInspectJourney,
     lookupAddress,
     onLookupAddress,
+    onPairChange,
+    decisionWindow,
+    onExitDecisionWindow,
   }: {
     instrument?: boolean;
     onInspectQuote?: (from: string, to: string) => void;
     onInspectJourney?: () => void;
     lookupAddress?: string | null;
     onLookupAddress?: (a: string | null) => void;
+    onPairChange?: (from: string, to: string) => void;
+    decisionWindow?: boolean;
+    onExitDecisionWindow?: () => void;
   }) =>
     React.createElement(
       "div",
@@ -109,6 +116,37 @@ vi.mock("../SwapTab", () => ({
         },
         "pair",
       ),
+      onPairChange
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "pair-change-trigger",
+              onClick: () => {
+                // Alternate tokens so each click is a real pair change.
+                mockPairToggle += 1;
+                onPairChange(mockPairToggle % 2 ? "NGNm" : "USDC", "KESm");
+              },
+            },
+            "pair-change",
+          )
+        : null,
+      React.createElement(
+        "div",
+        { "data-testid": "decision-window-state" },
+        decisionWindow ? "open" : "closed",
+      ),
+      onExitDecisionWindow
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "exit-decision-trigger",
+              onClick: onExitDecisionWindow,
+            },
+            "exit",
+          )
+        : null,
       onLookupAddress
         ? React.createElement(
             "button",
@@ -138,6 +176,19 @@ vi.mock("../SwapTab", () => ({
 }));
 
 import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
+import type { CorridorSignal } from "@/lib/corridor-context";
+
+const signalState: {
+  signals: { from: CorridorSignal | null; to: CorridorSignal | null };
+} = { signals: { from: null, to: null } };
+vi.mock("@/hooks/use-corridor-signals", () => ({
+  useCorridorSignals: () => signalState.signals,
+}));
+
+import { trackFunnelEvent } from "@/lib/analytics";
+vi.mock("@/lib/analytics", () => ({
+  trackFunnelEvent: vi.fn(),
+}));
 
 const journeyState: { data: CapitalHistory | null } = { data: null };
 const capitalHistoryArgs: (string | null)[] = [];
@@ -166,6 +217,8 @@ describe("ExchangeTab — instrument", () => {
     navState.pendingIntent = null;
     journeyState.data = null;
     capitalHistoryArgs.length = 0;
+    signalState.signals = { from: null, to: null };
+    mockPairToggle = 0;
   });
 
   it("mounts the ticket as the object, with no extra inspect button", () => {
@@ -473,5 +526,110 @@ describe("ExchangeTab — instrument", () => {
 
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
     expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
+  });
+});
+
+// § 2f — the decision-window lens: a state of the corridor-line object,
+// offered through the status tier's transition slot on a fresh dated
+// macro beat, never a forward calendar.
+describe("ExchangeTab — decision window", () => {
+  const freshSignals = () => {
+    signalState.signals = {
+      from: { dateLabel: "Sep 18", text: "CBN held the benchmark rate" },
+      to: null,
+    };
+  };
+
+  const armPair = () => {
+    fireEvent.click(screen.getByTestId("pair-change-trigger"));
+  };
+
+  it("no prompt without a fresh signal — netting keeps the transition slot", () => {
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(screen.queryByTestId("decision-window-prompt")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+  });
+
+  it("no prompt before the pair is reported", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    expect(screen.queryByTestId("decision-window-prompt")).not.toBeInTheDocument();
+  });
+
+  it("a fresh beat offers the prompt; netting stays reachable on the rail", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(screen.getByTestId("decision-window-prompt")).toHaveTextContent(
+      "New on this pair · Sep 18 — open the decision window →",
+    );
+    expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+  });
+
+  it("clicking the prompt opens the lens on the swap object and fires lens_open", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    fireEvent.click(screen.getByTestId("decision-window-prompt"));
+    expect(screen.getByTestId("decision-window-state")).toHaveTextContent("open");
+    expect(trackFunnelEvent).toHaveBeenCalledWith("lens_open", {
+      tab: "exchange",
+      lens: "decision_window",
+    });
+    // While open the prompt leaves the slot; netting returns to transition.
+    expect(screen.queryByTestId("decision-window-prompt")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
+  });
+
+  it("a pair change closes the lens", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    fireEvent.click(screen.getByTestId("decision-window-prompt"));
+    expect(screen.getByTestId("decision-window-state")).toHaveTextContent("open");
+    armPair();
+    expect(screen.getByTestId("decision-window-state")).toHaveTextContent("closed");
+  });
+
+  it("← Story on the object closes the lens", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    fireEvent.click(screen.getByTestId("decision-window-prompt"));
+    fireEvent.click(screen.getByTestId("exit-decision-trigger"));
+    expect(screen.getByTestId("decision-window-state")).toHaveTextContent("closed");
+    expect(screen.getByTestId("decision-window-prompt")).toBeInTheDocument();
+  });
+
+  it("signals disappearing while open closes the lens", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    fireEvent.click(screen.getByTestId("decision-window-prompt"));
+    signalState.signals = { from: null, to: null };
+    mockPairToggle = 0;
+    // Re-render path: the mocked hook reads signalState on each render —
+    // a pair re-report forces ExchangeTab to re-read it.
+    armPair();
+    expect(screen.getByTestId("decision-window-state")).toHaveTextContent("closed");
+  });
+
+  it("walletless: the prompt replaces netting as the single child", () => {
+    mockAddress = null;
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(screen.getByTestId("decision-window-prompt")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /FX netting/ })).not.toBeInTheDocument();
+  });
+
+  it("the status tier never exceeds three slots", () => {
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(
+      document.querySelectorAll("[data-status-slot]").length,
+    ).toBeLessThanOrEqual(3);
   });
 });

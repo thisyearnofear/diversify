@@ -473,3 +473,23 @@ describe('SwapInterface — journey rail', () => {
     expect(screen.getByTestId('journey-station-NGNm')).toBeInTheDocument();
   });
 });
+
+describe('SwapInterface — reports the live pair upward', () => {
+  it('fires onPairChange on mount and again when the pair changes', () => {
+    const onPairChange = vi.fn();
+    renderSwap({ onPairChange });
+    expect(onPairChange).toHaveBeenLastCalledWith('KESm', 'USDm');
+
+    onPairChange.mockClear();
+    act(() => {
+      (ctrl.setToToken as (v: string) => void)('USDC');
+    });
+    expect(onPairChange).toHaveBeenCalledWith('KESm', 'USDC');
+
+    onPairChange.mockClear();
+    act(() => {
+      (ctrl.setFromToken as (v: string) => void)('NGNm');
+    });
+    expect(onPairChange).toHaveBeenCalledWith('NGNm', 'USDC');
+  });
+});

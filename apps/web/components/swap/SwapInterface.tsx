@@ -88,6 +88,13 @@ interface SwapInterfaceProps {
    *  lead back when the executed pair matches it. */
   handoffOrigin?: { origin: HandoffOrigin; fromToken: string; toToken: string } | null;
   onHandoffConsumed?: () => void;
+  /** Reports the live pair upward so the tab's status tier can offer
+   *  the decision-window lens. */
+  onPairChange?: (from: string, to: string) => void;
+  /** Decision-window lens state — the corridor line's pinned past-event
+   *  view; the tab owns the trigger and the prompt. */
+  decisionWindow?: boolean;
+  onExitDecisionWindow?: () => void;
 }
 
 const SwapInterface = forwardRef<
@@ -128,6 +135,9 @@ const SwapInterface = forwardRef<
     onLookupAddress,
     handoffOrigin,
     onHandoffConsumed,
+    onPairChange,
+    decisionWindow = false,
+    onExitDecisionWindow,
   },
   ref,
 ) {
@@ -245,6 +255,12 @@ const SwapInterface = forwardRef<
   // signal supersedes the standing watch cadence for that side. Reads
   // the shared proof feed (sessionStorage-cached, zero Firecrawl cost).
   const corridorSignals = useCorridorSignals(fromToken, toToken);
+
+  // The live pair belongs to the tab's status tier (the decision-window
+  // prompt needs it), not just the controller.
+  useEffect(() => {
+    onPairChange?.(fromToken, toToken);
+  }, [onPairChange, fromToken, toToken]);
 
   // The pair is the resting object; the ticket is its acting mode.
   // Session memory keeps a returning user in the mode they left; any
@@ -458,6 +474,8 @@ const SwapInterface = forwardRef<
                 onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
               }
               signals={corridorSignals}
+              decisionWindow={decisionWindow}
+              onExitDecisionWindow={onExitDecisionWindow}
               ctaLabel="Move savings"
               receipt={receipt}
               onDismissReceipt={() => setReceipt(null)}
@@ -694,6 +712,8 @@ const SwapInterface = forwardRef<
             toToken={toToken}
             alive={false}
             signals={corridorSignals}
+            decisionWindow={decisionWindow}
+            onExitDecisionWindow={onExitDecisionWindow}
             onInspect={
               onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
             }

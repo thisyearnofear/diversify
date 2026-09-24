@@ -293,17 +293,25 @@ A tab change that fails any of these is the old stack. Do not ship it.
 
 **Lenses.** A lens is a state of the tab's existing object — same
 primitives, no new card — entered only through the transition slot and
-left via an in-object "←", always preview-only. Two are shipped:
+left via an in-object "←", always preview-only. Three are shipped:
 **Concentration** (Home) opens when one region carries ≥50% of the
 wallet — the same `RegionCoin`s staged larger, the fact as headline;
 **Stronger floor** (Shield) opens only when the wallet's dollar share
 sits ≥10 points above the plan floor — a stronger floor raises the
 dollar reserve, so it is never offered when the wallet is under-reserved
-(that's the gap CTA's job). Shield's floor lens IS the existing balance
+(that's the gap CTA's job); **Decision window** (Exchange) opens only on
+a fresh dated macro beat — the ones `corridorSignalsFor` already returns
+(≤14 days, readable off-chain echo) — never a forward calendar, never a
+predicted direction. Its state is the corridor line itself: still, no
+rotation, no what-if pin — each fresh side's dated beat plus the
+standing mechanism that produced it ("Decided at {event} · {cadence}"),
+then ← Story returns. Shield's floor lens IS the existing balance
 preview — ring re-slice, "Dollar reserve A% → B%", Use/Keep — nothing
 auto-commits. Home's transition order: banner > payment-cycle >
 concentration prompt > tip > compare. Shield's: sleeve back > compare
-row > floor prompt > status row.
+row > floor prompt > status row. Exchange's: while a fresh beat offers
+the decision window the prompt owns the transition slot and netting
+drops to the rail; otherwise netting is the transition, no rail.
 
 Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
 picker (and optionally Home amount-inspect) — not a peer tab until Advanced.

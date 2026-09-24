@@ -11,7 +11,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, pairWhatIfFor } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
@@ -579,5 +579,123 @@ describe('StoryPairStrip', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'XOFm to EURm' }));
     expect(onPick).toHaveBeenCalledWith('XOFm', 'EURm');
+  });
+});
+
+// § 2e — the decision window: a still state of the corridor line,
+// entered from the status tier's prompt, left via ← Story. Fresh dated
+// macro beats + standing mechanism only — never a forecast.
+describe('CorridorLine — decision window', () => {
+  const sig = (dateLabel: string, text: string) => ({ dateLabel, text });
+  const SIGNALS = {
+    from: sig('Sep 18', 'CBN held the benchmark rate at 27.5%'),
+    to: sig('Sep 20', 'Fed kept rates unchanged'),
+  };
+
+  it('renders both fresh sides with their mechanism lines', () => {
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="USDC"
+        signals={SIGNALS}
+        decisionWindow
+      />,
+    );
+    const win = screen.getByTestId('decision-window');
+    expect(win.textContent).toContain('Decision window');
+    expect(win.textContent).toContain(
+      'Sep 18 🇳🇬: CBN held the benchmark rate at 27.5%',
+    );
+    expect(win.textContent).toContain('Sep 20 🇺🇸: Fed kept rates unchanged');
+    // Standing mechanism — past event's venue + cadence, no forecast.
+    expect(win.textContent).toContain(
+      'Decided at CBN Monetary Policy Committee',
+    );
+    expect(win.textContent).toContain('Circle reserve attestations');
+  });
+
+  it('omits the mechanism line for a side with no watch in its provenance', () => {
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="ZARm"
+        signals={{ from: SIGNALS.from, to: sig('Sep 21', 'SARB paused') }}
+        decisionWindow
+      />,
+    );
+    const win = screen.getByTestId('decision-window');
+    expect(win.textContent).toContain('Sep 21 🇿🇦: SARB paused');
+    // NGNm carries a watch; ZARm has no provenance entry at all.
+    expect(win.textContent).toContain(
+      'Decided at CBN Monetary Policy Committee',
+    );
+    expect(within(win).getAllByText(/^Decided at/)).toHaveLength(1);
+  });
+
+  it('does not rotate while the window is open, even when alive', () => {
+    vi.useFakeTimers();
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="USDC"
+        alive
+        signals={SIGNALS}
+        decisionWindow
+      />,
+    );
+    act(() => {
+      vi.advanceTimersByTime(15_000);
+    });
+    const win = screen.getByTestId('decision-window');
+    expect(win.textContent).toContain('Sep 18');
+    expect(win.textContent).toContain('Sep 20');
+    vi.useRealTimers();
+  });
+
+  it('takes precedence over a pinned what-if', () => {
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="USDC"
+        signals={SIGNALS}
+        whatIf={pairWhatIfFor('NGNm', 'USDC', '5yr')}
+        decisionWindow
+      />,
+    );
+    expect(screen.getByTestId('decision-window')).toBeInTheDocument();
+    expect(screen.queryByText('What if')).not.toBeInTheDocument();
+  });
+
+  it('← Story calls onExitDecisionWindow without opening the inspector', () => {
+    const onExit = vi.fn();
+    const onInspect = vi.fn();
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="USDC"
+        signals={SIGNALS}
+        decisionWindow
+        onExitDecisionWindow={onExit}
+        onInspect={onInspect}
+      />,
+    );
+    fireEvent.click(screen.getByTestId('decision-window-back'));
+    expect(onExit).toHaveBeenCalledTimes(1);
+    expect(onInspect).not.toHaveBeenCalled();
+  });
+
+  it('renders the normal corridor line when signals are gone', () => {
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="USDC"
+        signals={null}
+        decisionWindow
+      />,
+    );
+    expect(screen.queryByTestId('decision-window')).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/NGN lost ~60% to USD in 5 years/),
+    ).toBeInTheDocument();
   });
 });

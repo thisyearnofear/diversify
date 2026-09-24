@@ -60,6 +60,10 @@ interface SwapTabProps {
   /** Walletless public-address lookup in the journey rail's slot. */
   lookupAddress?: string | null;
   onLookupAddress?: (address: string | null) => void;
+  /** Reports the live pair upward (decision-window lens trigger). */
+  onPairChange?: (from: string, to: string) => void;
+  decisionWindow?: boolean;
+  onExitDecisionWindow?: () => void;
 }
 
 export default function SwapTab({
@@ -75,6 +79,9 @@ export default function SwapTab({
   onInspectJourney,
   lookupAddress,
   onLookupAddress,
+  onPairChange,
+  decisionWindow = false,
+  onExitDecisionWindow,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
@@ -537,6 +544,9 @@ export default function SwapTab({
             }
             handoffOrigin={handoff}
             onHandoffConsumed={() => setHandoff(null)}
+            onPairChange={onPairChange}
+            decisionWindow={decisionWindow}
+            onExitDecisionWindow={onExitDecisionWindow}
           />
         </div>
       )}
