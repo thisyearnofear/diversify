@@ -15,6 +15,7 @@ import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { HomeRiskTheater } from "./HomeRiskTheater";
+import { CurrencyStoryInspector } from "./CurrencyStoryInspector";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useLensOffered } from "@/hooks/use-lens-offered";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
@@ -80,6 +81,7 @@ export function ConnectedOverview({
   const { config: adaptiveConfig } = useAdaptiveContext();
   const { askAdvisor } = useAdvisor();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
+  const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
   const { navigateToCompare, navigateToNetting, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
   const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
   // The concentration lens is a state of the coin object — preview-only,
@@ -87,6 +89,8 @@ export function ConnectedOverview({
   const [lens, setLens] = React.useState<"moment" | "concentration">("moment");
 
   const handleDialSelect = useCallback((region: string | null) => {
+    // One selection at a time — a region pick closes the currency sheet.
+    setInspectedCurrency(null);
     setFocusedRegion(region);
     setSealedRegion(null);
     if (region) {
@@ -130,6 +134,8 @@ export function ConnectedOverview({
     onChangeCountry,
     countryCode,
     frame,
+    viewingShared,
+    clearSharedView,
   } = useCurrencyMoment();
   const { config: profileConfig } = useProtectionProfile();
   const philosophyName = profileConfig.philosophy
@@ -240,6 +246,19 @@ export function ConnectedOverview({
       protectLabel={philosophyName ? `See your ${philosophyName} shield` : undefined}
       onChangeCountry={onChangeCountry}
       frame={frame}
+      onInspectCurrency={
+        moment
+          ? () => {
+              handleDialSelect(null);
+              setInspectedCurrency((prev) =>
+                prev === moment.currencyCode ? null : moment.currencyCode,
+              );
+            }
+          : undefined
+      }
+      currencySelected={moment !== null && inspectedCurrency === moment.currencyCode}
+      viewingShared={viewingShared}
+      onClearSharedView={clearSharedView}
       regionData={regionData}
       totalValue={totalValue}
       focusedRegion={focusedRegion}
@@ -314,8 +333,9 @@ export function ConnectedOverview({
   );
 
   const inspector = (
-    <InspectorSheet
-      selectedId={focusedRegion}
+    <>
+      <InspectorSheet
+        selectedId={focusedRegion}
       onClose={() => setFocusedRegion(null)}
       title={focusedRegion ?? "Region"}
     >
@@ -367,7 +387,12 @@ export function ConnectedOverview({
           {home.showZakat && <ZakatCalculator totalPortfolioValue={totalValue} />}
         </div>
       )}
-    </InspectorSheet>
+      </InspectorSheet>
+      <CurrencyStoryInspector
+        code={inspectedCurrency}
+        onClose={() => setInspectedCurrency(null)}
+      />
+    </>
   );
 
   const transition = home.banner ? (

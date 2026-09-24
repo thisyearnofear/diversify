@@ -10,12 +10,15 @@
 import { NETWORK_TOKENS, NETWORKS } from '@/config';
 import {
   corridorFor,
+  corridorSignalsFor,
   currencyRiskAsOfLabel,
   moneyNameFor,
   pairWhatIfFor,
   tiltForDrift,
   whatIfSentence,
+  type CorridorSignalRecord,
 } from './corridor-context';
+import { hasHype } from './card-tone';
 import { tokenColor } from '@/components/shared/palette';
 
 const CELO_SYMBOLS = NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId];
@@ -40,6 +43,11 @@ export interface PairCardContent {
   whatIf: string | null;
   /** "Jul 2025" — always disclosed. */
   asOf: string;
+  /** A fresh dated macro beat for the newer side's signal
+   *  ("Sep 18 🇳🇬 · CBN held the benchmark rate") — only when ledger
+   *  records are passed in (server-side), the signal is fresh and
+   *  readable, and its text survives the hype guard. */
+  beat: string | null;
   /** Beam tilt in degrees, identical to the stage's. */
   tilt: number;
   fromFlag: string | null;
@@ -55,6 +63,8 @@ function capitalize(s: string): string {
 export function pairCardContent(
   fromParam: string | null | undefined,
   toParam: string | null | undefined,
+  records?: CorridorSignalRecord[] | null,
+  nowMs?: number,
 ): PairCardContent | null {
   const from = canonicalPairSymbol(fromParam);
   const to = canonicalPairSymbol(toParam);
@@ -64,6 +74,26 @@ export function pairCardContent(
   if (!corridor) return null;
 
   const whatIf = pairWhatIfFor(from, to, '5yr');
+
+  // The beat: the newer side's fresh dated macro signal, formatted with
+  // that side's flag. AI-extracted text gets the hype guard — a beat
+  // that trips it drops rather than ships on a card.
+  const signals = records ? corridorSignalsFor(records, from, to, nowMs) : null;
+  const side =
+    signals?.from && signals?.to
+      ? signals.from.timestamp >= signals.to.timestamp
+        ? 'from'
+        : 'to'
+      : signals?.from
+        ? 'from'
+        : signals?.to
+          ? 'to'
+          : null;
+  const signal = side ? signals![side] : null;
+  const beat =
+    signal && !hasHype(signal.text)
+      ? `${signal.dateLabel}${corridor[side!].flag ? ` ${corridor[side!].flag}` : ''} · ${signal.text}`
+      : null;
 
   const headline = corridor.drift
     ? `${capitalize(
@@ -83,6 +113,7 @@ export function pairCardContent(
     headline,
     whatIf: whatIf ? whatIfSentence(whatIf) : null,
     asOf: currencyRiskAsOfLabel(),
+    beat,
     tilt: tiltForDrift(corridor.drift),
     fromFlag: corridor.from.flag,
     toFlag: corridor.to.flag,

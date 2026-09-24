@@ -1,18 +1,17 @@
 /**
- * Shareable pair page — crawlers read the meta (headline, what-if, the
- * /api/og/pair-card image), people get redirected into the app on that
- * pair's stage. Every value is derived from the two symbols via
- * pairCardContent; an unknown symbol or an unmeasurable corridor 404s.
+ * Shareable plan page — a philosophy's creed card. Crawlers read the
+ * meta (name + tagline, the /api/og/plan-card image), people get
+ * redirected into the app on Shield with that plan in preview. Every
+ * value derives from the id via planCardContent; unknown 404s.
  */
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
-import { pairCardContent, type PairCardContent } from '@/lib/pair-card';
-import { fetchLedgerRecords } from '@/lib/server/fetch-ledger-records';
+import { planCardContent, type PlanCardContent } from '@/lib/plan-card';
 
 interface Props {
-  content: PairCardContent;
+  content: PlanCardContent;
   deepLink: string;
   ogImageUrl: string;
   pageUrl: string;
@@ -21,46 +20,42 @@ interface Props {
 export const getServerSideProps: GetServerSideProps<Props> = async ({
   params,
 }) => {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
-  const records = await fetchLedgerRecords(baseUrl);
-  const content = pairCardContent(
-    params?.from as string | undefined,
-    params?.to as string | undefined,
-    records,
-  );
+  const content = planCardContent(params?.philosophy as string | undefined);
   if (!content) return { notFound: true };
 
-  const deepLink = `/?tab=exchange&from=${content.from}&to=${content.to}&src=pair_card`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+  const deepLink = `/?tab=protect&plan=${content.id}&src=plan_card`;
   return {
     props: {
       content,
       deepLink,
-      ogImageUrl: `${baseUrl}/api/og/pair-card?from=${content.from}&to=${content.to}`,
-      pageUrl: `${baseUrl}/pair/${content.from}/${content.to}`,
+      ogImageUrl: `${baseUrl}/api/og/plan-card?philosophy=${content.id}`,
+      pageUrl: `${baseUrl}/plan/${content.id}`,
     },
   };
 };
 
-export default function PairPage({ content, deepLink, ogImageUrl, pageUrl }: Props) {
+export default function PlanPage({ content, deepLink, ogImageUrl, pageUrl }: Props) {
   const router = useRouter();
 
-  // People land in the app on this pair's stage; crawlers only read meta.
+  // People land in the app on Shield with this plan in preview;
+  // crawlers read meta.
   useEffect(() => {
     router.replace(deepLink);
   }, [router, deepLink]);
 
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
-  const description = [content.beat, content.whatIf]
-    .filter(Boolean)
-    .join(' — ');
-
+  const targetLine = content.targets
+    .map((t) => `${t.ideal}% ${t.region}`)
+    .join(' · ');
+  const description = `${content.tagline} — ${targetLine}`;
   const embed = JSON.stringify({
     version: '1',
     imageUrl: ogImageUrl,
     button: {
-      title: 'Weigh this pair',
+      title: 'Preview this plan',
       action: {
         type: 'launch_miniapp',
         url: `${baseUrl}${deepLink}`,
@@ -74,32 +69,29 @@ export default function PairPage({ content, deepLink, ogImageUrl, pageUrl }: Pro
   return (
     <>
       <Head>
-        <title>{content.headline} · DiversiFi</title>
-        <meta property="og:title" content={content.headline} />
-        {description && (
-          <meta property="og:description" content={description} />
-        )}
+        <title>{content.name} · DiversiFi</title>
+        <meta property="og:title" content={content.name} />
+        <meta property="og:description" content={description} />
         <meta property="og:image" content={ogImageUrl} />
         <meta property="og:url" content={pageUrl} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={content.headline} />
-        {description && (
-          <meta name="twitter:description" content={description} />
-        )}
+        <meta name="twitter:title" content={content.name} />
+        <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={ogImageUrl} />
         <meta name="fc:miniapp" content={embed} />
         <meta name="fc:frame" content={embed} />
       </Head>
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#0b0b12] p-6 text-center">
         <h1 className="max-w-md text-2xl font-bold text-white">
-          {content.headline}
+          {content.icon} {content.name}
         </h1>
+        <p className="mt-2 text-sm text-gray-400">{description}</p>
         <a
           href={deepLink}
           className="mt-6 text-sm font-semibold text-blue-400 hover:underline"
         >
-          Open in DiversiFi →
+          Preview this plan in DiversiFi →
         </a>
       </div>
     </>

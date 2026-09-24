@@ -33,6 +33,7 @@ import { useAdvisor } from "@/hooks/use-advisor";
 import { useBestYield, yieldHintForDestination } from "@/hooks/use-best-yield";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { shareLandingFor } from "@/hooks/use-share-landing";
 import type { HandoffOrigin } from "@/context/app/types";
 
 interface Token {
@@ -317,6 +318,14 @@ const SwapInterface = forwardRef<
       // means it was abandoned, and leaving it armed would let a later
       // unrelated settle of the same pair claim "Back to your plan".
       onHandoffConsumed?.();
+    }
+    // A shared pair card that landed here settles when the receipt's
+    // pair matches the card's subject — attribution, never a number.
+    if (
+      shareLandingFor("pair_card")?.toLowerCase() ===
+      `${fromToken}/${toToken}`.toLowerCase()
+    ) {
+      trackFunnelEvent("share_settled", { source: "pair_card" });
     }
     recordSettlement({ toToken, settledAt });
     setAmount("");

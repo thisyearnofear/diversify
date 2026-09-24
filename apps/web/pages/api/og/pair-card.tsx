@@ -8,6 +8,7 @@
 import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 import { pairCardContent } from '@/lib/pair-card';
+import { fetchLedgerRecords } from '@/lib/server/fetch-ledger-records';
 
 export const config = {
   runtime: 'edge',
@@ -69,15 +70,22 @@ function Coin({
   );
 }
 
-export default function handler(req: NextRequest) {
-  const { searchParams } = new URL(req.url);
+export default async function handler(req: NextRequest) {
+  const url = new URL(req.url);
+  const { searchParams } = url;
+  const records = await fetchLedgerRecords(url.origin);
   const content = pairCardContent(
     searchParams.get('from'),
     searchParams.get('to'),
+    records,
   );
 
   const headers = {
-    'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=604800',
+    // A beat is dated and fresh-windowed, so a beat card caches for the
+    // hour, not the week — the date on the card keeps a stale copy honest.
+    'Cache-Control': content?.beat
+      ? 'public, s-maxage=3600, stale-while-revalidate=86400'
+      : 'public, s-maxage=86400, stale-while-revalidate=604800',
   };
 
   if (!content) {
@@ -99,6 +107,7 @@ export default function handler(req: NextRequest) {
     headline,
     whatIf,
     asOf,
+    beat,
   } = content;
 
   return new ImageResponse(
@@ -171,6 +180,20 @@ export default function handler(req: NextRequest) {
         >
           {headline}
         </div>
+        {beat && (
+          <div
+            style={{
+              display: 'flex',
+              color: '#b8b8c8',
+              fontSize: 22,
+              textAlign: 'center',
+              marginTop: 14,
+              maxWidth: 1000,
+            }}
+          >
+            {beat}
+          </div>
+        )}
         {whatIf && (
           <div
             style={{

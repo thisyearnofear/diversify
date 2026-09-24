@@ -1,18 +1,17 @@
 /**
- * Shareable pair page — crawlers read the meta (headline, what-if, the
- * /api/og/pair-card image), people get redirected into the app on that
- * pair's stage. Every value is derived from the two symbols via
- * pairCardContent; an unknown symbol or an unmeasurable corridor 404s.
+ * Shareable currency-moment page — crawlers read the meta (headline,
+ * the /api/og/moment-card image), people get redirected into the app on
+ * Home with that currency in view. Every value is derived from the code
+ * via momentCardContent; an unknown code 404s.
  */
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
-import { pairCardContent, type PairCardContent } from '@/lib/pair-card';
-import { fetchLedgerRecords } from '@/lib/server/fetch-ledger-records';
+import { momentCardContent, type MomentCardContent } from '@/lib/moment-card';
 
 interface Props {
-  content: PairCardContent;
+  content: MomentCardContent;
   deepLink: string;
   ogImageUrl: string;
   pageUrl: string;
@@ -21,46 +20,40 @@ interface Props {
 export const getServerSideProps: GetServerSideProps<Props> = async ({
   params,
 }) => {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
-  const records = await fetchLedgerRecords(baseUrl);
-  const content = pairCardContent(
-    params?.from as string | undefined,
-    params?.to as string | undefined,
-    records,
-  );
+  const content = momentCardContent(params?.code as string | undefined);
   if (!content) return { notFound: true };
 
-  const deepLink = `/?tab=exchange&from=${content.from}&to=${content.to}&src=pair_card`;
+  const baseUrl =
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+  const deepLink = `/?tab=overview&currency=${content.code}&src=moment_card`;
   return {
     props: {
       content,
       deepLink,
-      ogImageUrl: `${baseUrl}/api/og/pair-card?from=${content.from}&to=${content.to}`,
-      pageUrl: `${baseUrl}/pair/${content.from}/${content.to}`,
+      ogImageUrl: `${baseUrl}/api/og/moment-card?code=${content.code}`,
+      pageUrl: `${baseUrl}/moment/${content.code}`,
     },
   };
 };
 
-export default function PairPage({ content, deepLink, ogImageUrl, pageUrl }: Props) {
+export default function MomentPage({ content, deepLink, ogImageUrl, pageUrl }: Props) {
   const router = useRouter();
 
-  // People land in the app on this pair's stage; crawlers only read meta.
+  // People land in the app on Home with this currency; crawlers read meta.
   useEffect(() => {
     router.replace(deepLink);
   }, [router, deepLink]);
 
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
-  const description = [content.beat, content.whatIf]
+  const description = [content.event, `Curated data to ${content.asOf}`]
     .filter(Boolean)
     .join(' — ');
-
   const embed = JSON.stringify({
     version: '1',
     imageUrl: ogImageUrl,
     button: {
-      title: 'Weigh this pair',
+      title: 'See this currency',
       action: {
         type: 'launch_miniapp',
         url: `${baseUrl}${deepLink}`,

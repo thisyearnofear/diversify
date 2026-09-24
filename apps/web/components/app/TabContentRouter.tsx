@@ -18,6 +18,7 @@ import { getVisibleTabIds } from "@/constants/tabs";
 
 import { useAppShellContext } from "@/context/app/AppShellContext";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
+import { useShareLanding } from "@/hooks/use-share-landing";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
@@ -197,6 +198,10 @@ export default function TabContentRouter() {
     // One-shot URL consumption — activeTab/tabOrder must not retrigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
+
+  // Shared-card attribution: reads src=…_card, fires share_landed once,
+  // strips only src so each tab's own query effects still consume theirs.
+  useShareLanding();
 
   useEffect(() => {
     if (tabOrder.length === 0 || tabOrder.includes(activeTab)) return;

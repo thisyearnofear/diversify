@@ -13,6 +13,7 @@
  * fake currency-vs-benchmark delta.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
 import { useCurrencyRisk } from './use-currency-risk';
 import { regionForCountry } from './use-user-region';
 import { useInflationData } from './use-inflation-data';
@@ -29,8 +30,10 @@ import {
   momentFrameFor,
   type MomentFrame,
 } from '@/lib/narrative/moment-framing';
+import { momentBenchmarkFor } from '@/lib/moment-card';
 import {
   BENCHMARK_KEYS,
+  CURRENCY_BY_CODE,
   HORIZON_KEYS,
   exampleSavingsFor,
   type Benchmark,
@@ -58,6 +61,11 @@ export interface UseCurrencyMomentReturn {
   /** Philosophy-aware frame (accent + consequence) once a philosophy is
       chosen. null → the card uses a neutral accent + neutral sentence. */
   frame: MomentFrame | null;
+  /** True while a shared-card currency is being viewed (?currency=) —
+      view-only: never the country override, never visit memory. */
+  viewingShared: boolean;
+  /** Leave the shared view and return to the visitor's own currency. */
+  clearSharedView: () => void;
 }
 
 export function useCurrencyMoment(): UseCurrencyMomentReturn {
@@ -73,31 +81,58 @@ export function useCurrencyMoment(): UseCurrencyMomentReturn {
   // gold — their risk is real, just a different shape. Everyone else gets
   // the local example amount so the consequence reads in their own money.
   const [seededFor, setSeededFor] = useState<string | null>(null);
+
+  // Shared-card landing (?currency=CODE, from a moment card): view that
+  // currency's moment without touching the country override or visit
+  // memory. One-shot once the router is ready; a code equal to the
+  // visitor's own currency is not a shared view.
+  const router = useRouter();
+  const [viewCode, setViewCode] = useState<string | null>(null);
   useEffect(() => {
-    if (!risk.riskData) return;
-    const code = risk.riskData.code;
+    if (!router.isReady) return;
+    const c = router.query.currency;
+    if (typeof c !== 'string') return;
+    const entry = CURRENCY_BY_CODE[c.toUpperCase()];
+    if (entry && entry.code !== risk.currencyCode) setViewCode(entry.code);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady]);
+  // Detection can resolve after the URL is read — when the visitor's own
+  // currency turns out to be the shared one, the view was never foreign.
+  useEffect(() => {
+    if (viewCode && risk.currencyCode === viewCode) setViewCode(null);
+  }, [viewCode, risk.currencyCode]);
+  const viewEntry = viewCode ? CURRENCY_BY_CODE[viewCode] ?? null : null;
+  const activeEntry = viewEntry ?? risk.riskData;
+
+  useEffect(() => {
+    if (!activeEntry) return;
+    const code = activeEntry.code;
     if (seededFor === code) return;
     setBenchmark(
-      risk.isBenchmarkCurrency || isDefaultComparisonInert(risk.riskData)
-        ? 'XAU'
-        : 'USD',
+      viewEntry
+        ? momentBenchmarkFor(code)
+        : risk.isBenchmarkCurrency || isDefaultComparisonInert(activeEntry)
+          ? 'XAU'
+          : 'USD',
     );
     setSavingsAmount(exampleSavingsFor(code));
     setSeededFor(code);
-  }, [risk.riskData, risk.isBenchmarkCurrency, seededFor]);
+  }, [activeEntry, viewEntry, risk.isBenchmarkCurrency, seededFor]);
 
   const moment = useMemo(() => {
-    if (!risk.riskData) return null;
+    if (!activeEntry) return null;
     return buildCurrencyMoment({
-      entry: risk.riskData,
+      entry: activeEntry,
       benchmark,
       horizon,
       savingsAmount,
-      liveDepreciation1yr: risk.liveDepreciation1yr,
-      isLive: risk.isLive1yr,
+      // A shared view is always the curated reading — the card never
+      // mixes live and curated, and neither does the view it lands on.
+      liveDepreciation1yr: viewEntry ? null : risk.liveDepreciation1yr,
+      isLive: viewEntry ? false : risk.isLive1yr,
       dataAsOf: risk.dataAsOf,
     });
-  }, [risk.riskData, risk.liveDepreciation1yr, risk.isLive1yr, risk.dataAsOf, benchmark, horizon, savingsAmount]);
+  }, [activeEntry, viewEntry, risk.liveDepreciation1yr, risk.isLive1yr, risk.dataAsOf, benchmark, horizon, savingsAmount]);
 
   // Honest fallback for uncovered currencies: an inflation-only moment.
   // We never fake a currency-vs-benchmark delta the visitor's currency
@@ -105,6 +140,7 @@ export function useCurrencyMoment(): UseCurrencyMomentReturn {
   // inflation plus what it removes from their stated savings — "stable"
   // currencies lose buying power too, and that is the actual risk.
   const inflationMoment = useMemo(() => {
+    if (viewEntry) return null; // a shared view always has a real entry
     if (risk.riskData) return null;
     if (!risk.countryCode) return null;
     // The moment's region follows the effective country (honours an
@@ -123,6 +159,7 @@ export function useCurrencyMoment(): UseCurrencyMomentReturn {
       isLive: dataSource === 'api',
     });
   }, [
+    viewEntry,
     risk.riskData,
     risk.countryCode,
     risk.countryName,
@@ -143,13 +180,19 @@ export function useCurrencyMoment(): UseCurrencyMomentReturn {
     setHorizon,
     savingsAmount,
     setSavingsAmount,
-    benchmarks: risk.riskData ? selectableBenchmarks(risk.riskData.code) : BENCHMARK_KEYS,
+    benchmarks: activeEntry ? selectableBenchmarks(activeEntry.code) : BENCHMARK_KEYS,
     horizons: HORIZON_KEYS,
     /** Change the country whose savings this is about — re-frames the whole
-        moment (diaspora override). Writes user-country-code and re-seeds. */
-    onChangeCountry: risk.setCountryOverride,
+        moment (diaspora override). Writes user-country-code and re-seeds.
+        A deliberate country pick also leaves any shared view. */
+    onChangeCountry: (code: string) => {
+      setViewCode(null);
+      risk.setCountryOverride(code);
+    },
     /** The effective country code (detected or overridden) shown right now. */
     countryCode: risk.countryCode,
+    viewingShared: Boolean(viewEntry),
+    clearSharedView: () => setViewCode(null),
     /** Philosophy-aware accent + consequence, or null when no philosophy.
         The chosen archetype drives the moment's colour so the first viewport
         speaks the same values language as the rest of the protection plan. */

@@ -208,6 +208,105 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
   });
 });
 
+describe('CurrencyMomentCard — story coin', () => {
+  it('the local coin is a button only when onInspectCurrency is provided', () => {
+    const onInspectCurrency = vi.fn();
+    render(
+      <CurrencyMomentCard {...baseProps} onInspectCurrency={onInspectCurrency} />,
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Story of the GHS' }),
+    );
+    expect(onInspectCurrency).toHaveBeenCalledTimes(1);
+  });
+
+  it('without an inspect handler the coin is not a button', () => {
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(
+      screen.queryByRole('button', { name: 'Story of the GHS' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('the selected coin rests on its back: flag + newest dated event', () => {
+    render(
+      <CurrencyMomentCard
+        {...baseProps}
+        onInspectCurrency={() => {}}
+        currencySelected
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'Story of the GHS' }),
+    ).toHaveAttribute('aria-pressed', 'true');
+    // GHS's newest event (ties → last in the array).
+    expect(screen.getByText(/2022 · Domestic debt exchange/)).toBeInTheDocument();
+  });
+
+  it('the visit view never shows the coin button', async () => {
+    window.localStorage.setItem(
+      'diversifi:last-visit:home-reading:v1:GH:GHS:USD:1yr:curated',
+      JSON.stringify({
+        value: { key: 'GH:GHS:USD:1yr', delta: -19, dataAsOf: '2025-06-30', source: 'curated' },
+        at: Date.now() - 3 * 24 * 3600 * 1000,
+      }),
+    );
+    render(
+      <CurrencyMomentCard {...baseProps} onInspectCurrency={() => {}} />,
+    );
+    await screen.findByTestId('currency-visit-review');
+    expect(
+      screen.queryByRole('button', { name: 'Story of the GHS' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('a shared view shows the in-object return line', () => {
+    const onClearSharedView = vi.fn();
+    render(
+      <CurrencyMomentCard
+        {...baseProps}
+        viewingShared
+        onClearSharedView={onClearSharedView}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: '← Your currency' }));
+    expect(onClearSharedView).toHaveBeenCalledTimes(1);
+  });
+
+  it('reduced motion renders the back face without rotation', () => {
+    mocks.reduced = true;
+    render(
+      <CurrencyMomentCard
+        {...baseProps}
+        onInspectCurrency={() => {}}
+        currencySelected
+      />,
+    );
+    expect(screen.getByText(/2022 · Domestic debt exchange/)).toBeInTheDocument();
+  });
+
+  it('one occurrence, then still: shine plays on first mount but never replays after a flip', () => {
+    const { container, rerender } = render(
+      <CurrencyMomentCard {...baseProps} onInspectCurrency={() => {}} />,
+    );
+    expect(container.querySelector('.coin-shine-once')).not.toBeNull();
+
+    // Flip to the back, then back to the face — the remounted Coin must
+    // not replay its shine.
+    rerender(
+      <CurrencyMomentCard
+        {...baseProps}
+        onInspectCurrency={() => {}}
+        currencySelected
+      />,
+    );
+    rerender(
+      <CurrencyMomentCard {...baseProps} onInspectCurrency={() => {}} />,
+    );
+    expect(container.querySelector('.coin-shine-once')).toBeNull();
+    expect(container.querySelector('.coin-shine')).toBeNull();
+  });
+});
+
 describe('CurrencyMomentCard — returning visit', () => {
   const KEY = 'diversifi:last-visit:home-reading:v1:GH:GHS:USD:1yr:curated';
   const baseline = (over: Record<string, unknown> = {}) => ({

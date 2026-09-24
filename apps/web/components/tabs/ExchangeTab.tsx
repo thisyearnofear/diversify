@@ -119,6 +119,7 @@ function PairShareLine({ from, to }: { from: string; to: string }) {
   const url = `${typeof window !== "undefined" ? window.location.origin : ""}/pair/${content.from}/${content.to}`;
   const headline = content.headline;
   const share = async () => {
+    trackFunnelEvent("share_open", { source: "pair_card" });
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({ title: headline, url });

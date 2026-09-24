@@ -320,7 +320,11 @@ Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate
 picker (and optionally Home amount-inspect) — not a peer tab until Advanced.
 Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
 the one expressive object; holdings are a quiet coin row beneath it — one `Coin` per region, sized by share — never
-a second `AllocationRing`; tapping a coin dims the others and opens the region `InspectorSheet`. Shield alone owns the
+a second `AllocationRing`; tapping a coin dims the others and opens the region `InspectorSheet`. Tapping the stage's
+local coin flips it to its back (flag + newest dated event) and opens the currency story inspector (the dated
+`riskEvents` trail, "Share this currency's story ↗", Ask Guardian); a `?currency=` shared card lands view-only —
+no country override, no visit memory — with an in-object "← Your currency" to leave. Shield's focused-token
+coin flips the same way when a curated provenance entry exists (`ProvenanceCoinBack`, reset on selection change). Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring. Shield's since-last-visit alignment
 lives in the ring hole (`sinceHint`), not the status tier. When a swap

@@ -25,6 +25,7 @@ import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { shareLandingFor } from "@/hooks/use-share-landing";
 import { useLensOffered } from "@/hooks/use-lens-offered";
 import { useShieldIntent } from "./protect/use-shield-intent";
 import { ShieldSliceInspector } from "./protect/ShieldSliceInspector";
@@ -158,6 +159,13 @@ export default function ProtectionTab({
     if (router.query.sleeve === "rwa") setFocusedToken(SLEEVE_ID);
     if (router.query.serv === "1" || router.query.serv === "true") {
       setRwaServOn(true);
+    }
+    // A shared plan card lands here: ?plan= previews the philosophy in
+    // the same focused state the picker's flick/compare uses — never a
+    // commit, never persisted.
+    const plan = router.query.plan;
+    if (typeof plan === "string" && STRATEGIES.some((s) => s.id === plan)) {
+      setFocusedPhilosophy(plan as FinancialStrategy);
     }
     // One-shot URL consumption on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -507,6 +515,11 @@ export default function ProtectionTab({
 
   const commitFocusedPlan = useCallback(() => {
     if (!focusedPhilosophy) return;
+    // A shared plan card settles when the committed plan is the card's —
+    // coarse attribution only (source card), never the plan's numbers.
+    if (shareLandingFor("plan_card") === focusedPhilosophy) {
+      trackFunnelEvent("share_settled", { source: "plan_card" });
+    }
     setFinancialStrategy(focusedPhilosophy);
     setFocusedPhilosophy(null);
     setFocusedToken(null);

@@ -155,6 +155,13 @@ interface HomeRiskTheaterProps {
   protectLabel?: string;
   onChangeCountry?: (code: string) => void;
   frame: MomentFrame | null;
+  /** Tap the stage's local coin → open the currency story inspector. */
+  onInspectCurrency?: () => void;
+  /** The currency story sheet is open — the coin rests on its back. */
+  currencySelected?: boolean;
+  /** A shared-card view (?currency=) — shows the in-object return line. */
+  viewingShared?: boolean;
+  onClearSharedView?: () => void;
   // Holdings context — quiet strip, not a hero swap
   regionData: Array<{ region: string; value: number; color: string }>;
   totalValue: number;
@@ -183,6 +190,10 @@ export function HomeRiskTheater({
   protectLabel,
   onChangeCountry,
   frame,
+  onInspectCurrency,
+  currencySelected = false,
+  viewingShared = false,
+  onClearSharedView,
   regionData,
   totalValue,
   focusedRegion,
@@ -391,7 +402,11 @@ export function HomeRiskTheater({
           protectLabel={protectLabel}
           onChangeCountry={onChangeCountry}
           frame={frame}
-          rememberVisit={isActive && !isDemo}
+          onInspectCurrency={onInspectCurrency}
+          currencySelected={currencySelected}
+          viewingShared={viewingShared}
+          onClearSharedView={onClearSharedView}
+          rememberVisit={isActive && !isDemo && !viewingShared}
         />
         {guardianAway && (
           <button

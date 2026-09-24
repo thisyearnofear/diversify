@@ -93,7 +93,12 @@ meta and OG card are computed server-side from the two symbols alone —
 headline, what-if, beam tilt all come from the curated corridor
 dataset, and an unknown symbol or an unmeasurable corridor 404s or
 renders the neutral brand card. The card takes no numeric params, so a
-link can't carry a fabricated score. The old `/share/[id]` page did the
+link can't carry a fabricated score. When the proof feed holds a fresh
+macro signal for either side, the card carries one dated beat under the
+headline (`{date} {flag} · {text}`; the AI-extracted text passes a
+runtime hype guard and is dropped rather than sanitised). The deep link
+carries `src=pair_card` so the share funnel measures open → land →
+settle. The old `/share/[id]` page did the
 opposite — percentiles and ratings straight from query strings — and is
 retired to a redirect; its OG endpoint now ignores params entirely.
 

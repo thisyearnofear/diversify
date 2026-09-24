@@ -67,3 +67,63 @@ describe('pairCardContent', () => {
     expect(pairCardContent('USDm', 'USDT')).toBeNull();
   });
 });
+
+describe('pairCardContent — the fresh beat', () => {
+  const NOW = Date.parse('2026-09-24T00:00:00Z');
+  const fresh = (over: Record<string, unknown> = {}) => ({
+    action: 'MACRO_SIGNAL:CBN',
+    targetToken: 'NGNm',
+    reasoning: 'CBN held the benchmark rate. Source: https://cbn.gov',
+    timestamp: NOW / 1000 - 86400, // 1 day old
+    ...over,
+  });
+
+  it('is null without records — the client path stays beat-free', () => {
+    expect(pairCardContent('NGNm', 'USDm')!.beat).toBeNull();
+  });
+
+  it('carries the newer side\'s dated signal with its flag', () => {
+    const c = pairCardContent('NGNm', 'USDm', [fresh()], NOW);
+    expect(c!.beat).toBe('Sep 23 🇳🇬 · CBN held the benchmark rate');
+  });
+
+  it('is null for a stale signal (>14d)', () => {
+    const c = pairCardContent(
+      'NGNm',
+      'USDm',
+      [fresh({ timestamp: NOW / 1000 - 15 * 86400 })],
+      NOW,
+    );
+    expect(c!.beat).toBeNull();
+  });
+
+  it('is null for a hash-only record (no readable echo)', () => {
+    const c = pairCardContent(
+      'NGNm',
+      'USDm',
+      [fresh({ reasoning: undefined })],
+      NOW,
+    );
+    expect(c!.beat).toBeNull();
+  });
+
+  it('is null for a non-MACRO action', () => {
+    const c = pairCardContent(
+      'NGNm',
+      'USDm',
+      [fresh({ action: 'REBALANCE' })],
+      NOW,
+    );
+    expect(c!.beat).toBeNull();
+  });
+
+  it('drops a beat that trips the hype lexicon', () => {
+    const c = pairCardContent(
+      'NGNm',
+      'USDm',
+      [fresh({ reasoning: 'Naira to the moon 🚀' })],
+      NOW,
+    );
+    expect(c!.beat).toBeNull();
+  });
+});

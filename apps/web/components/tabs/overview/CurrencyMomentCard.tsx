@@ -19,6 +19,7 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import {
   BENCHMARKS,
+  CURRENCY_BY_CODE,
   HORIZONS,
   type Benchmark,
   type Horizon,
@@ -28,7 +29,7 @@ import { CountryOverrideSelect } from './CountryOverrideSelect';
 import { CurrencyVisitReview } from './CurrencyVisitReview';
 import type { MomentFrame } from '@/lib/narrative/moment-framing';
 import { useCurrencyVisit } from '@/hooks/use-currency-visit';
-import { reveal, springSoft } from '@/lib/motion-tokens';
+import { reveal, springPop, springSoft } from '@/lib/motion-tokens';
 import { trackFunnelEvent } from '@/lib/analytics';
 
 interface Props {
@@ -46,6 +47,15 @@ interface Props {
   onChangeCountry?: (code: string) => void;
   /** Philosophy-aware frame (accent + consequence reframe). null → neutral. */
   frame?: MomentFrame | null;
+  /** Provided → the local coin becomes a button that opens the currency
+   *  story inspector (tap verb on an existing noun, L2). */
+  onInspectCurrency?: () => void;
+  /** True while the story inspector is open — the coin rests on its back
+   *  (flag + newest dated event) and the benchmark coin dims. */
+  currencySelected?: boolean;
+  /** A shared-card view — shows "← Your currency" to return. */
+  viewingShared?: boolean;
+  onClearSharedView?: () => void;
   rememberVisit?: boolean;
   className?: string;
 }
@@ -99,6 +109,10 @@ export function CurrencyMomentCard({
   className = '',
   onChangeCountry,
   frame,
+  onInspectCurrency,
+  currencySelected = false,
+  viewingShared = false,
+  onClearSharedView,
   rememberVisit = true,
 }: Props) {
   const reducedMotion = useReducedMotion();
@@ -107,6 +121,17 @@ export function CurrencyMomentCard({
   // unchanged data renders exactly like a first visit.
   const changed = comparison && (comparison.kind === 'updated' || comparison.kind === 'revised') ? comparison : null;
   const [view, setView] = React.useState<'visit' | 'history' | null>(null);
+  // The coin's flip animation exists only for a face CHANGE — first mount
+  // renders still (one occurrence, then stillness; §5), and once the coin
+  // has ever flipped its shine doesn't replay on the remount.
+  const coinMountedRef = React.useRef(false);
+  const [hasFlipped, setHasFlipped] = React.useState(false);
+  React.useEffect(() => {
+    coinMountedRef.current = true;
+  }, []);
+  React.useEffect(() => {
+    if (currencySelected) setHasFlipped(true);
+  }, [currencySelected]);
   const showVisit = Boolean(changed) && view !== 'history';
   // The stage leans toward the cursor — Sylva's pointer-responsive scene,
   // damped through a spring. Dead under reduced motion.
@@ -121,9 +146,19 @@ export function CurrencyMomentCard({
 
   return (
     <div className={`text-center ${className}`}>
-      {/* Whose story this is — the visitor's own currency */}
+      {/* Whose story this is — the visitor's own currency. A shared-card
+          view gets an in-object return instead of a second line. */}
       <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
         <span aria-hidden="true">{moment.flag}</span> {moment.countryName} · {moment.currencyCode}
+        {viewingShared && onClearSharedView && (
+          <button
+            type="button"
+            onClick={onClearSharedView}
+            className="ml-2 min-h-[44px] align-middle font-semibold normal-case tracking-normal text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          >
+            ← Your currency
+          </button>
+        )}
       </p>
 
       {changed && (
@@ -182,14 +217,72 @@ export function CurrencyMomentCard({
                 transition={{ type: 'spring', stiffness: 120, damping: 20 }}
                 className="shrink-0"
               >
-                <Coin size={92} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
+                {/* The local coin is a door: tap flips it to its back —
+                    flag + the newest dated event — and opens the story
+                    inspector. Same flip verb as the pair stage's coins. */}
+                {(() => {
+                  const events = CURRENCY_BY_CODE[moment.currencyCode]?.riskEvents ?? [];
+                  const newest = events.reduce<(typeof events)[number] | null>(
+                    (acc, ev) => (acc === null || ev.year >= acc.year ? ev : acc),
+                    null,
+                  );
+                  const face = (
+                    <motion.span
+                      key={String(currencySelected)}
+                      className="inline-flex"
+                      initial={
+                        reducedMotion || !coinMountedRef.current
+                          ? false
+                          : { rotateY: 90, opacity: 0.3 }
+                      }
+                      animate={{ rotateY: 0, opacity: 1 }}
+                      transition={springPop}
+                    >
+                      {currencySelected && newest ? (
+                        <span className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full border-2 border-gray-200 bg-white px-1 text-center dark:border-gray-700 dark:bg-gray-900">
+                          <span aria-hidden="true" className="text-xl leading-none">{moment.flag}</span>
+                          <span className="mt-1 line-clamp-3 text-[10px] font-semibold leading-tight text-gray-500 dark:text-gray-400">
+                            {newest.year} · {newest.event}
+                          </span>
+                        </span>
+                      ) : (
+                        <Coin
+                          size={92}
+                          symbol={moment.currencyCode}
+                          color={accent}
+                          shine={reducedMotion || hasFlipped ? false : 'once'}
+                        />
+                      )}
+                    </motion.span>
+                  );
+                  return onInspectCurrency ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        haptics.tap();
+                        onInspectCurrency();
+                      }}
+                      aria-label={`Story of the ${moment.currencyCode}`}
+                      aria-pressed={currencySelected}
+                      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    >
+                      {face}
+                    </button>
+                  ) : (
+                    face
+                  );
+                })()}
               </motion.div>
               <div className="text-gray-300 dark:text-gray-600 text-lg font-bold select-none" aria-hidden="true">
                 →
               </div>
-              <div className="shrink-0">
+              <motion.div
+                className="shrink-0"
+                animate={{ opacity: currencySelected ? 0.35 : 1 }}
+                transition={reducedMotion ? { duration: 0 } : springSoft}
+              >
                 <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
-              </div>
+              </motion.div>
             </motion.div>
 
             {/* The number that carries the meaning */}

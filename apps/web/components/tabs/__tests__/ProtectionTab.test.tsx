@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
@@ -1637,5 +1637,98 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
       "lens_open",
       expect.anything(),
     );
+  });
+});
+
+describe("ProtectionTab — shared plan card + provenance flip", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = null;
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    mockSessionInfo.current = null;
+    mockVisibility.current = "quiet";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("?plan=africapitalism previews the philosophy — never commits", () => {
+    mockRouterQuery = { plan: "africapitalism" };
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(sheet).toHaveAttribute("aria-label", "Africapitalism");
+    // Preview only — no commit, no persist.
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+    // The share line rides the same sheet, same grammar as the pair card.
+    expect(
+      screen.getByRole("button", { name: /Share this plan/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("tapping the share line fires share_open for plan_card", async () => {
+    mockRouterQuery = { plan: "africapitalism" };
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByRole("button", { name: /Share this plan/ }));
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("share_open", {
+      source: "plan_card",
+    });
+  });
+
+  it("the share title names the plan — name · tagline, not the raw id", async () => {
+    const shareSpy = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "share", {
+      configurable: true,
+      value: shareSpy,
+    });
+    mockRouterQuery = { plan: "africapitalism" };
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByRole("button", { name: /Share this plan/ }));
+    await waitFor(() => expect(shareSpy).toHaveBeenCalled());
+    expect(shareSpy).toHaveBeenCalledWith({
+      title: "Africapitalism · Build the motherland",
+      url: expect.stringContaining("/plan/africapitalism"),
+    });
+    delete (window.navigator as { share?: unknown }).share;
+  });
+
+  it("an unknown ?plan= previews nothing", () => {
+    mockRouterQuery = { plan: "mooncoin" };
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+  });
+
+  it("a token with provenance flips to its coin-back; one without stays a plain icon", () => {
+    mockFinancialStrategy = "africapitalism";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    // KESm has a curated provenance entry → the icon is a flip button.
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    const flip = screen.getByRole("button", { name: "About KESm" });
+    expect(flip).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(flip);
+    expect(
+      screen.getByRole("button", { name: "About KESm" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    // The back names the issuer (ProvenanceCoinBack, non-compact).
+    expect(screen.getByTestId("inspector-sheet").textContent).toContain(
+      "Mento",
+    );
+
+    // WETH has no curated provenance → plain icon, not a button.
+    fireEvent.click(screen.getByTestId("ring-select-weth"));
+    expect(screen.getByText("WETH position")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "About WETH" }),
+    ).not.toBeInTheDocument();
   });
 });

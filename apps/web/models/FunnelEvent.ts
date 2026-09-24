@@ -49,6 +49,18 @@ export const FUNNEL_EVENTS = [
   // expressive object (shield_ring / home_dial / agent_budget). Selections
   // nobody acts on tell us the marquee is decoration, not a control.
   'marquee_select',
+  // Cross-tab hand-offs and lens prompts — fired client-side; the
+  // allowlist gap that dropped them was fixed with the share events.
+  'intent_handoff',
+  'handoff_settled',
+  'lens_offered',
+  'lens_open',
+  // Currencies-as-culture attribution: a share line was tapped, a shared
+  // card landed, and a landed visit settled (swap on the pair / plan
+  // committed). Coarse: source card only, never content or identity.
+  'share_open',
+  'share_landed',
+  'share_settled',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

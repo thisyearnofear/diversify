@@ -8,7 +8,9 @@ type DemoModeContextValue = {
   disableDemoMode: () => void;
 };
 
-const DemoModeContext = createContext<DemoModeContextValue | undefined>(undefined);
+/** Exported for soft reads — listeners that must not throw when a test
+ *  renders their host outside the provider (e.g. share-landing). */
+export const DemoModeContext = createContext<DemoModeContextValue | undefined>(undefined);
 
 export function DemoModeProvider({ children }: { children: React.ReactNode }) {
   const { setActiveTab } = useNavigation();

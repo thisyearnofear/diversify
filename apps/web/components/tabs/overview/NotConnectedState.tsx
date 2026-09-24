@@ -12,6 +12,7 @@ import React from "react";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
+import { CurrencyStoryInspector } from "./CurrencyStoryInspector";
 import { CountryOverrideSelect } from "./CountryOverrideSelect";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
@@ -40,7 +41,10 @@ export function NotConnectedState({
     setSavingsAmount,
     onChangeCountry,
     frame,
+    viewingShared,
+    clearSharedView,
   } = useCurrencyMoment();
+  const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
 
   const selectBenchmark = (b: Benchmark) => {
     setBenchmark(b);
@@ -63,7 +67,15 @@ export function NotConnectedState({
           onAmountChange={setSavingsAmount}
           onChangeCountry={onChangeCountry}
           frame={frame}
-          rememberVisit={isActive}
+          onInspectCurrency={() =>
+            setInspectedCurrency((prev) =>
+              prev === moment.currencyCode ? null : moment.currencyCode,
+            )
+          }
+          currencySelected={inspectedCurrency === moment.currencyCode}
+          viewingShared={viewingShared}
+          onClearSharedView={clearSharedView}
+          rememberVisit={isActive && !viewingShared}
         />
       ) : inflationMoment ? (
         <InflationMomentCard
@@ -97,6 +109,10 @@ export function NotConnectedState({
       )}
       {/* The one CTA — attached to the object, no card wrapper. */}
       <WalletButton variant="primary" className="w-full" />
+      <CurrencyStoryInspector
+        code={inspectedCurrency}
+        onClose={() => setInspectedCurrency(null)}
+      />
     </div>
   );
 

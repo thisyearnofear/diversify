@@ -264,12 +264,13 @@ vi.mock("../HomeExposureDial", () => ({
   ),
 }));
 vi.mock("../HomeRiskTheater", () => ({
-  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion, lens, onLensBack }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null; lens?: string; onLensBack?: () => void }) => {
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion, lens, onLensBack, onInspectCurrency }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null; lens?: string; onLensBack?: () => void; onInspectCurrency?: () => void }) => {
     if (moment) {
       return (
         <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)} data-sealed={sealedRegion ?? "none"} data-lens={lens ?? "moment"}>
           <button type="button" data-testid="home-lens-back" onClick={() => onLensBack?.()} />
           <div data-testid="currency-moment-card" />
+          <button type="button" data-testid="inspect-currency" onClick={() => onInspectCurrency?.()} />
           {Array.isArray(regionData) && regionData.length > 0 && (
             <div data-testid="holdings-strip" />
           )}
@@ -685,6 +686,88 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
       source: "home",
       region: "Africa",
     });
+  });
+});
+
+describe("ConnectedOverview — currency story inspector", () => {
+  afterEach(() => {
+    cleanup();
+    mockExperienceMode = "standard";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+  });
+
+  it("the coin tap opens the story sheet with the dated trail and share line", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(sheet).toHaveAttribute("aria-label", "🇬🇭 Ghana — GHS");
+    expect(sheet.textContent).toContain("Cedi crisis");
+    expect(sheet.textContent).toContain("Share this currency's story");
+    expect(sheet.textContent).toContain("Ask Guardian about the GHS");
+  });
+
+  it("region and currency sheets are mutually exclusive", async () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+
+    // Mid-fold a closing sheet may still be mounted — the open sheet is
+    // the one not collapsed to 0 height (or the last mounted).
+    const openSheet = () => {
+      const sheets = screen.getAllByTestId("inspector-sheet");
+      return sheets.find((s) => s.style.height !== "0px") ?? sheets.at(-1);
+    };
+
+    fireEvent.click(screen.getByTestId("select-region"));
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-focused", "Africa");
+    expect(openSheet()).toHaveAttribute("aria-label", "Africa");
+
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-focused", "none");
+    expect(openSheet()).toHaveAttribute("aria-label", "🇬🇭 Ghana — GHS");
+
+    // …and a region pick sends the currency sheet back down — selection
+    // state is exclusive even while the exit fold still has it mounted.
+    fireEvent.click(screen.getByTestId("select-region"));
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-focused", "Africa");
+    await vi.waitFor(() => {
+      expect(
+        screen
+          .getAllByTestId("inspector-sheet")
+          .filter((s) => s.getAttribute("aria-label") === "🇬🇭 Ghana — GHS")
+          .every((s) => s.style.height === "0px" || s.style.opacity === "0"),
+      ).toBe(true);
+    });
+  });
+
+  it("a second tap on the coin closes the sheet", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    expect(screen.getByTestId("inspector-sheet")).toHaveAttribute("aria-label", "🇬🇭 Ghana — GHS");
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    const sheet = screen.queryByTestId("inspector-sheet");
+    if (sheet) {
+      expect(sheet.style.height).toBe("0px");
+      expect(sheet.style.opacity).toBe("0");
+    }
+  });
+
+  it("closing the sheet un-flips the coin", () => {
+    mockMoment = GHANA_MOMENT;
+    renderOverview();
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    fireEvent.click(screen.getByLabelText("Close inspector"));
+    // Mid-exit fold the sheet may still be mounted, collapsed to nothing.
+    const sheet = screen.queryByTestId("inspector-sheet");
+    if (sheet) {
+      expect(sheet.style.height).toBe("0px");
+      expect(sheet.style.opacity).toBe("0");
+    }
   });
 });
 

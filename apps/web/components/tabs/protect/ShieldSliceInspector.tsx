@@ -18,6 +18,10 @@ import type { scorePlanAlignment } from "@/lib/plan-alignment";
 import type { seriesFor } from "@/lib/learn/protection-calculator";
 import { motion } from "framer-motion";
 import { springPop } from "@/lib/motion-tokens";
+import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
+import { ProvenanceCoinBack } from "../../swap/ProvenanceCoinBack";
+import { planCardContent } from "@/lib/plan-card";
+import { trackFunnelEvent } from "@/lib/analytics";
 import { InspectorSheet } from "../../shared/InspectorSheet";
 import { TokenIcon } from "../../shared/TokenIcon";
 import StatusBadge from "../../shared/StatusBadge";
@@ -90,6 +94,45 @@ export interface ShieldSliceInspectorProps {
   showToast: ReturnType<typeof useToast>["showToast"];
 }
 
+/** A philosophy is a creed — shareable as a card whose targets derive
+ *  from the id alone (same grammar as Exchange's pair share line). */
+function PlanShareLine({ id }: { id: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const url = `${typeof window !== "undefined" ? window.location.origin : ""}/plan/${id}`;
+  const content = planCardContent(id);
+  const share = async () => {
+    trackFunnelEvent("share_open", { source: "plan_card" });
+    if (typeof navigator !== "undefined" && navigator.share) {
+      try {
+        await navigator.share({
+          title: content ? `${content.name} · ${content.tagline}` : `${id} plan`,
+          url,
+        });
+        return;
+      } catch {
+        return; // dismissed sheet — nothing to copy
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard unavailable — quiet no-op
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={share}
+      className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+    >
+      {copied ? "Link copied" : "Share this plan ↗"}
+    </button>
+  );
+}
+
 export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
   const {
     inspectorSel,
@@ -140,6 +183,21 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     setShowMobileWizard,
     showToast,
   } = props;
+
+  // The focused-token coin flips to its provenance back — reset when
+  // the selection moves. The flip animation belongs to a face CHANGE —
+  // opening the inspector renders still (§5's "one occurrence, then
+  // still"), so the rotate-in is gated on a prior mount.
+  const [tokenFlipped, setTokenFlipped] = React.useState(false);
+  const flipMountedRef = React.useRef(false);
+  React.useEffect(() => setTokenFlipped(false), [focusedToken]);
+  React.useEffect(() => {
+    flipMountedRef.current = true;
+  }, []);
+  const focusedProvenance =
+    shape !== "picker" && !comparing && focusedToken && !isSleeveSelection(focusedToken)
+      ? provenanceFor(focusedToken)
+      : null;
 
   return (
     <InspectorSheet
@@ -259,12 +317,47 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
           >
             Ask Guardian about this plan
           </button>
+          {planCardContent(focusedPhilosophy) && (
+            <PlanShareLine id={focusedPhilosophy} />
+          )}
         </div>
       )}
       {shape !== "picker" && !comparing && focusedToken && !isSleeveSelection(focusedToken) && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <TokenIcon symbol={focusedToken} size={22} />
+            {/* Same flip verb as the pair stage: a token with a curated
+                provenance entry turns over; without one it stays a coin. */}
+            {focusedProvenance ? (
+              <button
+                type="button"
+                onClick={() => setTokenFlipped((f) => !f)}
+                aria-label={`About ${focusedToken}`}
+                aria-pressed={tokenFlipped}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                <motion.span
+                  key={String(tokenFlipped)}
+                  className="inline-flex"
+                  initial={
+                    reducedMotion || !flipMountedRef.current
+                      ? false
+                      : { rotateY: 90, opacity: 0.3 }
+                  }
+                  animate={{ rotateY: 0, opacity: 1 }}
+                  transition={springPop}
+                >
+                  {tokenFlipped ? (
+                    <span className="flex h-[44px] w-[180px] items-center rounded-xl border border-gray-200 bg-white px-2 dark:border-gray-700 dark:bg-gray-900">
+                      <ProvenanceCoinBack provenance={focusedProvenance} />
+                    </span>
+                  ) : (
+                    <TokenIcon symbol={focusedToken} size={22} />
+                  )}
+                </motion.span>
+              </button>
+            ) : (
+              <TokenIcon symbol={focusedToken} size={22} />
+            )}
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900 dark:text-white">{focusedToken} position</p>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
