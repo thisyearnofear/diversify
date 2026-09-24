@@ -169,8 +169,9 @@ vanished cycle) key by the candidate they declined. Transient per-tick noise
 (execution locks, concurrent claims) is deliberately not journaled.
 
 Surfacing: `GET /api/vault/permission` returns `decisionLog`; the Guardian
-journal (`AgentTierStatus` → `GuardianJournalTab`) renders each as an amber
-"Guardian stood down" event with the loop's own reason. The loop response now
+journal (`useGuardianInstrument` → `GuardianJournalSheet` → `GuardianJournalTab`)
+renders each as an amber "Guardian stood down" event with the loop's own
+reason; the newest one is also the Guardian object's latest-decision line. The loop response now
 carries `declinesJournaled` for cron logs.
 
 ### 2. Honest cron health — run status is recorded, not inferred

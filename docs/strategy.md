@@ -416,7 +416,7 @@ Goal: a business user is just another philosophy/archetype, not a new app.
 | Add `case 'importer':` in `StrategyService.getAIPrompt()` | `packages/shared/src/services/strategy/strategy.service.ts` | DRY |
 | Add importer archetype card/token | `components/protection-cards/tokens.ts` | ENHANCEMENT FIRST |
 | Add importer to `plan-preview.ts` | `components/protection-cards/plan-preview.ts` | DRY |
-| Add importer framing to `ProtectionScorecard` | `components/tabs/overview/ProtectionScorecard.tsx` | ENHANCEMENT FIRST |
+| Add importer framing to Shield's ring (persona morphs the object — `ProtectionScorecard` is retired, design-language §5 rail 7) | `components/tabs/protect/ProtectionPlanRing.tsx` | ENHANCEMENT FIRST |
 | Add importer handling to `ProtectionAmbient` if needed | `components/tabs/protect/ProtectionAmbient.tsx` | ENHANCEMENT FIRST |
 | Tests: importer config, prompt, archetype render | `packages/shared/src/services/strategy/__tests__/strategy.service.test.ts`, `components/protection-cards/__tests__/*.test.ts` | MODULAR |
 
