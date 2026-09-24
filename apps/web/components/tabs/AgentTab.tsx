@@ -1,12 +1,10 @@
 /**
- * Guardian tab — state object + ledger + one bounds inspector.
+ * Guardian tab — the mark as object + journal/bounds inspectors + one CTA.
  * Swaps belong on Shield / Exchange. Conversation lives in Ask Guardian.
  */
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ARCHETYPES } from "@/components/protection-cards/tokens";
-import { AgentTierStatus } from "../agent/AgentTierStatus";
-import AutomationSettings from "../agent/AutomationSettings";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useExperience } from "../../context/app/ExperienceContext";
@@ -15,7 +13,6 @@ import { useAdvisor } from "../../hooks/use-advisor";
 import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import ErrorBoundary from "../ui/ErrorBoundary";
-import { GUARDIAN_CONTROL_TITLE } from "@/constants/guardian-copy";
 import WalletButton from "../wallet/WalletButton";
 import { useDemoMode } from "../../context/app/DemoModeContext";
 import { InstrumentShell } from "../shared/InstrumentShell";
@@ -26,6 +23,14 @@ import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { formatDuration } from "@/lib/format-duration";
+import { useGuardianInstrument } from "@/hooks/use-guardian-instrument";
+import { GuardianObject } from "../agent/GuardianObject";
+import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
+import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
+import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
+import { GuardianGrantModal } from "../agent/GuardianGrantModal";
+import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
+import type AutomationSettings from "../agent/AutomationSettings";
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -37,7 +42,7 @@ interface AgentTabProps {
 
 export default function AgentTab({
   isMiniPay,
-  isFarcaster,
+  isFarcaster: _isFarcaster,
   portfolio,
   onNavigateToFund,
   refreshBalances,
@@ -56,22 +61,14 @@ export default function AgentTab({
   // One-shot hand-off from another instrument (e.g. Shield's gap inspector)
   // — renders once as a context card, then clears so it can't go stale.
   const { guardianContext, clearGuardianContext } = useNavigation();
-  const [boundsOpen, setBoundsOpen] = useState(false);
   const [dismissError, setDismissError] = useState(false);
   const previousAddress = React.useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
-      setBoundsOpen(false);
       setDismissError(false);
       previousAddress.current = address;
     }
   }, [address]);
-
-  const handleViewTimeline = useCallback(() => {
-    askAdvisor(
-      "Show me my Guardian timeline — recent observations, proposals, and executed actions with proof.",
-    );
-  }, [askAdvisor]);
 
   if (!address) {
     // Unconnected morph (§5 rail 5): the Guardian ITSELF is the object —
@@ -127,18 +124,89 @@ export default function AgentTab({
     );
   }
 
+  return (
+    <ConnectedAgent
+      address={address}
+      isMiniPay={isMiniPay}
+      portfolio={portfolio}
+      refreshBalances={refreshBalances}
+      onNavigateToFund={onNavigateToFund}
+      autonomousStatus={autonomousStatus}
+      isStatusLoading={isStatusLoading}
+      config={config}
+      updateConfig={updateConfig}
+      experienceMode={experienceMode}
+      askAdvisor={askAdvisor}
+      guardianContext={guardianContext}
+      clearGuardianContext={clearGuardianContext}
+    />
+  );
+}
+
+/** Connected surface — mounts the instrument hook (and its polling)
+ *  only once a wallet exists. */
+function ConnectedAgent({
+  address,
+  isMiniPay,
+  portfolio,
+  refreshBalances,
+  onNavigateToFund,
+  autonomousStatus,
+  isStatusLoading,
+  config,
+  updateConfig,
+  experienceMode,
+  askAdvisor,
+  guardianContext,
+  clearGuardianContext,
+}: {
+  address: string;
+  isMiniPay?: boolean;
+  portfolio?: MultichainPortfolio;
+  refreshBalances?: () => Promise<void>;
+  onNavigateToFund?: () => void;
+  autonomousStatus: { walletType?: string } | null;
+  isStatusLoading: boolean;
+  config?: Parameters<typeof AutomationSettings>[0]["config"];
+  updateConfig?: (config: any) => void;
+  experienceMode: string;
+  askAdvisor: ReturnType<typeof useAdvisor>["askAdvisor"];
+  guardianContext: ReturnType<typeof useNavigation>["guardianContext"];
+  clearGuardianContext: () => void;
+}) {
+  const g = useGuardianInstrument({ isMiniPay, onNavigateToFund });
+  const [sel, setSel] = useState<"journal" | "bounds" | null>(null);
+
+  const budgetShowing =
+    g.hasValidPermission && g.sessionInfo != null && g.dailyLimit > 0;
+
+  // One CTA per state — the setup/fund action belongs to the object, the
+  // monitoring state's CTA opens the journal with a live dry-run.
+  const cta: { label: string | null; action: () => void } = (() => {
+    if (g.guardianState === "monitoring") {
+      return {
+        label: "Preview next move",
+        action: () => {
+          setSel("journal");
+          void g.runPreview();
+        },
+      };
+    }
+    if (g.guardianState === "authorized") {
+      return {
+        label: onNavigateToFund ? g.copy.cta : null,
+        action: () => onNavigateToFund?.(),
+      };
+    }
+    // idle | funded — setup lives on the object, not in a sheet.
+    return {
+      label: g.copy.cta,
+      action: () => g.setShowPermissionModal(true),
+    };
+  })();
+
   const object = (
     <div data-testid="guardian-object">
-      <div className="text-center mb-4">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {GUARDIAN_CONTROL_TITLE}
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {experienceMode === "beginner"
-            ? "What Guardian is doing to protect your savings"
-            : "State, timeline, and evidence"}
-        </p>
-      </div>
       <ErrorBoundary moduleName="Guardian Status">
         {isStatusLoading ? (
           <InstrumentWait
@@ -147,27 +215,39 @@ export default function AgentTab({
             color={ARCHETYPES.custom.accent}
           />
         ) : (
-          <AgentTierStatus
-            isMiniPay={isMiniPay}
-            isFarcaster={isFarcaster}
-            showActivityFeed={true}
-            showMarquee
-            onNavigateToAgent={handleViewTimeline}
-            onNavigateToFund={onNavigateToFund}
+          <GuardianObject
+            guardianState={g.guardianState}
+            isAnalyzing={g.isAnalyzing}
+            sessionInfo={g.sessionInfo}
+            hasValidPermission={g.hasValidPermission}
+            dailyLimit={g.dailyLimit}
+            latestEvent={g.guardianProofEvents[0] ?? null}
+            latestCall={g.latestCall}
+            ctaLabel={cta.label}
+            onCta={cta.action}
+            onOpenJournal={() => setSel("journal")}
+            onOpenBounds={() => setSel("bounds")}
           />
         )}
       </ErrorBoundary>
     </div>
   );
 
+  const inspectorTitle = guardianContext
+    ? "From your Shield plan"
+    : sel === "journal"
+      ? "Guardian journal"
+      : "Limits & controls";
+
   return (
+    <>
     <InstrumentShell
       object={object}
       inspector={
         <InspectorSheet
-          selectedId={guardianContext ? "context" : boundsOpen ? "bounds" : null}
-          onClose={() => (guardianContext ? clearGuardianContext() : setBoundsOpen(false))}
-          title={guardianContext ? "From your Shield plan" : "Guardian bounds"}
+          selectedId={guardianContext ? "context" : sel}
+          onClose={() => (guardianContext ? clearGuardianContext() : setSel(null))}
+          title={inspectorTitle}
         >
           {guardianContext ? (
             <>
@@ -215,11 +295,45 @@ export default function AgentTab({
                 Ask Guardian about this
               </button>
             </>
+          ) : sel === "journal" ? (
+            <GuardianJournalSheet
+              sessionInfo={g.sessionInfo}
+              events={g.guardianProofEvents}
+              anchorByTxHash={g.anchorByTxHash}
+              hasValidPermission={g.hasValidPermission}
+              isLowOnFunds={g.isLowOnFunds}
+              isRunningLoop={g.isRunningLoop}
+              loopResult={g.loopResult}
+              onNavigateToFund={onNavigateToFund}
+              onPreview={() => void g.runPreview()}
+            />
           ) : (
-            <AutomationSettings
+            <GuardianBoundsSheet
+              autonomousStatus={autonomousStatus}
+              hasValidPermission={g.hasValidPermission}
+              guardianActive={g.guardianActive}
+              dailyLimit={g.dailyLimit}
+              sessionInfo={g.sessionInfo}
+              permissionExpiry={g.permissionExpiry}
+              isRunningLoop={g.isRunningLoop}
+              onRunNow={() => void g.runNow()}
+              loopResult={g.loopResult}
+              sessionKeyError={g.sessionKeyError}
+              isRevoking={g.isRevoking}
+              onRevoke={() => void g.handleRevokePermission()}
+              vault={g.vault}
+              onChangeStrategy={() => g.setShowStrategySwitcher(true)}
+              hasTokenVault={g.hasTokenVault}
+              walletStableBalanceUSD={g.stableBalanceOnChain.total}
+              isMiniPay={isMiniPay}
+              onNavigateToFund={onNavigateToFund}
+              isOnArbitrum={g.isOnArbitrum}
+              grantStatus={g.grantStatus}
+              grantError={g.grantError}
+              onOpenGrantModal={() => g.setShowGrantConfirmModal(true)}
+              onSwitchToArbitrum={() => void g.switchToChain(42161)}
               config={config}
               onConfigChange={updateConfig}
-              autonomousStatus={autonomousStatus}
             />
           )}
         </InspectorSheet>
@@ -230,10 +344,12 @@ export default function AgentTab({
         <StatusTier
           trust={<VerifiedEvidence />}
           transition={
-            experienceMode !== "beginner" ? (
+            // The budget line already opens the bounds sheet — one
+            // destination, one entry point per state.
+            experienceMode !== "beginner" && !budgetShowing ? (
               <button
                 type="button"
-                onClick={() => setBoundsOpen(true)}
+                onClick={() => setSel("bounds")}
                 className="min-h-[44px] px-3 text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0"
               >
                 Change limits
@@ -243,5 +359,59 @@ export default function AgentTab({
         />
       }
     />
+
+      {/* Auto-Saver setup modal — user picks their daily limit BEFORE any signature. */}
+      {g.showPermissionModal && (
+        <GuardianPermissionModal
+          pendingDailyLimit={g.pendingDailyLimit}
+          setPendingDailyLimit={g.setPendingDailyLimit}
+          DAILY_LIMIT_PRESETS={g.DAILY_LIMIT_PRESETS}
+          isChainSupported={g.isChainSupported}
+          isLowOnFunds={g.isLowOnFunds}
+          hasNonStableButNoStable={g.hasNonStableButNoStable}
+          nonStableBalanceOnChain={g.nonStableBalanceOnChain}
+          currentChainName={g.currentChainName}
+          stableBalanceTotal={g.stableBalanceOnChain.total}
+          portfolioLoading={g.portfolio.isLoading}
+          isMiniPay={isMiniPay}
+          onNavigateToFund={onNavigateToFund}
+          switchToChain={g.switchToChain}
+          onCancel={() => g.setShowPermissionModal(false)}
+          onApprove={g.handleRequestPermission}
+        />
+      )}
+
+      {/* On-chain (ERC-7715) grant confirmation modal — user must see the
+          summary BEFORE MetaMask pops. */}
+      {g.showGrantConfirmModal && (
+        <GuardianGrantModal
+          pendingDailyLimit={g.pendingDailyLimit}
+          setPendingDailyLimit={g.setPendingDailyLimit}
+          DAILY_LIMIT_PRESETS={g.DAILY_LIMIT_PRESETS}
+          onCancel={() => g.setShowGrantConfirmModal(false)}
+          onContinue={() => {
+            g.setShowGrantConfirmModal(false);
+            void g.handleGrantAdvanced();
+          }}
+        />
+      )}
+
+      {/* Strategy Switcher Wizard */}
+      {g.showStrategySwitcher && g.vault.vault && address && (
+        <GuardianMobileWizard
+          userAddress={address}
+          mode="change"
+          currentStrategy={g.vault.vault.strategy}
+          onComplete={() => {
+            g.setShowStrategySwitcher(false);
+            g.vault.refresh(address);
+          }}
+          onCancel={() => g.setShowStrategySwitcher(false)}
+          onUpdateStrategy={async (strategy) => g.vault.updateStrategy(address, strategy)}
+          onCreateVault={async () => false}
+          onRequestPermission={async () => false}
+        />
+      )}
+    </>
   );
 }

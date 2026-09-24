@@ -207,7 +207,10 @@ the ring, Exchange the pair stage (balance beam + coins) + story strip +
 journey rail, Guardian the mark. A new
 motif needs an owner and displaces nothing else's claim — otherwise
 every surface wears every motif, which is the cards problem in a nicer
-costume.
+costume. Guardian's object is the mark (96px) + its state headline + two
+quiet lines: the budget line — `$X left of $Y today`, a sentence, never
+a ring — and the latest decision line. Journal and limits are inspector
+sheets behind those lines.
 
 Tripwire: `corridor-context.test.tsx` asserts the resting corridor line
 stays under a word budget — sediment fails CI, not review.
@@ -276,7 +279,11 @@ A tab change that fails any of these is the old stack. Do not ship it.
    `ProtectionJourney`, `OptimizationInsight`, `ProtectionPlanCard`,
    `ProfileWizard`, `RobinhoodRwaCard`, `ShieldGuardianRecommendation`,
    `AssetModal`, `RwaAssetCards`, `DisclosureSection` (and before them
-   `BestYieldCard`, `SavingsLoopCard`) — is deleted. RWA vault data lives
+   `BestYieldCard`, `SavingsLoopCard`) — is deleted. The Guardian card
+   stack joined it: the `AgentTierStatus` component, `GuardianMarquee`,
+   `GuardianProofTab`, `ActivityFeed`, `AdvisorMetrics`. "Total Savings"
+   was retired with them — it summed projected `expectedSavings` as if
+   they were realized money. RWA vault data lives
    in `components/tabs/protect/rwa-assets.ts`. Do not recreate them.
 8. **Status tier budget.** Trust + one transition + one rail, via
    `StatusTier` (`components/shared/StatusTier.tsx`). A new prompt

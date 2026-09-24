@@ -52,8 +52,10 @@ vi.mock("@/components/wallet/WalletButton", () => ({
   default: () => <button type="button">Connect wallet</button>,
 }));
 
-vi.mock("@/components/agent/AgentTierStatus", () => ({
-  AgentTierStatus: () => <div data-testid="agent-tier-status" />,
+vi.mock("@/hooks/use-guardian-instrument", () => ({
+  useGuardianInstrument: () => {
+    throw new Error("guardian hook must not mount for a walletless wallet");
+  },
 }));
 
 vi.mock("@/components/agent/AutomationSettings", () => ({

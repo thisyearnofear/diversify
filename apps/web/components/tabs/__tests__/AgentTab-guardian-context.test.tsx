@@ -2,6 +2,7 @@ import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import { GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 
 // F4 drill-down: the one-shot Guardian context card must show the attached
 // journaled record VERBATIM (readable, not JSON) and hand it to Ask Guardian.
@@ -43,8 +44,63 @@ vi.mock("@/context/app/NavigationContext", () => ({
 vi.mock("@/components/wallet/WalletButton", () => ({
   default: () => <button type="button">Connect wallet</button>,
 }));
-vi.mock("@/components/agent/AgentTierStatus", () => ({
-  AgentTierStatus: () => <div data-testid="agent-tier-status" />,
+const mockInstrument = {
+  guardianState: "monitoring" as const,
+  copy: GUARDIAN_USER_COPY.monitoring,
+  sessionInfo: null,
+  hasValidPermission: false,
+  dailyLimit: 0,
+  guardianProofEvents: [] as any[],
+  latestCall: null,
+  isAnalyzing: false,
+  setShowPermissionModal: vi.fn(),
+  runPreview: vi.fn(),
+  runNow: vi.fn(),
+  isLowOnFunds: false,
+  isRunningLoop: false,
+  loopResult: null,
+  anchorByTxHash: new Map(),
+  permissionExpiry: null,
+  sessionKeyError: null,
+  isRevoking: false,
+  handleRevokePermission: vi.fn(),
+  vault: { vault: null, error: null, updateStrategy: vi.fn() },
+  setShowStrategySwitcher: vi.fn(),
+  hasTokenVault: false,
+  stableBalanceOnChain: { total: 0, tokens: [] as any[] },
+  isOnArbitrum: true,
+  grantStatus: "idle",
+  grantError: null,
+  setShowGrantConfirmModal: vi.fn(),
+  switchToChain: vi.fn(),
+  showPermissionModal: false,
+  showGrantConfirmModal: false,
+  showStrategySwitcher: false,
+  pendingDailyLimit: 0,
+  setPendingDailyLimit: vi.fn(),
+  DAILY_LIMIT_PRESETS: [],
+  isChainSupported: true,
+  hasNonStableButNoStable: false,
+  nonStableBalanceOnChain: null,
+  currentChainName: "Celo",
+  portfolio: { isLoading: false },
+  handleRequestPermission: vi.fn(),
+  handleGrantAdvanced: vi.fn(),
+};
+
+vi.mock("@/hooks/use-guardian-instrument", () => ({
+  useGuardianInstrument: () => mockInstrument,
+}));
+vi.mock("@/components/agent/GuardianObject", () => ({
+  GuardianObject: (props: { onOpenJournal?: () => void }) => (
+    <div data-testid="guardian-object-inner" onClick={props.onOpenJournal} />
+  ),
+}));
+vi.mock("@/components/agent/GuardianJournalSheet", () => ({
+  GuardianJournalSheet: () => <div data-testid="guardian-journal-sheet" />,
+}));
+vi.mock("@/components/agent/GuardianBoundsSheet", () => ({
+  GuardianBoundsSheet: () => <div data-testid="guardian-bounds-sheet" />,
 }));
 vi.mock("@/components/agent/AutomationSettings", () => ({
   default: () => <div data-testid="automation-settings" />,
