@@ -25,9 +25,9 @@ import { useWalletContext } from '../components/wallet/WalletProvider';
 import { getTokenAddresses, getNetworkConfig, NETWORKS } from '../config';
 import { getAddChainParameter } from '@diversifi/shared/src/modules/wallet/core/chains';
 import {
-    EIP3009_DOMAIN_NAME,
     EIP3009_DOMAIN_VERSION,
     EIP3009_TRANSFER_TYPES,
+    eip3009DomainNameFor,
     eip3009NonceBytes32,
 } from '@diversifi/shared/src/utils/eip3009';
 import {
@@ -178,7 +178,9 @@ async function signPaymentMandate(
     const signature = await walletClient.signTypedData({
         account: address as Hex,
         domain: {
-            name: EIP3009_DOMAIN_NAME,
+            // Arc USDC's EIP-712 name is 'USDC' (not 'USD Coin') — resolved
+            // per challenge chainId so off-chain sign and on-chain settle agree.
+            name: eip3009DomainNameFor(challenge.chainId),
             version: EIP3009_DOMAIN_VERSION,
             chainId: challenge.chainId,
             verifyingContract: challenge.token as Address,

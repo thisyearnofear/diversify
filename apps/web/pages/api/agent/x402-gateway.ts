@@ -30,7 +30,7 @@ import {
     type BrightDataCommodity,
     x402Analytics
 } from '@diversifi/shared';
-import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual } from '@diversifi/shared';
+import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual, getLedgerContractAddress } from '@diversifi/shared';
 import {
     analyzeCycles,
     requiredDates,
@@ -47,6 +47,13 @@ import connectDB from '../../../lib/mongodb';
 import { ProcessedPaymentProof } from '../../../models/ProcessedPaymentProof';
 import { mongoSettlementCapStore } from '../../../lib/settlement-cap-store';
 import { setSettlementCapStore } from '@diversifi/shared';
+import {
+    buildGatewayRequirements,
+    buildGatewayChallengeBlock,
+    decodePaymentSignature,
+    gatewayProofId,
+    settleGatewayPayment,
+} from '@diversifi/shared/src/services/nanopayments-service';
 
 // Inject the MongoDB-backed daily settlement cap store at module load.
 setSettlementCapStore(mongoSettlementCapStore);
@@ -411,6 +418,8 @@ export default async function handler(
     // Distinct header for HSP settlement — never overload x-payment-proof, whose
     // 32-byte-hex tx hashes route into the Arc/0G on-chain verifier.
     const hspProof = getHeader(req, 'x-payment-hsp');
+    // Gateway Nanopayments (Circle batched x402) — the documented header.
+    const paymentSignature = getHeader(req, 'payment-signature');
 
     const clientIP = (req.headers['x-forwarded-for'] as string) || req.connection.remoteAddress || 'unknown';
     const clientKey = Array.isArray(clientIP) ? clientIP[0] : clientIP;
@@ -511,6 +520,46 @@ export default async function handler(
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
             return res.status(401).json({ error: `Mandate settlement failed: ${msg}` });
+        }
+    }
+
+    // Gateway Nanopayments path (Circle batched x402). Additive to the mandate
+    // and tx-proof paths: the buyer signs a batched authorization against their
+    // Gateway Wallet balance; Circle's facilitator verifies and settles, and we
+    // credit the authorized amount exactly once — same credit-only-after-settle
+    // and replay guarantees as the mandate path. Arc rail only.
+    let gatewaySettled = false;
+    if (paymentSignature) {
+        try {
+            const paymentPayload = decodePaymentSignature(paymentSignature);
+            const requirements = buildGatewayRequirements({
+                env: SETTLEMENT_ENV,
+                rail: DEFAULT_SETTLEMENT_NETWORK,
+                amountMicroUsdc: Math.max(toMicroUSDC(MIN_PAYMENT_AMOUNT_USDC), totalCostMicros),
+                payTo: DATA_HUB_WALLET,
+            });
+            if (!requirements) {
+                return res.status(402).json({ error: 'Gateway batched payments are only accepted on the Arc settlement rail' });
+            }
+
+            const proofId = gatewayProofId(paymentPayload);
+            if (await isProofProcessed(proofId)) {
+                // Replay — already credited on a previous request. Fall through
+                // to the credit drawdown (idempotent).
+                gatewaySettled = true;
+            } else {
+                const settled = await settleGatewayPayment({ paymentPayload, requirements, env: SETTLEMENT_ENV });
+                UserManager.addCredit(user, toMicroUSDC(settled.amountUSDC));
+                await markProofProcessed(proofId, settled.amountUSDC);
+                settlementPayer = settled.payer;
+                settlementTxHash = settled.transaction;
+                gatewaySettled = true;
+                console.log(`[Data Hub] Gateway batched payment settled: $${settled.amountUSDC} → ${settled.transaction}`);
+                x402Analytics.recordPayment(requestedSourceLabel, settled.amountUSDC, Date.now() - start, 'GATEWAY_BATCHED');
+            }
+        } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            return res.status(402).json({ error: `Gateway payment failed: ${msg}` });
         }
     }
 
@@ -683,7 +732,14 @@ export default async function handler(
         if (fxIndex >= 0) {
             const currency = (payloads[fxIndex].data as { currency?: string } | undefined)?.currency ?? 'USD';
             const region = fxRegionForCurrency(currency);
-            const anchorChainId = FX_ANCHOR_CHAIN_BY_REGION[region];
+            // Decisions settle where money moves: when the x402 rail IS Arc
+            // mainnet and its ledger is deployed (env-gated, no-op when unset),
+            // the settlement receipt anchors there — else the region-canonical
+            // chain keeps the record.
+            const arcLedger = DEFAULT_SETTLEMENT_NETWORK === 'ARC' && SETTLEMENT_ENV === 'mainnet'
+                ? getLedgerContractAddress(5042)
+                : '';
+            const anchorChainId = arcLedger ? 5042 : FX_ANCHOR_CHAIN_BY_REGION[region];
             recordRecommendation({
                 user: settlementPayer,
                 action: 'PROTECT',
@@ -725,6 +781,7 @@ export default async function handler(
                     ? 'Protection Review funded from your balance'
                     : 'All requested inputs covered by the free tier',
                 evidenceCids: Array.from(evidenceCidsBySource.values()),
+                ...(gatewaySettled ? { settlementMethod: 'gateway_batched' } : {}),
                 ...settlementMeta,
             },
         });
@@ -747,6 +804,7 @@ export default async function handler(
                 ? `Free tier (${singlePlan.freeLimit - (singlePlan.currentUsage + 1)} remaining today)`
                 : 'Protection Review funded from your balance',
             evidenceCids: Array.from(evidenceCidsBySource.values()),
+            ...(gatewaySettled ? { settlementMethod: 'gateway_batched' } : {}),
             ...settlementMeta,
         },
     });
@@ -791,6 +849,23 @@ function buildHspChallengeBlock(settlementConfig: ReturnType<typeof getSettlemen
     };
 }
 
+/**
+ * Gateway Nanopayments advertisement. The x402 `accepts` array is the spec
+ * field buyers (GatewayClient.pay) scan for the batched option: Arc network,
+ * USDC asset, payTo = merchant, extra.name 'GatewayWalletBatched' + version '1'
+ * + extra.verifyingContract. Only on the Arc rail — {} elsewhere so non-Arc
+ * challenges are byte-for-byte unchanged.
+ * Docs: https://developers.circle.com/gateway/nanopayments/howtos/x402-integration
+ */
+function gatewayChallengeBlock(amountMicroUsdc: number): Record<string, unknown> {
+    return buildGatewayChallengeBlock({
+        env: SETTLEMENT_ENV,
+        rail: DEFAULT_SETTLEMENT_NETWORK,
+        amountMicroUsdc,
+        payTo: DATA_HUB_WALLET,
+    });
+}
+
 function sendResearchQuote(
     res: NextApiResponse,
     user: UserState,
@@ -822,6 +897,7 @@ function sendResearchQuote(
         settlement_network: DEFAULT_SETTLEMENT_NETWORK,
         settlement_env: SETTLEMENT_ENV,
         ...buildHspChallengeBlock(settlementConfig),
+        ...gatewayChallengeBlock(toMicroUSDC(paymentAmount)),
         reason: totalCost > 0
             ? `This review costs ${totalCost.toFixed(3)} USDC — drawn from your Protection Balance.`
             : 'This review is covered by the free tier — no balance spend needed.',
@@ -864,6 +940,7 @@ function sendPaymentRequired(
         settlement_network: DEFAULT_SETTLEMENT_NETWORK,
         settlement_env: SETTLEMENT_ENV,
         ...buildHspChallengeBlock(settlementConfig),
+        ...gatewayChallengeBlock(toMicroUSDC(paymentAmount)),
         circle_gateway: {
             enabled: Boolean(process.env.CIRCLE_API_KEY),
             description: 'Opaque Circle Gateway proof IDs are not accepted in the judge-facing path unless server-side verification is explicitly configured.',

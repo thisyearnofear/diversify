@@ -28,6 +28,11 @@ export const SIGNER_ENV_KEY_PATTERNS = [
   'MAINNET_DEPLOYER_KEY',
   'FIREBLOCKS_PRIVATE_KEY',
   'TURNKEY_PRIVATE_KEY',
+  // x402/CCTP operator script keys (SMOKE_BUYER_PRIVATE_KEY,
+  // NANOPAY_BUYER_PRIVATE_KEY, CCTP_SIGNER_PRIVATE_KEY) — real wallets that
+  // must never reach test-time network calls.
+  'BUYER_PRIVATE_KEY',
+  'SIGNER_PRIVATE_KEY',
 ] as const;
 
 export type SignerEnvKeyPattern = (typeof SIGNER_ENV_KEY_PATTERNS)[number];

@@ -1,7 +1,8 @@
 /**
  * GET /api/agent/arc-balance?address=0x...
  *
- * Returns the wallet's USDC balance on Arc testnet.
+ * Returns the wallet's USDC balance on the env-active Arc rail
+ * (Arc mainnet when SETTLEMENT_ENV=mainnet, else Arc testnet).
  * Thin wrapper over circleService.getUnifiedUSDCBalance — no duplication.
  */
 

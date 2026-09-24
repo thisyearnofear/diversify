@@ -8,6 +8,8 @@ const LEDGER_CHAIN_LABELS: Record<number, string> = {
   16602: '0G testnet',
   421614: 'Arbitrum Sepolia',
   11142220: 'Celo Sepolia',
+  5042: 'Arc',
+  5042002: 'Arc testnet',
 };
 
 /** Visual badge styles per chain for the live proof feed. */
@@ -20,10 +22,12 @@ export const LEDGER_CHAIN_BADGES: Record<number, { icon: string; color: string; 
   16602: { icon: '🔬', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
   421614: { icon: '🔗', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
   11142220: { icon: '🌍', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
+  5042: { icon: '🌐', color: 'bg-sky-100 text-sky-700 border-sky-200', darkColor: 'dark:bg-sky-900/30 dark:text-sky-300 dark:border-sky-800' },
+  5042002: { icon: '🌐', color: 'bg-gray-100 text-gray-700 border-gray-200', darkColor: 'dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700' },
 };
 
 /** Mainnet ledger chains — get the confident "Verified on X" headline. */
-const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661]);
+const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661, 5042]);
 
 /**
  * Mainnet ledger chains merged into the global proof feed when no user or
@@ -33,7 +37,7 @@ const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661]);
  * configured contract drop out automatically (see configuredProofFeedChains
  * in the ledger API route).
  */
-export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 4663, 177, 16661] as const;
+export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 4663, 177, 16661, 5042] as const;
 
 export interface ProofFeedRecommendationBase {
   id: number;

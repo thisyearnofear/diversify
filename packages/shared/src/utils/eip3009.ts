@@ -8,14 +8,28 @@
  * - `apps/web/hooks/use-x402-payment.ts` (client-side mandate signing)
  *
  * Circle's USDC (FiatTokenV2) supports this on every chain it deploys to —
- * Arc, Arbitrum, Base, Ethereum. The EIP-712 domain is always
- * { name: 'USD Coin', version: '2', chainId, verifyingContract: <token> }.
+ * Arc, Arbitrum, Base, Ethereum. The EIP-712 domain is
+ * { name: <token's name()>, version: '2', chainId, verifyingContract: <token> }.
+ *
+ * IMPORTANT: on Arc the predeploy's name() is 'USDC', NOT 'USD Coin'
+ * (verified against DOMAIN_SEPARATOR() at rpc.mainnet.arc.io). Signing with
+ * 'USD Coin' passes off-chain verification but reverts on-chain on Arc.
  */
 
 import { utils } from 'ethers';
 
 export const EIP3009_DOMAIN_NAME = 'USD Coin';
+export const EIP3009_DOMAIN_NAME_ARC = 'USDC';
 export const EIP3009_DOMAIN_VERSION = '2';
+
+/**
+ * The EIP-712 domain `name` the token's DOMAIN_SEPARATOR is built from.
+ * Arc (mainnet 5042 + testnet 5042002): 'USDC'. Everywhere else Circle
+ * deploys FiatTokenV2 as 'USD Coin'.
+ */
+export function eip3009DomainNameFor(chainId: number): string {
+    return chainId === 5042 || chainId === 5042002 ? EIP3009_DOMAIN_NAME_ARC : EIP3009_DOMAIN_NAME;
+}
 
 export const EIP3009_TRANSFER_TYPES: Record<string, { name: string; type: string }[]> = {
     TransferWithAuthorization: [
@@ -28,9 +42,9 @@ export const EIP3009_TRANSFER_TYPES: Record<string, { name: string; type: string
     ],
 };
 
-export function eip3009Domain(chainId: number, tokenAddress: string) {
+export function eip3009Domain(chainId: number, tokenAddress: string, name?: string) {
     return {
-        name: EIP3009_DOMAIN_NAME,
+        name: name ?? eip3009DomainNameFor(chainId),
         version: EIP3009_DOMAIN_VERSION,
         chainId,
         verifyingContract: tokenAddress,

@@ -432,12 +432,26 @@ export const TX_CONFIG = {
 
 // Circle Configuration
 export const CIRCLE_CONFIG = {
+    // CCTP V2 — mirror of packages/shared CIRCLE_CONFIG.CCTP. Addresses per
+    // developers.circle.com/cctp/references/contract-addresses (the previous
+    // ETHEREUM/ARBITRUM/BASE entries were V1 contracts).
     CCTP: {
-        DOMAINS: { ETHEREUM: 0, AVALANCHE: 1, OPTIMISM: 2, ARBITRUM: 3, BASE: 6, POLYGON: 7 },
+        DOMAINS: { ETHEREUM: 0, AVALANCHE: 1, OPTIMISM: 2, ARBITRUM: 3, BASE: 6, POLYGON: 7, ARC: 26 },
         TOKEN_MESSENGER: {
-            ETHEREUM: '0xbd3fa81b58ba92a821df2201e99602b9e6e87292',
-            ARBITRUM: '0x19330d10D9Cc8751218eaf51E8885D058642E08A',
-            BASE: '0x1682Ae6375C4009baf3d690757d822C92fc556aE',
+            ETHEREUM: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            ARBITRUM: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            BASE: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            ARC: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            ARBITRUM_SEPOLIA: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
+            ARC_TESTNET: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
+        },
+        MESSAGE_TRANSMITTER: {
+            ETHEREUM: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            ARBITRUM: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            BASE: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            ARC: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            ARBITRUM_SEPOLIA: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
+            ARC_TESTNET: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
         },
     },
     WALLET: { API_BASE_URL: 'https://api.circle.com/v1/w3s', USER_ID_PREFIX: 'diversifi_agent_' }

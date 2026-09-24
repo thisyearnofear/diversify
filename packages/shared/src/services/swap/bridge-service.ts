@@ -2,6 +2,12 @@ import { createConfig, getRoutes, executeRoute, RoutesRequest, Route, config } f
 import { ethers } from 'ethers';
 import { CIRCLE_CONFIG, ARBITRUM_TOKENS } from '../../config';
 import { initializeLiFiConfig, ensureWalletConnection } from './lifi-config';
+import {
+    burn as cctpBurn,
+    waitForAttestation,
+    mint as cctpMint,
+    cctpChainForChainId,
+} from '../cctp-service';
 
 // Initialize LI.FI Config with proper EVM provider
 initializeLiFiConfig();
@@ -29,8 +35,17 @@ export class BridgeService {
      * Note: Circle CCTP support is planned but not yet implemented
      */
     static async getBestRoute(params: BridgeQuoteRequest): Promise<{ route: any; provider: 'lifi' | 'circle' }> {
-        // TODO: Implement Circle CCTP when ready
-        // For now, always use LiFi for cross-chain swaps
+        // USDC→USDC between CCTP-supported chains can ride Circle CCTP V2
+        // (Arbitrum ↔ Arc) when the caller asks for it. Everything else —
+        // and every route when 'circle' isn't requested — stays on LiFi.
+        if (
+            params.preferredProvider === 'circle' &&
+            this.isUSDCToken(params.fromTokenAddress) &&
+            this.isUSDCToken(params.toTokenAddress) &&
+            this.isCCTPSupported(params.fromChainId, params.toChainId)
+        ) {
+            return { provider: 'circle', route: null };
+        }
 
         // Default to LI.FI
         const isUSDC = this.isUSDCToken(params.fromTokenAddress);
@@ -184,21 +199,63 @@ export class BridgeService {
         };
     }
 
+    /**
+     * Circle CCTP V2: approve → depositForBurn on the source chain, poll the
+     * Iris messages API for the attestation, then receiveMessage on the
+     * destination. The destination mint needs a signer on that chain — when
+     * the provided signer isn't connected to the destination network the
+     * result returns the attestation in `steps` so the caller can complete
+     * the mint after a chain switch (scripts sign each leg explicitly).
+     */
     private static async executeCircleCCTP(
-        signer: any,
+        signer: ethers.Signer,
         userAddress: string,
         amount: string,
-        from: any,
-        to: any
+        from: { address: string; chainId: number },
+        to: { address: string; chainId: number }
     ): Promise<BridgeResult> {
-        // TODO: Implement Circle CCTP integration
-        // Steps required:
-        // 1. Approve TokenMessenger contract
-        // 2. Call depositForBurn on source chain
-        // 3. Wait for Circle attestation (off-chain)
-        // 4. Call receiveMessage on destination chain
+        const source = cctpChainForChainId(from.chainId);
+        const destination = cctpChainForChainId(to.chainId);
+        if (!source || !destination) {
+            throw new Error(`CCTP route not supported: ${from.chainId} → ${to.chainId}`);
+        }
 
-        throw new Error('Circle CCTP integration not yet implemented. Please use LiFi for cross-chain swaps.');
+        const burnResult = await cctpBurn({
+            signer,
+            sourceChain: source.key,
+            destinationChain: destination.key,
+            recipient: userAddress,
+            amountUsdc: amount,
+        });
+
+        const attestation = await waitForAttestation({
+            sourceChain: source.key,
+            txHash: burnResult.txHash,
+        });
+
+        const steps: any[] = [
+            { kind: 'cctp-burn', txHash: burnResult.txHash, explorer: `${source.explorerBase}/tx/${burnResult.txHash}` },
+            { kind: 'cctp-attestation', message: attestation.message },
+        ];
+
+        const signerNetwork = signer.provider ? await signer.provider.getNetwork() : null;
+        if (signerNetwork && signerNetwork.chainId === destination.chainId) {
+            const mintTxHash = await cctpMint({
+                signer,
+                destinationChain: destination.key,
+                message: attestation.message,
+                attestation: attestation.attestation,
+            });
+            steps.push({
+                kind: 'cctp-mint',
+                txHash: mintTxHash,
+                explorer: `${destination.explorerBase}/tx/${mintTxHash}`,
+            });
+        } else {
+            steps.push({ kind: 'cctp-mint-pending', attestation: attestation.attestation });
+        }
+
+        return { provider: 'circle', txHash: burnResult.txHash, steps };
     }
 
     private static isUSDCToken(address: string): boolean {
@@ -213,7 +270,9 @@ export class BridgeService {
     }
 
     private static isCCTPSupported(from: number, to: number): boolean {
-        const supported = [1, 42161, 8453, 137, 10, 43114]; // Eth, Arb, Base, Poly, Op, Avax
+        // Chains with a wired CctpChainConfig (Arbitrum, Arc + testnets).
+        // Eth/Base/Polygon/Avax remain LiFi-routed until their configs are added.
+        const supported = [42161, 421614, 5042, 5042002];
         return supported.includes(from) && supported.includes(to);
     }
 }

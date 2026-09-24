@@ -27,11 +27,16 @@
     "backfill-ledger-reasoning": "npx tsx scripts/backfill-ledger-reasoning.ts",
     "rehearse-macro-signal": "npx tsx scripts/send-test-macro-signal.ts",
     "list-share-drops": "npx tsx scripts/list-share-drops.ts",
+    "cctp-transfer": "npx tsx scripts/cctp-transfer.ts",
+    "x402-mainnet-smoke": "npx tsx scripts/x402-mainnet-smoke.ts",
+    "circle-agent-wallet-smoke": "npx tsx scripts/circle-agent-wallet-smoke.ts",
+    "nanopay-buyer": "npx tsx scripts/nanopay-buyer.ts",
     "render-guardian-assets": "npx tsx scripts/render-guardian-assets.ts",
     "rive:build": "cd apps/web/rive && for p in claim-coin net-pair protection-seal guardian verified-seal; do rive \"$p\" --once --quiet || exit 1; done && cp claim-coin/build/claim-coin.riv net-pair/build/net-pair.riv protection-seal/build/protection-seal.riv guardian/build/guardian.riv verified-seal/build/verified-seal.riv ../public/rive/",
     "prepare": "husky"
   },
   "devDependencies": {
+    "@circle-fin/x402-batching": "3.5.0",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
     "@types/node": "^22.8.6",

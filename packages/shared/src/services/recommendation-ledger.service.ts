@@ -138,6 +138,8 @@ export function buildLedgerExplorerUrl(txHash: string, chainId?: number): string
     if (resolvedChainId === 16661) return `https://chainscan.0g.ai/tx/${txHash}`;
     if (resolvedChainId === 177) return `https://hashkey.blockscout.com/tx/${txHash}`;
     if (resolvedChainId === 4663) return `https://robinhoodchain.blockscout.com/tx/${txHash}`;
+    if (resolvedChainId === 5042) return `https://explorer.arc.io/tx/${txHash}`;
+    if (resolvedChainId === 5042002) return `https://testnet.arcscan.app/tx/${txHash}`;
     return `https://chainscan-galileo.0g.ai/tx/${txHash}`;
 }
 
@@ -191,6 +193,7 @@ const ZERO_G_GALILEO_CHAIN_ID = 16602;
 const ZERO_G_MAINNET_CHAIN_ID = 16661;
 const HASHKEY_MAINNET_CHAIN_ID = 177;
 const ROBINHOOD_MAINNET_CHAIN_ID = 4663;
+const ARC_MAINNET_CHAIN_ID = 5042;
 
 /**
  * Tokens that settle on Celo (savings / local stablecoins via Mento).
@@ -260,6 +263,13 @@ function getLedgerRegistry(): Record<number, LedgerConfig> {
             contractAddress: process.env.ROBINHOOD_MAINNET_LEDGER_CONTRACT || '',
             rpcUrl: process.env.ROBINHOOD_MAINNET_RPC_URL || 'https://rpc.mainnet.chain.robinhood.com',
             chainId: ROBINHOOD_MAINNET_CHAIN_ID,
+        },
+        // Arc mainnet — settlement rail of record when the x402 gateway runs
+        // SETTLEMENT_ENV=mainnet on ARC. Env-unset → no-op (empty address).
+        [ARC_MAINNET_CHAIN_ID]: {
+            contractAddress: process.env.ARC_MAINNET_LEDGER_CONTRACT || '',
+            rpcUrl: process.env.ARC_MAINNET_RPC_URL || 'https://rpc.mainnet.arc.io',
+            chainId: ARC_MAINNET_CHAIN_ID,
         },
     };
 }

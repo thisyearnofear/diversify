@@ -9,8 +9,21 @@
  */
 
 import { ethers, providers, utils } from 'ethers';
-import { ARC_DATA_HUB_CONFIG, CIRCLE_CONFIG } from '../config';
-import { eip3009Domain, eip3009NonceBytes32, EIP3009_TRANSFER_TYPES } from '../utils/eip3009';
+import { ARC_DATA_HUB_CONFIG, ARC_TOKENS, ARC_TESTNET_TOKENS, CIRCLE_CONFIG } from '../config';
+import { eip3009Domain, eip3009DomainNameFor, eip3009NonceBytes32, EIP3009_TRANSFER_TYPES } from '../utils/eip3009';
+
+// Circle Wallets blockchain codes follow the settlement rail env:
+// 'ARC' on mainnet, 'ARC-TESTNET' otherwise. CIRCLE_WALLET_BLOCKCHAIN overrides.
+// Docs: https://developers.circle.com/wallets (Arc mainnet 'ARC' — 2026-09-16 release).
+export function circleWalletBlockchain(): 'ARC' | 'ARC-TESTNET' {
+    const override = process.env.CIRCLE_WALLET_BLOCKCHAIN;
+    if (override === 'ARC' || override === 'ARC-TESTNET') return override;
+    return process.env.SETTLEMENT_ENV === 'mainnet' ? 'ARC' : 'ARC-TESTNET';
+}
+
+function circleWalletChainId(): number {
+    return circleWalletBlockchain() === 'ARC' ? 5042 : 5042002;
+}
 
 // Unified Circle API Configuration
 const CIRCLE_API = {
@@ -85,8 +98,11 @@ export class CircleService {
     private initialized: boolean = false;
 
     constructor() {
+        const defaultRpc = circleWalletBlockchain() === 'ARC'
+            ? 'https://rpc.mainnet.arc.io'
+            : 'https://rpc.testnet.arc.network';
         this.provider = new providers.JsonRpcProvider(
-            process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network'
+            process.env.ARC_RPC_URL || defaultRpc
         );
     }
 
@@ -122,15 +138,16 @@ export class CircleService {
         
         try {
             console.log(`[Circle Service] Retrieving agent wallet for user ${userId}`);
-            
-            // Search for existing wallet by user tag
+
+            // Dev-controlled wallets have no userId filter — listWallets filters by
+            // refId (WalletMetadata.refId), which we stamp at creation below.
             const listResponse = await this.client.listWallets({
-                userId: userId,
+                refId: userId,
                 pageSize: 10
             });
 
-            const existingWallet = listResponse.data?.wallets?.find((w: any) => 
-                w.metadata?.type === 'agent-fuel-account'
+            const existingWallet = listResponse.data?.wallets?.find((w: any) =>
+                w.metadata?.name === 'agent-fuel-account'
             );
 
             if (existingWallet) {
@@ -144,16 +161,17 @@ export class CircleService {
 
             const walletSetId = walletSetResponse.data.walletSet.id;
 
-            // Create the specific Arc L1 wallet for the agent
+            // metadata is an ARRAY of {name, refId} — one entry per created wallet.
+            // SCA so Gas Station sponsorship applies (Console-configured policy).
             const walletResponse = await this.client.createWallets({
-                accountType: 'SCA', // Smart Contract Account for ERC-6900 compatibility
-                blockchains: ['ARC-TESTNET'],
+                accountType: 'SCA',
+                blockchains: [circleWalletBlockchain()],
                 count: 1,
                 walletSetId: walletSetId,
-                metadata: { 
-                    type: 'agent-fuel-account',
-                    owner: userId
-                }
+                metadata: [{
+                    name: 'agent-fuel-account',
+                    refId: userId
+                }]
             });
 
             const newWalletId = walletResponse.data.wallets[0].id;
@@ -177,8 +195,8 @@ export class CircleService {
     async getUnifiedUSDCBalance(walletAddress: string): Promise<UnifiedUSDCBalance> {
         // Known USDC contract addresses per chain
         const USDC_CONTRACTS: Record<number, { address: string; rpc: string; name: string; decimals: number }> = {
-            5042002: { address: ARC_DATA_HUB_CONFIG.USDC_TESTNET, rpc: process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network', name: 'Arc Testnet', decimals: 6 },
-            5042:    { address: ARC_DATA_HUB_CONFIG.USDC_TESTNET, rpc: process.env.ARC_MAINNET_RPC_URL || 'https://rpc.mainnet.arc.io', name: 'Arc', decimals: 6 },
+            5042002: { address: ARC_TESTNET_TOKENS.USDC, rpc: process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network', name: 'Arc Testnet', decimals: 6 },
+            5042:    { address: ARC_TOKENS.USDC, rpc: process.env.ARC_MAINNET_RPC_URL || 'https://rpc.mainnet.arc.io', name: 'Arc', decimals: 6 },
             42161:   { address: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', rpc: process.env.ARBITRUM_RPC_URL || 'https://arb1.arbitrum.io/rpc', name: 'Arbitrum', decimals: 6 },
             1:       { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', rpc: process.env.ETH_RPC_URL || 'https://eth.llamarpc.com', name: 'Ethereum', decimals: 6 },
         };
@@ -219,7 +237,9 @@ export class CircleService {
                     nativeBalance: '0.00', // Not critical for agent logic
                     lastUpdated: new Date().toISOString(),
                 });
-                if (chainId === 5042002) arcBalanceStr = balance;
+                // arcBalance tracks the env-active Arc rail (5042 on mainnet,
+                // 5042002 on testnet).
+                if (chainId === circleWalletChainId()) arcBalanceStr = balance;
                 if (chainId === 1) ethereumBalanceStr = balance;
                 if (chainId === 42161) arbitrumBalanceStr = balance;
             }
@@ -242,7 +262,7 @@ export class CircleService {
     private async getUSDCBalanceOnArc(walletAddress: string): Promise<string> {
         try {
             const usdcContract = new ethers.Contract(
-                ARC_DATA_HUB_CONFIG.USDC_TESTNET,
+                circleWalletChainId() === 5042 ? ARC_TOKENS.USDC : ARC_TESTNET_TOKENS.USDC,
                 ['function balanceOf(address) view returns (uint256)'],
                 this.provider
             );
@@ -279,27 +299,44 @@ export class CircleService {
                 42220: 'CELO',
             };
 
-            const sourceBlockchain = CHAIN_MAP[fromChainId] || 'ARC-TESTNET';
+            const sourceBlockchain = CHAIN_MAP[fromChainId] || circleWalletBlockchain();
             const destBlockchain = CHAIN_MAP[toChainId] || 'ARB';
 
             // Find a wallet for this user on the source chain
-            const listResponse = await this.client.listWallets({ pageSize: 10 });
+            const listResponse = await this.client.listWallets({ blockchain: sourceBlockchain, pageSize: 10 });
             const wallet = listResponse.data?.wallets?.find((w: any) =>
-                w.blockchain === sourceBlockchain || w.metadata?.type === 'agent-fuel-account'
+                w.blockchain === sourceBlockchain
             );
 
             if (!wallet) {
                 throw new Error(`No Circle wallet found for chain ${sourceBlockchain}`);
             }
 
+            // createTransaction shape per SDK types: amounts[] (not amount),
+            // tokenAddress+blockchain (tokenId is a Circle UUID — we hold an
+            // address, not a tokenId), fee {type:'level', config:{feeLevel}}.
+            // USDC address per Circle blockchain code — never fall back to the
+            // Arc predeploy on another chain (that's a different token).
+            const USDC_BY_BLOCKCHAIN: Record<string, string> = {
+                'ARC': ARC_TOKENS.USDC,
+                'ARC-TESTNET': ARC_TESTNET_TOKENS.USDC,
+                'ARB': '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
+                'ARB-SEPOLIA': '0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d',
+                'ETH': '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+            };
+            const tokenAddress = USDC_BY_BLOCKCHAIN[sourceBlockchain];
+            if (!tokenAddress) {
+                throw new Error(`No USDC address mapped for Circle blockchain ${sourceBlockchain}`);
+            }
             const response = await this.client.createTransaction({
                 walletId: wallet.id,
                 blockchain: sourceBlockchain,
-                tokenId: CIRCLE_CONFIG.USDC_TOKEN_ID_ARC || '',
+                tokenAddress,
                 destinationAddress: walletAddress,
-                destinationBlockchain: destBlockchain,
-                amount: [amount],
-                feeLevel: 'MEDIUM',
+                refId: `dest-${destBlockchain.toLowerCase()}`,
+                amounts: [amount],
+                fee: { type: 'level', config: { feeLevel: 'MEDIUM' } },
+                idempotencyKey: `xfer-${wallet.id}-${Date.now()}`,
             });
 
             const txId = response.data?.id;
@@ -334,14 +371,14 @@ export class CircleService {
     async createNanopaymentMandate(
         signer: any,
         intent: NanopaymentIntent,
-        chainId: number = ARC_DATA_HUB_CONFIG.CHAIN_ID,
-        tokenAddress: string = ARC_DATA_HUB_CONFIG.USDC_TESTNET
+        chainId: number = circleWalletChainId(),
+        tokenAddress: string = circleWalletChainId() === 5042 ? ARC_TOKENS.USDC : ARC_TESTNET_TOKENS.USDC
     ): Promise<NanopaymentMandate> {
         console.log(`[Circle Service] Creating Nanopayment Mandate: ${intent.amount} USDC to ${intent.recipient}`);
 
         const sender = await signer.getAddress();
 
-        const domain = eip3009Domain(chainId, tokenAddress);
+        const domain = eip3009Domain(chainId, tokenAddress, eip3009DomainNameFor(chainId));
         const types = EIP3009_TRANSFER_TYPES;
 
         const value = {
@@ -371,7 +408,7 @@ export class CircleService {
      */
     async verifyNanopaymentMandate(mandate: NanopaymentMandate): Promise<boolean> {
         try {
-            const domain = eip3009Domain(mandate.chainId, mandate.tokenAddress);
+            const domain = eip3009Domain(mandate.chainId, mandate.tokenAddress, eip3009DomainNameFor(mandate.chainId));
             const types = EIP3009_TRANSFER_TYPES;
 
             const value = {
@@ -410,14 +447,17 @@ export class CircleService {
         try {
             console.log(`[Circle Service] Bridging ${amount} USDC from Arc to ${destinationBlockchain}`);
             
+            const sourceBlockchain = circleWalletBlockchain();
+            const tokenAddress = sourceBlockchain === 'ARC' ? ARC_TOKENS.USDC : ARC_TESTNET_TOKENS.USDC;
             const response = await this.client.createTransaction({
                 walletId: walletId,
-                blockchain: 'ARC-TESTNET',
-                tokenId: CIRCLE_CONFIG.USDC_TOKEN_ID_ARC || '', 
+                blockchain: sourceBlockchain,
+                tokenAddress,
                 destinationAddress: destinationAddress,
-                destinationBlockchain: destinationBlockchain,
-                amount: [amount],
-                feeLevel: 'MEDIUM'
+                refId: `dest-${destinationBlockchain.toLowerCase()}`,
+                amounts: [amount],
+                fee: { type: 'level', config: { feeLevel: 'MEDIUM' } },
+                idempotencyKey: `bridge-${walletId}-${Date.now()}`,
             });
 
             return response.data.id;

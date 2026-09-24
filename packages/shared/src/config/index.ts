@@ -432,21 +432,29 @@ export const TX_CONFIG = {
 // Circle Configuration
 export const CIRCLE_CONFIG = {
     CCTP: {
+        // CCTP V2 — addresses per developers.circle.com/cctp/references/contract-addresses
+        // (the previous ETHEREUM/ARBITRUM/BASE entries were V1 contracts).
         // Arc is CCTP domain 26 on both mainnet and testnet.
         DOMAINS: { ETHEREUM: 0, AVALANCHE: 1, OPTIMISM: 2, ARBITRUM: 3, BASE: 6, POLYGON: 7, ARC: 26 },
         TOKEN_MESSENGER: {
-            ETHEREUM: '0xbd3fa81b58ba92a821df2201e99602b9e6e87292',
-            ARBITRUM: '0x19330d10D9Cc8751218eaf51E8885D058642E08A',
-            BASE: '0x1682Ae6375C4009baf3d690757d822C92fc556aE',
-            // TokenMessengerV2 — docs.arc.io/arc/references/contract-addresses
+            ETHEREUM: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            ARBITRUM: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            BASE: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
             ARC: '0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d',
+            ARBITRUM_SEPOLIA: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
             ARC_TESTNET: '0x8FE6B999Dc680CcFDD5Bf7EB0974218be2542DAA',
         },
         MESSAGE_TRANSMITTER: {
-            // MessageTransmitterV2 — docs.arc.io/arc/references/contract-addresses
+            ETHEREUM: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            ARBITRUM: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            BASE: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
             ARC: '0x81D40F21F12A8F0E3252Bccb954D722d4c464B64',
+            ARBITRUM_SEPOLIA: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
             ARC_TESTNET: '0xE737e5cEBEEBa77EFE34D4aa090756590b1CE275',
         },
+        // Forwarding Service hook data — "cctp-forward" padded to bytes32
+        // (developers.circle.com/cctp/quickstarts/transfer-usdc-ethereum-to-arc)
+        FORWARDING_HOOK_DATA: '0x636374702d666f72776172640000000000000000000000000000000000000000',
     },
     // Circle Gateway — chain-abstracted USDC balance (deposit once on any
     // supported chain, spendable on Arc). Planned funding layer for the
