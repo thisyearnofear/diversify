@@ -48,6 +48,15 @@ const nextConfig = {
       './node_modules/json-schema/**/*',
       './node_modules/undici/**/*',
     ],
+    // 0G evidence anchoring — shared-0g loads the SDK via
+    // `eval('require("@0gfoundation/0g-storage-ts-sdk")')` at runtime, so NFT
+    // cannot see it from any route. Force-include the SDK plus its runtime
+    // deps that nothing else traces (open-jsonrpc-provider pulls ws/axios).
+    '*': [
+      './node_modules/@0gfoundation/0g-storage-ts-sdk/**/*',
+      './node_modules/open-jsonrpc-provider/**/*',
+      './node_modules/reconnecting-websocket/**/*',
+    ],
   },
 
   // NOTE (2026-09-11): outputFileTracingExcludes REMOVED entirely. Both

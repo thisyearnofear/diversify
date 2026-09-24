@@ -121,6 +121,13 @@ else
     ok "Build artifacts verified (apps/web/.next/BUILD_ID present)"
 fi
 
+# Guard: bare require()/import() specifiers in the compiled server chunks must
+# resolve inside the standalone tree — NFT tracing misses runtime-loaded deps
+# and rsync --delete removes whatever isn't shipped (the 0g-storage outage).
+if ! node scripts/check-standalone-requires.mjs; then
+    fail "Standalone server bundle references packages missing from .next/standalone — fix before deploying"
+fi
+
 # ── 3. Snapshot server state for rollback ───────────────────────────────────
 # Keep the previous build (and env, if we manage it) so a failed healthz gate
 # can restore them. This is the deploy's safety net.
@@ -201,12 +208,14 @@ if [ -d "$WEB_NEXT/standalone/packages" ]; then
         "$REMOTE:$RUNTIME_DIR/packages/" 2>&1 | tail -3
 fi
 
-# TypeSafe Gateway SDK (ai + peers) is loaded via dynamic import() from
-# ask-world-spike / firecrawl-webhook, so NFT often omits it from standalone.
-# Overlay these packages after the --delete sync so Signal Lens + Ask-the-World
-# keep working on Hetzner. Follow symlinks (-L) for the pnpm store layout.
-info "Overlaying AI Gateway SDK packages for TypeSafe routes..."
-ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules/@ai-sdk' '$RUNTIME_DIR/node_modules/@vercel' '$RUNTIME_DIR/node_modules/@standard-schema' '$RUNTIME_DIR/node_modules/@workflow'"
+# Runtime-loaded packages NFT can't see (dynamic import() via `new Function`
+# or `eval('require(...)')`) — AI Gateway SDK for TypeSafe routes
+# (ask-world-spike / firecrawl-webhook) and the 0G storage SDK that evidence
+# anchoring eval-requires in shared-0g. Overlay them after the --delete sync
+# so those routes keep working on Hetzner. -L follows pnpm symlinks and ships
+# each package's nested node_modules (e.g. open-jsonrpc-provider's axios@0.27).
+info "Overlaying runtime-loaded packages (AI Gateway SDK + 0G storage)..."
+ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules/@ai-sdk' '$RUNTIME_DIR/node_modules/@vercel' '$RUNTIME_DIR/node_modules/@standard-schema' '$RUNTIME_DIR/node_modules/@workflow' '$RUNTIME_DIR/node_modules/@0gfoundation'"
 for pkg_path in \
     ai \
     @ai-sdk/gateway \
@@ -217,7 +226,10 @@ for pkg_path in \
     @workflow/serde \
     eventsource-parser \
     json-schema \
-    undici
+    undici \
+    @0gfoundation/0g-storage-ts-sdk \
+    open-jsonrpc-provider \
+    reconnecting-websocket
 do
     if [ -d "node_modules/$pkg_path" ]; then
         rsync -azL --delete --no-owner --no-group \

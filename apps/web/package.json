@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@0gfoundation/0g-storage-ts-sdk": "1.2.9",
     "@celo/identity": "5.1.2",
     "@diversifi/shared": "workspace:*",
     "@diversifi/shared-0g": "workspace:*",
