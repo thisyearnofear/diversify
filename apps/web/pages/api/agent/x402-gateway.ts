@@ -10,6 +10,7 @@ import {
     getArcResearchSource,
     normalizeArcResearchSource,
     settleOnChain,
+    agentMirrorSettlementEnabled,
     settleWithAuthorization,
     DEFAULT_SETTLEMENT_NETWORK,
     getSettlementConfig,
@@ -679,8 +680,11 @@ export default async function handler(
     // On the HASHKEY rail the USER already settled on-chain via HSP (their wallet →
     // merchant transfer, observed + receipted), so the agent-side settleOnChain would
     // double-pay. Skip it — the HSP tx is the settlement of record.
+    // On mainnet the mirror is skipped entirely: it moves the vault's own USDC,
+    // which reads as fabricated volume on the explorer — only real buyer
+    // settlements (mandate, tx-proof, HSP, gateway_batched) appear on-chain.
     const settlements: SettlementResult[] = [];
-    if (totalCost > 0 && !user.enterprise && DEFAULT_SETTLEMENT_NETWORK !== 'HASHKEY') {
+    if (totalCost > 0 && !user.enterprise && DEFAULT_SETTLEMENT_NETWORK !== 'HASHKEY' && agentMirrorSettlementEnabled()) {
         const settlementPromises = sourcePlans
             .filter(p => p.cost > 0)
             .map(p => settleOnChain(p.cost, p.source.id, DEFAULT_SETTLEMENT_NETWORK));
@@ -758,15 +762,20 @@ export default async function handler(
     }
 
     const bundle = buildArcResearchBundle(payloads);
-    const settlementMeta = settlements.length > 0
-        ? {
-            txHashes: settlements.map(s => s.txHash),
-            explorer: settlements.map(s => s.explorer),
-            onChainSettled: true,
-            settlementNetwork: DEFAULT_SETTLEMENT_NETWORK,
-            settlementEnv: SETTLEMENT_ENV,
-        }
-        : { onChainSettled: false };
+    const settlementMeta = {
+        ...(settlements.length > 0
+            ? {
+                txHashes: settlements.map(s => s.txHash),
+                explorer: settlements.map(s => s.explorer),
+                onChainSettled: true,
+                settlementNetwork: DEFAULT_SETTLEMENT_NETWORK,
+                settlementEnv: SETTLEMENT_ENV,
+            }
+            : { onChainSettled: false }),
+        // The buyer's real settlement tx (mandate / tx-proof / HSP / gateway_batched)
+        // is reported even when the agent-side mirror is skipped on mainnet.
+        ...(settlementTxHash ? { settlementTxHash } : {}),
+    };
 
     if (bundleRequested) {
         return res.status(200).json({

@@ -1,4 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 describe('SettlementService — DEFAULT_SETTLEMENT_NETWORK (Phase 0 audit A5)', () => {
     const originalEnv = process.env.SETTLEMENT_NETWORK;
@@ -139,11 +141,28 @@ describe('SettlementService — daily settlement cap', () => {
         else process.env.SETTLEMENT_NETWORK = originalNetwork;
     });
 
-    it('defaults to 50 USDC when SETTLEMENT_DAILY_CAP_USDC is not set', async () => {
+    it('defaults to 50 USDC on testnet when SETTLEMENT_DAILY_CAP_USDC is not set', async () => {
         delete process.env.SETTLEMENT_DAILY_CAP_USDC;
+        process.env.SETTLEMENT_ENV = 'testnet';
         vi.resetModules();
         const { SETTLEMENT_DAILY_CAP_USDC } = await import('../settlement-service');
         expect(SETTLEMENT_DAILY_CAP_USDC).toBe(50.0);
+    });
+
+    it('defaults to 5 USDC on mainnet when SETTLEMENT_DAILY_CAP_USDC is not set', async () => {
+        delete process.env.SETTLEMENT_DAILY_CAP_USDC;
+        process.env.SETTLEMENT_ENV = 'mainnet';
+        vi.resetModules();
+        const { SETTLEMENT_DAILY_CAP_USDC } = await import('../settlement-service');
+        expect(SETTLEMENT_DAILY_CAP_USDC).toBe(5.0);
+    });
+
+    it('env override wins on mainnet too', async () => {
+        process.env.SETTLEMENT_DAILY_CAP_USDC = '10.5';
+        process.env.SETTLEMENT_ENV = 'mainnet';
+        vi.resetModules();
+        const { SETTLEMENT_DAILY_CAP_USDC } = await import('../settlement-service');
+        expect(SETTLEMENT_DAILY_CAP_USDC).toBe(10.5);
     });
 
     it('allows custom cap via SETTLEMENT_DAILY_CAP_USDC', async () => {
@@ -175,5 +194,44 @@ describe('SettlementService — daily settlement cap', () => {
         const { checkDailyCap, recordDailySpend } = await import('../settlement-service');
         await recordDailySpend(999, 'ARBITRUM');
         expect((await checkDailyCap(1, 'ARBITRUM')).allowed).toBe(true);
+    });
+});
+
+describe('agentMirrorSettlementEnabled — x402 gateway settleOnChain gate', () => {
+    const originalEnv = process.env.SETTLEMENT_ENV;
+    afterEach(() => {
+        if (originalEnv === undefined) delete process.env.SETTLEMENT_ENV;
+        else process.env.SETTLEMENT_ENV = originalEnv;
+    });
+
+    it('is disabled on mainnet — settleOnChain mirror must not run there', async () => {
+        process.env.SETTLEMENT_ENV = 'mainnet';
+        vi.resetModules();
+        const { agentMirrorSettlementEnabled } = await import('../settlement-service');
+        expect(agentMirrorSettlementEnabled()).toBe(false);
+    });
+
+    it('is enabled on testnet — settleOnChain mirror runs per paid request', async () => {
+        process.env.SETTLEMENT_ENV = 'testnet';
+        vi.resetModules();
+        const { agentMirrorSettlementEnabled } = await import('../settlement-service');
+        expect(agentMirrorSettlementEnabled()).toBe(true);
+    });
+
+    it('explicit env args behave the same regardless of process env', async () => {
+        const { agentMirrorSettlementEnabled } = await import('../settlement-service');
+        expect(agentMirrorSettlementEnabled('mainnet')).toBe(false);
+        expect(agentMirrorSettlementEnabled('testnet')).toBe(true);
+    });
+
+    it('the x402 gateway route gates its settleOnChain block on this predicate', () => {
+        // Tripwire: if the route's mirror block loses the env gate, mainnet
+        // would start broadcasting operator-funded USDC mirrors again.
+        const route = readFileSync(
+            resolve(__dirname, '../../../../../apps/web/pages/api/agent/x402-gateway.ts'),
+            'utf8',
+        );
+        expect(route).toMatch(/settleOnChain\(p\.cost/);
+        expect(route).toMatch(/agentMirrorSettlementEnabled\(\)/);
     });
 });

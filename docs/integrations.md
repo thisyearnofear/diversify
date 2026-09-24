@@ -150,7 +150,7 @@ agent-side `settleOnChain` fire-and-forget tx. See
 - The fallback path is `402` challenge → buyer sends a real USDC transfer on the active settlement rail → gateway verifies the tx hash and nonce. This remains for external agents and clients that prefer tx-hash proofs.
 - Data-source prices are at or below `$0.01`; artifact-level products (e.g. `fx_protection` at `$1.00`) are priced per decision, not per feed.
 - Nonce expiry and replay checks protect against double-spend on payment proofs and mandates (challenge nonce is consumed once; the EIP-3009 nonce is additionally spent on-chain).
-- Every paid request also triggers a real `USDC.transfer` mirror on the active rail via `settlement-service.ts`.
+- On testnet only, every paid request also triggers a real `USDC.transfer` mirror on the active rail via `settlement-service.ts` (`settleOnChain`, gated by `agentMirrorSettlementEnabled`). On mainnet the mirror is skipped — only real buyer settlements (mandate, tx-proof, HSP, `gateway_batched`) appear on-chain, reported as `_billing.settlementTxHash`.
 - Opaque `circle-gateway-*` proof ids are intentionally not accepted in the judge-facing flow unless server-side verification is explicitly configured.
 
 ### Configuring the Rail
@@ -539,10 +539,12 @@ Every response includes verifiable proof:
    - Arbitrum mainnet (42161) for yield/RWA decisions
    - 0G Galileo (16602) for evidence anchor/mirror
 
-3. **Settlement tx** — the `_billing.txHashes` array contains the
-   USDC transfer tx hashes on the active settlement rail. Verify on the
-   rail's explorer (returned in `_billing.explorer` and indicated by
-   `_billing.settlementNetwork` / `_billing.settlementEnv`).
+3. **Settlement tx** — the buyer's real settlement transaction is reported as
+   `_billing.settlementTxHash`. On testnet the `_billing.txHashes` array also
+   contains the agent-side `USDC.transfer` mirror hashes on the active rail
+   (skipped on mainnet); verify on the rail's explorer (returned in
+   `_billing.explorer` and indicated by `_billing.settlementNetwork` /
+   `_billing.settlementEnv`).
 
 **Gateway intelligence CIDs.** Every paid Data Hub response also includes
 `evidenceCids` in its `_billing` block — one 0G Storage CID per paid

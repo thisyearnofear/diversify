@@ -65,7 +65,8 @@ export const SETTLEMENT_ENV: SettlementEnv =
 /**
  * Global daily settlement cap in USDC. This is a safety valve on the agent
  * wallet: no more than this amount of USDC can be spent by the settlement
- * service across all rails in a UTC day. Defaults to 50 USDC; set
+ * service across all rails in a UTC day. Defaults to 5 USDC on mainnet
+ * (SETTLEMENT_ENV=mainnet) and 50 USDC otherwise; set
  * SETTLEMENT_DAILY_CAP_USDC=0 to disable the cap.
  *
  * Note: the counter is currently in-memory. For multi-instance or
@@ -73,8 +74,19 @@ export const SETTLEMENT_ENV: SettlementEnv =
  * For the single-server buildathon demo this is acceptable.
  */
 export const SETTLEMENT_DAILY_CAP_USDC = parseFloat(
-    process.env.SETTLEMENT_DAILY_CAP_USDC || '50.0',
+    process.env.SETTLEMENT_DAILY_CAP_USDC || (SETTLEMENT_ENV === 'mainnet' ? '5.0' : '50.0'),
 );
+
+/**
+ * Whether the agent-side settleOnChain mirror runs for a paid request. The
+ * mirror sends the vault's OWN USDC to the recipient — fine on testnet, but on
+ * mainnet operator money circling back reads as fabricated volume on the
+ * explorer; only real buyer settlements (mandate, tx-proof, HSP,
+ * gateway_batched) may appear on-chain there.
+ */
+export function agentMirrorSettlementEnabled(env: SettlementEnv = SETTLEMENT_ENV): boolean {
+    return env !== 'mainnet';
+}
 
 /** Pluggable store for the daily settlement cap. Implementations should be
  * atomic: if the cap would be exceeded, the spend must NOT be recorded. */
