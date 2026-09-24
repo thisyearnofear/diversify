@@ -1,175 +1,99 @@
 # Guardian
 
-## Guardian Enforcement Model
+## Guardian Execution Model
 
-**Status:** current production model is **app-enforced**; on-chain enforcement is a deferred architecture workstream.
-**Decision:** pursue the **hybrid** path (below) and stop overclaiming "on-chain ERC-7715 enforcement" until it ships.
+**Status:** wallet-native. Savings never leave the user's wallet — there is no
+Safe creation, no deposit step, and no custodial account anywhere in the flow.
+The "vault" record in MongoDB is a Guardian profile (strategy, permission,
+journal, audit trail), not a fund-holding account.
 
 This doc is the single source of truth for *how the Guardian's spending bounds
-are actually enforced*, the residual gap, and the plan to close it. It exists
-because several comments and docs previously implied the user's signed
-permission is enforced on-chain. It is not (yet).
+are actually enforced*.
 
 ---
 
 ## TL;DR
 
-- The user signs an **EIP-712 permission** (`erc7715-service.ts`). The server
-  **verifies** it on write (`POST /api/vault/permission`). This is real
-  cryptographic **consent**, bound to the user's wallet.
-- **Consent ≠ on-chain constraint.** On the production Celo / Mento path, the
-  bounds (`dailyLimitUSD`, `spendingLimitUSD`, `allowedTokens`, `expiresAt`,
-  `status`) are enforced **only in application code**:
-  - `VaultService.validateSwap` — destination-token allowlist, daily/total caps.
-  - `pages/api/agent/guardian-loop.ts` — autonomy tier, first-execution consent
-    (`firstAutoExecutionConfirmed`, set at GUARDIAN-tier grant time and after
-    the first manual rebalance), confidence threshold, daily-limit clamp,
-    staleness, per-user execution lock, dequeue-before-execute idempotency.
-- Execution signs through a **server-custodied** smart account
-  (`SMART_ACCOUNT_PROVIDER=privy`, the default). There is **no** operator-key
-  fallback: `VAULT_PRIVATE_KEY` is the settlement/ledger key and never signs
-  user vault transactions — with no configured provider, execution fails
-  closed (`VaultExecutionUnavailableError`, journaled as a decline). The chain
-  imposes **no** limit on what that account can sign.
-- The Privy path (`providers/privy-safe-provider.ts`) resolves the user by
-  wallet/smart-wallet address (`users().getBySmartWalletAddress` →
-  `getByWalletAddress`), then submits a UserOperation from the user's Safe
-  signed by their **delegated embedded wallet** — `createViemAccount` +
-  `authorization_context` (`PRIVY_AUTHORIZATION_PRIVATE_KEY`, a P-256 key whose
-  public half is registered in a Privy key quorum and granted via `addSigners`)
-  through an ERC-4337 bundler (`PRIVY_BUNDLER_URL`). Privy's server SDK has no
-  smart-wallet submit API, so the bundler path is required, and the provider
-  reports unconfigured unless every credential is present.
-- **Delegation consent** (client): when `NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID` is
-  set and the connected wallet is the user's Privy embedded wallet, the
-  Guardian grant flow calls `useSigners().addSigners({ signerId: quorum })`
-  in the same consent moment as the EIP-712 limits signature; revoke calls
-  `removeSigners`. A failed `addSigners` aborts the grant — no permission is
-  registered that claims delegation it didn't get. The API does not trust the
-  client claim: `POST /api/vault/permission` re-verifies the quorum signer on
-  the wallet's `additional_signers` via the Privy server SDK
-  (`privy-delegation.ts`) before storing `privyDelegated: true`. The
-  guardian loop declines GUARDIAN execution on the Privy rail with
-  `delegation_required` when the flag is absent — external-wallet users can
-  never delegate, so their decline is honest rather than an attempt.
-  Dashboard setup: enable Safe smart wallets on Celo, create a P-256
-  authorization key + key quorum, and attach a Privy policy restricting the
-  signer to the Mento broker and allowlisted stablecoin contracts (value 0).
-- A real on-chain enforcement path exists in code
-  (`providers/metamask-delegation-provider.ts`, ERC-7710 redemption via a
-  DelegationManager) but is **dark**: it is not the active provider,
-  `setDelegationContextResolver()` is exported but never called at boot, and it
-  is **EIP-7702-only (no Celo support)**.
+- **Two execution modes, one honest contract.**
+  - **One-tap (default, every chain):** the Guardian proposes; the user taps
+    "Review this move →", lands on Exchange prefilled with the pair and amount
+    (`origin: guardian`), and signs in their own wallet. Nothing moves until
+    they sign. ADVISORY and COPILOT tiers only ever get this path.
+  - **Autonomous (opt-in, ERC-7715/7710 only):** the user grants a MetaMask
+    Advanced Permission ("Stronger protection"). The Guardian session account
+    redeems it on the user's **own smart account** — bounds enforced on-chain
+    by the DelegationManager, not in app code.
+- The user signs an **EIP-712 permission** (`erc7715-service.ts`) — real
+  cryptographic consent stored on the `Permission` record. For GUARDIAN-tier
+  users who also complete the ERC-7715 grant, the returned
+  `delegationContext` (context + delegationManager + factory dependencies) is
+  persisted on the same record via `PATCH /api/vault/permission`.
+- Execution goes through `MetaMaskDelegationProvider`
+  (`providers/metamask-delegation-provider.ts`) — the **only** autonomy
+  provider. It is an ERC-7710 *redeemer*: the session signer
+  (`GUARDIAN_SESSION_PRIVATE_KEY`) can only act within the granted caveats;
+  it is not a master key. `VAULT_PRIVATE_KEY` is the operator settlement key
+  and never signs user transactions.
+- **Fail closed, everywhere.** Missing `GUARDIAN_SESSION_PRIVATE_KEY` /
+  bundler config → `isConfigured()` false → the loop journals the proposal
+  as `advisory_pending_user_review` ("review and sign it in your wallet").
+  A chain outside the eligible set → same fallback. An ERC-7715 grant with
+  no stored `delegationContext` → redemption throws, journaled, never silent.
+- **Chain eligibility is derived, not assumed:**
+  `isAutonomyEligibleChain(chainId)` = `ChainDetectionService.isSupported` ∩
+  chains where the installed `@metamask/smart-accounts-kit` ships
+  `getSmartAccountsEnvironment()` (`ERC7710_KIT_CHAIN_IDS`). Today that
+  intersects to **Celo 42220, Celo Sepolia 11142220, Arbitrum 42161**.
+- **Per-chain routing in the executor:**
+  - Celo chains → Mento broker `approve` + `swapIn` calldata.
+  - Other eligible chains → LI.FI HTTP quote (`https://li.quest/v1/quote`);
+    the approval targets `estimate.approvalAddress` and the swap is the
+    quote's `transactionRequest` verbatim.
+  - Both legs ride **one atomic UserOp** (`sendBatch`) — an approve+swap pair
+    can never half-land, and a quote missing `approvalAddress` throws rather
+    than shipping a swap that cannot execute.
+- **Privy is login/embedded-wallet onboarding only.** Every Privy execution
+  path (Safe provider, authorization-key delegation, session signers) has
+  been removed.
+- **Fees are under review.** Management/performance fees presupposed a
+  custodial vault; the fee engine and withdrawal settlement were removed.
+  The documented 0.10% swap spread is unchanged.
 
 ## What this means (threat model)
 
-The Guardian is a **trusted** agent, not a **constrained** one. The residual
-risk is that a compromised server, a bug that bypasses `validateSwap`, or a
-malicious code path can move funds **beyond the user's intended bounds**,
-because nothing on-chain stops the custodial signer. "Revoke" is a MongoDB
-status flag, not an on-chain revocation.
-
-The hardened app-layer gates (the 2026-06 Guardian hardening) make this
-robust *within the trusted model* — they are the enforcement layer today and
-remain valuable as defense-in-depth even after on-chain enforcement lands.
-They do not, by themselves, remove server trust.
+With one-tap as the default, a compromised server cannot move user funds at
+all — it can only surface a proposal. Autonomous moves are bounded twice: by
+the on-chain caveats in the ERC-7715 delegation (token, periodic amount,
+expiry — enforced by the DelegationManager) and by the app-layer gates
+below. "Revoke" sets the permission inactive in Mongo; on-chain revocation
+lives in the user's wallet (MetaMask permission UI) — both are surfaced.
 
 ## Current flow
 
 ```
-User wallet ──signs EIP-712──▶ SessionPermission ──verified + stored──▶ MongoDB
-                                                                          │
-guardian-loop (validateSwap + gates) ──signs via──▶ server-custodied      │
-                                                    Privy Safe (delegated  │
-                                                    embedded-wallet signer)│
-                                                          │               │
-                                                          ▼               │
-                                                     Mento swap   ◀── bounds checked
-                                                   (Celo mainnet)      in app code only
+User wallet ──signs EIP-712──▶ Permission (consent record) ──▶ MongoDB
+         └─(opt-in)──wallet_requestExecutionPermissions──▶ delegationContext stored
+                                                                  │
+guardian-loop ── GUARDIAN tier + eligible chain + provider configured? ──┤
+        │ yes: session account redeems via DelegationManager           │
+        │      approve+swap as ONE UserOp (Mento on Celo / LI.FI elsewhere)
+        │ no:  proposal stays queued — "Review this move →" one-tap    │
+        ▼                                                              ▼
+   swap executes inside caveats                              user signs in wallet
+   (funds never leave the user's account)                    (Exchange, prefilled)
 ```
-
-## Target flow (on-chain enforced, ERC-7710 redemption)
-
-```
-User smart account ──grants ERC-7715 delegation w/ caveats──▶ stored context
-   (target=Mento broker, token allowlist, amount cap, expiry)        │
-                                                                      ▼
-guardian-loop ──redeems via session signer──▶ DelegationManager ──enforces caveats
-                (scoped, not a master key)        on-chain          ON-CHAIN
-                                                       │
-                                                       ▼
-                                                  swap executes; funds never
-                                                  leave the user's account
-```
-
-## What needs to happen to close it
-
-1. **Real ERC-7715 grant.** Replace/augment the custom EIP-712 struct with an
-   actual delegation created client-side (the `erc7715-grant.ts` counterpart)
-   with caveats: target = Mento broker only, allowed tokens, amount cap per
-   period, expiry. Persist `context` + `delegationManager` + factory
-   `dependencies` per user/chain (new `Permission` fields).
-2. **Register the resolver at boot.** Call `setDelegationContextResolver()` once
-   at API startup, wired to read those fields from Mongo. Without this the
-   delegation provider is inert.
-3. **Provision the redeemer.** Set `GUARDIAN_SESSION_PRIVATE_KEY` (a *scoped*
-   signer — can only redeem within caveats, not a master key), `AA_BUNDLER_URL`,
-   and set `SMART_ACCOUNT_PROVIDER=metamask-delegation`.
-4. **Resolve the chain problem (the hard part).** ERC-7715/7710 need an
-   EIP-7702-capable chain + a deployed DelegationManager. **Celo + Mento is not
-   supported by this path today.** Options:
-   - (a) Move Guardian execution to an EIP-7702 chain (Arbitrum) + that chain's
-     DEX — abandons the Celo/Mento stablecoin core. ❌
-   - (b) Wait for Celo EIP-7702 + DelegationManager support, then add Celo to
-     `SUPPORTED_CHAINS` with a caveat enforcer permitting Mento broker calls —
-     may not exist yet. ⏳
-   - (c) **Hybrid (chosen):** keep Celo on the app-enforced Privy path; enable
-     chain-enforced redemption only on chains where the toolkit works; be
-     explicit about which surface is "soft/app-enforced" vs "hard/chain-enforced".
-5. **Map caveats carefully.** On-chain caveats are token-amount / native-value
-   based; our limits are **USD-denominated**. Enforce token-amount caps on-chain
-   and keep the USD daily limit + confidence threshold as softer app-layer gates.
-6. **Make revoke + proof real.** Wire revocation to disable the delegation
-   on-chain (or rely on expiry); surface the on-chain permission/redemption in
-   the proof feed.
-
-## Decision: hybrid (4c) — chain-aware enforcement
-
-The chain-aware thesis means enforcement follows the chain's capabilities.
-Celo/Mento *is* the savings layer, and EIP-7702/DelegationManager on Celo
-is the blocker, so:
-
-- **Celo Guardian stays app-enforced** for savings actions. Document it
-  honestly (this doc + the `Permission.ts` header + the architecture
-  intro). Keep the hardened gates.
-- **Pursue chain-enforced redemption on Arbitrum** for yield actions,
-  where EIP-7702 + DelegationManager is already supported. This is the
-  Arbitrum Open House AI & Agentic Track differentiator — true on-chain
-  permission enforcement for autonomous yield execution.
-- **Do not claim on-chain ERC-7715 enforcement** in code comments, docs,
-  or UI until it actually ships on the relevant surface. Be explicit
-  about which surface is "soft/app-enforced" (Celo savings) vs
-  "hard/chain-enforced" (Arbitrum yield, when it ships).
-
-## Impact summary
-
-| Dimension | Closing the gap (on-chain enforcement) |
-|-----------|----------------------------------------|
-| Security | Removes server-custody single point of failure; a compromised server can't exceed caveats. The 9→10 step. Revoke becomes real. |
-| Trust / product | Lets us truthfully claim non-custodial, on-chain-enforced autonomy. |
-| UX | Heavier onboarding: a real delegation grant (smart-account UX, possibly a one-time on-chain tx / EIP-7702 upgrade) vs a free off-chain signature. |
-| Cost / latency | Execution becomes an ERC-4337 userOp via a bundler — more gas + latency per swap; wants a paymaster. |
-| Ops | New deps: bundler, paymaster, scoped session-key management, delegation-context storage + migration. |
-| Scope | Architecture workstream, not a hardening pass. The chain-support question (step 4) may force a product decision. |
 
 ## Related code
 
-- `models/Permission.ts` — schema + the honest enforcement note.
+- `models/Permission.ts` — consent record + optional `delegationContext`.
 - `packages/shared/src/services/erc7715-service.ts` — EIP-712 sign/verify (consent).
-- `packages/shared/src/services/erc7715-grant.ts` — client-side grant counterpart.
 - `packages/shared/src/services/vault/providers/metamask-delegation-provider.ts` —
-  the real (dark) ERC-7710 redemption path.
-- `apps/web/lib/vault/executor.ts` — smart-account-only execution (Privy/Safe; fails closed without a provider).
+  the ERC-7710 redemption path (kit-derived chain set, atomic batching).
+- `apps/web/lib/vault/executor.ts` — provider selection, `isAutonomyEligibleChain`,
+  per-chain call builders (Mento / LI.FI), delegation-context resolver.
+- `apps/web/lib/erc7715-client-grant.ts` — per-chain grant config; refuses
+  chains without a grant token; `guardianSessionAddress()` returns null when
+  unset (no self-address fallback — the grant option is hidden instead).
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
 - `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
 

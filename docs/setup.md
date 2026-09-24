@@ -127,18 +127,27 @@ Rules and the object inventory: [`design-language.md`](./design-language.md) §5
 ### Test Drive
 
 1. Switch to Celo Sepolia in your wallet
-2. Get testnet tokens from the faucet
-3. Create a vault via `/api/vault/create`
-4. Pick a protection plan and deposit testnet stablecoins
+2. Get testnet tokens from the faucet — they stay in your wallet
+3. Pick a protection plan; the Guardian starts proposing moves
+4. Tap "Review this move →" and sign on Exchange
 5. Monitor allocations and P&L in the dashboard
 
-### Setup: Privy Smart Accounts
+### Setup: Guardian autonomy (ERC-7715/7710)
 
-1. **Privy Dashboard** → Enable smart wallets → Select "Safe"
-2. **Create an app authorization key** → `openssl ecparam -name prime256v1 -genkey`, register the public key in a key quorum (Dashboard → Authorization keys)
-3. **Add the signer** → each user grants the quorum on their embedded wallet via `addSigners` (client-side `useSigners`)
-4. **Bundler** → an ERC-4337 bundler for Celo (e.g. Pimlico) — Privy's server SDK does not submit smart-wallet UserOps itself
-5. **Set env vars** → `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `PRIVY_AUTHORIZATION_PRIVATE_KEY`, `PRIVY_BUNDLER_URL` — the provider fails closed unless all are set. For the client delegation step also set `NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID` (the quorum's signer id — the grant flow calls `addSigners` with it) and `PRIVY_KEY_QUORUM_ID` server-side so `POST /api/vault/permission` can verify the delegation before storing `privyDelegated`. Recommended: attach a Privy policy to the quorum restricting the signer to the Mento broker + allowlisted stablecoin contracts, value 0.
+Autonomous execution is opt-in and enforced on-chain by the user's own smart
+account — there is no Safe to create and no Privy execution path.
+
+1. **Session signer** → generate a dedicated key; its address is what users
+   grant Advanced Permissions to: `GUARDIAN_SESSION_PRIVATE_KEY` (server) +
+   `NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS` (client — when unset, the
+   "Stronger protection" option is hidden).
+2. **Bundler** → an ERC-4337 bundler per autonomy chain
+   (`AA_BUNDLER_URL` or `AA_BUNDLER_URL_<chainId>`), optional
+   `AA_RPC_URL_<chainId>` overrides. Eligible chains are derived from the
+   installed `@metamask/smart-accounts-kit` ∩ the app's supported set
+   (Celo, Celo Sepolia, Arbitrum today).
+3. **Fail closed** → without these, every Guardian proposal degrades to a
+   one-tap user approval, journaled as `advisory_pending_user_review`.
 
 ### Troubleshooting
 

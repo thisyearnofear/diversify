@@ -154,11 +154,11 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 ## How It Works (Guardian app)
 
-1. **Connect** — Privy creates a Safe smart account (email, social login, or existing wallet)
-2. **Pick a Protection Plan** — Sign an ERC-7715 spending permission (e.g., $50/day, 7 days)
-3. **Deposit stablecoins** — The Guardian diversifies per plan across regions and asset types, choosing Celo/Mento for stable-savings and Arbitrum for liquidity/RWA yield
+1. **Connect** — Privy login or existing wallet (email, social login, embedded wallet onboarding)
+2. **Pick a Protection Plan** — Savings stay in your own wallet; the Guardian starts proposing moves
+3. **Approve a move** — One tap opens Exchange prefilled; you sign in your wallet. On supported chains, opt into stronger protection (ERC-7715/7710, enforced on-chain by your own smart account) and the Guardian can act within those limits
 4. **Monitor** — Real-time receipts, allocations, P&L in a single dashboard
-5. **Withdraw anytime** — Fees settled at withdrawal
+5. **Your keys, always** — No deposit, no custodial account, revoke anytime
 
 ## Protection Plans
 
@@ -204,13 +204,13 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | **Intelligence gateway** | x402-gated Mento depeg + inflation + yield intelligence. HTTP 402 challenge → real USDC settlement → paid evidence with on-chain tx proof. Open to external agents. |
 | **AI inference** | Multi-provider chain: Gemini Flash → Venice → Featherless → 0G Serving → Modal, with circuit breakers and 5-min caching |
 | **Swap execution** | 12+ strategies: Mento (Celo), LiFi, 1inch, Uniswap V3, Hyperliquid perps, direct RWA, Arbitrum-native DEX, Curve Arc, Emerging Markets |
-| **Guardian loop** | Cron-driven autonomous execution with user-signed permission enforcement (app-layer; ERC-7710 on-chain enforcement is deferred), confidence thresholds, and daily caps |
+| **Guardian loop** | Cron-driven proposals with a one-tap user-signed default; opt-in autonomy via ERC-7715/7710 (MetaMask Advanced Permissions) enforced on-chain by the user's own smart account — kit-derived chain set, atomic approve+swap batches, confidence thresholds, and daily caps |
 | **Chain-aware ledger** | `RecommendationLedger` records decisions on the chain where the action settles — Celo for savings, Arbitrum for yield. Each ledger entry references a 0G Storage evidence CID. |
 | **0G verifiability** | Evidence layer: Storage (reasoning CIDs), Compute (TEE-verified inference), DA (state snapshots). 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
 | **Live data** | 11+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, TinyFish Search, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
 | **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — deploy pending HSK), 0G (evidence/anchoring), Arc (x402 nanopayment rail) |
-| **Wallet** | Privy Safe smart accounts + social login + Farcaster/MiniPay compatibility |
+| **Wallet** | User's own wallet (MetaMask/MiniPay/Farcaster-compatible) + Privy for login and embedded-wallet onboarding — Privy never executes |
 | **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Surfaced + depositable via `BestYieldCard`. See `docs/roadmap-log.md` § Yield Engine Strategy. |
 | **Voice** | Advisor voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
 | **Free web/news search** | TinyFish Search (web/news/research) feeds the Guardian region-specific context (FX news, central-bank moves) — free, replaces paid marketplace search. |
@@ -237,7 +237,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | Tab | Purpose |
 |-----|---------|
 | **Overview** | Portfolio summary, inflation impact, quick actions |
-| **Protect** | Choose plan, view allocation, deposit — with compact Guardian status before connect |
+| **Protect** | Choose plan, view allocation — savings stay in your wallet; compact Guardian status before connect |
 | **Exchange** | Swap stablecoins across regions and chains |
 | **Pilot** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
 | **Learn** | Wealth-protection calculator (cash vs your mix over time) |
@@ -250,8 +250,7 @@ New users see Shield-first order. Swipe/tap discovery hint animates in above the
 
 | Fee | Amount | When |
 |-----|--------|------|
-| Management | 1% annual | Pro-rated, settled at withdrawal |
-| Performance | 10% above high-water mark | Only on gains above previous peak |
+| Management / performance | Under review — presupposed a custodial vault that no longer exists | — |
 | Swap spread | 0.10% | Per swap |
 
 ## Target Users

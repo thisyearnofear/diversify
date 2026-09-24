@@ -4,14 +4,11 @@
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/vault/create` | POST/GET | Create or check vault |
-| `/api/vault/deposit` | POST | Record deposit |
-| `/api/vault/withdraw` | POST | Withdraw with fee settlement |
-| `/api/vault/balance` | GET | Vault summary (holdings, P&L, fees) |
-| `/api/vault/permission` | POST/GET/DELETE | ERC-7715 permission CRUD |
-| `/api/vault/rebalance` | POST | Agent-triggered rebalance |
-| `/api/vault/transactions` | GET | Transaction history |
-| `/api/vault/fees` | GET | Fee summary |
+| `/api/vault/permission` | POST/GET/PATCH/DELETE | Guardian permission CRUD; PATCH also attaches the ERC-7715 `delegationContext` |
+| `/api/vault/rebalance` | POST | Guardian execution (dry-run preview or ERC-7710 redeem) |
+| `/api/vault/transactions` | GET | Guardian journal / transaction history |
+| `/api/vault/strategy` | POST | Save Guardian strategy on the profile record |
+| `/api/vault/guardian-state` | GET | Guardian state (recommendation queue, decision log) |
 | `/api/status` | GET | System health check |
 | `/api/agent/execute-swap` | POST | Execute swap via agent |
 | `/api/agent/x402-gateway` | GET | Payment challenge + paid evidence retrieval |
@@ -374,7 +371,7 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | Category | Technology |
 |----------|------------|
 | Frontend | Next.js 15, React 19, Tailwind CSS |
-| Smart Accounts | Privy + Safe (ERC-4337); server execution signs as the user's delegated embedded wallet via `PRIVY_AUTHORIZATION_PRIVATE_KEY` and submits through a bundler (`PRIVY_BUNDLER_URL`) |
+| Smart Accounts | Privy for login + embedded-wallet onboarding only (never execution). Autonomy = ERC-7715/7710 via `@metamask/smart-accounts-kit`: a scoped session account (`GUARDIAN_SESSION_PRIVATE_KEY`) redeems the user's granted delegation on their own smart account through a bundler (`AA_BUNDLER_URL[_<chainId>]`); eligible chains are kit-derived (Celo, Celo Sepolia, Arbitrum intersect the app's supported set) |
 | AI | Gemini (primary), Venice AI, AI/ML API, NVIDIA, Featherless, 0G Serving, Modal GLM (fallback chain) |
 | Agent Memory | Tablestore (Alibaba Cloud, preferred) → Cognee (fallback); Qwen long-context consolidation via DashScope |
 | Macro Monitoring | Firecrawl (event-driven page watching) |

@@ -2,7 +2,7 @@
 
 *For the product pitch, see [`product.md`](./product.md). This doc covers the system architecture that makes it work: multi-provider AI inference, a strategy-pattern swap orchestrator, and a cron-driven Guardian execution loop — with chain-aware on-chain settlement (Celo for EM savings, Arbitrum for yield, HashKey for APAC savings, 0G as the tamper-proof evidence layer), all scoped by user-signed ERC-7715-style permissions. For the APAC rail rationale, see [`rails.md`](./rails.md).*
 
-> **Enforcement model (important):** the user-signed permission is cryptographic *consent*, verified server-side. Its spending bounds are currently enforced in **application code**, not on-chain — execution on Celo/Mento runs through a server-custodied smart account. True on-chain enforcement (ERC-7710 redemption) is the residual gap. See [`docs/guardian.md`](./guardian.md).
+> **Enforcement model (important):** the user-signed EIP-712 permission is cryptographic *consent*, verified server-side, with bounds also enforced in application code. The default execution path is **one-tap user signing** — nothing moves until the user signs on Exchange. Opt-in autonomy is **ERC-7715/7710 only**: the session account redeems a MetaMask Advanced Permission on the user's own smart account, enforced on-chain by the DelegationManager (kit-derived chains: Celo, Celo Sepolia, Arbitrum). There is no Safe, no vault deposit, no server-custodied user account. See [`docs/guardian.md`](./guardian.md).
 
 > **Current state:** this doc describes the post-hardening architecture (rating 8.7/10 after the 2026-06 review pass). The connected wallet is the source of truth for holdings — `apps/web/lib/wallet-portfolio-view.ts` is the shared selector layer consumed by all tabs. Dated change history lives in [`roadmap-log.md`](./roadmap-log.md).
 
@@ -48,7 +48,7 @@
 │  /api/agent/advisor         → AI-powered recommendations    │
 │  /api/agent/x402-gateway    → Payment-gated evidence        │
 │  /api/agent/zero-g-ledger   → 0G on-chain proof            │
-│  /api/vault/*               → Smart account + fee ops       │
+│  /api/vault/*               → Guardian profile/permission ops │
 │  /api/agent/firecrawl-*     → Macro signal webhooks         │
 └──────────────────────────┬──────────────────────────────────┘
                            │
@@ -152,7 +152,7 @@ Strategies are tried in order. The orchestrator tracks per-strategy performance 
 
 ## Guardian Autonomous Loop
 
-The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes within user-signed ERC-7715-style permission bounds (app-layer enforcement; on-chain ERC-7710 redemption is deferred — see [`guardian.md`](./guardian.md)):
+The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner. Savings stay in the user's own wallet; the default is a queued one-tap proposal the user signs on Exchange. Autonomous execution happens only for GUARDIAN-tier permissions on ERC-7710-eligible chains (`ChainDetectionService.isSupported` ∩ installed `@metamask/smart-accounts-kit` environments) with a configured session account — the provider redeems the stored `delegationContext` on the user's smart account, with approve+swap as one atomic UserOp (Mento on Celo, LI.FI quote API elsewhere). Anything else fails closed to a journaled one-tap proposal. See [`guardian.md`](./guardian.md):
 
 ```
 1. Firecrawl detects macro change
@@ -170,7 +170,7 @@ The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner that auto-executes
       - Deep-liquidity / RWA yield actions → Arbitrum executor
       - APAC conservative savings (Confucian / Gotong Royong, Asia region) → HashKey ledger via `routingContext`
    → Safety cap: MAX_EXECUTIONS_PER_LOOP (5)
-   → Execute via /api/vault/rebalance
+   → Execute via VaultService.rebalance → ERC-7710 provider (atomic UserOp)
    → Anchor evidence bundle to 0G Storage + Cognee memory
    → Record hash/CID on the **chain-aware RecommendationLedger** —
      the decision settles on the chain where the action executed
@@ -423,11 +423,11 @@ flowchart TD
     %% ===== HUMAN-IN-THE-LOOP =====
     subgraph HITL["Human-in-the-Loop"]
         direction TB
-        USER["User connects wallet<br/>via Privy (email / social)"]
-        PLAN["User selects Protection Plan<br/>e.g. Pan-Caribbean, Africapitalism"]
-        SIGN["User signs ERC-7715 permission<br/>EIP-712 typed data<br/>daily cap · token allowlist · 7-day expiry"]
-        APPROVE["User approves / rejects<br/>Guardian recommendation<br/>(manual mode)"]
-        WITHDRAW["User withdraws anytime<br/>fees settled at withdrawal"]
+        USER["User connects wallet<br/>via Privy login or any wallet"]
+        PLAN["User selects Protection Plan<br/>e.g. Pan-Caribbean, Africapitalism<br/>(savings stay in the user's wallet)"]
+        SIGN["User signs EIP-712 permission<br/>daily cap · token allowlist · expiry<br/>(opt-in: ERC-7715 grant for autonomy)"]
+        APPROVE["User approves a proposal<br/>one tap → Exchange, user signs"]
+        WITHDRAW["User revokes anytime<br/>funds were never deposited"]
         USER --> PLAN --> SIGN
     end
 
@@ -444,7 +444,7 @@ flowchart TD
         THRESH{"Decision: confidence<br/>&gt; 0.6 threshold?"}
         BOUNDS{"Decision: within daily cap<br/>&amp; allowed tokens?"}
         ROUTE{"Decision: route to<br/>execution chain?"}
-        EXEC["Execute via /api/vault/rebalance"]
+        EXEC["Execute via ERC-7710 provider<br/>approve+swap, one UserOp"]
         ANCHOR["Anchor evidence to 0G Storage<br/>+ Cognee memory"]
         LEDGER["Record on chain-aware<br/>RecommendationLedger"]
         CLEAR["Clear recommendation<br/>from guardian-state"]
@@ -523,7 +523,7 @@ flowchart TD
 |---|---|
 | **Inputs** | Blue nodes — World Bank, FRED, CoinGecko, DeFiLlama, Firecrawl (Caribbean inflation + hurricane + tariff signals), BrightData, Cognee memory |
 | **Agent orchestration** | Green nodes — Firecrawl webhook → AI signal extraction → guardian-state store → cron loop → permission query → AI synthesis (multi-provider failover) → recommendation generation → threshold/bounds/routing decisions → execute → anchor → ledger → clear |
-| **Human-in-the-loop** | Purple nodes — wallet connect → plan selection → ERC-7715 permission signing (EIP-712) → approve/reject recommendation → withdraw anytime |
+| **Human-in-the-loop** | Purple nodes — wallet connect → plan selection → permission signing (EIP-712 consent, optional ERC-7715 on-chain grant) → approve proposal in one tap → revoke anytime |
 | **Data sources & APIs** | Blue nodes + AI provider chain — 7 external data sources, 7 AI providers with circuit breakers, Cognee memory, MongoDB state |
 | **Outputs** | Orange nodes — chain-aware RecommendationLedger on 3 chains (Celo/Arbitrum/0G), 0G Storage evidence CID, 0G DA snapshot, user receipt, x402 gateway for external agents, on-chain swap execution |
 | **Key decision points** | Yellow diamonds — confidence > 0.6 threshold, within daily cap & allowed tokens, route to execution chain (Celo for savings, Arbitrum for yield) |
