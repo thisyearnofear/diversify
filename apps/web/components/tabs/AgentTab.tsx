@@ -408,7 +408,7 @@ function ConnectedAgent({
           }}
           onCancel={() => g.setShowStrategySwitcher(false)}
           onUpdateStrategy={async (strategy) => g.vault.updateStrategy(address, strategy)}
-          onCreateVault={async () => false}
+          onSaveStrategy={async () => false}
           onRequestPermission={async () => false}
         />
       )}

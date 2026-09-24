@@ -11,7 +11,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export type TransactionType = 'deposit' | 'withdraw' | 'swap' | 'rebalance' | 'fee_deduction' | 'approval';
 export type TransactionStatus = 'pending' | 'confirmed' | 'failed';
-export type ExecutionLayer = 'circle_sdk' | 'direct_rpc';
+export type ExecutionLayer = 'circle_sdk' | 'direct_rpc' | 'erc7710';
 
 export interface ITransaction extends Document {
   vaultId: mongoose.Types.ObjectId;
@@ -90,7 +90,7 @@ const TransactionSchema = new Schema<ITransaction>(
 
     executionLayer: {
       type: String,
-      enum: ['circle_sdk', 'direct_rpc'],
+      enum: ['circle_sdk', 'direct_rpc', 'erc7710'],
       default: 'circle_sdk',
     },
     strategyUsed: { type: String },

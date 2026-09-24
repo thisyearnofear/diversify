@@ -1,18 +1,14 @@
 /**
- * Vault Service — Core vault management for DiversiFi.
+ * Vault Service — Guardian profile + permission-bounded execution.
  *
- * Manages the lifecycle of user vaults:
- * - Create vault with Circle MPC wallet
- * - Process deposits (user sends USDC to vault address)
- * - Execute withdrawals (vault sends USDC back to user)
- * - Rebalance portfolio under ERC-7715 permission constraints
- * - Track allocations, P&L, and fees
- *
- * Phase 1: Circle MPC wallets
- * Phase 2: ERC-4626 smart contracts (same interface, different execution layer)
+ * The "vault" record is a per-user Guardian profile (strategy + bookkeeping),
+ * NOT a custodial account: savings stay in the user's own wallet and no
+ * deposit/withdrawal flow exists. Auto-execution redeems an ERC-7715/7710
+ * permission on-chain via the user's own smart account (MetaMask Advanced
+ * Permissions); without a configured provider the loop falls back to
+ * one-tap proposals the user signs themselves.
  */
 
-import { feeEngine, type FeeSummary } from './fee-engine';
 import { CELO_TOKEN_ADDRESSES } from '../../config/celo-tokens';
 
 // Types are defined here rather than importing from MongoDB models
@@ -76,7 +72,6 @@ export interface VaultPermission {
   totalSpentUSD: number;
   firstAutoExecutionConfirmed: boolean;
   autoExecuteCycleProtection?: boolean;
-  privyDelegated?: boolean;
   status: 'active' | 'expired' | 'revoked';
 }
 
@@ -93,7 +88,7 @@ export interface VaultTransaction {
   amountIn?: string;
   amountOut?: string;
   amountUSD: number;
-  executionLayer: 'circle_sdk' | 'direct_rpc';
+  executionLayer: 'circle_sdk' | 'direct_rpc' | 'erc7710';
   strategyUsed?: string;
   feeUSD: number;
   feePercentage: number;
@@ -104,7 +99,6 @@ export interface VaultTransaction {
 export interface VaultSummary {
   vault: Vault;
   permission: VaultPermission | null;
-  fees: FeeSummary;
   recentTransactions: VaultTransaction[];
   allocationByRegion: Record<string, { valueUSD: number; percentage: number }>;
 }
@@ -154,7 +148,7 @@ export interface VaultStore {
   updatePermission(permissionId: string, update: Partial<VaultPermission>): Promise<void>;
   createTransaction(data: Omit<VaultTransaction, '_id'>): Promise<VaultTransaction>;
   findTransactions(vaultId: string, limit?: number): Promise<VaultTransaction[]>;
-  /** Optional idempotency lookup — reject a deposit txHash already recorded. */
+  /** Optional idempotency lookup — reject a txHash already recorded. */
   findTransactionByTxHash?(txHash: string): Promise<VaultTransaction | null>;
 }
 
@@ -184,7 +178,6 @@ export interface VaultExecutor {
     amountIn: string,
     chainId: number
   ): Promise<{ txHash: string; amountOut?: string }>;
-  withdraw(vault: Vault, destinationAddress: string, amountUSD: number, chainId?: number): Promise<{ txHash: string; amountReceived: number }>;
 }
 
 // ─── Spend accounting ───────────────────────────────────────────────────
@@ -259,120 +252,6 @@ export class VaultService {
   }
 
   /**
-   * Record a deposit and update vault state.
-   */
-  async processDeposit(
-    vaultId: string,
-    amountUSD: number,
-    txHash: string,
-    chainId: number
-  ): Promise<VaultTransaction> {
-    const vault = await this.store.findVaultById(vaultId);
-    if (!vault) throw new Error('Vault not found');
-
-    const updated = await this.store.updateVault(vaultId, {
-      totalDepositedUSD: vault.totalDepositedUSD + amountUSD,
-      currentValueUSD: vault.currentValueUSD + amountUSD,
-      highWaterMarkUSD: Math.max(vault.highWaterMarkUSD, vault.currentValueUSD + amountUSD),
-      lastDepositAt: new Date(),
-    });
-
-    const explorerBase = chainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
-
-    return this.store.createTransaction({
-      vaultId,
-      userAddress: vault.userAddress,
-      type: 'deposit',
-      status: 'confirmed',
-      chainId,
-      txHash,
-      explorerUrl: `${explorerBase}/tx/${txHash}`,
-      amountUSD,
-      executionLayer: 'circle_sdk',
-      feeUSD: 0,
-      feePercentage: 0,
-    });
-  }
-
-  /**
-   * Execute a withdrawal with fee settlement.
-   */
-  async withdraw(
-    vaultId: string,
-    amountUSD: number,
-    userAddress: string
-  ): Promise<{ txHash: string; amountReceived: number; feeDeducted: number }> {
-    const vault = await this.store.findVaultById(vaultId);
-    if (!vault) throw new Error('Vault not found');
-    if (vault.userAddress !== userAddress.toLowerCase()) throw new Error('Unauthorized');
-
-    // Calculate and settle pending fees
-    const fees = feeEngine.calculateTotalFees({
-      aumUSD: vault.currentValueUSD,
-      lastChargeDate: vault.lastFeeChargeAt || null,
-      highWaterMarkUSD: vault.highWaterMarkUSD,
-      totalDepositedUSD: vault.totalDepositedUSD,
-      totalWithdrawnUSD: vault.totalWithdrawnUSD,
-      swapVolumeUSD: 0,
-    });
-
-    const totalPendingFees = vault.feesPendingUSD + fees.totalFeeUSD;
-    const netWithdrawal = Math.max(0, amountUSD - totalPendingFees);
-
-    if (netWithdrawal <= 0 && amountUSD > 0) {
-      throw new Error('Withdrawal amount is less than pending fees');
-    }
-
-    // Determine the chain from the vault's allocations, or default to Celo
-    const vaultChainId = vault.allocations?.[0]?.chainId || 42220;
-    const explorerBase = vaultChainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
-
-    // Execute withdrawal via executor (pass chainId so executor can use the right RPC)
-    const result = await this.executor.withdraw(vault, userAddress, netWithdrawal, vaultChainId);
-
-    // Update vault
-    await this.store.updateVault(vaultId, {
-      totalWithdrawnUSD: vault.totalWithdrawnUSD + amountUSD,
-      currentValueUSD: Math.max(0, vault.currentValueUSD - amountUSD),
-      totalFeesPaidUSD: vault.totalFeesPaidUSD + totalPendingFees,
-      feesPendingUSD: 0,
-      lastFeeChargeAt: new Date(),
-      lastWithdrawalAt: new Date(),
-    });
-
-    // Record transactions
-    await this.store.createTransaction({
-      vaultId,
-      userAddress: vault.userAddress,
-      type: 'withdraw',
-      status: 'confirmed',
-      chainId: vaultChainId,
-      txHash: result.txHash,
-      explorerUrl: `${explorerBase}/tx/${result.txHash}`,
-      amountUSD: netWithdrawal,
-      executionLayer: 'circle_sdk',
-      feeUSD: totalPendingFees,
-      feePercentage: amountUSD > 0 ? (totalPendingFees / amountUSD) * 100 : 0,
-    });
-
-    if (totalPendingFees > 0) {
-      await this.store.createTransaction({
-        vaultId,
-        userAddress: vault.userAddress,
-        type: 'fee_deduction',
-        status: 'confirmed',
-        chainId: vaultChainId,
-        amountUSD: totalPendingFees,
-        executionLayer: 'circle_sdk',
-        feeUSD: totalPendingFees,
-        feePercentage: 0,
-      });
-    }
-
-    return { txHash: result.txHash, amountReceived: netWithdrawal, feeDeducted: totalPendingFees };
-  }
-
-  /**
    * Execute a rebalance under permission constraints.
    */
   async rebalance(
@@ -429,8 +308,9 @@ export class VaultService {
         ?? rec.estimatedAmountUSD
         ?? 0;
 
-      // Calculate swap fee
-      const swapFee = feeEngine.calculateSwapFee(debitUSD);
+      // Fees are under review (they presupposed a custodial vault) — none
+      // are charged on execution.
+      const swapFee = 0;
 
       const executionChainId = permission.chainId || 42220;
       const explorerBase = executionChainId === 42161 ? 'https://arbiscan.io' : 'https://celoscan.io';
@@ -457,7 +337,7 @@ export class VaultService {
           amountIn: rec.amountIn,
           amountOut: result.amountOut,
           amountUSD: debitUSD,
-          executionLayer: 'circle_sdk',
+          executionLayer: 'erc7710',
           strategyUsed: 'vault-rebalance',
           feeUSD: swapFee,
           feePercentage: debitUSD > 0 ? (swapFee / debitUSD) * 100 : 0,
@@ -497,7 +377,7 @@ export class VaultService {
           tokenOut: rec.tokenOut,
           amountIn: rec.amountIn,
           amountUSD: rec.estimatedAmountUSD,
-          executionLayer: 'circle_sdk',
+          executionLayer: 'erc7710',
           feeUSD: 0,
           feePercentage: 0,
           error: error instanceof Error ? error.message : 'Unknown error',
@@ -526,7 +406,6 @@ export class VaultService {
 
       // Update vault
       await this.store.updateVault(vaultId, {
-        feesPendingUSD: vault.feesPendingUSD + totalFeesUSD,
         lastRebalanceAt: new Date(),
       });
     }
@@ -544,15 +423,6 @@ export class VaultService {
     const permission = await this.store.findActivePermission(vaultId);
     const transactions = await this.store.findTransactions(vaultId, 20);
 
-    const fees = feeEngine.calculateTotalFees({
-      aumUSD: vault.currentValueUSD,
-      lastChargeDate: vault.lastFeeChargeAt || null,
-      highWaterMarkUSD: vault.highWaterMarkUSD,
-      totalDepositedUSD: vault.totalDepositedUSD,
-      totalWithdrawnUSD: vault.totalWithdrawnUSD,
-      swapVolumeUSD: 0,
-    });
-
     // Aggregate allocation by region
     const allocationByRegion: Record<string, { valueUSD: number; percentage: number }> = {};
     for (const alloc of vault.allocations) {
@@ -563,7 +433,7 @@ export class VaultService {
       allocationByRegion[alloc.region].percentage += alloc.percentage;
     }
 
-    return { vault, permission, fees, recentTransactions: transactions, allocationByRegion };
+    return { vault, permission, recentTransactions: transactions, allocationByRegion };
   }
 
   /**

@@ -135,7 +135,7 @@ export function GuardianBoundsSheet({
         ) : null}
       </div>
 
-      {/* Vault Balance (shown when vault exists) */}
+      {/* Guardian profile (shown when a strategy is saved) */}
       {vault.vault && (
         <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
           {vault.vault.strategy && (
@@ -145,25 +145,6 @@ export function GuardianBoundsSheet({
                 <span className="size-1.5 rounded-full bg-purple-500" aria-hidden="true" />
                 {vault.vault.strategy.replace(/-/g, ' ')}
               </span>
-            </div>
-          )}
-          <div className="flex justify-between items-center text-sm mb-1">
-            <span className="text-gray-500">Vault Value</span>
-            <span className="font-bold text-purple-700 dark:text-purple-300">
-              ${vault.vault.currentValueUSD.toFixed(2)}
-            </span>
-          </div>
-          <div className="flex justify-between items-center text-sm mb-1">
-            <span className="text-gray-500">Deposited</span>
-            <span className="font-bold">${vault.vault.totalDepositedUSD.toFixed(2)}</span>
-          </div>
-          {vault.vault.allocations.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {vault.vault.allocations.map((a) => (
-                <span key={a.token} className="text-xs bg-white dark:bg-gray-800 px-2 py-0.5 rounded-full">
-                  {a.token}: {a.percentage.toFixed(0)}%
-                </span>
-              ))}
             </div>
           )}
           <button

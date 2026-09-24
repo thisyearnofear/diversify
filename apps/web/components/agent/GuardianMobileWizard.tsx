@@ -1,16 +1,11 @@
 /**
- * GuardianMobileWizard - Multi-step setup for Guardian vault
+ * GuardianMobileWizard - Multi-step setup for Auto-Saver
  *
  * Steps:
  * 1. Strategy selection (africapitalism, islamic, global, etc.)
  * 2. Set limits (daily budget, allowed tokens)
  * 3. Review & sign (EIP-712 permission)
- * 4. Deposit (show smart account address, copy)
- *
- * Follows Core Principles:
- *   - ENHANCEMENT FIRST: Enhances existing wizard, not a new component
- *   - CLEAN: Uses useVault + useSessionKey hooks (single source of truth)
- *   - ORGANIZED: Steps map to vault lifecycle
+ * 4. Done (confirmation — savings never leave the user's wallet)
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -25,7 +20,7 @@ import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type WizardStep = "strategy" | "limits" | "sign" | "deposit";
+type WizardStep = "strategy" | "limits" | "sign" | "done";
 
 interface Strategy {
   id: string;
@@ -77,17 +72,16 @@ const TOKENS = [
 
 interface GuardianMobileWizardProps {
   userAddress: string;
-  vaultAddress?: string;
   onComplete: () => void;
   onCancel: () => void;
   mode?: "setup" | "change";
   currentStrategy?: string;
   onUpdateStrategy?: (strategy: string) => Promise<boolean>;
   /**
-   * Create a vault with the given strategy. Return true on success, false on
-   * generic failure, or throw an Error with a message to surface inline.
+   * Save the chosen strategy on the user's Guardian profile. Return true on
+   * success, false on generic failure, or throw an Error to surface inline.
    */
-  onCreateVault: (strategy: string) => Promise<boolean>;
+  onSaveStrategy: (strategy: string) => Promise<boolean>;
   onRequestPermission: (dailyLimit: number, tokens: string[]) => Promise<boolean>;
 }
 
@@ -95,13 +89,12 @@ interface GuardianMobileWizardProps {
 
 export function GuardianMobileWizard({
   userAddress,
-  vaultAddress,
   onComplete,
   onCancel,
   mode = "setup",
   currentStrategy,
   onUpdateStrategy,
-  onCreateVault,
+  onSaveStrategy,
   onRequestPermission,
 }: GuardianMobileWizardProps) {
   const isChangeMode = mode === "change";
@@ -131,14 +124,14 @@ export function GuardianMobileWizard({
     return () => window.removeEventListener('keydown', handleKey);
   }, [onCancel]);
 
-  const steps: WizardStep[] = isChangeMode ? ["strategy"] : ["strategy", "limits", "sign", "deposit"];
+  const steps: WizardStep[] = isChangeMode ? ["strategy"] : ["strategy", "limits", "sign", "done"];
   const currentIndex = steps.indexOf(currentStep);
 
   const stepConfig: Record<WizardStep, { title: string; icon: string }> = {
     strategy: { title: "Pick a strategy", icon: "🎯" },
     limits: { title: "Set your limits", icon: "📊" },
     sign: { title: "Approve in wallet", icon: "✍️" },
-    deposit: { title: "Add funds", icon: "💰" },
+    done: { title: "All set", icon: "✅" },
   };
 
   const goNext = async () => {
@@ -170,25 +163,25 @@ export function GuardianMobileWizard({
 
     const nextStep = steps[nextIndex];
 
-    // Create vault when moving from strategy → limits
+    // Save the strategy on the Guardian profile when moving strategy → limits
     if (nextStep === "limits") {
       setLoading(true);
       try {
-        const ok = await onCreateVault(selectedStrategy);
+        const ok = await onSaveStrategy(selectedStrategy);
         setLoading(false);
         if (!ok) {
-          setError("Could not create vault. Please try again.");
+          setError("Could not save the strategy. Please try again.");
           return;
         }
       } catch (e: any) {
         setLoading(false);
-        setError(e?.message || "Could not create vault. Please try again.");
+        setError(e?.message || "Could not save the strategy. Please try again.");
         return;
       }
     }
 
-    // Request permission when moving from sign → deposit
-    if (nextStep === "deposit") {
+    // Request permission when moving from sign → done
+    if (nextStep === "done") {
       setLoading(true);
       try {
         const ok = await onRequestPermission(dailyLimit, allowedTokens);
@@ -233,7 +226,7 @@ export function GuardianMobileWizard({
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
           {isChangeMode
-            ? "It rebalances the vault over time. Nothing moves now."
+            ? "It steers what Auto-Saver proposes. Nothing moves now."
             : "Shapes how Auto-Saver spreads your stablecoins. Change anytime."}
         </p>
       </div>
@@ -397,18 +390,19 @@ export function GuardianMobileWizard({
         <div className="flex gap-2">
           <span>⚠️</span>
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            Auto-Saver can swap your stablecoins within these limits. Your funds stay
-            in your protection wallet — Auto-Saver can't withdraw them. You can stop
-            it any time.
+            Auto-Saver can propose swaps of your stablecoins within these limits.
+            Your funds stay in your own wallet — every move needs your signature
+            unless you enable on-chain Advanced Permissions. You can stop it any
+            time.
           </p>
         </div>
       </div>
     </div>
   );
 
-  // ─── Step 4: Deposit ─────────────────────────────────────────────────
+  // ─── Step 4: Done ────────────────────────────────────────────────────
 
-  const DepositStep = () => (
+  const DoneStep = () => (
     <div className="space-y-4">
       <div className="text-center mb-4">
         <motion.span
@@ -433,34 +427,16 @@ export function GuardianMobileWizard({
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          Send stablecoins to your protection wallet to start diversifying
+          Your savings stay in your own wallet — nothing moved
         </motion.p>
       </div>
-
-      {vaultAddress && (
-        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4">
-          <div className="text-xs text-gray-500 mb-2">Your Protection Wallet (Celo)</div>
-          <div className="flex items-center gap-2">
-            <code className="flex-1 text-sm font-mono text-gray-900 dark:text-white break-all">
-              {vaultAddress}
-            </code>
-            <button
-              onClick={() => navigator.clipboard.writeText(vaultAddress)}
-              className="px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
-            >
-              Copy
-            </button>
-          </div>
-        </div>
-      )}
 
       <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-3">
         <div className="text-sm font-bold text-purple-700 dark:text-purple-300 mb-1">What happens next</div>
         <ul className="text-xs text-purple-600 dark:text-purple-400 space-y-1">
-          <li>1. Send cUSD, cEUR, KESm, etc. to the address above.</li>
-          <li>2. Auto-Saver watches inflation around the clock.</li>
-          <li>3. When conditions change, it rebalances within your limit.</li>
-          <li>4. Withdraw any time — fees settle at withdrawal.</li>
+          <li>1. Auto-Saver watches inflation around the clock.</li>
+          <li>2. When conditions change, it proposes a move within your limit.</li>
+          <li>3. You approve with one tap — your wallet signs it.</li>
         </ul>
       </div>
 
@@ -468,11 +444,7 @@ export function GuardianMobileWizard({
           show them what other Guardian actions have been verified on-chain. */}
       <LiveProofCard />
 
-      <div className="text-center">
-        <div className="text-xs text-gray-400">
-          Fees: 1% annual management + 10% performance above high-water mark + 0.10% swap spread
-        </div>
-      </div>
+
     </div>
   );
 
@@ -483,7 +455,7 @@ export function GuardianMobileWizard({
       case "strategy": return <StrategyStep />;
       case "limits": return <LimitsStep />;
       case "sign": return <SignStep />;
-      case "deposit": return <DepositStep />;
+      case "done": return <DoneStep />;
     }
   };
 
@@ -575,7 +547,7 @@ export function GuardianMobileWizard({
         style={{ paddingBottom: "env(safe-area-inset-bottom, 16px)" }}
       >
         <button
-          onClick={currentStep === "deposit" ? onComplete : goNext}
+          onClick={currentStep === "done" ? onComplete : goNext}
           disabled={loading || (isChangeMode && selectedStrategy === currentStrategy)}
           className="w-full py-4 min-h-[56px] bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
         >
@@ -588,7 +560,7 @@ export function GuardianMobileWizard({
               <span>✍️</span>
               <span>Approve in Wallet</span>
             </>
-          ) : currentStep === "deposit" ? (
+          ) : currentStep === "done" ? (
             <span>Done — Open Dashboard</span>
           ) : (
             <>

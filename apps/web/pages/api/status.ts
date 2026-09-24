@@ -42,20 +42,21 @@ export default async function handler(
     detail: "Mento Protocol quotes + stablecoin swaps on Celo mainnet",
   };
 
-  // Check vault execution layer. Vault execution requires a user
-  // smart-account provider — VAULT_PRIVATE_KEY is the operator's
-  // settlement/ledger key and never signs user vault transactions.
+  // Guardian autonomy runs only on ERC-7710 (MetaMask Advanced Permissions):
+  // the agent redeems a permission the user granted from their own smart
+  // account. With no session signer + bundler configured, every Guardian
+  // proposal degrades to a one-tap approval the user signs in their wallet.
   let providerName = 'none';
-  let providerDetail = 'Set SMART_ACCOUNT_PROVIDER (vault execution requires a configured smart-account provider)';
+  let providerDetail = 'ERC-7710 not configured — Guardian proposals require one-tap user approval (set GUARDIAN_SESSION_PRIVATE_KEY + AA_BUNDLER_URL to enable autonomy)';
   try {
     const provider = getSmartAccountProvider();
     if (provider.isConfigured()) {
       providerName = provider.name;
-      providerDetail = `${provider.name} smart account — policy-enforced execution`;
+      providerDetail = 'ERC-7710 configured — on-chain-enforced autonomy via the user\u2019s own smart account';
     }
   } catch {}
 
-  checks.vault = {
+  checks.autonomy = {
     status: providerName !== 'none' ? providerName : 'not-configured',
     detail: providerDetail,
   };
@@ -77,14 +78,11 @@ export default async function handler(
       tradingSignals: "/api/trading/signals",
       celoMentoQuote: "/api/celo/mento-quote?tokenIn=cUSD&tokenOut=KESm&amount=1",
       celoMentoSwap: "/api/celo/mento-swap (POST)",
-      vaultCreate: "/api/vault/create (POST/GET)",
-      vaultBalance: "/api/vault/balance?userAddress=0x... (GET)",
-      vaultDeposit: "/api/vault/deposit (POST)",
-      vaultWithdraw: "/api/vault/withdraw (POST)",
-      vaultPermission: "/api/vault/permission (POST/GET/DELETE)",
+      vaultPermission: "/api/vault/permission (POST/GET/DELETE/PATCH)",
+      vaultStrategy: "/api/vault/strategy (PATCH)",
       vaultRebalance: "/api/vault/rebalance (POST)",
       vaultTransactions: "/api/vault/transactions (GET)",
-      vaultFees: "/api/vault/fees (GET)",
+      vaultGuardianState: "/api/vault/guardian-state (GET)",
       status: "/api/status",
     },
     deployedAt: new Date().toISOString(),

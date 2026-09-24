@@ -1,8 +1,10 @@
 /**
- * useVault — Client-side hook for vault management.
+ * useVault — Client-side hook for the Guardian profile + permission.
  *
- * Replaces the old useSessionKey + useAgentStatus pattern for the Guardian.
- * Provides: vault state, deposit, withdraw, permission management, rebalance.
+ * The "vault" record is a Guardian profile (strategy + bookkeeping) — not a
+ * custodial account. Savings stay in the user's own wallet; there are no
+ * deposit/withdraw/fee flows. Provides: profile state, permission
+ * management, rebalance (one-tap / ERC-7710).
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -19,7 +21,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 // modal stuck on "Loading...".
 const VAULT_FETCH_TIMEOUT_MS = 8000;
 
-export type VaultStatus = 'idle' | 'created' | 'funded' | 'active';
+export type VaultStatus = 'idle' | 'created' | 'active';
 
 export interface VaultAllocation {
   token: string;
@@ -74,25 +76,16 @@ export interface VaultTransaction {
   createdAt: string;
 }
 
-export interface VaultFees {
-  managementFeeUSD: number;
-  performanceFeeUSD: number;
-  swapFeesUSD: number;
-  totalFeeUSD: number;
-}
-
 export interface UseVaultReturn {
   // State
   status: VaultStatus;
   vault: VaultData | null;
   permission: VaultPermission | null;
   transactions: VaultTransaction[];
-  fees: VaultFees | null;
   loading: boolean;
   error: string | null;
 
   // Actions
-  createVault: (userAddress: string, strategy: string) => Promise<boolean>;
   grantPermission: (
     userAddress: string,
     signedPermission: any,
@@ -109,7 +102,6 @@ export function useVault(): UseVaultReturn {
   const [vault, setVault] = useState<VaultData | null>(null);
   const [permission, setPermission] = useState<VaultPermission | null>(null);
   const [transactions, setTransactions] = useState<VaultTransaction[]>([]);
-  const [fees, setFees] = useState<VaultFees | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -128,8 +120,7 @@ export function useVault(): UseVaultReturn {
 
   const deriveStatus = useCallback((v: VaultData | null, p: VaultPermission | null): VaultStatus => {
     if (!v) return 'idle';
-    if (v.totalDepositedUSD > 0 && p && p.status === 'active') return 'active';
-    if (v.totalDepositedUSD > 0) return 'funded';
+    if (p && p.status === 'active') return 'active';
     return 'created';
   }, []);
 
@@ -138,20 +129,21 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
-      // Fetch vault balance (includes vault, permission, fees, recent transactions)
+      // The permission GET is the profile read: it returns the Guardian
+      // profile (vault), active permission, and recent journal entries.
+      const authHeaders = await authHeadersFor(userAddress);
       const balanceResp = await fetchWithTimeout(
-        `${API_BASE}/api/vault/balance?userAddress=${encodeURIComponent(userAddress)}`,
-        {},
+        `${API_BASE}/api/vault/permission?userAddress=${encodeURIComponent(userAddress)}`,
+        { headers: authHeaders },
         VAULT_FETCH_TIMEOUT_MS,
       );
 
       if (balanceResp.ok) {
         const data = await balanceResp.json();
-        setVault(data.vault);
-        setPermission(data.permission);
+        setVault(data.vault ?? null);
+        setPermission(data.permission ?? null);
         setTransactions(data.recentTransactions || []);
-        setFees(data.fees);
-        setStatus(deriveStatus(data.vault, data.permission));
+        setStatus(deriveStatus(data.vault ?? null, data.permission ?? null));
       } else if (balanceResp.status === 404) {
         setVault(null);
         setPermission(null);
@@ -162,7 +154,7 @@ export function useVault(): UseVaultReturn {
     } finally {
       setLoading(false);
     }
-  }, [deriveStatus]);
+  }, [deriveStatus, authHeadersFor]);
 
   // Auto-poll when vault is active
   useEffect(() => {
@@ -176,39 +168,6 @@ export function useVault(): UseVaultReturn {
       }
     };
   }, [status, vault, refresh]);
-
-  const createVault = useCallback(async (userAddress: string, strategy: string): Promise<boolean> => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const authHeaders = await authHeadersFor(userAddress);
-      const resp = await fetchWithTimeout(
-        `${API_BASE}/api/vault/create`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ userAddress, strategy }),
-        },
-        VAULT_FETCH_TIMEOUT_MS,
-      );
-
-      if (!resp.ok) {
-        const data = await resp.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to create vault');
-      }
-
-      const data = await resp.json();
-      setVault(data.vault);
-      setStatus(deriveStatus(data.vault, permission));
-      return true;
-    } catch (e: any) {
-      setError(e.message);
-      throw e;
-    } finally {
-      setLoading(false);
-    }
-  }, [permission, deriveStatus, authHeadersFor]);
 
   const grantPermission = useCallback(async (
     userAddress: string,
@@ -285,11 +244,12 @@ export function useVault(): UseVaultReturn {
       setLoading(true);
       setError(null);
 
+      const authHeaders = await authHeadersFor(userAddress);
       const resp = await fetchWithTimeout(
         `${API_BASE}/api/vault/strategy`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({ userAddress, strategy }),
         },
         VAULT_FETCH_TIMEOUT_MS,
@@ -310,17 +270,15 @@ export function useVault(): UseVaultReturn {
     } finally {
       setLoading(false);
     }
-  }, [permission, deriveStatus]);
+  }, [permission, deriveStatus, authHeadersFor]);
 
   return {
     status,
     vault,
     permission,
     transactions,
-    fees,
     loading,
     error,
-    createVault,
     grantPermission,
     revokePermission,
     refresh,

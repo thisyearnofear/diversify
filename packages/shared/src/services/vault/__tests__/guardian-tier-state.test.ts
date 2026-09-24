@@ -92,40 +92,51 @@ describe('deriveGuardianTierState', () => {
         ).toBe('authorized');
     });
 
-    it('returns "authorized" when a signed permission exists but no vault', () => {
+    it('returns "monitoring" when a live permission exists even without a profile', () => {
+        // A live permission means protection is on — the profile record is
+        // bookkeeping, not a prerequisite.
         expect(
             deriveGuardianTierState({
                 vault: null,
                 permission: ACTIVE_PERMISSION,
                 nowSeconds: NOW,
             }),
-        ).toBe('authorized');
+        ).toBe('monitoring');
     });
 
-    it('returns "funded" when the vault has deposits but the permission is missing', () => {
+    it('returns "authorized" when the profile exists but the permission is missing', () => {
         expect(
             deriveGuardianTierState({
                 vault: { totalDepositedUSD: 500 },
                 permission: null,
                 nowSeconds: NOW,
             }),
-        ).toBe('funded');
+        ).toBe('authorized');
     });
 
-    it('returns "funded" when the vault has deposits but the permission has expired', () => {
+    it('returns "authorized" when the permission has expired', () => {
         expect(
             deriveGuardianTierState({
                 vault: { totalDepositedUSD: 500 },
                 permission: { ...ACTIVE_PERMISSION, expiresAt: NOW - 1 },
                 nowSeconds: NOW,
             }),
-        ).toBe('funded');
+        ).toBe('authorized');
     });
 
-    it('returns "monitoring" when the vault is funded and the permission is live', () => {
+    it('returns "monitoring" when the permission is live — no deposit required', () => {
+        // Savings stay in the user's wallet: a live permission IS the
+        // protecting state.
         expect(
             deriveGuardianTierState({
                 vault: { totalDepositedUSD: 500 },
+                permission: ACTIVE_PERMISSION,
+                nowSeconds: NOW,
+            }),
+        ).toBe('monitoring');
+        expect(
+            deriveGuardianTierState({
+                vault: { totalDepositedUSD: 0 },
                 permission: ACTIVE_PERMISSION,
                 nowSeconds: NOW,
             }),
@@ -135,31 +146,18 @@ describe('deriveGuardianTierState', () => {
     it('returns "monitoring" for a never-expiring permission (expiresAt === 0)', () => {
         expect(
             deriveGuardianTierState({
-                vault: { totalDepositedUSD: 500 },
+                vault: { totalDepositedUSD: 0 },
                 permission: { ...ACTIVE_PERMISSION, expiresAt: 0 },
                 nowSeconds: NOW,
             }),
         ).toBe('monitoring');
     });
 
-    it('downgrades "monitoring" to "funded" once the daily cap is hit', () => {
+    it('downgrades "monitoring" to "authorized" once the daily cap is hit', () => {
         expect(
             deriveGuardianTierState({
                 vault: { totalDepositedUSD: 500 },
                 permission: { ...ACTIVE_PERMISSION, spentTodayUSD: 10, dailyLimitUSD: 10 },
-                nowSeconds: NOW,
-            }),
-        ).toBe('funded');
-    });
-
-    it('treats a signed but not-yet-funded vault as "authorized", not "monitoring"', () => {
-        // Edge case: user has signed the permission and created a vault, but
-        // the deposit hasn't landed yet. The state should show "authorized"
-        // (intent) rather than "monitoring" (live autonomy).
-        expect(
-            deriveGuardianTierState({
-                vault: { totalDepositedUSD: 0 },
-                permission: ACTIVE_PERMISSION,
                 nowSeconds: NOW,
             }),
         ).toBe('authorized');

@@ -6,10 +6,8 @@
  */
 
 import React, { useEffect, useRef } from "react";
-import { useWallets } from "@privy-io/react-auth";
 import Scrim from "../shared/Scrim";
 import { haptic } from "@/lib/haptics";
-import { WALLET_FEATURES } from "@/config/features";
 
 const MIN_AUTO_SAVER_FUNDS_USD = 5;
 const ARBITRUM_CHAIN_ID = 42161;
@@ -48,13 +46,6 @@ export const GuardianPermissionModal: React.FC<{
   onApprove,
 }) => {
   const dialogRef = useRef<HTMLDivElement>(null);
-
-  // The Privy delegation line appears only when the flow will actually ask
-  // for it — quorum configured AND the user holds a Privy embedded wallet.
-  const { wallets: privyWallets } = useWallets();
-  const willDelegate =
-    Boolean(WALLET_FEATURES.PRIVY_KEY_QUORUM_ID) &&
-    privyWallets.some((w) => w.walletClientType === "privy");
 
   // Focus trap: keep focus inside the modal while it's mounted, Escape to close.
   useEffect(() => {
@@ -275,12 +266,6 @@ export const GuardianPermissionModal: React.FC<{
               <span className="text-purple-500 mt-0.5">•</span>
               <span>If your wallet is empty when it runs, it just waits — no errors, no fees.</span>
             </li>
-            {willDelegate && (
-              <li className="flex items-start gap-2">
-                <span className="text-purple-500 mt-0.5">•</span>
-                <span>Lets Guardian act from your wallet within these limits. Revoke anytime.</span>
-              </li>
-            )}
             <li className="flex items-start gap-2">
               <span className="text-purple-500 mt-0.5">•</span>
               <span>You can pause it from this screen any time.</span>

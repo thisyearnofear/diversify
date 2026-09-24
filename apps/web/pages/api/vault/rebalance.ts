@@ -64,11 +64,11 @@ async function resolveRecommendations(
  * POST /api/vault/rebalance — Agent-triggered rebalance.
  *
  * Replaces the old execute-loop.ts. Key differences:
- *   1. Signs with Circle MPC wallet (user's vault), NOT process.env.PRIVATE_KEY
- *   2. Reads from MongoDB Vault model, not in-memory sessions
+ *   1. Executes via the user's own smart account under an ERC-7710
+ *      delegation — never a custodial wallet, never the operator key
+ *   2. Reads from MongoDB Vault model (Guardian profile), not in-memory sessions
  *   3. Validates against persisted ERC-7715 Permission
- *   4. Deducts fees via FeeEngine
- *   5. Records every action to Transaction model (audit trail)
+ *   4. Records every action to Transaction model (audit trail)
  *
  * Body:
  *   { vaultId: "..." }       — rebalance single vault
@@ -191,7 +191,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         dryRun: true,
         vault: summary.vault,
         permission: summary.permission,
-        fees: summary.fees,
         status: 'ready',
         reasonCode: 'dry_run_ready',
         message: `${resolvedRecommendations.length} Guardian action${resolvedRecommendations.length === 1 ? '' : 's'} ready for execution.`,

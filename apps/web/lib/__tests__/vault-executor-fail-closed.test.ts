@@ -3,7 +3,7 @@
 /**
  * The vault executor must never sign user transactions with the operator key
  * (VAULT_PRIVATE_KEY — the same key that settles x402 and writes the ledger).
- * With no smart-account provider configured, executeSwap/withdraw throw
+ * With no smart-account provider configured, executeSwap throws
  * VaultExecutionUnavailableError even when VAULT_PRIVATE_KEY is set.
  */
 
@@ -20,12 +20,10 @@ const VAULT = {
 const SAVED_ENV = { ...process.env };
 
 beforeEach(() => {
-  // Simulate production: operator key present, NO smart-account provider.
-  delete process.env.SMART_ACCOUNT_PROVIDER; // defaults to 'privy', unconfigured
-  delete process.env.PRIVY_APP_ID;
-  delete process.env.PRIVY_APP_SECRET;
+  // Simulate production: operator key present, NO ERC-7710 provider env.
+  delete process.env.SMART_ACCOUNT_PROVIDER;
+  delete process.env.GUARDIAN_SESSION_PRIVATE_KEY;
   delete process.env.AA_BUNDLER_URL;
-  delete process.env.SAFE4337_SIGNER_PRIVATE_KEY;
   process.env.VAULT_PRIVATE_KEY = `0x${'de'.repeat(32)}`; // operator key present — must be ignored
 });
 
@@ -37,12 +35,6 @@ describe('vault executor — fail closed', () => {
   it('executeSwap throws VaultExecutionUnavailableError despite VAULT_PRIVATE_KEY being set', async () => {
     await expect(
       smartAccountExecutor.executeSwap(VAULT, '0x3', '0x4', '1000', 42220),
-    ).rejects.toBeInstanceOf(VaultExecutionUnavailableError);
-  });
-
-  it('withdraw throws VaultExecutionUnavailableError despite VAULT_PRIVATE_KEY being set', async () => {
-    await expect(
-      smartAccountExecutor.withdraw(VAULT, '0x3333333333333333333333333333333333333333', 10, 42220),
     ).rejects.toBeInstanceOf(VaultExecutionUnavailableError);
   });
 

@@ -792,14 +792,13 @@ export default function ProtectionTab({
       {showMobileWizard && address && (
         <GuardianMobileWizard
           userAddress={address}
-          vaultAddress={vault.vault?.circleWalletAddress}
           onComplete={() => {
             setShowMobileWizard(false);
             if (address) vault.refresh(address);
           }}
           onCancel={() => setShowMobileWizard(false)}
-          onCreateVault={async (strategy) => {
-            return vault.createVault(address, strategy);
+          onSaveStrategy={async (strategy) => {
+            return vault.updateStrategy(address, strategy);
           }}
           onRequestPermission={async (dailyLimit) => {
             if (!address || !chainId) return false;

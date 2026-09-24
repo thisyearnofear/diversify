@@ -4,7 +4,6 @@ import { vaultStore } from '@/lib/vault/store';
 import { ERC7715Service } from '@diversifi/shared/src/services/erc7715-service';
 import { getGuardianState } from '@/lib/vault/guardian-state';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
-import { verifyPrivyDelegation } from '@diversifi/shared/src/services/vault/privy-delegation';
 
 const erc7715 = new ERC7715Service();
 
@@ -99,15 +98,25 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-      const vault = await vaultStore.findVaultByUser(auth);
-      if (!vault) return res.status(404).json({ error: 'No vault found. Create one first.' });
-
-      // The client may claim it granted Privy delegation (addSigners with the
-      // app key quorum), but the flag is only stored after the server confirms
-      // it against Privy — a forged claim must not bypass the delegation gate.
-      const privyDelegated = permission.privyDelegated === true
-        ? await verifyPrivyDelegation(auth).catch(() => false)
-        : false;
+      // The "vault" record is the user's Guardian profile (strategy +
+      // bookkeeping) — not a custodial account. Upsert it so a permission
+      // grant is self-contained; savings never leave the user's wallet.
+      let vault = await vaultStore.findVaultByUser(auth);
+      if (!vault) {
+        vault = await vaultStore.createVault({
+          userAddress: auth,
+          vaultType: 'circle',
+          strategy: typeof permission.strategy === 'string' ? permission.strategy : 'global',
+          status: 'active',
+          totalDepositedUSD: 0,
+          totalWithdrawnUSD: 0,
+          currentValueUSD: 0,
+          highWaterMarkUSD: 0,
+          allocations: [],
+          totalFeesPaidUSD: 0,
+          feesPendingUSD: 0,
+        });
+      }
 
       // Revoke any existing active permission
       const existing = await vaultStore.findActivePermission(vault._id);
@@ -136,14 +145,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // autonomous execution — mark as confirmed so the guardian-loop gate
         // passes. COPILOT/ADVISORY tiers don't auto-execute anyway.
         firstAutoExecutionConfirmed: (permission.autonomyLevel || 'GUARDIAN') === 'GUARDIAN',
-        privyDelegated,
         status: 'active' as const,
       });
 
       return res.status(200).json({
         success: true,
         permission: created,
-        privyDelegated,
         summary: `${created.dailyLimitUSD}/day, ${created.allowedTokens.join(', ')}, expires ${new Date(created.expiresAt * 1000).toLocaleDateString()}`,
         warnings: validation.warnings,
       });
@@ -158,7 +165,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!vault) return res.status(404).json({ error: 'No vault found', hasPermission: false });
 
       const permission = await vaultStore.findActivePermission(vault._id);
-      if (!permission) return res.status(200).json({ hasPermission: false });
+      if (!permission) return res.status(200).json({ vault, hasPermission: false });
 
       const recentTransactions = await vaultStore.findTransactions(vault._id, 10);
       const now = Math.floor(Date.now() / 1000);
@@ -182,6 +189,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const remainingTodayUSD = Math.max(0, permission.dailyLimitUSD - permission.spentTodayUSD);
 
       return res.status(200).json({
+        vault,
+        recentTransactions,
         hasPermission: active,
         active,
         expired: !active && permission.expiresAt > 0 && permission.expiresAt < now,

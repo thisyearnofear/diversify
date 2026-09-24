@@ -2,7 +2,7 @@
  * Smart Account Provider — Abstraction layer for smart account operations.
  *
  * Decouples the vault executor from any specific smart account vendor.
- * Today: Privy Safe. Tomorrow: any ERC-4337 provider (Pimlico, Biconomy, Crossmint, Para).
+ * Today: MetaMask Advanced Permissions (ERC-7715/7710) is the only rail.
  *
  * The VaultService and _executor.ts depend ONLY on this interface.
  * Vendor-specific code lives in the provider implementations.
@@ -48,7 +48,7 @@ export interface SmartAccountBalance {
  * It does NOT handle:
  * - Business logic (that's VaultService)
  * - DEX routing (that's _executor.ts)
- * - Fee calculation (that's fee-engine.ts)
+ * - Fee calculation (management/performance fees are under review)
  */
 export interface SmartAccountProvider {
   /** Provider identifier for logging/config */
@@ -105,25 +105,20 @@ let initialized = false;
 
 /**
  * Get the configured smart account provider.
- * Reads SMART_ACCOUNT_PROVIDER env var, defaults to 'privy'.
+ * The only supported rail is 'metamask-delegation' (ERC-7715/7710), which is
+ * also the default when SMART_ACCOUNT_PROVIDER is unset.
  * Lazily registers providers on first call (avoids tree-shaking issues).
  */
 export function getSmartAccountProvider(): SmartAccountProvider {
   // Lazy registration — ensures providers are available even if the
   // side-effect import was tree-shaken by webpack.
   if (!initialized) {
-    const { PrivySafeProvider } = require('./providers/privy-safe-provider');
-    const { Safe4337Provider } = require('./providers/safe-4337-provider');
     const { MetaMaskDelegationProvider } = require('./providers/metamask-delegation-provider');
-    const { CircleSmartAccountProvider } = require('./providers/circle-smart-account-provider');
-    if (!providers.has('privy')) providers.set('privy', () => new PrivySafeProvider());
-    if (!providers.has('safe4337')) providers.set('safe4337', () => new Safe4337Provider());
     if (!providers.has('metamask-delegation')) providers.set('metamask-delegation', () => new MetaMaskDelegationProvider());
-    if (!providers.has('circle')) providers.set('circle', () => new CircleSmartAccountProvider());
     initialized = true;
   }
 
-  const name = process.env.SMART_ACCOUNT_PROVIDER || 'privy';
+  const name = process.env.SMART_ACCOUNT_PROVIDER || 'metamask-delegation';
   const factory = providers.get(name);
 
   if (!factory) {

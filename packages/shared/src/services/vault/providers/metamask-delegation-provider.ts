@@ -8,18 +8,18 @@
  * DelegationManager. The user's funds never leave the user's account.
  *
  * Setup:
- *   SMART_ACCOUNT_PROVIDER=metamask-delegation
  *   GUARDIAN_SESSION_PRIVATE_KEY=0x...        (the agent's session signer)
  *   AA_BUNDLER_URL=https://...                (ERC-4337 bundler for the target chain)
+ *   AA_BUNDLER_URL_<chainId> / AA_RPC_URL_<chainId>   (per-chain overrides)
  *
  * Per-user permission contexts (from the client grant) are resolved via a
  * pluggable resolver so this shared-package provider stays decoupled from the
  * app's database. Register one with setDelegationContextResolver() at API boot.
  *
- * ⚠️ Network: ERC-7715/7710 require an EIP-7702 chain. Guardian uses Arbitrum One
- * (42161). Celo is intentionally NOT handled here — Celo swaps stay on the
- * existing Privy/Safe path. This provider is additive and gated behind the env
- * flag above, so existing flows are untouched.
+ * ⚠️ Network: ERC-7715/7710 requires an EIP-7702 chain. Supported chains are
+ * the ones the DelegationManager environment ships for (see SUPPORTED_CHAINS).
+ * Chains outside that set fall back to one-tap proposals — the user signs
+ * each move in their own wallet.
  */
 
 import { createPublicClient, http, type Address, type Hex, type Chain } from 'viem';
@@ -92,10 +92,16 @@ export class MetaMaskDelegationProvider implements SmartAccountProvider {
     readonly name = 'metamask-delegation';
 
     isConfigured(): boolean {
+        // This provider is the only autonomy rail; it is configured when the
+        // session signer and at least one bundler URL are present. The
+        // SMART_ACCOUNT_PROVIDER name check is gone — metamask-delegation is
+        // the default.
         return (
-            process.env.SMART_ACCOUNT_PROVIDER === 'metamask-delegation' &&
             !!process.env.GUARDIAN_SESSION_PRIVATE_KEY &&
-            !!(process.env.AA_BUNDLER_URL || process.env[`AA_BUNDLER_URL_${DEFAULT_CHAIN_ID}`])
+            !!(
+                process.env.AA_BUNDLER_URL ||
+                Object.keys(SUPPORTED_CHAINS).some((id) => process.env[`AA_BUNDLER_URL_${id}`])
+            )
         );
     }
 

@@ -2,9 +2,8 @@
  * Vault API Executor — Bridges vault operations to the chain.
  *
  * Uses the SmartAccountProvider interface for all transactions.
- * The provider is selected via SMART_ACCOUNT_PROVIDER env var:
- *   - 'privy' (default): Privy Safe smart accounts (production)
- *   - 'safe4337': Generic Safe + any signer (self-hosted/dev)
+ * The only rail is 'metamask-delegation' (ERC-7715/7710): the Guardian
+ * redeems a permission the user granted from their own smart account.
  *
  * There is NO direct-signing fallback: VAULT_PRIVATE_KEY is the operator's
  * settlement/ledger key and must never sign user vault transactions. With no
@@ -168,7 +167,7 @@ export function getActiveProvider(): SmartAccountProvider | null {
 
 export const smartAccountExecutor: VaultExecutor = {
   async getHoldings(vault: Vault): Promise<VaultAllocation[]> {
-    const address = vault.circleWalletAddress;
+    const address = vault.userAddress;
     if (!address) return [];
     return getCeloBalances(address);
   },
@@ -188,37 +187,13 @@ export const smartAccountExecutor: VaultExecutor = {
     const provider = getProvider();
     const { data, minAmountOut } = await buildSwapParams(provider, tokenInAddress, tokenOutAddress, amountIn);
 
-    const userId = vault.circleWalletAddress || vault.userAddress;
+    // The delegator smart account IS the user's own address — no custodial account.
+    const userId = vault.userAddress;
     const result = await smartAccount.sendTransaction(
       userId,
       { to: MENTO_BROKER, data },
       chainId
     );
     return { txHash: result.hash, amountOut: minAmountOut.toString() };
-  },
-
-  async withdraw(
-    vault: Vault,
-    destinationAddress: string,
-    amountUSD: number,
-    chainId: number = NETWORKS.CELO_MAINNET.chainId
-  ): Promise<{ txHash: string; amountReceived: number }> {
-    const cUSD = TOKENS.cUSD;
-    const transferData = new ethers.utils.Interface(erc20Abi).encodeFunctionData('transfer', [
-      destinationAddress, ethers.utils.parseUnits(amountUSD.toString(), cUSD.decimals),
-    ]);
-
-    const smartAccount = getActiveProvider();
-    if (!smartAccount) {
-      throw new VaultExecutionUnavailableError();
-    }
-
-    const userId = vault.circleWalletAddress || vault.userAddress;
-    const result = await smartAccount.sendTransaction(
-      userId,
-      { to: cUSD.address, data: transferData },
-      chainId
-    );
-    return { txHash: result.hash, amountReceived: amountUSD };
   },
 };

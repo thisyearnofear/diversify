@@ -20,7 +20,6 @@ import { hyperliquidService, HyperliquidService } from './services/hyperliquid.s
 import { earnService, EarnService } from './services/earn-service';
 import { junoService, JunoService } from './services/juno-service';
 import { VaultService } from './services/vault/vault.service';
-import { FeeEngine, feeEngine } from './services/vault/fee-engine';
 import {
   getSmartAccountProvider,
   type SmartAccountProvider,
@@ -65,8 +64,6 @@ export {
   junoService,
   JunoService,
   VaultService,
-  FeeEngine,
-  feeEngine,
   getSmartAccountProvider,
   SmartAccountProvider,
   SmartAccountCall,

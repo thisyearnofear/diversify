@@ -22,12 +22,10 @@
     "@google/generative-ai": "0.24.1",
     "@lifi/sdk": "3.15.3",
     "@metamask/smart-accounts-kit": "1.6.0",
-    "@privy-io/node": "0.11.0",
     "ai": "^7.0.107",
     "ethers": "^5.7",
     "ethers6": "npm:ethers@^6.16.0",
     "openai": "6.16.0",
-    "permissionless": "0.2.57",
     "tablestore": "^5.6.5",
     "viem": "^2.37.0"
   },

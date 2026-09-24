@@ -7,13 +7,15 @@
  *
  * The four states, in escalation order:
  *
- *   idle        — no vault yet
- *   authorized  — vault exists (or permission signed) but not yet funded
- *   funded      — vault has deposits but no live permission
- *   monitoring  — vault is funded AND the permission is currently valid
+ *   idle        — no Guardian profile or permission yet
+ *   authorized  — profile/permission exists but no live permission
+ *   funded      — legacy state (custodial deposits no longer exist; kept in
+ *                 the union for stored data, never newly derived)
+ *   monitoring  — a Guardian permission is currently valid
  *
- * "Valid" means: status === 'active', expiresAt is in the future
- * (or never-expires with 0), and the daily cap has not been fully spent.
+ * Savings stay in the user's own wallet — there is no deposit step. "Valid"
+ * means: status === 'active', expiresAt is in the future (or never-expires
+ * with 0), and the daily cap has not been fully spent.
  *
  * The function is pure — no React, no DOM — so it is unit-testable in
  * isolation and can be reused by any surface (UI, server-side cron
@@ -53,23 +55,23 @@ export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
         headline: 'Set up Auto-Saver',
         description: 'Pick a strategy and set your daily limit to get started.',
         cta: 'Set up Auto-Saver',
-        hint: 'Pick a strategy, set your daily limit, and deposit stablecoins.',
+        hint: 'Pick a strategy and set your daily limit.',
     },
     authorized: {
-        headline: 'Add funds',
-        description: 'Auto-Saver is approved — deposit stablecoins to start protection.',
-        cta: 'Deposit now',
-        hint: 'Auto-Saver is approved. Send stablecoins to start.',
+        headline: 'Auto-Saver is set up',
+        description: 'Auto-Saver proposes moves within your limits — you approve each with one tap in your own wallet.',
+        cta: 'View proposals',
+        hint: 'Nothing moves until you approve it.',
     },
     funded: {
         headline: 'Turn on protection',
-        description: 'Your funds are ready. Turn on Auto-Saver to start protecting your savings.',
+        description: 'Turn on Auto-Saver to start protecting your savings.',
         cta: 'Turn on Auto-Saver',
-        hint: 'Funds are ready. Turn on Auto-Saver to start protecting your savings.',
+        hint: 'Turn on Auto-Saver to start protecting your savings.',
     },
     monitoring: {
         headline: 'Protection on',
-        description: 'Auto-Saver is watching markets and protecting your savings within your limits.',
+        description: 'Auto-Saver is watching markets and proposing moves within your limits.',
         cta: 'View activity',
         hint: 'Auto-Saver is working within the limits you set.',
     },
@@ -168,16 +170,15 @@ export function deriveGuardianTierState(
 ): GuardianTierState {
     const now = input.nowSeconds ?? Math.floor(Date.now() / 1000);
     const hasVault = !!input.vault;
-    const hasDeposit = hasVault && (input.vault?.totalDepositedUSD ?? 0) > 0;
     const hasLivePermission = isPermissionValidNow(input.permission, now);
 
-    if (hasDeposit && hasLivePermission) return 'monitoring';
-    if (hasDeposit) return 'funded';
+    // No deposit step exists — savings stay in the user's wallet, so a live
+    // permission IS the "protecting" state.
+    if (hasLivePermission) return 'monitoring';
     // "authorized" means the user has done *some* setup — signed a permission
-    // OR created a vault — but has not yet deposited. We treat a signed
-    // permission (even if not yet valid in the strict sense) as a signal
-    // of intent, so an expired permission still surfaces as "authorized"
-    // rather than "idle" once a vault exists.
+    // OR saved a strategy — but the permission isn't currently valid. We
+    // treat a signed permission (even expired) as a signal of intent, so it
+    // surfaces as "authorized" rather than "idle" once a profile exists.
     if (hasVault || !!input.permission) return 'authorized';
     return 'idle';
 }

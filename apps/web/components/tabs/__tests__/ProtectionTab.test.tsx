@@ -164,7 +164,7 @@ vi.mock("@/hooks/use-vault", () => ({
   useVault: () => ({
     vault: null,
     refresh: vi.fn(),
-    createVault: vi.fn(),
+    updateStrategy: vi.fn(),
   }),
 }));
 

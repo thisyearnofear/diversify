@@ -75,7 +75,6 @@ describe('VaultExecutionUnavailableError propagation', () => {
     const executor: VaultExecutor = {
       getHoldings: vi.fn().mockResolvedValue([]),
       executeSwap: vi.fn().mockRejectedValue(new VaultExecutionUnavailableError()),
-      withdraw: vi.fn().mockRejectedValue(new VaultExecutionUnavailableError()),
     };
     const service = new VaultService(store, executor);
     await expect(service.rebalance('v1', [rec])).rejects.toBeInstanceOf(VaultExecutionUnavailableError);
@@ -89,7 +88,6 @@ describe('VaultExecutionUnavailableError propagation', () => {
     const executor: VaultExecutor = {
       getHoldings: vi.fn().mockResolvedValue([]),
       executeSwap: vi.fn().mockRejectedValue(new Error('rpc down')),
-      withdraw: vi.fn(),
     };
     const service = new VaultService(store, executor);
     const result = await service.rebalance('v1', [rec]);
