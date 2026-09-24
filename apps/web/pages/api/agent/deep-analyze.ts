@@ -68,22 +68,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     try {
-        const { portfolio, config, networkInfo, signedPermission, userId } = req.body;
+        const { portfolio, config, networkInfo, signedPermission } = req.body;
 
         let agent: ArcAgent | null = null;
 
-        if (userId) {
-            // New 2026 Path: Custodial "Agent Fuel" flow (Circle MPC sub-wallet)
-            // The user has funded a dedicated agent wallet
-            agent = new ArcAgent({
-                userId,
-                isTestnet: process.env.ARC_AGENT_TESTNET !== 'false',
-                spendingLimit: parseFloat(process.env.ARC_AGENT_DAILY_LIMIT || '5.0'), // Global limit for safety, or fetch per-user limit
-                circleApiKey: process.env.CIRCLE_API_KEY,
-                circleEntitySecret: process.env.CIRCLE_ENTITY_SECRET,
-                circleBaseUrl: process.env.CIRCLE_BASE_URL
-            });
-        } else if (signedPermission) {
+        if (signedPermission) {
             // Preferred non-custodial path: client provides a user-signed ERC-7715 permission
             const spendingLimit = (signedPermission as SignedSessionPermission).permission?.dailyLimitUSD ?? 5.0;
             agent = buildSessionAgent(signedPermission as SignedSessionPermission, spendingLimit);
@@ -94,7 +83,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         if (!agent) {
             return res.status(503).json({
-                error: 'Agent not configured. Provide userId (for Agent Fuel) or signedPermission (for Session Key).',
+                error: 'Agent not configured. Provide signedPermission (Session Key flow).',
             });
         }
 

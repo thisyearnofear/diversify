@@ -328,6 +328,8 @@ export function useX402Payment() {
             settlementNetwork: billing.settlementNetwork,
             settlementTxHash: billing.settlementTxHash,
             settlementExplorer: billing.settlementExplorer,
+            settlementId: billing.settlementId,
+            settlementMethod: billing.settlementMethod,
         };
     };
 

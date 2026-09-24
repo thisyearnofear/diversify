@@ -126,65 +126,6 @@ export class CircleService {
     }
 
     // =========================================================================
-    // SUB-ACCOUNT MANAGEMENT (User-Specific Agents)
-    // =========================================================================
-
-    /**
-     * Get or create a dedicated sub-wallet for a user's AI Agent
-     * This fulfills the 2026 "Agent Fuel" architecture
-     */
-    async getOrCreateAgentWallet(userId: string): Promise<string> {
-        await this.ensureClient();
-        
-        try {
-            console.log(`[Circle Service] Retrieving agent wallet for user ${userId}`);
-
-            // Dev-controlled wallets have no userId filter — listWallets filters by
-            // refId (WalletMetadata.refId), which we stamp at creation below.
-            const listResponse = await this.client.listWallets({
-                refId: userId,
-                pageSize: 10
-            });
-
-            const existingWallet = listResponse.data?.wallets?.find((w: any) =>
-                w.metadata?.name === 'agent-fuel-account'
-            );
-
-            if (existingWallet) {
-                return existingWallet.id;
-            }
-
-            // Create new wallet set if none exists (each user gets their own MPC set)
-            const walletSetResponse = await this.client.createWalletSet({
-                name: `Agent Set - ${userId.substring(0, 8)}`
-            });
-
-            const walletSetId = walletSetResponse.data.walletSet.id;
-
-            // metadata is an ARRAY of {name, refId} — one entry per created wallet.
-            // SCA so Gas Station sponsorship applies (Console-configured policy).
-            const walletResponse = await this.client.createWallets({
-                accountType: 'SCA',
-                blockchains: [circleWalletBlockchain()],
-                count: 1,
-                walletSetId: walletSetId,
-                metadata: [{
-                    name: 'agent-fuel-account',
-                    refId: userId
-                }]
-            });
-
-            const newWalletId = walletResponse.data.wallets[0].id;
-            console.log(`[Circle Service] Created new agent wallet ${newWalletId} for user ${userId}`);
-            
-            return newWalletId;
-        } catch (error: any) {
-            console.error('[Circle Service] Agent wallet creation failed:', error.message);
-            throw error;
-        }
-    }
-
-    // =========================================================================
     // GATEWAY CAPABILITIES (Unified Balance & Transfers)
     // =========================================================================
 

@@ -28,7 +28,7 @@ import {
     type BrightDataCommodity,
     x402Analytics
 } from '@diversifi/shared';
-import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual, getLedgerContractAddress } from '@diversifi/shared';
+import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual, getLedgerContractAddress, buildSettlementMeta } from '@diversifi/shared';
 import {
     analyzeCycles,
     requiredDates,
@@ -710,6 +710,7 @@ export default async function handler(
     // as the cross-chain reference. Fires whenever we know the on-chain payer — the HSP
     // mandate signer OR the plain on-chain tx sender. Best-effort; never blocks; anchor
     // writes need only gas on the destination ledger chain (no stablecoin).
+    const isOnChainTxHash = /^0x[0-9a-fA-F]{64}$/.test(settlementTxHash ?? '');
     if (settlementPayer) {
         const fxIndex = payloads.findIndex((p, i) => p.sourceId === 'fx_protection' && (sourcePlans[i]?.cost ?? 0) > 0);
         if (fxIndex >= 0) {
@@ -731,7 +732,9 @@ export default async function handler(
                 evidenceCid: evidenceCidsBySource.get('fx_protection') ?? '',
                 servingModel: 'fx-drag/v1',
                 confidence: 9000,
-                settlementTxHash: settlementTxHash,
+                // Only a real on-chain tx hash anchors as the settlement
+                // reference — a Gateway settlement id is not one.
+                settlementTxHash: isOnChainTxHash ? settlementTxHash : undefined,
                 // Region-canonical anchor; omit to let default routing pick Arbitrum.
                 ...(anchorChainId ? { chainId: anchorChainId } : {}),
             }).catch((err: unknown) =>
@@ -741,20 +744,13 @@ export default async function handler(
     }
 
     const bundle = buildArcResearchBundle(payloads);
-    // settlementTxHash is the buyer's real settlement of record (mandate,
-    // tx-proof, HSP, or the gateway_batched settlement id). Only build an
-    // explorer link when it is an actual on-chain tx hash — a Gateway batched
-    // settlement id is not one.
-    const isOnChainTxHash = /^0x[0-9a-fA-F]{64}$/.test(settlementTxHash ?? '');
-    const settlementMeta = {
-        onChainSettled: Boolean(settlementTxHash),
-        settlementNetwork: DEFAULT_SETTLEMENT_NETWORK,
-        settlementEnv: SETTLEMENT_ENV,
-        ...(settlementTxHash ? { settlementTxHash } : {}),
-        ...(isOnChainTxHash
-            ? { settlementExplorer: `${getSettlementConfig().explorerBase}/tx/${settlementTxHash}` }
-            : {}),
-    };
+    const settlementMeta = buildSettlementMeta({
+        settlementTxHash,
+        gatewaySettled,
+        network: DEFAULT_SETTLEMENT_NETWORK,
+        env: SETTLEMENT_ENV,
+        explorerBase: getSettlementConfig().explorerBase,
+    });
 
     // PAYMENT-RESPONSE header for SDK buyers (GatewayClient.pay reads it for
     // the facilitator's SettleResponse.transaction). Only on a fresh settle —

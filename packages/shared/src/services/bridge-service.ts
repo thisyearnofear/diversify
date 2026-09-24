@@ -30,13 +30,13 @@ export class BridgeService {
      */
     async bridgeToArbitrum(amount: string): Promise<string> {
         await this.ensureWalletInitialized();
-        
-        // Check if we have a real Circle wallet
-        if (!(this.wallet instanceof RealCircleWalletProvider)) {
-            throw new Error('Autonomous bridging requires a real Circle MPC wallet');
-        }
 
-        const walletId = (this.wallet as any).getWalletId();
+        // The Circle developer-controlled wallet path was removed (no
+        // custodial wallets); bridging needs a walletId-bearing provider.
+        const walletId = (this.wallet as any).getWalletId?.();
+        if (!walletId) {
+            throw new Error('Autonomous bridging requires a Circle wallet provider — custodial agent wallets were removed');
+        }
         const destinationAddress = this.agentAddress; // Same address on both chains for the agent
 
         return await this.circleService.bridgeUSDC(
@@ -93,18 +93,5 @@ export class BridgeService {
             slippageTolerance: 0.5,
             signer: this.wallet // Pass the agent's signer directly
         } as any);
-    }
-
-    // Reuse existing provider classes from agent-service.ts for type checking
-    private isRealCircleWalletProvider(wallet: any): wallet is RealCircleWalletProvider {
-        return wallet && typeof wallet.getWalletId === 'function';
-    }
-}
-
-// Reuse existing provider class from agent-service.ts
-class RealCircleWalletProvider {
-    getWalletId(): string {
-        // Implementation would return actual wallet ID
-        return 'mock-wallet-id';
     }
 }

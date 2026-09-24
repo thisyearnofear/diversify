@@ -6,7 +6,6 @@
  */
 
 import React from "react";
-import AgentFuelGauge from "./AgentFuelGauge";
 import GuardianWDKStatus from "./GuardianWDKStatus";
 import AutomationSettings from "./AutomationSettings";
 import { LoopResultSummary } from "./LoopResultSummary";
@@ -73,10 +72,8 @@ export function GuardianBoundsSheet({
   return (
     <div className="space-y-6">
       <div>
-        {/* Guardian Wallet or Permission Info */}
-        {autonomousStatus?.walletType === "agent-fuel" ? (
-          <AgentFuelGauge status={autonomousStatus as never} />
-        ) : hasValidPermission ? (
+        {/* Permission info — Guardian runs on the user's wallet under signed session permissions */}
+        {hasValidPermission ? (
           <div className="space-y-3">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-500">Daily limit</span>

@@ -54,9 +54,12 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
     : null;
 
   // Settlement proof link: the buyer's real settlement tx comes back in
-  // _billing.settlementTxHash (mandate, tx-proof, HSP, gateway_batched).
+  // _billing.settlementTxHash (mandate, tx-proof, HSP). A gateway_batched
+  // payment instead carries _billing.settlementId — a Circle batch settlement
+  // id, not an on-chain tx, so it renders without an explorer link.
   const settlementTxHash = receipt.txHash ?? receipt.settlementTxHash;
   const settlementExplorer = receipt.explorer ?? receipt.settlementExplorer;
+  const gatewaySettlementId = receipt.settlementId;
 
   return (
     <div className="mt-2">
@@ -193,6 +196,13 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                 >
                   {settlementTxHash.slice(0, 18)}...{settlementTxHash.slice(-6)} ↗
                 </a>
+              )}
+
+              {gatewaySettlementId && (
+                <p className="text-[10px] text-slate-500">
+                  Paid from your Gateway balance · settles on-chain in Circle&rsquo;s next batch
+                  <span className="font-mono"> · {gatewaySettlementId.slice(0, 8)}…</span>
+                </p>
               )}
             </div>
           </motion.div>

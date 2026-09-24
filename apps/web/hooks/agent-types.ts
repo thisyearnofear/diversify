@@ -319,7 +319,7 @@ export interface AICapabilities {
 export interface AutonomousStatus {
   enabled: boolean;
   isTestnet: boolean;
-  walletType: "privateKey" | "circle" | "session" | "agent-fuel" | "none";
+  walletType: "privateKey" | "circle" | "session" | "none";
   spendingLimit: number;
   spent: number;
   remaining: number;

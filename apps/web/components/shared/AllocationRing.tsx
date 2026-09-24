@@ -3,7 +3,7 @@
  *
  * Before this existed, rings were hand-rolled four different ways
  * (ProtectionScore dasharray, ProtectionDashboard framer fill, canvas
- * SimplePieChart, AgentFuelGauge). One primitive serves Shield's plan
+ * SimplePieChart). One primitive serves Shield's plan
  * ring, Home's protection dial, and Agent's budget ring: spring-animated
  * slices that re-flow when the allocation changes, tap-to-select with a
  * haptic tick, archetype theming via per-slice colors, a center slot for

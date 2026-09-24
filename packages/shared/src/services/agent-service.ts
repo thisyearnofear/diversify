@@ -12,7 +12,7 @@ import type { AgentWalletProvider } from '../types/wallet-provider';
 export type { AgentWalletProvider };
 import { rwaService } from './rwa-service';
 import { circleService, CircleService } from './circle-service';
-import { RealCircleWalletProvider } from './circle-wallet-provider-real';
+
 import { hyperliquidService } from './hyperliquid.service';
 import { HYPERLIQUID_CONFIG } from '../config/index';
 import { GuardianExecutionService } from './guardian/guardian-execution.service';
@@ -134,10 +134,6 @@ export class AgentService {
         userId?: string;
         privateKey?: string;
         sessionKey?: { privateKey: string; permission: import('./erc7715-service').SessionPermission };
-        circleWalletId?: string;
-        circleApiKey?: string;
-        circleEntitySecret?: string;
-        circleBaseUrl?: string;
         rpcUrl: string;
         network: any; // SettlementNetwork
         spendingLimit?: number;
@@ -150,10 +146,6 @@ export class AgentService {
             userId: config.userId,
             privateKey: config.privateKey,
             sessionKey: config.sessionKey,
-            circleWalletId: config.circleWalletId,
-            circleApiKey: config.circleApiKey,
-            circleEntitySecret: config.circleEntitySecret,
-            circleBaseUrl: config.circleBaseUrl,
             rpcUrl: config.rpcUrl,
             circleService: circleService
         });

@@ -6,10 +6,6 @@ export interface ArcAgentConfig {
   userId?: string;
   privateKey?: string;
   sessionKey?: { privateKey: string; permission: SessionPermission };
-  circleWalletId?: string;
-  circleApiKey?: string;
-  circleEntitySecret?: string;
-  circleBaseUrl?: string;
   rpcUrl?: string;
   network?: any;
   spendingLimit?: number;
@@ -30,10 +26,6 @@ export class ArcAgent extends AgentService {
       userId: config.userId,
       privateKey: config.privateKey,
       sessionKey: config.sessionKey,
-      circleWalletId: config.circleWalletId,
-      circleApiKey: config.circleApiKey,
-      circleEntitySecret: config.circleEntitySecret,
-      circleBaseUrl: config.circleBaseUrl,
       rpcUrl: config.rpcUrl ?? defaultRpcUrl,
       network: resolvedNetwork,
       spendingLimit: config.spendingLimit,

@@ -281,9 +281,9 @@ The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stal
 ## Circle (CCTP, Gateway & MPC)
 
 - **CCTP Domains**: Arc is domain `26` (mainnet TokenMessenger `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d`); Arbitrum ↔ Celo via bridge
-- **Gateway (planned funding layer)**: `GatewayWallet`/`GatewayMinter` live on Arc mainnet — chain-abstracted USDC balance (deposit once on any supported chain, spendable on Arc). Chosen model for "Protection Balance"; the custodial MPC sub-wallet path is evaluated against it before further investment.
-- **Nanopayments / EIP-3009**: the gateway accepts `x-payment-mandate` (signed `transferWithAuthorization`); settlement is self-hosted today — the merchant submits the authorization on-chain. Circle Gateway batched settlement (down to `$0.000001`) is the Phase 3 upgrade.
-- **MPC Wallets**: Circle MPC for agent fuel tank + Hyperliquid API keys
+- **Gateway (funding layer)**: `GatewayWallet`/`GatewayMinter` live on Arc mainnet — chain-abstracted USDC balance (deposit once on any supported chain, spendable on Arc). This is the Protection Balance.
+- **Nanopayments / EIP-3009**: the gateway accepts `x-payment-mandate` (signed `transferWithAuthorization`) and `gateway_batched` proofs settled through `BatchFacilitatorClient` (down to `$0.000001`); self-hosted submission remains for the other rails.
+- **Developer-Controlled Wallets**: per-user agent wallets removed (custodial — superseded by the user's own Gateway balance + signed Guardian permissions). Planned: operator treasury custody + Gas Station.
 - **Hackathon Default**: prefer the simplest externally verifiable proof path for judges; keep experimental payment variants out of the core demo unless they are fully verified end to end
 
 ## Wallet Integration

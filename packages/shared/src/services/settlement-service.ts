@@ -707,3 +707,37 @@ export async function settleWithAuthorization(
 // No per-rail convenience wrappers. Use settleWithAuthorization(mandate, network)
 // and getSettlementStats(network, ...) with DEFAULT_SETTLEMENT_NETWORK or the
 // desired SettlementNetwork to keep a single settlement API.
+
+/**
+ * `_billing` settlement metadata. settlementTxHash is the buyer's real
+ * settlement of record (mandate, tx-proof, HSP). For gateway_batched, Circle's
+ * settle returns a Gateway settlement id — the on-chain write lands later in
+ * Circle's batch — so it is reported as `settlementId` with
+ * `onChainSettled: false`, never as a tx hash or explorer link.
+ */
+export function buildSettlementMeta(params: {
+    settlementTxHash?: string;
+    gatewaySettled: boolean;
+    network: string;
+    env: string;
+    explorerBase: string;
+}): Record<string, unknown> {
+    const { settlementTxHash, gatewaySettled, network, env, explorerBase } = params;
+    const isOnChainTxHash = /^0x[0-9a-fA-F]{64}$/.test(settlementTxHash ?? '');
+    return {
+        onChainSettled: isOnChainTxHash,
+        settlementNetwork: network,
+        settlementEnv: env,
+        ...(isOnChainTxHash && settlementTxHash
+            ? { settlementTxHash, settlementExplorer: `${explorerBase}/tx/${settlementTxHash}` }
+            : {}),
+        ...(gatewaySettled
+            ? {
+                settlementMethod: 'gateway_batched',
+                ...(settlementTxHash && !isOnChainTxHash
+                    ? { settlementId: settlementTxHash }
+                    : {}),
+            }
+            : {}),
+    };
+}

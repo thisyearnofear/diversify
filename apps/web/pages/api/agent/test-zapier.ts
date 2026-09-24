@@ -43,9 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
         // If connection test passes, execute a genuine agent run to test the entire pipeline safely
         const { ArcAgent } = await import('@diversifi/shared');
-        const agent = new ArcAgent({ 
-            userId: 'test-zapier@agent.user',
-            spendingLimit: 0 // Pass a zero spending limit to strictly prevent live execution side-effects
+        const agent = new ArcAgent({
+            // Throwaway key — analysis only; a zero spending limit strictly
+            // prevents live execution side-effects.
+            privateKey: `0x${'1'.padStart(64, '0')}`,
+            spendingLimit: 0
         });
 
         const realAnalysis = await agent.analyzePortfolioAutonomously(

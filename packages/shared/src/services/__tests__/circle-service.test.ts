@@ -39,52 +39,6 @@ describe('circleWalletBlockchain', () => {
     });
 });
 
-describe('CircleService.getOrCreateAgentWallet', () => {
-    const env = { ...process.env };
-    beforeEach(() => {
-        vi.clearAllMocks();
-        mockClient.listWallets.mockResolvedValue({ data: { wallets: [] } });
-        delete process.env.CIRCLE_WALLET_BLOCKCHAIN;
-        process.env.SETTLEMENT_ENV = 'testnet';
-        process.env.CIRCLE_API_KEY = 'test-key';
-        process.env.CIRCLE_ENTITY_SECRET = 'a'.repeat(64);
-    });
-    afterEach(() => { process.env = { ...env }; });
-
-    it('lists by refId (no userId filter exists in the SDK) and creates with metadata array + env chain', async () => {
-        const svc = new CircleService();
-        const id = await svc.getOrCreateAgentWallet('user-123');
-
-        expect(mockClient.listWallets).toHaveBeenCalledWith({ refId: 'user-123', pageSize: 10 });
-        expect(mockClient.createWallets).toHaveBeenCalledWith(expect.objectContaining({
-            accountType: 'SCA',
-            blockchains: ['ARC-TESTNET'],
-            count: 1,
-            walletSetId: 'ws-1',
-            metadata: [{ name: 'agent-fuel-account', refId: 'user-123' }],
-        }));
-        expect(id).toBe('w-1');
-    });
-
-    it('creates on ARC when SETTLEMENT_ENV=mainnet', async () => {
-        process.env.SETTLEMENT_ENV = 'mainnet';
-        const svc = new CircleService();
-        await svc.getOrCreateAgentWallet('user-123');
-        expect(mockClient.createWallets).toHaveBeenCalledWith(expect.objectContaining({
-            blockchains: ['ARC'],
-        }));
-    });
-
-    it('returns an existing wallet without creating', async () => {
-        mockClient.listWallets.mockResolvedValueOnce({
-            data: { wallets: [{ id: 'w-existing', metadata: { name: 'agent-fuel-account' } }] },
-        });
-        const svc = new CircleService();
-        expect(await svc.getOrCreateAgentWallet('user-123')).toBe('w-existing');
-        expect(mockClient.createWallets).not.toHaveBeenCalled();
-    });
-});
-
 describe('CircleService.transferUSDCViaGateway request shape', () => {
     const env = { ...process.env };
     beforeEach(() => {

@@ -68,29 +68,14 @@ export function useAgentStatus() {
         let autonomousStatus: AutonomousStatus | null = null;
         
         if (AUTONOMOUS_FEATURES.AUTONOMOUS_MODE && status.enabled) {
-          // If we have specific user agent data, use that
-          if (status.userAgent) {
-            autonomousStatus = {
-              enabled: true,
-              isTestnet: status.isTestnet ?? true,
-              walletType: "agent-fuel",
-              spendingLimit: status.spendingLimit ?? 5.0,
-              spent: status.userAgent.spent ?? 0,
-              remaining: status.userAgent.remaining ?? 5.0,
-              balance: status.userAgent.balance,
-              address: status.userAgent.address
-            };
-          } else {
-            // Fallback to server/global status
-            autonomousStatus = {
-              enabled: true,
-              isTestnet: status.isTestnet ?? true,
-              walletType: status.walletType ?? "none",
-              spendingLimit: status.spendingLimit ?? 5.0,
-              spent: status.spent ?? 0,
-              remaining: status.remaining ?? 5.0,
-            };
-          }
+          autonomousStatus = {
+            enabled: true,
+            isTestnet: status.isTestnet ?? true,
+            walletType: status.walletType ?? "none",
+            spendingLimit: status.spendingLimit ?? 5.0,
+            spent: status.spent ?? 0,
+            remaining: status.remaining ?? 5.0,
+          };
         }
 
         setState({

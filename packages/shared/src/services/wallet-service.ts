@@ -4,7 +4,6 @@
  */
 
 import { ethers, providers, Wallet, Contract, utils } from 'ethers';
-import { RealCircleWalletProvider } from './circle-wallet-provider-real';
 import { AgentWalletProvider } from '../types/wallet-provider';
 
 export class WalletService {
@@ -19,32 +18,17 @@ export class WalletService {
         userId?: string;
         privateKey?: string;
         sessionKey?: { privateKey: string; permission: import('./erc7715-service').SessionPermission };
-        circleWalletId?: string;
-        circleApiKey?: string;
-        circleEntitySecret?: string;
-        circleBaseUrl?: string;
         rpcUrl: string;
         circleService: any;
     }) {
         this.userId = config.userId;
         this.circleService = config.circleService;
         this.provider = new providers.JsonRpcProvider(config.rpcUrl);
-        
-        if (this.userId) {
-            this.wallet = new RealCircleWalletProvider({
-                walletId: 'pending',
-                apiKey: config.circleApiKey || process.env.CIRCLE_API_KEY || '',
-                entitySecret: config.circleEntitySecret || process.env.CIRCLE_ENTITY_SECRET || '',
-                baseUrl: config.circleBaseUrl
-            });
-        } else if (config.circleWalletId && config.circleApiKey) {
-            this.wallet = new RealCircleWalletProvider({
-                walletId: config.circleWalletId,
-                apiKey: config.circleApiKey,
-                entitySecret: config.circleEntitySecret || process.env.CIRCLE_ENTITY_SECRET || '',
-                baseUrl: config.circleBaseUrl
-            });
-        } else if (config.sessionKey) {
+
+        // No custodial Circle wallets: the Protection Balance is the user's own
+        // Gateway balance, and Guardian runs on the user's wallet under signed
+        // session permissions — only key-based providers remain.
+        if (config.sessionKey) {
             this.wallet = new SessionKeyProvider(
                 config.sessionKey.privateKey,
                 config.sessionKey.permission,
@@ -63,12 +47,6 @@ export class WalletService {
 
     public async ensureInitialized(): Promise<void> {
         if (this.initialized) return;
-
-        // If we have a userId but no specific walletId, fetch/create it via CircleService
-        if (this.userId && this.wallet instanceof RealCircleWalletProvider) {
-            const walletId = await this.circleService.getOrCreateAgentWallet(this.userId);
-            (this.wallet as any).updateWalletId(walletId);
-        }
 
         if (typeof this.wallet.initialize === 'function') {
             await this.wallet.initialize();

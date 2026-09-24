@@ -93,7 +93,7 @@ async function main() {
         }
         const result = await client.pay(url);
         console.log(`Paid:    ${result.formattedAmount} USDC (status ${result.status})`);
-        console.log(`Settle:  ${result.transaction}`);
+        console.log(`Settlement id:  ${result.transaction} (Circle batch settlement id — the on-chain write lands in Circle's next batch)`);
         const billing = (result.data as any)?._billing;
         if (billing) console.log(`_billing: ${JSON.stringify(billing, null, 2)}`);
         return;

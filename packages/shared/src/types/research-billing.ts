@@ -49,10 +49,14 @@ export interface ResearchReceipt {
   reason?: string;
   onChainSettled?: boolean;
   settlementNetwork?: string;
-  /** The buyer's real settlement tx (mandate, tx-proof, HSP, gateway_batched). */
+  /** The buyer's real settlement tx (mandate, tx-proof, HSP). */
   settlementTxHash?: string;
   /** Explorer link — present only when settlementTxHash is an on-chain tx hash. */
   settlementExplorer?: string;
+  /** Circle Gateway settlement id for gateway_batched payments — the on-chain
+   * write lands later in Circle's batch; not a tx hash. */
+  settlementId?: string;
+  settlementMethod?: 'gateway_batched' | string;
   error?: string;
   /**
    * On-chain 0G RecommendationLedger anchor for this receipt.
