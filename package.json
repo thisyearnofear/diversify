@@ -20,7 +20,6 @@
     "test-x402": "node scripts/smoke/test-x402-hub.mjs",
     "test-x402-comprehensive": "node scripts/smoke/test-x402-comprehensive.mjs",
     "test-x402-frequency": "node scripts/smoke/test-x402-frequency.mjs",
-    "generate-x402-volume": "node scripts/generate-x402-volume.mjs",
     "validate-agent": "npx tsx -e \"import { validateAgentConfig } from './packages/shared/src/utils/arc-agent-setup'; console.log(validateAgentConfig());\"",
     "register-agent": "npx tsx scripts/register-on-agentscan.ts",
     "register-erc8004": "npx tsx scripts/register-erc8004.ts",

@@ -9,8 +9,6 @@ import {
     circleService,
     getArcResearchSource,
     normalizeArcResearchSource,
-    settleOnChain,
-    agentMirrorSettlementEnabled,
     settleWithAuthorization,
     DEFAULT_SETTLEMENT_NETWORK,
     getSettlementConfig,
@@ -26,7 +24,6 @@ import {
     type ArcResearchCategory,
     type ArcResearchDataType,
     type ArcResearchSourceDefinition,
-    type SettlementResult,
     type BrightDataBankCode,
     type BrightDataCommodity,
     x402Analytics
@@ -46,8 +43,7 @@ import { indexRecommendation } from '../../../lib/audit-index';
 import { getClientStore, type ClientState } from '../../../lib/client-store';
 import connectDB from '../../../lib/mongodb';
 import { ProcessedPaymentProof } from '../../../models/ProcessedPaymentProof';
-import { mongoSettlementCapStore } from '../../../lib/settlement-cap-store';
-import { setSettlementCapStore } from '@diversifi/shared';
+
 import {
     buildGatewayRequirements,
     buildGatewayChallengeBlock,
@@ -55,9 +51,6 @@ import {
     gatewayProofId,
     settleGatewayPayment,
 } from '@diversifi/shared/src/services/nanopayments-service';
-
-// Inject the MongoDB-backed daily settlement cap store at module load.
-setSettlementCapStore(mongoSettlementCapStore);
 
 /**
  * Arc Data Hub - Production Gateway (v2)
@@ -673,33 +666,11 @@ export default async function handler(
             }),
     );
 
-    // --- Real on-chain settlement (fire-and-forget, non-blocking) ---
-    // Fires a real USDC micro-tx on the configured settlement rail for every paid request.
-    // Settlement runs in background — gateway response is not delayed.
-    // Enterprise API-key clients skip x402 settlement (billed via their tenant quota).
-    // On the HASHKEY rail the USER already settled on-chain via HSP (their wallet →
-    // merchant transfer, observed + receipted), so the agent-side settleOnChain would
-    // double-pay. Skip it — the HSP tx is the settlement of record.
-    // On mainnet the mirror is skipped entirely: it moves the vault's own USDC,
-    // which reads as fabricated volume on the explorer — only real buyer
-    // settlements (mandate, tx-proof, HSP, gateway_batched) appear on-chain.
-    const settlements: SettlementResult[] = [];
-    if (totalCost > 0 && !user.enterprise && DEFAULT_SETTLEMENT_NETWORK !== 'HASHKEY' && agentMirrorSettlementEnabled()) {
-        const settlementPromises = sourcePlans
-            .filter(p => p.cost > 0)
-            .map(p => settleOnChain(p.cost, p.source.id, DEFAULT_SETTLEMENT_NETWORK));
-
-        // Await with a short timeout so we can include tx hashes in the response
-        // if they land quickly, but never block the API response.
-        const settled = await Promise.race([
-            Promise.all(settlementPromises),
-            new Promise<null>(r => setTimeout(() => r(null), 1500)),
-        ]);
-
-        if (Array.isArray(settled)) {
-            settled.forEach(r => { if (r.settled) settlements.push(r as SettlementResult); });
-        }
-    }
+    // --- On-chain settlement of record ---
+    // There is no agent-side mirror settlement: the buyer's own settlement tx
+    // (mandate, tx-proof, HSP, or gateway_batched — captured above as
+    // settlementTxHash) is the only on-chain movement. The retired mirror sent
+    // the vault's own USDC per paid request — fabricated volume on any network.
 
     // --- Enterprise tenant audit attribution (fire-and-forget) ---
     // Every premium request from an enterprise key produces an off-chain audit
@@ -762,19 +733,19 @@ export default async function handler(
     }
 
     const bundle = buildArcResearchBundle(payloads);
+    // settlementTxHash is the buyer's real settlement of record (mandate,
+    // tx-proof, HSP, or the gateway_batched settlement id). Only build an
+    // explorer link when it is an actual on-chain tx hash — a Gateway batched
+    // settlement id is not one.
+    const isOnChainTxHash = /^0x[0-9a-fA-F]{64}$/.test(settlementTxHash ?? '');
     const settlementMeta = {
-        ...(settlements.length > 0
-            ? {
-                txHashes: settlements.map(s => s.txHash),
-                explorer: settlements.map(s => s.explorer),
-                onChainSettled: true,
-                settlementNetwork: DEFAULT_SETTLEMENT_NETWORK,
-                settlementEnv: SETTLEMENT_ENV,
-            }
-            : { onChainSettled: false }),
-        // The buyer's real settlement tx (mandate / tx-proof / HSP / gateway_batched)
-        // is reported even when the agent-side mirror is skipped on mainnet.
+        onChainSettled: Boolean(settlementTxHash),
+        settlementNetwork: DEFAULT_SETTLEMENT_NETWORK,
+        settlementEnv: SETTLEMENT_ENV,
         ...(settlementTxHash ? { settlementTxHash } : {}),
+        ...(isOnChainTxHash
+            ? { settlementExplorer: `${getSettlementConfig().explorerBase}/tx/${settlementTxHash}` }
+            : {}),
     };
 
     if (bundleRequested) {

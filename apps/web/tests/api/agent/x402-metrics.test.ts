@@ -86,6 +86,45 @@ describe('GET /api/agent/x402-metrics', () => {
     });
   });
 
+  it('reports buyer settlement stats (not the retired agent mirror)', async () => {
+    mockGetSettlementStats.mockResolvedValue({
+      proofSource: 'arbitrum_buyer_usdc_transfer_logs',
+      excludedOperatorAddress: '0x0000000000000000000000000000000000000009',
+      recipientAddress: '0x0000000000000000000000000000000000000001',
+      tokenAddress: '0x0000000000000000000000000000000000000002',
+      buyerSettlementCount: 3,
+      totalBuyerSettledUSDC: '0.012000',
+      latestTransferBlock: 123,
+      recentBuyerTransfers: [
+        {
+          txHash: `0x${'ab'.repeat(32)}`,
+          amountUSDC: '0.004000',
+          blockNumber: 123,
+          blockTimestamp: '2026-09-24T00:00:00.000Z',
+          logIndex: 0,
+          explorer: 'https://arbiscan.io/tx/0x...',
+        },
+      ],
+      amountBreakdown: { '0.004000': 3 },
+      network: 'ARBITRUM',
+    });
+    const res = makeRes();
+
+    await handler({ method: 'GET' } as never, res as never);
+
+    const body = res.body as { settlement: Record<string, unknown> };
+    expect(res.statusCode).toBe(200);
+    expect(body.settlement).toMatchObject({
+      buyerSettlementCount: 3,
+      totalBuyerSettledUSDC: '0.012000',
+      recentBuyerTransfers: expect.any(Array),
+    });
+    expect(String(body.settlement.note)).toContain('Gateway batched');
+    // The retired agent-mirror fields must not reappear.
+    expect(body.settlement).not.toHaveProperty('settlementTxCount');
+    expect(body.settlement).not.toHaveProperty('recentTransfers');
+  });
+
   it('returns degraded metrics when a ledger RPC never resolves', async () => {
     mockGetLedgerStats.mockReturnValue(new Promise(() => {}));
     mockWithTimeout.mockRejectedValue(new Error('recommendation ledger stats timed out'));

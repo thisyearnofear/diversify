@@ -46,7 +46,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const maxPerActionPrice = sourcePricing.reduce((max, item) => Math.max(max, item.priceUSDC), 0);
 
-  // Agent wallet info — lets judges verify the on-chain settlement address
+  // Agent wallet info — lets judges verify the on-chain settlement address.
+  // Buyer settlement stats no longer require the agent key: they scan
+  // buyer→recipient Transfer logs (any sender, operator address excluded).
   const settlementConfig = getSettlementConfig();
   const agentAddress = getAgentAddress();
   // These chain reads are observability only. Run them concurrently and bound
@@ -56,17 +58,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     agentAddress
       ? readMetricsRpc(getAgentUSDCBalance(DEFAULT_SETTLEMENT_NETWORK), 'agent USDC balance')
       : Promise.resolve(null),
-    agentAddress
-      ? readMetricsRpc(
-          getSettlementStats(DEFAULT_SETTLEMENT_NETWORK, { agentAddress, maxRecentTransfers: 10 }),
-          'settlement history',
-        )
-      : Promise.resolve(null),
+    readMetricsRpc(
+      getSettlementStats(DEFAULT_SETTLEMENT_NETWORK, { agentAddress, maxRecentTransfers: 10 }),
+      'buyer settlement history',
+    ),
     readMetricsRpc(getLedgerStats(), 'recommendation ledger stats'),
   ]);
   const settlementAnalytics = chainSettlement as (typeof chainSettlement & {
     amountBreakdown?: Record<string, number>;
-    recentTransfers?: Array<{ amountUSDC: string; blockTimestamp?: string | null }>;
+    recentBuyerTransfers?: Array<{ amountUSDC: string; blockTimestamp?: string | null }>;
   }) | null;
   const shouldUseChainDerivedAnalytics = !!chainSettlement && dashboard.totalPayments === 0;
   const derivedTopSources = shouldUseChainDerivedAnalytics
@@ -77,7 +77,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     : dashboard.topSources;
   const derivedRecentSpending = shouldUseChainDerivedAnalytics
     ? Object.entries(
-        (settlementAnalytics?.recentTransfers || []).reduce<Record<string, number>>((acc, transfer) => {
+        (settlementAnalytics?.recentBuyerTransfers || []).reduce<Record<string, number>>((acc, transfer) => {
           const day = transfer.blockTimestamp?.slice(0, 10) || new Date().toISOString().slice(0, 10);
           acc[day] = Number(((acc[day] || 0) + Number.parseFloat(transfer.amountUSDC)).toFixed(6));
           return acc;
@@ -85,7 +85,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ).sort(([left], [right]) => right.localeCompare(left))
     : dashboard.recentSpending;
   const derivedSuccessRate = shouldUseChainDerivedAnalytics
-    ? (chainSettlement.transferCount > 0 ? 1 : 0)
+    ? (chainSettlement.buyerSettlementCount > 0 ? 1 : 0)
     : dashboard.successRate;
   const derivedAveragePaymentTime = dashboard.averagePaymentTime > 0
     ? Math.round(dashboard.averagePaymentTime)
@@ -94,8 +94,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ? report.insights
     : chainSettlement
       ? [
-          `Chain-verified settlements observed: ${chainSettlement.transferCount}`,
-          `Total ${settlementConfig.name} USDC settled: $${chainSettlement.totalSettledUSDC}`,
+          `Chain-verified buyer settlements observed: ${chainSettlement.buyerSettlementCount}`,
+          `Total ${settlementConfig.name} USDC settled by buyers: $${chainSettlement.totalBuyerSettledUSDC}`,
           derivedTopSources[0] ? `Most observed paid route: ${derivedTopSources[0][0]} (${derivedTopSources[0][1]} requests)` : `Observability derived from ${settlementConfig.name} transfer history`,
         ].filter(Boolean)
       : [];
@@ -113,16 +113,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     agentUSDCBalance: agentBalance,
     recipientAddress: chainSettlement?.recipientAddress ?? settlementConfig.recipientAddress,
     tokenAddress: chainSettlement?.tokenAddress ?? settlementConfig.usdcAddress,
-    totalSettledUSDC: chainSettlement?.totalSettledUSDC ?? null,
-    settledTransferCount: chainSettlement?.transferCount ?? null,
-    recentTransfers: chainSettlement?.recentTransfers ?? [],
+    totalBuyerSettledUSDC: chainSettlement?.totalBuyerSettledUSDC ?? null,
+    buyerSettlementCount: chainSettlement?.buyerSettlementCount ?? null,
+    recentBuyerTransfers: chainSettlement?.recentBuyerTransfers ?? [],
     explorerBase: settlementConfig.explorerBase,
     agentExplorer: agentAddress ? `${settlementConfig.explorerBase}/address/${agentAddress}` : null,
-    note: agentBalance === null
-      ? `Fund agent wallet to enable real on-chain settlement on ${settlementConfig.name}`
-      : chainSettlement
-        ? `Transaction counts are derived from ${settlementConfig.name} USDC Transfer logs for the agent wallet`
-        : `Agent wallet live — ${settlementConfig.name} settlement is enabled, but chain-derived proof is temporarily unavailable`,
+    note: chainSettlement
+      ? `Counts are buyer→recipient USDC Transfer logs on ${settlementConfig.name} (operator address excluded). Gateway batched settlements credit the merchant's Gateway balance inside Circle's batch and do not appear as direct ERC-20 transfers.`
+      : `${settlementConfig.name} buyer settlement scan temporarily unavailable`,
   };
 
   return res.status(200).json({
@@ -133,7 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       description: 'Decentralized AI inference via 0G Router API',
     },
     transactionFrequency: {
-      totalSettledPayments: chainSettlement?.transferCount ?? dashboard.totalPayments,
+      totalSettledPayments: chainSettlement?.buyerSettlementCount ?? dashboard.totalPayments,
       evidenceSource: chainSettlement?.proofSource ?? 'in_memory_fallback',
       latestSettlementBlock: chainSettlement?.latestTransferBlock ?? null,
       successRate: derivedSuccessRate,
@@ -152,7 +150,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     arcSettlement: settlementPayload,
     appAnalytics: {
       totalRecordedPayments: shouldUseChainDerivedAnalytics
-        ? chainSettlement?.transferCount ?? 0
+        ? chainSettlement?.buyerSettlementCount ?? 0
         : dashboard.totalPayments,
       successRate: derivedSuccessRate,
       averagePaymentTimeMs: derivedAveragePaymentTime,

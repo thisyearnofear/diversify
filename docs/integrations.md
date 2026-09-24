@@ -130,8 +130,9 @@ mainnet without code changes.
 
 `HASHKEY` is a distinct rail: settlement happens zero-custody via **HSP
 (HashKey Settlement Protocol)** — the buyer's wallet signs an EIP-712 mandate
-and broadcasts the USDC transfer itself, rather than the gateway's usual
-agent-side `settleOnChain` fire-and-forget tx. See
+and broadcasts the USDC transfer itself. There is no agent-side mirror
+settlement on any rail: the buyer-signed settlement is always the settlement
+of record. See
 [`strategy.md`](./strategy.md) § HSP Settlement & FX Protection Insight for the full flow and the
 `fx_protection` source it powers.
 
@@ -150,7 +151,7 @@ agent-side `settleOnChain` fire-and-forget tx. See
 - The fallback path is `402` challenge → buyer sends a real USDC transfer on the active settlement rail → gateway verifies the tx hash and nonce. This remains for external agents and clients that prefer tx-hash proofs.
 - Data-source prices are at or below `$0.01`; artifact-level products (e.g. `fx_protection` at `$1.00`) are priced per decision, not per feed.
 - Nonce expiry and replay checks protect against double-spend on payment proofs and mandates (challenge nonce is consumed once; the EIP-3009 nonce is additionally spent on-chain).
-- On testnet only, every paid request also triggers a real `USDC.transfer` mirror on the active rail via `settlement-service.ts` (`settleOnChain`, gated by `agentMirrorSettlementEnabled`). On mainnet the mirror is skipped — only real buyer settlements (mandate, tx-proof, HSP, `gateway_batched`) appear on-chain, reported as `_billing.settlementTxHash`.
+- Only real buyer settlements appear on-chain: mandate, tx-proof, HSP, or `gateway_batched`. There is no agent-side `USDC.transfer` mirror (it was removed — the vault sending its own USDC per request is fabricated volume). The buyer's settlement is reported as `_billing.settlementTxHash` + `_billing.settlementExplorer` (the latter only when the value is an on-chain tx hash — a Gateway batched settlement id is not).
 - Opaque `circle-gateway-*` proof ids are intentionally not accepted in the judge-facing flow unless server-side verification is explicitly configured.
 
 ### Configuring the Rail
@@ -202,8 +203,8 @@ Client → GET /api/agent/x402-gateway?source=macro_analysis
          x-payment-proof: 0x<real_usdc_transfer_tx_hash>
          x-payment-nonce: <challenge_nonce>
        ← 200 { data, _billing: { onChainSettled: true, settlementNetwork: "ARBITRUM",
-             settlementEnv: "mainnet", txHashes: ["0x..."],
-             explorer: ["https://arbiscan.io/tx/0x..."] } }
+             settlementEnv: "mainnet", settlementTxHash: "0x...",
+             settlementExplorer: "https://arbiscan.io/tx/0x..." } }
 ```
 
 The example above shows the Arbitrum buildathon default; swap
@@ -420,8 +421,8 @@ External Agent
     ├── GET /api/agent/x402-gateway?source=macro_analysis
     │       + x-payment-proof: 0x{tx_hash}
     │       + x-payment-nonce: {challenge_nonce}
-    │       ← 200 { data, _billing: { onChainSettled, txHashes, explorer,
-    │             settlementNetwork, settlementEnv, anchor } }
+    │       ← 200 { data, _billing: { onChainSettled, settlementTxHash,
+    │             settlementExplorer, settlementNetwork, settlementEnv, anchor } }
     │
     └── Intelligence consumed + on-chain proof recorded
 ```
@@ -512,8 +513,8 @@ Response (HTTP 200):
     "onChainSettled": true,
     "settlementNetwork": "ZERO_G",
     "settlementEnv": "testnet",
-    "txHashes": ["0x..."],
-    "explorer": ["https://chainscan-galileo.0g.ai/tx/0x..."],
+    "settlementTxHash": "0x...",
+    "settlementExplorer": "https://chainscan-galileo.0g.ai/tx/0x...",
     "evidenceCids": ["bafy..."],
     "anchor": {
       "status": "anchored",
@@ -540,11 +541,11 @@ Every response includes verifiable proof:
    - 0G Galileo (16602) for evidence anchor/mirror
 
 3. **Settlement tx** — the buyer's real settlement transaction is reported as
-   `_billing.settlementTxHash`. On testnet the `_billing.txHashes` array also
-   contains the agent-side `USDC.transfer` mirror hashes on the active rail
-   (skipped on mainnet); verify on the rail's explorer (returned in
-   `_billing.explorer` and indicated by `_billing.settlementNetwork` /
-   `_billing.settlementEnv`).
+   `_billing.settlementTxHash` with `_billing.settlementExplorer` pointing at
+   the rail's explorer (the link is omitted for Gateway batched settlements,
+   whose `settlementTxHash` is a Gateway settlement id, not an on-chain hash).
+   The rail is indicated by `_billing.settlementNetwork` /
+   `_billing.settlementEnv`.
 
 **Gateway intelligence CIDs.** Every paid Data Hub response also includes
 `evidenceCids` in its `_billing` block — one 0G Storage CID per paid

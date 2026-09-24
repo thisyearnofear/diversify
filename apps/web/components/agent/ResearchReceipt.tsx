@@ -53,10 +53,10 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
         : 'text-rose-600 dark:text-rose-400'
     : null;
 
-  // Settlement proof link: a mandate payment has no buyer-side txHash — the
-  // merchant's settlement tx comes back in _billing instead.
-  const settlementTxHash = receipt.txHash ?? receipt.settlementTxHashes?.[0];
-  const settlementExplorer = receipt.explorer ?? receipt.settlementExplorers?.[0];
+  // Settlement proof link: the buyer's real settlement tx comes back in
+  // _billing.settlementTxHash (mandate, tx-proof, HSP, gateway_batched).
+  const settlementTxHash = receipt.txHash ?? receipt.settlementTxHash;
+  const settlementExplorer = receipt.explorer ?? receipt.settlementExplorer;
 
   return (
     <div className="mt-2">

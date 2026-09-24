@@ -1362,3 +1362,17 @@ discloses the curated as-of label whenever a figure is quoted. Live
 check (Gemini): the NGNm→USDm answer named the Mento Reserve 1.42×
 backing, MENTO-holder governance, the CBN MPC cadence, and closed with
 "figures are curated to July 2025 and are not live exchange rates".
+
+#### x402 settlement mirror removed — metrics now count only buyer settlements (2026-09-24)
+
+The gateway's agent-side `settleOnChain` mirror (a real `USDC.transfer`
+from the vault to the recipient on every paid request, plus its
+`SETTLEMENT_DAILY_CAP_USDC` machinery and the `generate-x402-volume`
+script) is deleted. It was buildathon-era proof volume — operator money
+circling back — and reads as fabricated activity on the explorer on any
+network. `_billing` now reports only the buyer's real settlement
+(`settlementTxHash` + `settlementExplorer`, link omitted for Gateway
+batched settlement ids); `x402-metrics` counts buyer→recipient Transfer
+logs with the operator address excluded (Gateway batched settlements
+credit the merchant's Gateway balance and never appear as ERC-20
+transfers — noted in the response).

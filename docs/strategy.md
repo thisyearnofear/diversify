@@ -696,9 +696,9 @@ honestly.
   authenticated Coordinator writes (`POST /payments`, `/observe`) using
   `HSP_API_KEY`, which is a server-only env var.
 - **No double-settlement.** On the `HASHKEY` rail, the user's own wallet is
-  the settlement transaction (observed and receipted by the Coordinator), so
-  the gateway's usual agent-side `settleOnChain` fire-and-forget step is
-  skipped for that rail.
+  the settlement transaction (observed and receipted by the Coordinator).
+  There is no agent-side settlement mirror on any rail — the buyer's tx is
+  always the settlement of record.
 - **`SettlementConfig` shape untouched.** HSP-specific fields (coordinator
   URL, verifying contract, chain name) live in a sibling `HSP_CONFIG` map
   keyed by chainId, not bolted onto the 4-rail `SettlementConfig` interface.

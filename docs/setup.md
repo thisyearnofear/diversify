@@ -111,15 +111,6 @@ The backfill reconstructs the anchored line from the GuardianState queue and
 writes it **only** when `keccak256(candidate)` equals the record's on-chain
 `reasoningHash`; everything else is reported as unmatched.
 
-#### Generating Test Volume
-
-```bash
-X402_BUYER_PRIVATE_KEY=<funded_arc_testnet_buyer> \
-RUN_COUNT=17 \
-X402_SOURCES=macro_analysis,portfolio_optimization,risk_assessment \
-pnpm generate-x402-volume
-```
-
 ### Rive objects (optional — only when editing them)
 
 The app's five self-contained Rive objects ship compiled in `apps/web/public/rive/`

@@ -49,8 +49,10 @@ export interface ResearchReceipt {
   reason?: string;
   onChainSettled?: boolean;
   settlementNetwork?: string;
-  settlementTxHashes?: string[];
-  settlementExplorers?: string[];
+  /** The buyer's real settlement tx (mandate, tx-proof, HSP, gateway_batched). */
+  settlementTxHash?: string;
+  /** Explorer link — present only when settlementTxHash is an on-chain tx hash. */
+  settlementExplorer?: string;
   error?: string;
   /**
    * On-chain 0G RecommendationLedger anchor for this receipt.

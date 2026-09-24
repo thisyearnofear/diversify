@@ -326,8 +326,8 @@ export function useX402Payment() {
             reason: billing.reason,
             onChainSettled: Boolean(billing.onChainSettled),
             settlementNetwork: billing.settlementNetwork,
-            settlementTxHashes: billing.txHashes,
-            settlementExplorers: billing.explorer,
+            settlementTxHash: billing.settlementTxHash,
+            settlementExplorer: billing.settlementExplorer,
         };
     };
 

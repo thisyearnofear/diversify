@@ -1,13 +1,17 @@
 /**
  * Cross-Chain On-Chain Settlement Service
  *
- * Sends real USDC micro-payments on supported networks (0G, Arc, etc.) for each paid research request.
- * Uses the VAULT_PRIVATE_KEY EOA — no Circle entity secret required.
+ * Settles REAL buyer payments on supported networks (EIP-3009
+ * transferWithAuthorization mandates, verified tx-proof transfers) and scans
+ * buyer→recipient USDC Transfer logs for settlement metrics. Uses the
+ * VAULT_PRIVATE_KEY EOA to submit buyer-signed mandates (gas payer only — the
+ * funds always move buyer→merchant). The old agent→recipient mirror
+ * (settleOnChain + daily cap) was removed: it sent the vault's own USDC per
+ * paid request, which is fabricated volume on any network.
  *
  * Core Principles:
  * - ENHANCEMENT FIRST: Generalized from Arc-only to multi-chain (0G ready)
  * - SINGLE RESPONSIBILITY: Only handles EOA settlement across supported chains
- * - PERFORMANT: Non-blocking — fires tx and returns hash immediately
  * - DRY: RPCs and USDC addresses come from shared config
  */
 
@@ -61,101 +65,6 @@ export interface SettlementConfig {
  */
 export const SETTLEMENT_ENV: SettlementEnv =
     process.env.SETTLEMENT_ENV === 'mainnet' ? 'mainnet' : 'testnet';
-
-/**
- * Global daily settlement cap in USDC. This is a safety valve on the agent
- * wallet: no more than this amount of USDC can be spent by the settlement
- * service across all rails in a UTC day. Defaults to 5 USDC on mainnet
- * (SETTLEMENT_ENV=mainnet) and 50 USDC otherwise; set
- * SETTLEMENT_DAILY_CAP_USDC=0 to disable the cap.
- *
- * Note: the counter is currently in-memory. For multi-instance or
- * restart-resilient production deployments, persist it to MongoDB/Redis.
- * For the single-server buildathon demo this is acceptable.
- */
-export const SETTLEMENT_DAILY_CAP_USDC = parseFloat(
-    process.env.SETTLEMENT_DAILY_CAP_USDC || (SETTLEMENT_ENV === 'mainnet' ? '5.0' : '50.0'),
-);
-
-/**
- * Whether the agent-side settleOnChain mirror runs for a paid request. The
- * mirror sends the vault's OWN USDC to the recipient — fine on testnet, but on
- * mainnet operator money circling back reads as fabricated volume on the
- * explorer; only real buyer settlements (mandate, tx-proof, HSP,
- * gateway_batched) may appear on-chain there.
- */
-export function agentMirrorSettlementEnabled(env: SettlementEnv = SETTLEMENT_ENV): boolean {
-    return env !== 'mainnet';
-}
-
-/** Pluggable store for the daily settlement cap. Implementations should be
- * atomic: if the cap would be exceeded, the spend must NOT be recorded. */
-export interface SettlementCapStore {
-    recordSpendAtomic(
-        date: string,
-        network: string,
-        amountUSDC: number,
-        capUSDC: number,
-    ): Promise<{ allowed: boolean; newTotal: number }>;
-    getSpendTotal(date: string, network: string): Promise<number>;
-}
-
-// Default in-memory store. Production deployments should inject a MongoDB-backed
-// store via setSettlementCapStore() so the cap survives restarts and scales
-// across instances.
-const _memoryTotals: Record<string, { date: string; spent: number }> = {};
-
-const defaultCapStore: SettlementCapStore = {
-    async recordSpendAtomic(date, network, amountUSDC, capUSDC) {
-        const key = `${date}:${network}`;
-        const bucket = _memoryTotals[key];
-        if (!bucket || bucket.date !== date) {
-            _memoryTotals[key] = { date, spent: 0 };
-        }
-        if (_memoryTotals[key].spent + amountUSDC > capUSDC + 1e-9) {
-            return { allowed: false, newTotal: _memoryTotals[key].spent };
-        }
-        _memoryTotals[key].spent += amountUSDC;
-        return { allowed: true, newTotal: _memoryTotals[key].spent };
-    },
-    async getSpendTotal(date, network) {
-        const key = `${date}:${network}`;
-        const bucket = _memoryTotals[key];
-        return bucket && bucket.date === date ? bucket.spent : 0;
-    },
-};
-
-let _settlementCapStore: SettlementCapStore | null = null;
-
-export function setSettlementCapStore(store: SettlementCapStore): void {
-    _settlementCapStore = store;
-}
-
-function getCapStore(): SettlementCapStore {
-    return _settlementCapStore ?? defaultCapStore;
-}
-
-function getCurrentDateKey(): string {
-    return new Date().toISOString().slice(0, 10);
-}
-
-export async function checkDailyCap(amountUSDC: number, network: SettlementNetwork): Promise<{ allowed: boolean; remaining: number }> {
-    if (SETTLEMENT_DAILY_CAP_USDC <= 0) {
-        return { allowed: true, remaining: Infinity };
-    }
-    const today = getCurrentDateKey();
-    const current = await getCapStore().getSpendTotal(today, network);
-    const remaining = Math.max(0, SETTLEMENT_DAILY_CAP_USDC - current);
-    return { allowed: current + amountUSDC <= SETTLEMENT_DAILY_CAP_USDC + 1e-9, remaining };
-}
-
-export async function recordDailySpend(amountUSDC: number, network: SettlementNetwork): Promise<{ allowed: boolean; newTotal: number }> {
-    if (SETTLEMENT_DAILY_CAP_USDC <= 0) {
-        return { allowed: true, newTotal: 0 };
-    }
-    const today = getCurrentDateKey();
-    return getCapStore().recordSpendAtomic(today, network, amountUSDC, SETTLEMENT_DAILY_CAP_USDC);
-}
 
 /**
  * Per-rail config for both environments. NETWORK_CONFIGS (the single source of
@@ -387,19 +296,6 @@ function getContracts(network: SettlementNetwork): { provider: ethers.providers.
     return { provider: _providers[network], signer: _signers[network], usdc: _usdcContracts[network] };
 }
 
-export interface SettlementResult {
-    txHash: string;
-    amount: string;       // USDC, e.g. "0.001"
-    explorer: string;     // Explorer link
-    settled: true;
-    network: SettlementNetwork;
-}
-
-export interface SettlementSkipped {
-    settled: false;
-    reason: string;
-}
-
 export interface SettlementTransfer {
     txHash: string;
     amountUSDC: string;
@@ -409,15 +305,24 @@ export interface SettlementTransfer {
     explorer: string;
 }
 
+/**
+ * Buyer→recipient settlement stats. Counts only real buyer settlements: USDC
+ * Transfer logs where `to == recipient` and `from !=` the operator vault/agent
+ * address (which excludes the retired agent-side mirror and the operator's own
+ * funding txs). Gateway batched settlements credit the merchant's Gateway
+ * balance inside Circle's batch — they do NOT appear as direct ERC-20
+ * transfers and are not counted here.
+ */
 export interface SettlementStats {
     proofSource: string;
-    agentAddress: string;
+    /** Operator vault/agent address excluded from buyer counts (empty when no VAULT_PRIVATE_KEY). */
+    excludedOperatorAddress: string;
     recipientAddress: string;
     tokenAddress: string;
-    transferCount: number;
-    totalSettledUSDC: string;
+    buyerSettlementCount: number;
+    totalBuyerSettledUSDC: string;
     latestTransferBlock: number | null;
-    recentTransfers: SettlementTransfer[];
+    recentBuyerTransfers: SettlementTransfer[];
     amountBreakdown: Record<string, number>;
     network: SettlementNetwork;
 }
@@ -426,17 +331,17 @@ function getTransferTopic(address: string): string {
     return ethers.utils.hexZeroPad(ethers.utils.getAddress(address), 32);
 }
 
-function createEmptySettlementStats(network: SettlementNetwork, agentAddress: string, recipientAddress: string): SettlementStats {
+function createEmptySettlementStats(network: SettlementNetwork, excludedOperatorAddress: string, recipientAddress: string): SettlementStats {
     const config = NETWORK_CONFIGS[network];
     return {
-        proofSource: `${network.toLowerCase()}_usdc_transfer_logs`,
-        agentAddress,
+        proofSource: `${network.toLowerCase()}_buyer_usdc_transfer_logs`,
+        excludedOperatorAddress,
         recipientAddress,
         tokenAddress: config.usdcAddress,
-        transferCount: 0,
-        totalSettledUSDC: '0.000000',
+        buyerSettlementCount: 0,
+        totalBuyerSettledUSDC: '0.000000',
         latestTransferBlock: null,
-        recentTransfers: [],
+        recentBuyerTransfers: [],
         amountBreakdown: {},
         network,
     };
@@ -457,8 +362,8 @@ function mergeSettlementStats(
     maxRecentTransfers: number,
 ): SettlementStats {
     const mergedRecent = sortRecentTransfers([
-        ...base.recentTransfers,
-        ...delta.recentTransfers,
+        ...base.recentBuyerTransfers,
+        ...delta.recentBuyerTransfers,
     ]).slice(0, maxRecentTransfers);
     const amountBreakdown = { ...base.amountBreakdown };
     for (const [amount, count] of Object.entries(delta.amountBreakdown)) {
@@ -466,15 +371,15 @@ function mergeSettlementStats(
     }
 
     const totalSettled = ethers.utils
-        .parseUnits(base.totalSettledUSDC, 6)
-        .add(ethers.utils.parseUnits(delta.totalSettledUSDC, 6));
+        .parseUnits(base.totalBuyerSettledUSDC, 6)
+        .add(ethers.utils.parseUnits(delta.totalBuyerSettledUSDC, 6));
 
     return {
         ...base,
-        transferCount: base.transferCount + delta.transferCount,
-        totalSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
+        buyerSettlementCount: base.buyerSettlementCount + delta.buyerSettlementCount,
+        totalBuyerSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
         latestTransferBlock: Math.max(base.latestTransferBlock || 0, delta.latestTransferBlock || 0) || null,
-        recentTransfers: mergedRecent,
+        recentBuyerTransfers: mergedRecent,
         amountBreakdown,
     };
 }
@@ -484,7 +389,7 @@ async function fetchTransferLogs(
     provider: ethers.providers.JsonRpcProvider,
     fromBlock: number,
     toBlock: number,
-    topics: string[],
+    topics: (string | null)[],
     chunkSize: number = SETTLEMENT_LOG_CHUNK_SIZE,
 ): Promise<ethers.providers.Log[]> {
     const allLogs: ethers.providers.Log[] = [];
@@ -524,24 +429,31 @@ async function fetchTransferLogs(
 async function scanSettlementRange(
     network: SettlementNetwork,
     provider: ethers.providers.JsonRpcProvider,
-    agentAddress: string,
+    excludedOperatorAddress: string,
     recipientAddress: string,
     fromBlock: number,
     toBlock: number,
     maxRecentTransfers: number,
 ): Promise<SettlementStats> {
     if (fromBlock > toBlock) {
-        return createEmptySettlementStats(network, agentAddress, recipientAddress);
+        return createEmptySettlementStats(network, excludedOperatorAddress, recipientAddress);
     }
 
     const config = NETWORK_CONFIGS[network];
-    const logs = await fetchTransferLogs(
+    // Buyer settlements: any sender → recipient. The `from` topic is left
+    // unconstrained so buyer wallets are matched; the operator/vault address is
+    // filtered out below (it funded the retired mirror and pays mandate gas).
+    const logs = (await fetchTransferLogs(
         network,
         provider,
         fromBlock,
         toBlock,
-        [transferTopic, getTransferTopic(agentAddress), getTransferTopic(recipientAddress)],
-    );
+        [transferTopic, null, getTransferTopic(recipientAddress)],
+    )).filter((log) => {
+        const from = transferInterface.parseLog(log).args.from as string;
+        return !excludedOperatorAddress
+            || from.toLowerCase() !== excludedOperatorAddress.toLowerCase();
+    });
 
     let totalSettled = ethers.BigNumber.from(0);
     const transferRecords = logs.map((log) => {
@@ -578,14 +490,14 @@ async function scanSettlementRange(
     }));
 
     return {
-        proofSource: `${network.toLowerCase()}_usdc_transfer_logs`,
-        agentAddress,
+        proofSource: `${network.toLowerCase()}_buyer_usdc_transfer_logs`,
+        excludedOperatorAddress,
         recipientAddress,
         tokenAddress: config.usdcAddress,
-        transferCount: transferRecords.length,
-        totalSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
+        buyerSettlementCount: transferRecords.length,
+        totalBuyerSettledUSDC: ethers.utils.formatUnits(totalSettled, 6),
         latestTransferBlock: recentTransfersWithTimestamps[0]?.blockNumber ?? null,
-        recentTransfers: recentTransfersWithTimestamps,
+        recentBuyerTransfers: recentTransfersWithTimestamps,
         amountBreakdown,
         network,
     };
@@ -624,14 +536,16 @@ export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SE
     recipientAddress?: string;
     maxRecentTransfers?: number;
 }): Promise<SettlementStats | null> {
-    const agentAddress = options?.agentAddress ?? getAgentAddress();
-    if (!agentAddress) return null;
+    // The operator address is only used to EXCLUDE non-buyer transfers (the
+    // retired agent-side mirror, operator funding). Stats still work without a
+    // VAULT_PRIVATE_KEY — nothing is excluded in that case.
+    const excludedOperatorAddress = options?.agentAddress ?? getAgentAddress() ?? '';
 
     const config = NETWORK_CONFIGS[network];
     const recipientAddress = options?.recipientAddress || config.recipientAddress;
     const maxRecentTransfers = options?.maxRecentTransfers || SETTLEMENT_RECENT_LIMIT;
     const provider = getProvider(network);
-    
+
     // Attempt to get block number, fallback to 0 if network is down
     let latestBlock = 0;
     try {
@@ -642,10 +556,10 @@ export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SE
         );
     } catch (err) {
         console.warn(`[SettlementService] Failed to get block number for ${network}:`, err);
-        return createEmptySettlementStats(network, agentAddress, recipientAddress);
+        return createEmptySettlementStats(network, excludedOperatorAddress, recipientAddress);
     }
 
-    const cacheKey = `${network}:${ethers.utils.getAddress(agentAddress)}:${ethers.utils.getAddress(recipientAddress)}:${maxRecentTransfers}`;
+    const cacheKey = `${network}:${excludedOperatorAddress ? ethers.utils.getAddress(excludedOperatorAddress) : ''}:${ethers.utils.getAddress(recipientAddress)}:${maxRecentTransfers}`;
 
     if (
         _settlementStatsCache[cacheKey] &&
@@ -658,7 +572,7 @@ export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SE
     const isCacheHit = !!_settlementStatsCache[cacheKey];
     const baseStats = isCacheHit
         ? _settlementStatsCache[cacheKey].stats
-        : createEmptySettlementStats(network, agentAddress, recipientAddress);
+        : createEmptySettlementStats(network, excludedOperatorAddress, recipientAddress);
     const scanFromBlock = isCacheHit
         ? _settlementStatsCache[cacheKey].latestBlock + 1
         : getSettlementStartBlock(network, latestBlock);
@@ -666,7 +580,7 @@ export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SE
     const deltaStats = await scanSettlementRange(
         network,
         provider,
-        agentAddress,
+        excludedOperatorAddress,
         recipientAddress,
         scanFromBlock,
         latestBlock,
@@ -687,75 +601,6 @@ export async function getSettlementStats(network: SettlementNetwork = DEFAULT_SE
 }
 
 /**
- * Settle a micro-payment by sending `amountUSDC` from the agent EOA
- * to the data-hub recipient. Fire-and-forget.
- */
-export async function settleOnChain(
-    amountUSDC: number,
-    sourceId: string,
-    network: SettlementNetwork = 'ZERO_G'
-): Promise<SettlementResult | SettlementSkipped> {
-    const c = getContracts(network);
-    const config = NETWORK_CONFIGS[network];
-    if (!c) return { settled: false, reason: `No agent wallet configured for ${network}` };
-
-    // Minimum settlement: 0.001 USDC (1000 micro-USDC)
-    const micro = Math.max(0.001, Math.min(amountUSDC, 0.01));
-
-    // Global daily safety cap on the agent wallet (MongoDB-backed atomic check)
-    const capCheck = await checkDailyCap(micro, network);
-    if (!capCheck.allowed) {
-        return {
-            settled: false,
-            reason: `Daily settlement cap reached on ${network} (cap ${SETTLEMENT_DAILY_CAP_USDC} USDC, remaining ${capCheck.remaining.toFixed(6)} USDC)`,
-        };
-    }
-
-    const raw   = ethers.utils.parseUnits(micro.toFixed(6), 6);
-
-    try {
-        // Non-blocking balance pre-check
-        const balance: ethers.BigNumber = await c.usdc.balanceOf(c.signer.address);
-        if (balance.lt(raw)) {
-            return {
-                settled: false,
-                reason: `Insufficient USDC balance on ${network} (${ethers.utils.formatUnits(balance, 6)} < ${micro})`,
-            };
-        }
-
-        // Send — do NOT await mining
-        const tx: ethers.providers.TransactionResponse = await c.usdc.transfer(config.recipientAddress, raw, {
-            gasLimit: 100_000,
-        });
-
-        const result: SettlementResult = {
-            txHash:   tx.hash,
-            amount:   micro.toFixed(6),
-            explorer: `${config.explorerBase}/tx/${tx.hash}`,
-            settled:  true,
-            network,
-        };
-
-        console.log(`[SettlementService] ✅ ${sourceId} → ${micro} USDC on ${network} → ${tx.hash}`);
-
-        // Record against the daily safety cap atomically (optimistically, at broadcast time)
-        await recordDailySpend(micro, network);
-
-        // Mine in background
-        tx.wait(1).then(receipt => {
-            console.log(`[SettlementService] ⛏ ${network} confirmed block ${receipt.blockNumber}: ${tx.hash}`);
-        }).catch(err => {
-            console.warn(`[SettlementService] ${network} tx ${tx.hash} mining warning:`, err.message);
-        });
-
-        return result;
-    } catch (err: any) {
-        console.error(`[SettlementService] ${network} transfer failed:`, err.message);
-        return { settled: false, reason: err.message };
-    }
-}
-
-/**
  * EIP-3009 mandate settlement — the mandate-first x402 buyer path.
  *
  * The buyer signs a `TransferWithAuthorization` off-chain (no gas, no chain
@@ -763,8 +608,8 @@ export async function settleOnChain(
  * A mandate is only credited AFTER the on-chain transfer succeeds — credit is
  * the settled amount, not the claimed amount.
  *
- * Unlike settleOnChain (agent→hub mirror payments), this moves buyer→hub funds:
- * the daily cap intentionally does not apply (it guards outflow, not inflow).
+ * This moves buyer→merchant funds — it is the settlement of record, not a
+ * mirror.
  */
 export interface Eip3009MandateSettlement {
     sender: string;
@@ -859,6 +704,6 @@ export async function settleWithAuthorization(
     };
 }
 
-// No per-rail convenience wrappers. Use settleOnChain(network, ...) and
-// getSettlementStats(network, ...) with DEFAULT_SETTLEMENT_NETWORK or the
+// No per-rail convenience wrappers. Use settleWithAuthorization(mandate, network)
+// and getSettlementStats(network, ...) with DEFAULT_SETTLEMENT_NETWORK or the
 // desired SettlementNetwork to keep a single settlement API.
