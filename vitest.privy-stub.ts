@@ -22,6 +22,13 @@ export function useWallets() {
   return { wallets: [] as unknown[] };
 }
 
+export function useSigners() {
+  return {
+    addSigners: async () => ({ user: null }),
+    removeSigners: async () => ({ user: null }),
+  };
+}
+
 export function PrivyProvider({ children }: { children: unknown }) {
   return children;
 }

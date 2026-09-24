@@ -138,7 +138,7 @@ Rules and the object inventory: [`design-language.md`](./design-language.md) §5
 2. **Create an app authorization key** → `openssl ecparam -name prime256v1 -genkey`, register the public key in a key quorum (Dashboard → Authorization keys)
 3. **Add the signer** → each user grants the quorum on their embedded wallet via `addSigners` (client-side `useSigners`)
 4. **Bundler** → an ERC-4337 bundler for Celo (e.g. Pimlico) — Privy's server SDK does not submit smart-wallet UserOps itself
-5. **Set env vars** → `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `PRIVY_AUTHORIZATION_PRIVATE_KEY`, `PRIVY_BUNDLER_URL` — the provider fails closed unless all are set
+5. **Set env vars** → `PRIVY_APP_ID`, `PRIVY_APP_SECRET`, `PRIVY_AUTHORIZATION_PRIVATE_KEY`, `PRIVY_BUNDLER_URL` — the provider fails closed unless all are set. For the client delegation step also set `NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID` (the quorum's signer id — the grant flow calls `addSigners` with it) and `PRIVY_KEY_QUORUM_ID` server-side so `POST /api/vault/permission` can verify the delegation before storing `privyDelegated`. Recommended: attach a Privy policy to the quorum restricting the signer to the Mento broker + allowlisted stablecoin contracts, value 0.
 
 ### Troubleshooting
 

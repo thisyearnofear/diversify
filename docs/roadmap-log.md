@@ -1401,3 +1401,14 @@ server-side path, since Privy's server SDK does not submit smart-wallet ops.
 The provider reports unconfigured unless every credential is present, so
 execution keeps failing closed until the authorization key and bundler are
 provisioned in the Privy dashboard.
+
+#### Guardian delegation consent — Privy addSigners in the grant flow (2026-09-24)
+
+The server-side Privy Safe provider can only sign when the user has added the
+app's key quorum to their embedded wallet — but nothing in the client ever
+asked for it, so every user would have hit `delegation_required` declines. The
+Guardian permission grant now calls `useSigners().addSigners` in the same
+consent moment (gated on `NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID`), the permission API
+re-verifies the signer server-side before storing `privyDelegated`, and revoke
+calls `removeSigners`. The guardian loop declines non-delegated GUARDIAN
+permissions honestly instead of attempting execution.

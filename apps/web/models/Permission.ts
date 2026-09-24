@@ -68,6 +68,15 @@ export interface IPermission extends Document {
    */
   autoExecuteCycleProtection?: boolean;
 
+  /**
+   * Server-verified Privy delegation: true only after the server confirmed
+   * the user's embedded wallet carries the app's key quorum as an additional
+   * signer (see `privy-delegation.ts`). Client claims are never trusted —
+   * the API verifies against Privy before persisting. The guardian loop
+   * declines GUARDIAN execution on the Privy rail when this is false.
+   */
+  privyDelegated?: boolean;
+
   // Status
   status: PermissionStatus;
 
@@ -104,6 +113,8 @@ const PermissionSchema = new Schema<IPermission>(
     firstAutoExecutionConfirmed: { type: Boolean, default: false },
 
     autoExecuteCycleProtection: { type: Boolean, default: false },
+
+    privyDelegated: { type: Boolean, default: false },
 
     status: {
       type: String,

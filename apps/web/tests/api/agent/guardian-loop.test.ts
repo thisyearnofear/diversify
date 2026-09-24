@@ -71,7 +71,7 @@ vi.mock('@/models/Permission', () => ({
 }));
 
 vi.mock('@/lib/vault/store', () => ({ vaultStore: {} }));
-vi.mock('@/lib/vault/executor', () => ({ smartAccountExecutor: {} }));
+vi.mock('@/lib/vault/executor', () => ({ smartAccountExecutor: {}, getActiveProvider: () => null }));
 vi.mock('@/lib/vault/guardian-state', () => ({
   getGuardianState: vi.fn().mockResolvedValue(null),
   updateGuardianState: vi.fn().mockResolvedValue(undefined),
@@ -306,7 +306,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
         }),
       },
     }));
-    vi.doMock('@/lib/vault/executor', () => ({ smartAccountExecutor: {} }));
+    vi.doMock('@/lib/vault/executor', () => ({ smartAccountExecutor: {}, getActiveProvider: () => null }));
     vi.doMock('@/lib/vault/guardian-state', () => ({
       getGuardianState: vi.fn().mockResolvedValue({
         recommendationQueue: opts.recommendationQueue,

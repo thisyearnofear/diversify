@@ -30,8 +30,10 @@ import {
 // Deep leaf import — NOT the barrel — keeps the timeout helper available
 // without dragging the AI/swap/ethers stack into first-load.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { useWallets, useSigners } from '@privy-io/react-auth';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { getWalletAuthHeaders } from '@/lib/wallet-auth';
+import { WALLET_FEATURES } from '@/config/features';
 
 const service = new ERC7715Service();
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -233,6 +235,16 @@ export interface UseSessionKeyReturn {
 
 export function useSessionKey(): UseSessionKeyReturn {
     const { signMessage } = useWalletContext();
+    // Privy delegation — the Guardian's server-side smart-account path can
+    // only act when the user has added the app's key quorum as a signer on
+    // their embedded wallet. Gated entirely on NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID:
+    // unset → no calls, no behaviour change. Safe to call unconditionally
+    // (module-level stores; same pattern as use-wallet.ts).
+    const { wallets: privyWallets } = useWallets();
+    const { addSigners, removeSigners } = useSigners();
+    const privyEmbeddedWallet = WALLET_FEATURES.PRIVY_KEY_QUORUM_ID
+        ? privyWallets.find((w) => w.walletClientType === 'privy')
+        : undefined;
     // Vault routes verify the caller owns the wallet — attach a signed
     // wallet-auth proof. When signing isn't possible, the request still goes
     // out and the server answers 401 — honest failure, never silent.
@@ -370,6 +382,22 @@ export function useSessionKey(): UseSessionKeyReturn {
             // Prompt the user's wallet (MetaMask / Privy) for an EIP-712 signature
             const signed = await service.signPermission(permission, signer);
 
+            // Privy delegation consent — one consent moment with the limits
+            // signature. Only for users whose connected wallet IS their Privy
+            // embedded wallet. A failure aborts the grant: we never register a
+            // permission claiming delegation the user didn't complete.
+            let privyDelegated = false;
+            if (
+                privyEmbeddedWallet &&
+                privyEmbeddedWallet.address.toLowerCase() === userAddress.toLowerCase()
+            ) {
+                await addSigners({
+                    address: privyEmbeddedWallet.address,
+                    signers: [{ signerId: WALLET_FEATURES.PRIVY_KEY_QUORUM_ID }],
+                });
+                privyDelegated = true;
+            }
+
             // Register the session server-side so the Guardian can execute autonomously
             const regAuthHeaders = await authHeadersFor(userAddress);
             const regResp = await fetchWithTimeout(
@@ -382,6 +410,7 @@ export function useSessionKey(): UseSessionKeyReturn {
                         permission: {
                             ...permission,
                             signature: signed.signature,
+                            privyDelegated,
                         },
                     }),
                 },
@@ -406,7 +435,7 @@ export function useSessionKey(): UseSessionKeyReturn {
             setStatus('error');
             return null;
         }
-    }, [authHeadersFor, triggerExecutionLoopInternal]);
+    }, [authHeadersFor, triggerExecutionLoopInternal, privyEmbeddedWallet, addSigners]);
 
     const revokePermission = useCallback(async (): Promise<boolean> => {
         // Revoke server-side first — only clear local state once the server
@@ -424,6 +453,19 @@ export function useSessionKey(): UseSessionKeyReturn {
                     const data = await resp.json().catch(() => ({}));
                     throw new Error(data.error || 'Failed to revoke Guardian permission');
                 }
+                // Best-effort: remove the app's signer from the user's embedded
+                // wallet. The server permission is already revoked, so a failure
+                // here surfaces a warning but doesn't block the revoke.
+                if (
+                    privyEmbeddedWallet &&
+                    privyEmbeddedWallet.address.toLowerCase() === userAddress.toLowerCase()
+                ) {
+                    try {
+                        await removeSigners({ address: privyEmbeddedWallet.address });
+                    } catch {
+                        setError('Auto-Saver paused, but removing the delegated signer failed — revoke it in your wallet settings.');
+                    }
+                }
             } catch (e) {
                 setError(
                     e instanceof Error
@@ -438,7 +480,7 @@ export function useSessionKey(): UseSessionKeyReturn {
         setStatus('idle');
         setError(null);
         return true;
-    }, [signedPermission, authHeadersFor]);
+    }, [signedPermission, authHeadersFor, privyEmbeddedWallet, removeSigners]);
 
     const isPermissionValid = useCallback((): boolean => {
         if (!signedPermission) return false;

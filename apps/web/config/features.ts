@@ -78,6 +78,13 @@ export const WALLET_FEATURES = {
 
   /** Privy App ID */
   PRIVY_APP_ID: process.env.NEXT_PUBLIC_PRIVY_APP_ID || '',
+
+  /**
+   * Privy key-quorum signer ID the Guardian flow delegates to (addSigners).
+   * Unset → no delegation UI or calls; Guardian auto-execution on the Privy
+   * rail stays declined until users delegate.
+   */
+  PRIVY_KEY_QUORUM_ID: process.env.NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID || '',
 } as const;
 
 // Feature descriptions for user-facing UI

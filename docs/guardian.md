@@ -40,6 +40,21 @@ permission is enforced on-chain. It is not (yet).
   through an ERC-4337 bundler (`PRIVY_BUNDLER_URL`). Privy's server SDK has no
   smart-wallet submit API, so the bundler path is required, and the provider
   reports unconfigured unless every credential is present.
+- **Delegation consent** (client): when `NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID` is
+  set and the connected wallet is the user's Privy embedded wallet, the
+  Guardian grant flow calls `useSigners().addSigners({ signerId: quorum })`
+  in the same consent moment as the EIP-712 limits signature; revoke calls
+  `removeSigners`. A failed `addSigners` aborts the grant — no permission is
+  registered that claims delegation it didn't get. The API does not trust the
+  client claim: `POST /api/vault/permission` re-verifies the quorum signer on
+  the wallet's `additional_signers` via the Privy server SDK
+  (`privy-delegation.ts`) before storing `privyDelegated: true`. The
+  guardian loop declines GUARDIAN execution on the Privy rail with
+  `delegation_required` when the flag is absent — external-wallet users can
+  never delegate, so their decline is honest rather than an attempt.
+  Dashboard setup: enable Safe smart wallets on Celo, create a P-256
+  authorization key + key quorum, and attach a Privy policy restricting the
+  signer to the Mento broker and allowlisted stablecoin contracts (value 0).
 - A real on-chain enforcement path exists in code
   (`providers/metamask-delegation-provider.ts`, ERC-7710 redemption via a
   DelegationManager) but is **dark**: it is not the active provider,

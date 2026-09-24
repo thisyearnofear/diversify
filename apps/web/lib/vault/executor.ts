@@ -155,7 +155,7 @@ async function buildSwapParams(
 
 // ─── Execution Mode Detection ──────────────────────────────────────────────
 
-function getActiveProvider(): SmartAccountProvider | null {
+export function getActiveProvider(): SmartAccountProvider | null {
   try {
     const provider = getSmartAccountProvider();
     return provider.isConfigured() ? provider : null;

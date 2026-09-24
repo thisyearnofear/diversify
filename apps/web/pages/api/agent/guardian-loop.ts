@@ -40,7 +40,7 @@ import {
 import { appendDecisionLog, bumpUserActivity, claimExecutionLock, dequeueRecommendation, getGuardianState, pushAnchorHistory, releaseExecutionLock, resolveRecommendationQueue, updateGuardianState, type GuardianAnchorRecord, type GuardianDecisionEntry, type GuardianRecommendationSnapshot } from '@/lib/vault/guardian-state';
 import { bumpGlobalActivity, isoWeekKey } from '@/lib/guardian-activity-counter';
 import { VaultService, VaultExecutionUnavailableError, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
-import { smartAccountExecutor } from '@/lib/vault/executor';
+import { smartAccountExecutor, getActiveProvider } from '@/lib/vault/executor';
 import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
 // Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
 // their reasoning through the ONE shared builder so identical facts produce
@@ -85,6 +85,7 @@ const PERSISTED_DECISION_STATUSES = new Set([
   'advisory_pending_user_review',
   'no_vault',
   'execution_unavailable',
+  'delegation_required',
 ]);
 
 /**
@@ -330,6 +331,27 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Additionally, require at least one prior manual execution (totalSpentUSD > 0)
       // to confirm the user has actively used the system before we auto-trade.
       if (perm.autonomyLevel !== 'GUARDIAN') {
+        continue;
+      }
+      // Delegation gate: on the Privy smart-account rail the server can only
+      // act through a signer the user added to their embedded wallet
+      // (addSigners with the app key quorum). Users on external wallets can
+      // never delegate — record the decline rather than attempt execution.
+      // Other providers (safe4337) don't need user delegation; an
+      // unconfigured provider still fails closed at execution time.
+      const activeProvider = getActiveProvider();
+      if (activeProvider?.name === 'privy' && perm.privyDelegated !== true) {
+        trackDecline(
+          userAddress,
+          'delegation_required',
+          'Auto-execution needs a delegated Privy wallet — grant Guardian delegation in the app',
+        );
+        results.push({
+          userAddress,
+          action: 'skip',
+          status: 'delegation_required',
+          reason: 'Auto-execution needs a delegated Privy wallet',
+        });
         continue;
       }
       if (perm.totalSpentUSD === 0 && !perm.firstAutoExecutionConfirmed) {
