@@ -35,7 +35,9 @@ import { useMobile } from "../../hooks/use-mobile";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
+import { trackFunnelEvent } from "@/lib/analytics";
 import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
+import type { HandoffOrigin } from "@/context/app/types";
 
 interface SwapTabProps {
   userRegion: Region;
@@ -267,8 +269,34 @@ export default function SwapTab({
 
   const targetRegion = profileConfig.userRegion;
 
+  // A hand-off that arrived as a swap prefill: the origin rides along so a
+  // settled receipt can lead back to the surface that sent the user.
+  const [handoff, setHandoff] = useState<{
+    origin: HandoffOrigin;
+    fromToken: string;
+    toToken: string;
+  } | null>(null);
+
   useEffect(() => {
     if (swapPrefill && swapInterfaceRef.current?.setTokens) {
+      // Every consumed prefill replaces the hand-off — an origin-less
+      // prefill (the ?from=&to= doorway, tour flows) clears a stale one.
+      setHandoff(
+        swapPrefill.origin
+          ? {
+              origin: swapPrefill.origin,
+              fromToken: swapPrefill.fromToken || "USDm",
+              toToken: swapPrefill.toToken || "EURm",
+            }
+          : null,
+      );
+      if (swapPrefill.origin) {
+        trackFunnelEvent("intent_handoff", {
+          source: swapPrefill.origin.source,
+          target: "exchange",
+          outcome: "prefilled",
+        });
+      }
       swapInterfaceRef.current.setTokens(
         swapPrefill.fromToken || "USDm",
         swapPrefill.toToken || "EURm",
@@ -507,6 +535,8 @@ export default function SwapTab({
                 ? { label: `${estimatedReward} G$ ready`, onClaim: flow.handleClaim }
                 : null
             }
+            handoffOrigin={handoff}
+            onHandoffConsumed={() => setHandoff(null)}
           />
         </div>
       )}

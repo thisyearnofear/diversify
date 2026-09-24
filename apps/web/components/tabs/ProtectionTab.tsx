@@ -99,7 +99,7 @@ export default function ProtectionTab({
   refreshBalances,
 }: ProtectionTabProps) {
   const { address, chainId, isMiniPay } = useWalletContext();
-  const { navigateToSwap, navigateToGuardian, compareRequested, consumeCompareRequest, pendingIntent, consumeIntent } = useNavigation();
+  const { navigateToSwap, navigateToGuardian, pendingIntent, consumeIntent } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
   const { visibility } = useGuardianVisibility();
@@ -308,7 +308,6 @@ export default function ProtectionTab({
       }
     }
 
-    setActiveTab?.("exchange");
     navigateToSwap({
       fromToken: sourceToken,
       toToken: swapToken,
@@ -316,6 +315,7 @@ export default function ProtectionTab({
       reason: `Review protection move to ${targetToken} for ${planName}`,
       fromChainId,
       toChainId,
+      origin: { source: "shield", asset: targetToken, label: planName },
     });
   };
 
@@ -432,35 +432,40 @@ export default function ProtectionTab({
     [alignment.legs, chainId],
   );
 
-  // Deep link (e.g. Home's "Compare philosophies →"): open the ring's compare
-  // mode once. No plan → the picker already IS the gallery; just consume.
-  useEffect(() => {
-    if (!compareRequested) return;
-    if (hasPlan && shape !== "picker") {
-      setFocusedToken(null);
-      setComparing(true);
-    }
-    consumeCompareRequest();
-  }, [compareRequested, hasPlan, shape, consumeCompareRequest]);
-
-  // Cross-tab intent (e.g. Home's "Strengthen {region} coverage in Shield"):
-  // resolve the question to a slice once the wallet has settled. Transient —
-  // consumed exactly once, never persisted. A balance-preview draft is never
-  // silently discarded: consume without focusing while previewing.
+  // Cross-tab intent (e.g. Home's "Strengthen {region} coverage in Shield",
+  // a compare deep link, or a receipt's "back to plan"): resolve the
+  // question once the wallet has settled. Transient — consumed exactly
+  // once, never persisted. A balance-preview draft is never silently
+  // discarded: consume without focusing while previewing.
   useEffect(() => {
     if (pendingIntent?.tab !== "protect") return;
     if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) return;
-    if (!balance.isPreviewing && hasPlan && shape !== "picker") {
-      const token = resolveIntentFocus(
-        pendingIntent.intent,
-        allocations,
-        heldPctByToken,
-      );
+    const intent = pendingIntent.intent;
+    let outcome: "compare" | "focused" | "unfocused" | "preview_kept";
+    if (intent.lens === "compare") {
+      // No plan → the picker already IS the gallery; just consume.
+      if (hasPlan && shape !== "picker") {
+        setFocusedToken(null);
+        setComparing(true);
+      }
+      outcome = "compare";
+    } else if (balance.isPreviewing) {
+      outcome = "preview_kept";
+    } else if (hasPlan && shape !== "picker") {
+      const token = resolveIntentFocus(intent, allocations, heldPctByToken);
       if (token) {
         setComparing(false);
         setFocusedToken(token);
       }
+      outcome = token ? "focused" : "unfocused";
+    } else {
+      outcome = "unfocused";
     }
+    trackFunnelEvent("intent_handoff", {
+      source: intent.source,
+      target: "protect",
+      outcome,
+    });
     consumeIntent();
   }, [
     pendingIntent,

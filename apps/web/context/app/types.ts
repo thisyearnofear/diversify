@@ -1,5 +1,14 @@
 import type { TabId } from '@/constants/tabs';
 
+export type TreasuryIntentSource = 'home' | 'shield' | 'exchange' | 'guardian';
+
+/** Where a swap hand-off came from — carried to the receipt so it can lead back. */
+export interface HandoffOrigin {
+  source: TreasuryIntentSource;
+  asset?: string;
+  label?: string;
+}
+
 export interface SwapPrefill {
   fromToken?: string;
   toToken?: string;
@@ -9,6 +18,7 @@ export interface SwapPrefill {
   toChainId?: number;
   phoneNumber?: string;
   recipientAddress?: string;
+  origin?: HandoffOrigin;
 }
 
 export interface GuidedTourState {

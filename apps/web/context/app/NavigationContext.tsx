@@ -1,6 +1,8 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isTabId, LEGACY_TAB_MAP, type TabId } from '@/constants/tabs';
-import type { NavigationState, SwapPrefill } from './types';
+import type { NavigationState, SwapPrefill, TreasuryIntentSource } from './types';
+
+export type { TreasuryIntentSource } from './types';
 
 /**
  * How long a freshly-focused row stays highlighted before the surface
@@ -31,8 +33,6 @@ export interface GuardianContext {
   decisionRef?: GuardianDecisionRef;
 }
 
-export type TreasuryIntentSource = 'home' | 'shield' | 'exchange' | 'guardian';
-
 /** Cross-tab hand-off: carries the question, not just the tab. Transient —
  *  consumed once by the target tab, never persisted. */
 export interface TreasuryIntent {
@@ -41,6 +41,8 @@ export interface TreasuryIntent {
   region?: string;
   /** Canonical mixed-case token symbol, e.g. "KESm". */
   asset?: string;
+  /** A specific mode the target tab should open in, not a slice. */
+  lens?: 'compare' | 'netting';
 }
 
 export interface GuardianDecisionRef {
@@ -60,14 +62,10 @@ type NavigationContextValue = NavigationState & {
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
-  /** Deep-link to the Exchange tab's counterparty-matching rail — the
-   *  pair inspector unfolds with the netting form. Clears any swap
-   *  prefill — a netting hand-off is not a swap. */
-  navigateToNetting: () => void;
-  /** Transient flag — Exchange consumes it once to open the netting
-   *  inspector (like `compareRequested` on Shield). */
-  nettingRequested: boolean;
-  consumeNettingRequest: () => void;
+  /** Deep-link to the Exchange tab's counterparty-matching rail — rides
+   *  `navigateWithIntent` with `lens: "netting"`; the pair inspector
+   *  unfolds with the netting form. */
+  navigateToNetting: (source?: TreasuryIntentSource) => void;
   /** Navigate to the Guardian tab carrying the slice the user was acting
    *  on. `context` is transient — the Guardian surface consumes it once. */
   navigateToGuardian: (context?: GuardianContext) => void;
@@ -75,17 +73,20 @@ type NavigationContextValue = NavigationState & {
   guardianContext: GuardianContext | null;
   clearGuardianContext: () => void;
   /**
-   * Deep-link to the Shield tab's compare mode. Sets a transient flag the
-   * Shield surface consumes once (like `focusedCycleId`) — not persisted.
+   * Deep-link to the Shield tab's compare mode — rides
+   * `navigateWithIntent` with `lens: "compare"`.
    */
-  navigateToCompare: () => void;
-  compareRequested: boolean;
-  consumeCompareRequest: () => void;
+  navigateToCompare: (source?: TreasuryIntentSource) => void;
   /** Cross-tab hand-off that carries the question, not just the tab.
    *  The target tab consumes `pendingIntent` once — never persisted. */
   navigateWithIntent: (tab: TabId, intent: TreasuryIntent) => void;
   pendingIntent: { tab: TabId; intent: TreasuryIntent } | null;
   consumeIntent: () => void;
+  /** Transient record of the last completed swap — Home consumes it once
+   *  refreshed balances show the destination token. Never persisted. */
+  lastSettlement: { toToken: string; settledAt: number } | null;
+  recordSettlement: (s: { toToken: string; settledAt: number }) => void;
+  consumeSettlement: () => void;
   initializeFromStorage: () => void;
   /**
    * Cycle to focus in `PaymentCycleReport`. Set when the drawer's
@@ -117,10 +118,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // Transient Guardian hand-off — see GuardianContext above. Not persisted:
   // it reflects the current "take this to Guardian" gesture, not history.
   const [guardianContext, setGuardianContext] = useState<GuardianContext | null>(null);
-  // Transient Shield-compare hand-off — the Shield tab consumes it once.
-  const [compareRequested, setCompareRequested] = useState(false);
-  const [nettingRequested, setNettingRequested] = useState(false);
   const [pendingIntent, setPendingIntent] = useState<{ tab: TabId; intent: TreasuryIntent } | null>(null);
+  // Transient settlement echo — Home seals the destination region coin
+  // once refreshed balances show the token. Not persisted.
+  const [lastSettlement, setLastSettlement] = useState<{ toToken: string; settledAt: number } | null>(null);
 
   // init from storage (active tab). A deep-link doorway (?tab=…) wins
   // over the saved tab — read straight from the URL, no router.isReady
@@ -170,20 +171,25 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     setState((prev) => ({ ...prev, swapPrefill: null }));
   }, []);
 
+  const navigateWithIntent = useCallback((tab: TabId, intent: TreasuryIntent) => {
+    setPendingIntent({ tab, intent });
+    setState((prev) => ({
+      ...prev,
+      activeTab: tab,
+      swapPrefill: null,
+      visitedTabs: prev.visitedTabs.includes(tab) ? prev.visitedTabs : [...prev.visitedTabs, tab],
+    }));
+  }, []);
+
   /**
    * Open the Exchange tab with the counterparty-matching rail unfolded in
    * the pair inspector. Same intent contract as navigateToSwap: one call,
    * one artefact. Also mirrors the ?netting=1 URL hand-off used by chat
    * deep links.
    */
-  const navigateToNetting = useCallback(() => {
-    setNettingRequested(true);
-    setState((prev) => ({ ...prev, activeTab: 'exchange', swapPrefill: null }));
-  }, []);
-
-  const consumeNettingRequest = useCallback(() => {
-    setNettingRequested(false);
-  }, []);
+  const navigateToNetting = useCallback((source: TreasuryIntentSource = 'home') => {
+    navigateWithIntent('exchange', { source, lens: 'netting' });
+  }, [navigateWithIntent]);
 
   /**
    * Open the Guardian tab carrying the slice context the user came from.
@@ -202,27 +208,20 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
    * Open the Shield tab in compare mode — the gallery unfolds beneath the
    * ring. One call, one artefact — the same contract as navigateToSwap.
    */
-  const navigateToCompare = useCallback(() => {
-    setCompareRequested(true);
-    setState((prev) => ({ ...prev, activeTab: 'protect', swapPrefill: null }));
-  }, []);
-
-  const consumeCompareRequest = useCallback(() => {
-    setCompareRequested(false);
-  }, []);
-
-  const navigateWithIntent = useCallback((tab: TabId, intent: TreasuryIntent) => {
-    setPendingIntent({ tab, intent });
-    setState((prev) => ({
-      ...prev,
-      activeTab: tab,
-      swapPrefill: null,
-      visitedTabs: prev.visitedTabs.includes(tab) ? prev.visitedTabs : [...prev.visitedTabs, tab],
-    }));
-  }, []);
+  const navigateToCompare = useCallback((source: TreasuryIntentSource = 'home') => {
+    navigateWithIntent('protect', { source, lens: 'compare' });
+  }, [navigateWithIntent]);
 
   const consumeIntent = useCallback(() => {
     setPendingIntent(null);
+  }, []);
+
+  const recordSettlement = useCallback((s: { toToken: string; settledAt: number }) => {
+    setLastSettlement(s);
+  }, []);
+
+  const consumeSettlement = useCallback(() => {
+    setLastSettlement(null);
   }, []);
 
   const initializeFromStorage = useCallback(() => {
@@ -251,22 +250,21 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       navigateToSwap,
       clearSwapPrefill,
       navigateToNetting,
-      nettingRequested,
-      consumeNettingRequest,
       navigateToGuardian,
       guardianContext,
       clearGuardianContext,
       navigateToCompare,
-      compareRequested,
-      consumeCompareRequest,
       navigateWithIntent,
       pendingIntent,
       consumeIntent,
+      lastSettlement,
+      recordSettlement,
+      consumeSettlement,
       initializeFromStorage,
       focusedCycleId,
       setFocusedCycleId,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, nettingRequested, consumeNettingRequest, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, compareRequested, consumeCompareRequest, navigateWithIntent, pendingIntent, consumeIntent, initializeFromStorage, focusedCycleId],
+    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
   );
 
   // The consuming surface (PaymentCycleReport) already auto-clears the

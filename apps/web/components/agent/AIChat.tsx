@@ -833,6 +833,7 @@ export default function AIChat() {
                                 amount: a.amount,
                                 reason: a.reason ?? activeGuardianReview.contract?.proposal
                                   ?? activeGuardianReview.summary,
+                                origin: { source: "guardian" },
                               });
                               closeReview();
                               return;
@@ -858,6 +859,7 @@ export default function AIChat() {
                                 toChainId: a.chainId,
                                 reason: activeGuardianReview.contract?.proposal
                                   ?? activeGuardianReview.summary,
+                                origin: { source: "guardian" },
                               });
                               closeReview();
                               return;
@@ -867,7 +869,7 @@ export default function AIChat() {
                               // for pan-Caribbean / upcoming-payment personas,
                               // reachable via the status-rail link or this
                               // chat hand-off for everyone.
-                              navigateToNetting();
+                              navigateToNetting("guardian");
                               closeReview();
                               return;
                             case 'claim_ubi':

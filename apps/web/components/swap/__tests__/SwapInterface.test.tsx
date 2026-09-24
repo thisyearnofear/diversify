@@ -142,6 +142,16 @@ vi.mock('../../wallet/WalletProvider', () => ({
   useWalletContext: () => ({ address: null, connect: vi.fn() }),
 }));
 
+const mockRecordSettlement = vi.fn();
+vi.mock('@/context/app/NavigationContext', () => ({
+  useNavigation: () => ({ recordSettlement: mockRecordSettlement }),
+}));
+
+const mockTrackFunnelEvent = vi.fn();
+vi.mock('@/lib/analytics', () => ({
+  trackFunnelEvent: (...args: unknown[]) => mockTrackFunnelEvent(...args),
+}));
+
 import SwapInterface from '../SwapInterface';
 
 beforeEach(() => {
@@ -346,6 +356,59 @@ describe('SwapInterface — settlement receipt', () => {
     expect(receipt).toHaveTextContent('5 G$ ready');
     fireEvent.click(screen.getByRole('button', { name: 'Claim →' }));
     expect(onClaim).toHaveBeenCalledTimes(1);
+  });
+
+  it('records the settlement for every completed receipt', () => {
+    complete();
+    renderSwap({ address: '0xabc' });
+    expect(mockRecordSettlement).toHaveBeenCalledWith(
+      expect.objectContaining({ toToken: 'USDm', settledAt: expect.any(Number) }),
+    );
+  });
+
+  it('a matching hand-off attaches its origin — the return line shows', () => {
+    complete({ fromToken: 'USDC', toToken: 'KESm' });
+    renderSwap({
+      address: '0xabc',
+      handoffOrigin: {
+        origin: { source: 'shield', asset: 'KESm', label: 'africapitalism' },
+        fromToken: 'usdc', // settled pair matched case-insensitively
+        toToken: 'KESm',
+      },
+      onHandoffConsumed: vi.fn(),
+    });
+    expect(screen.getByTestId('receipt-return')).toHaveTextContent(
+      'Back to your africapitalism plan',
+    );
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith('handoff_settled', {
+      source: 'shield',
+    });
+    expect(mockRecordSettlement).toHaveBeenCalled();
+  });
+
+  it('an abandoned hand-off (different pair settled) carries no origin and is still consumed', () => {
+    mockTrackFunnelEvent.mockClear();
+    complete({ fromToken: 'KESm', toToken: 'USDm' });
+    const onHandoffConsumed = vi.fn();
+    renderSwap({
+      address: '0xabc',
+      handoffOrigin: {
+        origin: { source: 'shield', asset: 'NGNm' },
+        fromToken: 'USDC',
+        toToken: 'NGNm',
+      },
+      onHandoffConsumed,
+    });
+    expect(screen.queryByTestId('receipt-return')).not.toBeInTheDocument();
+    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
+      'handoff_settled',
+      expect.anything(),
+    );
+    // A completed receipt always ends the hand-off — otherwise a later
+    // unrelated settle of the prefilled pair would claim "Back to your plan".
+    expect(onHandoffConsumed).toHaveBeenCalledTimes(1);
+    // The settlement is still recorded — Home may seal it.
+    expect(mockRecordSettlement).toHaveBeenCalled();
   });
 });
 

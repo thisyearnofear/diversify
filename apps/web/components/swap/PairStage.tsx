@@ -24,6 +24,8 @@ import { MintMark } from './MintMark';
 import { CorridorLine } from './CorridorContext';
 import { goodsEquivalentFor } from '@/lib/corridor-context';
 import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
+import { useNavigation } from '@/context/app/NavigationContext';
+import type { HandoffOrigin } from '@/context/app/types';
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
 
@@ -37,6 +39,9 @@ export type PairReceipt = {
   txHash: string | null;
   chainId: number;
   settledAt: number;
+  /** The hand-off that sent the user here — only when the settled pair
+   *  matches the prefilled one, so the receipt can lead back honestly. */
+  origin?: HandoffOrigin;
 };
 
 /** One end of the beam — the coin drops in on mount, then its wrapper
@@ -187,6 +192,7 @@ export function PairStage({
   claim?: { label: string; onClaim(): void } | null;
 }) {
   const reduced = useReducedMotion();
+  const { navigateWithIntent } = useNavigation();
   // The pair time machine: the corridor line's 1y/3y/5y control picks
   // the horizon and the beam re-weighs to that window's drift. A pair
   // change resets to the resting 5y view.
@@ -403,6 +409,25 @@ export function PairStage({
                 Claim →
               </button>
             </p>
+          )}
+          {receipt.origin?.source === "shield" && (
+            // The loop back: only a Shield hand-off earns a way home —
+            // it lands on the slice the plan asked about.
+            <button
+              type="button"
+              data-testid="receipt-return"
+              onClick={() =>
+                navigateWithIntent("protect", {
+                  source: "exchange",
+                  asset: receipt.origin?.asset,
+                })
+              }
+              className="mt-1 w-full min-h-[32px] text-[11px] text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              {receipt.origin.label
+                ? `Back to your ${receipt.origin.label} plan →`
+                : "Back to your plan →"}
+            </button>
           )}
           <button
             type="button"

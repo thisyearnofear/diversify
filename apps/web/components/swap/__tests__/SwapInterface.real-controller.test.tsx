@@ -85,6 +85,10 @@ vi.mock('../../wallet/WalletProvider', () => ({
   useWalletContext: () => ({ address: null, connect: vi.fn() }),
 }));
 
+vi.mock('@/context/app/NavigationContext', () => ({
+  useNavigation: () => ({ recordSettlement: vi.fn() }),
+}));
+
 import SwapInterface from '../SwapInterface';
 
 const TOKENS = [

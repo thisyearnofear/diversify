@@ -15,6 +15,7 @@ import { corridorFor, corridorSideFor } from "@/lib/corridor-context";
 import { pairCardContent } from "@/lib/pair-card";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { useAdvisor } from "@/hooks/use-advisor";
+import { trackFunnelEvent } from "@/lib/analytics";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import RouteSchematic from "../swap/RouteSchematic";
@@ -286,7 +287,7 @@ export default function ExchangeTab({
   const { address } = useWalletContext();
   const { enableDemoMode } = useDemoMode();
   const router = useRouter();
-  const { setSwapPrefill, swapPrefill, nettingRequested, consumeNettingRequest } = useNavigation();
+  const { setSwapPrefill, swapPrefill, pendingIntent, consumeIntent } = useNavigation();
   const { financialStrategy } = useStrategy();
   const { config } = useProtectionProfile();
   const sharedPortfolio = usePortfolio();
@@ -322,13 +323,21 @@ export default function ExchangeTab({
     }
   }, [nettingPersona]);
 
-  // Chat deep-link hand-off: navigateToNetting() lands here — unfold the
-  // netting rail once, then clear the transient flag.
+  // Cross-tab intent (e.g. navigateToNetting from chat or Home): unfold
+  // the netting rail once, then consume — an exchange intent never goes
+  // stale.
   useEffect(() => {
-    if (!nettingRequested) return;
-    consumeNettingRequest();
-    setInspectorSel((sel) => (sel?.kind === "netting" ? sel : { kind: "netting" }));
-  }, [nettingRequested, consumeNettingRequest]);
+    if (pendingIntent?.tab !== "exchange") return;
+    if (pendingIntent.intent.lens === "netting") {
+      trackFunnelEvent("intent_handoff", {
+        source: pendingIntent.intent.source,
+        target: "exchange",
+        outcome: "netting",
+      });
+      setInspectorSel((sel) => (sel?.kind === "netting" ? sel : { kind: "netting" }));
+    }
+    consumeIntent();
+  }, [pendingIntent, consumeIntent]);
 
   useEffect(() => {
     if (!router.isReady) return;

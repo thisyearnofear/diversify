@@ -31,6 +31,9 @@ import { configTokenFor } from "@/lib/plan-legs";
 import { useMobile } from "@/hooks/use-mobile";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useBestYield, yieldHintForDestination } from "@/hooks/use-best-yield";
+import { useNavigation } from "@/context/app/NavigationContext";
+import { trackFunnelEvent } from "@/lib/analytics";
+import type { HandoffOrigin } from "@/context/app/types";
 
 interface Token {
   symbol: string;
@@ -81,6 +84,10 @@ interface SwapInterfaceProps {
   /** Walletless public-address lookup in the journey rail's slot. */
   lookupAddress?: string | null;
   onLookupAddress?: (address: string | null) => void;
+  /** The hand-off that prefilled this pair — the settled receipt can
+   *  lead back when the executed pair matches it. */
+  handoffOrigin?: { origin: HandoffOrigin; fromToken: string; toToken: string } | null;
+  onHandoffConsumed?: () => void;
 }
 
 const SwapInterface = forwardRef<
@@ -119,9 +126,12 @@ const SwapInterface = forwardRef<
     onInspectJourney,
     lookupAddress = null,
     onLookupAddress,
+    handoffOrigin,
+    onHandoffConsumed,
   },
   ref,
 ) {
+  const { recordSettlement } = useNavigation();
   const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useExperience();
   const { financialStrategy } = useStrategy();
   const { askAdvisor } = useAdvisor();
@@ -264,6 +274,15 @@ const SwapInterface = forwardRef<
   const [receipt, setReceipt] = useState<PairReceipt | null>(null);
   useEffect(() => {
     if (status !== "completed" || leg2Hint) return;
+    const settledAt = Date.now();
+    // The receipt only leads back when the user settled the prefilled
+    // pair — a different pair means the hand-off was abandoned.
+    const origin =
+      handoffOrigin &&
+      fromToken.toLowerCase() === handoffOrigin.fromToken.toLowerCase() &&
+      toToken.toLowerCase() === handoffOrigin.toToken.toLowerCase()
+        ? handoffOrigin.origin
+        : undefined;
     setReceipt({
       fromToken,
       toToken,
@@ -271,8 +290,19 @@ const SwapInterface = forwardRef<
       quotedOut: expectedOutput ?? null,
       txHash: localTxHash,
       chainId: fromChainId,
-      settledAt: Date.now(),
+      settledAt,
+      origin,
     });
+    if (handoffOrigin) {
+      if (origin) {
+        trackFunnelEvent("handoff_settled", { source: origin.source });
+      }
+      // Any completed receipt ends the hand-off — a mismatched settle
+      // means it was abandoned, and leaving it armed would let a later
+      // unrelated settle of the same pair claim "Back to your plan".
+      onHandoffConsumed?.();
+    }
+    recordSettlement({ toToken, settledAt });
     setAmount("");
     acknowledgeCompletion();
     setMode("stage");
@@ -293,6 +323,9 @@ const SwapInterface = forwardRef<
     setAmount,
     acknowledgeCompletion,
     capitalHistory,
+    handoffOrigin,
+    onHandoffConsumed,
+    recordSettlement,
   ]);
 
   const wakeTicket = () => {

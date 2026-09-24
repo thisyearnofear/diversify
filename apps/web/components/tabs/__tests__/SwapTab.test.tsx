@@ -41,8 +41,14 @@ vi.mock("@/context/app/NavigationContext", () => ({
     focusedCycleId: null,
     setFocusedCycleId: vi.fn(),
     navigateToSwap: vi.fn(),
+    recordSettlement: vi.fn(),
   }),
   FOCUS_HIGHLIGHT_MS: 1500,
+}));
+
+const mockTrackFunnelEvent = vi.fn();
+vi.mock("@/lib/analytics", () => ({
+  trackFunnelEvent: (...args: unknown[]) => mockTrackFunnelEvent(...args),
 }));
 
 vi.mock("@/components/wallet/WalletProvider", () => ({
@@ -205,8 +211,11 @@ vi.mock("@/components/swap/SwapInterface", () => {
   // The factory runs after top-level imports are evaluated, so React is
   // in scope. Use the typed forwardRef generic instead of `any` to keep
   // the mock strongly typed.
-  const MockSwapInterface = React.forwardRef<unknown, unknown>(
-    (_props, ref) => {
+  const MockSwapInterface = React.forwardRef<
+    unknown,
+    { handoffOrigin?: { origin: { source: string }; fromToken: string; toToken: string } | null }
+  >(
+    (props, ref) => {
       React.useImperativeHandle(ref, () => ({
         refreshBalances: vi.fn(),
         getSelectedTokens: () => ({ fromToken: "cUSD", toToken: "USDC" }),
@@ -214,6 +223,7 @@ vi.mock("@/components/swap/SwapInterface", () => {
       }));
       return React.createElement("div", {
         "data-testid": "mock-swap-interface",
+        "data-handoff-origin": props.handoffOrigin?.origin.source ?? "",
       });
     },
   );
@@ -514,6 +524,57 @@ describe("SwapTab prefill — wallet auto-switch", () => {
     const notice = screen.getByTestId("auto-switch-notice");
     expect(notice).toBeInTheDocument();
     expect(notice).toHaveTextContent(AUTO_SWITCH_NOTICE_COPY);
+  });
+
+  it("a prefill carrying an origin fires intent_handoff and passes the handoff to the ticket", () => {
+    const { rerender } = render(
+      <SwapTab userRegion="USA" inflationData={{}} />,
+    );
+
+    mockSwapPrefill = {
+      fromToken: "USDC",
+      toToken: "KESm",
+      origin: { source: "shield", asset: "KESm", label: "africapitalism" },
+    };
+    rerender(<SwapTab userRegion="USA" inflationData={{}} />);
+
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("intent_handoff", {
+      source: "shield",
+      target: "exchange",
+      outcome: "prefilled",
+    });
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-handoff-origin",
+      "shield",
+    );
+  });
+
+  it("an origin-less prefill clears a stale handoff and fires no event", () => {
+    const { rerender } = render(
+      <SwapTab userRegion="USA" inflationData={{}} />,
+    );
+
+    mockSwapPrefill = {
+      fromToken: "USDC",
+      toToken: "KESm",
+      origin: { source: "shield", asset: "KESm" },
+    };
+    rerender(<SwapTab userRegion="USA" inflationData={{}} />);
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-handoff-origin",
+      "shield",
+    );
+
+    // A bare prefill (URL doorway, tour) replaces the handoff entirely —
+    // no stale "Back to your plan" on an unrelated settle.
+    mockSwapPrefill = { fromToken: "cUSD", toToken: "USDC" };
+    rerender(<SwapTab userRegion="USA" inflationData={{}} />);
+
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-handoff-origin",
+      "",
+    );
+    expect(mockTrackFunnelEvent).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -17,7 +17,7 @@
  * only surfacing in the browser console in prod.
  */
 
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, cleanup, screen, act, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
@@ -75,12 +75,18 @@ vi.mock("@/hooks/use-market-regime", () => ({
 const mockNavigateToCompare = vi.fn();
 const mockNavigateToNetting = vi.fn();
 const mockNavigateWithIntent = vi.fn();
+const mockConsumeSettlement = vi.fn();
+const navState: {
+  lastSettlement: { toToken: string; settledAt: number } | null;
+} = { lastSettlement: null };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToSwap: vi.fn(),
     navigateToCompare: mockNavigateToCompare,
     navigateToNetting: mockNavigateToNetting,
     navigateWithIntent: mockNavigateWithIntent,
+    lastSettlement: navState.lastSettlement,
+    consumeSettlement: mockConsumeSettlement,
   }),
 }));
 
@@ -248,10 +254,10 @@ vi.mock("../HomeExposureDial", () => ({
   ),
 }));
 vi.mock("../HomeRiskTheater", () => ({
-  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void }) => {
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null }) => {
     if (moment) {
       return (
-        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)}>
+        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)} data-sealed={sealedRegion ?? "none"}>
           <div data-testid="currency-moment-card" />
           {Array.isArray(regionData) && regionData.length > 0 && (
             <div data-testid="holdings-strip" />
@@ -662,5 +668,60 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
       source: "home",
       region: "Africa",
     });
+  });
+});
+
+describe("ConnectedOverview — the settled-move seal", () => {
+  const portfolioWithKESm = () =>
+    buildPortfolio({
+      allTokens: [
+        { symbol: "KESm", name: "Kenyan Shilling", value: 120, region: "Africa" },
+      ] as any,
+    });
+
+  beforeEach(() => {
+    mockMoment = GHANA_MOMENT;
+  });
+
+  afterEach(() => {
+    cleanup();
+    navState.lastSettlement = null;
+    mockConsumeSettlement.mockClear();
+    mockExperienceMode = "standard";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+  });
+
+  it("seals the region the settled token landed in once refreshed balances show it", () => {
+    navState.lastSettlement = { toToken: "KESm", settledAt: Date.now() - 1000 };
+    renderOverview({ portfolio: portfolioWithKESm(), isActive: true });
+
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-sealed", "Africa");
+    expect(mockConsumeSettlement).toHaveBeenCalledTimes(1);
+  });
+
+  it("waits while the portfolio's clock hasn't passed the settlement — never seals on stale balances", () => {
+    navState.lastSettlement = { toToken: "KESm", settledAt: Date.now() + 60_000 };
+    renderOverview({ portfolio: portfolioWithKESm(), isActive: true });
+
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-sealed", "none");
+    expect(mockConsumeSettlement).not.toHaveBeenCalled();
+  });
+
+  it("consumes without sealing when the settled token isn't in the refreshed balances", () => {
+    navState.lastSettlement = { toToken: "NGNm", settledAt: Date.now() - 1000 };
+    renderOverview({ portfolio: portfolioWithKESm(), isActive: true });
+
+    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-sealed", "none");
+    expect(mockConsumeSettlement).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not claim a move while Home is inactive", () => {
+    navState.lastSettlement = { toToken: "KESm", settledAt: Date.now() - 1000 };
+    renderOverview({ portfolio: portfolioWithKESm(), isActive: false });
+
+    expect(mockConsumeSettlement).not.toHaveBeenCalled();
   });
 });

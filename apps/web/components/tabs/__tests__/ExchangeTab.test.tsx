@@ -14,8 +14,10 @@ vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress, connect: mockConnect }),
 }));
 
-let mockNettingRequested = false;
-const mockConsumeNetting = vi.fn();
+const navState: {
+  pendingIntent: { tab: string; intent: { source: string; lens?: "compare" | "netting" } } | null;
+} = { pendingIntent: null };
+const mockConsumeIntent = vi.fn();
 const mockAskAdvisor = vi.fn();
 
 vi.mock("@/hooks/use-advisor", () => ({
@@ -26,8 +28,8 @@ vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     swapPrefill: null,
     setSwapPrefill: vi.fn(),
-    nettingRequested: mockNettingRequested,
-    consumeNettingRequest: mockConsumeNetting,
+    pendingIntent: navState.pendingIntent,
+    consumeIntent: mockConsumeIntent,
   }),
 }));
 
@@ -161,7 +163,7 @@ describe("ExchangeTab — instrument", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAddress = "0xabc";
-    mockNettingRequested = false;
+    navState.pendingIntent = null;
     journeyState.data = null;
     capitalHistoryArgs.length = 0;
   });
@@ -446,13 +448,30 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByTestId("fx-netting-rail")).toHaveTextContent("USD-USD");
   });
 
-  it("a netting hand-off (navigateToNetting) unfolds the rail on arrival", () => {
-    mockNettingRequested = true;
+  it("a netting-lens intent (navigateToNetting) unfolds the rail on arrival and consumes", () => {
+    navState.pendingIntent = {
+      tab: "exchange",
+      intent: { source: "guardian", lens: "netting" },
+    };
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
 
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("fx-netting-rail")).toBeInTheDocument();
+    expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it("a non-netting exchange intent is still consumed — it never goes stale", () => {
+    navState.pendingIntent = {
+      tab: "exchange",
+      intent: { source: "home" },
+    };
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
   });
 });

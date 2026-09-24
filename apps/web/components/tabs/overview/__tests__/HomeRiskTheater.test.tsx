@@ -371,3 +371,29 @@ describe("HomeRiskTheater — while you were away (Guardian activity)", () => {
     expect(payload.prompt).toContain("within bounds");
   });
 });
+
+describe("HomeRiskTheater — the settled-move seal", () => {
+  it("marks the sealed region's coin with a persistent ✓", () => {
+    renderTheater({ sealedRegion: "Africa" });
+    expect(screen.getByTestId("region-coin-sealed")).toHaveTextContent("✓");
+  });
+
+  it("seals only the named region — the other coin stays bare", () => {
+    renderTheater({ sealedRegion: "Africa" });
+    expect(screen.getAllByTestId("region-coin-sealed")).toHaveLength(1);
+    cleanup();
+    renderTheater({ sealedRegion: "LatAm" });
+    expect(screen.getByTestId("region-coin-sealed")).toBeInTheDocument();
+  });
+
+  it("reduced motion shows the ✓ without the pulse ring", () => {
+    mocks.reduced = true;
+    try {
+      renderTheater({ sealedRegion: "Africa" });
+      expect(screen.getByTestId("region-coin-sealed")).toHaveTextContent("✓");
+      expect(document.querySelector(".border-emerald-500")).toBeNull();
+    } finally {
+      mocks.reduced = false;
+    }
+  });
+});

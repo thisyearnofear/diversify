@@ -29,6 +29,7 @@ import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
 import { timeAgo } from "@/lib/format-duration";
+import { MintMark } from "@/components/swap/MintMark";
 
 interface RegionDatum {
   region: string;
@@ -56,6 +57,7 @@ function RegionCoin({
   pct,
   isSelected,
   isDimmed,
+  isSealed,
   index,
   reducedMotion,
   onSelect,
@@ -64,6 +66,7 @@ function RegionCoin({
   pct: number;
   isSelected: boolean;
   isDimmed: boolean;
+  isSealed: boolean;
   index: number;
   reducedMotion: boolean;
   onSelect: () => void;
@@ -98,7 +101,28 @@ function RegionCoin({
       }
       className="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
     >
-      <Coin variant="asset" size={size} symbol={regionGlyph(region.region)} color={region.color} />
+      <span className="relative inline-flex">
+        <Coin variant="asset" size={size} symbol={regionGlyph(region.region)} color={region.color} />
+        {isSealed && !reducedMotion && (
+          // One emerald pulse — the same single-shot seal the receipt
+          // coin wears, never a loop.
+          <motion.span
+            aria-hidden
+            className="absolute inset-0 rounded-full border-2 border-emerald-500"
+            initial={{ scale: 0.9, opacity: 0.9 }}
+            animate={{ scale: 1.25, opacity: 0 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
+          />
+        )}
+        {isSealed && (
+          <MintMark
+            data-testid="region-coin-sealed"
+            className="h-4 w-4 bg-emerald-500 text-[10px] leading-none text-white ring-emerald-600 dark:bg-emerald-600"
+          >
+            ✓
+          </MintMark>
+        )}
+      </span>
       <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[72px]">
         {region.region}
       </span>
@@ -129,6 +153,9 @@ interface HomeRiskTheaterProps {
   onSelectRegion: (region: string | null) => void;
   isDemo?: boolean;
   isActive?: boolean;
+  /** Region whose destination token a settled swap landed in — the coin
+   *  wears a seal until the user selects a coin. */
+  sealedRegion?: string | null;
 }
 
 export function HomeRiskTheater({
@@ -149,6 +176,7 @@ export function HomeRiskTheater({
   onSelectRegion,
   isDemo,
   isActive = true,
+  sealedRegion = null,
 }: HomeRiskTheaterProps) {
   const reducedMotion = useReducedMotion();
   const hasHoldings = totalValue > 0 && regionData.length > 0;
@@ -259,6 +287,7 @@ export function HomeRiskTheater({
               pct={pct}
               isSelected={isSelected}
               isDimmed={focusedRegion !== null && !isSelected}
+              isSealed={sealedRegion === r.region}
               index={idx}
               reducedMotion={Boolean(reducedMotion)}
               onSelect={() =>

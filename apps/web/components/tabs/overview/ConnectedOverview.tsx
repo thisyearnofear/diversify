@@ -4,7 +4,7 @@
  * strip beneath it, never a second ring. Region tap opens InspectorSheet.
  */
 
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import type { TabId } from "@/constants/tabs";
@@ -76,13 +76,41 @@ export function ConnectedOverview({
   const { config: adaptiveConfig } = useAdaptiveContext();
   const { askAdvisor } = useAdvisor();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
+  const { navigateToCompare, navigateToNetting, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
+  const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
 
   const handleDialSelect = useCallback((region: string | null) => {
     setFocusedRegion(region);
+    setSealedRegion(null);
     if (region) {
       trackFunnelEvent("marquee_select", { region, source: "home_theater" });
     }
   }, []);
+
+  // Settlement seal: only when refreshed balances actually show the
+  // destination token — the receipt's word is never taken on faith.
+  // lastUpdated older than the settlement means the refresh hasn't
+  // landed yet: wait, don't claim a move balances don't show.
+  useEffect(() => {
+    if (!isActive || !lastSettlement) return;
+    if (
+      portfolio.lastUpdated == null ||
+      portfolio.lastUpdated <= lastSettlement.settledAt
+    ) {
+      return;
+    }
+    const landed = portfolio.allTokens?.find(
+      (t) =>
+        t.symbol.toLowerCase() === lastSettlement.toToken.toLowerCase() &&
+        t.value > 0,
+    );
+    if (landed) setSealedRegion(landed.region);
+    consumeSettlement();
+  }, [isActive, lastSettlement, portfolio, consumeSettlement]);
+
+  useEffect(() => {
+    if (!isActive) setSealedRegion(null);
+  }, [isActive]);
 
   const {
     moment,
@@ -96,7 +124,6 @@ export function ConnectedOverview({
     countryCode,
     frame,
   } = useCurrencyMoment();
-  const { navigateToCompare, navigateToNetting, navigateWithIntent } = useNavigation();
   const { config: profileConfig } = useProtectionProfile();
   const philosophyName = profileConfig.philosophy
     ? STRATEGIES.find((s) => s.id === profileConfig.philosophy)?.name ?? null
@@ -169,6 +196,7 @@ export function ConnectedOverview({
       onSelectRegion={handleDialSelect}
       isDemo={isDemo}
       isActive={isActive}
+      sealedRegion={sealedRegion}
     />
   ) : (
     // No card here — InstrumentShell owns the one surface; the fallback
@@ -310,7 +338,7 @@ export function ConnectedOverview({
   ) : home.isPaymentCycle ? (
     <button
       type="button"
-      onClick={navigateToNetting}
+      onClick={() => navigateToNetting()}
       className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
     >
       Match this payment against a counterparty →
@@ -320,7 +348,7 @@ export function ConnectedOverview({
   ) : philosophyName ? (
     <button
       type="button"
-      onClick={navigateToCompare}
+      onClick={() => navigateToCompare()}
       className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
       data-testid="home-compare-link"
     >

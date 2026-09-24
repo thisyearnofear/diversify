@@ -291,7 +291,10 @@ the one expressive object; holdings are a quiet coin row beneath it — one `Coi
 a second `AllocationRing`; tapping a coin dims the others and opens the region `InspectorSheet`. Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring. Shield's since-last-visit alignment
-lives in the ring hole (`sinceHint`), not the status tier.
+lives in the ring hole (`sinceHint`), not the status tier. When a swap
+settles, the destination's region coin wears a seal on the next Home
+visit — derived from refreshed balances (never the receipt's word), one
+emerald pulse plus a persistent ✓; reduced motion shows the ✓ alone.
 
 Exchange's resting object is the PAIR (`PairStage`) — two coins on a
 balance beam tilted by the corridor's drift. The ticket is its acting

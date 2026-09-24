@@ -47,7 +47,10 @@ the quoted output is labelled "at quote", never presented as the settled
 amount; a null quote shows no number at all. The goods line and the
 "Settled on {chain} · View transaction ↗" link carry the same provenance
 authority as the corridor line; a claimable reward gets one quiet
-emerald line. The casino modal is retired — "Swap Successful!", a
+emerald line. When the swap arrived as a Shield hand-off (the prefilled
+pair is the pair that settled), the receipt adds one quiet "Back to
+your {plan} plan →" that returns to the plan slice it came from — the
+loop closes where it opened. The casino modal is retired — "Swap Successful!", a
 fabricated "+5% Protection Score", and an "Annual Savings" estimate
 presented as fact all broke the honesty contract. A via-hub leg-1
 completion is the exception: it advances the ticket to leg 2 in place,

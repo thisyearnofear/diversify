@@ -124,18 +124,14 @@ vi.mock("@/hooks/use-agent-status", () => ({
 
 const mockNavigateToSwap = vi.fn();
 const mockNavigateToGuardian = vi.fn();
-const mockConsumeCompareRequest = vi.fn();
 const mockConsumeIntent = vi.fn();
 const navState: {
-  compareRequested: boolean;
-  pendingIntent: { tab: string; intent: { source: string; region?: string; asset?: string } } | null;
-} = { compareRequested: false, pendingIntent: null };
+  pendingIntent: { tab: string; intent: { source: string; region?: string; asset?: string; lens?: "compare" | "netting" } } | null;
+} = { pendingIntent: null };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     navigateToSwap: mockNavigateToSwap,
     navigateToGuardian: mockNavigateToGuardian,
-    compareRequested: navState.compareRequested,
-    consumeCompareRequest: mockConsumeCompareRequest,
     pendingIntent: navState.pendingIntent,
     consumeIntent: mockConsumeIntent,
   }),
@@ -460,7 +456,6 @@ describe("ProtectionTab — instrument shapes", () => {
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     demoState.isActive = false;
-    navState.compareRequested = false;
     navState.pendingIntent = null;
     mockRouterQuery = {};
     mockSessionInfo.current = null;
@@ -927,9 +922,12 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
-  it("opens compare mode when a Home deep link requested it", () => {
+  it("opens compare mode when a compare-lens intent arrives", () => {
     mockFinancialStrategy = "africapitalism";
-    navState.compareRequested = true;
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "compare" },
+    };
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
@@ -938,13 +936,16 @@ describe("ProtectionTab — instrument shapes", () => {
 
     expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
     expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
-    expect(mockConsumeCompareRequest).toHaveBeenCalled();
+    expect(mockConsumeIntent).toHaveBeenCalled();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
-  it("consumes a compare request without entering compare when there is no plan", () => {
+  it("consumes a compare-lens intent without entering compare when there is no plan", () => {
     mockFinancialStrategy = null;
-    navState.compareRequested = true;
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "compare" },
+    };
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
@@ -953,7 +954,7 @@ describe("ProtectionTab — instrument shapes", () => {
 
     expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
     expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
-    expect(mockConsumeCompareRequest).toHaveBeenCalled();
+    expect(mockConsumeIntent).toHaveBeenCalled();
   });
 
   it("header plan badge enters compare and exits it again", () => {
@@ -1424,7 +1425,6 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     demoState.isActive = false;
-    navState.compareRequested = false;
     navState.pendingIntent = null;
     mockRouterQuery = {};
     mockSessionInfo.current = null;
@@ -1495,6 +1495,18 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
 
     expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it("an asset intent from Exchange focuses that slice", () => {
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "exchange", asset: "KESm" },
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-selected", "KESm");
+    expect(screen.getByText("KESm position")).toBeInTheDocument();
     expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
   });
 });

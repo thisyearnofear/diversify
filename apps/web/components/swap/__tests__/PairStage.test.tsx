@@ -23,6 +23,11 @@ vi.mock('framer-motion', async (importOriginal) => {
   return { ...actual, useReducedMotion: () => reducedMotionState.on };
 });
 
+const mockNavigateWithIntent = vi.fn();
+vi.mock('@/context/app/NavigationContext', () => ({
+  useNavigation: () => ({ navigateWithIntent: mockNavigateWithIntent }),
+}));
+
 afterEach(() => cleanup());
 beforeEach(() => sessionStorage.clear());
 
@@ -355,4 +360,32 @@ describe('PairStage — settlement receipt', () => {
       .filter(Boolean);
     expect(words.length).toBeLessThanOrEqual(45);
   });
+
+  it('a shield-origin receipt offers the return line and leads back to the plan slice', () => {
+    renderReceipt({
+      origin: { source: 'shield', asset: 'NGNm', label: 'africapitalism' },
+    });
+    const back = screen.getByTestId('receipt-return');
+    expect(back).toHaveTextContent('Back to your africapitalism plan');
+    fireEvent.click(back);
+    expect(mockNavigateWithIntent).toHaveBeenCalledWith('protect', {
+      source: 'exchange',
+      asset: 'NGNm',
+    });
+  });
+
+  it('the return line falls back to the plain label when none was carried', () => {
+    renderReceipt({ origin: { source: 'shield', asset: 'NGNm' } });
+    expect(screen.getByTestId('receipt-return')).toHaveTextContent(
+      'Back to your plan',
+    );
+  });
+
+  it.each([undefined, { source: 'guardian' } as const])(
+    'no return line for a %s origin',
+    (origin) => {
+      renderReceipt(origin ? { origin } : {});
+      expect(screen.queryByTestId('receipt-return')).not.toBeInTheDocument();
+    },
+  );
 });
