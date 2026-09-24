@@ -17,6 +17,7 @@ let mockExperienceMode = "advanced";
 
 const mockSetShowPermissionModal = vi.fn();
 const mockRunPreview = vi.fn();
+const mockReviewPendingMove = vi.fn();
 
 let instrument: Record<string, unknown>;
 
@@ -64,6 +65,8 @@ function makeInstrument(over: Record<string, unknown> = {}) {
     portfolio: { isLoading: false },
     handleRequestPermission: vi.fn(),
     handleGrantAdvanced: vi.fn(),
+    pendingMove: null,
+    reviewPendingMove: mockReviewPendingMove,
     ...over,
   };
 }
@@ -176,6 +179,24 @@ describe("AgentTab — instrument composition", () => {
     expect(
       screen.queryByRole("button", { name: GUARDIAN_USER_COPY.authorized.cta }),
     ).not.toBeInTheDocument();
+  });
+
+  it("a pending proposal owns the one CTA — Review this move hands off to Exchange", () => {
+    instrument = makeInstrument({
+      guardianState: "monitoring",
+      pendingMove: {
+        toToken: "KESm",
+        amount: "25",
+        reason: "rotate to KESm",
+        origin: { source: "guardian" },
+      },
+    });
+    render(<AgentTab />);
+    // Exactly one CTA — the proposal's — the state's own CTA is displaced.
+    expect(screen.queryByRole("button", { name: "Preview next move" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Review this move →" }));
+    expect(mockReviewPendingMove).toHaveBeenCalledTimes(1);
+    expect(mockRunPreview).not.toHaveBeenCalled();
   });
 
   it("monitoring: Preview next move opens the journal and runs a dry run", () => {

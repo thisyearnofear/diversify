@@ -26,6 +26,8 @@ import { GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardia
 import type { GuardianProofEvent } from "../components/agent/GuardianJournalTab";
 import { useWDKAgent } from "./use-wdk-agent";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
+import { useNavigation } from "../context/app/NavigationContext";
+import { guardianProposalPrefill } from "../lib/guardian-proposal-prefill";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -451,6 +453,18 @@ export function useGuardianInstrument({
     }
   }, [triggerExecutionLoop]);
 
+  // The pending proposal is the one-tap surface: "Review this move →" hands
+  // the pair/amount to the Exchange ticket for the user's own signature.
+  const { navigateToSwap } = useNavigation();
+  const pendingMove = useMemo(() => {
+    const rec = sessionInfo?.latestRecommendation;
+    return rec ? guardianProposalPrefill(rec) : null;
+  }, [sessionInfo?.latestRecommendation]);
+  const reviewPendingMove = useCallback(() => {
+    if (!pendingMove) return;
+    navigateToSwap(pendingMove);
+  }, [pendingMove, navigateToSwap]);
+
   const copy = GUARDIAN_USER_COPY[guardianState];
 
   return {
@@ -506,6 +520,8 @@ export function useGuardianInstrument({
     handleGrantAdvanced,
     guardianProofEvents,
     anchorByTxHash,
+    pendingMove,
+    reviewPendingMove,
     // The Guardian's latest call — the one-liner (or raw reasoning) of the
     // most recent recommendation; the object's "Latest call" line.
     latestCall:

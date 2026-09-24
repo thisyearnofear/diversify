@@ -197,7 +197,7 @@ export function PairStage({
   claim?: { label: string; onClaim(): void } | null;
 }) {
   const reduced = useReducedMotion();
-  const { navigateWithIntent } = useNavigation();
+  const { navigateWithIntent, navigateToGuardian } = useNavigation();
   // The pair time machine: the corridor line's 1y/3y/5y control picks
   // the horizon and the beam re-weighs to that window's drift. A pair
   // change resets to the resting 5y view.
@@ -432,6 +432,19 @@ export function PairStage({
               {receipt.origin.label
                 ? `Back to your ${receipt.origin.label} plan →`
                 : "Back to your plan →"}
+            </button>
+          )}
+          {receipt.origin?.source === "guardian" && (
+            // Same loop back for a Guardian hand-off — the "Review this
+            // move" ticket settles and returns the user to the Guardian
+            // journal where the proposal lives.
+            <button
+              type="button"
+              data-testid="receipt-return"
+              onClick={() => navigateToGuardian()}
+              className="mt-1 w-full min-h-[32px] text-[11px] text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              Back to Guardian →
             </button>
           )}
           <button

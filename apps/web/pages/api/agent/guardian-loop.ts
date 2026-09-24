@@ -330,6 +330,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Additionally, require at least one prior manual execution (totalSpentUSD > 0)
       // to confirm the user has actively used the system before we auto-trade.
       if (perm.autonomyLevel !== 'GUARDIAN') {
+        // One-tap is the default: the loop never executes for these users.
+        // A queued proposal is still journaled as awaiting their review so
+        // the "Review this move →" surface can act on it.
+        if (queue.length > 0) {
+          trackDecline(
+            userAddress,
+            'advisory_pending_user_review',
+            `${queue.length} queued proposal(s) awaiting your approval — nothing moves until you sign`,
+            queue[0],
+          );
+          results.push({
+            userAddress,
+            action: 'skip',
+            status: 'advisory_pending_user_review',
+            reason: `${queue.length} queued proposal(s) awaiting your approval — nothing moves until you sign`,
+          });
+        }
         continue;
       }
       // Autonomy runs only on the ERC-7710 rail (MetaMask Advanced

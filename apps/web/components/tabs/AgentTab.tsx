@@ -183,6 +183,11 @@ function ConnectedAgent({
   // One CTA per state — the setup/fund action belongs to the object, the
   // monitoring state's CTA opens the journal with a live dry-run.
   const cta: { label: string | null; action: () => void } = (() => {
+    // A pending Guardian proposal owns the single CTA — "Review this move"
+    // hands it to the Exchange ticket for the user's own signature.
+    if (g.pendingMove) {
+      return { label: "Review this move →", action: g.reviewPendingMove };
+    }
     if (g.guardianState === "monitoring") {
       return {
         label: "Preview next move",
@@ -306,6 +311,7 @@ function ConnectedAgent({
               loopResult={g.loopResult}
               onNavigateToFund={onNavigateToFund}
               onPreview={() => void g.runPreview()}
+              onReviewMove={g.pendingMove ? g.reviewPendingMove : undefined}
             />
           ) : (
             <GuardianBoundsSheet

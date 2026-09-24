@@ -24,8 +24,12 @@ vi.mock('framer-motion', async (importOriginal) => {
 });
 
 const mockNavigateWithIntent = vi.fn();
+const mockNavigateToGuardian = vi.fn();
 vi.mock('@/context/app/NavigationContext', () => ({
-  useNavigation: () => ({ navigateWithIntent: mockNavigateWithIntent }),
+  useNavigation: () => ({
+    navigateWithIntent: mockNavigateWithIntent,
+    navigateToGuardian: mockNavigateToGuardian,
+  }),
 }));
 
 afterEach(() => cleanup());
@@ -381,11 +385,16 @@ describe('PairStage — settlement receipt', () => {
     );
   });
 
-  it.each([undefined, { source: 'guardian' } as const])(
-    'no return line for a %s origin',
-    (origin) => {
-      renderReceipt(origin ? { origin } : {});
-      expect(screen.queryByTestId('receipt-return')).not.toBeInTheDocument();
-    },
-  );
+  it('a guardian-origin receipt offers "Back to Guardian" and returns to the Guardian tab', () => {
+    renderReceipt({ origin: { source: 'guardian' } });
+    const back = screen.getByTestId('receipt-return');
+    expect(back).toHaveTextContent('Back to Guardian');
+    fireEvent.click(back);
+    expect(mockNavigateToGuardian).toHaveBeenCalledTimes(1);
+  });
+
+  it('no return line for an origin-less receipt', () => {
+    renderReceipt({});
+    expect(screen.queryByTestId('receipt-return')).not.toBeInTheDocument();
+  });
 });

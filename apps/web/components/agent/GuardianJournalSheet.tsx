@@ -25,6 +25,7 @@ export function GuardianJournalSheet({
   loopResult,
   onNavigateToFund,
   onPreview,
+  onReviewMove,
 }: {
   sessionInfo: GuardianSessionInfo | null;
   events: GuardianProofEvent[];
@@ -35,6 +36,9 @@ export function GuardianJournalSheet({
   loopResult: GuardianLoopResult | null;
   onNavigateToFund?: () => void;
   onPreview: () => void;
+  /** One-tap approval hand-off — present only when the suggestion is a
+   *  move the user can sign in their own wallet. */
+  onReviewMove?: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -69,6 +73,15 @@ export function GuardianJournalSheet({
                 Agreement {(sessionInfo.latestRecommendation.researchEvidence.bundle.agreementScore * 100).toFixed(0)}%
               </span>
             </div>
+          )}
+          {onReviewMove && (
+            <button
+              type="button"
+              onClick={onReviewMove}
+              className="mt-3 w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
+            >
+              Review this move →
+            </button>
           )}
         </div>
       )}

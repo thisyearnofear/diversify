@@ -169,6 +169,19 @@ export interface GuardianSessionInfo {
         targetToken?: string;
         oneLiner?: string;
         reasoning?: string;
+        /** USD notional of the proposed move — feeds the one-tap prefill. */
+        tradeAmountUSD?: number;
+        /** Typed action contract — open_swap_review carries the exact pair. */
+        contract?: {
+            action?: {
+                type: string;
+                fromToken?: string;
+                toToken?: string;
+                chainId?: number;
+                amount?: string;
+                reason?: string;
+            };
+        };
         expectedSavings?: number;
         confidence?: number;
         riskLevel?: string;
