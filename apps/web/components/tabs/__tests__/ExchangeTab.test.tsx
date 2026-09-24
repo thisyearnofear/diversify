@@ -48,9 +48,13 @@ vi.mock("@/context/app/PortfolioContext", () => ({
 }));
 
 const mockEnableDemo = vi.fn();
+const demoState = { isActive: false };
 
 vi.mock("@/context/app/DemoModeContext", () => ({
-  useDemoMode: () => ({ enableDemoMode: mockEnableDemo }),
+  useDemoMode: () => ({
+    demoMode: demoState,
+    enableDemoMode: mockEnableDemo,
+  }),
 }));
 
 vi.mock("@/components/wallet/WalletButton", () => ({
@@ -219,6 +223,8 @@ describe("ExchangeTab — instrument", () => {
     capitalHistoryArgs.length = 0;
     signalState.signals = { from: null, to: null };
     mockPairToggle = 0;
+    demoState.isActive = false;
+    sessionStorage.clear();
   });
 
   it("mounts the ticket as the object, with no extra inspect button", () => {
@@ -533,9 +539,18 @@ describe("ExchangeTab — instrument", () => {
 // offered through the status tier's transition slot on a fresh dated
 // macro beat, never a forward calendar.
 describe("ExchangeTab — decision window", () => {
+  beforeEach(() => {
+    (trackFunnelEvent as unknown as ReturnType<typeof vi.fn>).mockClear();
+    sessionStorage.clear();
+  });
+
   const freshSignals = () => {
     signalState.signals = {
-      from: { dateLabel: "Sep 18", text: "CBN held the benchmark rate" },
+      from: {
+        dateLabel: "Sep 18",
+        text: "CBN held the benchmark rate",
+        timestamp: 1758153600000,
+      },
       to: null,
     };
   };
@@ -608,7 +623,6 @@ describe("ExchangeTab — decision window", () => {
     armPair();
     fireEvent.click(screen.getByTestId("decision-window-prompt"));
     signalState.signals = { from: null, to: null };
-    mockPairToggle = 0;
     // Re-render path: the mocked hook reads signalState on each render —
     // a pair re-report forces ExchangeTab to re-read it.
     armPair();
@@ -622,6 +636,63 @@ describe("ExchangeTab — decision window", () => {
     armPair();
     expect(screen.getByTestId("decision-window-prompt")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /FX netting/ })).not.toBeInTheDocument();
+  });
+
+  it("the prompt dates the newer side's beat, whichever side it is", () => {
+    signalState.signals = {
+      from: { dateLabel: "Sep 18", text: "CBN held", timestamp: 1_758_153_600_000 },
+      to: { dateLabel: "Sep 22", text: "Fed kept rates", timestamp: 1_758_499_200_000 },
+    };
+    const { unmount } = render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(screen.getByTestId("decision-window-prompt")).toHaveTextContent(
+      "New on this pair · Sep 22 — open the decision window →",
+    );
+    unmount();
+    signalState.signals = {
+      from: { dateLabel: "Sep 22", text: "CBN held", timestamp: 1_758_499_200_000 },
+      to: { dateLabel: "Sep 18", text: "Fed kept rates", timestamp: 1_758_153_600_000 },
+    };
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(screen.getByTestId("decision-window-prompt")).toHaveTextContent(
+      "New on this pair · Sep 22 — open the decision window →",
+    );
+  });
+
+  it("fires lens_offered once per session — not again on remount", () => {
+    freshSignals();
+    const first = render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    const calls = () =>
+      (trackFunnelEvent as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([name]) => name === "lens_offered",
+      );
+    expect(calls()).toHaveLength(1);
+    expect(calls()[0]).toEqual([
+      "lens_offered",
+      { tab: "exchange", lens: "decision_window" },
+    ]);
+    // Remount in the same session: the prompt renders again but the
+    // event stays once-per-session.
+    first.unmount();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    expect(screen.getByTestId("decision-window-prompt")).toBeInTheDocument();
+    expect(calls()).toHaveLength(1);
+  });
+
+  it("never fires lens_offered or lens_open in demo mode", () => {
+    demoState.isActive = true;
+    freshSignals();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    armPair();
+    fireEvent.click(screen.getByTestId("decision-window-prompt"));
+    expect(
+      (trackFunnelEvent as ReturnType<typeof vi.fn>).mock.calls.filter(
+        ([name]) => name === "lens_offered" || name === "lens_open",
+      ),
+    ).toHaveLength(0);
   });
 
   it("the status tier never exceeds three slots", () => {

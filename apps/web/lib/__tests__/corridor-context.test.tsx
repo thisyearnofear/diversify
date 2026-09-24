@@ -310,7 +310,7 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
           toToken="USDC"
           alive
           signals={{
-            from: { dateLabel: 'Sep 18', text: 'CBN held the benchmark rate' },
+            from: { dateLabel: 'Sep 18', text: 'CBN held the benchmark rate', timestamp: 1_758_153_600_000 },
             to: null,
           }}
         />,
@@ -379,6 +379,16 @@ describe('corridorSignalsFor — fresh dated beats from the anchored ledger', ()
     );
     expect(out.from?.text).toBe('Newer CBK signal');
     expect(out.to).toBeNull(); // gold has no fiat-mapped signal source
+  });
+
+  it('carries the record timestamp in unix ms', () => {
+    const out = corridorSignalsFor(
+      [signal('KESm', 'CBK moved', 2)],
+      'KESm',
+      'USDC',
+      NOW,
+    );
+    expect(out.from?.timestamp).toBe(daysAgo(2) * 1000);
   });
 
   it('drops signals outside the freshness window and non-macro actions', () => {
@@ -586,7 +596,11 @@ describe('StoryPairStrip', () => {
 // entered from the status tier's prompt, left via ← Story. Fresh dated
 // macro beats + standing mechanism only — never a forecast.
 describe('CorridorLine — decision window', () => {
-  const sig = (dateLabel: string, text: string) => ({ dateLabel, text });
+  const sig = (dateLabel: string, text: string, timestamp = 1_700_000_000_000) => ({
+    dateLabel,
+    text,
+    timestamp,
+  });
   const SIGNALS = {
     from: sig('Sep 18', 'CBN held the benchmark rate at 27.5%'),
     to: sig('Sep 20', 'Fed kept rates unchanged'),

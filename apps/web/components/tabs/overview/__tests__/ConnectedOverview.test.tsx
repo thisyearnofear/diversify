@@ -829,6 +829,30 @@ describe("ConnectedOverview — concentration lens", () => {
     expect(sessionStorage.getItem("diversifi.home.lens")).toBe("concentration");
   });
 
+  it("fires lens_offered when the prompt renders — never in demo", () => {
+    renderOverview({ portfolio: concentrated() });
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("lens_offered", {
+      tab: "home",
+      lens: "concentration",
+    });
+    cleanup();
+    mockTrackFunnelEvent.mockClear();
+    sessionStorage.clear();
+
+    renderOverview({ portfolio: concentrated(), isDemo: true });
+    expect(screen.getByTestId("home-concentration-link")).toBeInTheDocument();
+    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
+      "lens_offered",
+      expect.anything(),
+    );
+    // …and a demo click doesn't fire lens_open either.
+    fireEvent.click(screen.getByTestId("home-concentration-link"));
+    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
+      "lens_open",
+      expect.anything(),
+    );
+  });
+
   it("the lens closes itself when the trigger drops", () => {
     const { rerender } = render(
       <ConnectedOverview

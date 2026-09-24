@@ -10,8 +10,6 @@ export const ASK_GUARDIAN_LABEL = 'Ask Guardian';
 
 export const GUARDIAN_TAB_LABEL = 'Guardian';
 
-export const GUARDIAN_CONTROL_TITLE = 'Guardian Control';
-
 export const GUARDIAN_DRAWER_SUBTITLE = 'Your protection companion';
 
 export const AUTO_SAVER_CAPABILITY = 'Auto-Saver';

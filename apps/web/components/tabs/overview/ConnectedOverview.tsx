@@ -16,6 +16,7 @@ import { useAdvisor } from "@/hooks/use-advisor";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { HomeRiskTheater } from "./HomeRiskTheater";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { useLensOffered } from "@/hooks/use-lens-offered";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
@@ -199,6 +200,17 @@ export function ConnectedOverview({
   });
 
   const hasHoldings = totalValue > 0;
+  // Offered = the prompt is actually the chosen transition (banner and
+  // payment-cycle outrank it) on a live, non-demo surface.
+  const concentrationOffered = Boolean(
+    !home.banner &&
+      !home.isPaymentCycle &&
+      concentration &&
+      lens === "moment" &&
+      isActive &&
+      !isDemo,
+  );
+  useLensOffered("home", "concentration", concentrationOffered);
   const selected = regionData.find((r) => r.region === focusedRegion) ?? null;
   const selectedPct =
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
@@ -389,7 +401,9 @@ export function ConnectedOverview({
       data-testid="home-concentration-link"
       onClick={() => {
         setLens("concentration");
-        trackFunnelEvent("lens_open", { tab: "home", lens: "concentration" });
+        if (!isDemo) {
+          trackFunnelEvent("lens_open", { tab: "home", lens: "concentration" });
+        }
       }}
       className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
     >

@@ -319,6 +319,8 @@ export interface CorridorSignal {
   dateLabel: string;
   /** The extracted one-liner, source URL stripped, length-capped. */
   text: string;
+  /** Unix ms — the anchored record's own timestamp. */
+  timestamp: number;
 }
 
 /** Minimal structural shape of a ledger record — decoupled from the
@@ -393,7 +395,11 @@ export function corridorSignalsFor(
     if (typeof rec.reasoning !== 'string') continue;
     const text = extractOneLiner(rec.reasoning);
     if (!text) continue;
-    const signal = { dateLabel: dateLabelFor(rec.timestamp), text };
+    const signal = {
+      dateLabel: dateLabelFor(rec.timestamp),
+      text,
+      timestamp: rec.timestamp * 1000,
+    };
     if (!out.from && code === fromCode) out.from = signal;
     else if (!out.to && code === toCode) out.to = signal;
     if (out.from && out.to) break;

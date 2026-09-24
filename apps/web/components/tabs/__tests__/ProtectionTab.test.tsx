@@ -1612,4 +1612,30 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
       lens: "floor",
     });
   });
+
+  it("fires lens_offered when the prompt renders — never in demo", () => {
+    sessionStorage.clear();
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("lens_offered", {
+      tab: "protect",
+      lens: "floor",
+    });
+    cleanup();
+    mockTrackFunnelEvent.mockClear();
+    sessionStorage.clear();
+
+    demoState.isActive = true;
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
+      "lens_offered",
+      expect.anything(),
+    );
+    if (screen.queryByTestId("shield-floor-prompt")) {
+      fireEvent.click(screen.getByTestId("shield-floor-prompt"));
+    }
+    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
+      "lens_open",
+      expect.anything(),
+    );
+  });
 });

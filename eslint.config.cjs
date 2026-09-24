@@ -69,6 +69,7 @@ module.exports = [
       'lib/openzeppelin-contracts/**',
       'lib/forge-std/**',
       'apps/web/.next/**',
+      'vendor/**',
     ]
   }
 ];

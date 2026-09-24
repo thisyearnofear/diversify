@@ -15,7 +15,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Dev**: `pnpm dev` (starts Next.js on port 3042).
 - **Build**: `pnpm build` (orchestrates turbo builds for shared packages before the application build).
 - **Test**: `pnpm test` (runs the Vitest suite).
-- **Lint**: `pnpm lint` (runs workspace-wide linting).
+- **Lint**: `pnpm lint` (runs workspace-wide linting; currently clean — 0 errors, warnings only).
 - **Format**: `pnpm format` (Prettier).
 - **Rive objects**: `pnpm rive:build` (recompiles all five `.rml` projects in `apps/web/rive/` → `apps/web/public/rive/`; requires the `rive` CLI). Dev-only exercise page: `/rive-test`.
 

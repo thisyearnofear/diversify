@@ -26,6 +26,7 @@ import {
 } from "../swap/CorridorContext";
 import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { useCorridorSignals } from "@/hooks/use-corridor-signals";
+import { useLensOffered } from "@/hooks/use-lens-offered";
 import { StatusTier } from "../shared/StatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { useCapitalHistory } from "@/hooks/use-capital-history";
@@ -286,7 +287,7 @@ export default function ExchangeTab({
   portfolio,
 }: ExchangeTabProps) {
   const { address } = useWalletContext();
-  const { enableDemoMode } = useDemoMode();
+  const { demoMode, enableDemoMode } = useDemoMode();
   const router = useRouter();
   const { setSwapPrefill, swapPrefill, pendingIntent, consumeIntent } = useNavigation();
   const { financialStrategy } = useStrategy();
@@ -300,8 +301,21 @@ export default function ExchangeTab({
   const [pair, setPair] = useState<{ from: string; to: string } | null>(null);
   const [decisionWindow, setDecisionWindow] = useState(false);
   const pairSignals = useCorridorSignals(pair?.from ?? "", pair?.to ?? "");
-  const freshSignal = pair ? pairSignals.from ?? pairSignals.to : null;
+  const freshSignal = pair
+    ? pairSignals.from && pairSignals.to
+      ? pairSignals.from.timestamp >= pairSignals.to.timestamp
+        ? pairSignals.from
+        : pairSignals.to
+      : pairSignals.from ?? pairSignals.to
+    : null;
   const hasFreshSignal = Boolean(freshSignal);
+  // Offered = the prompt actually occupies the transition slot (both
+  // connected and walletless surfaces), never in demo.
+  useLensOffered(
+    "exchange",
+    "decision_window",
+    hasFreshSignal && !decisionWindow && !demoMode.isActive,
+  );
   useEffect(() => {
     setDecisionWindow(false);
   }, [pair?.from, pair?.to]);
@@ -390,10 +404,12 @@ export default function ExchangeTab({
       data-testid="decision-window-prompt"
       onClick={() => {
         setDecisionWindow(true);
-        trackFunnelEvent("lens_open", {
-          tab: "exchange",
-          lens: "decision_window",
-        });
+        if (!demoMode.isActive) {
+          trackFunnelEvent("lens_open", {
+            tab: "exchange",
+            lens: "decision_window",
+          });
+        }
       }}
       className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
     >

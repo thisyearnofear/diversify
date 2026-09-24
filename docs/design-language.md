@@ -311,7 +311,10 @@ auto-commits. Home's transition order: banner > payment-cycle >
 concentration prompt > tip > compare. Shield's: sleeve back > compare
 row > floor prompt > status row. Exchange's: while a fresh beat offers
 the decision window the prompt owns the transition slot and netting
-drops to the rail; otherwise netting is the transition, no rail.
+drops to the rail; otherwise netting is the transition, no rail. Every
+lens logs `lens_offered` (once per session, only when the prompt is the
+rendered transition, never in demo) and `lens_open`, so open rates are
+honest.
 
 Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
 picker (and optionally Home amount-inspect) — not a peer tab until Advanced.
