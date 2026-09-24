@@ -95,6 +95,55 @@ export function buildGatewayChallengeBlock(params: {
 }
 
 /**
+ * The PAYMENT-REQUIRED header the SDK's GatewayClient parses on a 402:
+ * base64(JSON({x402Version, resource, accepts})) — see
+ * node_modules/@circle-fin/x402-batching/dist/client/index.js (pay/supports
+ * read `PAYMENT-REQUIRED`, base64-decoded) and dist/server/index.js (the
+ * middleware emits exactly this shape). Returns null off the Arc rail.
+ */
+export function buildPaymentRequiredHeader(params: {
+    env: 'testnet' | 'mainnet';
+    rail: string;
+    amountMicroUsdc: number;
+    payTo: string;
+    resourceUrl: string;
+    description?: string;
+}): string | null {
+    const requirements = buildGatewayRequirements(params);
+    if (!requirements) return null;
+    const paymentRequired = {
+        x402Version: 2,
+        resource: {
+            url: params.resourceUrl,
+            description: params.description ?? 'DiversiFi Data Hub intelligence',
+            mimeType: 'application/json',
+        },
+        accepts: [requirements],
+    };
+    return Buffer.from(JSON.stringify(paymentRequired)).toString('base64');
+}
+
+/**
+ * The PAYMENT-RESPONSE header the SDK reads on the paid 200: base64(JSON of a
+ * SettleResponse {success, transaction, network, payer?}) — dist/client
+ * `pay()` base64-decodes it for `settleResponse.transaction`.
+ */
+export function buildPaymentResponseHeader(params: {
+    env: 'testnet' | 'mainnet';
+    success: boolean;
+    transaction?: string;
+    payer?: string;
+}): string {
+    const config = CHAIN_CONFIGS[GATEWAY_CHAIN_BY_ENV[params.env]];
+    return Buffer.from(JSON.stringify({
+        success: params.success,
+        transaction: params.transaction ?? '',
+        network: `eip155:${config.chain.id}`,
+        ...(params.payer ? { payer: params.payer } : {}),
+    })).toString('base64');
+}
+
+/**
  * Decode the PAYMENT-SIGNATURE header (base64 JSON per x402 spec).
  */
 export function decodePaymentSignature(header: string): GatewayPaymentPayload {

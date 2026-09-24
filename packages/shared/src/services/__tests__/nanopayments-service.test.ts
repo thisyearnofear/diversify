@@ -11,6 +11,8 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import {
     buildGatewayRequirements,
     buildGatewayChallengeBlock,
+    buildPaymentRequiredHeader,
+    buildPaymentResponseHeader,
     decodePaymentSignature,
     gatewayProofId,
     settleGatewayPayment,
@@ -143,5 +145,84 @@ describe('settleGatewayPayment', () => {
         expect(result.amountUSDC).toBeCloseTo(0.004, 6);
         expect(result.payer).toBe('0xBuyer');
         expect(result.transaction).toBe('0xsettled');
+    });
+});
+
+/**
+ * Wire-compat test: run our 402/200 headers through the SDK's own
+ * GatewayClient (dist/client/index.js pay()/supports() read the
+ * PAYMENT-REQUIRED / PAYMENT-RESPONSE headers, base64 JSON). Only fetch is
+ * mocked — signing is local and the facilitator is never contacted.
+ */
+describe('SDK wire compatibility (PAYMENT-REQUIRED / PAYMENT-RESPONSE)', () => {
+    const BUYER_KEY = `0x${'11'.repeat(32)}` as const;
+    const SETTLE_TX = `0x${'ab'.repeat(32)}`;
+    let originalFetch: typeof globalThis.fetch;
+
+    beforeEach(() => { originalFetch = globalThis.fetch; });
+    afterEach(() => { globalThis.fetch = originalFetch; });
+
+    function challengeResponse(): Response {
+        const header = buildPaymentRequiredHeader({
+            env: 'mainnet',
+            rail: 'ARC',
+            amountMicroUsdc: 1000,
+            payTo: PAY_TO,
+            resourceUrl: 'https://api.example.com/x402-gateway?source=fx_protection',
+        })!;
+        return new Response('{}', {
+            status: 402,
+            headers: { 'PAYMENT-REQUIRED': header, 'Content-Type': 'application/json' },
+        });
+    }
+
+    it('GatewayClient.supports() accepts our 402 challenge', async () => {
+        const { GatewayClient } = await import('@circle-fin/x402-batching/client');
+        globalThis.fetch = async () => challengeResponse();
+        const client = new GatewayClient({ chain: 'arc', privateKey: BUYER_KEY });
+        const result = await client.supports('https://api.example.com/x402-gateway');
+        expect(result.supported).toBe(true);
+        expect(result.requirements).toMatchObject({
+            network: 'eip155:5042',
+            amount: '1000',
+            payTo: PAY_TO,
+            extra: { name: 'GatewayWalletBatched', version: '1', verifyingContract: MAINNET_GATEWAY_WALLET },
+        });
+    });
+
+    it('GatewayClient.pay() completes against our header contract and its signature parses server-side', async () => {
+        const { GatewayClient } = await import('@circle-fin/x402-batching/client');
+        const { isBatchPayment } = await import('@circle-fin/x402-batching/server');
+        let capturedSignature: string | undefined;
+        let calls = 0;
+        globalThis.fetch = async (_url: unknown, init?: RequestInit) => {
+            calls++;
+            if (calls === 1) return challengeResponse();
+            capturedSignature = new Headers(init?.headers).get('Payment-Signature') ?? undefined;
+            return new Response(JSON.stringify({ data: { ok: true } }), {
+                status: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'PAYMENT-RESPONSE': buildPaymentResponseHeader({
+                        env: 'mainnet', success: true, transaction: SETTLE_TX, payer: '0xBuyer',
+                    }),
+                },
+            });
+        };
+        const client = new GatewayClient({ chain: 'arc', privateKey: BUYER_KEY });
+        const result = await client.pay('https://api.example.com/x402-gateway?source=fx_protection');
+
+        expect(calls).toBe(2);
+        expect(result.status).toBe(200);
+        expect(result.transaction).toBe(SETTLE_TX);      // decoded from PAYMENT-RESPONSE
+        expect(result.amount).toBe(1000n);               // from requirements.amount
+        expect(result.formattedAmount).toBe('0.001');
+
+        // The Payment-Signature the SDK sent must round-trip through our server decode path.
+        const payload = decodePaymentSignature(capturedSignature!);
+        expect(payload.x402Version).toBe(2);
+        const accepted = (payload as unknown as { accepted: Record<string, unknown> }).accepted;
+        expect(isBatchPayment(accepted as never)).toBe(true);
+        expect(gatewayProofId(payload)).toMatch(/^gateway:0x[0-9a-f]+:/);
     });
 });

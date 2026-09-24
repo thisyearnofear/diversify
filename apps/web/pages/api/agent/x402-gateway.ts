@@ -47,6 +47,8 @@ import { ProcessedPaymentProof } from '../../../models/ProcessedPaymentProof';
 import {
     buildGatewayRequirements,
     buildGatewayChallengeBlock,
+    buildPaymentRequiredHeader,
+    buildPaymentResponseHeader,
     decodePaymentSignature,
     gatewayProofId,
     settleGatewayPayment,
@@ -523,6 +525,9 @@ export default async function handler(
     // credit the authorized amount exactly once — same credit-only-after-settle
     // and replay guarantees as the mandate path. Arc rail only.
     let gatewaySettled = false;
+    // The SDK's GatewayClient.pay() reads the facilitator's SettleResponse from
+    // the PAYMENT-RESPONSE header on the 200 (base64 JSON) for its `transaction`.
+    let gatewaySettleResponse: { transaction?: string; payer?: string } | undefined;
     if (paymentSignature) {
         try {
             const paymentPayload = decodePaymentSignature(paymentSignature);
@@ -547,12 +552,15 @@ export default async function handler(
                 await markProofProcessed(proofId, settled.amountUSDC);
                 settlementPayer = settled.payer;
                 settlementTxHash = settled.transaction;
+                gatewaySettleResponse = { transaction: settled.transaction, payer: settled.payer };
                 gatewaySettled = true;
                 console.log(`[Data Hub] Gateway batched payment settled: $${settled.amountUSDC} → ${settled.transaction}`);
                 x402Analytics.recordPayment(requestedSourceLabel, settled.amountUSDC, Date.now() - start, 'GATEWAY_BATCHED');
             }
         } catch (error) {
             const msg = error instanceof Error ? error.message : String(error);
+            // Re-advertise the challenge on a failed payment so SDK clients can retry.
+            setPaymentRequiredHeader(req, res, Math.max(toMicroUSDC(MIN_PAYMENT_AMOUNT_USDC), totalCostMicros));
             return res.status(402).json({ error: `Gateway payment failed: ${msg}` });
         }
     }
@@ -613,7 +621,7 @@ export default async function handler(
     }
 
     if (totalCostMicros > 0 && !user.enterprise && !UserManager.deductCredit(user, totalCostMicros)) {
-        return sendPaymentRequired(res, user, sourcePlans, totalCost, bundleRequested);
+        return sendPaymentRequired(req, res, user, sourcePlans, totalCost, bundleRequested);
     }
 
     // fxInput was parsed + validated before charging (above).
@@ -748,6 +756,18 @@ export default async function handler(
             : {}),
     };
 
+    // PAYMENT-RESPONSE header for SDK buyers (GatewayClient.pay reads it for
+    // the facilitator's SettleResponse.transaction). Only on a fresh settle —
+    // a replayed proof has no new settlement to report.
+    if (gatewaySettleResponse) {
+        res.setHeader('PAYMENT-RESPONSE', buildPaymentResponseHeader({
+            env: SETTLEMENT_ENV,
+            success: true,
+            transaction: gatewaySettleResponse.transaction,
+            payer: gatewaySettleResponse.payer,
+        }));
+    }
+
     if (bundleRequested) {
         return res.status(200).json({
             bundle,
@@ -846,6 +866,36 @@ function gatewayChallengeBlock(amountMicroUsdc: number): Record<string, unknown>
     });
 }
 
+/**
+ * The absolute URL the SDK's GatewayClient echoes back inside the signed
+ * payment payload (`resource.url`) — informational only.
+ */
+function requestUrl(req: NextApiRequest): string {
+    const host = req.headers.host;
+    const proto = (req.headers['x-forwarded-proto'] as string) || 'https';
+    return host ? `${proto}://${host}${req.url}` : (req.url ?? '');
+}
+
+/**
+ * The Circle Gateway SDK's GatewayClient.pay() reads the challenge from the
+ * `PAYMENT-REQUIRED` header (base64 JSON), not the JSON body — set it on every
+ * 402 while the Arc rail is active. No-op off the Arc rail.
+ */
+function setPaymentRequiredHeader(
+    req: NextApiRequest,
+    res: NextApiResponse,
+    amountMicroUsdc: number,
+) {
+    const header = buildPaymentRequiredHeader({
+        env: SETTLEMENT_ENV,
+        rail: DEFAULT_SETTLEMENT_NETWORK,
+        amountMicroUsdc,
+        payTo: DATA_HUB_WALLET,
+        resourceUrl: requestUrl(req),
+    });
+    if (header) res.setHeader('PAYMENT-REQUIRED', header);
+}
+
 function sendResearchQuote(
     res: NextApiResponse,
     user: UserState,
@@ -886,6 +936,7 @@ function sendResearchQuote(
 }
 
 function sendPaymentRequired(
+    req: NextApiRequest,
     res: NextApiResponse,
     user: UserState,
     sourcePlans: SourcePlan[],
@@ -897,6 +948,7 @@ function sendPaymentRequired(
     UserManager.issueNonce(user, nonce, expiresAt);
     const paymentAmount = Math.max(MIN_PAYMENT_AMOUNT_USDC, Number(totalCost.toFixed(3)));
     const settlementConfig = getSettlementConfig();
+    setPaymentRequiredHeader(req, res, toMicroUSDC(paymentAmount));
 
     return res.status(402).json({
         error: bundleRequested ? 'Protection Review Bundle Required' : 'Protection Review Required',
