@@ -99,6 +99,20 @@ describe('SwapStatus error classes', () => {
     expect(onViaHub).toHaveBeenCalled();
   });
 
+  it('market_closed explains the venue is shut — no recovery offer', () => {
+    render(
+      <SwapStatus
+        {...BASE}
+        status="error"
+        errorClass="market_closed"
+        error="Mento FX market is closed — quotes resume when FX markets reopen."
+      />,
+    );
+    expect(screen.getByText('FX market closed')).toBeInTheDocument();
+    expect(screen.getByText('Quotes resume when FX markets reopen — try again later.')).toBeInTheDocument();
+    expect(screen.queryByTestId('via-hub-action')).not.toBeInTheDocument();
+  });
+
   it('session class tells the user to reconnect', () => {
     render(
       <SwapStatus

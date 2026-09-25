@@ -53,6 +53,10 @@ export function useExpectedAmountOut({
   // the ticket's CTA and via-hub recovery read this instead of matching
   // on message text.
   const [noRoute, setNoRoute] = useState(false);
+  // True when the venue itself is shut (FX market closed) — an expected,
+  // temporary state: CTA copy says "try again when it reopens", and the
+  // via-hub recovery does NOT fire (a different route can't open the venue).
+  const [marketClosed, setMarketClosed] = useState(false);
   const [chainId, setChainId] = useState<number | null>(null);
   const [debouncedAmount, setDebouncedAmount] = useState(amount);
   const [quotedAt, setQuotedAt] = useState<number | null>(null);
@@ -108,12 +112,14 @@ export function useExpectedAmountOut({
         setExpectedOutput(null);
         setQuoteProvider(null);
         setNoRoute(false);
+        setMarketClosed(false);
         return;
       }
 
       setIsLoading(true);
       setError(null);
       setNoRoute(false);
+      setMarketClosed(false);
 
       try {
         const result = await getExpectedAmountOut(fromToken, toToken, debouncedAmount);
@@ -128,6 +134,7 @@ export function useExpectedAmountOut({
         // fabricated number.
         const errorClass = (err as { errorClass?: SwapErrorClass })?.errorClass;
         setNoRoute(errorClass === 'no-route');
+        setMarketClosed(errorClass === 'market_closed');
         setError(err instanceof Error ? err.message : 'Failed to get expected output');
         setExpectedOutput(null);
         setQuoteProvider(null);
@@ -186,6 +193,7 @@ export function useExpectedAmountOut({
     expectedOutput,
     provider: quoteProvider,
     noRoute,
+    marketClosed,
     isLoading,
     error,
     quotedAt,

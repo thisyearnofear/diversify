@@ -133,7 +133,13 @@ vi.mock('../InflationInsightRow', () => ({ default: () => null }));
 vi.mock('../ChainSelector', () => ({ default: () => null }));
 vi.mock('../SocialContactPicker', () => ({ SocialContactPicker: () => null }));
 vi.mock('../SwapActionButton', () => ({
-  default: () => React.createElement('button', { type: 'button' }, 'swap'),
+  // Renders its disabled reason so CTA gating copy is testable.
+  default: (props: { disabled?: boolean; disabledReason?: string | null }) =>
+    React.createElement(
+      'button',
+      { type: 'button', disabled: props.disabled },
+      props.disabledReason ?? 'swap',
+    ),
 }));
 vi.mock('../../wallet/WalletButton', () => ({
   default: () => React.createElement('button', { type: 'button' }, 'connect'),
@@ -491,5 +497,19 @@ describe('SwapInterface — reports the live pair upward', () => {
       (ctrl.setFromToken as (v: string) => void)('NGNm');
     });
     expect(onPairChange).toHaveBeenCalledWith('NGNm', 'USDC');
+  });
+});
+
+describe('SwapInterface — market-closed venue', () => {
+  it('disables the CTA with a reopen reason when the quote reports FX market closed', () => {
+    resetCtrl({
+      amount: '10',
+      quoteMarketClosed: true,
+      tokenBalances: { KESm: { formattedBalance: '100' } },
+    });
+    renderSwap({ address: '0xabc' });
+    expect(
+      screen.getByText('FX market closed — try again when it reopens'),
+    ).toBeInTheDocument();
   });
 });

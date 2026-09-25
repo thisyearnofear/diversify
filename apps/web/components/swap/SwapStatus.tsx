@@ -34,6 +34,11 @@ function errorCopy(
                 title: "No route for this amount",
                 body: "Try a larger amount, or route through USDm below.",
             };
+        case "market_closed":
+            return {
+                title: "FX market closed",
+                body: "Quotes resume when FX markets reopen — try again later.",
+            };
         case "session":
             return {
                 title: "Wallet session expired",

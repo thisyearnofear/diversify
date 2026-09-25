@@ -42,6 +42,13 @@ export function evaluateHealth({ status, agentStatus, routesOk, routesOutput }) 
     }
   }
 
+  // MARKET-CLOSED lines are informational — Mento FX markets legitimately
+  // close on weekends/holidays. They ride along in the issue body only when
+  // the run failed for another reason; alone they never fail the check.
+  for (const line of (routesOutput ?? '').split('\n')) {
+    if (line.startsWith('MARKET-CLOSED')) warnings.push(`warn: ${line.trim()}`);
+  }
+
   if (!routesOk) {
     problems.push(`check-swap-routes failed — tail:\n${(routesOutput ?? '').trim().split('\n').slice(-15).join('\n')}`);
   }

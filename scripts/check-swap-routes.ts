@@ -11,14 +11,19 @@
  * Run: pnpm check-swap-routes
  */
 
+import { ethers } from 'ethers';
 import { SwapOrchestratorService } from '../packages/shared/src/services/swap/swap-orchestrator.service';
-import { NETWORKS } from '../packages/shared/src/config';
+import { NETWORKS, getTokenAddresses, TOKEN_METADATA } from '../packages/shared/src/config';
+import {
+    isMentoMarketClosedError,
+    quoteMento,
+} from '../packages/shared/src/services/swap/mento-sdk.service';
 
 const CELO = NETWORKS.CELO_MAINNET.chainId; // 42220
 const ARBITRUM = NETWORKS.ARBITRUM_ONE.chainId; // 42161
 const USER = '0x000000000000000000000000000000000000dEaD';
 
-interface PairCheck {
+export interface PairCheck {
     fromToken: string;
     toToken: string;
     amount: string;
@@ -82,6 +87,45 @@ const ARB_PAIRS: PairCheck[] = [
     },
 ];
 
+/**
+ * FX markets close outside trading hours (weekends/holidays): Mento FPMM
+ * pools revert "FX market is currently closed" and oracle-priced regional
+ * pools revert "no valid median". A Mento-expected pair failing this way —
+ * or being rescued by a fallback provider — is expected behaviour, not a
+ * regression, so it prints MARKET-CLOSED and never counts as unexpected.
+ * Exported for tests.
+ */
+export function isExpectedMarketClosure(
+    pair: PairCheck,
+    errorClass?: string,
+    message?: string,
+): boolean {
+    if (pair.expectProvider !== 'Mento') return false;
+    return (
+        errorClass === 'market_closed' ||
+        isMentoMarketClosedError(message)
+    );
+}
+
+/** Live probe: does Mento itself fail market-closed for this pair? Used
+ *  when a fallback provider answered in Mento's place — the WRONG PROVIDER
+ *  flag should only fire when Mento is actually broken, not when the FX
+ *  market is simply shut. */
+async function mentoMarketClosedNow(chainId: number, pair: PairCheck): Promise<boolean> {
+    try {
+        const tokens = getTokenAddresses(chainId) as Record<string, string>;
+        const inAddr = tokens[pair.fromToken];
+        const outAddr = tokens[pair.toToken];
+        if (!inAddr || !outAddr) return false;
+        const decimals = TOKEN_METADATA[pair.fromToken]?.decimals ?? 18;
+        const amountIn = ethers.utils.parseUnits(pair.amount, decimals).toBigInt();
+        await quoteMento(chainId, inAddr, outAddr, amountIn);
+        return false;
+    } catch (error: any) {
+        return isMentoMarketClosedError(error?.message ?? String(error));
+    }
+}
+
 async function checkChain(chainId: number, name: string, pairs: PairCheck[]): Promise<number> {
     let failures = 0;
     console.log(`\n== ${name} (${chainId}) ==`);
@@ -113,8 +157,18 @@ async function checkChain(chainId: number, name: string, pairs: PairCheck[]): Pr
                 );
             }
             if (pair.expectRoute && pair.expectProvider && provider !== pair.expectProvider) {
-                status = 'WRONG PROVIDER';
-                failures += 1;
+                // A fallback answering for a Mento pair is only a flag when
+                // Mento is genuinely broken — if the FX market is closed the
+                // fallback routing through is the correct behaviour.
+                if (
+                    pair.expectProvider === 'Mento' &&
+                    (await mentoMarketClosedNow(chainId, pair))
+                ) {
+                    status = 'MARKET-CLOSED';
+                } else {
+                    status = 'WRONG PROVIDER';
+                    failures += 1;
+                }
             }
             if (pair.expectRoute && pair.expectOutputRange) {
                 const out = Number.parseFloat(estimate.expectedOutput ?? 'NaN');
@@ -130,7 +184,12 @@ async function checkChain(chainId: number, name: string, pairs: PairCheck[]): Pr
         } catch (error: any) {
             const message: string = error?.message ?? String(error);
             const errorClass = (error as { errorClass?: string }).errorClass;
-            if (!pair.expectRoute) {
+            if (
+                isExpectedMarketClosure(pair, errorClass, message) ||
+                (pair.expectProvider === 'Mento' && (await mentoMarketClosedNow(chainId, pair)))
+            ) {
+                console.log(`MARKET-CLOSED      ${label.padEnd(26)} ${message}`);
+            } else if (!pair.expectRoute) {
                 const matchNote =
                     pair.expectErrorIncludes &&
                     !message.toLowerCase().includes(pair.expectErrorIncludes)
@@ -161,7 +220,10 @@ async function main() {
     process.exit(0);
 }
 
-main().catch((error) => {
-    console.error('check-swap-routes crashed:', error);
-    process.exit(1);
-});
+// Tests import the predicates above — never run the live check under vitest.
+if (!process.env.VITEST) {
+    main().catch((error) => {
+        console.error('check-swap-routes crashed:', error);
+        process.exit(1);
+    });
+}

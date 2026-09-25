@@ -33,6 +33,7 @@ export type SwapErrorClass =
     | 'cancelled'
     | 'onchain-failed'
     | 'no-route'
+    | 'market_closed'
     | 'session'
     | 'no-gas'
     | 'error';

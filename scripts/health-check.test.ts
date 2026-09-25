@@ -60,6 +60,19 @@ describe('health-check evaluateHealth', () => {
     expect(problems.join('\n')).not.toContain('line 10'); // truncated to tail
   });
 
+  it('MARKET-CLOSED route lines are warnings, never problems', () => {
+    const routesOutput = [
+      'OK               CELO -> USDm (10)      via Uniswap V3 -> 9.9 USDm',
+      'MARKET-CLOSED    USDm -> KESm (10)     Mento FX market is closed — quotes resume when FX markets reopen.',
+      'MARKET-CLOSED    CHFm -> USDm (10)     via LiFi -> 9.8 USDm',
+    ].join('\n');
+    const { problems, warnings } = evaluateHealth({
+      status: okStatus, agentStatus: okAgent, routesOk: true, routesOutput,
+    });
+    expect(problems).toEqual([]);
+    expect(warnings.filter((w: string) => w.includes('MARKET-CLOSED')).length).toBe(2);
+  });
+
   it('warns (not fails) when a guardian run block is absent', () => {
     const { problems, warnings } = evaluateHealth({ status: okStatus, agentStatus: { guardian: {} }, routesOk: true, routesOutput: '' });
     expect(problems).toEqual([]);

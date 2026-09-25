@@ -20,6 +20,7 @@ function makeStrategy(
     opts: {
         supports?: boolean | ((p: SwapParams) => boolean);
         execute?: (p: SwapParams, callbacks?: SwapCallbacks) => Promise<SwapResult>;
+        estimate?: (p: SwapParams) => Promise<never>;
     } = {},
 ) {
     return class {
@@ -40,7 +41,8 @@ function makeStrategy(
                 }
             );
         }
-        async getEstimate() {
+        async getEstimate(p: SwapParams) {
+            if (opts.estimate) return opts.estimate(p);
             throw new Error(`${name} estimate unavailable`);
         }
         async validate() {
@@ -72,13 +74,32 @@ vi.mock('../strategies/oneinch-swap.strategy', () => ({
     OneInchSwapStrategy: makeStrategy('OneInchSwapStrategy', {
         // 1inch has no Celo coverage — it can never rescue a CELO pair.
         supports: (p) => p.fromToken !== 'CELO' && p.toToken !== 'CELO',
-        execute: async () => ({ success: true, txHash: '0xoneinch' }),
+        // Only rescues USDm pairs — the market-closed test (EURm) needs a
+        // venue where every strategy fails.
+        execute: async (p) =>
+            p.fromToken === 'USDm'
+                ? { success: true, txHash: '0xoneinch' }
+                : { success: false, error: 'No route found for this pair' },
+        // A generic no-route estimate — the market-closed tests prove the
+        // closed venue outranks this weaker signal.
+        estimate: async () => {
+            throw new Error('No route found for this pair');
+        },
     }),
 }));
 
-// Everything else declines every swap.
+// Mento claims the EURm pair — its failures are the market-closed signal.
 vi.mock('../strategies/mento-swap.strategy', () => ({
-    MentoSwapStrategy: makeStrategy('MentoSwapStrategy'),
+    MentoSwapStrategy: makeStrategy('MentoSwapStrategy', {
+        supports: (p) => p.fromToken === 'EURm',
+        execute: async () => ({
+            success: false,
+            error: 'Mento FX market is closed — quotes resume when FX markets reopen.',
+        }),
+        estimate: async () => {
+            throw new Error('Mento FX market is closed — quotes resume when FX markets reopen.');
+        },
+    }),
 }));
 vi.mock('../strategies/emerging-markets.strategy', () => ({
     EmergingMarketsStrategy: makeStrategy('EmergingMarketsStrategy'),
@@ -165,6 +186,51 @@ describe('SwapOrchestratorService.executeSwap fallback safety', () => {
         // no-route keeps the strategy-specific reason rather than the
         // generic "contact support" fallback.
         expect(result.error).toContain('Not enough liquidity');
+    });
+
+    it('surfaces market_closed verbatim when every strategy fails and Mento reported a closed venue', async () => {
+        executeCalls.length = 0;
+
+        const result = await SwapOrchestratorService.executeSwap({
+            ...params,
+            fromToken: 'EURm',
+            toToken: 'USDm',
+        });
+
+        expect(result.success).toBe(false);
+        // Mento reported market-closed; the other strategies' generic
+        // no-route errors must not bury it.
+        expect(result.errorClass).toBe('market_closed');
+        expect(result.error).toContain('FX market is closed');
+    });
+});
+
+describe('SwapOrchestratorService.getEstimate market-closed precedence', () => {
+    it('a market_closed failure outranks generic no-route from other strategies', async () => {
+        // EURm -> USDm: Mento estimate throws market-closed, OneInch throws
+        // a generic no-route — the closed venue is the honest answer.
+        await expect(
+            SwapOrchestratorService.getEstimate({
+                ...params,
+                fromToken: 'EURm',
+                toToken: 'USDm',
+            })
+        ).rejects.toMatchObject({
+            message: expect.stringContaining('FX market is closed'),
+            errorClass: 'market_closed',
+        });
+    });
+
+    it('without a market-closed signal the generic classification still applies', async () => {
+        // USDT pair: Mento doesn't support it, every estimate fails
+        // generically — no market-closed anywhere to surface.
+        await expect(
+            SwapOrchestratorService.getEstimate({
+                ...params,
+                fromToken: 'USDT',
+                toToken: 'KESm',
+            })
+        ).rejects.toMatchObject({ errorClass: 'error' });
     });
 });
 

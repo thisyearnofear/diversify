@@ -178,6 +178,7 @@ const SwapInterface = forwardRef<
     mounted,
     routeProvider,
     quoteNoRoute,
+    quoteMarketClosed,
     signatureCount,
     viaHub,
     applyViaHub,
@@ -388,6 +389,9 @@ const SwapInterface = forwardRef<
     // this size (e.g. price-impact guard) — say that, not "pair" — and
     // don't let the click produce a doomed execution.
     if (quoteNoRoute) return "No route at this size";
+    // The venue is shut (weekend/holiday) — expected, temporary. A via-hub
+    // offer can't help: every Mento route is closed, not just this pair.
+    if (quoteMarketClosed) return "FX market closed — try again when it reopens";
     return null;
   };
 

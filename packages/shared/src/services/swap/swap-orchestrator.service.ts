@@ -82,6 +82,10 @@ export class SwapOrchestratorService {
 
         // Try strategies in order with performance tracking
         let lastError: string | undefined;
+        // If every strategy fails but any failed because the FX market is
+        // closed, that reason outranks generic no-route/pool-absent errors —
+        // the pair is fine, the venue is shut.
+        let marketClosedError: string | undefined;
 
         for (const strategy of rankedStrategies) {
             const strategyName = strategy.getName();
@@ -179,12 +183,18 @@ export class SwapOrchestratorService {
                 }
 
                 lastError = result.error;
+                if (this.classifyError(result.error) === 'market_closed' && !marketClosedError) {
+                    marketClosedError = result.error;
+                }
 
             } catch (error: any) {
                 const duration = (Date.now() - startTime) / 1000;
                 this.updatePerformance(strategyName, false, duration);
 
                 lastError = error.message;
+                if (this.classifyError(error.message) === 'market_closed' && !marketClosedError) {
+                    marketClosedError = error.message;
+                }
                 console.log(`[SwapOrchestrator] ${strategyName} failed:`, error.message);
 
                 if (txSubmitted) {
@@ -204,13 +214,18 @@ export class SwapOrchestratorService {
         }
 
         // All strategies failed
-        const errorClass = this.classifyError(lastError);
+        const errorClass: SwapResult['errorClass'] = marketClosedError
+            ? 'market_closed'
+            : this.classifyError(lastError);
         return {
             success: false,
             // A classified no-route keeps the specific reason (which pool /
             // which pair) — "contact support" would contradict the ticket's
-            // "try a larger amount" copy.
-            error: errorClass === 'no-route' && lastError
+            // "try a larger amount" copy. Market-closed surfaces verbatim for
+            // the same reason.
+            error: errorClass === 'market_closed' && marketClosedError
+                ? marketClosedError
+                : errorClass === 'no-route' && lastError
                 ? lastError
                 : this.getUserFriendlyError(lastError || 'All swap methods are currently unavailable'),
             errorClass,
@@ -235,6 +250,9 @@ export class SwapOrchestratorService {
         // from a fallback provider shouldn't bury the top-ranked strategy's
         // specific one (e.g. "Not enough liquidity … at this size").
         let specificNoRouteError: string | undefined;
+        // Any strategy reporting FX-market closure outranks generic
+        // no-route/pool-absent errors — the pair is fine, the venue is shut.
+        let marketClosedError: string | undefined;
         for (const strategy of rankedStrategies) {
             try {
                 const estimate = await strategy.getEstimate(params);
@@ -242,6 +260,13 @@ export class SwapOrchestratorService {
                 return estimate;
             } catch (error: any) {
                 lastError = error.message;
+                if (
+                    lastError &&
+                    this.classifyError(lastError) === 'market_closed' &&
+                    !marketClosedError
+                ) {
+                    marketClosedError = lastError;
+                }
                 if (
                     lastError &&
                     this.classifyError(lastError) === 'no-route' &&
@@ -256,12 +281,15 @@ export class SwapOrchestratorService {
 
         // Keep the specific reason when it's a route-absence — the ticket
         // renders "no route at this size" and the via-hub recovery off it;
-        // anything else stays generic. errorClass rides on the error so
-        // callers can distinguish without string matching.
-        const message = specificNoRouteError ?? lastError;
-        const errorClass = this.classifyError(message);
+        // market-closed surfaces verbatim the same way; anything else stays
+        // generic. errorClass rides on the error so callers can distinguish
+        // without string matching.
+        const message = marketClosedError ?? specificNoRouteError ?? lastError;
+        const errorClass = marketClosedError
+            ? 'market_closed' as const
+            : this.classifyError(message);
         const err = new Error(
-            errorClass === 'no-route' && message
+            (errorClass === 'no-route' || errorClass === 'market_closed') && message
                 ? message
                 : 'Unable to get swap estimate. Please try again later.'
         );
@@ -382,6 +410,14 @@ export class SwapOrchestratorService {
     private static classifyError(message?: string): SwapResult['errorClass'] {
         if (!message) return 'error';
         const m = message.toLowerCase();
+        // FX market closure is expected (weekends/holidays) — more specific
+        // than no-route: nothing is wrong with the pair, the venue is shut.
+        if (
+            (m.includes('fx market') && m.includes('closed')) ||
+            m.includes('no valid median')
+        ) {
+            return 'market_closed';
+        }
         if (
             m.includes('no swap routes') || m.includes('no exchange found') ||
             m.includes('no available quotes') || m.includes('no route') ||

@@ -83,6 +83,19 @@ describe("useExpectedAmountOut — Celo honest quotes", () => {
     expect(result.current.error).toContain("Not enough liquidity");
   });
 
+  it("a market-closed failure yields null output + marketClosed, never noRoute", async () => {
+    const err = new Error("Mento FX market is closed — quotes resume when FX markets reopen.");
+    (err as { errorClass?: string }).errorClass = "market_closed";
+    mocks.getEstimate.mockRejectedValue(err);
+    const { result } = renderHook(() =>
+      useExpectedAmountOut({ fromToken: "USDm", toToken: "KESm", amount: "10" }),
+    );
+    await settle();
+    expect(result.current.expectedOutput).toBeNull();
+    expect(result.current.marketClosed).toBe(true);
+    expect(result.current.noRoute).toBe(false);
+  });
+
   it("a non-route failure still yields null output but noRoute stays false", async () => {
     mocks.getEstimate.mockRejectedValue(new Error("network down"));
     const { result } = renderHook(() =>

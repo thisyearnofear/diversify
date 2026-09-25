@@ -33,6 +33,36 @@ export interface MentoBuiltSwap {
     route: Route;
 }
 
+/**
+ * Stable market-closed message — FPMM pools revert with "FX market is
+ * currently closed" and oracle-priced regional pools (KESm, BRLm, NGNm…)
+ * revert with "no valid median" when the FX feeds stop reporting. Both are
+ * expected weekend/holiday behaviour, so callers get one stable string to
+ * classify instead of matching revert text. No reopening time is promised.
+ */
+export const MENTO_MARKET_CLOSED_MESSAGE =
+    'Mento FX market is closed — quotes resume when FX markets reopen.';
+
+export function isMentoMarketClosedError(
+    message: string | undefined | null
+): boolean {
+    if (!message) return false;
+    const m = message.toLowerCase();
+    return (
+        m.includes('fx market is currently closed') ||
+        m.includes('no valid median') ||
+        m === MENTO_MARKET_CLOSED_MESSAGE.toLowerCase()
+    );
+}
+
+function rethrowMarketClosed(error: unknown): never {
+    const message = error instanceof Error ? error.message : String(error);
+    if (isMentoMarketClosedError(message)) {
+        throw new Error(MENTO_MARKET_CLOSED_MESSAGE);
+    }
+    throw error;
+}
+
 const mentoCache = new Map<number, Promise<Mento>>();
 
 function rpcUrlFor(chainId: number): string {
@@ -125,8 +155,14 @@ export async function quoteMento(
     amountIn: bigint
 ): Promise<MentoQuote> {
     const mento = await getMento(chainId);
-    const route = await mento.routes.findRoute(tokenInAddr, tokenOutAddr);
-    const amountOut = await mento.quotes.getAmountOut(tokenInAddr, tokenOutAddr, amountIn, route);
+    let route: Route;
+    let amountOut: bigint;
+    try {
+        route = await mento.routes.findRoute(tokenInAddr, tokenOutAddr);
+        amountOut = await mento.quotes.getAmountOut(tokenInAddr, tokenOutAddr, amountIn, route);
+    } catch (error) {
+        rethrowMarketClosed(error);
+    }
 
     const a = tokenInAddr.toLowerCase();
     const b = tokenOutAddr.toLowerCase();
@@ -170,41 +206,45 @@ export async function buildMentoSwap(args: {
     } = args;
 
     const mento = await getMento(chainId);
-    const route = await mento.routes.findRoute(tokenIn, tokenOut);
+    try {
+        const route = await mento.routes.findRoute(tokenIn, tokenOut);
 
-    const tradable = await mento.trading.isRouteTradable(route);
-    if (!tradable) {
-        throw new Error(`Mento trading is currently paused for ${tokenIn}/${tokenOut}`);
+        const tradable = await mento.trading.isRouteTradable(route);
+        if (!tradable) {
+            throw new Error(`Mento trading is currently paused for ${tokenIn}/${tokenOut}`);
+        }
+
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
+        const built = await mento.swap.buildSwapTransaction(
+            tokenIn,
+            tokenOut,
+            amountIn,
+            recipient,
+            owner,
+            { slippageTolerance: slippagePercent, deadline },
+            route
+        );
+
+        const spender = mento.getContractAddress('Router');
+
+        return {
+            approval: built.approval
+                ? { to: built.approval.to, data: built.approval.data, value: built.approval.value }
+                : null,
+            swap: {
+                to: built.swap.params.to,
+                data: built.swap.params.data,
+                value: built.swap.params.value,
+            },
+            expectedAmountOut: built.swap.expectedAmountOut,
+            amountOutMin: built.swap.amountOutMin,
+            hops: route.path.length,
+            spender,
+            route,
+        };
+    } catch (error) {
+        rethrowMarketClosed(error);
     }
-
-    const deadline = BigInt(Math.floor(Date.now() / 1000) + deadlineSeconds);
-    const built = await mento.swap.buildSwapTransaction(
-        tokenIn,
-        tokenOut,
-        amountIn,
-        recipient,
-        owner,
-        { slippageTolerance: slippagePercent, deadline },
-        route
-    );
-
-    const spender = mento.getContractAddress('Router');
-
-    return {
-        approval: built.approval
-            ? { to: built.approval.to, data: built.approval.data, value: built.approval.value }
-            : null,
-        swap: {
-            to: built.swap.params.to,
-            data: built.swap.params.data,
-            value: built.swap.params.value,
-        },
-        expectedAmountOut: built.swap.expectedAmountOut,
-        amountOutMin: built.swap.amountOutMin,
-        hops: route.path.length,
-        spender,
-        route,
-    };
 }
 
 /** The Mento v3 Router this chain's swaps approve and call. */

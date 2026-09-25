@@ -28,6 +28,7 @@ const PAIR_STORAGE_KEY = "diversifi.exchange.pair";
 type SwapOutcome =
   | "success"
   | "no_route"
+  | "market_closed"
   | "cancelled"
   | "onchain_failed"
   | "session"
@@ -39,6 +40,7 @@ function mapErrorClassToOutcome(cls: SwapErrorClass | null | undefined): SwapOut
     case "cancelled": return "cancelled";
     case "onchain-failed": return "onchain_failed";
     case "no-route": return "no_route";
+    case "market_closed": return "market_closed";
     case "session": return "session";
     case "no-gas": return "no_gas";
     default: return "error";
@@ -276,7 +278,7 @@ export function useSwapController({
     step: swapStep,
     reset: resetSwap,
   } = useSwap();
-  const { expectedOutput, provider: quoteProvider, noRoute: quoteNoRoute, isLoading: isExpectedOutputLoading, quotedAt, refreshQuote } =
+  const { expectedOutput, provider: quoteProvider, noRoute: quoteNoRoute, marketClosed: quoteMarketClosed, isLoading: isExpectedOutputLoading, quotedAt, refreshQuote } =
     useExpectedAmountOut({ fromToken, toToken, amount });
   const {
     getInflationRateForStablecoin,
@@ -753,6 +755,7 @@ export function useSwapController({
     // route context
     routeProvider,
     quoteNoRoute,
+    quoteMarketClosed,
     signatureCount,
     viaHub,
     applyViaHub,

@@ -4,7 +4,10 @@ import {
     isMentoPair,
     isMentoToken,
     buildMentoSwap,
+    quoteMento,
     getMentoRouterAddress,
+    isMentoMarketClosedError,
+    MENTO_MARKET_CLOSED_MESSAGE,
 } from '../mento-sdk.service';
 import { getTokenAddresses } from '../../../config';
 
@@ -22,7 +25,11 @@ const KESM = '0x456a3D042C0DbD3db53D5489e98dFb038553B0d0';
 const CELO_TOKEN = '0x471ece3750da237f93b8e339c536989b8978a438';
 const ROUTER = '0x4861840C2EfB2b98312B0aE34d86fD73E8f9B6f6';
 
-const state = vi.hoisted(() => ({ tradable: true }));
+const state = vi.hoisted(() => ({
+    tradable: true,
+    quoteError: null as string | null,
+    buildError: null as string | null,
+}));
 
 vi.mock('@mento-protocol/mento-sdk', async (importOriginal) => {
     const actual =
@@ -37,7 +44,12 @@ vi.mock('@mento-protocol/mento-sdk', async (importOriginal) => {
     const fakeRoute = { id: 'route-1', tokens: [], path: [{}] };
     const fakeMento = {
         routes: { findRoute: vi.fn(async () => fakeRoute) },
-        quotes: { getAmountOut: vi.fn(async () => 1_000n) },
+        quotes: {
+            getAmountOut: vi.fn(async () => {
+                if (state.quoteError) throw new Error(state.quoteError);
+                return 1_000n;
+            }),
+        },
         trading: { isRouteTradable: vi.fn(async () => state.tradable) },
         swap: {
             buildSwapTransaction: vi.fn(
@@ -47,6 +59,7 @@ vi.mock('@mento-protocol/mento-sdk', async (importOriginal) => {
                     options: { slippageTolerance: number; deadline: bigint },
                     route: unknown,
                 ) => {
+                    if (state.buildError) throw new Error(state.buildError);
                     const expectedAmountOut = 1_000n;
                     // Delegate to the REAL SDK conversion.
                     const amountOutMin = (
@@ -76,6 +89,8 @@ vi.mock('@mento-protocol/mento-sdk', async (importOriginal) => {
 
 beforeEach(() => {
     state.tradable = true;
+    state.quoteError = null;
+    state.buildError = null;
 });
 
 describe('getMentoRoutableAddresses / isMentoPair (real SDK cache)', () => {
@@ -139,6 +154,54 @@ describe('buildMentoSwap', () => {
                 slippagePercent: 1,
             }),
         ).rejects.toThrow('trading is currently paused');
+    });
+});
+
+describe('market-closed classification', () => {
+    it('detects both raw failure shapes, case-insensitively', () => {
+        expect(
+            isMentoMarketClosedError(
+                'FX market is currently closed. Swap quotes are unavailable until the market reopens.'
+            )
+        ).toBe(true);
+        expect(isMentoMarketClosedError('execution reverted: NO VALID MEDIAN')).toBe(true);
+        expect(isMentoMarketClosedError('Mento FX market is closed — quotes resume when FX markets reopen.')).toBe(true);
+        expect(isMentoMarketClosedError('No Uniswap V3 pool found')).toBe(false);
+        expect(isMentoMarketClosedError(undefined)).toBe(false);
+    });
+
+    it('quoteMento rethrows the stable market-closed message for both raw shapes', async () => {
+        for (const raw of [
+            'FX market is currently closed. Swap quotes are unavailable until the market reopens.',
+            'execution reverted: no valid median',
+        ]) {
+            state.quoteError = raw;
+            await expect(quoteMento(CELO, USDM, KESM, 100n)).rejects.toThrow(
+                MENTO_MARKET_CLOSED_MESSAGE
+            );
+        }
+    });
+
+    it('buildMentoSwap rethrows the stable market-closed message on an oracle revert', async () => {
+        state.buildError = 'execution reverted: no valid median';
+        await expect(
+            buildMentoSwap({
+                chainId: CELO,
+                tokenIn: USDM,
+                tokenOut: KESM,
+                amountIn: 100n,
+                recipient: '0x0000000000000000000000000000000000000001',
+                owner: '0x0000000000000000000000000000000000000001',
+                slippagePercent: 1,
+            })
+        ).rejects.toThrow(MENTO_MARKET_CLOSED_MESSAGE);
+    });
+
+    it('non-market errors pass through unchanged', async () => {
+        state.quoteError = 'Not enough liquidity';
+        await expect(quoteMento(CELO, USDM, KESM, 100n)).rejects.toThrow(
+            'Not enough liquidity'
+        );
     });
 });
 
