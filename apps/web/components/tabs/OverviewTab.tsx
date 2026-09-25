@@ -5,7 +5,6 @@ import { useWalletContext } from "@/components/wallet/WalletProvider";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NotConnectedState } from "@/components/tabs/overview/NotConnectedState";
-import { ConnectingState } from "@/components/tabs/overview/ConnectingState";
 import { ConnectedOverview } from "@/components/tabs/overview/ConnectedOverview";
 import OverviewSkeleton from "@/components/ui/skeletons/OverviewSkeleton";
 
@@ -45,7 +44,7 @@ export default function OverviewTab({
   refreshChainId,
   currencyPerformanceData,
 }: OverviewTabProps) {
-  const { address, isConnecting, chainId } = useWalletContext();
+  const { address, chainId } = useWalletContext();
   const { demoMode, disableDemoMode, enableDemoMode } = useDemoMode();
 
   const isDemo = demoMode.isActive;
@@ -74,17 +73,16 @@ export default function OverviewTab({
     return <OverviewSkeleton />;
   }
 
-  if (!address && !isConnecting && !isDemo) {
+  // Connecting is not a screen: the explorable unconnected Home stays up
+  // (the prompt may be ignored or tapped by accident). The connect button
+  // itself carries the "Connecting…" state — no second line repeating it.
+  if (!address && !isDemo) {
     return (
       <NotConnectedState
         isActive={isActive}
         onEnableDemo={enableDemoMode}
       />
     );
-  }
-
-  if (isConnecting) {
-    return <ConnectingState />;
   }
 
   return (

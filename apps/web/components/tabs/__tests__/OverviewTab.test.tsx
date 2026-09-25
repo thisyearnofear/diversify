@@ -34,9 +34,6 @@ vi.mock("@/components/tabs/overview/NotConnectedState", () => ({
     <div data-testid="not-connected" data-active={String(isActive)} />
   ),
 }));
-vi.mock("@/components/tabs/overview/ConnectingState", () => ({
-  ConnectingState: () => <div data-testid="connecting" />,
-}));
 vi.mock("@/components/tabs/overview/ConnectedOverview", () => ({
   ConnectedOverview: ({ isDemo, isActive }: { isDemo: boolean; isActive?: boolean }) => (
     <div data-testid="connected-overview" data-demo={String(isDemo)} data-active={String(isActive)} />
@@ -164,6 +161,16 @@ describe("OverviewTab — connected wallet vs preview", () => {
       />,
     );
     expect(screen.getByTestId("not-connected")).toBeInTheDocument();
+  });
+
+  it("keeps the explorable unconnected Home up while the wallet prompt is open", () => {
+    mockAddress = null;
+    mockIsConnecting = true;
+    render(<OverviewTab {...baseProps} portfolio={emptyPortfolio()} isLoading={false} />);
+    // Connecting never replaces Home — the user can ignore the prompt and
+    // keep exploring; the connect button carries the Connecting… state.
+    expect(screen.getByTestId("not-connected")).toBeInTheDocument();
+    expect(screen.queryByTestId("overview-skeleton")).not.toBeInTheDocument();
   });
 
   it("forwards isActive=false to both connected and unconnected morphs", () => {
