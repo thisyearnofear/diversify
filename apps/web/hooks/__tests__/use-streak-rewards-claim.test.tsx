@@ -14,6 +14,7 @@ import React from 'react';
 const mockGetWalletProvider = vi.fn();
 const mockClaimUBI = vi.fn();
 const mockGetFVLink = vi.fn();
+const hoist = vi.hoisted(() => ({ streakData: undefined as unknown }));
 
 vi.mock('@/components/wallet/WalletProvider', () => ({
   useWalletContext: () => ({ address: '0x1111111111111111111111111111111111111111', isConnected: true }),
@@ -38,17 +39,17 @@ vi.mock('@diversifi/shared/src/modules/rewards/streak/internal/api', async (impo
   const actual = await importOriginal<typeof import('@diversifi/shared/src/modules/rewards/streak/internal/api')>();
   return {
     ...actual,
-    fetchStreakFromApi: vi.fn().mockResolvedValue({
-      streak: {
+    fetchStreakFromApi: vi.fn().mockImplementation(async () => ({
+      streak: hoist.streakData === undefined ? {
         walletAddress: '0x1111111111111111111111111111111111111111',
         startTime: Date.now() - 2 * 86400_000,
         lastActivity: Date.now(),
         daysActive: 2,
         gracePeriodsUsed: 0,
         totalSaved: 0,
-      },
+      } : hoist.streakData,
       raw: {},
-    }),
+    })),
   };
 });
 
@@ -76,6 +77,7 @@ async function mounted() {
 describe('useStreakRewards — claimG/verifyIdentity', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    hoist.streakData = undefined;
     mockGetWalletProvider.mockResolvedValue({ request: vi.fn() });
     mockClaimUBI.mockResolvedValue({ success: true, txHash: '0xabc' });
     mockGetFVLink.mockResolvedValue('https://fv.example/link');
@@ -112,6 +114,15 @@ describe('useStreakRewards — claimG/verifyIdentity', () => {
     expect(out?.success).toBe(false);
     expect(out?.error).toContain('Verify once');
     expect(openSpy).not.toHaveBeenCalled();
+  });
+
+  it('canClaim is true for a verified entitled wallet with zero streak', async () => {
+    // The $1+ swap gate is gone: claiming needs only GoodDollar
+    // verification + on-chain entitlement — the streak builds separately.
+    hoist.streakData = null;
+    const { result } = await mounted();
+    expect(result.current.canClaim).toBe(true);
+    expect(result.current.isEligible).toBe(false); // no streak, still claimable
   });
 
   it('verifyIdentity errors when the popup is missing (desktop)', async () => {

@@ -109,6 +109,14 @@ export default function FloatingControls({
         transition={{ duration: 0.2, ease: "easeOut" }}
         className="fixed bottom-20 right-4 z-40 h-12 pl-2.5 pr-4 rounded-2xl bg-white dark:bg-gray-900 text-blue-950 dark:text-blue-100 shadow-lg shadow-blue-900/20 border border-blue-200 dark:border-blue-800/60 flex items-center gap-2"
       >
+        {/* Inner content fades out fast — the layout morph only reshapes the
+            shared container; without this the pill's text stretches into the
+            panel mid-flight. (Reduced motion keeps the plain fade above.) */}
+        <motion.span
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.08 }}
+          className="flex items-center gap-2"
+        >
         <GuardianMascot
           size={30}
           mood={badgeCount > 0 ? "alert" : "neutral"}
@@ -126,6 +134,7 @@ export default function FloatingControls({
             {badgeCount > 9 ? "9+" : badgeCount}
           </motion.span>
         )}
+        </motion.span>
       </motion.button>
       )}
       </AnimatePresence>

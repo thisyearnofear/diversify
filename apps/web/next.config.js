@@ -8,6 +8,13 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 // Keep root .env.local working after the apps/web extraction (scripts + local DX).
 loadEnvConfig(path.resolve(__dirname, '../..'));
 
+// 0G evidence-anchoring SDK include — see the scoped route keys below.
+const SDK_INCLUDE = [
+  '../../node_modules/@0gfoundation/0g-storage-ts-sdk/**/*',
+  '../../node_modules/open-jsonrpc-provider/**/*',
+  '../../node_modules/reconnecting-websocket/**/*',
+];
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -21,10 +28,10 @@ const nextConfig = {
   ],
 
   // `ai` is ESM-only and is loaded at runtime by the server-only TypeSafe
-  // Gateway adapters (Signal Lens + Ask-the-World). Keep it external to the
-  // CommonJS shared package transform. The loaders use `new Function(…import…)`
-  // so NFT cannot see the dependency — force-include it (and its @ai-sdk/*
-  // peers) into the standalone trace for the routes that call Gateway.
+  // Gateway adapters (Signal Lens + Ask-the-World) via literal dynamic
+  // imports in apps/web server-only code. Keep it external to the CommonJS
+  // shared package transform; force-include it (and its @ai-sdk/* peers)
+  // into the standalone trace for the routes that call Gateway.
   serverExternalPackages: ['ai'],
   outputFileTracingIncludes: {
     // Include globs resolve relative to THIS app dir (apps/web). With
@@ -55,12 +62,39 @@ const nextConfig = {
     ],
     // 0G evidence anchoring — shared-0g loads the SDK via dynamic `import()` at
     // runtime; force-include the SDK plus its runtime deps that nothing else
-    // traces (open-jsonrpc-provider pulls ws/axios).
-    '*': [
-      '../../node_modules/@0gfoundation/0g-storage-ts-sdk/**/*',
-      '../../node_modules/open-jsonrpc-provider/**/*',
-      '../../node_modules/reconnecting-websocket/**/*',
-    ],
+    // traces (open-jsonrpc-provider pulls ws/axios). Scoped (2026-09-25) to the
+    // routes whose bundle actually contains storage-service/persistence-service
+    // — a '*' key was adding ~22 MB of SDK to every function.
+    '/api/agent/advisor': SDK_INCLUDE,
+    '/api/agent/agentic-id': SDK_INCLUDE,
+    '/api/agent/arc-balance': SDK_INCLUDE,
+    '/api/agent/automation': SDK_INCLUDE,
+    '/api/agent/business/cycle-monitor': SDK_INCLUDE,
+    '/api/agent/check-connection': SDK_INCLUDE,
+    '/api/agent/deep-analyze': SDK_INCLUDE,
+    '/api/agent/enterprise/audit': SDK_INCLUDE,
+    '/api/agent/firecrawl-webhook': SDK_INCLUDE,
+    '/api/agent/guardian-heartbeat': SDK_INCLUDE,
+    '/api/agent/guardian-loop': SDK_INCLUDE,
+    '/api/agent/intelligence': SDK_INCLUDE,
+    '/api/agent/memory': SDK_INCLUDE,
+    '/api/agent/onramp-help': SDK_INCLUDE,
+    '/api/agent/social-resolve': SDK_INCLUDE,
+    '/api/agent/speak': SDK_INCLUDE,
+    '/api/agent/status': SDK_INCLUDE,
+    '/api/agent/test-zapier': SDK_INCLUDE,
+    '/api/agent/transcribe': SDK_INCLUDE,
+    '/api/agent/web-analyze': SDK_INCLUDE,
+    '/api/agent/x402-gateway': SDK_INCLUDE,
+    '/api/agent/x402-metrics': SDK_INCLUDE,
+    '/api/agent/zero-g-ledger': SDK_INCLUDE,
+    '/api/bitso/juno': SDK_INCLUDE,
+    '/api/emerging-markets/prices': SDK_INCLUDE,
+    '/api/healthz': SDK_INCLUDE,
+    '/api/prices/token': SDK_INCLUDE,
+    '/api/status': SDK_INCLUDE,
+    '/api/trading/market-pulse': SDK_INCLUDE,
+    '/api/trading/signals': SDK_INCLUDE,
   },
 
   // NOTE (2026-09-11): outputFileTracingExcludes REMOVED entirely. Both

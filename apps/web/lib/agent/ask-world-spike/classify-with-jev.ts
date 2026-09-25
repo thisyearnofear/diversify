@@ -13,6 +13,7 @@
  */
 
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { loadGatewayEvaluate } from '../load-gateway-evaluate';
 import type { AskWorldKind } from '../ask-world-types';
 
 const TYPESAFE_ENDPOINT = 'https://api.typesafe.ai/v1/systemone';
@@ -64,18 +65,8 @@ type GatewayEvaluate = (request: {
     abortSignal: AbortSignal;
 }) => Promise<GatewayResult>;
 
-/**
- * `ai` is ESM-only; this file only runs inside the API route bundle
- * (server-side), so a literal dynamic import keeps the specifier visible
- * to the file tracer/bundler. `ai` stays in `serverExternalPackages`.
- */
-async function loadGatewayEvaluate(): Promise<GatewayEvaluate> {
-    const sdk = await import('ai');
-    if (!sdk.experimental_evaluate) {
-        throw new Error('AI SDK experimental_evaluate is unavailable');
-    }
-    return sdk.experimental_evaluate as GatewayEvaluate;
-}
+// `ai` loads via the shared server-only loader (lib/agent/load-gateway-evaluate.ts)
+// — literal import keeps the specifier visible to the file tracer.
 
 function intentQuestions() {
     return {

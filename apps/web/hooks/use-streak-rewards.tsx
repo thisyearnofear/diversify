@@ -8,7 +8,8 @@
  *
  * Use `useStreakRewards()` from any component — it reads the shared context.
  *
- * Unlock Criteria: Any swap of $1+ unlocks daily G$ claim
+ * Unlock Criteria: GoodDollar face verification is the only claim gate;
+ * $1+ swaps build the streak (its own rewards), they no longer gate claiming.
  *
  * Core Principles:
  * - DRY: Centralized streak logic
@@ -123,7 +124,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
           achievements: nextAchievements,
           newlyEarnedAchievements: newlyEarned,
           eligibleForGraduation,
-          canClaim: (streakState.canClaim || false) && onChainStatus.canClaimOnChain,
+          canClaim: onChainStatus.canClaimOnChain,
           isLoading: false,
           error: null,
           usingFallback: false,

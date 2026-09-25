@@ -109,7 +109,10 @@ describe('POST /api/agent/firecrawl-webhook TypeSafe shadow mode', () => {
       sourceUrl: 'https://example.com/central-bank',
       sourceSummary: 'Routine wording update.',
       changeContent: 'Routine wording update.',
-    });
+    }, expect.objectContaining({
+      // The route injects the server-side 'ai' loader lazily.
+      evaluateGateway: expect.any(Function),
+    }));
     await Promise.resolve();
     expect(mockFindOneAndUpdate).toHaveBeenCalledWith(
       expect.objectContaining({ sourceFingerprint: expect.any(String) }),

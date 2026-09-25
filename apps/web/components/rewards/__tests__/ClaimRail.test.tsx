@@ -15,7 +15,6 @@ import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { ClaimRail } from '../ClaimRail';
 
-const mockSetActiveTab = vi.fn();
 const mockHandleClaim = vi.fn();
 const mockHandleVerify = vi.fn();
 
@@ -28,10 +27,6 @@ vi.mock('@/hooks/use-streak-rewards', () => ({
 
 vi.mock('@/hooks/claim-flow-context', () => ({
   useClaimFlowContext: () => flowState,
-}));
-
-vi.mock('@/context/app/NavigationContext', () => ({
-  useNavigation: () => ({ setActiveTab: mockSetActiveTab }),
 }));
 
 afterEach(() => {
@@ -83,8 +78,8 @@ describe('ClaimRail', () => {
     expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
   });
 
-  it('offers one-time verification when eligible but not whitelisted', () => {
-    streakState = { canClaim: false, isEligible: true, isWhitelisted: false, isLoading: false };
+  it('offers one-time verification to any unverified wallet — no streak needed', () => {
+    streakState = { canClaim: false, isEligible: false, isWhitelisted: false, isLoading: false };
     flowState = { ...baseFlow };
     render(<ClaimRail />);
     const rail = screen.getByTestId('claim-rail');
@@ -109,14 +104,22 @@ describe('ClaimRail', () => {
     expect(rail.tagName).toBe('P'); // no action — nothing to do
   });
 
-  it('points at Exchange when the streak is not unlocked', () => {
-    streakState = { canClaim: false, isEligible: false, isWhitelisted: true, alreadyClaimedOnChain: false, isLoading: false };
+  it('shows a claimable verified wallet even with zero streak', () => {
+    // The $1+ swap gate is gone — claiming needs only verification + entitlement.
+    streakState = { canClaim: true, isEligible: false, isWhitelisted: true, alreadyClaimedOnChain: false, estimatedReward: '0.31 G$', isLoading: false };
     flowState = { ...baseFlow };
     render(<ClaimRail />);
     const rail = screen.getByTestId('claim-rail');
-    expect(rail).toHaveTextContent('Swap $1+ to unlock daily G$');
+    expect(rail).toHaveTextContent('Claim Daily G$');
     fireEvent.click(rail);
-    expect(mockSetActiveTab).toHaveBeenCalledWith('exchange');
+    expect(mockHandleClaim).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders nothing for a verified wallet with no streak and nothing claimable', () => {
+    streakState = { canClaim: false, isEligible: false, isWhitelisted: true, alreadyClaimedOnChain: false, isLoading: false };
+    flowState = { ...baseFlow };
+    render(<ClaimRail />);
+    expect(screen.queryByTestId('claim-rail')).toBeNull();
   });
 
   it('renders nothing while loading or in an unexplained state', () => {

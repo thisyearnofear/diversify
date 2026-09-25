@@ -26,6 +26,27 @@ import { STREAK_CONFIG } from '@diversifi/shared/src/modules/rewards/streak/type
 import { isMiniPayEnvironment } from '@diversifi/shared/src/utils/environment';
 import { useToast } from '@/components/ui/Toast';
 import { haptic } from '@/lib/haptics';
+import { trackFunnelEvent } from '@/lib/analytics';
+
+type ClaimOutcome =
+  | 'success'
+  | 'already_claimed'
+  | 'not_verified'
+  | 'chain_switch_rejected'
+  | 'cancelled'
+  | 'gas_topup_failed'
+  | 'error';
+
+/** Map a claimG error string to its coarse funnel outcome. */
+function claimOutcomeFromError(error: string | undefined): ClaimOutcome {
+  const m = (error ?? '').toLowerCase();
+  if (m.includes('verify once') || m.includes('whitelist') || m.includes('not verified')) return 'not_verified';
+  if (m.includes('already claimed')) return 'already_claimed';
+  if (m.includes('switch') && m.includes('celo')) return 'chain_switch_rejected';
+  if (m.includes('cancel')) return 'cancelled';
+  if (m.includes('gas') || m.includes('top-up') || m.includes('faucet')) return 'gas_topup_failed';
+  return 'error';
+}
 
 // Lazy-load the celebration so consumers that don't reach success never
 // pay the bundle cost.
@@ -154,6 +175,9 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
     setClaimError(null);
     try {
       const result = await claimG();
+      trackFunnelEvent('claim_outcome', {
+        outcome: result.success ? 'success' : claimOutcomeFromError(result.error),
+      });
       if (result.success) {
         haptic("success");
         setLastClaim({
@@ -192,6 +216,7 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
     } catch (err) {
       haptic("error");
       const message = err instanceof Error ? err.message : 'Unexpected error';
+      trackFunnelEvent('claim_outcome', { outcome: claimOutcomeFromError(message) });
       setClaimError(message);
       showToast(message, 'error');
       setClaimStatus('error');

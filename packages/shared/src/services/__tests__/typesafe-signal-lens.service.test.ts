@@ -129,6 +129,30 @@ describe('assessMacroSignalWithTypeSafe', () => {
     expect(fetchImpl).toHaveBeenCalledOnce();
   });
 
+  it('skips Gateway and uses direct when evaluateGateway is not injected', async () => {
+    // The shared package can't import ESM-only `ai` itself — callers inject
+    // the evaluator. A key with no injection must degrade to direct, not throw.
+    const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({
+      model: 'jev-1.13.0',
+      answers: {
+        materiality: { type: 'noul', noul: 0.9 },
+        category: { type: 'choice', choice: 'rate_cut', confidence: 0.8 },
+        urgency: { type: 'choice', choice: 'monitor', confidence: 0.7 },
+        source_quality: { type: 'score', score: 1.5, confidence: 0.75 },
+      },
+    }));
+
+    const result = await assessMacroSignalWithTypeSafe(input, {
+      enabled: true,
+      aiGatewayApiKey: 'gateway-key',
+      apiKey: 'direct-key',
+      fetchImpl,
+    });
+
+    expect(result?.provider).toBe('typesafe-direct');
+    expect(fetchImpl).toHaveBeenCalledOnce();
+  });
+
   it('returns null for an invalid vendor response without affecting callers', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(jsonResponse({ model: 'jev-1.13.0', answers: {} }));
 

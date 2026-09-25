@@ -29,6 +29,7 @@
     "list-share-drops": "npx tsx scripts/list-share-drops.ts",
     "cctp-transfer": "npx tsx scripts/cctp-transfer.ts",
     "check-swap-routes": "npx tsx scripts/check-swap-routes.ts",
+    "funnel-outcomes": "node scripts/funnel-outcomes.mjs",
     "x402-mainnet-smoke": "npx tsx scripts/x402-mainnet-smoke.ts",
     "nanopay-buyer": "npx tsx scripts/nanopay-buyer.ts",
     "render-guardian-assets": "npx tsx scripts/render-guardian-assets.ts",

@@ -847,6 +847,16 @@ export default function AIChat() {
           </div>
           )}
 
+        {/* Content crossfade — on desktop the FAB↔panel layout morph only
+            resizes the shared container; the panel's contents fade in once
+            it settles so header text never stretches mid-morph. Mobile and
+            reduced motion render immediately (the panel itself fades). */}
+        <motion.div
+          initial={isDesktop && !reducedMotion ? { opacity: 0 } : false}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.15, delay: isDesktop && !reducedMotion ? 0.15 : 0 }}
+          className="flex flex-col min-h-0 flex-1"
+        >
         {address && walletView.freshness !== "ready" && walletView.freshness !== "empty" && (
           <p className="px-6 py-2 text-[11px] text-amber-700 dark:text-amber-300" role="status">
             Guardian is working with {walletView.freshness === "stale" ? "stale" : "partial"} wallet data. Refresh balances before acting.
@@ -1426,6 +1436,7 @@ export default function AIChat() {
             )}
           </div>
         </div>
+        </motion.div>
       </motion.div>
       )}
       </AnimatePresence>

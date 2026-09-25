@@ -161,8 +161,8 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
       <>
         <InsightCard
           icon="🌱"
-          title="Unlock Daily G$"
-          description="Swap $1+ to activate daily G$ rewards. Requires one-time face verification on GoodDollar."
+          title="Daily G$ Rewards"
+          description="Verify once on GoodDollar to claim daily G$. $1+ swaps build your streak."
           impact="Daily G$ rewards"
           action={
             onSaveClick
@@ -197,7 +197,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
         ? 'Claim G$'
         : nextClaimTime
           ? `Next claim in ${formatTimeUntil(nextClaimTime)}`
-          : 'Unlock Daily G$';
+          : 'Check back tomorrow';
   const verifyButtonLabel =
     verifyStatus === 'opening'
       ? 'Opening Verification...'
@@ -226,7 +226,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
                 : "Verify once on GoodDollar to start claiming your daily UBI. Takes about a minute."
               : canClaim
                 ? `Your daily G$ is ready — claim ${rewardLabel} now.`
-                : `Swap $1+ to unlock tomorrow's bonus.`
+                : `Today's G$ claimed — $1+ swaps keep building your streak.`
           }
           impact={!isWhitelisted ? (verifyStatus === 'awaiting' ? 'Checking every 30s' : 'Identity Pending') : (canClaim ? rewardLabel : `Day ${streak?.daysActive} streak`)}
           action={

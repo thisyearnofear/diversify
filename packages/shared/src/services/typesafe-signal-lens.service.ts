@@ -83,26 +83,12 @@ type GatewayEvaluate = (request: {
 }) => Promise<GatewayResult>;
 
 /**
- * AI SDK is ESM-only while this shared package intentionally compiles to
- * CommonJS (dist via tsc). A literal `await import('ai')` compiles to
- * `require('ai')` in that output — webpack then refuses the ESM external
- * ("ESM packages need to be imported") and Node <22.12 can't resolve it.
- * So this site keeps the runtime `new Function` import; `ai` + its peers
- * reach the standalone bundle via outputFileTracingIncludes in
- * next.config.js and the deploy's runtime-overlay closure. The Gateway
- * call is inside a try/catch, so failures degrade to the direct TypeSafe
- * REST fallback below.
+ * `ai` is ESM-only while this shared package intentionally compiles to
+ * CommonJS — it can never literally `import('ai')` here. Server-only callers
+ * (apps/web) inject the evaluator via `options.evaluateGateway`
+ * (`lib/agent/load-gateway-evaluate.ts`); without it the Gateway branch is
+ * skipped and the direct TypeSafe REST fallback below applies.
  */
-async function loadGatewayEvaluate(): Promise<GatewayEvaluate> {
-  const loadModule = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<{
-    experimental_evaluate?: GatewayEvaluate;
-  }>;
-  const sdk = await loadModule('ai');
-  if (!sdk.experimental_evaluate) {
-    throw new Error('AI SDK experimental_evaluate is unavailable');
-  }
-  return sdk.experimental_evaluate;
-}
 
 function isChoice(value: unknown, choices: readonly string[]): value is ChoiceAnswer {
   return !!value
@@ -235,14 +221,18 @@ export async function assessMacroSignalWithTypeSafe(
   };
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  if (gatewayApiKey) {
+  if (gatewayApiKey && !options.evaluateGateway) {
+    console.warn('[TypeSafe Signal Lens] AI_GATEWAY_API_KEY set but evaluateGateway not injected — using direct fallback');
+  }
+
+  if (gatewayApiKey && options.evaluateGateway) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
       // The SDK reads AI_GATEWAY_API_KEY from the server environment. This
       // branch is intentionally Gateway-first for spend controls, logs, and
       // promotional access; direct TypeSafe remains available below.
-      const evaluate = options.evaluateGateway ?? await loadGatewayEvaluate();
+      const evaluate = options.evaluateGateway;
       const startedAt = Date.now();
       const assessment = normalizeGatewayResult(await evaluate({
         model: 'typesafe-ai/jev',

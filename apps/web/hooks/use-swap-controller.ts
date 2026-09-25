@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useContext, useMemo, useRef } from "react";
 import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
@@ -12,6 +12,8 @@ import { SwapErrorHandler } from "@diversifi/shared/src/services/swap/error-hand
 import { SwapOrchestratorService } from "@diversifi/shared/src/services/swap/swap-orchestrator.service";
 import { isMentoToken } from "@diversifi/shared/src/services/swap/mento-sdk.service";
 import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strategies/base-swap.strategy";
+import { trackFunnelEvent } from "@/lib/analytics";
+import { DemoModeContext } from "@/context/app/DemoModeContext";
 
 // Hub the aggregator can't beat on Celo: USDm is the broker's routing
 // token, so a failed X -> Y often decomposes into X -> USDm -> Y.
@@ -21,6 +23,36 @@ const HUB_TOKEN = "USDm";
 // session — walletless browsing carries into the connected state.
 // Prefill/setTokens always win over the stored pair.
 const PAIR_STORAGE_KEY = "diversifi.exchange.pair";
+
+// Funnel outcome mapping — errorClass values 1:1 to funnel outcomes.
+type SwapOutcome =
+  | "success"
+  | "no_route"
+  | "cancelled"
+  | "onchain_failed"
+  | "session"
+  | "no_gas"
+  | "error";
+
+function mapErrorClassToOutcome(cls: SwapErrorClass | null | undefined): SwapOutcome {
+  switch (cls) {
+    case "cancelled": return "cancelled";
+    case "onchain-failed": return "onchain_failed";
+    case "no-route": return "no_route";
+    case "session": return "session";
+    case "no-gas": return "no_gas";
+    default: return "error";
+  }
+}
+
+// Coarse only — never the raw amount.
+function usdBucket(amount: number): string {
+  if (!Number.isFinite(amount) || amount <= 0) return "0";
+  if (amount < 1) return "<1";
+  if (amount < 10) return "1-10";
+  if (amount < 100) return "10-100";
+  return "100+";
+}
 
 interface Token {
   symbol: string;
@@ -168,6 +200,13 @@ export function useSwapController({
   const [leg2Hint, setLeg2Hint] = useState<string | null>(null);
   const [signatureCount, setSignatureCount] = useState<number | null>(null);
 
+  // Funnel: one swap_outcome per attempt (leg-1 of a via-hub route counts
+  // as its own attempt). Soft demo read — outside the provider there's no
+  // demo state, so nothing is gated.
+  const demoActive = useContext(DemoModeContext)?.demoMode?.isActive === true;
+  const attemptSeqRef = useRef(0);
+  const reportedAttemptRef = useRef(0);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -245,6 +284,25 @@ export function useSwapController({
     dataSource: inflationDataSource,
   } = useInflationData();
   const { recordSwap } = useStreakRewards();
+
+  // One funnel event per attempt — later emits for the same attempt
+  // (delegated return + step-sync) dedupe on the attempt counter.
+  const emitSwapOutcome = useCallback(
+    (outcome: SwapOutcome) => {
+      if (demoActive) return;
+      if (reportedAttemptRef.current === attemptSeqRef.current) return;
+      reportedAttemptRef.current = attemptSeqRef.current;
+      trackFunnelEvent("swap_outcome", {
+        outcome,
+        provider: quoteProvider ?? "unknown",
+        chainId: String(fromChainId),
+        from: fromToken,
+        to: toToken,
+        usdBucket: usdBucket(parseFloat(amount)),
+      });
+    },
+    [demoActive, quoteProvider, fromChainId, fromToken, toToken, amount],
+  );
 
   // 3. Derived Token Lists
   const availableFromTokens = useMemo(() => {
@@ -423,6 +481,7 @@ export function useSwapController({
       setLocalErrorClass(null);
       setLocalTxHash(null);
       setStatus("approving");
+      attemptSeqRef.current += 1;
 
       try {
         if (onSwapProp) {
@@ -451,6 +510,7 @@ export function useSwapController({
           if (result && result.success === false) {
             // Delegated failure that returned instead of throwing — without
             // this check the ticket would report success on a dead route.
+            emitSwapOutcome(mapErrorClassToOutcome(result.errorClass));
             if (result.errorClass === "cancelled") {
               setStatus("idle");
             } else {
@@ -459,6 +519,7 @@ export function useSwapController({
               setStatus("error");
             }
           } else {
+            emitSwapOutcome("success");
             setStatus("completed");
             refreshWithRetries();
           }
@@ -477,12 +538,14 @@ export function useSwapController({
           // A cancellation produces no error state in the hook — reset the
           // ticket quietly rather than stranding it on "approving".
           if (res && !res.success && res.errorClass === "cancelled") {
+            emitSwapOutcome("cancelled");
             setStatus("idle");
           }
           // Note: Hook state will be handled via useEffect tracking swapStep
         }
       } catch (err) {
         const anyErr = err as { errorClass?: SwapErrorClass };
+        emitSwapOutcome(mapErrorClassToOutcome(anyErr?.errorClass));
         setLocalError(SwapErrorHandler.handle(err, "swap tokens"));
         setLocalErrorClass(anyErr?.errorClass ?? "error");
         setStatus("error");
@@ -504,6 +567,7 @@ export function useSwapController({
       getInflationRateForStablecoin,
       recipientAddress,
       phoneNumber,
+      emitSwapOutcome,
     ],
   );
 
@@ -593,6 +657,7 @@ export function useSwapController({
   // Sync hook status to local status
   useEffect(() => {
     if (swapStep === "completed" && status !== "completed") {
+      emitSwapOutcome("success");
       setStatus("completed");
       refreshWithRetries();
 
@@ -623,12 +688,13 @@ export function useSwapController({
       // approval first.
       setStatus("swapping");
     } else if (swapError) {
+      emitSwapOutcome(mapErrorClassToOutcome(swapErrorClass));
       setLocalError(swapError);
       setLocalErrorClass(swapErrorClass ?? "error");
       setStatus("error");
     }
     if (swapTxHash && status !== "completed") setLocalTxHash(swapTxHash);
-  }, [swapStep, swapError, swapErrorClass, swapTxHash, refreshWithRetries, status, amount, recordSwap, pendingViaFinal, toToken]);
+  }, [swapStep, swapError, swapErrorClass, swapTxHash, refreshWithRetries, status, amount, recordSwap, pendingViaFinal, toToken, emitSwapOutcome]);
 
   // 6. Inflation Data Processing
   const {

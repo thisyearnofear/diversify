@@ -28,7 +28,8 @@ export function calculateStreakState(streak: StreakData | null): Pick<
   const isStreakActive = daysSinceActivity <= 1;
   const isEligible = isStreakActive && streak.daysActive > 0;
 
-  // Whether they can *actually* claim is later ANDed with on-chain eligibility.
+  // Whether they can *actually* claim is decided by on-chain eligibility
+  // (whitelisted + entitlement > 0) — the streak no longer gates claiming.
   const canClaim = isEligible;
 
   const nextClaimTime = isEligible

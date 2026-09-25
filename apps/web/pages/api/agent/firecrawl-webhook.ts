@@ -29,6 +29,7 @@ import {
   recommendationLedgerService,
 } from '@diversifi/shared';
 import { enqueueRecommendation } from '@/lib/vault/guardian-state';
+import { loadGatewayEvaluate } from '@/lib/agent/load-gateway-evaluate';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
 import { Permission } from '../../../models/Permission';
@@ -108,6 +109,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sourceUrl: url,
       sourceSummary: summary,
       changeContent,
+    }, {
+      // Lazy injection: 'ai' is loaded only when the Gateway path actually
+      // runs (key configured + enabled), keeping it off cold requests.
+      evaluateGateway: async (request) => (await loadGatewayEvaluate())(request),
     });
 
     const analysis = await generateChatCompletion({

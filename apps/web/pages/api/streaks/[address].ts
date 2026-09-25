@@ -11,7 +11,7 @@ import connectDB from '../../../lib/mongodb';
 import Streak from '../../../models/Streak';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
-const MIN_SWAP_USD = 1.00; // Any $1+ swap unlocks G$ claim
+const MIN_SWAP_USD = 1.00; // Any $1+ swap counts toward the streak (claiming needs only GoodDollar verification)
 const GRACE_PERIODS_PER_WEEK = 1;
 
 // Validate Ethereum address

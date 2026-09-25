@@ -228,7 +228,11 @@ export default function SwapTab({
 
   // Filter to only show tokens that Mento actually supports
   const tradeableTokens = useMemo(() => {
-    const filtered = filterTradeableTokens(networkTokens, tradeableSymbols);
+    const filtered = filterTradeableTokens(
+      networkTokens,
+      tradeableSymbols,
+      walletChainId || preferredChainId,
+    );
 
     const essentialSymbols = ["USDT", "USDC", "USDm", "CELO"];
     const essentials = networkTokens.filter(
@@ -259,7 +263,7 @@ export default function SwapTab({
     }
 
     return combined;
-  }, [networkTokens, tradeableSymbols, walletSymbols]);
+  }, [networkTokens, tradeableSymbols, walletSymbols, walletChainId, preferredChainId]);
 
   const filteredTokens = useMemo(() => {
     if (!searchQuery) return tradeableTokens;

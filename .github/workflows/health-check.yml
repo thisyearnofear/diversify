@@ -1,0 +1,84 @@
+name: Daily Health Check
+
+on:
+  schedule:
+    - cron: '0 7 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.30.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Check swap routes (retry once for RPC flakiness)
+        run: |
+          set +e
+          pnpm check-swap-routes > /tmp/routes.txt 2>&1
+          RC=$?
+          if [ $RC -ne 0 ]; then
+            echo "first run failed (rc=$RC) — retrying once"
+            sleep 10
+            pnpm check-swap-routes > /tmp/routes.txt 2>&1
+            RC=$?
+          fi
+          echo "ROUTES_RC=$RC" >> "$GITHUB_ENV"
+          tail -30 /tmp/routes.txt || true
+
+      - name: Evaluate health
+        id: eval
+        run: |
+          set +e
+          node scripts/health-check.mjs --routes-output /tmp/routes.txt --routes-ok $([ "$ROUTES_RC" = "0" ] && echo 1 || echo 0) > /tmp/health.txt 2>&1
+          RC=$?
+          cat /tmp/health.txt
+          echo "HEALTH_RC=$RC" >> "$GITHUB_ENV"
+
+      - name: Create or update health-alert issue
+        if: env.HEALTH_RC != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create health-alert --description "Automated daily health check failure" --color B60205 2>/dev/null || true
+          DATE=$(date -u +%Y-%m-%d)
+          {
+            echo "## Health check failed — $DATE"
+            echo
+            echo '```'
+            head -60 /tmp/health.txt
+            echo '```'
+          } > /tmp/issue-body.md
+          ISSUE=$(gh issue list --label health-alert --state open --json number --jq '.[0].number' || true)
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --body-file /tmp/issue-body.md
+          else
+            gh issue create --title "Daily health check failed" --label health-alert --body-file /tmp/issue-body.md
+          fi
+          exit 1
+
+      - name: Close health-alert issue when recovered
+        if: env.HEALTH_RC == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE=$(gh issue list --label health-alert --state open --json number --jq '.[0].number' || true)
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --body "Recovered $(date -u +%Y-%m-%d)"
+            gh issue close "$ISSUE"
+          fi

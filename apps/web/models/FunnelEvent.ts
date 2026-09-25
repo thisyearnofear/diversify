@@ -61,6 +61,11 @@ export const FUNNEL_EVENTS = [
   'share_open',
   'share_landed',
   'share_settled',
+  // Outcome funnels — one event per attempt, coarse props only
+  // (outcome/provider/chainId/pair symbols/usd bucket — never txHash,
+  // addresses, or raw amounts).
+  'swap_outcome',
+  'claim_outcome',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

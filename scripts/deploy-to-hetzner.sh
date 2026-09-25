@@ -227,25 +227,43 @@ fi
 info "Overlaying runtime-loaded packages (full dependency closure)..."
 OVERLAY_DIRS=$(node scripts/runtime-overlay-closure.mjs) || \
     fail "Runtime overlay closure could not resolve locally — fix dependencies before deploying"
+# Self-reducing: now that outputFileTracingIncludes resolves to the repo-root
+# node_modules, the standalone trace should already ship these packages whole.
+# Only overlay a closure package that is INCOMPLETE in standalone (fewer
+# files than the local copy, or absent); report each decision.
+OVERLAY_DIRS=$(echo "$OVERLAY_DIRS" | while IFS= read -r d; do
+    [ -z "$d" ] && continue
+    local_count=$(find "$d" -type f 2>/dev/null | wc -l | tr -d ' ')
+    traced_count=$(find "$WEB_NEXT/standalone/$d" -type f 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$traced_count" -ge "$local_count" ] && [ "$local_count" -gt 0 ]; then
+        printf 'skip (fully traced: %s files) %s\n' "$traced_count" "$d" >&2
+    else
+        printf 'overlay (traced %s of %s) %s\n' "$traced_count" "$local_count" "$d" >&2
+        printf '%s\n' "$d"
+    fi
+done)
+[ -n "$OVERLAY_DIRS" ] || { ok "Runtime overlay unnecessary — every closure package is fully traced"; }
 # Create every parent dir in ONE ssh call. ssh must never run inside the
 # read loop without -n: it reads the loop's stdin and silently swallows the
 # rest of the package list (2026-09-25: only the first package shipped).
-PARENT_DIRS=$(echo "$OVERLAY_DIRS" | while IFS= read -r d; do [ -n "$d" ] && printf "'%s/%s' " "$RUNTIME_DIR" "$(dirname "$d")"; done)
-ssh -n "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules' $PARENT_DIRS" || fail "Could not create runtime overlay directories"
 OVERLAY_COUNT=0
-while IFS= read -r pkg_dir; do
-    [ -z "$pkg_dir" ] && continue
-    [ -d "$pkg_dir" ] || fail "Runtime overlay missing locally: $pkg_dir"
-    rsync -azL --delete --no-owner --no-group \
-        "$pkg_dir/" \
-        "$REMOTE:$RUNTIME_DIR/$pkg_dir/" < /dev/null >/dev/null \
-        || fail "Runtime overlay rsync failed: $pkg_dir"
-    OVERLAY_COUNT=$((OVERLAY_COUNT + 1))
-done <<< "$OVERLAY_DIRS"
-# Verify every overlay dir actually landed before the restart.
-MISSING_REMOTE=$(echo "$OVERLAY_DIRS" | ssh "$REMOTE" "cd '$RUNTIME_DIR' && while IFS= read -r d; do [ -n \"\$d\" ] && [ ! -f \"\$d/package.json\" ] && echo \"\$d\"; done; true")
-[ -z "$MISSING_REMOTE" ] || fail "Runtime overlay incomplete on server: $(echo "$MISSING_REMOTE" | head -5 | tr '\n' ' ')"
-ok "Runtime overlay synced and verified ($OVERLAY_COUNT packages)"
+if [ -n "$OVERLAY_DIRS" ]; then
+    PARENT_DIRS=$(echo "$OVERLAY_DIRS" | while IFS= read -r d; do [ -n "$d" ] && printf "'%s/%s' " "$RUNTIME_DIR" "$(dirname "$d")"; done)
+    ssh -n "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules' $PARENT_DIRS" || fail "Could not create runtime overlay directories"
+    while IFS= read -r pkg_dir; do
+        [ -z "$pkg_dir" ] && continue
+        [ -d "$pkg_dir" ] || fail "Runtime overlay missing locally: $pkg_dir"
+        rsync -azL --delete --no-owner --no-group \
+            "$pkg_dir/" \
+            "$REMOTE:$RUNTIME_DIR/$pkg_dir/" < /dev/null >/dev/null \
+            || fail "Runtime overlay rsync failed: $pkg_dir"
+        OVERLAY_COUNT=$((OVERLAY_COUNT + 1))
+    done <<< "$OVERLAY_DIRS"
+    # Verify every overlay dir actually landed before the restart.
+    MISSING_REMOTE=$(echo "$OVERLAY_DIRS" | ssh "$REMOTE" "cd '$RUNTIME_DIR' && while IFS= read -r d; do [ -n \"\$d\" ] && [ ! -f \"\$d/package.json\" ] && echo \"\$d\"; done; true")
+    [ -z "$MISSING_REMOTE" ] || fail "Runtime overlay incomplete on server: $(echo "$MISSING_REMOTE" | head -5 | tr '\n' ' ')"
+    ok "Runtime overlay synced and verified ($OVERLAY_COUNT packages)"
+fi
 
 # Static assets live inside .next/static/ which standalone doesn't include
 info "Syncing static assets..."

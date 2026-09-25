@@ -105,6 +105,13 @@ async function checkChain(chainId: number, name: string, pairs: PairCheck[]): Pr
             const provider = estimate.provider ?? SwapOrchestratorService.getRouteProvider(params);
             let status = pair.expectRoute ? 'OK' : 'UNEXPECTED ROUTE';
             if (!pair.expectRoute) failures += 1;
+            // A sentinel pair that suddenly routes means an unroutable-token
+            // entry is stale — surface the exact cleanup action.
+            if (!pair.expectRoute && pair.toToken === 'USDY') {
+                console.log(
+                    `NOTE             USDY is now routable on chain ${chainId} — remove it from UNROUTABLE_SWAP_TOKENS (apps/web/hooks/use-tradeable-tokens.ts)`
+                );
+            }
             if (pair.expectRoute && pair.expectProvider && provider !== pair.expectProvider) {
                 status = 'WRONG PROVIDER';
                 failures += 1;
