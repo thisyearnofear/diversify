@@ -18,8 +18,13 @@ provenance back (flag + phrase, issuer + keys, `ProvenanceCoinBack`),
 one coin at a time; a coin with no back is just an icon. Tap a label
 (`KESm ▾`) to change that side — the stage opens `TokenPickerSheet`
 itself, fed by the shared `useTokenPickerItems` hook so both pickers
-read the same compliance/badge/balance list. Below the beam the
-corridor line rotates its beats (alive); a `StoryPairStrip` of
+read the same compliance/badge/balance list. `TokenIcon` resolves logos
+through the curated `constants/token-logos.ts` registry; the nine Mento
+Celo currencies added in September 2026 use their configured token
+contracts' verified Trust Wallet assets. Missing or failed logos use the
+branded Coin fallback rather than a broken image; GoodDollar (`G$`) remains
+an explicit fallback until a verified public logo is available. Below the
+beam the corridor line rotates its beats (alive); a `StoryPairStrip` of
 signature pairs sits under the stage — connected, it leads with what
 the wallet holds (each held token vs USDm, EURm when the held token IS
 USDm); walletless, with the visitor's region token. Only pairs with

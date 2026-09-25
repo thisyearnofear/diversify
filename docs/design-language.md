@@ -272,17 +272,22 @@ A tab change that fails any of these is the old stack. Do not ship it.
    sanctioned third gaze surface). Never swap the object for a hero-card +
    proof-card + how-it-works stack. All four share one status tier:
    `UnconnectedStatusTier` (Verified evidence line + demo text link).
-   **One connect affordance per tab on mobile:** below `sm` the header
-   `WalletButton` yields to the in-object CTA on tabs that carry one
-   (Home, Shield, Guardian); it survives where the resting object has
-   none (Exchange's pair stage, Info), when connected, on desktop, and
-   in Farcaster/MiniPay contexts. **Shield morphs ring ↔ gallery in
+   **Connecting never replaces Home's object:** while a wallet prompt is
+   open, Home stays explorable and its connect CTA alone shows
+   "Connecting…"; do not strand the user on a full-screen wait or add a
+   second connecting banner. **One connect affordance per tab on mobile:**
+   below `sm` the header `WalletButton` yields to the in-object CTA on tabs
+   that carry one (Home, Shield, Guardian); it survives where the resting
+   object has none (Exchange's pair stage, Info), when connected, on desktop,
+   and in Farcaster/MiniPay contexts. **Shield morphs ring ↔ gallery in
    place:** with a philosophy the ghost ring is the object and the plan
    badge ("Africapitalism ▾") swaps the picker in; "← Your plan" or a
-   card commit returns to the re-sliced ring. Walletless honesty is
-   stated once (the hole: "Connect to fund" / "Target only · not
-   funded"), never per legend row; leg rows render canonical tickers
-   (USDm/EURm/BRLm) though leg ids stay wallet-facing internally.
+   card commit returns to the re-sliced ring without a blank frame.
+   Walletless Shield copy separates the jobs: the badge names the plan,
+   the hole states its dollar-reserve target and compare affordance, and
+   the CTA says "Connect wallet" — no duplicate plan name or connect ask
+   in the hole. Leg rows render canonical tickers (USDm/EURm/BRLm) though
+   leg ids stay wallet-facing internally.
 6. **Nothing sits above the object** except a real error. Banners,
    scorecards, honesty strips, and “next step” journeys are object /
    status / footnote — or they leave.
@@ -519,7 +524,7 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link |
 | `StatusTier` | `apps/web/components/shared/StatusTier.tsx` | connected status tier budget: trust + one transition + one rail (§5 rail 8) |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
-| `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` | real token logos w/ coin fallback |
+| `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts` | curated token logos w/ branded coin fallback on missing or failed logos; add verified assets to the registry, never leave broken images |
 | `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |
 | segmented control | risk card + money purpose | period/purpose selector |
 | `.scrollbar-hide` | `globals.css` | horizontal chip strips |
