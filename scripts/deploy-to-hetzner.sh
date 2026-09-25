@@ -211,35 +211,28 @@ fi
 # Runtime-loaded packages NFT can't see (dynamic import() via `new Function`
 # or `eval('require(...)')`) — AI Gateway SDK for TypeSafe routes
 # (ask-world-spike / firecrawl-webhook) and the 0G storage SDK that evidence
-# anchoring eval-requires in shared-0g. Overlay them after the --delete sync
-# so those routes keep working on Hetzner. -L follows pnpm symlinks and ships
-# each package's nested node_modules (e.g. open-jsonrpc-provider's axios@0.27).
-info "Overlaying runtime-loaded packages (AI Gateway SDK + 0G storage)..."
-ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules/@ai-sdk' '$RUNTIME_DIR/node_modules/@vercel' '$RUNTIME_DIR/node_modules/@standard-schema' '$RUNTIME_DIR/node_modules/@workflow' '$RUNTIME_DIR/node_modules/@0gfoundation'"
-for pkg_path in \
-    ai \
-    @ai-sdk/gateway \
-    @ai-sdk/provider \
-    @ai-sdk/provider-utils \
-    @vercel/oidc \
-    @standard-schema/spec \
-    @workflow/serde \
-    eventsource-parser \
-    json-schema \
-    undici \
-    @0gfoundation/0g-storage-ts-sdk \
-    open-jsonrpc-provider \
-    reconnecting-websocket
-do
-    if [ -d "node_modules/$pkg_path" ]; then
-        rsync -azL --delete --no-owner --no-group \
-            "node_modules/$pkg_path/" \
-            "$REMOTE:$RUNTIME_DIR/node_modules/$pkg_path/" >/dev/null
-    else
-        warn "AI Gateway overlay missing locally: node_modules/$pkg_path"
+# anchoring eval-requires in shared-0g. Their TRANSITIVE deps arrive partial
+# or absent in the standalone trace (the @noble/hashes hkdf.js outage), so we
+# overlay the full dependency closure computed by
+# scripts/runtime-overlay-closure.mjs from scripts/runtime-loaded-packages.json
+# — every package dir in FULL, preserving nested node_modules paths (e.g.
+# open-jsonrpc-provider/node_modules/axios). -L follows pnpm symlinks.
+info "Overlaying runtime-loaded packages (full dependency closure)..."
+OVERLAY_DIRS=$(node scripts/runtime-overlay-closure.mjs) || \
+    fail "Runtime overlay closure could not resolve locally — fix dependencies before deploying"
+ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules'"
+while IFS= read -r pkg_dir; do
+    [ -z "$pkg_dir" ] && continue
+    if [ ! -d "$pkg_dir" ]; then
+        warn "Runtime overlay missing locally: $pkg_dir"
+        continue
     fi
-done
-ok "AI Gateway SDK overlayed"
+    ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/$(dirname "$pkg_dir")'"
+    rsync -azL --delete --no-owner --no-group \
+        "$pkg_dir/" \
+        "$REMOTE:$RUNTIME_DIR/$pkg_dir/" >/dev/null
+done <<< "$OVERLAY_DIRS"
+ok "Runtime overlay synced ($(echo "$OVERLAY_DIRS" | grep -c .) packages)"
 
 # Static assets live inside .next/static/ which standalone doesn't include
 info "Syncing static assets..."
@@ -310,10 +303,29 @@ fi
 if [ "$SKIP_GATE" = "true" ]; then
     warn "Skipping healthz gate (DEPLOY_SKIP_GATE=true). You are on your own."
 else
+    # Runtime module smoke — the overlay rsync ships the full dep closure,
+    # but a partial tree still passes healthz while eval-require routes die
+    # later (the @noble/hashes hkdf.js outage). Require every runtime-loaded
+    # root plus a deep entry (@noble/hashes/hkdf.js) inside the runtime dir
+    # before declaring the deploy healthy; failure takes the same rollback
+    # path as healthz below.
+    RUNTIME_MODS=$(node -e 'console.log(require("./scripts/runtime-loaded-packages.json").concat("@noble/hashes/hkdf.js").join(","))')
+    info "Runtime module smoke in $RUNTIME_DIR (require all overlay roots + @noble/hashes/hkdf.js)..."
+    SMOKE_OUT=$(ssh "$REMOTE" "cd '$RUNTIME_DIR' && RUNTIME_MODS='$RUNTIME_MODS' node -e 'const mods=process.env.RUNTIME_MODS.split(\",\");(async()=>{for(const m of mods){try{require(m)}catch(e){if(e&&e.code===\"ERR_REQUIRE_ESM\"){await import(m);continue}console.error(\"SMOKE_FAIL \"+m+\": \"+(e&&e.message));process.exit(1)}}console.log(\"runtime smoke ok — \"+mods.length+\" modules\")})()'" 2>&1) && RUNTIME_SMOKE_OK=true || RUNTIME_SMOKE_OK=false
+
     info "Gating on $PUBLIC_HEALTH_URL (up to 30s, 3 attempts)..."
     HEALTH_OK=false
     LAST_BODY=""
+    if [ "$RUNTIME_SMOKE_OK" = "true" ]; then
+        ok "runtime module smoke passed: $SMOKE_OUT"
+    else
+        warn "runtime module smoke FAILED:"
+        echo "$SMOKE_OUT"
+        LAST_BODY="runtime module smoke failed: $SMOKE_OUT"
+    fi
     for attempt in 1 2 3; do
+        # Smoke failure is already fatal — don't sit through healthz retries.
+        if [ "$RUNTIME_SMOKE_OK" != "true" ]; then break; fi
         sleep 5  # give the new process a moment to bind the port
         HTTP_CODE=$(ssh "$REMOTE" "curl -s -o /tmp/healthz-resp.json -w '%{http_code}' --max-time 15 '$HEALTH_URL' 2>&1" || echo "000")
         LAST_BODY=$(ssh "$REMOTE" "cat /tmp/healthz-resp.json 2>/dev/null" || echo "")

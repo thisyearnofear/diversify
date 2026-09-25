@@ -139,6 +139,50 @@ describe('RecommendationLedgerService.recordRecommendation — return shape', ()
         mockContract.recordRecommendation.mockResolvedValue(mockTx);
     });
 
+    it('estimates gas and applies a 1.25× buffer to the write', async () => {
+        mockTx.wait.mockResolvedValue({ status: 1, logs: [] });
+        (mockContract.recordRecommendation as any).estimateGas =
+            vi.fn().mockResolvedValue(228_943n);
+        const { recordRecommendation } = await import('../recommendation-ledger.service');
+
+        await recordRecommendation({
+            user: '0x' + 'ab'.repeat(20),
+            action: 'SWAP',
+            targetToken: 'cUSD',
+            reasoning: 'test',
+            evidenceCid: '',
+            servingModel: 'test',
+            confidence: 8000,
+        });
+
+        expect((mockContract.recordRecommendation as any).estimateGas).toHaveBeenCalled();
+        const overrides = mockContract.recordRecommendation.mock.calls.at(-1)!.at(-1) as any;
+        // ceil(228943 × 1.25) = 286179
+        expect(overrides.gasLimit).toBe(286_179n);
+        delete (mockContract.recordRecommendation as any).estimateGas;
+    });
+
+    it('falls back to a 500k gas limit when estimation fails', async () => {
+        mockTx.wait.mockResolvedValue({ status: 1, logs: [] });
+        (mockContract.recordRecommendation as any).estimateGas =
+            vi.fn().mockRejectedValue(new Error('execution reverted'));
+        const { recordRecommendation } = await import('../recommendation-ledger.service');
+
+        await recordRecommendation({
+            user: '0x' + 'ab'.repeat(20),
+            action: 'SWAP',
+            targetToken: 'cUSD',
+            reasoning: 'test',
+            evidenceCid: '',
+            servingModel: 'test',
+            confidence: 8000,
+        });
+
+        const overrides = mockContract.recordRecommendation.mock.calls.at(-1)!.at(-1) as any;
+        expect(overrides.gasLimit).toBe(500_000n);
+        delete (mockContract.recordRecommendation as any).estimateGas;
+    });
+
     it('returns "failed" with an explainable error when the write contract is unavailable', async () => {
         // Must clear BOTH LEDGER_PRIVATE_KEY and VAULT_PRIVATE_KEY — the
         // service checks `LEDGER_PRIVATE_KEY || VAULT_PRIVATE_KEY`.

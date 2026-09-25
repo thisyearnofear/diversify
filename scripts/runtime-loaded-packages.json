@@ -1,0 +1,15 @@
+[
+  "ai",
+  "@ai-sdk/gateway",
+  "@ai-sdk/provider",
+  "@ai-sdk/provider-utils",
+  "@vercel/oidc",
+  "@standard-schema/spec",
+  "@workflow/serde",
+  "eventsource-parser",
+  "json-schema",
+  "undici",
+  "@0gfoundation/0g-storage-ts-sdk",
+  "open-jsonrpc-provider",
+  "reconnecting-websocket"
+]

@@ -540,19 +540,32 @@ export async function recordRecommendation(params: {
         };
     }
 
+    const writeArgs = [
+        params.user,
+        params.action,
+        params.targetToken,
+        reasoningHash,
+        params.evidenceCid,
+        params.servingModel,
+        params.settlementTxHash || '',
+        params.confidence,
+    ] as const;
+
+    // Gas: a hardcoded 500k limit prices writes out on Celo — with the
+    // current base fee the wallet would need ~0.20 CELO for a ~230k-gas
+    // write. Estimate the real call and add a 25% buffer; fall back to
+    // 500k when estimation fails (provider can't simulate).
+    let gasLimit: bigint = 500_000n;
+    try {
+        const estimated = await contract.recordRecommendation.estimateGas(...writeArgs);
+        gasLimit = (estimated * 5n + 3n) / 4n; // ceil(estimate × 1.25)
+    } catch {
+        // Keep the fallback limit.
+    }
+
     let tx;
     try {
-        tx = await contract.recordRecommendation(
-            params.user,
-            params.action,
-            params.targetToken,
-            reasoningHash,
-            params.evidenceCid,
-            params.servingModel,
-            params.settlementTxHash || '',
-            params.confidence,
-            { gasLimit: 500_000 }
-        );
+        tx = await contract.recordRecommendation(...writeArgs, { gasLimit });
     } catch (error: any) {
         console.error(`[RecommendationLedger] ❌ Failed to broadcast for ${params.user} on chain ${chainId}: ${error.message}`);
         return { status: 'failed', error: error.message || 'Broadcast failed', chainId };
