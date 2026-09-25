@@ -237,7 +237,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.getByText('Add funds')).toBeInTheDocument();
   });
 
-  it('emptyLabel replaces the Add funds label (walletless ghost ring)', () => {
+  it('walletless hole states the plan reserve — no connect copy, no repeated plan name', () => {
     const empty = {
       ...DEMO_PORTFOLIO,
       totalValue: 0,
@@ -251,10 +251,16 @@ describe('ProtectionPlanRing — projections shape', () => {
         selectedToken={null}
         onSelectToken={() => {}}
         empty
-        emptyLabel="Connect to fund"
+        walletless
+        onHoleTap={() => {}}
       />,
     );
-    expect(screen.getByText('Connect to fund')).toBeInTheDocument();
+    const hole = screen.getByTestId('ring-hole');
+    expect(within(hole).getByText('dollar reserve')).toBeInTheDocument();
+    expect(within(hole).getByText(/^\d+%$/)).toBeInTheDocument();
+    expect(within(hole).queryByText(/connect/i)).not.toBeInTheDocument();
+    // The plan name lives once, in the badge.
+    expect(screen.getAllByText(/Africapitalism/)).toHaveLength(1);
     expect(screen.queryByText('Add funds')).not.toBeInTheDocument();
   });
 });

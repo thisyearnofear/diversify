@@ -3,7 +3,7 @@
  *
  * §5 rail 5 (unconnected is a morph too): when a philosophy is resolvable
  * the ghost plan ring IS the object — walletless, so it renders the
- * plan's slices with a "Connect to fund" hole. The plan badge morphs the
+ * plan's slices with the plan's dollar reserve in the hole. The plan badge morphs the
  * object in place: tap "Africapitalism ▾" and the gallery replaces the
  * ring; "← Your plan" or choosing a card returns to the ring re-sliced.
  * With no philosophy the gallery alone is the object. The connect CTA
@@ -98,17 +98,27 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
   const [galleryOpen, setGalleryOpen] = React.useState(false);
   React.useEffect(() => setGalleryOpen(false), [ringKey]);
   const showPicker = !balance.isPreviewing && (!showRing || galleryOpen);
-  const planName = ringArchetype ? ARCHETYPES[ringArchetype].name : null;
 
   const object = (
     <div className="space-y-4" data-testid="shield-unconnected-object">
-      <AnimatePresence mode="wait" initial={false}>
+      {/* Crossfade in one grid cell: the outgoing view fades while the
+          incoming one is already painted, so the morph never shows an
+          empty card (mode="wait" left a blank frame between the two). The
+          cell sizes to the incoming view; the leaving one is taken out of
+          flow so the height snaps once instead of stacking. */}
+      <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
+      <AnimatePresence initial={false}>
         <motion.div
           key={showPicker ? "picker" : "ring"}
-          initial={reducedMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reducedMotion ? undefined : { opacity: 0, y: -8 }}
-          transition={{ duration: 0.2, ease: "easeOut" }}
+          initial={reducedMotion ? false : { opacity: 0, scale: 0.985 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={
+            reducedMotion
+              ? undefined
+              : { opacity: 0, scale: 0.985, position: "absolute", inset: 0, pointerEvents: "none" }
+          }
+          transition={{ duration: 0.18, ease: "easeOut" }}
+          className="relative min-w-0"
         >
       {showRing && !showPicker && (
         <div data-testid="shield-ring" data-walletless>
@@ -122,7 +132,7 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
             onSelectToken={setSelectedToken}
             alignmentScore={null}
             empty
-            emptyLabel="Connect to fund"
+            walletless
             onHoleTap={
               balance.isPreviewing
                 ? undefined
@@ -191,14 +201,12 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
       )}
         </motion.div>
       </AnimatePresence>
+      </div>
 
-      {/* The one CTA — attaches to the object, no card wrapper. */}
+      {/* The one CTA — attaches to the object, no card wrapper. The plan
+          name already lives in the badge; the button just says the verb. */}
       {!balance.isPreviewing && (
-        <WalletButton
-          variant="primary"
-          className="w-full"
-          connectLabel={planName ? `Connect to use ${planName}` : undefined}
-        />
+        <WalletButton variant="primary" className="w-full" connectLabel="Connect wallet" />
       )}
     </div>
   );

@@ -65,8 +65,11 @@ interface Props {
   alignmentScore?: number | null;
   /** Empty-wallet morph — hole says Add funds; slices are the plan. */
   empty?: boolean;
-  /** Replaces the empty hole's label line (walletless: "Connect to fund"). */
-  emptyLabel?: string;
+  /**
+   * Walletless ghost ring — the hole states the plan's own fact (dollar
+   * reserve %) instead of repeating the connect CTA that sits below it.
+   */
+  walletless?: boolean;
   /** Makes the hole tappable while idle/empty — Shield uses it for compare mode. */
   onHoleTap?: () => void;
   /** Replaces the idle hint text (compare mode: "under this plan"). */
@@ -95,7 +98,7 @@ export function ProtectionPlanRing({
   onSelectToken,
   alignmentScore = null,
   empty = false,
-  emptyLabel = "Add funds",
+  walletless = false,
   onHoleTap,
   holeHintOverride,
   legs,
@@ -301,11 +304,19 @@ export function ProtectionPlanRing({
     if (empty && selected) {
       return { number: `${selected.percent}%` as React.ReactNode, label: displayToken(selected.token), hint: 'Target only · not funded' };
     }
+    // The plan name lives in the badge above — the hole never repeats it.
+    if (empty && walletless) {
+      return {
+        number: `${floorPercent(allocations)}%` as React.ReactNode,
+        label: 'dollar reserve',
+        hint: 'plan target',
+      };
+    }
     if (empty) {
       return {
         number: null as React.ReactNode,
-        label: emptyLabel,
-        hint: archetype.name,
+        label: 'Add funds',
+        hint: 'to start this plan',
       };
     }
     if (selectedToken === SLEEVE_ID) {
