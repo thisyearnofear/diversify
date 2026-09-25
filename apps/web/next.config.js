@@ -27,35 +27,39 @@ const nextConfig = {
   // peers) into the standalone trace for the routes that call Gateway.
   serverExternalPackages: ['ai'],
   outputFileTracingIncludes: {
+    // Include globs resolve relative to THIS app dir (apps/web). With
+    // node-linker=hoisted the packages live at the repo-root node_modules
+    // (apps/web/node_modules only holds @diversifi/@stable-station links), so
+    // every glob must climb to '../../node_modules' — a './node_modules' glob
+    // silently matches nothing.
     // Full Gateway runtime graph — dynamic `import('ai')` hides these from NFT.
     '/api/agent/ask-world-spike': [
-      './node_modules/ai/**/*',
-      './node_modules/@ai-sdk/**/*',
-      './node_modules/@vercel/oidc/**/*',
-      './node_modules/@standard-schema/spec/**/*',
-      './node_modules/@workflow/serde/**/*',
-      './node_modules/eventsource-parser/**/*',
-      './node_modules/json-schema/**/*',
-      './node_modules/undici/**/*',
+      '../../node_modules/ai/**/*',
+      '../../node_modules/@ai-sdk/**/*',
+      '../../node_modules/@vercel/oidc/**/*',
+      '../../node_modules/@standard-schema/spec/**/*',
+      '../../node_modules/@workflow/serde/**/*',
+      '../../node_modules/eventsource-parser/**/*',
+      '../../node_modules/json-schema/**/*',
+      '../../node_modules/undici/**/*',
     ],
     '/api/agent/firecrawl-webhook': [
-      './node_modules/ai/**/*',
-      './node_modules/@ai-sdk/**/*',
-      './node_modules/@vercel/oidc/**/*',
-      './node_modules/@standard-schema/spec/**/*',
-      './node_modules/@workflow/serde/**/*',
-      './node_modules/eventsource-parser/**/*',
-      './node_modules/json-schema/**/*',
-      './node_modules/undici/**/*',
+      '../../node_modules/ai/**/*',
+      '../../node_modules/@ai-sdk/**/*',
+      '../../node_modules/@vercel/oidc/**/*',
+      '../../node_modules/@standard-schema/spec/**/*',
+      '../../node_modules/@workflow/serde/**/*',
+      '../../node_modules/eventsource-parser/**/*',
+      '../../node_modules/json-schema/**/*',
+      '../../node_modules/undici/**/*',
     ],
-    // 0G evidence anchoring — shared-0g loads the SDK via
-    // `eval('require("@0gfoundation/0g-storage-ts-sdk")')` at runtime, so NFT
-    // cannot see it from any route. Force-include the SDK plus its runtime
-    // deps that nothing else traces (open-jsonrpc-provider pulls ws/axios).
+    // 0G evidence anchoring — shared-0g loads the SDK via dynamic `import()` at
+    // runtime; force-include the SDK plus its runtime deps that nothing else
+    // traces (open-jsonrpc-provider pulls ws/axios).
     '*': [
-      './node_modules/@0gfoundation/0g-storage-ts-sdk/**/*',
-      './node_modules/open-jsonrpc-provider/**/*',
-      './node_modules/reconnecting-websocket/**/*',
+      '../../node_modules/@0gfoundation/0g-storage-ts-sdk/**/*',
+      '../../node_modules/open-jsonrpc-provider/**/*',
+      '../../node_modules/reconnecting-websocket/**/*',
     ],
   },
 
