@@ -61,17 +61,17 @@ describe('deriveGuardianRunHealth', () => {
     expect(health.healthy).toBe(false);
   });
 
-  it('uses the heartbeat cadence (30 min → 90 min window) for heartbeat', () => {
-    expect(GUARDIAN_RUN_CADENCE_MS.heartbeat).toBe(30 * 60 * 1000);
+  it('uses the heartbeat cadence (2 days → 6 day window) for heartbeat', () => {
+    expect(GUARDIAN_RUN_CADENCE_MS.heartbeat).toBe(2 * 24 * 60 * 60 * 1000);
     const within = deriveGuardianRunHealth(
       'heartbeat',
-      { lastRunAt: new Date(NOW - 60 * 60 * 1000).toISOString(), status: 'ok' }, // 1h ago
+      { lastRunAt: new Date(NOW - 3 * 24 * 60 * 60 * 1000).toISOString(), status: 'ok' }, // 3d ago
       NOW,
     );
     expect(within.freshness).toBe('fresh');
     const outside = deriveGuardianRunHealth(
       'heartbeat',
-      { lastRunAt: new Date(NOW - 2 * 60 * 60 * 1000).toISOString(), status: 'ok' }, // 2h ago
+      { lastRunAt: new Date(NOW - 7 * 24 * 60 * 60 * 1000).toISOString(), status: 'ok' }, // 7d ago
       NOW,
     );
     expect(outside.freshness).toBe('stale');

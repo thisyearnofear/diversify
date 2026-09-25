@@ -95,7 +95,7 @@ guardian-loop ── GUARDIAN tier + eligible chain + provider configured? ─�
   chains without a grant token; `guardianSessionAddress()` returns null when
   unset (no self-address fallback — the grant option is hidden instead).
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
-- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on the configured ledger chains (Celo/Arbitrum primary + 0G evidence mirror, plus HashKey/Robinhood/Arc legs when their contracts are configured — see `PROOF_FEED_CHAIN_IDS`). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
+- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on the configured ledger chains (Celo/Arbitrum primary + 0G evidence mirror, plus HashKey/Robinhood/Arc legs when their contracts are configured — see `PROOF_FEED_CHAIN_IDS`). The Hetzner crontab owns the cadence and passes a `rails` list in the POST body (absent = all four legs): **every 2 days** `{"rails":["primary","caribbean","mirror"]}` (primary write + Caribbean cohort on Celo + 0G evidence mirror) and **weekly** `{"rails":["apac"]}` (HashKey APAC cohort) — ledger spend ≈ $1/month; every advisory stays individually anchored (no digest). Keep this doc in sync with the crontab, not the reverse.
 
 ---
 
@@ -133,7 +133,7 @@ start (`success:false`) — indistinguishable to a monitor. New `GuardianRunLog`
 model (one document per `loop` / `heartbeat` key) + `lib/guardian-run-status.ts`:
 `recordGuardianRun()` upserts the terminal outcome; `deriveGuardianRunHealth()`
 (pure, tested) computes `freshness` (`fresh` | `stale` | `never` — window = 3×
-cadence: 15 min for the loop, 90 min for the heartbeat) and `healthy` (fresh
+cadence: 15 min for the loop, 6 days for the heartbeat) and `healthy` (fresh
 AND not `failed`). Both cron endpoints record `ok` / `idle` / `degraded` /
 `failed` with compact summaries; `/api/agent/status` exposes
 `guardian: { loop, heartbeat }` with `lastRunAt`, `ageSeconds`, `freshness`,

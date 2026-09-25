@@ -14,8 +14,9 @@ import { GuardianRunLog, type GuardianRunKind, type GuardianRunTerminalStatus } 
 export const GUARDIAN_RUN_CADENCE_MS: Record<GuardianRunKind, number> = {
   // The loop cron fires every 5 minutes.
   loop: 5 * 60 * 1000,
-  // The heartbeat cron fires roughly every 30 minutes (deployment cron).
-  heartbeat: 30 * 60 * 1000,
+  // The heartbeat cron fires every 2 days (Hetzner crontab); the weekly
+  // APAC-only run also records here, so freshness = 3× the 2-day cadence.
+  heartbeat: 2 * 24 * 60 * 60 * 1000,
 };
 
 /** A run is only considered "fresh" up to 3× its cadence late. */

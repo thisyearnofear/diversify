@@ -21,7 +21,12 @@
  *      — plus a Caribbean-cohort savings advisory on Celo (cohort-labelled receipt)
  *   4. Mirror to 0G mainnet as evidence anchor
  *
- * Called by server-side cron every 30 minutes on Hetzner.
+ * Cadence (owned by the Hetzner crontab — ledger spend ≈ $1/month):
+ *   every 2 days: `rails=primary,caribbean,mirror`
+ *   weekly:       `rails=apac`
+ * An optional `rails` list (POST JSON body, or `?rails=` comma-list) selects
+ * which legs run; absent/empty = all four (backward compatible).
+ * Unknown values → 400 with the allowed list.
  *
  * Security: Protected by GUARDIAN_LOOP_SECRET header (same as guardian-loop).
  */
@@ -136,12 +141,42 @@ export function pickRecommendation(snapshot: MarketSnapshot): HeartbeatRecommend
   return synthesizeHeartbeatAdvisory(snapshot);
 }
 
+const RAIL_VALUES = ['primary', 'caribbean', 'apac', 'mirror'] as const;
+type Rail = (typeof RAIL_VALUES)[number];
+
+/** POST body `rails` array or `?rails=` comma list; absent/empty = all. */
+function parseRails(req: NextApiRequest): Set<Rail> | 'invalid' {
+  const raw: unknown = req.body?.rails ?? req.query?.rails;
+  if (raw == null || (Array.isArray(raw) && raw.length === 0) || raw === '') {
+    return new Set(RAIL_VALUES);
+  }
+  const parts = Array.isArray(raw)
+    ? raw
+    : String(raw).split(',');
+  const rails = new Set<Rail>();
+  for (const part of parts) {
+    const value = String(part).trim();
+    if (!value) continue;
+    if (!(RAIL_VALUES as readonly string[]).includes(value)) return 'invalid';
+    rails.add(value as Rail);
+  }
+  return rails.size === 0 ? new Set(RAIL_VALUES) : rails;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
 
   const authHeader = req.headers['x-guardian-secret'] || req.body?.secret;
   if (typeof authHeader !== 'string' || !constantTimeEqual(authHeader, GUARDIAN_LOOP_SECRET)) {
     return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const rails = parseRails(req);
+  if (rails === 'invalid') {
+    return res.status(400).json({
+      error: 'Unknown rail',
+      allowed: [...RAIL_VALUES],
+    });
   }
 
   // Recording the run outcome must never change the cron's behaviour.
@@ -187,7 +222,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       bodyComplete: true,
     };
 
-    const apacPromise = process.env.HASHKEY_LEDGER_CONTRACT
+    const apacPromise = rails.has('apac') && process.env.HASHKEY_LEDGER_CONTRACT
       ? recommendationLedgerService.recordRecommendation({
           user: GUARDIAN_AGENT_ADDRESS,
           ...decisionToLedgerParams(
@@ -207,7 +242,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // settles savings on Celo (USD-pegged stables). Kept as its own
     // cohort-labelled receipt so the proof feed shows a live Caribbean
     // pulse alongside the APAC one (docs/caribbean-rail.md).
-    const caribbeanPromise = process.env.CELO_MAINNET_LEDGER_CONTRACT
+    const caribbeanPromise = rails.has('caribbean') && process.env.CELO_MAINNET_LEDGER_CONTRACT
       ? recommendationLedgerService.recordRecommendation({
           user: GUARDIAN_AGENT_ADDRESS,
           ...decisionToLedgerParams(
@@ -222,28 +257,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         })
       : Promise.resolve(null);
 
-    const primaryResult = await recommendationLedgerService.recordRecommendation({
-      user: GUARDIAN_AGENT_ADDRESS,
-      ...decisionToLedgerParams({ ...decisionBase, recordKind: 'advisory' }),
-      evidenceCid: '',
-    });
+    const primaryResult = rails.has('primary')
+      ? await recommendationLedgerService.recordRecommendation({
+          user: GUARDIAN_AGENT_ADDRESS,
+          ...decisionToLedgerParams({ ...decisionBase, recordKind: 'advisory' }),
+          evidenceCid: '',
+        })
+      : null;
 
-    // 3. Mirror to 0G mainnet as evidence anchor (fire-and-forget)
-    const mirrorPromise = recommendationLedgerService.mirrorRecommendationToZeroG({
-      user: GUARDIAN_AGENT_ADDRESS,
-      ...decisionToLedgerParams(
-        { ...decisionBase, recordKind: 'evidence-mirror' },
-        {
-          actionOverride: 'EVIDENCE_MIRROR',
-          mirrorBody: `Evidence anchor for heartbeat rec: ${rec.reasoning}`,
-        },
-      ),
-      evidenceCid: '',
-      settlementTxHash: primaryResult.status === 'failed' ? '' : primaryResult.txHash,
-    }).catch((err) => {
-      console.warn(`[guardian-heartbeat] 0G mirror failed: ${err.message}`);
-      return null;
-    });
+    // 3. Mirror to 0G mainnet as evidence anchor (fire-and-forget). When
+    // `mirror` runs without `primary` there is no settlement tx to link —
+    // pass '' rather than skipping the anchor.
+    const mirrorPromise = rails.has('mirror')
+      ? recommendationLedgerService.mirrorRecommendationToZeroG({
+          user: GUARDIAN_AGENT_ADDRESS,
+          ...decisionToLedgerParams(
+            { ...decisionBase, recordKind: 'evidence-mirror' },
+            {
+              actionOverride: 'EVIDENCE_MIRROR',
+              mirrorBody: `Evidence anchor for heartbeat rec: ${rec.reasoning}`,
+            },
+          ),
+          evidenceCid: '',
+          settlementTxHash:
+            primaryResult && primaryResult.status !== 'failed' ? primaryResult.txHash : '',
+        }).catch((err) => {
+          console.warn(`[guardian-heartbeat] 0G mirror failed: ${err.message}`);
+          return null;
+        })
+      : Promise.resolve(null);
 
     const [mirrorResult, apacResult, caribbeanResult] = await Promise.all([
       mirrorPromise,
@@ -252,11 +294,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     ]);
 
     await recordRunSafely({
-      status: primaryResult.status === 'failed' ? 'degraded' : 'ok',
+      status: primaryResult?.status === 'failed' ? 'degraded' : 'ok',
       summary: {
         targetToken: rec.targetToken,
         confidence: rec.confidence,
-        primaryStatus: primaryResult.status,
+        primaryStatus: primaryResult?.status ?? null,
         evidenceMirror: mirrorResult?.status ?? null,
         apacRail: apacResult?.status ?? null,
         caribbeanRail: caribbeanResult?.status ?? null,
@@ -278,13 +320,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         confidence: rec.confidence,
         reasoning: rec.reasoning,
       },
-      primaryChain: {
+      primaryChain: primaryResult ? {
         status: primaryResult.status,
         chainId: primaryResult.chainId,
         txHash: primaryResult.status === 'failed' ? undefined : primaryResult.txHash,
         explorerUrl: primaryResult.status === 'failed' ? undefined : (primaryResult as any).explorerUrl,
         id: primaryResult.status === 'anchored' ? (primaryResult as any).id : undefined,
-      },
+      } : null,
       evidenceMirror: mirrorResult ? {
         status: mirrorResult.status,
         chainId: mirrorResult.chainId,

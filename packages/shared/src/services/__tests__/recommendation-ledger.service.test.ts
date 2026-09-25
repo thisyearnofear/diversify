@@ -548,20 +548,24 @@ describe('getLedgerGasRunways — gas runway per write chain', () => {
         const celo = rows.find((r) => r.chainId === 42220)!;
 
         expect(celo.estCostPerWrite).toBe('0.092');
-        // 100 / 0.092 = 1086 writes; Celo cohort cadence = 12/day → ~90 days → ok
+        // 100 / 0.092 = 1086 writes; Celo cohort cadence = 0.5/day (every 2
+        // days per the Hetzner crontab) → 2172 days → ok
         expect(celo.runwayWrites).toBe(1086);
-        expect(celo.runwayDays).toBeCloseTo(90.5, 1);
+        expect(celo.runwayDays).toBeCloseTo(2172, 0);
         expect(celo.status).toBe('ok');
         // Unconfigured chains report not-configured, never throw
         expect(rows.find((r) => r.chainId === 177)!.status).toBe('not-configured');
     });
 
     it('reports low below 7 days of runway and blocked below one write', async () => {
-        mockRpcProvider.getBalance.mockResolvedValue(4n * 10n ** 17n); // 0.4 native → 4 writes
+        // 0.03 native → 0 writes… balance 0.05 → still <1 write → blocked
+        // already. For 'low' (<7 days at 0.5 writes/day → <4 writes): use
+        // 0.3 native → 3 writes → 6 days → low.
+        mockRpcProvider.getBalance.mockResolvedValue(3n * 10n ** 17n); // 0.3 native → 3 writes
         mockRpcProvider.getFeeData.mockResolvedValue({ maxFeePerGas: FEE, gasPrice: null });
         const { getLedgerGasRunways } = await import('../recommendation-ledger.service');
         let celo = (await getLedgerGasRunways()).find((r) => r.chainId === 42220)!;
-        expect(celo.runwayWrites).toBe(4);
+        expect(celo.runwayWrites).toBe(3);
         expect(celo.status).toBe('low');
 
         mockRpcProvider.getBalance.mockResolvedValue(0n);

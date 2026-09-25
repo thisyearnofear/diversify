@@ -399,11 +399,12 @@ export function getLedgerConfig(chainId?: number): LedgerConfig | null {
 // Real measured gasUsed for recordRecommendation writes: 228,943. We estimate
 // at 230k with headroom for fee drift.
 const EST_WRITE_GAS = 230_000n;
-// Matches the guardian-loop crontab: a heartbeat write every 2h = 12/day on
-// the primary chain, plus one mirrored write per cohort rail on the same
-// cadence — Caribbean cohort → Celo, APAC → HashKey, evidence mirror → 0G.
-const HEARTBEAT_WRITES_PER_DAY = 12;
-const COHORT_MIRROR_WRITES_PER_DAY = 12;
+// MUST MATCH the Hetzner crontab: the Guardian heartbeat runs every 2 days
+// (0.5 writes/day) on the primary chain, the Celo Caribbean cohort, and the
+// 0G evidence mirror; the HashKey APAC rail writes weekly (1/7 per day).
+const HEARTBEAT_WRITES_PER_DAY = 0.5;
+const APAC_WEEKLY_WRITES_PER_DAY = 1 / 7;
+const COHORT_MIRROR_WRITES_PER_DAY = 0.5;
 
 export interface LedgerGasRunway {
     chainId: number;
@@ -418,7 +419,7 @@ export interface LedgerGasRunway {
 function ledgerWritesPerDay(chainId: number, primaryChainId: number): number {
     return (chainId === primaryChainId ? HEARTBEAT_WRITES_PER_DAY : 0)
         + (chainId === CELO_MAINNET_CHAIN_ID ? COHORT_MIRROR_WRITES_PER_DAY : 0)
-        + (chainId === HASHKEY_MAINNET_CHAIN_ID ? COHORT_MIRROR_WRITES_PER_DAY : 0)
+        + (chainId === HASHKEY_MAINNET_CHAIN_ID ? APAC_WEEKLY_WRITES_PER_DAY : 0)
         + (chainId === ZERO_G_MAINNET_CHAIN_ID ? COHORT_MIRROR_WRITES_PER_DAY : 0);
 }
 
