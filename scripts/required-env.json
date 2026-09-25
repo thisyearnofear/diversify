@@ -15,6 +15,11 @@
     ["CIRCLE_API_KEY", "CIRCLE_ENTITY_SECRET"]
   ],
 
+  "_recommendedComment": "Non-fatal tier: vars the app can live without but degrades around. required-env.js ignores this key; scripts/check-env-parity.sh warns when a recommended var is on Vercel but missing on the server (or vice versa). Never add boot-critical vars here — they belong in required/oneOf.",
+  "recommended": [
+    "LIFI_API_KEY"
+  ],
+
   "_expectedValueComment": "Keys whose presence is required to equal one of these values. Use sparingly — only for hard constraints like NODE_ENV=production.",
   "expectedValues": {
     "NODE_ENV": ["production"]

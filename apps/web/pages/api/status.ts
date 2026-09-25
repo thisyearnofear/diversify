@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getSmartAccountProvider } from "@diversifi/shared";
+import { getSmartAccountProvider, getLedgerGasRunways, type LedgerGasRunway } from "@diversifi/shared";
 
 export default async function handler(
   req: NextApiRequest,
@@ -61,6 +61,16 @@ export default async function handler(
     detail: providerDetail,
   };
 
+  // Ledger gas runway per write chain — signer balance ÷ one write's
+  // estimated cost. RPC failures degrade to status 'unknown'; never fatal.
+  // NOT part of /api/healthz — low gas must never roll back a deploy.
+  let ledgerGas: LedgerGasRunway[] = [];
+  try {
+    ledgerGas = await getLedgerGasRunways();
+  } catch {
+    ledgerGas = [];
+  }
+
   const liveCount = Object.values(checks).filter(
     (c) => c.status === "live" || c.status === "configured" || c.status === "connected" || c.status === "smart-account"
   ).length;
@@ -70,6 +80,7 @@ export default async function handler(
     version: "1.0.0",
     chains: ["celo", "ethereum", "arbitrum"],
     integrations: checks,
+    ledgerGas,
     summary: `${liveCount}/${Object.keys(checks).length} integrations active`,
     endpoints: {
       inflation: "/api/inflation",

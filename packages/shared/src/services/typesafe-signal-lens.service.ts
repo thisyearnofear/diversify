@@ -84,12 +84,14 @@ type GatewayEvaluate = (request: {
 
 /**
  * AI SDK is ESM-only while this shared package intentionally compiles to
- * CommonJS for the existing Next.js server bundle. Keep the Gateway evaluator
- * behind a native runtime import so webpack does not try to require `ai` from
- * the shared barrel; this branch only loads when Gateway is configured.
- * NOTE: `new Function` needs an eval-allowed Node runtime — this loader will
- * throw on edge/no-eval CSP hosts. The Gateway call is inside a try/catch, so
- * that path degrades to the direct TypeSafe REST fallback below.
+ * CommonJS (dist via tsc). A literal `await import('ai')` compiles to
+ * `require('ai')` in that output — webpack then refuses the ESM external
+ * ("ESM packages need to be imported") and Node <22.12 can't resolve it.
+ * So this site keeps the runtime `new Function` import; `ai` + its peers
+ * reach the standalone bundle via outputFileTracingIncludes in
+ * next.config.js and the deploy's runtime-overlay closure. The Gateway
+ * call is inside a try/catch, so failures degrade to the direct TypeSafe
+ * REST fallback below.
  */
 async function loadGatewayEvaluate(): Promise<GatewayEvaluate> {
   const loadModule = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<{

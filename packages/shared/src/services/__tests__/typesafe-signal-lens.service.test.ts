@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { assessMacroSignalWithTypeSafe } from '../typesafe-signal-lens.service';
 
 const input = {
@@ -15,6 +15,15 @@ function jsonResponse(body: unknown, status = 200): Response {
 }
 
 describe('assessMacroSignalWithTypeSafe', () => {
+  // .env.local may carry a real AI_GATEWAY_API_KEY — these tests exercise the
+  // direct path explicitly, so neutralize it unless a test opts in via options.
+  const savedGatewayKey = process.env.AI_GATEWAY_API_KEY;
+  beforeEach(() => { delete process.env.AI_GATEWAY_API_KEY; });
+  afterEach(() => {
+    if (savedGatewayKey === undefined) delete process.env.AI_GATEWAY_API_KEY;
+    else process.env.AI_GATEWAY_API_KEY = savedGatewayKey;
+  });
+
   it('does not call the vendor when disabled', async () => {
     const fetchImpl = vi.fn();
 

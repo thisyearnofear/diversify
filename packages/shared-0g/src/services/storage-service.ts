@@ -55,14 +55,15 @@ export class ZeroGStorageService {
     async uploadEvidence(data: any, metadata: { agent: string; source: string; timestamp: number }): Promise<StorageResult> {
         let SDK: any;
         if (typeof window === 'undefined') {
-            // Use eval to hide the require from Webpack's static analysis
-            SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+            // Literal dynamic import — this module is server-only and the
+            // specifier must stay visible to the file tracer / bundler.
+            SDK = await import('@0gfoundation/0g-storage-ts-sdk');
         } else {
             throw new Error('0G Storage is not available in the browser.');
         }
 
         const { Indexer, Blob: ZgBlob } = SDK;
-        const ethers6 = eval('require("ethers6")');
+        const ethers6 = await import('ethers6');
 
         const privateKey = getZeroGStorageSignerKey();
         if (!privateKey) {
@@ -221,7 +222,7 @@ export class ZeroGStorageService {
             // Import SDK dynamically
             let SDK: any;
             if (typeof window === 'undefined') {
-                SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+                SDK = await import('@0gfoundation/0g-storage-ts-sdk');
             } else {
                 throw new Error('0G Storage is not available in the browser.');
             }

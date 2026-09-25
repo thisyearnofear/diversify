@@ -65,20 +65,16 @@ type GatewayEvaluate = (request: {
 }) => Promise<GatewayResult>;
 
 /**
- * Same ESM/CJS constraint as the Signal Lens loader: `ai` is ESM-only and
- * this bundle is CommonJS, so the import goes through `new Function`. Needs
- * an eval-allowed Node runtime; on no-eval hosts the call throws inside the
- * try/catch below and degrades to the direct REST fallback.
+ * `ai` is ESM-only; this file only runs inside the API route bundle
+ * (server-side), so a literal dynamic import keeps the specifier visible
+ * to the file tracer/bundler. `ai` stays in `serverExternalPackages`.
  */
 async function loadGatewayEvaluate(): Promise<GatewayEvaluate> {
-    const loadModule = new Function('specifier', 'return import(specifier)') as (specifier: string) => Promise<{
-        experimental_evaluate?: GatewayEvaluate;
-    }>;
-    const sdk = await loadModule('ai');
+    const sdk = await import('ai');
     if (!sdk.experimental_evaluate) {
         throw new Error('AI SDK experimental_evaluate is unavailable');
     }
-    return sdk.experimental_evaluate;
+    return sdk.experimental_evaluate as GatewayEvaluate;
 }
 
 function intentQuestions() {

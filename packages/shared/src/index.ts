@@ -122,6 +122,8 @@ export {
   getLedgerStats,
   buildLedgerExplorerUrl,
   computeReasoningHash,
+  getLedgerGasRunways,
+  type LedgerGasRunway,
   verifyLedgerTx,
   type LedgerRecommendation,
   type LedgerTxVerification,

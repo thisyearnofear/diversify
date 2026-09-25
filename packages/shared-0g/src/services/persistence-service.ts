@@ -153,12 +153,12 @@ export class ZeroGPersistenceService {
             // Import SDK dynamically
             let SDK: any;
             if (typeof window === 'undefined') {
-                SDK = eval('require("@0gfoundation/0g-storage-ts-sdk")');
+                SDK = await import('@0gfoundation/0g-storage-ts-sdk');
             } else {
                 throw new Error('0G Persistence is not available in the browser.');
             }
             const { Indexer, Blob: ZgBlob } = SDK;
-            const ethers6 = eval('require("ethers6")');
+            const ethers6 = await import('ethers6');
 
             // Setup Ethers v6
             const provider = new ethers6.JsonRpcProvider(this.evmRpc);

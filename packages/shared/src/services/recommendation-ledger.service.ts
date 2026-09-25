@@ -395,6 +395,88 @@ export function getLedgerConfig(chainId?: number): LedgerConfig | null {
     return resolveLedgerConfig(id);
 }
 
+// ── Ledger gas runway (surfaced by /api/status) ─────────────────────────────
+// Real measured gasUsed for recordRecommendation writes: 228,943. We estimate
+// at 230k with headroom for fee drift.
+const EST_WRITE_GAS = 230_000n;
+// Matches the guardian-loop crontab: a heartbeat write every 2h = 12/day on
+// the primary chain, plus one mirrored write per cohort rail on the same
+// cadence — Caribbean cohort → Celo, APAC → HashKey, evidence mirror → 0G.
+const HEARTBEAT_WRITES_PER_DAY = 12;
+const COHORT_MIRROR_WRITES_PER_DAY = 12;
+
+export interface LedgerGasRunway {
+    chainId: number;
+    /** null when the chain isn't a configured write target. */
+    balance: string | null;
+    estCostPerWrite: string | null;
+    runwayWrites: number | null;
+    runwayDays: number | null;
+    status: 'ok' | 'low' | 'blocked' | 'unknown' | 'not-configured';
+}
+
+function ledgerWritesPerDay(chainId: number, primaryChainId: number): number {
+    return (chainId === primaryChainId ? HEARTBEAT_WRITES_PER_DAY : 0)
+        + (chainId === CELO_MAINNET_CHAIN_ID ? COHORT_MIRROR_WRITES_PER_DAY : 0)
+        + (chainId === HASHKEY_MAINNET_CHAIN_ID ? COHORT_MIRROR_WRITES_PER_DAY : 0)
+        + (chainId === ZERO_G_MAINNET_CHAIN_ID ? COHORT_MIRROR_WRITES_PER_DAY : 0);
+}
+
+/** The mainnet chains the ledger writes to when configured. */
+const LEDGER_WRITE_CHAINS = [
+    CELO_MAINNET_CHAIN_ID,
+    ARBITRUM_MAINNET_CHAIN_ID,
+    ZERO_G_MAINNET_CHAIN_ID,
+    HASHKEY_MAINNET_CHAIN_ID,
+];
+
+/**
+ * Gas runway per configured ledger write chain: signer balance ÷ estimated
+ * cost of one recordRecommendation write (230k gas × current fee). Never
+ * throws — a chain whose RPC fails reports status 'unknown' so /api/status
+ * stays up.
+ */
+export async function getLedgerGasRunways(): Promise<LedgerGasRunway[]> {
+    const privateKey = process.env.LEDGER_PRIVATE_KEY || process.env.VAULT_PRIVATE_KEY;
+    const primary = getDefaultLedgerChainId();
+
+    return Promise.all(LEDGER_WRITE_CHAINS.map(async (chainId): Promise<LedgerGasRunway> => {
+        const config = resolveLedgerConfig(chainId);
+        const writesPerDay = ledgerWritesPerDay(chainId, primary);
+        const empty = { balance: null, estCostPerWrite: null, runwayWrites: null, runwayDays: null };
+        if (!config?.contractAddress || !privateKey) {
+            return { chainId, ...empty, status: 'not-configured' };
+        }
+        try {
+            const provider = getProvider(chainId);
+            const signer = new ethers.Wallet(privateKey, provider);
+            const [balance, feeData] = await Promise.all([
+                provider.getBalance(signer.address),
+                provider.getFeeData(),
+            ]);
+            const feePerGas = feeData.maxFeePerGas ?? feeData.gasPrice;
+            if (feePerGas == null) return { chainId, ...empty, status: 'unknown' };
+            const estCost = EST_WRITE_GAS * feePerGas;
+            const runwayWrites = Number(balance / estCost);
+            const runwayDays = writesPerDay > 0 ? runwayWrites / writesPerDay : null;
+            const status =
+                runwayWrites < 1 ? 'blocked'
+                : runwayDays != null && runwayDays < 7 ? 'low'
+                : 'ok';
+            return {
+                chainId,
+                balance: ethers.formatEther(balance),
+                estCostPerWrite: ethers.formatEther(estCost),
+                runwayWrites,
+                runwayDays,
+                status,
+            };
+        } catch {
+            return { chainId, ...empty, status: 'unknown' };
+        }
+    }));
+}
+
 export function setLedgerContractAddress(address: string, chainId?: number): void {
     const id = chainId ?? getDefaultLedgerChainId();
     const registry = getLedgerRegistry();
@@ -561,6 +643,34 @@ export async function recordRecommendation(params: {
         gasLimit = (estimated * 5n + 3n) / 4n; // ceil(estimate × 1.25)
     } catch {
         // Keep the fallback limit.
+    }
+
+    // Preflight funding check: a signer that can't cover gasLimit × fee
+    // fails on-chain anyway — skip loudly so the guardian run records a
+    // readable degrade (underfunded:…) instead of an opaque broadcast error.
+    try {
+        const runner: any = (contract as any).runner;
+        const provider = runner?.provider;
+        const from = runner?.address;
+        if (provider && from) {
+            const [balance, feeData] = await Promise.all([
+                provider.getBalance(from),
+                provider.getFeeData(),
+            ]);
+            const feePerGas = feeData.maxFeePerGas ?? feeData.gasPrice;
+            if (feePerGas != null) {
+                const required = gasLimit * feePerGas;
+                if (balance < required) {
+                    const underfunded =
+                        `underfunded: have ${ethers.formatEther(balance)} need ${ethers.formatEther(required)} (chain ${chainId})`;
+                    console.warn(`[RecommendationLedger] ⚠️ ${underfunded}`);
+                    return { status: 'failed', error: underfunded, chainId };
+                }
+            }
+        }
+    } catch {
+        // If the balance probe itself fails, don't block the write — the
+        // broadcast path below surfaces any real RPC error.
     }
 
     let tx;

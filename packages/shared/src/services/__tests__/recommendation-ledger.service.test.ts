@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock ethers so we can exercise the service without an RPC.
 const mockTx = { hash: '0x' + '11'.repeat(32), wait: vi.fn() };
+const mockRpcProvider = { getBalance: vi.fn(), getFeeData: vi.fn() };
 const mockContract = {
     recordRecommendation: vi.fn().mockResolvedValue(mockTx),
     interface: {
@@ -14,12 +15,13 @@ vi.mock('ethers6', () => {
     const wallet = { privateKey: '0x' + '22'.repeat(32), address: '0x' + '33'.repeat(20) };
     return {
         ethers: {
-            JsonRpcProvider: vi.fn().mockImplementation(() => ({})),
+            JsonRpcProvider: vi.fn().mockImplementation(() => mockRpcProvider),
             Contract: vi.fn().mockImplementation(() => mockContract),
             Wallet: vi.fn().mockImplementation(() => wallet),
             utils: { hexlify: vi.fn(), randomBytes: vi.fn() },
             keccak256: vi.fn().mockImplementation(() => '0x' + '99'.repeat(32)),
             toUtf8Bytes: vi.fn().mockImplementation((s: string) => s),
+            formatEther: vi.fn().mockImplementation((v: bigint) => (Number(v) / 1e18).toString()),
             ZeroHash: '0x' + '00'.repeat(32),
         },
     };
@@ -181,6 +183,58 @@ describe('RecommendationLedgerService.recordRecommendation — return shape', ()
         const overrides = mockContract.recordRecommendation.mock.calls.at(-1)!.at(-1) as any;
         expect(overrides.gasLimit).toBe(500_000n);
         delete (mockContract.recordRecommendation as any).estimateGas;
+    });
+
+    it('skips the broadcast when the signer cannot cover gasLimit × fee', async () => {
+        const provider = {
+            getBalance: vi.fn().mockResolvedValue(0n),
+            getFeeData: vi.fn().mockResolvedValue({ maxFeePerGas: 400_000_000_000n, gasPrice: null }),
+        };
+        (mockContract as any).runner = { provider, address: '0x' + '33'.repeat(20) };
+        mockContract.recordRecommendation.mockClear();
+        const { recordRecommendation } = await import('../recommendation-ledger.service');
+
+        const result = await recordRecommendation({
+            user: '0x' + 'ab'.repeat(20),
+            action: 'SWAP',
+            targetToken: 'cUSD',
+            reasoning: 'test',
+            evidenceCid: '',
+            servingModel: 'test',
+            confidence: 8000,
+        });
+
+        expect(result.status).toBe('failed');
+        if (result.status === 'failed') {
+            expect(result.error).toMatch(/^underfunded: have .* need .* \(chain \d+\)$/);
+        }
+        expect(mockContract.recordRecommendation).not.toHaveBeenCalled();
+        delete (mockContract as any).runner;
+    });
+
+    it('broadcasts when the signer can cover the write', async () => {
+        mockTx.wait.mockResolvedValue({ status: 1, logs: [] });
+        const provider = {
+            getBalance: vi.fn().mockResolvedValue(10n ** 18n),
+            getFeeData: vi.fn().mockResolvedValue({ maxFeePerGas: 400_000_000_000n, gasPrice: null }),
+        };
+        (mockContract as any).runner = { provider, address: '0x' + '33'.repeat(20) };
+        mockContract.recordRecommendation.mockClear();
+        const { recordRecommendation } = await import('../recommendation-ledger.service');
+
+        const result = await recordRecommendation({
+            user: '0x' + 'ab'.repeat(20),
+            action: 'SWAP',
+            targetToken: 'cUSD',
+            reasoning: 'test',
+            evidenceCid: '',
+            servingModel: 'test',
+            confidence: 8000,
+        });
+
+        expect(mockContract.recordRecommendation).toHaveBeenCalled();
+        expect(result.status).toBe('anchored');
+        delete (mockContract as any).runner;
     });
 
     it('returns "failed" with an explainable error when the write contract is unavailable', async () => {
@@ -458,5 +512,69 @@ describe('getDefaultLedgerChainId — mainnet preference', () => {
         process.env.ARBITRUM_LEDGER_CONTRACT = '0x' + 'cd'.repeat(20);
         const { getDefaultLedgerChainId } = await import('../recommendation-ledger.service');
         expect(getDefaultLedgerChainId()).toBe(421614);
+    });
+});
+
+describe('getLedgerGasRunways — gas runway per write chain', () => {
+    const ORIGINAL_ENV = process.env;
+
+    beforeEach(() => {
+        vi.resetModules();
+        mockRpcProvider.getBalance.mockReset();
+        mockRpcProvider.getFeeData.mockReset();
+        process.env = {
+            ...ORIGINAL_ENV,
+            VAULT_PRIVATE_KEY: '0x' + 'aa'.repeat(32),
+            CELO_MAINNET_LEDGER_CONTRACT: '0x' + 'ce'.repeat(20),
+            ARBITRUM_MAINNET_LEDGER_CONTRACT: '',
+            ZERO_G_MAINNET_LEDGER_CONTRACT: '',
+            ZERO_G_LEDGER_CONTRACT: '',
+            HASHKEY_LEDGER_CONTRACT: '',
+        };
+    });
+
+    afterEach(() => {
+        process.env = ORIGINAL_ENV;
+    });
+
+    // 400 gwei fee → estCostPerWrite = 230_000 × 400e9 = 0.092 native.
+    const FEE = 400_000_000_000n;
+
+    it('reports ok with derived runway math on a funded chain', async () => {
+        mockRpcProvider.getBalance.mockResolvedValue(100n * 10n ** 18n); // 100 native
+        mockRpcProvider.getFeeData.mockResolvedValue({ maxFeePerGas: FEE, gasPrice: null });
+        const { getLedgerGasRunways } = await import('../recommendation-ledger.service');
+        const rows = await getLedgerGasRunways();
+        const celo = rows.find((r) => r.chainId === 42220)!;
+
+        expect(celo.estCostPerWrite).toBe('0.092');
+        // 100 / 0.092 = 1086 writes; Celo cohort cadence = 12/day → ~90 days → ok
+        expect(celo.runwayWrites).toBe(1086);
+        expect(celo.runwayDays).toBeCloseTo(90.5, 1);
+        expect(celo.status).toBe('ok');
+        // Unconfigured chains report not-configured, never throw
+        expect(rows.find((r) => r.chainId === 177)!.status).toBe('not-configured');
+    });
+
+    it('reports low below 7 days of runway and blocked below one write', async () => {
+        mockRpcProvider.getBalance.mockResolvedValue(4n * 10n ** 17n); // 0.4 native → 4 writes
+        mockRpcProvider.getFeeData.mockResolvedValue({ maxFeePerGas: FEE, gasPrice: null });
+        const { getLedgerGasRunways } = await import('../recommendation-ledger.service');
+        let celo = (await getLedgerGasRunways()).find((r) => r.chainId === 42220)!;
+        expect(celo.runwayWrites).toBe(4);
+        expect(celo.status).toBe('low');
+
+        mockRpcProvider.getBalance.mockResolvedValue(0n);
+        celo = (await getLedgerGasRunways()).find((r) => r.chainId === 42220)!;
+        expect(celo.runwayWrites).toBe(0);
+        expect(celo.status).toBe('blocked');
+    });
+
+    it('degrades to unknown on RPC failure instead of throwing', async () => {
+        mockRpcProvider.getBalance.mockRejectedValue(new Error('RPC down'));
+        mockRpcProvider.getFeeData.mockRejectedValue(new Error('RPC down'));
+        const { getLedgerGasRunways } = await import('../recommendation-ledger.service');
+        const rows = await getLedgerGasRunways();
+        expect(rows.find((r) => r.chainId === 42220)!.status).toBe('unknown');
     });
 });

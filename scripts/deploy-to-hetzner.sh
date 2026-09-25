@@ -90,6 +90,13 @@ if [ "$SYNC_ENV" = "true" ]; then
 else
     info "Skipping env drift check (SYNC_ENV=false; env is not being changed by this deploy)"
 fi
+
+# Parity check (names only): warns when server/Vercel env names diverge;
+# exits 1 only when a REQUIRED name is missing on the server — same
+# fail-fast posture as the drift check above.
+if ! ./scripts/check-env-parity.sh; then
+    fail "env parity check found required vars missing on the server. Fix the server env and re-run."
+fi
 echo ""
 
 # ── 1. Verify SSH connection ────────────────────────────────────────────────
