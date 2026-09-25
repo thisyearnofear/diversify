@@ -6,7 +6,7 @@
 
 ## Summary
 
-The **APAC rail** is DiversiFi's **regulated-market savings and settlement home** for East and Southeast Asia (live on **HashKey Chain mainnet**, chain 177, pending deployer HSK gas). It is where **Confucian** and **Gotong Royong** protection plans execute when the user's goal is prudence, compliance-adjacent trust, and local market access — not maximum RWA depth.
+The **APAC rail** is DiversiFi's **regulated-market savings and settlement home** for East and Southeast Asia. The `RecommendationLedger` contract is live on **HashKey Chain mainnet** (chain 177, `0x3BCf…369C` — see § Implementation status); the remaining go-live step is deployer HSK gas + env wiring for the banner/heartbeat. It is where **Confucian** and **Gotong Royong** protection plans execute when the user's goal is prudence, compliance-adjacent trust, and local market access — not maximum RWA depth.
 
 It is **not** a replacement for Arbitrum (yield), Celo (EM local stables), Arc (x402 intelligence tolls), or 0G (evidence). It fills a **geographic + trust gap** the current four-chain stack does not cover.
 
@@ -198,8 +198,8 @@ BUIDL copy, demo script, and checklist: see the go-live runbook above.
 What Arc does for us:
 
 - **x402 settlement for decision artifacts.** Buyer signs an EIP-3009 `transferWithAuthorization` mandate (no transaction, no gas, no chain switch); the merchant settles it on-chain. Raw-transfer proofs remain the fallback for external agents. The billing unit is the Protection Review artifact — per-source data prices are COGS bundled inside it (`docs/product.md` § The product object).
-- **Protection Balance funding (planned).** Circle Gateway is live on Arc mainnet: a user deposits USDC once on whatever chain they already hold funds on, and the balance is spendable on Arc. This is the chosen funding model for the prepaid balance that powers reviews — funding is the one signature moment; Guardian draws within user-set bounds.
-- **Treasury mobility.** Arc is CCTP domain 26 — native burn/mint USDC movement between the settlement rail and Arbitrum/Celo without third-party bridge risk.
+- **Circle Gateway Nanopayments (integrated, activation unconfirmed).** The x402 gateway has an additive Circle Gateway batched-payment path on Arc. A Gateway settlement is reported as a settlement ID rather than an immediate on-chain transaction; buyer credit is added only after Circle reports settlement. Do not conflate this with a generally available, user-facing Protection Balance funded on any chain: that product flow remains a separate roadmap direction, and repository integration alone does not prove a deployed production balance.
+- **Treasury mobility.** Arc is CCTP domain 26. CCTP V2 configuration and transfer code are present for Arc↔Arbitrum mainnet and the Arc/Arbitrum testnet pair; this code-level integration is not proof of a production transfer or of CCTP support to Celo.
 
 Why Arc (not Celo/Arb/0G):
 
@@ -585,12 +585,11 @@ This is a code-only extension of the existing env-gated settlement system. No ne
 
 The settlement layer is already env-gated via `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`:
 
-- `packages/shared/src/services/settlement-service.ts` builds per-rail configs for `ARC` and `ZERO_G`.
-- `pages/api/agent/x402-gateway.ts` already reads the active config via `getSettlementConfig()` and returns the right `chainId`, `settlement_network`, `settlement_env` in the 402/quote responses.
-- `pages/api/agent/x402-metrics.ts` already derives explorer + stats from the active config.
-- `SettlementNetwork` is currently `'ARC' | 'ZERO_G'`.
+- The current `settlement-service.ts` builds per-rail configs, including `ARC`, `ZERO_G`, `ARBITRUM`, and `HASHKEY`.
+- `x402-gateway.ts` reads the active config and returns its chain and environment in payment challenges; `x402-metrics.ts` derives explorer and settlement stats from the active config.
+- Arc mainnet support has since been integrated. The configured default remains `ZERO_G`/testnet; production activation on any rail must be verified in deployment configuration.
 
-What is missing is an `ARBITRUM` rail in the config registry and the Arbitrum USDC addresses.
+The Arbitrum rail and USDC addresses described in this plan have shipped.
 
 ---
 
@@ -712,7 +711,7 @@ Add a new describe block:
 1. `pnpm build`
 2. `pnpm test`
 3. `pnpm lint`
-4. Fund the agent wallet (`VAULT_PRIVATE_KEY`) with Arbitrum Sepolia USDC for testnet validation, or Arbitrum mainnet USDC for the live demo.
+4. Fund the server-side settlement signer (`VAULT_PRIVATE_KEY` — legacy env name, not a user-funds vault) with Arbitrum Sepolia USDC for testnet validation, or Arbitrum mainnet USDC for the live demo.
 5. Set `SETTLEMENT_NETWORK=ARBITRUM` and `SETTLEMENT_ENV=mainnet` (or `testnet`) in `.env.local`.
 6. Deploy with `DEPLOY_SYNC_ENV=true ./scripts/deploy-to-hetzner.sh`.
 
@@ -760,7 +759,7 @@ The buyer sends a USDC transfer on Arbitrum mainnet to the recipient. The gatewa
 
 ## Funding & Operational Notes
 
-- **Mainnet demo:** `VAULT_PRIVATE_KEY` must hold real Arbitrum USDC + a small amount of ETH for gas. The recipient address (`DATA_HUB_RECIPIENT_ADDRESS`) must also be funded or at least able to receive USDC.
+- **Mainnet demo:** the server-side settlement signer (`VAULT_PRIVATE_KEY` — legacy env name, not a user-funds vault) holds the Arbitrum USDC that funds settlement submission + a small amount of ETH for gas. The recipient address (`DATA_HUB_RECIPIENT_ADDRESS`) must also be funded or at least able to receive USDC.
 - **Testnet validation:** Arbitrum Sepolia USDC is available from the Circle testnet faucet. This is the recommended way to verify the integration before risking mainnet funds.
 - **Gas:** each `USDC.transfer` on Arbitrum costs ~$0.01–$0.05 in gas. The intelligence payment itself is $0.001–$0.01, so gas is the dominant cost at tiny payment sizes. For the demo, this is acceptable; for production, batching/credits already amortize this.
 

@@ -96,16 +96,20 @@ permissions or needs approval).
   ($0.001–$0.01) are internal cost accounting bundled into an artifact —
   never surfaced. Retail and B2B license the same object (`fx_protection`
   at $1 is the prototype); only presentation differs.
-- **Charge for decisions, not data.** Ambient monitoring is free; the
-  Protection Balance funds artifact generation only when there is
-  something worth deciding. "Nothing actionable" reviews stay free.
-- **Funding is the consent moment.** The user signs once at top-up; the
-  Guardian draws the funded balance within user-set bounds (per-call cap,
-  daily cap). Escalate to the user only on empty balance or out-of-bounds
-  action — never a signature per call. When a review needs funding, the
-  app quotes it and shows the price **in-app first** — "Fund & run ·
-  $1.00" with the evidence provenance listed — so the wallet prompt is
-  never the first place a number appears.
+- **Charge for decisions, not data.** The intended product model is that
+  ambient monitoring is free and a Protection Balance funds artifact
+  generation only when there is something worth deciding. "Nothing
+  actionable" reviews stay free. This balance model is product direction;
+  it should not be read as proof that cross-chain Gateway funding or a
+  production prepaid balance is currently deployed.
+- **Funding is the consent moment.** In the intended flow, the user signs
+  once at top-up and the Guardian draws the funded balance within user-set
+  bounds (per-call cap, daily cap). Escalate to the user only on empty
+  balance or out-of-bounds action — never a signature per call. When a
+  review needs funding, the app quotes it and shows the price **in-app
+  first** — "Fund & run · $1.00" with the evidence provenance listed — so
+  the wallet prompt is never the first place a number appears. This
+  describes product intent, not confirmed production activation.
 - **Evidence is empirical first.** Social proof ("68% of Lagos savers
   rotated") is staged behind real aggregate Guardian activity — per the
   honesty contract, it does not ship hollow.
@@ -180,7 +184,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 3. **Verifiable autonomy.** A server-side Guardian loop monitors markets 24/7 and auto-executes within user-signed permission bounds. Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings, Arbitrum for yield — with reasoning anchored to 0G Storage as tamper-proof evidence. LiveProofCard surfaces those receipts before wallet connect: proof-first, not splash-first. Each chain has an irreplaceable role — see [`rails.md`](./rails.md).
 
-4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Simple mode (default) shows Shield, Home, Learn until the user opts into more.
+4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Simple mode (default) shows Shield, Home, Exchange until the user opts into more (Guardian on intermediate, Learn on advanced).
 
 5. **Currencies as stories — the engagement layer is the literacy layer.** Every token carries a curated provenance answering three questions — who controls it (origin, backing, keys), what has happened to it (dated geopolitical events), and what might happen next (the cadence and mechanism to watch, never a prediction). The memetic/cultural/political texture of money is surfaced at the moment of choice: the ticket's pair sentence, the coin-back flip in the picker, the pair inspector's event trail and watch lines. Facts are hand-sourced and dated (`packages/shared/src/constants/token-provenance.ts`), re-verified on a 90-day cycle — engagement built on understanding, never on tickers, leaderboards, or invented forecasts. The timeline teaches mechanism, not prediction.
 
@@ -193,7 +197,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | Agent | Advisor / Guardian |
 | Strategy | Protection Plan |
 | Exchange | Protect |
-| Agent Fuel | Protection Balance |
+| Agent Fuel | Protection Balance (intended product term; prepaid balance availability depends on deployment) |
 | Rebalance | Re-protect |
 | Vault | Savings |
 
@@ -202,14 +206,14 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | Area | Status |
 |------|--------|
 | **Intelligence gateway** | x402-gated Mento depeg + inflation + yield intelligence. HTTP 402 challenge → real USDC settlement → paid evidence with on-chain tx proof. Open to external agents. |
-| **AI inference** | Multi-provider chain: Gemini Flash → Venice → Featherless → 0G Serving → Modal, with circuit breakers and 5-min caching |
+| **AI inference** | Multi-provider chain (code order in `ai-service.ts`): Venice → Gemini → AI·ML API → Featherless → 0G Serving → Modal → OpenAI → ElevenLabs → NVIDIA → DashScope, with circuit breakers and 5-min caching |
 | **Swap execution** | 12+ strategies: Mento (Celo), LiFi, 1inch, Uniswap V3, Hyperliquid perps, direct RWA, Arbitrum-native DEX, Curve Arc, Emerging Markets |
 | **Guardian loop** | Cron-driven proposals with a one-tap user-signed default; opt-in autonomy via ERC-7715/7710 (MetaMask Advanced Permissions) enforced on-chain by the user's own smart account — kit-derived chain set, atomic approve+swap batches, confidence thresholds, and daily caps |
-| **Chain-aware ledger** | `RecommendationLedger` records decisions on the chain where the action settles — Celo for savings, Arbitrum for yield. Each ledger entry references a 0G Storage evidence CID. |
-| **0G verifiability** | Evidence layer: Storage (reasoning CIDs), Compute (TEE-verified inference), DA (state snapshots). 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
+| **Chain-aware ledger** | `RecommendationLedger` records decisions on the chain where the action settles — Celo for savings, Arbitrum for yield, HashKey for APAC savings, Robinhood for RWA/stock-token legs, Arc for x402-settled intelligence, 0G as the evidence mirror. One `0x3BCf…369C` address; the canonical fan-out is `PROOF_FEED_CHAIN_IDS`. Each ledger entry references a 0G Storage evidence CID. |
+| **0G verifiability** | Evidence layer: Storage (reasoning CIDs) + Compute (TEE-verified inference) + Guardian-state snapshots on 0G Storage. 0G DA is **not** integrated — see `architecture.md`. 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
 | **Live data** | 11+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, TinyFish Search, Firecrawl |
 | **Agent memory** | Cognee for cross-session persistent context |
-| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — deploy pending HSK), 0G (evidence/anchoring), Arc (x402 nanopayment rail) |
+| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — contract live, see `rails.md` § Implementation status), Robinhood (RWA ledger, chain 4663 — env-gated), 0G (evidence/anchoring), Arc (x402 settlement rail, chain 5042 — env-gated) |
 | **Wallet** | User's own wallet (MetaMask/MiniPay/Farcaster-compatible) + Privy for login and embedded-wallet onboarding — Privy never executes |
 | **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Surfaced + depositable via `BestYieldCard`. See `docs/roadmap-log.md` § Yield Engine Strategy. |
 | **Voice** | Advisor voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
@@ -236,13 +240,15 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 | Tab | Purpose |
 |-----|---------|
-| **Overview** | Portfolio summary, inflation impact, quick actions |
-| **Protect** | Choose plan, view allocation — savings stay in your wallet; compact Guardian status before connect |
+| **Protect (Shield)** | Choose plan, view allocation — savings stay in your wallet; compact Guardian status before connect |
+| **Overview (Home)** | Portfolio summary, inflation impact, quick actions |
 | **Exchange** | Swap stablecoins across regions and chains |
-| **Pilot** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
-| **Learn** | Wealth-protection calculator (cash vs your mix over time) |
+| **Agent (Guardian)** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
+| **Info (Learn)** | Wealth-protection calculator (cash vs your mix over time) |
 
-**Simple mode** (beginner): Shield → Home → Learn only. Exchange and Advisor remain reachable via **More options** on Home. **Standard/Advanced** modes restore the full tab bar.
+Tab IDs are `protect / overview / exchange / agent / info` (`apps/web/constants/tabs.ts`); Shield, Home, Guardian, Learn are the user-facing labels (`TabNavigation.tsx`).
+
+**Simple mode** (beginner): Shield → Home → Exchange only. **Intermediate** adds Guardian. **Advanced** restores the full bar including Learn (the calculator also lives as the Shield empty-wallet inspector + optional Home amount-inspect). Exchange and Guardian remain reachable via the rail on other modes. See `design-language.md` §5.
 
 New users see Shield-first order. Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 2 tabs visited or first swipe gesture.
 

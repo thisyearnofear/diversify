@@ -65,23 +65,28 @@ CIDs those entries reference (current-state detail:
 
 ### Payment-rail migration phases
 
-0G Pay is a stopgap for the settlement rail. Arc public mainnet landed
-2026-09-16 (chain ID 5042, USDC native gas, CCTP domain 26, Circle Gateway
-+ Nanopayments live) — the conditions that argued for Arc owning this
-layer are now real. What remains is operational: fix the staged config,
-fund the vault wallet, then `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet`.
+The codebase default remains 0G Pay on testnet; Arc public mainnet landed
+2026-09-16 (chain ID 5042, USDC native gas, CCTP domain 26). Arc EIP-3009
+settlement, CCTP V2 and Circle Gateway Nanopayments are integrated. Production
+activation is not established by repository state: the deployed environment
+must select `SETTLEMENT_NETWORK=ARC SETTLEMENT_ENV=mainnet`, configure the
+merchant recipient and the legacy-named `VAULT_PRIVATE_KEY` settlement signer,
+and pass an explicitly authorized end-to-end mainnet payment check. That signer
+submits buyer authorizations and pays gas; it is not a user-funds vault.
 
 | Phase | Trigger | Payment rail | Notes |
 |---|---|---|---|
-| **1 — Buildathon** | Now | 0G Pay (interim default) | `SETTLEMENT_NETWORK=ZERO_G`; Arc testnet for dev |
-| **2 — Arc mainnet** | ✅ Mainnet landed 2026-09-16 | Arc | Mandate-first (EIP-3009): buyer signs, merchant settles — no chain switch, no buyer gas. Flip once vault is funded |
-| **3 — Protection Balance** | Post-flip | Arc canonical | Circle Gateway funding: deposit USDC once on any supported chain → spendable on Arc; nanopayment batching makes sub-cent tolls honest |
+| **1 — Current code defaults** | Current | ZERO_G/testnet | `SETTLEMENT_NETWORK=ZERO_G`, `SETTLEMENT_ENV=testnet` |
+| **2 — Arc mainnet integration** | Implemented; production activation unconfirmed | Arc | EIP-3009 settlement, CCTP V2 and Gateway Nanopayments are integrated; validate deployment config and a real settlement before describing production as live |
+| **3 — Protection Balance product** | Planned; deployment not established here | — | A cross-chain prepaid balance is distinct from Gateway Nanopayments; do not infer production availability from the settlement integration |
 | **4 — Venue eval (parked)** | Corridor execution needs it | — | StableFX RFQ fiat-FX inquiry deferred; Arc fiat-stable roster complements Mento, not a rotation venue yet |
 
-Billing unit across all phases: the user funds a Protection Balance once
-and pays for **decision artifacts** (Protection Reviews), not per-source
-feeds — source prices are COGS inside the artifact. Doctrine:
-`docs/product.md` § The product object.
+Intended billing unit: a user funds a Protection Balance once and pays for
+**decision artifacts** (Protection Reviews), not per-source feeds — source
+prices are COGS inside the artifact. This is product direction; do not infer
+that a cross-chain Gateway balance or production payment rail is active from
+the settlement integrations alone. Doctrine: `docs/product.md` § The product
+object.
 
 **Codebase rule:** do not delete Arc infrastructure (`ArcAgent`, Curve/AeonDEX
 strategies, `use-arc-balance`) — it has long-term value at Arc mainnet.
@@ -171,7 +176,7 @@ is visible and decisions are intentional.
 
 | Task | Why deferred |
 |---|---|
-| **Package split** (`@diversifi/shared` → `shared-ai`, `shared-swap`, `shared-guardian`, `shared-data`, `shared-core`) | 33K-line monolith will surface circular dependency nightmares. Revisit at 50K+ lines or a second team. |
+| **Package split** (`@diversifi/shared` → `shared-ai`, `shared-swap`, `shared-guardian`, `shared-data`, `shared-core`) | ~53K-line monolith will surface circular dependency nightmares. Revisit at a second team. |
 | **API versioning** (`/api/v1/` prefix) | Zero external consumers; all API routes are internal Next.js routes. Add when the first SDK or mobile app exists. |
 | **Turbopack migration** | Mixing bundler changes with component refactors makes debugging untraceable. Standalone task once the codebase is stable. |
 | **Design tokens** (CSS custom properties) | Low ROI for a solo dev; revisit with a second designer or a white-label need. |

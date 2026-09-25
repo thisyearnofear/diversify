@@ -95,7 +95,7 @@ guardian-loop ── GUARDIAN tier + eligible chain + provider configured? ─�
   chains without a grant token; `guardianSessionAddress()` returns null when
   unset (no self-address fallback — the grant option is hidden instead).
 - `pages/api/agent/guardian-loop.ts` — the app-layer enforcement gates. Cron every 5 min.
-- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on all 3 chains (Celo/Arbitrum primary + 0G evidence mirror). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
+- `pages/api/agent/guardian-heartbeat.ts` — advisory heartbeat that records recommendations on the configured ledger chains (Celo/Arbitrum primary + 0G evidence mirror, plus HashKey/Robinhood/Arc legs when their contracts are configured — see `PROOF_FEED_CHAIN_IDS`). Runs on a server cron; the route self-documents ~every 30 minutes (the actual crontab cadence is deployment-managed — keep this doc in sync with the crontab, not the reverse).
 
 ---
 

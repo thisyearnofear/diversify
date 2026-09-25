@@ -40,25 +40,36 @@ Prefer not to run anything? The deterministic engine is a pure-function library 
 |-------|---------|----------------|
 | **Celo** | Savings + identity + savings ledger of record (`0x3BCf…369C` on mainnet) | [Celo Faucet](https://celo.org/developers/faucet) |
 | **Arbitrum** | Yield + execution + yield ledger of record (`0x3BCf…369C` on mainnet) | [Arbitrum Faucet](https://faucet.arbitrum.io/) |
-| **0G** | Evidence layer (Storage CIDs, Compute TEE proofs, DA snapshots, evidence anchor ledger `0x3BCf…369C` on mainnet) | [0G Galileo Faucet](https://chainscan-galileo.0g.ai) |
-| **Arbitrum / Arc / 0G (env-gated)** | x402 nanopayment settlement rail for paid intelligence (`SETTLEMENT_NETWORK` = `ARBITRUM`, `ZERO_G`, or `ARC`; `SETTLEMENT_ENV` = `testnet` or `mainnet`) | **Arbitrum:** fund `VAULT_PRIVATE_KEY` with Sepolia USDC (testnet) or Circle USDC (mainnet). Arc/0G: Circle Arc Faucet (testnet) or rail-specific mainnet funding. |
-| **Robinhood Chain** | Emerging market tokens | Robinhood Faucet |
+| **0G** | Evidence layer (Storage CIDs, Compute TEE proofs, Guardian-state snapshots on 0G Storage, evidence anchor ledger `0x3BCf…369C` on mainnet — 0G DA is **not** integrated) | [0G Galileo Faucet](https://chainscan-galileo.0g.ai) |
+| **Arbitrum / Arc / 0G (env-gated)** | x402 settlement rail for paid intelligence (`SETTLEMENT_NETWORK` = `ARBITRUM`, `ZERO_G`, or `ARC`; `SETTLEMENT_ENV` = `testnet` or `mainnet`) | **Arc mainnet:** chain 5042, USDC-native gas; configure the merchant recipient and `VAULT_PRIVATE_KEY` (legacy env name, server-side settlement signer). The signer needs USDC for transaction gas; the buyer's signed EIP-3009 mandate supplies payment principal. Arc/0G testnet: Circle Arc Faucet or 0G Galileo Faucet. |
+| **Robinhood Chain** | RWA / stock-token ledger (`0x3BCf…369C`, chain 4663 — env-gated; USDG, SGOV, SPY/QQQ + tokenized stocks) | Robinhood Faucet |
 
 ### x402 / Settlement Research Mode
 
 Enable the autonomous research-payment loop where the Guardian negotiates paid premium data via x402 nanopayments on the configured settlement rail:
 
-1. Set `NEXT_PUBLIC_ENABLE_ARC=true` (keeps the legacy env name; gate is rail-agnostic)
+1. Set `NEXT_PUBLIC_ENABLE_ARC=true` (legacy env name; the gate is rail-agnostic)
 2. Set `ENABLE_AUTONOMOUS_MODE=true`
 3. Configure `SETTLEMENT_NETWORK` (`ARBITRUM`, `ZERO_G`, or `ARC`) and `SETTLEMENT_ENV` (`testnet` or `mainnet`)
-4. Configure the rail's RPC + USDC address (e.g. `ARBITRUM_ONE_RPC_URL` + `ARBITRUM_MAINNET_USDC`, or their ZERO_G/ARC equivalents)
-5. Fund the agent EOA with USDC on the active rail (see below)
+4. Configure the rail's RPC, USDC address, merchant recipient, and server-side settlement signer. On Arc mainnet, buyer mandates provide the payment principal; the signer pays native USDC gas. Circle Gateway batching is a distinct method.
+5. Confirm the deployed gateway challenge advertises the intended rail and environment before enabling paid mainnet transactions.
 
-> **Buildathon recommendation:** Use `SETTLEMENT_NETWORK=ARBITRUM` and
-> `SETTLEMENT_ENV=mainnet` for the Arbitrum Open House. Arbitrum has a verified,
-> live Circle USDC contract on chainId 42161, so real mainnet payments are ready
-> as soon as the agent wallet is funded. Arc mainnet is not live yet and 0G mainnet
-> lacks a verified USDC contract, so those rails should stay on testnet for now.
+> **Current status (2026-09-25):** Arc public mainnet is live (chain ID 5042),
+> and the x402 EIP-3009 settlement path is implemented. The repository defaults
+> remain `SETTLEMENT_NETWORK=ZERO_G` and `SETTLEMENT_ENV=testnet`; Arc production
+> use is therefore **not established by this configuration or by this guide**.
+> To test or activate Arc, select `ARC` + `mainnet`, configure the merchant
+> recipient and server-side settlement signer, then verify the deployed
+> gateway with the read-only command:
+>
+> ```bash
+> pnpm run x402-mainnet-smoke -- --gateway <url> --source macro_analysis
+> ```
+>
+> It remains read-only unless `--apply` is explicitly passed; applying requires
+> `SMOKE_BUYER_PRIVATE_KEY` and submits a real payment. Run the read-only check
+> before considering production activation. 0G mainnet settlement remains
+> unavailable without a verified USDC address.
 
 #### Verification
 
@@ -68,16 +79,20 @@ pnpm test-x402-comprehensive      # Full research-payment-settlement cycle
 pnpm test-x402-frequency          # Payment frequency validation
 ```
 
-#### Funding the Agent Wallet
+#### Settlement signer and buyer funding
 
-The agent wallet (`VAULT_PRIVATE_KEY`) must hold USDC on the active settlement rail to settle paid requests.
+`VAULT_PRIVATE_KEY` is a legacy environment-variable name for the server-side
+settlement signer; it is **not** a user-funds vault. On Arc mainnet, that signer
+submits EIP-3009 authorizations and pays Arc's native USDC gas. The buyer's
+signed authorization transfers the payment principal directly to the configured
+merchant recipient. A mandate requires both a funded buyer and a signer with
+sufficient gas; this is distinct from any Circle Gateway-batched payment.
 
-1. Get the address: `GET /api/agent/x402-metrics` → `settlement.agentAddress` (legacy alias: `arcSettlement.agentAddress`)
-2. Fund it:
-   - **Arbitrum mainnet:** send Circle USDC on Arbitrum to the agent address. Gas is paid in ETH.
-   - **Arbitrum Sepolia:** get USDC from the [Circle testnet faucet](https://faucet.circle.com).
-   - **ZERO_G / ARC testnet:** use the Circle Arc Faucet → select **Arc Testnet**, or the 0G Galileo faucet for the ZERO_G rail.
-3. Verify: `settlement.agentUSDCBalance` reflects the balance
+Before activation, verify the signer address and balance through the deployed
+service's settlement diagnostics, and run the read-only mainnet smoke check
+shown above. Do not infer production readiness from a configured key or a
+successful RPC check alone. Testnet funding should use the faucet for the
+selected rail.
 
 #### Macro path rehearsal
 

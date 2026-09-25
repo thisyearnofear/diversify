@@ -117,13 +117,12 @@ The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio 
 
 DiversiFi’s x402 gateway is the single billing surface for decision-artifact
 generation (Protection Reviews — `docs/product.md` § The product object).
-Users fund a Protection Balance once and reviews draw it down; the
-per-source prices below are internal cost accounting, never surfaced
-per-call.
-The underlying settlement rail is configurable: `ZERO_G` (interim default),
-`ARC`, `ARBITRUM`, or `HASHKEY`, in `testnet` or `mainnet` mode. This lets the
-same gateway serve hackathon judges on testnet and production consumers on
-mainnet without code changes.
+The underlying settlement rail is configurable: `ZERO_G` (current default),
+`ARC`, `ARBITRUM`, or `HASHKEY`, in `testnet` or `mainnet` mode. The codebase
+defaults to ZERO_G/testnet; Arc mainnet support is implemented but is not
+activated by those defaults. A buyer-funded Protection Balance is a product
+direction, not a claim that every environment currently has a live balance
+flow.
 
 `HASHKEY` is a distinct rail: settlement happens zero-custody via **HSP
 (HashKey Settlement Protocol)** — the buyer's wallet signs an EIP-712 mandate
@@ -167,9 +166,29 @@ Set in `.env.local` or on the server (see `.env.example` → "MAINNET FLIP"):
 | `HASHKEY_TESTNET_USDC`, `HASHKEY_MAINNET_USDC` | — | Fallbacks only — the authoritative token address is read from the Coordinator's `GET /chains` at verify time |
 | `HASHKEY_PAY_RECIPIENT` | `DATA_HUB_RECIPIENT_ADDRESS` | Merchant payout wallet on HashKey |
 
-To flip to mainnet: fund `VAULT_PRIVATE_KEY`, set the rail's verified mainnet USDC address (Arc's default is already correct — `0x3600…`), and set `SETTLEMENT_ENV=mainnet`.
+To select Arc mainnet, configure `SETTLEMENT_NETWORK=ARC` and
+`SETTLEMENT_ENV=mainnet`, the merchant `DATA_HUB_RECIPIENT_ADDRESS`, and the
+server-side `VAULT_PRIVATE_KEY` settlement signer. `VAULT_PRIVATE_KEY` is a
+legacy variable name: it is not a user-funds vault. For EIP-3009 mandates, the
+buyer-authorized USDC principal transfers directly to the configured merchant;
+the signer submits the transfer and pays Arc-native USDC gas. A key or env flip
+alone does not prove successful production settlement. Run the read-only
+`pnpm run x402-mainnet-smoke -- --gateway <url> --source macro_analysis` check against the
+deployed gateway; only pass `--apply` with explicit authorization and a funded
+buyer key to submit a real payment.
 
-> **Arc mainnet status (2026-09-16):** Arc public mainnet is live — chain ID `5042`, RPC `https://rpc.mainnet.arc.io`, explorer `https://explorer.arc.io`, USDC native gas + ERC-20 at `0x3600…` (verified `symbol()`/`version()` on-chain), EURC at `0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1` (differs from testnet), CCTP domain `26`, Circle Gateway + Nanopayments live. Arc is the intended canonical rail once the vault is funded; Arbitrum remains a valid mainnet fallback. 0G mainnet still lacks a verified stablecoin for settlement.
+> **Arc mainnet status (2026-09-25):** Arc public mainnet is live — chain ID
+> `5042`, RPC `https://rpc.mainnet.arc.io`, explorer `https://explorer.arc.io`,
+> USDC predeploy `0x3600000000000000000000000000000000000000` (on-chain
+> `FiatTokenV2`, EIP-3009 domain `USDC`), EURC
+> `0xbEf5f6d51CB62b58e6A8f77868681825C6fe21c1`, and CCTP domain `26`. The
+> repository contains Arc settlement, CCTP V2, and Gateway Nanopayments
+> integration. The committed defaults remain ZERO_G/testnet; production Arc
+> activation and a successful production buyer settlement are not evidenced by
+> repository state. Circle Gateway batching is distinct from the separate
+> Protection Balance product; the integration does not establish that a
+> cross-chain prepaid balance is deployed or operational. 0G mainnet still lacks
+> a verified stablecoin for settlement.
 
 ### Evidence Bundles
 
@@ -193,7 +212,7 @@ Client → signs TransferWithAuthorization over {from, to: recipient,
 Client → GET /api/agent/x402-gateway?source=macro_analysis
          x-payment-mandate: <mandate json>
        ← gateway verifies signature + submits transferWithAuthorization
-         on-chain (vault key pays gas); credit = settled amount
+         on-chain (server-side settlement signer pays native gas); credit = settled amount
 
 # Fallback: raw transfer proof
 Client → GET /api/agent/x402-gateway?source=macro_analysis
@@ -273,14 +292,14 @@ The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stal
 | **Celo** | Mento Protocol | Built-in stablecoin swaps |
 | **Arbitrum** | Uniswap V3, 1inch | LiFi for cross-chain |
 | **Hyperliquid** | Perps DEX | Direct API |
-| **Robinhood Chain** | AMM | Built-in |
+| **Robinhood Chain** | Tokenized stocks/ETFs (USDG, SGOV, SPY/QQQ, AAPL…) | Direct RWA path |
 
 ## Circle (CCTP, Gateway & MPC)
 
-- **CCTP Domains**: Arc is domain `26` (mainnet TokenMessenger `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d`); Arbitrum ↔ Celo via bridge
-- **Gateway (funding layer)**: `GatewayWallet`/`GatewayMinter` live on Arc mainnet — chain-abstracted USDC balance (deposit once on any supported chain, spendable on Arc). This is the Protection Balance.
+- **CCTP**: Arc is domain `26` (mainnet TokenMessenger `0x28b5a0e9C621a5BadaA536219b3a228C8168cf5d`). Arc↔Arbitrum mainnet transfer configuration/code is present; the code is not evidence of a completed production transfer.
+- **Gateway Nanopayments**: Circle Gateway's batched x402 facilitator path is integrated for Arc. It verifies and settles a buyer payment and returns a settlement identifier; this is not itself evidence that the separate cross-chain Protection Balance product is deployed or enabled.
 - **Nanopayments / EIP-3009**: the gateway accepts `x-payment-mandate` (signed `transferWithAuthorization`) and `gateway_batched` proofs settled through `BatchFacilitatorClient` (down to `$0.000001`); self-hosted submission remains for the other rails.
-- **Developer-Controlled Wallets**: per-user agent wallets removed (custodial — superseded by the user's own Gateway balance + signed Guardian permissions). Planned: operator treasury custody + Gas Station.
+- **Developer-Controlled Wallets**: per-user custodial agent wallets were removed. Privy remains for user login/embedded-wallet onboarding; Guardian execution uses the user's own wallet and signed permissions. `VAULT_PRIVATE_KEY` is a separate legacy-named server-side x402 settlement signer, not a user wallet or balance.
 - **Hackathon Default**: prefer the simplest externally verifiable proof path for judges; keep experimental payment variants out of the core demo unless they are fully verified end to end
 
 ## Wallet Integration

@@ -13,15 +13,15 @@
 │  Frontend (Next.js 15 + React 19 + Tailwind)                │
 │  pages/index.tsx → AppShell → {Overview,Protect,Exchange,   │
 │                                Agent,Info} tabs             │
-│  27 hooks, dynamic imports, Framer Motion transitions       │
+│  70+ hooks, dynamic imports, Framer Motion transitions       │
 └──────────────────────────┬──────────────────────────────────┘
                            │
 ┌──────────────────────────▼──────────────────────────────────┐
-│  @diversifi/shared (monorepo package, 33K+ lines)           │
+│  @diversifi/shared (monorepo package, ~53K lines)            │
 │                                                             │
 │  ┌─────────────────────┐  ┌───────────────────────────┐     │
 │  │ AI Layer            │  │ Swap Layer                │     │
-│  │ • 9 providers       │  │ • SwapOrchestratorService │     │
+│  │ • 10 providers      │  │ • SwapOrchestratorService │     │
 │  │ • FallbackOrch.     │  │ • 13 strategy impls       │     │
 │  │ • CircuitBreaker    │  │ • ChainDetectionService   │     │
 │  │ • CachingDecorator  │  │ • LiFi, 1inch, UniswapV3  │     │
@@ -61,8 +61,8 @@
 │  • Arbitrum: yield execution (Uniswap V3 / Aave / RWA)      │
 │    + RecommendationLedger (yield decisions of record)       │
 │    + StrategyVault, AgenticHub                              │
-│  • 0G: Storage (evidence CID) + DA + Compute (TEE proofs)   │
-│    — the tamper-proof evidence layer both ledgers reference │
+│  • 0G: Storage (evidence CID) + Compute (TEE proofs)         │
+│    — the tamper-proof evidence layer the ledgers reference │
 │  • Arc: x402 nanopayment settlement                         │
 │  • HashKey Chain: APAC savings ledger (Confucian / Gotong Royong) │
 │    + RecommendationLedger on chain 177 — see docs/rails.md   │
@@ -107,16 +107,16 @@ what feeds the surface it powers, where it comes from, and how it stays honest.
 ### 4. AI / agent
 | Stream | Source | Powers | Honesty behaviour |
 |---|---|---|---|
-| LLM intelligence | `AIService` — Venice/Gemini/AI·ML/NVIDIA/Featherless/0G/Modal (6-deep failover) | advisor, intelligence, web-search, deep-analyze | Circuit breaker + 5-min cache + provider fallback; 0G anchors reasoning |
+| LLM intelligence | `AIService` — Venice/Gemini/AI·ML API/NVIDIA/Featherless/0G/Modal/OpenAI/ElevenLabs/DashScope (10-deep failover) | advisor, intelligence, web-search, deep-analyze | Circuit breaker + 5-min cache + provider fallback; 0G anchors reasoning |
 | Voice | ElevenLabs TTS/STT (`/api/agent/speak`, `/api/agent/transcribe`) | chat voice | Live round-trip; feature-flag gated |
 | Guardian | `guardian-heartbeat` + `guardian-loop` cron (Hetzner) | auto-executes within permission bounds | Bounds enforced in app code; every action mirrored to 0G |
 
 ## AI Provider Chain
 
-Requests flow through a 6-deep fallback with circuit breakers at each step:
+Requests flow through a 10-deep fallback with circuit breakers at each step:
 
 ```
-Gemini Flash → Venice AI → AI/ML API → NVIDIA → Featherless → 0G Serving → Modal (GLM)
+Venice → Gemini → AI/ML API → Featherless → 0G Serving → Modal (GLM) → OpenAI → ElevenLabs → NVIDIA → DashScope (Qwen)
     │              │            │          │           │             │            │
     └── CircuitBreaker ────────┴──────────┴───────────┴─────────────┴────────────┘
                   │
@@ -267,6 +267,11 @@ Every AI recommendation traces through the full 0G pipeline:
 | **Arbitrum One mainnet** | Yield decisions of record | [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://arbiscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) | Live |
 | **Celo mainnet** | Savings decisions of record | [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://celoscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) | Live (ERC-8004 identity also live) |
 | **0G mainnet** | Evidence mirror | [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://chainscan.0g.ai/address/0x3BCf7dFd68ce98880618c89A351168960724369C) | Live (Wave 3) |
+| **HashKey mainnet (177)** | APAC savings decisions of record | `0x3BCf7dFd68ce98880618c89A351168960724369C` | Live — see [`rails.md`](./rails.md) § Implementation status |
+| **Robinhood Chain mainnet (4663)** | RWA / stock-token decisions of record | `0x3BCf7dFd68ce98880618c89A351168960724369C` (env: `ROBINHOOD_MAINNET_LEDGER_CONTRACT`) | Env-gated |
+| **Arc mainnet (5042)** | Settlement-rail decisions of record (x402 gateway on ARC) | `0x3BCf…369C` (env: `ARC_MAINNET_LEDGER_CONTRACT`) | Env-gated |
+
+The canonical fan-out is `PROOF_FEED_CHAIN_IDS` (`apps/web/constants/proof-feed.ts`): Arbitrum, Celo, Robinhood, HashKey, 0G, Arc. Chains without a configured contract drop out automatically.
 
 Sepolia/Galileo testnet predecessors: RecommendationLedger on Arbitrum Sepolia [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996), evidence mirror on 0G Galileo [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED).
 
@@ -340,9 +345,10 @@ Client → GET /api/agent/x402-gateway?source=macro_analysis
                                validAfter, validBefore, chainId,
                                tokenAddress, signature}
        ← gateway verifies the signature AND settles it on-chain via
-         transferWithAuthorization (vault key pays gas); credit = the
-         on-chain settled amount — a mandate is never credited unsettled
-       ← 200 { data, _billing: { onChainSettled, txHashes, explorer } }
+         transferWithAuthorization (server-side settlement signer pays native gas);
+         credit = the on-chain settled amount — a mandate is never credited unsettled
+       ← 200 { data, _billing: { settlementTxHash, settlementExplorer } }
+       (gateway_batched reports a settlementId, not an immediate tx hash)
 
 Agent fallback → x-payment-proof: 0x{tx_hash}   (raw USDC transfer on the
                  active rail; for external agents / legacy clients)
@@ -354,7 +360,7 @@ Arbitrum · HashKey (HSP). Arc's role is commerce only — it never custodies
 user savings and stays out of user-facing chain surfaces (`docs/rails.md`
 § Arc Rail).
 
-Agent wallet: `0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8` (Arc Testnet)
+Test fixture / historical demo wallet: `0x6D5967e30dF504834DFD0aE38eFaC5DA4ac2DaC8` (Arc Testnet only; not evidence of an Arc mainnet operator or buyer wallet).
 
 ## Deployment
 
@@ -380,7 +386,7 @@ diversifi/
   lib/                      # MongoDB client, demo data, OZ contracts (submodule)
   models/                   # Mongoose models (Permission, Vault, etc.)
   packages/
-    shared/                 # Core business logic (33K+ lines) — AI, swaps, Guardian, data
+    shared/                 # Core business logic (~53K lines) — AI, swaps, Guardian, data
     shared-0g/              # 0G Storage integration (evidence anchoring + persistence)
     mento-utils/            # Mento Protocol helpers
   scripts/                  # Firecrawl setup, wallet creation, volume generation
@@ -463,7 +469,7 @@ flowchart TD
     %% ===== AI PROVIDER CHAIN (sub-detail) =====
     subgraph AIChain["AI Provider Failover Chain"]
         direction LR
-        P1["Gemini Flash"] --> P2["Venice AI"] --> P3["AI/ML API"] --> P4["NVIDIA"] --> P5["Featherless"] --> P6["0G Serving<br/>TEE-verified"] --> P7["Modal GLM"]
+        P1["Venice"] --> P2["Gemini"] --> P3["AI/ML API"] --> P4["Featherless"] --> P5["0G Serving"] --> P6["Modal GLM"] --> P7["OpenAI"] --> P8["ElevenLabs"] --> P9["NVIDIA"] --> P10["DashScope Qwen"]
         CB["CircuitBreaker<br/>per provider"]
         CACHE["CachingDecorator<br/>5-min TTL"]
         ZG["ZeroGAnchoringDecorator<br/>evidence → 0G Storage"]
@@ -476,8 +482,9 @@ flowchart TD
         LEDGER_C["RecommendationLedger<br/>Celo mainnet · 0x3BCf…369C<br/>savings decisions of record"]
         LEDGER_A["RecommendationLedger<br/>Arbitrum mainnet · 0x3BCf…369C<br/>yield decisions of record"]
         LEDGER_0G["RecommendationLedger<br/>0G mainnet · 0x3BCf…369C<br/>evidence anchor"]
+        LEDGER_R["Region ledgers<br/>HashKey 177 · Robinhood 4663 · Arc 5042<br/>same 0x3BCf…369C, env-gated"]
         ZG_STORAGE["0G Storage<br/>evidence CID<br/>encrypted prompt + reasoning + sources"]
-        ZG_DA["0G DA<br/>verifiable state snapshot"]
+        ZG_SNAP["0G Storage snapshot<br/>verifiable Guardian state"]
         RECEIPT["User receipt<br/>in-app proof feed<br/>explorer links + anchor status"]
         X402["x402 gateway<br/>external agents pay USDC<br/>to consume intelligence"]
         TX["On-chain swap / rebalance<br/>executed via smart account"]
@@ -497,8 +504,9 @@ flowchart TD
     LEDGER --> LEDGER_C
     LEDGER --> LEDGER_A
     LEDGER --> LEDGER_0G
+    LEDGER --> LEDGER_R
     ANCHOR --> ZG_STORAGE
-    ANCHOR --> ZG_DA
+    ANCHOR --> ZG_SNAP
     LEDGER --> RECEIPT
     EXEC --> TX
     SYNTH --> X402
@@ -514,7 +522,7 @@ flowchart TD
     class USER,PLAN,SIGN,APPROVE,WITHDRAW hitlStyle
     class WEBHOOK,EXTRACT,STORE,CRON,QUERY,SYNTH,RECOG,EXEC,ANCHOR,LEDGER,CLEAR agentStyle
     class THRESH,BOUNDS,ROUTE decisionStyle
-    class LEDGER_C,LEDGER_A,LEDGER_0G,ZG_STORAGE,ZG_DA,RECEIPT,X402,TX outputStyle
+    class LEDGER_C,LEDGER_A,LEDGER_0G,LEDGER_R,ZG_STORAGE,ZG_SNAP,RECEIPT,X402,TX outputStyle
 ```
 
 ### Legend
@@ -524,8 +532,8 @@ flowchart TD
 | **Inputs** | Blue nodes — World Bank, FRED, CoinGecko, DeFiLlama, Firecrawl (Caribbean inflation + hurricane + tariff signals), BrightData, Cognee memory |
 | **Agent orchestration** | Green nodes — Firecrawl webhook → AI signal extraction → guardian-state store → cron loop → permission query → AI synthesis (multi-provider failover) → recommendation generation → threshold/bounds/routing decisions → execute → anchor → ledger → clear |
 | **Human-in-the-loop** | Purple nodes — wallet connect → plan selection → permission signing (EIP-712 consent, optional ERC-7715 on-chain grant) → approve proposal in one tap → revoke anytime |
-| **Data sources & APIs** | Blue nodes + AI provider chain — 7 external data sources, 7 AI providers with circuit breakers, Cognee memory, MongoDB state |
-| **Outputs** | Orange nodes — chain-aware RecommendationLedger on 3 chains (Celo/Arbitrum/0G), 0G Storage evidence CID, 0G DA snapshot, user receipt, x402 gateway for external agents, on-chain swap execution |
+| **Data sources & APIs** | Blue nodes + AI provider chain — 7 external data sources, 10 AI providers with circuit breakers, Cognee memory, MongoDB state |
+| **Outputs** | Orange nodes — chain-aware RecommendationLedger (Celo/Arbitrum/0G + env-gated HashKey/Robinhood/Arc — see `PROOF_FEED_CHAIN_IDS`), 0G Storage evidence CID + Guardian-state snapshot, user receipt, x402 gateway for external agents, on-chain swap execution |
 | **Key decision points** | Yellow diamonds — confidence > 0.6 threshold, within daily cap & allowed tokens, route to execution chain (Celo for savings, Arbitrum for yield) |
 
 
