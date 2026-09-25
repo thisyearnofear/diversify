@@ -236,33 +236,36 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
       ]);
       const walletProvider = await getWalletProvider();
       if (!walletProvider) {
-        window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
-        return { success: true, error: 'Opened external claim page' };
+        return { success: false, error: 'Connect a wallet to claim G$.' };
       }
       const service = await GoodDollarService.fromWeb3Provider(walletProvider);
       const result = await service.claimUBI();
       if (result.success) {
         console.log('[StreakRewards] UBI claimed successfully:', result);
-      } else {
-        console.warn('[StreakRewards] Claim failed, opening external page');
-        window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
+        void refresh();
       }
       return result;
     } catch (error) {
       console.error('[StreakRewards] Error claiming UBI:', error);
-      window.open(STREAK_CONFIG.G_CLAIM_URL, '_blank');
-      return { success: false, error: 'Opened external claim page as fallback' };
+      return { success: false, error: error instanceof Error ? error.message : 'Claim failed. Please try again.' };
     }
-  }, [state.canClaim]);
+  }, [state.canClaim, refresh]);
 
-  const verifyIdentity = useCallback(async (): Promise<{ success: boolean; url?: string; error?: string }> => {
+  /**
+   * Face Verification flow. Desktop callers pass a blank popup opened
+   * synchronously in the click handler (survives popup blockers); the
+   * generated link is then routed into it. Mobile/embedded wallets get a
+   * full-page redirect instead.
+   */
+  const verifyIdentity = useCallback(async (popup: Window | null): Promise<{ success: boolean; url?: string; error?: string }> => {
     if (!address) return { success: false, error: 'Wallet not connected' };
     try {
       // Deep leaf imports — NOT the barrel — keep the face-verification
       // path off the AI/swap/ethers chunk.
-      const [{ GoodDollarService }, { getWalletProvider }] = await Promise.all([
+      const [{ GoodDollarService }, { getWalletProvider, isFarcasterProvider }, { isMiniPayEnvironment }] = await Promise.all([
         import('@diversifi/shared/src/services/gooddollar-service'),
         import('@diversifi/shared/src/modules/wallet/core/provider-registry'),
+        import('@diversifi/shared/src/utils/environment'),
       ]);
       const walletProvider = await getWalletProvider();
       if (!walletProvider) {
@@ -270,14 +273,39 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
       }
       const service = await GoodDollarService.fromWeb3Provider(walletProvider);
       const callbackUrl = window.location.href;
-      const url = await service.getFaceVerificationLink('DiversiFi User', callbackUrl);
-      window.open(url, '_blank');
+
+      const isDesktop =
+        !(window.matchMedia?.('(pointer: coarse)')?.matches ?? false) &&
+        !isMiniPayEnvironment() &&
+        !isFarcasterProvider();
+
+      if (isDesktop) {
+        if (!popup) {
+          return { success: false, error: 'Pop-up blocked — allow pop-ups to verify.' };
+        }
+        const url = await service.getFaceVerificationLink(callbackUrl, true);
+        popup.location.href = url;
+        // Re-check eligibility once the FV popup closes.
+        const poll = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(poll);
+            void refresh();
+          }
+        }, 1000);
+        return { success: true, url };
+      }
+
+      // Embedded/mobile — the caller may have optimistically opened a
+      // blank window; close it and take the full-page redirect instead.
+      popup?.close();
+      const url = await service.getFaceVerificationLink(callbackUrl, false);
+      window.location.href = url;
       return { success: true, url };
     } catch (error) {
       console.error('[StreakRewards] Error generating FV link:', error);
       return { success: false, error: 'Failed to start verification flow' };
     }
-  }, [address]);
+  }, [address, refresh]);
 
   const resetStreak = useCallback(async () => {
     if (!address) return;

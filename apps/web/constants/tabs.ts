@@ -7,6 +7,15 @@ import type { UserExperienceMode } from '@/context/app/types';
 export const TAB_IDS = ["protect", "overview", "exchange", "agent", "info"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
+/** Persona-neutral display labels (adaptive overrides live in TabNavigation). */
+export const TAB_LABELS: Record<TabId, string> = {
+  protect: "Shield",
+  overview: "Home",
+  exchange: "Exchange",
+  agent: "Guardian",
+  info: "Learn",
+};
+
 /**
  * Which tabs appear in each experience mode.
  * Simple dock (design-language §5): beginner = Shield / Home / Exchange.

@@ -2,8 +2,10 @@
  * FloatingControls — Guardian FAB, proactive updates, tour triggers.
  */
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
+
+import { useAIConversation } from "@/context/AIConversationContext";
 
 import TourTrigger from "@/components/tour/TourTrigger";
 import { GuardianMascot } from "@/components/shared/GuardianMascot";
@@ -37,7 +39,26 @@ export default function FloatingControls({
   onSnoozeGuardianUpdate,
   onMuteGuardianUpdateType,
 }: FloatingControlsProps) {
-  const showGuardianFab = true;
+  // The FAB morphs into the desktop docked panel via a shared layoutId —
+  // while the drawer is open the pill folds away. Read the context
+  // defensively so isolated tests outside the provider still render the FAB.
+  let isDrawerOpen = false;
+  try {
+    isDrawerOpen = useAIConversation().isDrawerOpen;
+  } catch {
+    isDrawerOpen = false;
+  }
+  const reducedMotion = useReducedMotion();
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(min-width: 1024px)");
+    if (!mq) return;
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  const showGuardianFab = !isDrawerOpen;
   // Active (non-dismissed, non-expired) updates stay in the tray for review.
   const activeUpdates = guardianUpdates.filter(
     (u) => !u.dismissed && u.expiresAt.getTime() > Date.now(),
@@ -72,14 +93,17 @@ export default function FloatingControls({
         onMuteType={onMuteGuardianUpdateType}
       />
 
+      <AnimatePresence>
       {showGuardianFab && (
       <motion.button
         key={bounceKey}
+        layoutId={isDesktop && !reducedMotion ? "ask-guardian" : undefined}
         onClick={openAdvisor}
         aria-label={`${ASK_GUARDIAN_LABEL} — ask about your protection`}
         title={ASK_GUARDIAN_LABEL}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.9 }}
         whileHover={{ scale: 1.04 }}
         whileTap={{ scale: 0.94 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
@@ -104,6 +128,7 @@ export default function FloatingControls({
         )}
       </motion.button>
       )}
+      </AnimatePresence>
     </>
   );
 }

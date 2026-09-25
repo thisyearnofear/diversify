@@ -76,7 +76,7 @@ Files: `packages/shared/src/services/serv/{ixs-vault-catalog,rwa-allocator,serv-
 | **FRED** | Economic indicators | 120 req/min |
 | **CoinGecko** | Exchange rates | 50k req/month |
 | **DeFiLlama** | TVL, yields | 100 req/day |
-| **GoodDollar** | UBI distribution | — |
+| **GoodDollar** | Daily G$ UBI claim + face verification on Celo via `@goodsdks/citizen-sdk` 1.2.7 (`gooddollar-service.ts`) — wallet client built with the account attached, wallet switched to Celo before claiming, `getWalletClaimStatus()` gates `claim()`; FV is a popup on desktop, redirect on mobile/embedded | — |
 | **SoSoValue** | LEGACY — crypto flash news + sentiment (off-thesis, disabled in chat UI); API is crypto-native with US-only macro events | Free tier + API key |
 | **Firecrawl** | Event-driven macro page monitoring (ECB, Fed, yield trackers) | 500 credits/month free |
 | **Cognee** | Agent memory — cross-session persistent context (fallback) | Tenant API (REST) |

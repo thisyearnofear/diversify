@@ -239,6 +239,15 @@ it; that is separate from the bubbles on screen. Do not reintroduce
 revert this stance. Empty state stays quiet (one line + starters) —
 trust footnotes belong behind recommendations, not in the first paint.
 
+On desktop (≥lg) Ask Guardian docks as a right-side panel — 420px,
+`min(720px, 100dvh−2rem)`, no scrim, no blur, no scroll lock; the page
+stays live behind it. The FAB morphs into the panel via a shared
+`layoutId` (fade only under reduced motion), and hides while it's open.
+⌘K / Ctrl+K or "/" opens it, Esc closes it; the header carries one
+context line (`Looking at: {tab} · {from} → {to}` on Exchange) and the
+Protection Balance lives once in the footer. Mobile keeps the bottom
+sheet unchanged.
+
 `DisclosureSection` is not IA. Accordion rows are a density tactic.
 Disclosure is allowed only for **trust footnotes** (data source, method).
 

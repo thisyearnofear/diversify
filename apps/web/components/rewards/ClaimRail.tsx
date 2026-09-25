@@ -22,6 +22,7 @@ import React from "react";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import { useClaimFlowContext } from "@/hooks/claim-flow-context";
 import { useNavigation } from "@/context/app/NavigationContext";
+import { STREAK_CONFIG } from "@diversifi/shared/src/modules/rewards/streak/types";
 
 export function ClaimRail() {
   let streak: ReturnType<typeof useStreakRewards> | null = null;
@@ -48,7 +49,15 @@ export function ClaimRail() {
   if (flow.claimStatus === "error" && flow.claimError) {
     return (
       <p data-testid="claim-rail" className="text-xs text-red-600 dark:text-red-400">
-        {flow.claimError}
+        {flow.claimError}{" "}
+        <a
+          href={STREAK_CONFIG.G_CLAIM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline font-medium"
+        >
+          Claim on GoodDollar →
+        </a>
       </p>
     );
   }

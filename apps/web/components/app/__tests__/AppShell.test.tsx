@@ -137,6 +137,7 @@ vi.mock("@/components/shared/GuardianMascot", () => ({
 import AppShell from "../AppShell";
 import { useAppShell } from "@/hooks/use-app-shell";
 import { ProtectionProfileProvider } from "@/hooks/use-protection-profile";
+import AIConversationContext from "@/context/AIConversationContext";
 
 /** AppShell reads the philosophy via ProtectionProfileProvider (present in
  *  the real app tree above AppShell) — wrap it in the test harness too. */
@@ -280,5 +281,57 @@ describe("AppShell AI Chat FAB", () => {
 
     const button = screen.getByLabelText("Ask Guardian — ask about your protection");
     expect(button.querySelector('[data-testid="guardian-mascot"]')).toBeTruthy();
+  });
+});
+
+describe("AppShell — Guardian dock reflow", () => {
+  /** jsdom has no matchMedia; stub the >=1180px breakpoint. */
+  function setWideViewport(wide: boolean) {
+    window.matchMedia = ((query: string) => ({
+      matches: wide,
+      media: query,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      onchange: null,
+      dispatchEvent: vi.fn(),
+    })) as unknown as typeof window.matchMedia;
+  }
+
+  function renderDocked(isDrawerOpen: boolean) {
+    return render(
+      <ProtectionProfileProvider>
+        <AIConversationContext.Provider value={{ isDrawerOpen } as never}>
+          <AppShell />
+        </AIConversationContext.Provider>
+      </ProtectionProfileProvider>,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseAppShell.mockReturnValue({ ...baseShellState });
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("docks the main column when the drawer is open on a wide viewport", () => {
+    setWideViewport(true);
+    renderDocked(true);
+    expect(document.querySelector("[data-guardian-docked]")).toBeInTheDocument();
+  });
+
+  it("keeps the column untouched when the drawer is closed or the viewport is narrow", () => {
+    setWideViewport(true);
+    renderDocked(false);
+    expect(document.querySelector("[data-guardian-docked]")).not.toBeInTheDocument();
+    cleanup();
+
+    setWideViewport(false);
+    renderDocked(true);
+    expect(document.querySelector("[data-guardian-docked]")).not.toBeInTheDocument();
   });
 });

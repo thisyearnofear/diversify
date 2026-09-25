@@ -1,8 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { spring } from "@/lib/motion-tokens";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
-import { isTabId, LEGACY_TAB_MAP } from "@/constants/tabs";
+import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from "@/constants/tabs";
 import { useAgentChat } from "../../hooks/use-agent-chat";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentVoice } from "../../hooks/use-agent-voice";
@@ -26,7 +27,7 @@ import { ResearchReceipt } from "./ResearchReceipt";
 import { TrustFlow } from "./TrustFlow";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { MaskedReveal } from "../shared/MaskedReveal";
-import { GUARDIAN_DRAWER_SUBTITLE } from "@/constants/guardian-copy";
+
 import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
 import { WorldAnswerCard } from "./WorldAnswerCard";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
@@ -241,28 +242,90 @@ const HoldActionWidget = ({ action }: { action: any }) => {
  */
 // Persisted user API key (client-side only, never sent to our server unintentionally)
 const USER_GEMINI_KEY_STORAGE = "diversifi_user_gemini_key";
+// Starter intents — same prompts as before, re-labelled as questions for the
+// empty state. The paid/free tier stays on the intent but only surfaces in
+// title + sr-only text, never as a visible price tag.
 const STARTER_PROMPTS = [
   {
+    id: "summary",
     label: "Portfolio summary",
+    question: "How is my portfolio protected?",
     prompt: "Summarize my portfolio protection status and tell me the top 3 actions to take.",
     badge: "Free",
   },
   {
+    id: "currency",
     label: "Currency risk",
+    question: "Am I exposed to currency risk?",
     prompt: "Explain my currency exposure and whether I should protect savings before the next payment cycle.",
     badge: "Free",
   },
   {
+    id: "plan",
     label: "Protection plan",
+    question: "What should my protection plan be?",
     prompt: "Create a practical protection plan for my savings using stablecoins, yield, and real-world assets.",
     badge: "Free",
   },
   {
+    id: "payment",
     label: "Payment readiness",
+    question: "Should I convert before my next payment?",
     prompt: "Help me model FX drag for an upcoming supplier payment and decide whether to convert now or wait.",
     badge: "Shield",
   },
 ] as const;
+
+type StarterId = (typeof STARTER_PROMPTS)[number]["id"];
+
+// Three chips per tab, chosen from the existing intents — the tab's job
+// orders them, never invents new ones.
+const STARTERS_BY_TAB: Partial<Record<TabId, readonly StarterId[]>> = {
+  overview: ["summary", "currency", "plan"],
+  protect: ["plan", "currency", "summary"],
+  exchange: ["currency", "payment", "summary"],
+};
+const DEFAULT_STARTERS: readonly StarterId[] = ["summary", "currency", "plan"];
+
+// Per-tab greeting for the empty state — one line, keyed to the surface the
+// user was on when they opened the drawer.
+const GREETING_BY_TAB: Partial<Record<TabId, string>> = {
+  overview: "Ask about your savings picture",
+  protect: "Ask about your protection plan",
+  exchange: "Ask about a swap or a payment",
+  agent: "Ask about a decision or review",
+};
+const DEFAULT_GREETING = "Ask Guardian for a clear next action";
+
+const EXCHANGE_PAIR_KEY = "diversifi.exchange.pair";
+
+function readExchangePair(): { fromToken: string; toToken: string } | null {
+  try {
+    const raw = sessionStorage.getItem(EXCHANGE_PAIR_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.fromToken === "string" && typeof parsed?.toToken === "string" && parsed.fromToken !== parsed.toToken) {
+      return { fromToken: parsed.fromToken, toToken: parsed.toToken };
+    }
+  } catch {
+    /* opaque — fall back to the tab label alone */
+  }
+  return null;
+}
+
+/** Desktop = lg breakpoint and up (1024px), same as Tailwind `lg:`. */
+function useIsDesktop(): boolean {
+  const [isDesktop, setIsDesktop] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(min-width: 1024px)");
+    if (!mq) return;
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return isDesktop;
+}
 
 function useUserGeminiKey() {
   const [key, setKey] = useState<string>(() => {
@@ -410,17 +473,24 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId } = useNavigation();
+  const { activeTab, setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId } = useNavigation();
   const { address, signMessage } = useWalletContext();
   const { showToast } = useToast();
   const portfolio = useSharedMultichainBalances(address);
   const walletView = buildWalletPortfolioView(portfolio);
+  const isDesktop = useIsDesktop();
+  const reducedMotion = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
   const dragStartYRef = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [isForgetting, setIsForgetting] = React.useState(false);
   const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
+  const [menuOpen, setMenuOpen] = useState(false);
+  // One-shot mascot "nod" when a reply finishes streaming.
+  const [nodKey, setNodKey] = useState(0);
+  const wasChattingRef = useRef(false);
   // Direct-claim flow: shared from app-level context.
   const flow = useClaimFlowContext();
   useOnClaimSuccess(() => {
@@ -479,15 +549,16 @@ export default function AIChat() {
     });
   }, [messages, isChatting]);
 
-  // Body scroll lock: prevent the page from scrolling behind the drawer
+  // Body scroll lock: mobile sheet only — the desktop docked panel leaves
+  // the page fully interactive (no scrim, no lock).
   useEffect(() => {
-    if (!isDrawerOpen) return;
+    if (!isDrawerOpen || isDesktop) return;
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = originalOverflow;
     };
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isDesktop]);
 
   // visualViewport: handle iOS keyboard occlusion — keep the input visible
   // when the soft keyboard opens by adjusting the drawer height.
@@ -526,10 +597,69 @@ export default function AIChat() {
     }
   }, [currentUserMsgCount, setDrawerOpen]);
 
+  // Mascot beat: one 300ms nod when a reply completes — never a loop.
+  useEffect(() => {
+    if (wasChattingRef.current && !isChatting) {
+      setNodKey((k) => k + 1);
+    }
+    wasChattingRef.current = isChatting;
+  }, [isChatting]);
+
+  // Keyboard affordances: ⌘K / Ctrl+K and "/" open the drawer (unless the
+  // user is typing in a field), Esc closes. Focus lands in the input only on
+  // desktop — on mobile it would pop the soft keyboard over the sheet.
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null) =>
+      el instanceof HTMLElement &&
+      (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isDrawerOpen) {
+        // Innermost surface first: menu → confirm modal → drawer.
+        if (menuOpen) setMenuOpen(false);
+        else if (showClearConfirm) setShowClearConfirm(false);
+        else setDrawerOpen(false);
+        return;
+      }
+      if (isTypingTarget(e.target)) return;
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setDrawerOpen(true);
+        return;
+      }
+      if (e.key === '/') {
+        e.preventDefault();
+        setDrawerOpen(true);
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isDrawerOpen, setDrawerOpen, menuOpen, showClearConfirm]);
+
+  useEffect(() => {
+    if (isDrawerOpen && isDesktop) {
+      inputRef.current?.focus();
+    }
+  }, [isDrawerOpen, isDesktop]);
+
   // Actions are now user-initiated via buttons below each AI response.
   // No auto-triggers — no tab switches, no claim popups, no navigation.
 
-  if (!isDrawerOpen && flow.claimStatus === 'idle' && flow.verifyStatus === 'idle') return null;
+  // Context line: the tab the user is looking at (+ the live Exchange pair
+  // when it's recoverable from session state — no new plumbing).
+  const tabLabel = TAB_LABELS[activeTab as TabId] ?? 'Guardian';
+  const exchangePair =
+    activeTab === 'exchange' && typeof sessionStorage !== 'undefined'
+      ? readExchangePair()
+      : null;
+  const contextLine = `Looking at: ${tabLabel}${
+    exchangePair ? ` · ${exchangePair.fromToken} → ${exchangePair.toToken}` : ''
+  }`;
+  const mascotMood = activeGuardianReview ? 'alert' : isChatting ? 'thinking' : 'neutral';
+  const starterIds = STARTERS_BY_TAB[activeTab as TabId] ?? DEFAULT_STARTERS;
+  const starters = starterIds
+    .map((id) => STARTER_PROMPTS.find((p) => p.id === id))
+    .filter((p): p is (typeof STARTER_PROMPTS)[number] => Boolean(p));
+  const greeting = GREETING_BY_TAB[activeTab as TabId] ?? DEFAULT_GREETING;
 
   const handleConfirmClear = () => {
     clearMessages();
@@ -588,17 +718,20 @@ export default function AIChat() {
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col justify-end pointer-events-none">
-      {/* Backdrop */}
-      {isDrawerOpen && (
-        <Scrim
-          intensity="default"
-          onClick={() => {
-            setDrawerOpen(false);
-            setShowClearConfirm(false);
-          }}
-          className="pointer-events-auto"
-        />
-      )}
+      {/* Backdrop — mobile sheet only; the desktop docked panel leaves the
+          page visible and interactive. */}
+      <AnimatePresence>
+        {isDrawerOpen && !isDesktop && (
+          <Scrim
+            intensity="default"
+            onClick={() => {
+              setDrawerOpen(false);
+              setShowClearConfirm(false);
+            }}
+            className="pointer-events-auto"
+          />
+        )}
+      </AnimatePresence>
 
       {/* New Conversation Confirmation Modal */}
       {showClearConfirm && (
@@ -645,19 +778,28 @@ export default function AIChat() {
         </motion.div>
       )}
 
-      {/* Drawer */}
+      {/* Drawer — bottom sheet on mobile, right-docked panel on desktop
+          (layoutId morphs it from the FAB; reduced motion → opacity fade). */}
+      <AnimatePresence>
       {isDrawerOpen && (
         <motion.div
-          initial={{ y: "100%" }}
-          animate={{ y: 0 }}
-          exit={{ y: "100%" }}
-          transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="relative z-[50] isolate bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
+          layoutId={isDesktop && !reducedMotion ? "ask-guardian" : undefined}
+          initial={isDesktop ? (reducedMotion ? { opacity: 0 } : false) : { y: "100%" }}
+          animate={isDesktop ? { opacity: 1 } : { y: 0 }}
+          exit={isDesktop ? { opacity: 0 } : { y: "100%" }}
+          transition={spring}
+          className={
+            isDesktop
+              ? "fixed right-4 bottom-4 z-[50] isolate bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-[420px] h-[min(720px,calc(100dvh-2rem))] flex flex-col pointer-events-auto border border-gray-200 dark:border-white/10 overflow-hidden"
+              : "relative z-[50] isolate bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
+          }
           role="dialog"
           aria-modal="false"
           aria-label="Ask Guardian"
         >
-          {/* Drag Handle — pointer-capture drag-to-dismiss */}
+          {/* Drag Handle — pointer-capture drag-to-dismiss (mobile only;
+              a mouse has no use for it) */}
+          {!isDesktop && (
           <div
             className="w-full flex justify-center py-3 cursor-grab active:cursor-grabbing"
             style={{ touchAction: 'none' }}
@@ -703,6 +845,7 @@ export default function AIChat() {
               onClick={() => setDrawerOpen(false)}
             />
           </div>
+          )}
 
         {address && walletView.freshness !== "ready" && walletView.freshness !== "empty" && (
           <p className="px-6 py-2 text-[11px] text-amber-700 dark:text-amber-300" role="status">
@@ -710,60 +853,69 @@ export default function AIChat() {
           </p>
         )}
 
-        {/* Freemium Status Banner */}
-        <FreemiumPanel onGoodDollarClaim={handleClaimFromChat} />
-
-        {/* Header */}
-        <div className="px-6 pb-4 flex justify-between items-center border-b border-blue-200/60 dark:border-blue-800/30 bg-gradient-to-r from-blue-50/80 via-sky-50/50 to-blue-50/80 dark:from-blue-900/20 dark:via-sky-900/10 dark:to-blue-900/20">
-          <div className="flex items-center gap-3">
-            <GuardianMascot
-              size={42}
-              mood={isChatting ? "thinking" : "neutral"}
+        {/* Header — one row: mascot + name + context, a ⋯ menu for the
+            secondary controls, and an explicit close button. */}
+        <div className="px-6 py-3 lg:py-4 flex justify-between items-center border-b border-blue-200/60 dark:border-blue-800/30 bg-gradient-to-r from-blue-50/80 via-sky-50/50 to-blue-50/80 dark:from-blue-900/20 dark:via-sky-900/10 dark:to-blue-900/20">
+          <div className="flex items-center gap-3 min-w-0">
+            <motion.div
+              key={nodKey}
+              animate={nodKey > 0 && !reducedMotion ? { scale: [1, 0.92, 1] } : { scale: 1 }}
+              transition={{ duration: 0.3 }}
               className="shrink-0"
-            />
-            <div>
-              <h3 className="font-black text-blue-950 dark:text-blue-100 uppercase tracking-tight text-sm">
+            >
+              <GuardianMascot size={32} mood={mascotMood} />
+            </motion.div>
+            <div className="min-w-0">
+              <h3 className="font-black text-blue-950 dark:text-blue-100 tracking-tight text-sm leading-tight">
                 Guardian
               </h3>
-              <div className="flex items-center gap-1.5">
-                <motion.div
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="w-1.5 h-1.5 rounded-full bg-blue-500"
-                />
-                <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase">
-                  {GUARDIAN_DRAWER_SUBTITLE}
-                </span>
-              </div>
+              <p className="truncate text-xs text-blue-600/80 dark:text-blue-300/80">
+                {contextLine}
+              </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowSettings(true)}
-              className="text-[10px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-wider transition-colors"
-              title="AI model settings"
-              aria-label="AI model settings"
-            >
-              ⚙️
-            </button>
-            <button
-              onClick={() => setCurrentView(currentView === 'chat' ? 'history' : 'chat')}
-              className={`text-xs font-black uppercase tracking-widest px-2.5 py-1 rounded-full border transition-colors ${
-                currentView === 'history' 
-                  ? 'bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-500/20' 
-                  : 'bg-white/50 dark:bg-gray-800/50 text-blue-700 dark:text-blue-300 border-blue-200/50 dark:border-blue-700/30'
-              }`}
-            >
-              {currentView === 'chat' ? 'History' : 'Chat'}
-            </button>
-            <button
-              onClick={() => setShowClearConfirm(true)}
-              className="text-[10px] font-black text-gray-400 hover:text-blue-500 uppercase tracking-wider"
-              title="Start a new conversation"
-            >
-              New
-            </button>
-            {/* Explicit close button so users can dismiss without confusion */}
+          <div className="flex items-center gap-2">
+            {/* Secondary controls live in one menu — settings, view toggle,
+                new thread. Esc closes it (handled by the drawer keydown). */}
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen((v) => !v)}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-label="More options"
+                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base leading-none"
+              >
+                ⋯
+              </button>
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 top-full mt-1 w-44 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-xl py-1 z-10"
+                >
+                  <button
+                    role="menuitem"
+                    onClick={() => { setCurrentView(currentView === 'chat' ? 'history' : 'chat'); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    {currentView === 'chat' ? 'History' : 'Back to chat'}
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setShowClearConfirm(true); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    New conversation
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={() => { setShowSettings(true); setMenuOpen(false); }}
+                    className="w-full text-left px-3 py-2 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    AI model settings
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={() => setDrawerOpen(false)}
               className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/30 transition-colors"
@@ -946,20 +1098,18 @@ export default function AIChat() {
                 )}
 
                 {messages.length === 0 && !isChatting && !activeGuardianReview && (
-                  <motion.div 
+                  <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ duration: 0.5 }}
                     className="h-full flex flex-col items-center justify-center text-center space-y-5"
                   >
-                    <GuardianMascot size={82} mood="happy" gaze="pointer" />
-                    
                     <div className="space-y-2">
-                      {/* Greeting hero — rises once out of the mask on mount
-                          (design-language §5: motion reveals, never loops). */}
+                      {/* One greeting line keyed to the tab — the header mascot
+                          is the only mascot; no second hero mark here. */}
                       <MaskedReveal
                         as="p"
-                        lines={["Ask Guardian for a clear next action"]}
+                        lines={[greeting]}
                         delay={0.15}
                         lineClassName="text-base font-bold text-blue-900 dark:text-blue-100"
                       />
@@ -969,16 +1119,15 @@ export default function AIChat() {
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
-                      {STARTER_PROMPTS.map(({ label, prompt, badge }) => (
+                      {starters.map(({ id, question, prompt, badge }) => (
                         <motion.button
-                          key={label}
+                          key={id}
                           onClick={() => submitPrompt(prompt)}
+                          title={`${badge} tier`}
                           className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full border border-blue-200 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors"
                         >
-                          <span>{label}</span>
-                          <span className="rounded-full bg-white/80 dark:bg-black/20 px-1.5 py-0.5 text-[10px] font-black">
-                            {badge}
-                          </span>
+                          <span>{question}</span>
+                          <span className="sr-only">({badge} tier)</span>
                         </motion.button>
                       ))}
                     </div>
@@ -1226,8 +1375,9 @@ export default function AIChat() {
           </AnimatePresence>
         </div>
 
-        {/* Footer Input */}
-        <div className="p-6 pt-2 pb-10 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 flex items-center gap-3">
+        {/* Footer — the Protection Balance lives here once (collapsed summary
+            that expands in place above the input), not a top banner. */}
+        <div className="p-6 pt-2 pb-10 lg:pb-6 bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 flex items-center gap-3">
           <div className="flex-1 space-y-2">
             <div className="px-1">
               <ResearchCheck
@@ -1235,21 +1385,24 @@ export default function AIChat() {
                 spent={autonomousStatus?.spent ?? 0}
               />
             </div>
+            <FreemiumPanel onGoodDollarClaim={handleClaimFromChat} />
             <form
               onSubmit={handleSubmit}
               className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 flex items-center shadow-inner"
             >
               <input
+                ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder="Ask about your portfolio, macro outlook, or strategy..."
                 aria-label="Ask your Guardian a question"
-                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white"
+                className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white pr-10"
               />
               <VoiceButton
                 size="sm"
                 variant="embedded"
+                tooltipPlacement="top"
                 onTranscription={(t) => {
                   submitPrompt(t);
                 }}
@@ -1275,6 +1428,7 @@ export default function AIChat() {
         </div>
       </motion.div>
       )}
+      </AnimatePresence>
       {showSettings && (
         <ModelSettingsModal
           onClose={() => setShowSettings(false)}

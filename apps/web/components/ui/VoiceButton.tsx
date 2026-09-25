@@ -24,6 +24,8 @@ interface VoiceButtonProps {
     externalSuggestionsOpen?: boolean;
     /** Called when suggestions open/close so parent can sync its own state */
     onSuggestionsChange?: (open: boolean) => void;
+    /** First-visit tooltip direction — 'top' keeps it inside a bottom-docked panel. */
+    tooltipPlacement?: 'top' | 'bottom';
 }
 
 type RecordingState = 'idle' | 'recording' | 'processing';
@@ -46,6 +48,7 @@ export default function VoiceButton({
     showSuggestions = true,
     externalSuggestionsOpen,
     onSuggestionsChange,
+    tooltipPlacement = 'bottom',
 }: VoiceButtonProps) {
     const { capabilities } = useAgentStatus();
     const { transcribeAudio } = useAgentVoice({ apiBase: API_BASE, capabilities });
@@ -383,10 +386,10 @@ export default function VoiceButton({
             <AnimatePresence>
                 {isFirstVisit && !hasBeenSeen && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10, scale: 0.9 }}
+                        initial={{ opacity: 0, y: tooltipPlacement === 'top' ? -10 : 10, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -10, scale: 0.9 }}
-                        className="absolute top-full mt-2 left-1/2 transform -translate-x-1/2 z-[9999]"
+                        exit={{ opacity: 0, y: tooltipPlacement === 'top' ? 10 : -10, scale: 0.9 }}
+                        className={`absolute ${tooltipPlacement === 'top' ? 'bottom-full mb-2' : 'top-full mt-2'} left-1/2 transform -translate-x-1/2 z-[9999]`}
                     >
                         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3 rounded-xl shadow-xl whitespace-nowrap">
                             <div className="flex items-center gap-2">
@@ -397,7 +400,7 @@ export default function VoiceButton({
                                 </div>
                             </div>
                             {/* Arrow */}
-                            <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rotate-45" />
+                            <div className={`absolute ${tooltipPlacement === 'top' ? '-bottom-1' : '-top-1'} left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-600 rotate-45`} />
                         </div>
                     </motion.div>
                 )}

@@ -72,7 +72,15 @@ describe('ClaimRail', () => {
     streakState = { canClaim: true, isEligible: true, isWhitelisted: true, isLoading: false };
     flowState = { ...baseFlow, claimStatus: 'error', claimError: 'Claim failed. Please try again.' };
     render(<ClaimRail />);
-    expect(screen.getByTestId('claim-rail')).toHaveTextContent('Claim failed. Please try again.');
+    const rail = screen.getByTestId('claim-rail');
+    expect(rail).toHaveTextContent('Claim failed. Please try again.');
+    // The auto-open is popup-blocked post-await — the escape hatch is a
+    // real user-gesture link to the GoodDollar wallet.
+    const link = rail.querySelector('a');
+    expect(link).not.toBeNull();
+    expect(link).toHaveAttribute('href', expect.stringContaining('wallet.gooddollar.org'));
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', expect.stringContaining('noopener'));
   });
 
   it('offers one-time verification when eligible but not whitelisted', () => {

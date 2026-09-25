@@ -24,6 +24,7 @@ import {
   type WalletClient,
 } from 'viem';
 import { celo } from 'viem/chains';
+import { NETWORKS } from '../config/index';
 import {
   ClaimSDK,
   IdentitySDK,
@@ -48,7 +49,10 @@ export const GOODDOLLAR_ADDRESSES = {
   CFA_FORWARDER,
 } as const;
 
-const CELO_RPC = 'https://forno.celo.org';
+const CELO_RPC = NETWORKS.CELO_MAINNET.rpcUrl;
+const CELO_CHAIN_ID = celo.id;
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 function publicClientFor(rpcUrl: string) {
   return createPublicClient({ chain: celo, transport: http(rpcUrl) });
@@ -158,7 +162,8 @@ export class GoodDollarService {
    * Resolve a connected wallet to its whitelisted root and report
    * verification status. Uses `getWhitelistedRoot` per GoodDollar docs:
    * `isWhitelisted(connectedWallet)` returns false even when the wallet
-   * is linked to a verified identity.
+   * is linked to a verified identity. A non-zero root means the wallet
+   * is verified — linked wallets claim through their root.
    */
   async isVerified(userAddress: string): Promise<boolean> {
     const addr = safeAddress(userAddress);
@@ -170,8 +175,7 @@ export class GoodDollarService {
         functionName: 'getWhitelistedRoot',
         args: [addr],
       })) as Address;
-      if (!root || root === '0x0000000000000000000000000000000000000000') return false;
-      return root.toLowerCase() === addr.toLowerCase();
+      return !!root && root !== ZERO_ADDRESS;
     } catch (err) {
       console.warn('[GoodDollar] isVerified read failed:', err);
       return false;
@@ -180,9 +184,9 @@ export class GoodDollarService {
 
   /**
    * Check UBI claim eligibility for an address. Combines:
-   * - getWhitelistedRoot (linked-wallet aware)
-   * - checkEntitlement(root)
-   * - alreadyClaimed heuristic (nextClaimTime > now)
+   * - getWhitelistedRoot (linked-wallet aware: any non-zero root counts)
+   * - checkEntitlement(root) — entitlement lives on the root identity
+   * - nextClaimTime derived from UBIScheme periodStart/currentDay
    */
   async checkClaimEligibility(userAddress: string): Promise<ClaimEligibility> {
     const empty: ClaimEligibility = {
@@ -202,8 +206,7 @@ export class GoodDollarService {
         args: [addr],
       })) as Address;
 
-      const isWhitelisted =
-        !!root && root !== '0x0000000000000000000000000000000000000000' && root.toLowerCase() === addr.toLowerCase();
+      const isWhitelisted = !!root && root !== ZERO_ADDRESS;
 
       if (!isWhitelisted) {
         return { ...empty };
@@ -213,10 +216,11 @@ export class GoodDollarService {
         address: UBI_SCHEME,
         abi: ubiSchemeV2ABI,
         functionName: 'checkEntitlement',
-        args: [addr],
+        args: [root],
       })) as bigint;
 
       const alreadyClaimed = entitlement === 0n;
+      const nextClaimTime = alreadyClaimed ? await this.readNextClaimTime() : undefined;
 
       return {
         canClaim: !alreadyClaimed && entitlement > 0n,
@@ -224,11 +228,40 @@ export class GoodDollarService {
         claimAmountRaw: entitlement,
         alreadyClaimed,
         isWhitelisted,
-        nextClaimTime: alreadyClaimed ? nextDailyReset() : undefined,
+        nextClaimTime,
       };
     } catch (err) {
       console.warn('[GoodDollar] checkClaimEligibility failed:', err);
       return empty;
+    }
+  }
+
+  /**
+   * Mirror of the SDK's ClaimSDK.nextClaimTime(): the current claim period
+   * starts at periodStart + currentDay*DAY; if that boundary is already in
+   * the past, the next claim opens at +DAY.
+   */
+  private async readNextClaimTime(): Promise<Date | undefined> {
+    try {
+      const [periodStart, currentDay] = await Promise.all([
+        this.publicClient.readContract({
+          address: UBI_SCHEME,
+          abi: ubiSchemeV2ABI,
+          functionName: 'periodStart',
+        }) as Promise<bigint>,
+        this.publicClient.readContract({
+          address: UBI_SCHEME,
+          abi: ubiSchemeV2ABI,
+          functionName: 'currentDay',
+        }) as Promise<bigint>,
+      ]);
+      const periodStartMs = Number(periodStart) * 1000;
+      const startRef = new Date(periodStartMs + Number(currentDay) * DAY_MS);
+      const now = new Date();
+      return startRef < now ? new Date(startRef.getTime() + DAY_MS) : startRef;
+    } catch (err) {
+      console.warn('[GoodDollar] readNextClaimTime failed:', err);
+      return undefined;
     }
   }
 
@@ -283,9 +316,57 @@ export class GoodDollarService {
     });
   }
 
+  /**
+   * Ensure the connected wallet is on Celo mainnet before any claim write —
+   * the SDK's `claim()` signs with `walletClient.chain`, so a wallet left on
+   * another chain would produce a doomed transaction.
+   */
+  private async ensureCeloChain(walletClient: WalletClient): Promise<void> {
+    const current = await walletClient.getChainId();
+    if (current === CELO_CHAIN_ID) return;
+    try {
+      await walletClient.switchChain({ id: celo.id });
+    } catch (err: unknown) {
+      if (isUserRejection(err)) {
+        throw new Error('Switch your wallet to Celo to claim G$.');
+      }
+      // 4902 = the wallet doesn't know Celo yet — add it, then switch.
+      if (hasErrorCode(err, 4902)) {
+        try {
+          await walletClient.addChain({ chain: celo });
+          await walletClient.switchChain({ id: celo.id });
+          return;
+        } catch (addErr: unknown) {
+          if (isUserRejection(addErr)) {
+            throw new Error('Switch your wallet to Celo to claim G$.');
+          }
+          throw addErr;
+        }
+      }
+      throw err;
+    }
+  }
+
   async claimUBI(): Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }> {
     try {
+      const { walletClient } = this.requireClient();
+      await this.ensureCeloChain(walletClient);
       const sdk = await this.initClaimSDK();
+
+      // Gate on getWalletClaimStatus first: sdk.claim() performs a hard
+      // window.location redirect to face verification when the wallet isn't
+      // whitelisted — never call it in that state.
+      const status = await sdk.getWalletClaimStatus();
+      if (status.status === 'not_whitelisted') {
+        return { success: false, error: 'Verify once with GoodDollar to claim.' };
+      }
+      if (status.status === 'already_claimed') {
+        const when = status.nextClaimTime
+          ? status.nextClaimTime.toLocaleString()
+          : 'tomorrow';
+        return { success: false, error: `Already claimed — next claim ${when}.` };
+      }
+
       const receipt = await sdk.claim();
       const txHash = (receipt as { transactionHash?: `0x${string}` })?.transactionHash;
       const receiptLogs = (receipt as { logs?: Log[] })?.logs;
@@ -299,11 +380,14 @@ export class GoodDollarService {
       return { success: true, txHash, amount };
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to claim UBI';
-      if (message.includes('not whitelisted') || message.includes('face verification')) {
-        return { success: false, error: 'Wallet not verified. Please complete face verification.' };
+      if (isUserRejection(err) || message.includes('Claim cancelled')) {
+        return { success: false, error: 'Claim cancelled.' };
       }
-      if (message.includes('already claimed')) {
-        return { success: false, error: 'Already claimed today. Come back tomorrow!' };
+      if (message.includes('requires identity verification') || message.includes('face verification')) {
+        return { success: false, error: 'Verify once with GoodDollar to claim.' };
+      }
+      if (message.includes('balance threshold') || message.includes('faucet')) {
+        return { success: false, error: "Couldn't top up gas for the claim — try again in a minute." };
       }
       console.error('[GoodDollar] claim failed:', err);
       return { success: false, error: message };
@@ -311,10 +395,11 @@ export class GoodDollarService {
   }
 
   /**
-   * Generate a Face Verification link via the SDK (handles popup mode,
-   * chainId, and the FV_IDENTIFIER signature internally).
+   * Generate a Face Verification link via the SDK. `popupMode` selects the
+   * desktop-popup link variant vs the full-page redirect variant; the SDK
+   * handles the FV_IDENTIFIER signature internally.
    */
-  async getFaceVerificationLink(_firstName: string, callbackUrl: string): Promise<string> {
+  async getFaceVerificationLink(callbackUrl: string, popupMode: boolean): Promise<string> {
     const { walletClient } = this.requireClient();
     const identitySDK = new IdentitySDK({
       account: this.account!,
@@ -322,7 +407,7 @@ export class GoodDollarService {
       walletClient,
       env: this.sdkEnv,
     });
-    return identitySDK.generateFVLink(true, callbackUrl, celo.id as SdkChainId);
+    return identitySDK.generateFVLink(popupMode, callbackUrl, celo.id as SdkChainId);
   }
 
   // ─── Superfluid streaming ──────────────────────────────────────────────
@@ -413,17 +498,41 @@ export class GoodDollarService {
    * a Viem WalletClient and attach the connected account.
    */
   static async fromWeb3Provider(provider: unknown): Promise<GoodDollarService> {
-    const walletClient = createWalletClient({
-      chain: celo,
-      transport: custom(provider as Parameters<typeof custom>[0]),
-    });
-    const [account] = await walletClient.getAddresses();
+    const transport = custom(provider as Parameters<typeof custom>[0]);
+    // Resolve the account first and attach it to the wallet client — the
+    // SDK's IdentitySDK/ClaimSDK constructors throw without one.
+    const probe = createWalletClient({ chain: celo, transport });
+    const [account] = await probe.getAddresses();
     if (!account) {
       throw new Error('GoodDollarService: wallet returned no addresses');
     }
-    const publicClient = createPublicClient({ chain: celo, transport: custom(provider as Parameters<typeof custom>[0]) });
+    const walletClient = createWalletClient({
+      account,
+      chain: celo,
+      transport,
+    });
+    // Reads go over the app's Celo RPC, not the wallet transport — wallets
+    // may be connected to a different chain or a flaky RPC.
+    const publicClient = publicClientFor(CELO_RPC);
     return new GoodDollarService({ publicClient, walletClient, account });
   }
+}
+
+// ─── Error helpers ─────────────────────────────────────────────────────
+
+function hasErrorCode(err: unknown, code: number): boolean {
+  let cur: unknown = err;
+  while (cur && typeof cur === 'object') {
+    if ((cur as { code?: number }).code === code) return true;
+    cur = (cur as { cause?: unknown }).cause;
+  }
+  return false;
+}
+
+function isUserRejection(err: unknown): boolean {
+  if (hasErrorCode(err, 4001)) return true;
+  const message = err instanceof Error ? err.message : String(err);
+  return /reject|denied|cancelled/i.test(message);
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────
@@ -439,10 +548,6 @@ function formatG(raw: bigint): string {
   const whole = str.slice(0, -G_DECIMALS) || '0';
   const fraction = str.slice(-G_DECIMALS).replace(/0+$/, '');
   return fraction ? `${whole}.${fraction}` : whole;
-}
-
-function nextDailyReset(): Date {
-  return new Date(Date.now() + 24 * 60 * 60 * 1000);
 }
 
 function safeAddress(input: string | undefined | null): Address | null {

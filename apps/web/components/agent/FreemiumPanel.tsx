@@ -39,30 +39,23 @@ export default function FreemiumPanel({ onGoodDollarClaim }: FreemiumPanelProps)
 
   return (
     <div className="px-4 pt-1 pb-2">
+      {/* Collapsed state: one quiet text line — the balance belongs in
+          the footer as a footnote, not a banner. Expanded is unchanged. */}
       <button
         onClick={() => setShowFreemium(v => !v)}
-        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl border text-xs ${
+        aria-expanded={showFreemium}
+        className={`w-full flex items-center justify-between py-1 text-xs transition-colors ${
           isLow
-            ? "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200/60 dark:border-amber-700/40"
-            : "bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200/60 dark:border-emerald-700/40"
+            ? "text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
         }`}
       >
-        <span className="flex items-center gap-2">
-          <span className={`font-bold ${isLow ? "text-amber-700 dark:text-amber-300" : "text-emerald-700 dark:text-emerald-300"}`}>
-            Protection Balance: ${creditsStatus.credits.bonus.toFixed(3)} USDC
-          </span>
-          {isLow && creditsStatus.credits.bonus > 0 && (
-            <span className="bg-amber-400 text-amber-900 font-bold px-1.5 py-0.5 rounded-full text-[10px]">
-              Low
-            </span>
-          )}
-          {!isLow && creditsStatus.referral.availableActions.length > 0 && (
-            <span className="bg-amber-400 text-amber-900 font-bold px-1.5 py-0.5 rounded-full text-[10px]">
-              +{creditsStatus.referral.availableActions.length} ways to earn
-            </span>
-          )}
+        <span>
+          ${creditsStatus.credits.bonus.toFixed(2)} protection balance
+          {creditsStatus.referral.availableActions.length > 0 &&
+            ` · ${creditsStatus.referral.availableActions.length} ways to earn`}
         </span>
-        <span className="text-gray-400">{showFreemium ? "▲" : "▼"}</span>
+        <span aria-hidden="true">{showFreemium ? "▴" : "▾"}</span>
       </button>
 
       <AnimatePresence>

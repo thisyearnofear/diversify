@@ -1,5 +1,4 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { useCredits } from '../../hooks/use-credits';
 
 /**
  * ResearchCheck — a compact response status shown above the chat input.
@@ -13,9 +12,8 @@ interface ResearchCheckProps {
 }
 
 export function ResearchCheck({ isActive }: ResearchCheckProps) {
-  const { status } = useCredits();
-  const remaining = status?.credits.bonus ?? 0;
-  const isLow = remaining < 0.05;
+  // The Protection Balance renders once in the footer via FreemiumPanel —
+  // ResearchCheck carries only the live Ready/Responding status.
   const reducedMotion = useReducedMotion();
 
   return (
@@ -38,12 +36,6 @@ export function ResearchCheck({ isActive }: ResearchCheckProps) {
       <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
         {isActive ? 'Responding...' : 'Ready'}
       </span>
-
-      {remaining > 0 && (
-        <span className={`text-[10px] font-mono ml-auto ${isLow ? "text-amber-500" : "text-slate-500"}`}>
-          ${remaining.toFixed(3)} credits
-        </span>
-      )}
     </div>
   );
 }

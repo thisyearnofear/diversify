@@ -8,7 +8,10 @@
  *
  * index.tsx handles only page-level concerns (onboarding gate, SEO).
  */
+import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { AppShellProvider, useAppShellContext } from "@/context/app/AppShellContext";
+import { useAIConversationOptional } from "@/context/AIConversationContext";
 import { NETWORKS } from "@/config";
 import { shouldShowTestnetBanner } from "@/constants/testnet";
 import TabNavigation, { DesktopRail } from "@/components/ui/TabNavigation";
@@ -79,12 +82,34 @@ function AppShellInner() {
 
   const showTestnetBanner = shouldShowTestnetBanner(walletChainId);
 
+  // Desktop Ask Guardian dock: when the panel is open on a wide enough
+  // viewport, reflow the main column beside it instead of letting the
+  // panel cover the card edge. Below ~1180px the column + 420px panel +
+  // gutters no longer fit, so the panel keeps overlaying (unchanged).
+  const isDrawerOpen = useAIConversationOptional()?.isDrawerOpen ?? false;
+  const reducedMotion = useReducedMotion();
+  const [wideEnoughToDock, setWideEnoughToDock] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia?.("(min-width: 1180px)");
+    if (!mq) return;
+    const update = () => setWideEnoughToDock(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  const guardianDocked = isDrawerOpen && wideEnoughToDock;
+
   // Philosophy accent for the ambient backdrop (static, §5-compliant).
   const { financialStrategy } = useStrategy();
   const archetype = ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'];
 
   return (
-    <div className="lg:pl-20">
+    <motion.div
+      className="lg:pl-20"
+      data-guardian-docked={guardianDocked || undefined}
+      animate={{ paddingRight: guardianDocked ? 452 : 0 }}
+      transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.32, 0.72, 0, 1] }}
+    >
       <DesktopRail
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -166,6 +191,6 @@ function AppShellInner() {
         isMiniPay={isMiniPay}
       />
       </div>
-    </div>
+    </motion.div>
   );
 }

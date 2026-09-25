@@ -23,6 +23,8 @@ import { useStreakRewards } from './use-streak-rewards';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
 import { NETWORKS } from '@/config';
 import { STREAK_CONFIG } from '@diversifi/shared/src/modules/rewards/streak/types';
+import { isMiniPayEnvironment } from '@diversifi/shared/src/utils/environment';
+import { useToast } from '@/components/ui/Toast';
 import { haptic } from '@/lib/haptics';
 
 // Lazy-load the celebration so consumers that don't reach success never
@@ -85,6 +87,7 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
     recordSwap,
     isLoading,
   } = useStreakRewards();
+  const { showToast } = useToast();
 
   const [verifyStatus, setVerifyStatus] = useState<VerifyStatus>('idle');
   const [claimStatus, setClaimStatus] = useState<ClaimStatus>('idle');
@@ -93,16 +96,28 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
 
   const handleVerify = useCallback(async () => {
     setVerifyStatus('opening');
-    try {
-      await verifyIdentity();
-    } catch {
+    // Open the FV popup synchronously inside the user gesture — awaiting
+    // the link generation first would trip the popup blocker. Embedded
+    // wallets (MiniPay) take the full-page redirect path instead, so no
+    // window is opened for them.
+    const isDesktop =
+      typeof window !== 'undefined' &&
+      !(window.matchMedia?.('(pointer: coarse)')?.matches ?? false) &&
+      !isMiniPayEnvironment();
+    const popup = isDesktop
+      ? window.open('', 'faceVerification', 'width=600,height=700,scrollbars=yes,resizable=yes')
+      : null;
+    const result = await verifyIdentity(popup);
+    if (!result.success) {
+      popup?.close();
       setVerifyStatus('idle');
+      showToast(result.error || 'Verification failed to start.', 'error');
       return;
     }
     // Move to awaiting state. We re-check verification on tab focus and
     // every 30s; the user gets a manual "Check now" affordance too.
     setVerifyStatus('awaiting');
-  }, [verifyIdentity]);
+  }, [verifyIdentity, showToast]);
 
   // Re-check verification when the user returns to the tab (FV popup closes)
   // and on a 30s poll while we're awaiting approval. Stops automatically
@@ -165,7 +180,9 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
         onClaimSuccess?.();
       } else {
         haptic("error");
-        setClaimError(result.error || 'Claim failed. Please try again.');
+        const message = result.error || 'Claim failed. Please try again.';
+        setClaimError(message);
+        showToast(message, 'error');
         setClaimStatus('error');
         setTimeout(() => {
           setClaimStatus((s) => (s === 'error' ? 'idle' : s));
@@ -174,14 +191,16 @@ export function useClaimFlow(options: UseClaimFlowOptions = {}): ClaimFlow {
       }
     } catch (err) {
       haptic("error");
-      setClaimError(err instanceof Error ? err.message : 'Unexpected error');
+      const message = err instanceof Error ? err.message : 'Unexpected error';
+      setClaimError(message);
+      showToast(message, 'error');
       setClaimStatus('error');
       setTimeout(() => {
         setClaimStatus((s) => (s === 'error' ? 'idle' : s));
         setClaimError(null);
       }, 6_000);
     }
-  }, [canClaim, claimStatus, claimG, estimatedReward, recordActivity, recordSwap, chainId, onClaimSuccess]);
+  }, [canClaim, claimStatus, claimG, estimatedReward, recordActivity, recordSwap, chainId, onClaimSuccess, showToast]);
 
   const handleClaimSuccessClose = useCallback(() => {
     setClaimStatus('idle');
