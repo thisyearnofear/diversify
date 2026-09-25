@@ -1,11 +1,16 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createPublicClient, http, formatUnits, parseUnits, parseAbi } from "viem";
-import { celo } from "viem/chains";
+import { formatUnits, parseUnits } from "viem";
+import {
+  findMentoRoute,
+  quoteMento,
+  getMentoRouterAddress,
+} from "@diversifi/shared/src/services/swap/mento-sdk.service";
 
-const CELO_RPC = process.env.NEXT_PUBLIC_CELO_RPC || "https://forno.celo.org";
+const CHAIN_ID = 42220;
 
-const MENTO_BROKER = "0x777a8255ca72412f0d706dc03c9d1987306b4cad" as const;
-
+// Legacy Mento symbol aliases — cUSD/cEUR/cREAL are the pre-rebrand names
+// for USDm/EURm/BRLm. Symbol→address is a static map, never route-derived
+// (route tokens report e.g. 'USD₮' for USDT).
 const TOKENS: Record<string, `0x${string}`> = {
   CELO: "0x471EcE3750Da237f93B8E339c536989b8978a438",
   cUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
@@ -16,15 +21,6 @@ const TOKENS: Record<string, `0x${string}`> = {
   COPm: "0x8A567e2aE79CA692Bd748aB832081C45de4041eA",
   PHPm: "0x105d4A9306D2E55a71d2Eb95B81553AE1dC20d7B",
 };
-
-const brokerAbi = parseAbi([
-  "function getExchangeProviders() view returns (address[])",
-  "function getAmountOut(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn) view returns (uint256)",
-]);
-
-const exchangeAbi = parseAbi([
-  "function getExchanges() view returns ((bytes32 exchangeId, address[] assets)[])",
-]);
 
 export default async function handler(
   req: NextApiRequest,
@@ -54,85 +50,38 @@ export default async function handler(
     });
   }
 
-  const client = createPublicClient({
-    chain: celo,
-    transport: http(CELO_RPC),
-  });
-
   try {
-    // Get exchange providers
-    const providers = await client.readContract({
-      address: MENTO_BROKER,
-      abi: brokerAbi,
-      functionName: "getExchangeProviders",
-    });
-
-    // Find the right exchange
-    let foundProvider = "";
-    let foundExchangeId = "" as `0x${string}`;
-
-    for (const provider of providers) {
-      const exchanges = await client.readContract({
-        address: provider,
-        abi: exchangeAbi,
-        functionName: "getExchanges",
-      });
-
-      for (const exchange of exchanges) {
-        const assets = exchange.assets.map((a: string) => a.toLowerCase());
-        if (
-          assets.includes(tokenInAddr.toLowerCase()) &&
-          assets.includes(tokenOutAddr.toLowerCase())
-        ) {
-          foundProvider = provider;
-          foundExchangeId = exchange.exchangeId;
-          break;
-        }
-      }
-      if (foundProvider) break;
-    }
-
-    if (!foundProvider || !foundExchangeId) {
-      return res.status(404).json({
-        error: `No Mento exchange found for ${tokenIn}/${tokenOut}`,
-      });
-    }
-
-    // Get quote
     const amountIn = parseUnits(amount?.toString() || "1", 18);
-    const amountOut = await client.readContract({
-      address: MENTO_BROKER,
-      abi: brokerAbi,
-      functionName: "getAmountOut",
-      args: [
-        foundProvider as `0x${string}`,
-        foundExchangeId,
-        tokenInAddr,
-        tokenOutAddr,
-        amountIn,
-      ],
-    });
+    const route = await findMentoRoute(CHAIN_ID, tokenInAddr, tokenOutAddr);
+    const quote = await quoteMento(CHAIN_ID, tokenInAddr, tokenOutAddr, amountIn);
 
     const formattedIn = formatUnits(amountIn, 18);
-    const formattedOut = formatUnits(amountOut, 18);
+    const formattedOut = formatUnits(quote.amountOut, 18);
     const rate = Number(formattedOut) / Number(formattedIn);
 
     res.status(200).json({
       success: true,
       protocol: "mento",
       chain: "celo",
-      chainId: 42220,
+      chainId: CHAIN_ID,
       tokenIn: tokenIn,
       tokenOut: tokenOut,
       amountIn: formattedIn,
       amountOut: formattedOut,
       rate: rate.toFixed(6),
-      exchangeProvider: foundProvider,
-      exchangeId: foundExchangeId,
+      // v3: swaps settle through the Router; the route id replaces the
+      // legacy (provider, exchangeId) pair.
+      exchangeProvider: getMentoRouterAddress(CHAIN_ID),
+      exchangeId: route.id,
       timestamp: new Date().toISOString(),
     });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
+    if (message.toLowerCase().includes("no route")) {
+      return res.status(404).json({
+        error: `No Mento exchange found for ${tokenIn}/${tokenOut}`,
+      });
+    }
     res.status(500).json({ success: false, error: message });
   }
 }

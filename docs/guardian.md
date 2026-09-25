@@ -45,7 +45,7 @@ are actually enforced*.
   `getSmartAccountsEnvironment()` (`ERC7710_KIT_CHAIN_IDS`). Today that
   intersects to **Celo 42220, Celo Sepolia 11142220, Arbitrum 42161**.
 - **Per-chain routing in the executor:**
-  - Celo chains → Mento broker `approve` + `swapIn` calldata.
+  - Celo chains → Mento SDK v3 (`mento-sdk.service.ts`): `approve(tokenIn → Mento Router)` + the SDK-built Router swap (multi-hop in one call), 1% slippage.
   - Other eligible chains → LI.FI HTTP quote (`https://li.quest/v1/quote`);
     the approval targets `estimate.approvalAddress` and the swap is the
     quote's `transactionRequest` verbatim.

@@ -30,7 +30,9 @@ export default defineConfig({
       // from shared-0g's source path) don't fail with MODULE_NOT_FOUND
       // against the unbuilt source under vitest's resolver.
       deps: {
-        inline: [/@goodsdks\//, /lz-string/, /axios/, /@diversifi\/shared-0g/],
+        // @mento-protocol/mento-sdk's ESM build uses extensionless imports,
+        // which native Node ESM rejects — inline it so Vite resolves them.
+        inline: [/@goodsdks\//, /lz-string/, /axios/, /@diversifi\/shared-0g/, /@mento-protocol\//],
       },
     },
   },

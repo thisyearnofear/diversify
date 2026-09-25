@@ -73,18 +73,6 @@ const NETWORK_EXPLORERS: Record<number, string> = {
 // can never drift from the rest of the codebase.
 const TOKENS = CELO_TOKEN_ADDRESSES;
 
-const MENTO_BROKER = '0x777A8255cA72412f0d706dc03C9D1987306B4CaD';
-
-const brokerAbi = [
-  'function getExchangeProviders() view returns (address[])',
-  'function getAmountOut(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn) view returns (uint256)',
-  'function swapIn(address exchangeProvider, bytes32 exchangeId, address assetIn, address assetOut, uint256 amountIn, uint256 minAmountOut) returns (uint256)',
-];
-
-const exchangeAbi = [
-  'function getExchanges() view returns ((bytes32 exchangeId, address[] assets)[])',
-];
-
 const erc20Abi = [
   'function balanceOf(address) view returns (uint256)',
   'function transfer(address to, uint256 amount) returns (bool)',
@@ -187,57 +175,43 @@ async function getCeloBalances(address: string): Promise<VaultAllocation[]> {
   return allocations;
 }
 
-async function findMentoExchange(
-  provider: ethers.providers.JsonRpcProvider,
-  tokenInAddr: string,
-  tokenOutAddr: string
-): Promise<{ provider: string; exchangeId: string } | null> {
-  const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, provider);
-  const providers = await broker.getExchangeProviders();
-  for (const prov of providers) {
-    const ex = new ethers.Contract(prov, exchangeAbi, provider);
-    const exchanges = await ex.getExchanges();
-    for (const exchange of exchanges) {
-      const assets = exchange.assets.map((a: string) => a.toLowerCase());
-      if (assets.includes(tokenInAddr.toLowerCase()) && assets.includes(tokenOutAddr.toLowerCase())) {
-        return { provider: prov, exchangeId: exchange.exchangeId };
-      }
-    }
-  }
-  return null;
-}
-
 /**
- * Celo path: approve the Mento broker + swapIn, batched into one UserOp by
- * the provider. Never returns a partial call list — a missing exchange or
- * quote throws rather than shipping a swap without its approval.
+ * Celo path: approve the Mento Router + swap, batched into one UserOp by
+ * the provider. Deterministic and atomic: the approval is ALWAYS encoded
+ * (spender = swap.to) — the SDK's allowance-dependent approval is ignored
+ * because the batch can't observe on-chain allowance at build time for
+ * every caller. A missing route or paused pair throws rather than
+ * shipping a swap without its approval.
  */
 async function buildMentoCalls(
-  provider: ethers.providers.JsonRpcProvider,
   tokenIn: string,
   tokenOut: string,
-  amountIn: string
-): Promise<{ calls: { to: string; data: string }[]; minAmountOut: ethers.BigNumber }> {
-  const exchange = await findMentoExchange(provider, tokenIn, tokenOut);
-  if (!exchange) throw new Error(`No Mento exchange for ${tokenIn}/${tokenOut}`);
-
-  const broker = new ethers.Contract(MENTO_BROKER, brokerAbi, provider);
-  const expectedOut = await broker.getAmountOut(
-    exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn
+  amountIn: string,
+  chainId: number,
+  userAddress: string
+): Promise<{ calls: { to: string; data: string }[]; minAmountOut: bigint }> {
+  const { buildMentoSwap } = await import(
+    '@diversifi/shared/src/services/swap/mento-sdk.service'
   );
-  const minAmountOut = expectedOut.sub(expectedOut.mul(100).div(10000));
 
-  const approveData = erc20Iface.encodeFunctionData('approve', [MENTO_BROKER, amountIn]);
-  const swapData = new ethers.utils.Interface(brokerAbi).encodeFunctionData('swapIn', [
-    exchange.provider, exchange.exchangeId, tokenIn, tokenOut, amountIn, minAmountOut,
-  ]);
+  const built = await buildMentoSwap({
+    chainId,
+    tokenIn,
+    tokenOut,
+    amountIn: BigInt(amountIn),
+    recipient: userAddress,
+    owner: userAddress,
+    slippagePercent: 1, // 1% — same tolerance the broker path used
+  });
+
+  const approveData = erc20Iface.encodeFunctionData('approve', [built.swap.to, amountIn]);
 
   return {
     calls: [
       { to: tokenIn, data: approveData },
-      { to: MENTO_BROKER, data: swapData },
+      { to: built.swap.to, data: built.swap.data },
     ],
-    minAmountOut,
+    minAmountOut: built.amountOutMin,
   };
 }
 
@@ -326,8 +300,7 @@ export const smartAccountExecutor: VaultExecutor = {
     let minAmountOut: string | undefined;
 
     if (CELO_CHAIN_IDS.has(chainId)) {
-      const provider = getProvider(chainId);
-      const built = await buildMentoCalls(provider, tokenIn, tokenOut, amountIn);
+      const built = await buildMentoCalls(tokenIn, tokenOut, amountIn, chainId, userId);
       calls = built.calls;
       minAmountOut = built.minAmountOut.toString();
     } else if (isAutonomyEligibleChain(chainId)) {

@@ -177,6 +177,7 @@ const SwapInterface = forwardRef<
     isLoading,
     mounted,
     routeProvider,
+    quoteNoRoute,
     signatureCount,
     viaHub,
     applyViaHub,
@@ -383,6 +384,10 @@ const SwapInterface = forwardRef<
     // No strategy supports this pair/chain — don't present it as
     // executable; the click would only produce a failed execution.
     if (!routeProvider) return "No route for this pair";
+    // Pair is routable in principle but the live quote found no route at
+    // this size (e.g. price-impact guard) — say that, not "pair" — and
+    // don't let the click produce a doomed execution.
+    if (quoteNoRoute) return "No route at this size";
     return null;
   };
 
@@ -809,6 +814,20 @@ const SwapInterface = forwardRef<
             <p className="mt-1 px-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300" data-testid="leg2-hint">
               {leg2Hint}
             </p>
+          )}
+
+          {/* Proactive recovery — the quote found no route at this size but
+              one side is a Mento asset, so routing through USDm can succeed.
+              Same slot/style as the leg-2 hint; a single tap retargets. */}
+          {!leg2Hint && status === "idle" && quoteNoRoute && viaHub && (
+            <button
+              type="button"
+              data-testid="via-hub-proactive"
+              onClick={applyViaHub}
+              className="mt-1 px-1 text-left text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+            >
+              Route via {viaHub} instead →
+            </button>
           )}
 
           <SwapStatus

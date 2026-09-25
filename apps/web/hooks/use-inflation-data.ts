@@ -304,6 +304,8 @@ export function useInflationData() {
     );
 
     if (!currency) {
+      // CELO is a native asset, not a fiat-pegged stablecoin — no warning.
+      if (normalizedStablecoin === 'CELO') return 0;
       console.warn(`[Inflation] No currency mapping found for ${stablecoin}`);
       return 0;
     }

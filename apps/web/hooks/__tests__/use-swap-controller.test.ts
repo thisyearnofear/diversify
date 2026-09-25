@@ -32,8 +32,20 @@ vi.mock("../use-swap", () => ({
   }),
 }));
 
+// Mutable so tests can drive quote states (provider attribution, noRoute).
+const mockQuote: {
+  expectedOutput: string | null;
+  provider: string | null;
+  noRoute: boolean;
+} = { expectedOutput: null, provider: null, noRoute: false };
+
 vi.mock("../use-expected-amount-out", () => ({
-  useExpectedAmountOut: () => ({ expectedOutput: null, isLoading: false }),
+  useExpectedAmountOut: () => ({
+    expectedOutput: mockQuote.expectedOutput,
+    provider: mockQuote.provider,
+    noRoute: mockQuote.noRoute,
+    isLoading: false,
+  }),
 }));
 
 vi.mock("../../context/app/PortfolioContext", () => ({
@@ -58,6 +70,9 @@ vi.mock("../use-streak-rewards", () => ({
 beforeEach(() => {
   mockSwapStep = "idle";
   mockSwapReset.mockClear();
+  mockQuote.expectedOutput = null;
+  mockQuote.provider = null;
+  mockQuote.noRoute = false;
   sessionStorage.clear();
 });
 
@@ -302,5 +317,52 @@ describe("useSwapController — session pair persistence", () => {
     rerender();
     expect(result.current.fromToken).toBe("USDm");
     expect(result.current.toToken).toBe("BRLm");
+  });
+});
+
+const WIDE_TOKENS = [
+  { symbol: "CELO", name: "Celo", region: "Global" },
+  { symbol: "USDm", name: "Mento Dollar", region: "USA" },
+  { symbol: "BRLm", name: "Mento Brazilian Real", region: "LatAm" },
+  { symbol: "KESm", name: "Mento Kenyan Shilling", region: "Africa" },
+];
+
+describe("useSwapController — quote-driven routing", () => {
+  it("a resolved quote's provider is authoritative for routeProvider", () => {
+    mockQuote.expectedOutput = "1.5";
+    mockQuote.provider = "Uniswap V3";
+    const { result } = renderController();
+    expect(result.current.routeProvider).toBe("Uniswap V3");
+  });
+
+  it("quoteNoRoute offers via-hub for CELO -> KESm (only KESm is a Mento asset)", () => {
+    mockQuote.noRoute = true;
+    const { result } = renderController({ availableTokens: WIDE_TOKENS });
+    act(() => {
+      result.current.setFromToken("CELO");
+      result.current.setToToken("KESm");
+    });
+    expect(result.current.quoteNoRoute).toBe(true);
+    expect(result.current.viaHub).toBe("USDm");
+  });
+
+  it("quoteNoRoute does NOT offer via-hub for KESm -> BRLm (both Mento assets)", () => {
+    mockQuote.noRoute = true;
+    const { result } = renderController({ availableTokens: WIDE_TOKENS });
+    act(() => {
+      result.current.setFromToken("KESm");
+      result.current.setToToken("BRLm");
+    });
+    expect(result.current.quoteNoRoute).toBe(true);
+    expect(result.current.viaHub).toBeNull();
+  });
+
+  it("no via-hub offer without a failure — a healthy quote stands", () => {
+    const { result } = renderController({ availableTokens: WIDE_TOKENS });
+    act(() => {
+      result.current.setFromToken("CELO");
+      result.current.setToToken("KESm");
+    });
+    expect(result.current.viaHub).toBeNull();
   });
 });

@@ -131,24 +131,23 @@ Each provider implements `BaseAIProvider` (abstract class with `initialize()`, `
 
 ## Swap Orchestrator
 
-The `SwapOrchestratorService` routes swaps through an ordered list of `BaseSwapStrategy` implementations:
+The `SwapOrchestratorService` routes swaps through a ranked set of `BaseSwapStrategy` implementations:
 
-| # | Strategy | Use case |
-|---|----------|----------|
-| 1 | MentoSwapStrategy | Celo same-chain stablecoins |
-| 2 | EmergingMarketsStrategy | Celo Sepolia fictional companies |
-| 3 | CurveArcStrategy | Curve on Arc Testnet |
-| 4 | ArcTestnetStrategy | Arc Testnet guidance |
-| 5 | ArbitrumSwapStrategy | Arbitrum-native DEX liquidity (Uniswap V3, Camelot) |
-| 6 | HyperliquidPerpStrategy | Commodity perps (GOLD, SILVER, OIL) |
-| 7 | OneInchSwapStrategy | Multi-chain best rates |
-| 8 | UniswapV3Strategy | Direct Uniswap V3 fallback |
-| 9 | LiFiEarnStrategy | Vault deposits |
-| 10 | LiFiSwapStrategy | LiFi same-chain |
-| 11 | LiFiBridgeStrategy | Cross-chain bridging |
-| 12 | DirectRWAStrategy | RWA swaps (final fallback) |
+| Strategy | Use case |
+|----------|----------|
+| MentoSwapStrategy | Celo stablecoins via Mento SDK v3 (broker + FPMM pools, multi-hop in one Router tx) |
+| EmergingMarketsStrategy | Celo Sepolia fictional companies |
+| CurveArcStrategy | Curve on Arc Testnet |
+| ArcTestnetStrategy | Arc Testnet guidance |
+| HyperliquidPerpStrategy | Commodity perps (GOLD, SILVER, OIL) |
+| OneInchSwapStrategy | Arbitrum best-rate aggregator via `/api/swap/oneinch-proxy` (needs `ONEINCH_API_KEY` server-side; not on Celo) |
+| UniswapV3Strategy | CELO pairs on Celo (SwapRouter02 + QuoterV2) and Arbitrum (SwapRouter + QuoterV2); rejects >3% price impact as no-route |
+| GmxGmDepositStrategy | GMX GM-pool deposits (feature-gated) |
+| LiFiEarnStrategy | Vault deposits |
+| LiFiSwapStrategy | Same-chain aggregator fallback (on Celo it cannot route CELO) |
+| LiFiBridgeStrategy | Cross-chain bridging |
 
-Strategies are tried in order. The orchestrator tracks per-strategy performance (success rate, average time) and can promote/demote. Islamic Finance mode excludes HyperliquidPerpStrategy.
+Strategies are ranked by `SWAP_CONFIG.STRATEGY_SCORES` + `TOKEN_PREFERENCES` + tracked performance — not tried in a fixed order. Quotes for the ticket come from `getEstimate`, which surfaces the most specific no-route reason with an `errorClass`; a failed quote renders nothing (no static-rate fallback). `pnpm check-swap-routes` is the live read-only route check. Islamic Finance mode excludes HyperliquidPerpStrategy.
 
 ## Guardian Autonomous Loop
 
@@ -398,10 +397,10 @@ diversifi/
 
 | Pattern | Where | Why |
 |---------|-------|------|
-| **Strategy** | 13 swap strategies under `SwapOrchestratorService` | New DEX = new class, no existing code changes |
+| **Strategy** | 11 swap strategies under `SwapOrchestratorService` | New DEX = new class, no existing code changes |
 | **Provider** | 9 AI providers under `BaseAIProvider` | Add/remove providers without touching orchestration |
 | **Decorator** | AI service wraps providers in caching → circuit breaker → 0G anchoring → ledger | Cross-cutting concerns are independently testable |
-| **Orchestrator** | `FallbackOrchestrator` and `SwapOrchestratorService` | Ordered fallback with performance tracking |
+| **Orchestrator** | `FallbackOrchestrator` and `SwapOrchestratorService` | Ranked fallback (scores + token prefs) with performance tracking |
 | **Observer** | `agentEventBus` for proactive yield/rebalance alerts | Decoupled pub/sub between detection and notification |
 
 ## Guardian Workflow Diagram

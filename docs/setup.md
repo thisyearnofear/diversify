@@ -21,6 +21,8 @@ Users can sign in via email, social login, or existing wallet (Privy). No wallet
 
 That's the minimum to run the app. Every other env var (AI providers, data feeds, Arc/x402, Circle, deployment) is documented in [`integrations.md`](./integrations.md) — pick what you need and the linked doc has the table, the purpose, and the source.
 
+One routing note: `ONEINCH_API_KEY` (server-only, `apps/web/.env.local`, never `NEXT_PUBLIC_`) enables 1inch quotes/swaps on Arbitrum via `/api/swap/oneinch-proxy`. Without it, Arbitrum still routes via Uniswap V3 and LiFi.
+
 ### Try the Caribbean FX netting demo (no keys beyond Privy)
 
 The Future Caribbean submission's core system runs with just the minimum setup plus MongoDB:

@@ -10,7 +10,7 @@ import { isTokenAvailableOnChain, getTokensForChain } from "@diversifi/shared/sr
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import { SwapErrorHandler } from "@diversifi/shared/src/services/swap/error-handler";
 import { SwapOrchestratorService } from "@diversifi/shared/src/services/swap/swap-orchestrator.service";
-import { MENTO_BROKER_TOKENS } from "@diversifi/shared/src/services/swap/strategies/mento-swap.strategy";
+import { isMentoToken } from "@diversifi/shared/src/services/swap/mento-sdk.service";
 import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strategies/base-swap.strategy";
 
 // Hub the aggregator can't beat on Celo: USDm is the broker's routing
@@ -237,7 +237,7 @@ export function useSwapController({
     step: swapStep,
     reset: resetSwap,
   } = useSwap();
-  const { expectedOutput, isLoading: isExpectedOutputLoading, quotedAt, refreshQuote } =
+  const { expectedOutput, provider: quoteProvider, noRoute: quoteNoRoute, isLoading: isExpectedOutputLoading, quotedAt, refreshQuote } =
     useExpectedAmountOut({ fromToken, toToken, amount });
   const {
     getInflationRateForStablecoin,
@@ -511,7 +511,11 @@ export function useSwapController({
   // computed synchronously so the ticket can say "via Mento" before any
   // quote resolves. Null when nothing can route it.
   const routeProvider = useMemo(() => {
-    if (!address || !fromToken || !toToken || fromToken === toToken) return null;
+    if (!fromToken || !toToken || fromToken === toToken) return null;
+    // A resolved quote's provider is authoritative — the sync check below
+    // is the pre-quote hint only.
+    if (expectedOutput && quoteProvider) return quoteProvider;
+    if (!address) return null;
     return SwapOrchestratorService.getRouteProvider({
       fromToken,
       toToken,
@@ -520,7 +524,7 @@ export function useSwapController({
       toChainId,
       userAddress: address,
     });
-  }, [address, fromToken, toToken, amount, fromChainId, toChainId]);
+  }, [address, expectedOutput, quoteProvider, fromToken, toToken, amount, fromChainId, toChainId]);
 
   // Signature disclosure — once a quote exists, count the wallet
   // confirmations the chosen route will ask for (swaps + approvals).
@@ -548,18 +552,21 @@ export function useSwapController({
   }, [address, expectedOutput, fromToken, toToken, amount, fromChainId, toChainId]);
 
   // Recovery offer: a failed Celo pair that isn't USDm-involving can often
-  // decompose through the broker's hub. Offered only for failure classes
+  // decompose through USDm, the Mento hub. Offered only for failure classes
   // where a different route could succeed — never after a cancellation.
+  // Since the SDK routes Mento↔Mento itself, the offer only makes sense
+  // when exactly one side is a Mento asset — the non-Mento side hops
+  // through USDm to reach the Mento destination.
   const viaHub = useMemo(() => {
-    if (status !== "error") return null;
-    if (localErrorClass !== "onchain-failed" && localErrorClass !== "no-route") return null;
+    const errorWarrantsRetry =
+      status === "error" &&
+      (localErrorClass === "onchain-failed" || localErrorClass === "no-route");
+    if (!errorWarrantsRetry && !quoteNoRoute) return null;
     if (!ChainDetectionService.isCelo(fromChainId) || fromChainId !== toChainId) return null;
     if (fromToken === HUB_TOKEN || toToken === HUB_TOKEN) return null;
-    // Only worth offering when at least one leg lands on a broker asset —
-    // otherwise both hops still need an aggregator anyway.
-    if (!MENTO_BROKER_TOKENS.has(fromToken) && !MENTO_BROKER_TOKENS.has(toToken)) return null;
+    if (isMentoToken(fromChainId, fromToken) === isMentoToken(fromChainId, toToken)) return null;
     return HUB_TOKEN;
-  }, [status, localErrorClass, fromChainId, toChainId, fromToken, toToken]);
+  }, [status, localErrorClass, quoteNoRoute, fromChainId, toChainId, fromToken, toToken]);
 
   // Dismiss a completed swap: a plain setStatus("idle") would bounce —
   // the sync effect below re-maps the hook's still-"completed" step —
@@ -679,6 +686,7 @@ export function useSwapController({
 
     // route context
     routeProvider,
+    quoteNoRoute,
     signatureCount,
     viaHub,
     applyViaHub,

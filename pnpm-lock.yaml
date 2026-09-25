@@ -223,6 +223,9 @@ importers:
       '@lifi/sdk':
         specifier: 3.15.3
         version: 3.15.3(@solana/wallet-adapter-base@0.9.27(@solana/web3.js@1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10)))(@solana/web3.js@1.98.4(bufferutil@4.1.0)(encoding@0.1.13)(typescript@5.9.3)(utf-8-validate@5.0.10))(@types/react@18.3.27)(bufferutil@4.1.0)(react@19.2.3)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@19.2.3))(utf-8-validate@5.0.10)(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))(zod@4.3.5)
+      '@mento-protocol/mento-sdk':
+        specifier: 3.4.0
+        version: 3.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
       '@metamask/smart-accounts-kit':
         specifier: 1.6.0
         version: 1.6.0(typescript@5.9.3)(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))(zod@4.3.5)
@@ -237,7 +240,7 @@ importers:
         version: ethers@6.16.0(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       openai:
         specifier: 6.16.0
-        version: 6.16.0(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.5)
+        version: 6.16.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.5)
       tablestore:
         specifier: ^5.6.5
         version: 5.6.5
@@ -1707,6 +1710,10 @@ packages:
     peerDependencies:
       react: ^17.0.2 || ^18.0.0 || ^19.0
       react-dom: ^17.0.2 || ^18.0.0 || ^19.0
+
+  '@mento-protocol/mento-sdk@3.4.0':
+    resolution: {integrity: sha512-7seD+uoTgvxPDdU9eVDRAv0qcb2q6qM2N5VN15sBRaAtM0vSv++3hn7fNgzF8Nm722IonRIbsyW94qqs0xGpiw==}
+    engines: {node: '>=18', pnpm: '>=9'}
 
   '@metamask/7715-permission-types@0.7.1':
     resolution: {integrity: sha512-67UekbyVrtUZKo2evT6gwDD27iEM38DbTrDb2fTyzD3iGWJis3rRFPAge/Y+IhKZVT33gQDvrsR4kuCLA7Viow==}
@@ -10477,6 +10484,15 @@ snapshots:
       react: 19.2.3
       react-dom: 19.2.3(react@19.2.3)
 
+  '@mento-protocol/mento-sdk@3.4.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)':
+    dependencies:
+      viem: 2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5)
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+      - zod
+
   '@metamask/7715-permission-types@0.7.1': {}
 
   '@metamask/abi-utils@3.0.0':
@@ -18160,9 +18176,9 @@ snapshots:
       is-wsl: 2.2.0
     optional: true
 
-  openai@6.16.0(ws@8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.5):
+  openai@6.16.0(ws@8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10))(zod@4.3.5):
     optionalDependencies:
-      ws: 8.20.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
+      ws: 8.18.3(bufferutil@4.1.0)(utf-8-validate@5.0.10)
       zod: 4.3.5
 
   openapi-fetch@0.13.8:

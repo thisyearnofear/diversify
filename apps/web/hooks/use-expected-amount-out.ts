@@ -1,30 +1,26 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { ethers } from 'ethers';
-import {
-  getTokenAddresses,
-  getBrokerAddress,
-  getNetworkConfig,
-  ABIS,
-} from '../config';
-import { EXCHANGE_RATES } from '../config';
 import { NETWORKS } from '../config';
 // Deep leaf imports — NOT the barrel — keeps the api + swap stacks out of first-load.
-import { TokenPriceService } from '@diversifi/shared/src/utils/api-services';
-import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
 import { ProviderFactoryService } from '@diversifi/shared/src/services/swap/provider-factory.service';
+import { SwapOrchestratorService } from '@diversifi/shared/src/services/swap/swap-orchestrator.service';
+import type { SwapErrorClass } from '@diversifi/shared/src/services/swap/strategies/base-swap.strategy';
 
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Quotes are reads — a dead address works when no wallet is connected.
+const QUOTE_USER = '0x000000000000000000000000000000000000dEaD';
 
 interface CacheEntry<T> {
   data: T;
   timestamp: number;
 }
 
-let exchangeProvidersCache: CacheEntry<string[]> | null = null;
-const exchangesCache: Map<string, CacheEntry<any[]>> = new Map();
-const resultCache: Map<string, CacheEntry<string>> = new Map();
+interface QuoteResult {
+  output: string;
+  provider: string | null;
+}
 
-function getCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null): string | null {
+const resultCache: Map<string, CacheEntry<QuoteResult>> = new Map();
+
+function getCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null): QuoteResult | null {
   const key = `${fromToken}-${toToken}-${amount}-${chainId}`;
   const cached = resultCache.get(key);
   if (cached && Date.now() - cached.timestamp < 30000) { // 30 seconds for result cache
@@ -33,32 +29,9 @@ function getCachedResult(fromToken: string, toToken: string, amount: string, cha
   return null;
 }
 
-function setCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null, result: string) {
+function setCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null, result: QuoteResult) {
   const key = `${fromToken}-${toToken}-${amount}-${chainId}`;
   resultCache.set(key, { data: result, timestamp: Date.now() });
-}
-
-function getCachedExchangeProviders(): string[] | null {
-  if (exchangeProvidersCache && Date.now() - exchangeProvidersCache.timestamp < CACHE_TTL) {
-    return exchangeProvidersCache.data;
-  }
-  return null;
-}
-
-function setCachedExchangeProviders(providers: string[]) {
-  exchangeProvidersCache = { data: providers, timestamp: Date.now() };
-}
-
-function getCachedExchanges(providerAddress: string): any[] | null {
-  const cached = exchangesCache.get(providerAddress);
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-    return cached.data;
-  }
-  return null;
-}
-
-function setCachedExchanges(providerAddress: string, exchanges: any[]) {
-  exchangesCache.set(providerAddress, { data: exchanges, timestamp: Date.now() });
 }
 
 interface UseExpectedAmountOutParams {
@@ -73,8 +46,13 @@ export function useExpectedAmountOut({
   amount,
 }: UseExpectedAmountOutParams) {
   const [expectedOutput, setExpectedOutput] = useState<string | null>(null);
+  const [quoteProvider, setQuoteProvider] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // True when the quote failed because no route exists at this size —
+  // the ticket's CTA and via-hub recovery read this instead of matching
+  // on message text.
+  const [noRoute, setNoRoute] = useState(false);
   const [chainId, setChainId] = useState<number | null>(null);
   const [debouncedAmount, setDebouncedAmount] = useState(amount);
   const [quotedAt, setQuotedAt] = useState<number | null>(null);
@@ -128,22 +106,31 @@ export function useExpectedAmountOut({
         fromToken === toToken
       ) {
         setExpectedOutput(null);
+        setQuoteProvider(null);
+        setNoRoute(false);
         return;
       }
 
       setIsLoading(true);
       setError(null);
+      setNoRoute(false);
 
       try {
-        const output = await getExpectedAmountOut(fromToken, toToken, debouncedAmount);
-        setExpectedOutput(output);
+        const result = await getExpectedAmountOut(fromToken, toToken, debouncedAmount);
+        setExpectedOutput(result.output);
+        setQuoteProvider(result.provider);
         setQuotedAt(Date.now());
       } catch (err) {
         if (process.env.NODE_ENV === 'development') {
           console.warn("Error getting expected output:", err);
         }
+        // Honesty contract: a failed quote renders nothing — never a
+        // fabricated number.
+        const errorClass = (err as { errorClass?: SwapErrorClass })?.errorClass;
+        setNoRoute(errorClass === 'no-route');
         setError(err instanceof Error ? err.message : 'Failed to get expected output');
         setExpectedOutput(null);
+        setQuoteProvider(null);
       } finally {
         setIsLoading(false);
       }
@@ -161,479 +148,31 @@ export function useExpectedAmountOut({
     fromToken: string,
     toToken: string,
     amount: string
-  ): Promise<string> => {
+  ): Promise<QuoteResult> => {
     // Check result cache first
     const cached = getCachedResult(fromToken, toToken, amount, chainId);
     if (cached) return cached;
 
-    try {
-      // Short-circuit for Arbitrum: use live prices when possible
-      if (ChainDetectionService.isArbitrum(chainId)) {
-        const amountNum = Number.parseFloat(amount);
-        const tokens = getTokenAddresses(NETWORKS.ARBITRUM_ONE.chainId) as Record<string, string>;
-        const fromAddr = tokens[fromToken] || tokens[fromToken.toUpperCase()] || tokens[fromToken.toLowerCase()];
-        const toAddr = tokens[toToken] || tokens[toToken.toUpperCase()] || tokens[toToken.toLowerCase()];
+    // Every chain goes through the orchestrator — Mento SDK v3 / Uniswap V3
+    // on Celo, Uniswap V3 / LiFi on Arbitrum. A failure throws (errorClass
+    // preserved) — no price-based math, no static-rate fallback, no
+    // fabricated numbers.
+    const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
+    const estimate = await SwapOrchestratorService.getEstimate({
+      fromToken,
+      toToken,
+      amount,
+      fromChainId: effectiveChainId,
+      toChainId: effectiveChainId,
+      userAddress: QUOTE_USER,
+    });
 
-        const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: NETWORKS.ARBITRUM_ONE.chainId,
-          address: fromAddr,
-          symbol: fromToken
-        });
-        const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: NETWORKS.ARBITRUM_ONE.chainId,
-          address: toAddr,
-          symbol: toToken
-        });
-
-        // Final fallback to static rates
-        const fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] ?? 1);
-        const toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] ?? 1);
-        const arbResult = ((amountNum * fromRate) / toRate).toString();
-        setCachedResult(fromToken, toToken, amount, chainId, arbResult);
-        return arbResult;
-      }
-      // Determine if we're on Celo Sepolia testnet or Arbitrum
-      const isCeloSepolia = ChainDetectionService.isTestnet(chainId) && ChainDetectionService.isCelo(chainId);
-
-      // Get configuration
-      const effectiveChainId = chainId || NETWORKS.CELO_MAINNET.chainId;
-      const tokenList = getTokenAddresses(effectiveChainId) as Record<string, string>;
-      const brokerAddress = getBrokerAddress(effectiveChainId);
-      const networkConfig = getNetworkConfig(effectiveChainId);
-
-
-      // Get token addresses
-      const fromTokenAddress = tokenList[fromToken as keyof typeof tokenList];
-      const toTokenAddress = tokenList[toToken as keyof typeof tokenList];
-
-      if (!fromTokenAddress || !toTokenAddress) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(`Using fallback calculation for ${fromToken}/${toToken} on chain ${chainId}`);
-        }
-
-        const amountNum = Number.parseFloat(amount);
-        const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: effectiveChainId,
-          symbol: fromToken
-        });
-        const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: effectiveChainId,
-          symbol: toToken
-        });
-        let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
-        let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
-        if (isCeloSepolia) {
-          if (fromToken === 'USDm') fromRate = 1;
-          else if (fromToken === 'EURm') fromRate = 1.08;
-          else if (fromToken === 'BRLm') fromRate = 0.2;
-          else if (fromToken === 'XOFm') fromRate = 0.0016;
-          else if (fromToken === 'KESm') fromRate = 0.0078;
-          else if (fromToken === 'COPm') fromRate = 0.00025;
-          else if (fromToken === 'GHSm') fromRate = 0.083;
-          else if (fromToken === 'GBPm') fromRate = 1.27;
-          else if (fromToken === 'ZARm') fromRate = 0.055;
-          else if (fromToken === 'CADm') fromRate = 0.74;
-          else if (fromToken === 'AUDm') fromRate = 0.66;
-          else if (fromToken === 'PHPm') fromRate = 0.0179;
-          if (toToken === 'USDm') toRate = 1;
-          else if (toToken === 'EURm') toRate = 1.08;
-          else if (toToken === 'BRLm') toRate = 0.2;
-          else if (toToken === 'XOFm') toRate = 0.0016;
-          else if (toToken === 'KESm') toRate = 0.0078;
-          else if (toToken === 'COPm') toRate = 0.00025;
-          else if (toToken === 'GHSm') toRate = 0.083;
-          else if (toToken === 'GBPm') toRate = 1.27;
-          else if (toToken === 'ZARm') toRate = 0.055;
-          else if (toToken === 'CADm') toRate = 0.74;
-          else if (toToken === 'AUDm') toRate = 0.66;
-          else if (toToken === 'PHPm') toRate = 0.0179;
-        }
-        const result = ((amountNum * fromRate) / toRate).toString();
-        setCachedResult(fromToken, toToken, amount, chainId, result);
-        return result;
-      }
-
-      // Create a read-only provider for Celo. The 8s timeout protects the
-      // output preview from hanging on a flaky RPC: the inner Promise.race
-      // timeouts above already bound the getAmountOut call, but the
-      // provider-level timeout is the last line of defence. Passing
-      // `network` as the second arg skips the default `eth_chainId`
-      // auto-detect (~200ms) since we know the chain.
-      const provider = new ethers.providers.JsonRpcProvider(
-        {
-          url: networkConfig.rpcUrl,
-          timeout: 8000,
-        },
-        {
-          chainId: effectiveChainId,
-          name: ChainDetectionService.isArbitrum(effectiveChainId) ? "arbitrum" : "celo",
-        },
-      );
-
-      // Convert amount to wei
-      const amountInWei = ethers.utils.parseUnits(amount, 18);
-
-      // Find the exchange for the token pair
-      const brokerContract = new ethers.Contract(
-        brokerAddress,
-        ABIS.BROKER.PROVIDERS,
-        provider
-      );
-
-      let exchangeProviders = getCachedExchangeProviders();
-      if (!exchangeProviders) {
-        const fetchedProviders: string[] = await brokerContract.getExchangeProviders();
-        setCachedExchangeProviders(fetchedProviders);
-        exchangeProviders = fetchedProviders;
-      }
-
-      // Find the exchange for the token pair
-      let exchangeProvider = "";
-      let exchangeId = "";
-
-      // Loop through providers to find the right exchange
-      for (const providerAddress of exchangeProviders) {
-        let exchangesCached = getCachedExchanges(providerAddress);
-        if (!exchangesCached) {
-          const exchangeContract = new ethers.Contract(
-            providerAddress,
-            ABIS.EXCHANGE,
-            provider
-          );
-          const fetchedExchanges: any[] = await exchangeContract.getExchanges();
-          setCachedExchanges(providerAddress, fetchedExchanges);
-          exchangesCached = fetchedExchanges;
-        }
-
-        // Check each exchange
-        for (const exchange of exchangesCached) {
-          const assets = exchange.assets.map((a: string) => a.toLowerCase());
-
-          if (
-            fromTokenAddress && toTokenAddress &&
-            assets.includes(fromTokenAddress.toLowerCase()) &&
-            assets.includes(toTokenAddress.toLowerCase())
-          ) {
-            exchangeProvider = providerAddress;
-            exchangeId = exchange.exchangeId;
-            break;
-          }
-        }
-
-        if (exchangeProvider && exchangeId) break;
-      }
-
-      if (!exchangeProvider || !exchangeId) {
-        if (process.env.NODE_ENV === 'development') {
-          console.warn(`No exchange found for ${fromToken}/${toToken}, checking for two-step swap`);
-        }
-
-        // Check if we can do a two-step swap via CELO for specific pairs
-        const canUseViaSwap = (
-          // USDm/EURm pairs
-          (fromToken === 'USDm' && toToken === 'EURm') ||
-          (fromToken === 'EURm' && toToken === 'USDm') ||
-          // USDm/BRLm pairs
-          (fromToken === 'USDm' && toToken === 'BRLm') ||
-          (fromToken === 'BRLm' && toToken === 'USDm')
-        );
-
-        // Try two-step calculation on both mainnet and Celo Sepolia
-        if (canUseViaSwap) {
-          try {
-            // Step 1: Find exchange for fromToken to CELO
-            let fromTokenToCeloExchangeProvider = '';
-            let fromTokenToCeloExchangeId = '';
-            const celoAddress = tokenList.CELO;
-
-            // Loop through providers to find exchange for fromToken to CELO
-            for (const providerAddress of exchangeProviders) {
-              let exchangesCached = getCachedExchanges(providerAddress);
-              if (!exchangesCached) {
-                const exchangeContract = new ethers.Contract(
-                  providerAddress,
-                  ABIS.EXCHANGE,
-                  provider
-                );
-                const fetchedExchanges: any[] = await exchangeContract.getExchanges();
-                setCachedExchanges(providerAddress, fetchedExchanges);
-                exchangesCached = fetchedExchanges;
-              }
-
-              // Check each exchange
-              for (const exchange of exchangesCached) {
-                const assets = exchange.assets.map((a: string) => a.toLowerCase());
-
-                if (
-                  assets.includes(fromTokenAddress.toLowerCase()) &&
-                  assets.includes(celoAddress.toLowerCase())
-                ) {
-                  fromTokenToCeloExchangeProvider = providerAddress;
-                  fromTokenToCeloExchangeId = exchange.exchangeId;
-                  break;
-                }
-              }
-
-              if (fromTokenToCeloExchangeProvider && fromTokenToCeloExchangeId) break;
-            }
-
-            if (!fromTokenToCeloExchangeProvider || !fromTokenToCeloExchangeId) {
-              throw new Error(`No exchange found for ${fromToken}/CELO`);
-            }
-
-            // Step 2: Find exchange for CELO to toToken
-            let celoToToTokenExchangeProvider = '';
-            let celoToToTokenExchangeId = '';
-
-            // Loop through providers to find exchange for CELO to toToken
-            for (const providerAddress of exchangeProviders) {
-              let exchangesCached2 = getCachedExchanges(providerAddress);
-              if (!exchangesCached2) {
-                const exchangeContract = new ethers.Contract(
-                  providerAddress,
-                  ABIS.EXCHANGE,
-                  provider
-                );
-                const fetchedExchanges2: any[] = await exchangeContract.getExchanges();
-                setCachedExchanges(providerAddress, fetchedExchanges2);
-                exchangesCached2 = fetchedExchanges2;
-              }
-
-              // Check each exchange
-              for (const exchange of exchangesCached2) {
-                const assets = exchange.assets.map((a: string) => a.toLowerCase());
-
-                if (
-                  assets.includes(celoAddress.toLowerCase()) &&
-                  assets.includes(toTokenAddress.toLowerCase())
-                ) {
-                  celoToToTokenExchangeProvider = providerAddress;
-                  celoToToTokenExchangeId = exchange.exchangeId;
-                  break;
-                }
-              }
-
-              if (celoToToTokenExchangeProvider && celoToToTokenExchangeId) break;
-            }
-
-            if (!celoToToTokenExchangeProvider || !celoToToTokenExchangeId) {
-              throw new Error(`No exchange found for CELO/${toToken}`);
-            }
-
-            // Step 3: Get expected amount out for fromToken to CELO
-            const brokerRateContract = new ethers.Contract(
-              brokerAddress,
-              ABIS.BROKER.RATE,
-              provider
-            );
-
-            const expectedCeloAmount = await brokerRateContract.getAmountOut(
-              fromTokenToCeloExchangeProvider,
-              fromTokenToCeloExchangeId,
-              fromTokenAddress,
-              celoAddress,
-              amountInWei
-            );
-
-            // Step 4: Get expected amount out for CELO to toToken
-            const expectedFinalAmount = await brokerRateContract.getAmountOut(
-              celoToToTokenExchangeProvider,
-              celoToToTokenExchangeId,
-              celoAddress,
-              toTokenAddress,
-              expectedCeloAmount
-            );
-
-            const formattedAmount = ethers.utils.formatUnits(expectedFinalAmount, 18);
-
-            setCachedResult(fromToken, toToken, amount, chainId, formattedAmount);
-            return formattedAmount;
-          } catch (error) {
-            // Expected fallback path — no two-step route via CELO, the
-            // static-rate estimate below covers it. console.error would
-            // surface in the Next.js dev overlay as a runtime error.
-            if (process.env.NODE_ENV === 'development') {
-              console.warn('No two-step route; using static-rate estimate:', error);
-            }
-          }
-        }
-
-        const amountNum = Number.parseFloat(amount);
-        const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: effectiveChainId,
-          address: tokenList[fromToken as keyof typeof tokenList],
-          symbol: fromToken
-        });
-        const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: effectiveChainId,
-          address: tokenList[toToken as keyof typeof tokenList],
-          symbol: toToken
-        });
-        let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
-        let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
-
-        // For Celo Sepolia testnet, use hardcoded rates for common tokens
-        if (isCeloSepolia) {
-          if (fromToken === 'USDm') fromRate = 1;
-          else if (fromToken === 'EURm') fromRate = 1.08;
-          else if (fromToken === 'BRLm') fromRate = 0.2;
-          else if (fromToken === 'XOFm') fromRate = 0.0016;
-          else if (fromToken === 'KESm') fromRate = 0.0078;
-          else if (fromToken === 'COPm') fromRate = 0.00025;
-          else if (fromToken === 'GHSm') fromRate = 0.083;
-          else if (fromToken === 'GBPm') fromRate = 1.27;
-          else if (fromToken === 'ZARm') fromRate = 0.055;
-          else if (fromToken === 'CADm') fromRate = 0.74;
-          else if (fromToken === 'AUDm') fromRate = 0.66;
-          else if (fromToken === 'PHPm') fromRate = 0.0179;
-
-          if (toToken === 'USDm') toRate = 1;
-          else if (toToken === 'EURm') toRate = 1.08;
-          else if (toToken === 'BRLm') toRate = 0.2;
-          else if (toToken === 'XOFm') toRate = 0.0016;
-          else if (toToken === 'KESm') toRate = 0.0078;
-          else if (toToken === 'COPm') toRate = 0.00025;
-          else if (toToken === 'GHSm') toRate = 0.083;
-          else if (toToken === 'GBPm') toRate = 1.27;
-          else if (toToken === 'ZARm') toRate = 0.055;
-          else if (toToken === 'CADm') toRate = 0.74;
-          else if (toToken === 'AUDm') toRate = 0.66;
-          else if (toToken === 'PHPm') toRate = 0.0179;
-        }
-
-        const expectedOutput = (amountNum * fromRate) / toRate;
-
-        const result = expectedOutput.toString();
-        setCachedResult(fromToken, toToken, amount, chainId, result);
-        return result;
-      }
-
-      // Get the expected amount out
-      const brokerRateContract = new ethers.Contract(
-        brokerAddress,
-        ABIS.BROKER.RATE,
-        provider
-      );
-
-      try {
-        const expectedAmountOut = await brokerRateContract.getAmountOut(
-          exchangeProvider,
-          exchangeId,
-          fromTokenAddress,
-          toTokenAddress,
-          amountInWei
-        );
-
-        // Format the amount
-        const formattedAmount = ethers.utils.formatUnits(expectedAmountOut, 18);
-        setCachedResult(fromToken, toToken, amount, chainId, formattedAmount);
-        return formattedAmount;
-      } catch (rateError) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Error getting rate from Mento:", rateError);
-        }
-
-        const amountNum = Number.parseFloat(amount);
-        const fromUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: effectiveChainId,
-          address: tokenList[fromToken as keyof typeof tokenList],
-          symbol: fromToken
-        });
-        const toUsd = await TokenPriceService.getTokenUsdPrice({
-          chainId: effectiveChainId,
-          address: tokenList[toToken as keyof typeof tokenList],
-          symbol: toToken
-        });
-        let fromRate = typeof fromUsd === 'number' ? fromUsd : (EXCHANGE_RATES[fromToken] || 1);
-        let toRate = typeof toUsd === 'number' ? toUsd : (EXCHANGE_RATES[toToken] || 1);
-
-        // For Celo Sepolia testnet, use hardcoded rates for common tokens
-        if (isCeloSepolia) {
-          if (fromToken === 'USDm') fromRate = 1;
-          else if (fromToken === 'EURm') fromRate = 1.08;
-          else if (fromToken === 'BRLm') fromRate = 0.2;
-          else if (fromToken === 'XOFm') fromRate = 0.0016;
-          else if (fromToken === 'KESm') fromRate = 0.0078;
-          else if (fromToken === 'COPm') fromRate = 0.00025;
-          else if (fromToken === 'GHSm') fromRate = 0.083;
-          else if (fromToken === 'GBPm') fromRate = 1.27;
-          else if (fromToken === 'ZARm') fromRate = 0.055;
-          else if (fromToken === 'CADm') fromRate = 0.74;
-          else if (fromToken === 'AUDm') fromRate = 0.66;
-          else if (fromToken === 'PHPm') fromRate = 0.0179;
-
-          if (toToken === 'USDm') toRate = 1;
-          else if (toToken === 'EURm') toRate = 1.08;
-          else if (toToken === 'BRLm') toRate = 0.2;
-          else if (toToken === 'XOFm') toRate = 0.0016;
-          else if (toToken === 'KESm') toRate = 0.0078;
-          else if (toToken === 'COPm') toRate = 0.00025;
-          else if (toToken === 'GHSm') toRate = 0.083;
-          else if (toToken === 'GBPm') toRate = 1.27;
-          else if (toToken === 'ZARm') toRate = 0.055;
-          else if (toToken === 'CADm') toRate = 0.74;
-          else if (toToken === 'AUDm') toRate = 0.66;
-          else if (toToken === 'PHPm') toRate = 0.0179;
-        }
-
-        const expectedOutput = (amountNum * fromRate) / toRate;
-
-        const result = expectedOutput.toString();
-        setCachedResult(fromToken, toToken, amount, chainId, result);
-        return result;
-      }
-    } catch (err) {
-      if (process.env.NODE_ENV === 'development') {
-        console.error("Error getting expected amount out:", err);
-      }
-
-      // Even if everything fails, try to return a reasonable estimate
-      try {
-        const amountNum = Number.parseFloat(amount);
-
-        // Use default exchange rates as last resort
-        let fromRate = 1;
-        let toRate = 1;
-
-        // Default rates for all tokens
-        if (fromToken === 'USDm') fromRate = 1;
-        else if (fromToken === 'EURm') fromRate = 1.08;
-        else if (fromToken === 'BRLm') fromRate = 0.2;
-        else if (fromToken === 'XOFm') fromRate = 0.0016;
-        else if (fromToken === 'KESm') fromRate = 0.0078;
-        else if (fromToken === 'COPm') fromRate = 0.00025;
-        else if (fromToken === 'GHSm') fromRate = 0.083;
-        else if (fromToken === 'GBPm') fromRate = 1.27;
-        else if (fromToken === 'ZARm') fromRate = 0.055;
-        else if (fromToken === 'CADm') fromRate = 0.74;
-        else if (fromToken === 'AUDm') fromRate = 0.66;
-        else if (fromToken === 'PHPm') fromRate = 0.0179;
-
-        if (toToken === 'USDm') toRate = 1;
-        else if (toToken === 'EURm') toRate = 1.08;
-        else if (toToken === 'BRLm') toRate = 0.2;
-        else if (toToken === 'XOFm') toRate = 0.0016;
-        else if (toToken === 'KESm') toRate = 0.0078;
-        else if (toToken === 'COPm') toRate = 0.00025;
-        else if (toToken === 'GHSm') toRate = 0.083;
-        else if (toToken === 'GBPm') toRate = 1.27;
-        else if (toToken === 'ZARm') toRate = 0.055;
-        else if (toToken === 'CADm') toRate = 0.74;
-        else if (toToken === 'AUDm') toRate = 0.66;
-        else if (toToken === 'PHPm') toRate = 0.0179;
-
-        const expectedOutput = (amountNum * fromRate) / toRate;
-
-        const result = expectedOutput.toString();
-        setCachedResult(fromToken, toToken, amount, chainId, result);
-        return result;
-      } catch (fallbackErr) {
-        if (process.env.NODE_ENV === 'development') {
-          console.error("Even fallback calculation failed:", fallbackErr);
-        }
-        return "0";
-      }
-    }
+    const result: QuoteResult = {
+      output: estimate.expectedOutput ?? '0',
+      provider: estimate.provider ?? null,
+    };
+    setCachedResult(fromToken, toToken, amount, chainId, result);
+    return result;
   }, [chainId]);
 
   // Manual refresh — busts the 30s result cache for this pair so the
@@ -645,6 +184,8 @@ export function useExpectedAmountOut({
 
   return {
     expectedOutput,
+    provider: quoteProvider,
+    noRoute,
     isLoading,
     error,
     quotedAt,

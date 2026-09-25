@@ -18,7 +18,7 @@ const executeCalls: string[] = [];
 function makeStrategy(
     name: string,
     opts: {
-        supports?: boolean;
+        supports?: boolean | ((p: SwapParams) => boolean);
         execute?: (p: SwapParams, callbacks?: SwapCallbacks) => Promise<SwapResult>;
     } = {},
 ) {
@@ -26,8 +26,10 @@ function makeStrategy(
         getName() {
             return name;
         }
-        supports() {
-            return opts.supports ?? false;
+        supports(p: SwapParams) {
+            return typeof opts.supports === 'function'
+                ? opts.supports(p)
+                : (opts.supports ?? false);
         }
         async execute(p: SwapParams, callbacks?: SwapCallbacks): Promise<SwapResult> {
             executeCalls.push(name);
@@ -53,7 +55,7 @@ function makeStrategy(
 // transaction on-chain.
 vi.mock('../strategies/lifi-swap.strategy', () => ({
     LiFiSwapStrategy: makeStrategy('LiFiSwapStrategy', {
-        supports: true,
+        supports: (p) => p.fromToken !== 'CELO' && p.toToken !== 'CELO',
         execute: async (p, callbacks) => {
             // Only the USDT pair reaches on-chain submission — everything
             // else fails at quote stage so fallback remains available.
@@ -68,7 +70,8 @@ vi.mock('../strategies/lifi-swap.strategy', () => ({
 
 vi.mock('../strategies/oneinch-swap.strategy', () => ({
     OneInchSwapStrategy: makeStrategy('OneInchSwapStrategy', {
-        supports: true,
+        // 1inch has no Celo coverage — it can never rescue a CELO pair.
+        supports: (p) => p.fromToken !== 'CELO' && p.toToken !== 'CELO',
         execute: async () => ({ success: true, txHash: '0xoneinch' }),
     }),
 }));
@@ -90,7 +93,16 @@ vi.mock('../strategies/hyperliquid-perp.strategy', () => ({
     HyperliquidPerpStrategy: makeStrategy('HyperliquidPerpStrategy'),
 }));
 vi.mock('../strategies/uniswap-v3.strategy', () => ({
-    UniswapV3Strategy: makeStrategy('UniswapV3Strategy', { supports: true }),
+    UniswapV3Strategy: makeStrategy('UniswapV3Strategy', {
+        supports: true,
+        execute: async (p) =>
+            p.fromToken === 'CELO'
+                ? {
+                      success: false,
+                      error: 'Not enough liquidity for CELO/KESm on Uniswap V3 at this size (price impact 22.1%)',
+                  }
+                : { success: false, error: 'No Uniswap V3 pool found' },
+    }),
 }));
 vi.mock('../strategies/gmx-gm-deposit.strategy', () => ({
     GmxGmDepositStrategy: makeStrategy('GmxGmDepositStrategy'),
@@ -101,10 +113,6 @@ vi.mock('../strategies/lifi-earn.strategy', () => ({
 vi.mock('../strategies/lifi-bridge.strategy', () => ({
     LiFiBridgeStrategy: makeStrategy('LiFiBridgeStrategy'),
 }));
-vi.mock('../strategies/direct-rwa.strategy', () => ({
-    DirectRWAStrategy: makeStrategy('DirectRWAStrategy'),
-}));
-
 const { SwapOrchestratorService } = await import('../swap-orchestrator.service');
 
 const params: SwapParams = {
@@ -141,5 +149,42 @@ describe('SwapOrchestratorService.executeSwap fallback safety', () => {
         expect(result.txHash).toBe('0xoneinch');
         expect(executeCalls).toContain('LiFiSwapStrategy');
         expect(executeCalls).toContain('OneInchSwapStrategy');
+    });
+
+    it('classifies a "Not enough liquidity" failure as no-route so the ticket offers recovery', async () => {
+        executeCalls.length = 0;
+
+        const result = await SwapOrchestratorService.executeSwap({
+            ...params,
+            fromToken: 'CELO',
+            toToken: 'KESm',
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.errorClass).toBe('no-route');
+        // no-route keeps the strategy-specific reason rather than the
+        // generic "contact support" fallback.
+        expect(result.error).toContain('Not enough liquidity');
+    });
+});
+
+describe('SwapOrchestratorService route reporting', () => {
+    it('routes CELO -> KESm on Celo via Uniswap V3 (CELO token preference outranks LiFi)', () => {
+        const provider = SwapOrchestratorService.getRouteProvider({
+            ...params,
+            fromToken: 'CELO',
+            toToken: 'KESm',
+        });
+        expect(provider).toBe('Uniswap V3');
+    });
+
+    it('counts an approval for a CELO-source Uniswap route — CELO is an ERC-20 on Celo', async () => {
+        const confirmations = await SwapOrchestratorService.estimateConfirmations({
+            ...params,
+            fromToken: 'CELO',
+            toToken: 'USDm',
+        });
+        // 1 swap + 1 approval
+        expect(confirmations).toBe(2);
     });
 });

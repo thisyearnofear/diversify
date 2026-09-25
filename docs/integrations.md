@@ -289,10 +289,14 @@ The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stal
 
 | Chain | DEX | Router |
 |-------|-----|--------|
-| **Celo** | Mento Protocol | Built-in stablecoin swaps |
-| **Arbitrum** | Uniswap V3, 1inch | LiFi for cross-chain |
+| **Celo** | Mento Protocol v3 (SDK), Uniswap V3 (CELO pairs) | Mento Router; SwapRouter02 |
+| **Arbitrum** | Uniswap V3, 1inch, LiFi | 1inch via server proxy (`ONEINCH_API_KEY`); LiFi for cross-chain |
 | **Hyperliquid** | Perps DEX | Direct API |
 | **Robinhood Chain** | Tokenized stocks/ETFs (USDG, SGOV, SPY/QQQ, AAPL…) | Direct RWA path |
+
+| Env | Default | Notes |
+|---|---|---|
+| `ONEINCH_API_KEY` | — | Server-only, never `NEXT_PUBLIC_` — 1inch quotes/swaps on Arbitrum via `/api/swap/oneinch-proxy` |
 
 ## Circle (CCTP, Gateway & MPC)
 
@@ -394,7 +398,7 @@ The following providers have been evaluated but not yet integrated. See `docs/ro
 | AI | Gemini (primary), Venice AI, AI/ML API, NVIDIA, Featherless, 0G Serving, Modal GLM (fallback chain) |
 | Agent Memory | Tablestore (Alibaba Cloud, preferred) → Cognee (fallback); Qwen long-context consolidation via DashScope |
 | Macro Monitoring | Firecrawl (event-driven page watching) |
-| Swaps | Mento Protocol (Celo), 1inch/Uniswap (Arbitrum) |
+| Swaps | Mento Protocol v3 + Uniswap V3 (Celo), Uniswap V3/1inch/LiFi (Arbitrum) |
 | Bridging | Circle CCTP, LiFi |
 | Hedging | Hyperliquid perps |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |

@@ -13,7 +13,7 @@ const CUSD = '0x765DE816845861e75A25fCA122bb6898B8B1282a';
 const CEUR = '0xD8763CBa276a3738E6DE85b4b3bF5FDed6D6ca73';
 const ARB_USDC = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
 const ARB_TOKEN_OUT = '0xDA10009cBd5D07dd0CeCc66161FC93D7c9000da1';
-const MENTO_BROKER = '0x777A8255cA72412f0d706dc03C9D1987306B4CaD';
+const MENTO_ROUTER = '0x4861840C2EfB2b98312B0aE34d86fD73E8f9B6f6';
 const LIFI_DIAMOND = '0x1231DEB6f5749EF6cE6943a275A1D3E7486F4EaE';
 const USER = '0x1111111111111111111111111111111111111111';
 
@@ -38,20 +38,24 @@ vi.mock('@diversifi/shared/src/services/vault/providers/metamask-delegation-prov
 vi.mock('@/lib/mongodb', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('@/models/Permission', () => ({ Permission: { findOne: vi.fn() } }));
 
-vi.mock('ethers', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('ethers')>();
-  const Contract = vi.fn().mockImplementation(() => ({
-    getExchangeProviders: async () => [`0x${'ef'.repeat(20)}`],
-    getExchanges: async () => [
-      { exchangeId: `0x${'ab'.repeat(32)}`, assets: [CUSD, CEUR] },
-    ],
-    getAmountOut: async () => actual.ethers.BigNumber.from('2000'),
-  }));
-  return {
-    ...actual,
-    ethers: { ...actual.ethers, Contract },
-  };
-});
+// The Celo path resolves routes and calldata through the Mento SDK service —
+// mock it at the module boundary (the real service's chain reads are covered
+// by its own tests).
+vi.mock('@diversifi/shared/src/services/swap/mento-sdk.service', () => ({
+  buildMentoSwap: vi.fn(async () => ({
+    approval: null, // executor always encodes its own approval
+    swap: {
+      to: '0x4861840C2EfB2b98312B0aE34d86fD73E8f9B6f6', // Mento Router
+      data: '0x12b34c', // router calldata shape is opaque to the executor
+      value: '0',
+    },
+    expectedAmountOut: 2000n,
+    amountOutMin: 1980n,
+    hops: 1,
+    spender: '0x4861840C2EfB2b98312B0aE34d86fD73E8f9B6f6',
+    route: {},
+  })),
+}));
 
 import { smartAccountExecutor, isAutonomyEligibleChain, AutonomyChainIneligibleError } from '../vault/executor';
 import { VaultExecutionUnavailableError } from '@diversifi/shared/src/services/vault/vault.service';
@@ -94,7 +98,9 @@ describe('executeSwap routing', () => {
     expect(calls).toHaveLength(2);
     expect(calls[0].to.toLowerCase()).toBe(CUSD.toLowerCase()); // approve on the input token
     expect(calls[0].data.slice(0, 10)).toBe('0x095ea7b3'); // approve(address,uint256)
-    expect(calls[1].to).toBe(MENTO_BROKER);
+    // Spender is the Mento Router (the same contract the swap call targets).
+    expect(calls[0].data.toLowerCase()).toContain(MENTO_ROUTER.slice(2).toLowerCase());
+    expect(calls[1].to).toBe(MENTO_ROUTER);
     expect(result.amountOut).toBeDefined();
   });
 

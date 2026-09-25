@@ -19,7 +19,6 @@ import { LiFiBridgeStrategy } from './strategies/lifi-bridge.strategy';
 import { LiFiEarnStrategy } from './strategies/lifi-earn.strategy';
 import { OneInchSwapStrategy } from './strategies/oneinch-swap.strategy';
 import { UniswapV3Strategy } from './strategies/uniswap-v3.strategy';
-import { DirectRWAStrategy } from './strategies/direct-rwa.strategy';
 import { ArcTestnetStrategy } from './strategies/arc-testnet.strategy';
 import { EmergingMarketsStrategy } from './strategies/emerging-markets.strategy';
 import { CurveArcStrategy } from './strategies/curve-arc.strategy';
@@ -27,9 +26,6 @@ import { HyperliquidPerpStrategy } from './strategies/hyperliquid-perp.strategy'
 import { ethers } from 'ethers';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
-
-// Mento's hub token — every broker exchange pairs against it.
-const ROUTING_HUB_SYMBOL = 'USDm';
 
 interface StrategyPerformance {
     successRate: number;
@@ -53,7 +49,6 @@ export class SwapOrchestratorService {
         new LiFiEarnStrategy(),           // LiFi Earn (vault deposits)
         new LiFiSwapStrategy(),           // LiFi same-chain (fallback)
         new LiFiBridgeStrategy(),         // Cross-chain bridging
-        new DirectRWAStrategy(),          // Direct RWA swaps (final fallback)
     ];
 
     private static performanceData = new Map<string, StrategyPerformance>();
@@ -235,18 +230,43 @@ export class SwapOrchestratorService {
 
         // Try to get estimate from the best strategy — stamp which provider
         // produced it so the ticket can say "via Mento" honestly.
+        let lastError: string | undefined;
+        // The most informative route-absence reason — a generic "no routes"
+        // from a fallback provider shouldn't bury the top-ranked strategy's
+        // specific one (e.g. "Not enough liquidity … at this size").
+        let specificNoRouteError: string | undefined;
         for (const strategy of rankedStrategies) {
             try {
                 const estimate = await strategy.getEstimate(params);
                 estimate.provider = this.getProviderLabel(strategy.getName());
                 return estimate;
             } catch (error: any) {
+                lastError = error.message;
+                if (
+                    lastError &&
+                    this.classifyError(lastError) === 'no-route' &&
+                    !this.isGenericNoRoute(lastError)
+                ) {
+                    specificNoRouteError = lastError;
+                }
                 console.log(`[SwapOrchestrator] Estimate failed for ${strategy.getName()}:`, error.message);
                 continue;
             }
         }
 
-        throw new Error('Unable to get swap estimate. Please try again later.');
+        // Keep the specific reason when it's a route-absence — the ticket
+        // renders "no route at this size" and the via-hub recovery off it;
+        // anything else stays generic. errorClass rides on the error so
+        // callers can distinguish without string matching.
+        const message = specificNoRouteError ?? lastError;
+        const errorClass = this.classifyError(message);
+        const err = new Error(
+            errorClass === 'no-route' && message
+                ? message
+                : 'Unable to get swap estimate. Please try again later.'
+        );
+        (err as any).errorClass = errorClass;
+        throw err;
     }
 
     /**
@@ -276,9 +296,14 @@ export class SwapOrchestratorService {
                 return await this.estimateMentoConfirmations(params);
             }
             // Aggregator/direct-DEX routes: one swap, plus an approval when
-            // the source isn't the chain's native asset (CELO needs none).
+            // the source isn't the chain's native asset. On Celo, CELO is an
+            // ERC-20 (0x471E…) and DOES need approval to a DEX router — the
+            // native exemption only applies off Celo.
             const nativeSymbol = this.getNativeSymbol(params.fromChainId);
-            const approvals = params.fromToken === nativeSymbol ? 0 : 1;
+            const approvals =
+                params.fromToken === nativeSymbol && !ChainDetectionService.isCelo(params.fromChainId)
+                    ? 0
+                    : 1;
             return 1 + approvals;
         } catch {
             return null;
@@ -286,54 +311,30 @@ export class SwapOrchestratorService {
     }
 
     private static async estimateMentoConfirmations(params: SwapParams): Promise<number | null> {
-        const { getTokenAddresses, getBrokerAddress, TOKEN_METADATA } = require('../../config');
-        const { ExchangeDiscoveryService } = require('./exchange-discovery');
-        const { ApprovalService } = require('./approval');
-        const { ProviderFactoryService } = require('./provider-factory.service');
+        const { getTokenAddresses, TOKEN_METADATA, TX_CONFIG } = require('../../config');
+        const { buildMentoSwap } = require('./mento-sdk.service');
 
         const tokens = getTokenAddresses(params.fromChainId);
-        const brokerAddress = getBrokerAddress(params.fromChainId);
-        if (!brokerAddress || brokerAddress === '0x0000000000000000000000000000000000000000') {
-            return null;
-        }
         const fromTokenAddress = tokens[params.fromToken as keyof typeof tokens];
         const toTokenAddress = tokens[params.toToken as keyof typeof tokens];
         if (!fromTokenAddress || !toTokenAddress) return null;
 
-        const provider = ProviderFactoryService.getProvider(params.fromChainId);
         const fromDecimals = (TOKEN_METADATA[params.fromToken as keyof typeof TOKEN_METADATA]?.decimals) || 18;
         const amountIn = ethers.utils.parseUnits(params.amount, fromDecimals);
 
-        const hubAddress = tokens[ROUTING_HUB_SYMBOL as keyof typeof tokens];
+        // One Router tx for any hop count; the SDK's approval field tells
+        // us whether the wallet will also sign an approve.
+        const built = await buildMentoSwap({
+            chainId: params.fromChainId,
+            tokenIn: fromTokenAddress,
+            tokenOut: toTokenAddress,
+            amountIn: BigInt(amountIn.toString()),
+            recipient: params.userAddress,
+            owner: params.userAddress,
+            slippagePercent: params.slippageTolerance || TX_CONFIG.DEFAULT_SLIPPAGE,
+        });
 
-        const direct = await ExchangeDiscoveryService.findDirectExchange(
-            brokerAddress, fromTokenAddress, toTokenAddress, provider,
-        );
-        const twoStep = !direct && hubAddress
-            ? await ExchangeDiscoveryService.findTwoStepExchange(
-                brokerAddress, fromTokenAddress, toTokenAddress, hubAddress, provider,
-            )
-            : null;
-        if (!direct && !twoStep) return null;
-
-        const swaps = direct ? 1 : 2;
-        let approvals = 0;
-        const fromApproval = await ApprovalService.checkApproval(
-            fromTokenAddress, params.userAddress, brokerAddress, amountIn,
-            params.fromChainId, fromDecimals,
-        );
-        if (!fromApproval.isApproved) approvals += 1;
-
-        if (twoStep) {
-            // The USDm leg needs its own approval unless one already covers it.
-            const hubApproval = await ApprovalService.checkApproval(
-                hubAddress!, params.userAddress, brokerAddress,
-                ethers.utils.parseUnits('1', 18), params.fromChainId, 18,
-            );
-            if (!hubApproval.isApproved) approvals += 1;
-        }
-
-        return swaps + approvals;
+        return 1 + (built.approval ? 1 : 0);
     }
 
     private static getProviderLabel(strategyName: string): string {
@@ -349,7 +350,6 @@ export class SwapOrchestratorService {
             ArcTestnetStrategy: 'Arc',
             HyperliquidPerpStrategy: 'Hyperliquid',
             GmxGmDepositStrategy: 'GMX',
-            DirectRWAStrategy: 'RWA direct',
         };
         return labels[strategyName] || strategyName;
     }
@@ -359,6 +359,20 @@ export class SwapOrchestratorService {
         if (ChainDetectionService.isArbitrum(chainId)) return 'ETH';
         if (ChainDetectionService.isArc(chainId)) return 'USDC';
         return 'ETH';
+    }
+
+    /**
+     * Generic "no route anywhere" messages carry no reason — a size or
+     * pause explanation is more useful to the ticket.
+     */
+    private static isGenericNoRoute(message: string): boolean {
+        const m = message.toLowerCase();
+        return (
+            m.includes('no swap routes') || m.includes('no route found') ||
+            m.includes('no exchange found') || m.includes('no available quotes') ||
+            m.includes('unable to get swap estimate') || m.includes('no uniswap v3 pool') ||
+            m.includes('not available on')
+        );
     }
 
     /**
@@ -372,7 +386,8 @@ export class SwapOrchestratorService {
             m.includes('no swap routes') || m.includes('no exchange found') ||
             m.includes('no available quotes') || m.includes('no route') ||
             m.includes('unable to get swap estimate') || m.includes('no uniswap v3 pool') ||
-            m.includes('not available on')
+            m.includes('not enough liquidity') || m.includes('not available on') ||
+            m.includes('trading is currently paused') || m.includes('no route found')
         ) {
             return 'no-route';
         }

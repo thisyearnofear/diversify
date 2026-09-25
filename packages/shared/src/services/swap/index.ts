@@ -60,9 +60,20 @@ export type {
 
 // Legacy services (still used by strategies)
 export { ApprovalService } from './approval';
-export { ExchangeDiscoveryService } from './exchange-discovery';
-export { SwapExecutionService } from './execution';
 export { SwapErrorHandler } from './error-handler';
+
+// Mento SDK v3 integration point
+export {
+    getMento,
+    getMentoRoutableAddresses,
+    isMentoPair,
+    isMentoToken,
+    findMentoRoute,
+    quoteMento,
+    buildMentoSwap,
+    getMentoRouterAddress,
+} from './mento-sdk.service';
+export type { MentoCallParams, MentoQuote, MentoBuiltSwap } from './mento-sdk.service';
 
 // Types
 export type {

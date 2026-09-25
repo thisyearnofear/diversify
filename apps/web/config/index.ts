@@ -275,7 +275,7 @@ export const TOKEN_METADATA: Record<string, TokenMetadata> = {
 
     // Yield-Bearing Assets (Arbitrum RWAs)
     USDY: { name: 'Ondo US Dollar Yield', region: REGIONS.USA, decimals: 18, apy: 5.0 },
-    SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 18, apy: 4.5 },
+    SYRUPUSDC: { name: 'Syrup USDC', region: REGIONS.USA, decimals: 6, apy: 4.5 },
 
     // Inflation Hedges (store of value, no yield)
     PAXG: { name: 'Pax Gold', region: REGIONS.COMMODITIES, decimals: 18, apy: 0, isInflationHedge: true },
@@ -530,13 +530,13 @@ export const SWAP_CONFIG = {
         [NETWORKS.CELO_MAINNET.chainId]: { 'MentoSwapStrategy': 100, 'OneInchSwapStrategy': 20, 'UniswapV3Strategy': 15, 'LiFiSwapStrategy': 40 },
         [NETWORKS.CELO_SEPOLIA.chainId]: { 'MentoSwapStrategy': 100, 'LiFiSwapStrategy': 20 },
         [NETWORKS.ARC_TESTNET.chainId]: { 'CurveArcStrategy': 100, 'ArcTestnetStrategy': 90 },
-        [NETWORKS.ARBITRUM_ONE.chainId]: { 'OneInchSwapStrategy': 90, 'UniswapV3Strategy': 80, 'LiFiSwapStrategy': 60, 'DirectRWAStrategy': 30 },
+        [NETWORKS.ARBITRUM_ONE.chainId]: { 'OneInchSwapStrategy': 90, 'UniswapV3Strategy': 80, 'LiFiSwapStrategy': 60 },
     },
     TOKEN_PREFERENCES: {
         'PAXG': { 'OneInchSwapStrategy': 25 },
         'USDC': { 'OneInchSwapStrategy': 15, 'UniswapV3Strategy': 12 },
-        'USDY': { 'UniswapV3Strategy': 100, 'OneInchSwapStrategy': 90 },
-        'SYRUPUSDC': { 'UniswapV3Strategy': 100, 'OneInchSwapStrategy': 90 },
+        'USDY': { 'OneInchSwapStrategy': 90 },
+        'SYRUPUSDC': { 'LiFiSwapStrategy': 100, 'OneInchSwapStrategy': 90 },
     },
     ENABLE_PERFORMANCE_TRACKING: true,
     ENABLE_AUTOMATIC_FALLBACK: true,
