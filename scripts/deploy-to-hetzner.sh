@@ -220,19 +220,25 @@ fi
 info "Overlaying runtime-loaded packages (full dependency closure)..."
 OVERLAY_DIRS=$(node scripts/runtime-overlay-closure.mjs) || \
     fail "Runtime overlay closure could not resolve locally — fix dependencies before deploying"
-ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules'"
+# Create every parent dir in ONE ssh call. ssh must never run inside the
+# read loop without -n: it reads the loop's stdin and silently swallows the
+# rest of the package list (2026-09-25: only the first package shipped).
+PARENT_DIRS=$(echo "$OVERLAY_DIRS" | while IFS= read -r d; do [ -n "$d" ] && printf "'%s/%s' " "$RUNTIME_DIR" "$(dirname "$d")"; done)
+ssh -n "$REMOTE" "mkdir -p '$RUNTIME_DIR/node_modules' $PARENT_DIRS" || fail "Could not create runtime overlay directories"
+OVERLAY_COUNT=0
 while IFS= read -r pkg_dir; do
     [ -z "$pkg_dir" ] && continue
-    if [ ! -d "$pkg_dir" ]; then
-        warn "Runtime overlay missing locally: $pkg_dir"
-        continue
-    fi
-    ssh "$REMOTE" "mkdir -p '$RUNTIME_DIR/$(dirname "$pkg_dir")'"
+    [ -d "$pkg_dir" ] || fail "Runtime overlay missing locally: $pkg_dir"
     rsync -azL --delete --no-owner --no-group \
         "$pkg_dir/" \
-        "$REMOTE:$RUNTIME_DIR/$pkg_dir/" >/dev/null
+        "$REMOTE:$RUNTIME_DIR/$pkg_dir/" < /dev/null >/dev/null \
+        || fail "Runtime overlay rsync failed: $pkg_dir"
+    OVERLAY_COUNT=$((OVERLAY_COUNT + 1))
 done <<< "$OVERLAY_DIRS"
-ok "Runtime overlay synced ($(echo "$OVERLAY_DIRS" | grep -c .) packages)"
+# Verify every overlay dir actually landed before the restart.
+MISSING_REMOTE=$(echo "$OVERLAY_DIRS" | ssh "$REMOTE" "cd '$RUNTIME_DIR' && while IFS= read -r d; do [ -n \"\$d\" ] && [ ! -f \"\$d/package.json\" ] && echo \"\$d\"; done; true")
+[ -z "$MISSING_REMOTE" ] || fail "Runtime overlay incomplete on server: $(echo "$MISSING_REMOTE" | head -5 | tr '\n' ' ')"
+ok "Runtime overlay synced and verified ($OVERLAY_COUNT packages)"
 
 # Static assets live inside .next/static/ which standalone doesn't include
 info "Syncing static assets..."
@@ -311,7 +317,7 @@ else
     # path as healthz below.
     RUNTIME_MODS=$(node -e 'console.log(require("./scripts/runtime-loaded-packages.json").concat("@noble/hashes/hkdf.js").join(","))')
     info "Runtime module smoke in $RUNTIME_DIR (require all overlay roots + @noble/hashes/hkdf.js)..."
-    SMOKE_OUT=$(ssh "$REMOTE" "cd '$RUNTIME_DIR' && RUNTIME_MODS='$RUNTIME_MODS' node -e 'const mods=process.env.RUNTIME_MODS.split(\",\");(async()=>{for(const m of mods){try{require(m)}catch(e){if(e&&e.code===\"ERR_REQUIRE_ESM\"){await import(m);continue}console.error(\"SMOKE_FAIL \"+m+\": \"+(e&&e.message));process.exit(1)}}console.log(\"runtime smoke ok — \"+mods.length+\" modules\")})()'" 2>&1) && RUNTIME_SMOKE_OK=true || RUNTIME_SMOKE_OK=false
+    SMOKE_OUT=$(ssh "$REMOTE" "cd '$RUNTIME_DIR' && RUNTIME_MODS='$RUNTIME_MODS' node -e 'const mods=process.env.RUNTIME_MODS.split(\",\");(async()=>{for(const m of mods){try{require(m)}catch(e){try{await import(m);continue}catch(e2){console.error(\"SMOKE_FAIL \"+m+\": require: \"+(e&&e.message)+\" | import: \"+(e2&&e2.message));process.exit(1)}}}console.log(\"runtime smoke ok — \"+mods.length+\" modules\")})()'" 2>&1) && RUNTIME_SMOKE_OK=true || RUNTIME_SMOKE_OK=false
 
     info "Gating on $PUBLIC_HEALTH_URL (up to 30s, 3 attempts)..."
     HEALTH_OK=false
