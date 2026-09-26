@@ -6,11 +6,16 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const mocks = vi.hoisted(() => ({
-  recordRecommendation: vi.fn(),
-  mirrorRecommendationToZeroG: vi.fn(),
-  recordGuardianRun: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  // The handler reads the secret at module load; pin it so a real value in
+  // a developer's .env.local can't turn every request into a 401.
+  process.env.GUARDIAN_LOOP_SECRET = 'dev-guardian-loop';
+  return {
+    recordRecommendation: vi.fn(),
+    mirrorRecommendationToZeroG: vi.fn(),
+    recordGuardianRun: vi.fn(),
+  };
+});
 
 vi.mock('@diversifi/shared', () => ({
   recommendationLedgerService: {
