@@ -153,7 +153,7 @@ async function checkChain(chainId: number, name: string, pairs: PairCheck[]): Pr
             // entry is stale — surface the exact cleanup action.
             if (!pair.expectRoute && pair.toToken === 'USDY') {
                 console.log(
-                    `NOTE             USDY is now routable on chain ${chainId} — remove it from UNROUTABLE_SWAP_TOKENS (apps/web/hooks/use-tradeable-tokens.ts)`
+                    `NOTE             USDY is now routable on chain ${chainId} — remove it from UNROUTABLE_SWAP_TOKENS (apps/web/constants/unroutable-swap-tokens.ts)`
                 );
             }
             if (pair.expectRoute && pair.expectProvider && provider !== pair.expectProvider) {

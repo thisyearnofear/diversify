@@ -24,19 +24,8 @@ interface UseTradeableTokensResult {
 // Tradeable via Uniswap V3 / LiFi rather than Mento — always offered on Celo.
 const NON_MENTO_TRADEABLE = ["CELO", "USDT", "G$"];
 
-/**
- * Tokens the picker must not offer for swapping on a chain — they exist in
- * the chain's asset list (holdings/metadata/history stay intact) but have
- * no working route.
- *
- * 42161 USDY — verified unroutable 2026-09-25: no Uniswap V3 pool, LiFi no
- * route, 1inch INSUFFICIENT_LIQUIDITY. `pnpm check-swap-routes` keeps the
- * USDC→USDY expected-fail sentinel and prints a removal notice if it ever
- * succeeds.
- */
-export const UNROUTABLE_SWAP_TOKENS: Record<number, readonly string[]> = {
-  42161: ["USDY"],
-};
+export { UNROUTABLE_SWAP_TOKENS } from "../constants/unroutable-swap-tokens";
+import { UNROUTABLE_SWAP_TOKENS } from "../constants/unroutable-swap-tokens";
 
 function tradeableSymbolsForChain(chainId: number): string[] {
   const routable = getMentoRoutableAddresses(chainId);

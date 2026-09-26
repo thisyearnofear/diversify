@@ -308,8 +308,14 @@ A tab change that fails any of these is the old stack. Do not ship it.
    stack joined it: the `AgentTierStatus` component, `GuardianMarquee`,
    `GuardianProofTab`, `ActivityFeed`, `AdvisorMetrics`. "Total Savings"
    was retired with them — it summed projected `expectedSavings` as if
-   they were realized money. RWA vault data lives
-   in `components/tabs/protect/rwa-assets.ts`. Do not recreate them.
+   they were realized money. Tokenized-asset (RWA) identity lives in
+   `components/tabs/protect/rwa-assets.ts` — claim-free: issuer facts come
+   from `token-provenance.ts`, rates/prices live from
+   `/api/agent/rwa-market` (absent when a provider is down). The RWA lens
+   (`?sleeve=rwa`, or the status rail) keeps RWA wedges in color and
+   quiets the rest; holdable assets lead the inspector, IXS vaults follow
+   as an off-app section — they never re-slice the user's ring. Do not
+   recreate them.
 8. **Status tier budget.** Trust + one transition + one rail, via
    `StatusTier` (`components/shared/StatusTier.tsx`). A new prompt
    competes for the transition slot by priority — it never stacks. All

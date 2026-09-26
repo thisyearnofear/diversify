@@ -14,6 +14,7 @@ import type { PlanLeg } from "@/components/protection-cards/plan-preview";
 import type { useAdvisor } from "@/hooks/use-advisor";
 import type { useNavigation } from "@/context/app/NavigationContext";
 import type { useRwaAllocation } from "@/hooks/use-rwa-allocation";
+import type { RwaMarket } from "@diversifi/shared/src/services/rwa-market-service";
 import type { scorePlanAlignment } from "@/lib/plan-alignment";
 import type { seriesFor } from "@/lib/learn/protection-calculator";
 import { motion } from "framer-motion";
@@ -58,7 +59,10 @@ export interface ShieldSliceInspectorProps {
   rwa: ReturnType<typeof useRwaAllocation>;
   rwaServOn: boolean;
   setRwaServOn: (v: boolean) => void;
-  sleeveHostSymbol: string | null;
+  rwaMarket: RwaMarket;
+  planPctBySymbol: Record<string, number>;
+  heldPctBySymbol: Record<string, number>;
+  sleevePhilosophy: string | null;
   allocations: PlanLeg[];
   previewAllocations: PlanLeg[];
   alignmentLegs: ReturnType<typeof scorePlanAlignment>["legs"];
@@ -148,7 +152,10 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     rwa,
     rwaServOn,
     setRwaServOn,
-    sleeveHostSymbol,
+    rwaMarket,
+    planPctBySymbol,
+    heldPctBySymbol,
+    sleevePhilosophy,
     allocations,
     previewAllocations,
     alignmentLegs,
@@ -209,7 +216,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
       title={
         !comparing && isSleeveSelection(focusedToken)
           ? focusedToken === SLEEVE_ID
-            ? "RWA vault sleeve"
+            ? "Tokenized assets"
             : (IXS_VAULT_BY_ID[focusedToken!.slice(VAULT_SLICE_PREFIX.length)]?.name ??
               "RWA vault")
           : shape === "picker" || comparing
@@ -235,7 +242,13 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
           onSelectVault={(id) =>
             setFocusedToken(id ? `${VAULT_SLICE_PREFIX}${id}` : SLEEVE_ID)
           }
-          sleeveContext={sleeveHostSymbol ? `${sleeveHostSymbol} leg` : "preview"}
+          planPctBySymbol={planPctBySymbol}
+          heldPctBySymbol={heldPctBySymbol}
+          totalValue={totalValue}
+          philosophy={sleevePhilosophy}
+          market={rwaMarket}
+          onReviewMove={address && totalValue > 0 ? openProtectionFlow : undefined}
+          walletCta={!address ? <WalletButton variant="primary" className="w-full" /> : undefined}
         />
       )}
       {(shape === "picker" || comparing) && focusedPhilosophy && (
@@ -471,7 +484,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
             return (
               <>
                 <p data-testid="rwa-leg" className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {rwa.label} — {rwa.description}
+                  {rwa.name} — {provenanceFor(rwa.symbol)?.phrase ?? rwa.kind.toLowerCase()}, held on {rwa.chain}.
                 </p>
                 <button
                   type="button"
@@ -479,7 +492,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                   onClick={() => setFocusedToken(SLEEVE_ID)}
                   className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
                 >
-                  See this sleeve as licensed RWA vaults →
+                  Compare every tokenized asset →
                 </button>
               </>
             );

@@ -29,7 +29,8 @@ export interface ShieldStatusTierProps {
   selectedAlloc: PlanLeg | null;
   planName: string;
   planRingVisible: boolean;
-  sleeveHostSymbol: string | null;
+  /** Tokenized assets the plan or wallet already carries (names the rail). */
+  rwaSymbols: string[];
   address: string | null;
   isDemo: boolean;
   biggestGap: unknown;
@@ -54,7 +55,7 @@ export function ShieldStatusTier({
   selectedAlloc,
   planName,
   planRingVisible,
-  sleeveHostSymbol,
+  rwaSymbols,
   address,
   isDemo,
   biggestGap,
@@ -184,14 +185,13 @@ export function ShieldStatusTier({
         )
       }
       rail={
-        // RWA sleeve rail — the status/transition grammar (§5 rail 4). Plans
-        // with an RWA leg reach the sleeve through the hatched wedge; every
-        // other persona reaches it here. Never while the sleeve is open —
-        // its exit lives in the transition slot.
+        // Tokenized-asset rail — the status/transition grammar (§5 rail 4).
+        // Offered to every persona so the lens is always one tap away; it
+        // names the plan's own RWA legs when there are any. Never while the
+        // lens is open — its exit lives in the transition slot.
         !sleeveOpen &&
         !comparing &&
         planRingVisible &&
-        !sleeveHostSymbol &&
         !focusedToken ? (
           <button
             type="button"
@@ -199,7 +199,9 @@ export function ShieldStatusTier({
             onClick={() => setFocusedToken(SLEEVE_ID)}
             className="text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
-            RWA vaults: preview a yield sleeve →
+            {rwaSymbols.length > 0
+              ? `Tokenized assets in this plan: ${rwaSymbols.join(" · ")} →`
+              : "Tokenized assets you can hold →"}
           </button>
         ) : undefined
       }

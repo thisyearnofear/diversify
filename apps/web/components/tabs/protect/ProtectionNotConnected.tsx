@@ -30,7 +30,7 @@ import { ApacRailHonestyBanner } from "../../shared/ApacRailHonestyBanner";
 import { needsApacRailMessaging } from "@/constants/apac-rail";
 import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBanner";
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
-import { ProtectionPlanRing } from "./ProtectionPlanRing";
+import { ProtectionPlanRing, SLEEVE_ID } from "./ProtectionPlanRing";
 import { PlanFloorControl } from "./PlanFloorControl";
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 import {
@@ -46,9 +46,20 @@ interface Props {
   onEnableDemo?: () => void;
   /** Selection-bound inspector (e.g. the RWA vault sleeve via ?sleeve=rwa). */
   inspector?: React.ReactNode;
+  /** Tokenized-asset lens is open — the ghost ring restages to match. */
+  sleeveOpen?: boolean;
+  onOpenSleeve?: () => void;
+  onCloseSleeve?: () => void;
 }
 
-export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnableDemo, inspector }: Props) {
+export function ProtectionNotConnected({
+  experienceMode: _experienceMode,
+  onEnableDemo,
+  inspector,
+  sleeveOpen = false,
+  onOpenSleeve,
+  onCloseSleeve,
+}: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const reducedMotion = useReducedMotion();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
@@ -128,8 +139,13 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
             balancePreview={balance.isPreviewing}
             savedLegs={ringLegs}
             portfolio={walletlessPortfolio}
-            selectedToken={effectiveToken}
-            onSelectToken={setSelectedToken}
+            selectedToken={sleeveOpen ? SLEEVE_ID : effectiveToken}
+            onSelectToken={(token) => {
+              // A wedge tap inside the lens steps out of it to that leg.
+              if (sleeveOpen) onCloseSleeve?.();
+              setSelectedToken(token === SLEEVE_ID ? null : token);
+            }}
+            sleeveOpen={sleeveOpen}
             alignmentScore={null}
             empty
             walletless
@@ -219,7 +235,24 @@ export function ProtectionNotConnected({ experienceMode: _experienceMode, onEnab
           {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
         </div>
       )}
-      {onEnableDemo && <UnconnectedStatusTier onEnableDemo={onEnableDemo} />}
+      {onEnableDemo && (
+        <UnconnectedStatusTier onEnableDemo={onEnableDemo}>
+          {onOpenSleeve && onCloseSleeve && (
+            <button
+              type="button"
+              data-testid={sleeveOpen ? "rwa-sleeve-back" : "rwa-sleeve-entry"}
+              onClick={() => {
+                if (sleeveOpen) onCloseSleeve();
+                else onOpenSleeve();
+                haptics.tap();
+              }}
+              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+            >
+              {sleeveOpen ? "← Back to plan" : "Tokenized assets you can hold →"}
+            </button>
+          )}
+        </UnconnectedStatusTier>
+      )}
     </div>
   );
 

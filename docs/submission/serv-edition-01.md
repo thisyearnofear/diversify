@@ -9,8 +9,10 @@
 
 - **Name:** DiversiFi — Guardian RWA Allocator
 - **Concept (one line):** A values-aware treasury agent that detects local-currency depreciation and allocates stablecoin protection across IXS Finance's licensed RWA yield vaults — free heuristic by default, SERV Reasoning as an opt-in brain.
-- **Demo URL:** https://diversifiapp.vercel.app/rwa-vaults (add `?serv=1` for the SERV-enhanced path)
-- **Repo:** https://github.com/udingethe/diversifi (built in the open)
+- **Demo URL:** https://diversifi.persidian.com/?tab=protect&sleeve=rwa (SERV-enhanced: add `&serv=1`)
+  - Note: `/rwa-vaults` is a doorway that redirects into the app onboarding flow.
+    Use the direct app URL above to land on the RWA Vaults instrument.
+- **Repo:** https://github.com/thisyearnofear/diversify (built in the open)
 
 ## What it does
 
@@ -67,14 +69,14 @@ Free tier (default forever): currency-risk detection + heuristic vault suggestio
 - **Track:** RWA Vaults (IXS Finance)
 - **Concept:** Values-aware RWA vault allocation agent; SERV Reasoning as an opt-in enhancement over a free deterministic heuristic — fail-safe if credits expire.
 - **X post URL:** [fill after posting]
-- **Demo:** /rwa-vaults (+ ?serv=1)
+- **Demo:** /?tab=protect&sleeve=rwa (+ &serv=1)
 - **How it uses SERV:** SERV Reasoning (`/v1/chat/completions`, mandatory system prompt) selects/weights IXS vaults and produces an explained allocation receipt; strict JSON validation with heuristic fallback on any failure.
 - **Revenue:** freemium advisory → SERV-enhanced premium allocation → IXS Agent Rail execution/referral (future).
 
 ## Demo video storyboard (~90s)
 
-1. `/rwa-vaults` loads → free heuristic allocation renders instantly, no keys.
-2. Change lens → Islamic Finance → allocation re-weights, conventional-yield flag shows.
-3. Toggle "Enhance with SERV Reasoning" (or reload `?serv=1`) → SERV-weighted allocation + per-vault rationale + receipt (model/latency/tokens).
+1. `/?tab=protect&sleeve=rwa` loads → the ring highlights the plan's tokenized-asset legs and turns the rest gray; the sheet leads with holdable USDY / syrupUSDC / PAXG (live APY/price), and the IXS vaults show below as "Licensed vaults, off-app", with the free heuristic allocation rendering instantly and no keys needed.
+2. Switch plan → Islamic Finance → interest-bearing tokens flagged, CTA targets PAXG; the IXS section re-weights and carries the "none is Sharia-certified" note.
+3. Tap "Get a deeper allocation →" (or reload `&serv=1`) → SERV-weighted IXS allocation + per-vault rationale + receipt (model/latency).
 4. Kill the key (or show expired-credit 401) → same page falls back to heuristic with honest degraded badge.
 5. Receipt close-up: source, provenance, fallback state.

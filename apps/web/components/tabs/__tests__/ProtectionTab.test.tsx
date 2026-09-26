@@ -872,6 +872,19 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("serv-enhance")).toBeInTheDocument();
   });
 
+  it("walletless: the lens leads with holdable assets and can be left and re-entered", () => {
+    mockRouterQuery = { sleeve: "rwa" };
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+
+    expect(screen.getByTestId("rwa-row-PAXG")).toBeInTheDocument();
+    expect(screen.getByTestId("rwa-offapp")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("rwa-sleeve-back"));
+    expect(screen.queryByTestId("rwa-vault-sleeve")).not.toBeInTheDocument();
+    // The doorway is no longer URL-only: the status tier re-opens it.
+    fireEvent.click(screen.getByTestId("rwa-sleeve-entry"));
+    expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
+  });
+
   it("tapping the ring centre enters compare mode without committing", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({

@@ -70,6 +70,7 @@ import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { rwaLegFor } from "./protect/rwa-assets";
 import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
+import { useRwaMarket } from "@/hooks/use-rwa-market";
 import { useRouter } from "next/router";
 
 interface ProtectionTabProps {
@@ -218,12 +219,27 @@ export default function ProtectionTab({
     return map;
   }, [chains, totalValue]);
 
-  // The wedge the sleeve fans from — a held RWA token first (funded ring is
-  // holdings), else the plan's RWA leg. Null means the sleeve is a preview.
-  const sleeveHostSymbol = useMemo(() => {
-    const held = [...heldPctByToken.keys()].find((t) => rwaLegFor(t));
-    return held ?? allocations.find((a) => rwaLegFor(a.token))?.token ?? null;
-  }, [heldPctByToken, allocations]);
+  // The tokenized-asset lens reads the plan the visitor actually sees: the
+  // committed strategy, else the onboarding philosophy (walletless ghost).
+  const sleeveLegs = useMemo(() => {
+    if (allocations.length > 0) return allocations;
+    const id = strategyToArchetype(config.philosophy ?? null);
+    return id ? legsForRisk(getArchetypeAllocations(id), config.riskTolerance) : [];
+  }, [allocations, config.philosophy, config.riskTolerance]);
+  const sleevePhilosophy = strategyKey ?? config.philosophy ?? null;
+  const planPctBySymbol = useMemo(
+    () => Object.fromEntries(sleeveLegs.map((l) => [l.token, l.percent])),
+    [sleeveLegs],
+  );
+  const heldPctBySymbol = useMemo(() => Object.fromEntries(heldPctByToken), [heldPctByToken]);
+  // Tokenized assets the plan or wallet already carries — names the rail.
+  const rwaSymbols = useMemo(() => {
+    const set = new Set<string>();
+    for (const t of heldPctByToken.keys()) if (rwaLegFor(t)) set.add(rwaLegFor(t)!.symbol);
+    for (const l of sleeveLegs) if (rwaLegFor(l.token)) set.add(rwaLegFor(l.token)!.symbol);
+    return [...set];
+  }, [heldPctByToken, sleeveLegs]);
+  const rwaMarket = useRwaMarket(sleeveOpen);
 
   // Compare mode (Wave D): the ring previews the focused philosophy's plan
   // without committing it — the committed alignment/shape/since-last-visit
@@ -579,7 +595,6 @@ export default function ProtectionTab({
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
             sleeveOpen={sleeveOpen}
-            sleeveVaults={rwa.allocations}
             sinceHint={alignmentSinceHint ?? undefined}
             controls={!comparing ? (
               <div className="mt-3">
@@ -696,7 +711,10 @@ export default function ProtectionTab({
       rwa={rwa}
       rwaServOn={rwaServOn}
       setRwaServOn={setRwaServOn}
-      sleeveHostSymbol={sleeveHostSymbol}
+      rwaMarket={rwaMarket.market}
+      planPctBySymbol={planPctBySymbol}
+      heldPctBySymbol={heldPctBySymbol}
+      sleevePhilosophy={sleevePhilosophy}
       allocations={allocations}
       previewAllocations={previewAllocations}
       alignmentLegs={alignment.legs}
@@ -745,7 +763,7 @@ export default function ProtectionTab({
       selectedAlloc={selectedAlloc}
       planName={planName}
       planRingVisible={planRingVisible}
-      sleeveHostSymbol={sleeveHostSymbol}
+      rwaSymbols={rwaSymbols}
       address={address}
       isDemo={isDemo}
       biggestGap={biggestGap}
@@ -769,6 +787,9 @@ export default function ProtectionTab({
         experienceMode={experienceMode}
         onEnableDemo={enableDemoMode}
         inspector={sleeveOpen ? inspector : undefined}
+        sleeveOpen={sleeveOpen}
+        onOpenSleeve={() => setFocusedToken(SLEEVE_ID)}
+        onCloseSleeve={() => setFocusedToken(null)}
       />
     );
   }

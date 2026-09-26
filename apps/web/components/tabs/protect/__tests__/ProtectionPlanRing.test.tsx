@@ -265,7 +265,7 @@ describe('ProtectionPlanRing — projections shape', () => {
   });
 });
 
-describe('ProtectionPlanRing — RWA sleeve fan', () => {
+describe('ProtectionPlanRing — tokenized-asset lens', () => {
   const emptyPortfolio = {
     ...DEMO_PORTFOLIO,
     totalValue: 0,
@@ -273,14 +273,7 @@ describe('ProtectionPlanRing — RWA sleeve fan', () => {
     chains: [],
   } as unknown as MultichainPortfolio;
 
-  const SLEEVE_VAULTS = [
-    { vaultId: 'ixs-usd-mmf', weightPct: 40, why: 'cash anchor' },
-    { vaultId: 'ixs-open-ended', weightPct: 30, why: 'daily liquidity' },
-    { vaultId: 'ixs-corp-bond', weightPct: 15, why: 'credit' },
-    { vaultId: 'ixs-private-credit', weightPct: 15, why: 'yield' },
-  ];
-
-  it('fans the hatched wedge into IXS vault wedges when the sleeve opens', () => {
+  it('keeps the RWA wedge and states its share in the hole — no IXS fan in the ring', () => {
     render(
       <ProtectionPlanRing
         strategyKey="islamic"
@@ -288,29 +281,35 @@ describe('ProtectionPlanRing — RWA sleeve fan', () => {
         selectedToken="sleeve"
         onSelectToken={() => {}}
         sleeveOpen
-        sleeveVaults={SLEEVE_VAULTS}
       />,
     );
-    // The PAXG wedge decomposes — vault wedges appear, the host is gone.
-    expect(
-      screen.getByRole('button', {
-        name: /Fidelity USD Money Market Fund Vault — RWA vault/,
-      }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /Open-Ended Vault \(daily liquidity\) — RWA vault/ }),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: /^PAXG — plan/ }),
-    ).not.toBeInTheDocument();
-    // Other plan legs are untouched.
+    // The PAXG leg stays itself — gold never decomposes into credit vaults.
+    expect(screen.getByRole('button', { name: /^PAXG — plan/ })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /RWA vault/ })).not.toBeInTheDocument();
+    // Other plan legs are still drawn (quiet), still tappable.
     expect(screen.getByRole('button', { name: /^USDm — plan/ })).toBeInTheDocument();
-    // Hole names the sleeve context.
-    expect(screen.getByText('vault sleeve')).toBeInTheDocument();
-    expect(screen.getByText('PAXG leg')).toBeInTheDocument();
+    expect(screen.getByText('tokenized assets')).toBeInTheDocument();
+    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.getByText('PAXG · of this plan')).toBeInTheDocument();
   });
 
-  it('appends a labelled preview sleeve when the plan has no RWA leg', () => {
+  it('reads the same on the walletless ghost ring (lens checked before empty)', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="islamic"
+        portfolio={emptyPortfolio}
+        selectedToken="sleeve"
+        onSelectToken={() => {}}
+        sleeveOpen
+        empty
+        walletless
+      />,
+    );
+    expect(screen.getByText('tokenized assets')).toBeInTheDocument();
+    expect(screen.queryByText('dollar reserve')).not.toBeInTheDocument();
+  });
+
+  it('appends one labelled preview wedge when the plan has no tokenized asset', () => {
     render(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -318,36 +317,28 @@ describe('ProtectionPlanRing — RWA sleeve fan', () => {
         selectedToken="sleeve"
         onSelectToken={() => {}}
         sleeveOpen
-        sleeveVaults={SLEEVE_VAULTS}
       />,
     );
-    // Plan legs stay put…
     expect(screen.getByRole('button', { name: /^KESm — plan/ })).toBeInTheDocument();
-    // …and the vault fan is appended as a preview.
     expect(
-      screen.getByRole('button', {
-        name: /Fidelity USD Money Market Fund Vault — RWA vault/,
-      }),
+      screen.getByRole('button', { name: /Tokenized assets — preview, not in your plan/ }),
     ).toBeInTheDocument();
-    expect(screen.getByText('preview — not in your plan')).toBeInTheDocument();
+    expect(screen.getByText('none in this plan yet')).toBeInTheDocument();
   });
 
-  it('shows the focused vault in the hole when a wedge is selected', () => {
+  it('no preview wedge while the lens is closed', () => {
     render(
       <ProtectionPlanRing
-        strategyKey="islamic"
+        strategyKey="africapitalism"
         portfolio={emptyPortfolio}
-        selectedToken="vault:ixs-usd-mmf"
+        selectedToken={null}
         onSelectToken={() => {}}
-        sleeveOpen
-        sleeveVaults={SLEEVE_VAULTS}
       />,
     );
-    expect(screen.getByText('of the RWA sleeve')).toBeInTheDocument();
-    expect(screen.getByText('Fidelity USD Money Market Fund')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Tokenized assets/ })).not.toBeInTheDocument();
   });
 
-  it('emits the vault slice id when a fanned wedge is tapped', () => {
+  it('tapping a wedge inside the lens emits that leg', () => {
     const onSelect = vi.fn();
     render(
       <ProtectionPlanRing
@@ -356,27 +347,10 @@ describe('ProtectionPlanRing — RWA sleeve fan', () => {
         selectedToken="sleeve"
         onSelectToken={onSelect}
         sleeveOpen
-        sleeveVaults={SLEEVE_VAULTS}
       />,
     );
-    fireEvent.click(
-      screen.getByRole('button', { name: /Fidelity USD Money Market Fund Vault — RWA vault/ }),
-    );
-    expect(onSelect).toHaveBeenCalledWith('vault:ixs-usd-mmf');
-  });
-
-  it('does not fan while the sleeve view is closed', () => {
-    render(
-      <ProtectionPlanRing
-        strategyKey="islamic"
-        portfolio={emptyPortfolio}
-        selectedToken={null}
-        onSelectToken={() => {}}
-        sleeveVaults={SLEEVE_VAULTS}
-      />,
-    );
-    expect(screen.queryByRole('button', { name: /RWA vault/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^PAXG — plan/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^PAXG — plan/ }));
+    expect(onSelect).toHaveBeenCalledWith('PAXG');
   });
 });
 

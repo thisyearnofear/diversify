@@ -43,7 +43,7 @@
 
 SERV (`inference-api.openserv.ai`) is an OpenAI-compatible inference API used
 **only** by the RWA vault allocator (`POST /api/agent/rwa-allocation`, demo at
-`/rwa-vaults`) — it is deliberately **not** part of the `AIService` failover
+`/?tab=protect&sleeve=rwa`; `/rwa-vaults` redirects there) — it is deliberately **not** part of the `AIService` failover
 chain. The default path is a free deterministic heuristic over the IXS Finance
 ERC-4626 catalog; SERV engages only on explicit opt-in (`?serv=1` /
 `{ serv: true }`) with `SERV_API_KEY` configured. Every failure — missing key,
@@ -61,6 +61,16 @@ validated (unknown vault ids dropped, weights normalized to 100).
 | `SERV_TIMEOUT_MS` | `20000` | Hard abort, then heuristic fallback |
 
 Files: `packages/shared/src/services/serv/{ixs-vault-catalog,rwa-allocator,serv-reasoning-client}.ts`.
+
+### RWA market figures (DeFiLlama + CoinGecko, keyless)
+
+`GET /api/agent/rwa-market` feeds Shield's tokenized-asset lens: USDY APY
+(DeFiLlama `ondo-yield-assets` on Arbitrum), syrupUSDC APY (DeFiLlama `maple`
+USDC pool — the pool that sets syrupUSDC's yield) and PAXG spot (CoinGecko
+`pax-gold`). Public, read-only, no env vars; 10-minute in-memory + CDN cache
+(`s-maxage=600`). A provider that fails nulls only its own figure — there is
+no static fallback number. File:
+`packages/shared/src/services/rwa-market-service.ts`.
 
 ### AI Endpoints & Caching
 
