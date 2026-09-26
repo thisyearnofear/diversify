@@ -12,7 +12,7 @@ describe('momentCardContent', () => {
     expect(c!.headline).toBe(
       'The naira bought 60% less than the dollar in 5 years',
     );
-    expect(c!.event).toBe('2024 · Multiple FX windows');
+    expect(c!.event).toBe('2026 · Rate-cut test');
     expect(c!.asOf).toBe('Jul 2025');
   });
 

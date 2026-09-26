@@ -35,7 +35,7 @@ describe('/moment/[code]', () => {
     expect(props.ogImageUrl).toContain('/api/og/moment-card?code=NGN');
     expect(props.pageUrl).toContain('/moment/NGN');
     expect(props.content.headline).toContain('naira');
-    expect(props.content.event).toContain('2024');
+    expect(props.content.event).toContain('2026');
   });
 
   it('canonicalises a lowercase code into the URLs', async () => {
