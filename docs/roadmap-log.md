@@ -1437,3 +1437,29 @@ consent moment (gated on `NEXT_PUBLIC_PRIVY_KEY_QUORUM_ID`), the permission API
 re-verifies the signer server-side before storing `privyDelegated`, and revoke
 calls `removeSigners`. The guardian loop declines non-delegated GUARDIAN
 permissions honestly instead of attempting execution.
+
+#### Trust batch — grounded advisor, question allowance, chain receipts, live currency data (2026-09-26)
+
+Four feedback items shipped in one commit (`4e7f1048`, 2,342 tests):
+
+- **Guardian grounding:** fabricated prompt defaults (84 users, $1.2M, gold
+  +1.25%) replaced with an "unavailable" rule; stale product facts corrected
+  (quote-gated swaps, real token lists, one-tap autonomy default); a FACTS
+  block injects live 1yr depreciation + dated events for currency questions;
+  the client's current tab/pair travels as `view`; empty action-only replies
+  now render honest captions. Provider/model/latency logged per response.
+- **Credits → allowance:** the fake "$0.50 protection balance" (localStorage,
+  never deducted) is replaced by a server-enforced daily question allowance
+  (10 per wallet / 3 per IP, AgentUsage model, earn actions grant questions,
+  honest 429 with friendly message, demo mode skips).
+- **Receipts:** `/receipt/[chainId]/[txHash]` derives the swap from Celo /
+  Arbitrum RPC — legs, effective rate, gas, explorer link, shareable OG
+  image; no DB. Journey stations now cover Arbitrum Blockscout too and link
+  each tx to its receipt; the post-swap card links out with "view receipt →".
+- **Currency data freshness:** inspector gains a 12-month sparkline with
+  event markers + newest ledger signal prepended; SideTrack overlays live
+  1yr vs dated curated values; curated vsUSD 1yr synced to the live feed
+  (25 corrections — NGN −40%→+13%, COP −2→+16, KES −8→0); a daily
+  `check-data-freshness` job opens `data-review` issues on >3pp drift,
+  sign flips, or >90d-old trail/provenance asOf dates (currently flagging
+  21 stale event trails for re-verification — intended).
