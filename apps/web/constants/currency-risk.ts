@@ -22,6 +22,13 @@
  * data (central bank rates, IMF, World Bank) as of mid-2025. They are
  * directionally accurate — sufficient to make the risk visceral — and
  * should be refreshed periodically from a live API.
+ *
+ * Event trails follow the same provenance discipline as
+ * packages/shared/src/constants/token-provenance.ts: every event a
+ * refresh verifies carries an `asOf` (ISO date the claim was last
+ * checked), and each trail should be re-verified by its newest `asOf`
+ * + 90 days. Events without `asOf` predate this discipline — their
+ * trail's checked date falls back to CURRENCY_RISK_DATA_AS_OF.
  */
 
 /** When this curated dataset was last reviewed — show in UX for transparency. */
@@ -44,6 +51,34 @@ export interface RiskEvent {
   year: number;
   event: string;
   impact: string;
+  /** ISO date this claim was last verified against a named source.
+      Absent → the event predates the freshness discipline; the trail's
+      checked date falls back to CURRENCY_RISK_DATA_AS_OF. */
+  asOf?: string;
+}
+
+/**
+ * Newest verification date across a currency's event trail. Trails that
+ * predate per-event `asOf` honestly report the dataset-level review date
+ * rather than implying a fresher check than they got.
+ */
+export function riskTrailCheckedAt(entry: CurrencyRiskEntry): string {
+  return entry.riskEvents.reduce<string>(
+    (latest, ev) => (ev.asOf && ev.asOf > latest ? ev.asOf : latest),
+    CURRENCY_RISK_DATA_AS_OF,
+  );
+}
+
+/**
+ * Whole-year age label for a dated trail event ("this year", "1y ago").
+ * Events are year-granular, so age is in whole years — never pretend to
+ * more precision than the data has.
+ */
+export function riskEventAge(year: number, now: Date = new Date()): string {
+  const age = now.getFullYear() - year;
+  if (age <= 0) return 'this year';
+  if (age === 1) return '1y ago';
+  return `${age}y ago`;
 }
 
 /**
@@ -163,8 +198,10 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     },
     goodsAnchor: { name: 'rice', unit: 'bags of rice', price: 80_000 },
     riskEvents: [
-      { year: 2023, event: 'Tinubu unification', impact: 'Naira devalued 40% as new president floated the currency' },
-      { year: 2024, event: 'Multiple FX windows', impact: 'Continued gap between official and parallel market rates' },
+      { year: 2023, event: 'Tinubu unification', impact: 'Naira devalued 40% as new president floated the currency', asOf: '2026-09-26' },
+      { year: 2024, event: 'Multiple FX windows', impact: 'Continued gap between official and parallel market rates', asOf: '2026-09-26' },
+      { year: 2025, event: 'First annual gain in 13 years', impact: 'Naira appreciated 7.4% to ₦1,429/$ as CBN reforms narrowed the official–parallel gap below 5%', asOf: '2026-09-26' },
+      { year: 2026, event: 'Rate-cut test', impact: 'Held ~₦1,330/$ with reserves above $54B even as the CBN cut rates 350bps in September', asOf: '2026-09-26' },
     ],
   },
   {
@@ -229,9 +266,10 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     },
     goodsAnchor: { name: 'maize flour', unit: '2kg bags of maize flour', price: 220 },
     riskEvents: [
-      { year: 2022, event: 'General Election', impact: 'KES dropped 6.8% in the 3 months around the election cycle' },
-      { year: 2023, event: 'Eurobond maturity pressure', impact: 'KES hit record low as $2B Eurobond repayment loomed' },
-      { year: 2024, event: 'Anti-government protests', impact: 'Currency volatility spiked during Gen Z protests over finance bill' },
+      { year: 2022, event: 'General Election', impact: 'KES dropped 6.8% in the 3 months around the election cycle', asOf: '2026-09-26' },
+      { year: 2023, event: 'Eurobond maturity pressure', impact: 'KES hit record low as $2B Eurobond repayment loomed', asOf: '2026-09-26' },
+      { year: 2024, event: 'Anti-government protests', impact: 'Currency volatility spiked during Gen Z protests over finance bill', asOf: '2026-09-26' },
+      { year: 2025, event: 'Record stability', impact: 'Pinned near KSh129/$ for 16 straight months — IMF questioned whether CBK dollar-buying muted policy transmission', asOf: '2026-09-26' },
     ],
   },
   {
@@ -246,8 +284,9 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsXAU: { '1yr': -18, '3yr': -35, '5yr': -45 },
     },
     riskEvents: [
-      { year: 2023, event: 'Load-shedding crisis', impact: 'Record power cuts dragged ZAR to weakest level as GDP contracted' },
-      { year: 2024, event: 'Election uncertainty', impact: 'ANC lost majority for first time, coalition talks weakened rand' },
+      { year: 2023, event: 'Load-shedding crisis', impact: 'Record power cuts dragged ZAR to weakest level as GDP contracted', asOf: '2026-09-26' },
+      { year: 2024, event: 'Election uncertainty', impact: 'ANC lost majority for first time, coalition talks weakened rand', asOf: '2026-09-26' },
+      { year: 2025, event: 'Best year since 2009', impact: 'Rand gained ~13% vs USD — first annual rise since 2019 — despite April’s 31% tariff shock hitting R19/$', asOf: '2026-09-26' },
     ],
   },
   {
@@ -294,8 +333,9 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsXAU: { '1yr': -21, '3yr': -35, '5yr': -49 },
     },
     riskEvents: [
-      { year: 2022, event: 'Lula vs Bolsonaro election', impact: 'BRL volatility spiked during polarized presidential race' },
-      { year: 2023, event: 'Fiscal concerns', impact: "Real weakened as new government's spending plans spooked markets" },
+      { year: 2022, event: 'Lula vs Bolsonaro election', impact: 'BRL volatility spiked during polarized presidential race', asOf: '2026-09-26' },
+      { year: 2023, event: 'Fiscal concerns', impact: "Real weakened as new government's spending plans spooked markets", asOf: '2026-09-26' },
+      { year: 2025, event: 'Carry rally', impact: 'Real gained ~14% vs USD to ~R$5.32/$ as the 15% Selic drew carry inflows amid global dollar weakness', asOf: '2026-09-26' },
     ],
   },
   {
@@ -431,7 +471,8 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsXAU: { '1yr': -12, '3yr': -22, '5yr': -30 },
     },
     riskEvents: [
-      { year: 2024, event: 'Sheinbaum election', impact: 'MXN weakened 7% on election day as markets assessed nearshoring continuity' },
+      { year: 2024, event: 'Sheinbaum election', impact: 'MXN weakened 7% on election day as markets assessed nearshoring continuity', asOf: '2026-09-26' },
+      { year: 2025, event: 'Strongest year in decades', impact: 'Peso gained ~14% to ~18/$ — best since the 1990s — despite February’s tariff spike to 21.3/$', asOf: '2026-09-26' },
     ],
   },
   {
@@ -518,8 +559,9 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsXAU: { '1yr': -17, '3yr': -30, '5yr': -41 },
     },
     riskEvents: [
-      { year: 2022, event: 'Mini-budget crisis', impact: 'GBP crashed to parity with USD after unfunded tax cuts; Bank of England intervened' },
-      { year: 2024, event: 'Election + fiscal uncertainty', impact: "Pound volatility as new government's spending plans drew scrutiny" },
+      { year: 2022, event: 'Mini-budget crisis', impact: 'GBP crashed to parity with USD after unfunded tax cuts; Bank of England intervened', asOf: '2026-09-26' },
+      { year: 2024, event: 'Election + fiscal uncertainty', impact: "Pound volatility as new government's spending plans drew scrutiny", asOf: '2026-09-26' },
+      { year: 2025, event: 'Budget jitters', impact: 'Sterling gained ~5% for the year but November budget hedging costs hit multi-month highs after repeated gilt selloffs', asOf: '2026-09-26' },
     ],
   },
   {
@@ -534,8 +576,9 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsXAU: { '1yr': -18, '3yr': -32, '5yr': -38 },
     },
     riskEvents: [
-      { year: 2022, event: 'Energy crisis', impact: 'EUR dropped to parity with USD as energy import costs surged after Russia-Ukraine war' },
-      { year: 2023, event: 'Inflation peak 9.2%', impact: 'Eurozone inflation hit record highs, eroding purchasing power across the bloc' },
+      { year: 2022, event: 'Energy crisis', impact: 'EUR dropped to parity with USD as energy import costs surged after Russia-Ukraine war', asOf: '2026-09-26' },
+      { year: 2023, event: 'Inflation peak 9.2%', impact: 'Eurozone inflation hit record highs, eroding purchasing power across the bloc', asOf: '2026-09-26' },
+      { year: 2025, event: 'Euro breakout', impact: 'Top G10 performer in 2025, +13% vs USD to ~1.18 — highest since 2021 — on dollar weakness and German fiscal stimulus', asOf: '2026-09-26' },
     ],
   },
   {
@@ -550,9 +593,11 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
       vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
     },
     riskEvents: [
-      { year: 2022, event: 'Inflation crisis', impact: 'USD inflation hit 8% — the highest in 40 years. Purchasing power eroded significantly' },
-      { year: 2023, event: 'Debt ceiling standoff', impact: 'US nearly defaulted on sovereign debt; credit rating downgraded by Fitch' },
-      { year: 2024, event: 'Election volatility', impact: 'Political polarization drove uncertainty about dollar stability and fiscal policy' },
+      { year: 2022, event: 'Inflation crisis', impact: 'USD inflation hit 8% — the highest in 40 years. Purchasing power eroded significantly', asOf: '2026-09-26' },
+      { year: 2023, event: 'Debt ceiling standoff', impact: 'US nearly defaulted on sovereign debt; credit rating downgraded by Fitch', asOf: '2026-09-26' },
+      { year: 2024, event: 'Election volatility', impact: 'Political polarization drove uncertainty about dollar stability and fiscal policy', asOf: '2026-09-26' },
+      { year: 2025, event: 'Worst first half since 1973', impact: 'DXY fell 10.8% in H1 2025 on tariff policy and Fed-independence worries; Moody’s stripped the AAA rating in May', asOf: '2026-09-26' },
+      { year: 2026, event: 'Winner-takes-all rebound', impact: 'USD was the best-performing major currency in H1 2026 (+3%) on Fed hike bets and demand for US assets', asOf: '2026-09-26' },
     ],
   },
 ];

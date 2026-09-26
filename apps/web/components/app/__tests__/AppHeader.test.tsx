@@ -1,5 +1,5 @@
-import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, within, cleanup } from '@testing-library/react';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, within, cleanup, fireEvent, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
 
@@ -140,5 +140,73 @@ describe('AppHeader — one connect affordance below sm', () => {
     render(<AppHeader {...baseProps} address={null} isFarcaster activeTab="overview" />);
     expect(screen.getByTestId('farcaster-wallet-button')).toBeInTheDocument();
     expect(screen.queryByTestId('wallet-button')).not.toBeInTheDocument();
+  });
+});
+
+describe('AppHeader — first-visit mode tip', () => {
+  const tipText = () => screen.queryByText(/Tap →/);
+  const modeToggle = () =>
+    screen.getByRole('button', { name: /Switch to .* mode/ });
+
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  it('shows on first visit and auto-dismisses after 4s, persisting dismissal', () => {
+    vi.useFakeTimers();
+    try {
+      render(<AppHeader {...baseProps} address={null} activeTab="overview" />);
+      expect(tipText()).toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(3999));
+      expect(tipText()).toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(1));
+      expect(tipText()).not.toBeInTheDocument();
+      expect(window.localStorage.getItem('seenModeTip')).toBe('1');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('dismisses on an outside pointerdown; a click inside the tip survives', () => {
+    render(<AppHeader {...baseProps} address={null} activeTab="overview" />);
+    const tip = tipText()!.closest('div')!;
+
+    fireEvent.pointerDown(tip);
+    expect(tipText()).toBeInTheDocument();
+
+    fireEvent.pointerDown(document.body);
+    expect(tipText()).not.toBeInTheDocument();
+    expect(window.localStorage.getItem('seenModeTip')).toBe('1');
+  });
+
+  it('never shows for a returning visitor, but hover still opens the tooltip', () => {
+    window.localStorage.setItem('seenModeTip', '1');
+    render(<AppHeader {...baseProps} address={null} activeTab="overview" />);
+    expect(tipText()).not.toBeInTheDocument();
+
+    fireEvent.mouseEnter(modeToggle().closest('div')!);
+    expect(tipText()).toBeInTheDocument();
+
+    fireEvent.mouseLeave(modeToggle().closest('div')!);
+    expect(tipText()).not.toBeInTheDocument();
+  });
+
+  it('cleans up the timer and listener on unmount', () => {
+    vi.useFakeTimers();
+    try {
+      const removeSpy = vi.spyOn(document, 'removeEventListener');
+      const { unmount } = render(
+        <AppHeader {...baseProps} address={null} activeTab="overview" />,
+      );
+      unmount();
+      expect(removeSpy).toHaveBeenCalledWith('pointerdown', expect.any(Function));
+      // The pending timeout must not fire post-unmount.
+      act(() => vi.advanceTimersByTime(5000));
+      removeSpy.mockRestore();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

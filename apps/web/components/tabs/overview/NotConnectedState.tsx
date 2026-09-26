@@ -34,6 +34,7 @@ export function NotConnectedState({
     inflationMoment,
     isLoading,
     countryCode,
+    countryIsDefault,
     benchmarks,
     horizons,
     setBenchmark,
@@ -43,7 +44,7 @@ export function NotConnectedState({
     frame,
     viewingShared,
     clearSharedView,
-  } = useCurrencyMoment();
+  } = useCurrencyMoment({ fallbackCountryCode: 'NG' });
   const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
 
   const selectBenchmark = (b: Benchmark) => {
@@ -75,7 +76,8 @@ export function NotConnectedState({
           currencySelected={inspectedCurrency === moment.currencyCode}
           viewingShared={viewingShared}
           onClearSharedView={clearSharedView}
-          rememberVisit={isActive && !viewingShared}
+          countryIsDefault={countryIsDefault}
+          rememberVisit={isActive && !viewingShared && !countryIsDefault}
         />
       ) : inflationMoment ? (
         <InflationMomentCard

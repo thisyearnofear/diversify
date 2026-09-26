@@ -13,6 +13,21 @@ const mocks = vi.hoisted(() => ({
   query: {} as Record<string, string | string[] | undefined>,
   isReady: false,
   setCountryOverride: vi.fn(),
+  // The visitor's own currency is Kenya's shilling — overridable per test.
+  // riskData is populated in beforeEach (CURRENCY_BY_CODE isn't
+  // initialized yet when the hoisted block runs).
+  risk: {
+    currencyCode: 'KES' as string | null,
+    riskData: null as unknown,
+    countryCode: 'KE' as string | null,
+    countryName: 'Kenya' as string | null,
+    region: 'Africa' as const,
+    isBenchmarkCurrency: false,
+    liveDepreciation1yr: null as number | null,
+    isLive1yr: false,
+    dataAsOf: '2025-07-01',
+    isLoading: false,
+  },
 }));
 
 vi.mock('next/router', () => ({
@@ -23,19 +38,9 @@ vi.mock('next/router', () => ({
   }),
 }));
 
-// The visitor's own currency is Kenya's shilling.
 vi.mock('@/hooks/use-currency-risk', () => ({
   useCurrencyRisk: () => ({
-    currencyCode: 'KES',
-    riskData: CURRENCY_BY_CODE['KES'] ?? null,
-    countryCode: 'KE',
-    countryName: 'Kenya',
-    region: 'Africa',
-    isBenchmarkCurrency: false,
-    liveDepreciation1yr: null,
-    isLive1yr: false,
-    dataAsOf: '2025-07-01',
-    isLoading: false,
+    ...mocks.risk,
     setCountryOverride: mocks.setCountryOverride,
   }),
 }));
@@ -57,6 +62,12 @@ import { useCurrencyMoment } from '../use-currency-moment';
 beforeEach(() => {
   mocks.query = {};
   mocks.isReady = false;
+  mocks.risk.currencyCode = 'KES';
+  mocks.risk.riskData = CURRENCY_BY_CODE['KES'] ?? null;
+  mocks.risk.countryCode = 'KE';
+  mocks.risk.countryName = 'Kenya';
+  mocks.risk.isBenchmarkCurrency = false;
+  mocks.risk.isLoading = false;
   vi.clearAllMocks();
   window.localStorage.clear();
 });
@@ -111,5 +122,62 @@ describe('useCurrencyMoment — shared-card landing', () => {
     const again = renderHook(() => useCurrencyMoment());
     expect(again.result.current.viewingShared).toBe(false);
     expect(again.result.current.moment?.currencyCode).toBe('KES');
+  });
+});
+
+describe('useCurrencyMoment — display-only default country', () => {
+  function geoFailed() {
+    mocks.risk.currencyCode = null;
+    mocks.risk.riskData = null;
+    mocks.risk.countryCode = null;
+    mocks.risk.countryName = null;
+    mocks.risk.isLoading = false;
+  }
+
+  it('keeps the moment alive on the fallback country when detection yields no country', () => {
+    geoFailed();
+    const { result } = renderHook(() =>
+      useCurrencyMoment({ fallbackCountryCode: 'NG' }),
+    );
+    expect(result.current.moment?.currencyCode).toBe('NGN');
+    expect(result.current.countryIsDefault).toBe(true);
+    // Display-only: nothing writes a country the visitor never chose.
+    expect(mocks.setCountryOverride).not.toHaveBeenCalled();
+    expect(window.localStorage.getItem('user-country-code')).toBeNull();
+  });
+
+  it('never shows the fallback while detection is still running or without the option', () => {
+    geoFailed();
+    mocks.risk.isLoading = true;
+    const { result: loading } = renderHook(() =>
+      useCurrencyMoment({ fallbackCountryCode: 'NG' }),
+    );
+    expect(loading.current.moment).toBeNull();
+    expect(loading.current.countryIsDefault).toBe(false);
+
+    mocks.risk.isLoading = false;
+    const { result: noOpt } = renderHook(() => useCurrencyMoment());
+    expect(noOpt.current.moment).toBeNull();
+    expect(noOpt.current.countryIsDefault).toBe(false);
+  });
+
+  it('a detected or overridden country always beats the fallback', () => {
+    const { result } = renderHook(() =>
+      useCurrencyMoment({ fallbackCountryCode: 'NG' }),
+    );
+    expect(result.current.moment?.currencyCode).toBe('KES');
+    expect(result.current.countryIsDefault).toBe(false);
+  });
+
+  it('a shared-card view wins over the fallback and is not marked default', () => {
+    geoFailed();
+    mocks.isReady = true;
+    mocks.query = { currency: 'BRL' };
+    const { result } = renderHook(() =>
+      useCurrencyMoment({ fallbackCountryCode: 'NG' }),
+    );
+    expect(result.current.viewingShared).toBe(true);
+    expect(result.current.moment?.currencyCode).toBe('BRL');
+    expect(result.current.countryIsDefault).toBe(false);
   });
 });

@@ -24,6 +24,7 @@ import {
   type PairWhatIf,
 } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
+import { riskEventAge, riskTrailCheckedAt } from '@/constants/currency-risk';
 import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
 import { TokenIcon } from '../shared/TokenIcon';
 import { springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
@@ -375,9 +376,14 @@ function SideTrack({ side }: { side: CorridorSide }) {
         <div className="mt-0.5 space-y-0.5">
           {[...e.riskEvents].reverse().map((ev, i) => (
             <p key={`${ev.year}-${i}`} className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
-              {ev.year}: {ev.event} — {ev.impact}
+              {ev.year} ({riskEventAge(ev.year)}): {ev.event} — {ev.impact}
             </p>
           ))}
+          {/* Freshness is disclosed, not implied — the trail reports when
+              it was last verified against named sources. */}
+          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+            Checked {riskTrailCheckedAt(e)} · curated, not a feed
+          </p>
         </div>
       )}
       {e.goodsAnchor && (

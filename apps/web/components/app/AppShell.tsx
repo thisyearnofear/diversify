@@ -84,20 +84,32 @@ function AppShellInner() {
 
   // Desktop Ask Guardian dock: when the panel is open on a wide enough
   // viewport, reflow the main column beside it instead of letting the
-  // panel cover the card edge. Below ~1180px the column + 420px panel +
+  // panel cover the card edge. Below ~1180px the column + panel +
   // gutters no longer fit, so the panel keeps overlaying (unchanged).
+  // The panel is 340px through the lg range and widens to 420px at xl —
+  // the reflow padding tracks whichever width is active (32px gutter).
   const isDrawerOpen = useAIConversationOptional()?.isDrawerOpen ?? false;
   const reducedMotion = useReducedMotion();
   const [wideEnoughToDock, setWideEnoughToDock] = useState(false);
+  const [atXl, setAtXl] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia?.("(min-width: 1180px)");
-    if (!mq) return;
-    const update = () => setWideEnoughToDock(mq.matches);
+    const mqXl = window.matchMedia?.("(min-width: 1280px)");
+    if (!mq || !mqXl) return;
+    const update = () => {
+      setWideEnoughToDock(mq.matches);
+      setAtXl(mqXl.matches);
+    };
     update();
     mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    mqXl.addEventListener("change", update);
+    return () => {
+      mq.removeEventListener("change", update);
+      mqXl.removeEventListener("change", update);
+    };
   }, []);
   const guardianDocked = isDrawerOpen && wideEnoughToDock;
+  const dockPadding = atXl ? 452 : 372;
 
   // Philosophy accent for the ambient backdrop (static, §5-compliant).
   const { financialStrategy } = useStrategy();
@@ -107,7 +119,7 @@ function AppShellInner() {
     <motion.div
       className="lg:pl-20"
       data-guardian-docked={guardianDocked || undefined}
-      animate={{ paddingRight: guardianDocked ? 452 : 0 }}
+      animate={{ paddingRight: guardianDocked ? dockPadding : 0 }}
       transition={{ duration: reducedMotion ? 0 : 0.3, ease: [0.32, 0.72, 0, 1] }}
     >
       <DesktopRail

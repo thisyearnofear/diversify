@@ -790,7 +790,7 @@ export default function AIChat() {
           transition={spring}
           className={
             isDesktop
-              ? "fixed right-4 bottom-4 z-[50] isolate bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-[420px] h-[min(720px,calc(100dvh-2rem))] flex flex-col pointer-events-auto border border-gray-200 dark:border-white/10 overflow-hidden"
+              ? "fixed right-4 bottom-4 z-[50] isolate bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-[340px] xl:w-[420px] h-[min(720px,calc(100dvh-2rem))] flex flex-col pointer-events-auto border border-gray-200 dark:border-white/10 overflow-hidden"
               : "relative z-[50] isolate bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl w-full max-w-2xl mx-auto min-h-[60dvh] max-h-[var(--chat-drawer-max-h,92dvh)] flex flex-col pointer-events-auto border-t border-white/10 pb-[env(safe-area-inset-bottom)]"
           }
           role="dialog"
@@ -1405,7 +1405,7 @@ export default function AIChat() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your portfolio, macro outlook, or strategy..."
+                placeholder="Ask about your savings…"
                 aria-label="Ask your Guardian a question"
                 className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white pr-10"
               />

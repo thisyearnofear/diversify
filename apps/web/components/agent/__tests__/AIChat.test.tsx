@@ -307,7 +307,9 @@ describe('AIChat — desktop docked panel', () => {
     setViewport(true);
     render(<AIChat />);
     const panel = screen.getByRole('dialog', { name: 'Ask Guardian' });
-    expect(panel.className).toContain('w-[420px]');
+    // 340px through the lg range, widening to 420px at xl+.
+    expect(panel.className).toContain('w-[340px]');
+    expect(panel.className).toContain('xl:w-[420px]');
     expect(panel.className).toContain('rounded-3xl');
     expect(screen.queryByTestId('scrim')).not.toBeInTheDocument();
     // No drag handle on desktop

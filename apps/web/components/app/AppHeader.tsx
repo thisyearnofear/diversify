@@ -2,7 +2,7 @@
  * AppHeader — The top header bar for the DiversiFi app.
  * Contains: logo, mode toggle, voice button, wallet button.
  */
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { UserExperienceMode } from "@/context/app/types";
 import type { TabId } from "@/constants/tabs";
 import VoiceButton from "@/components/ui/VoiceButton";
@@ -64,10 +64,29 @@ export default function AppHeader({
     if (typeof window === "undefined") return false;
     return !localStorage.getItem("seenModeTip");
   });
-  const dismissModeTip = () => {
+  const dismissModeTip = useCallback(() => {
     setShowModeTip(false);
     if (typeof window !== "undefined") localStorage.setItem("seenModeTip", "1");
-  };
+  }, []);
+  const modeTipRef = useRef<HTMLDivElement>(null);
+
+  // The first-visit tip is a temporary hello, not a resident banner:
+  // it auto-dismisses after 4s or on any outside pointerdown, and the
+  // dismissal persists (seenModeTip) so it never nags twice. Hovering
+  // the toggle still re-opens the tooltip via activeHint — that path is
+  // unaffected and stays available forever.
+  useEffect(() => {
+    if (!showModeTip) return;
+    const timer = window.setTimeout(dismissModeTip, 4000);
+    const onPointerDown = (e: PointerEvent) => {
+      if (!modeTipRef.current?.contains(e.target as Node)) dismissModeTip();
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener("pointerdown", onPointerDown);
+    };
+  }, [showModeTip, dismissModeTip]);
 
   // The streak badge's claim affordance rides the shared claim flow —
   // "Claim ready" in the header is a working action, not just a signal.
@@ -148,7 +167,7 @@ export default function AppHeader({
             </span>
           </button>
           {(activeHint === "mode" || showModeTip) && (
-            <div className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
+            <div ref={modeTipRef} className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
               <button
                 onClick={() => { setActiveHint(null); dismissModeTip(); }}
                 className="absolute top-1.5 right-2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs leading-none"

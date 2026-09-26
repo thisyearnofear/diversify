@@ -11,6 +11,7 @@ const hookState = vi.hoisted(() => ({
   inflationMoment: null as Record<string, unknown> | null,
   isLoading: false,
   countryCode: null as string | null,
+  countryIsDefault: false,
   onChangeCountry: vi.fn(),
 }));
 
@@ -20,6 +21,7 @@ vi.mock("@/hooks/use-currency-moment", () => ({
     inflationMoment: hookState.inflationMoment,
     isLoading: hookState.isLoading,
     countryCode: hookState.countryCode,
+    countryIsDefault: hookState.countryIsDefault,
     benchmarks: [],
     horizons: [],
     setBenchmark: vi.fn(),
@@ -31,8 +33,18 @@ vi.mock("@/hooks/use-currency-moment", () => ({
 }));
 
 vi.mock("@/components/tabs/overview/CurrencyMomentCard", () => ({
-  CurrencyMomentCard: ({ rememberVisit }: { rememberVisit?: boolean }) => (
-    <div data-testid="moment-card" data-remember-visit={String(rememberVisit)} />
+  CurrencyMomentCard: ({
+    rememberVisit,
+    countryIsDefault,
+  }: {
+    rememberVisit?: boolean;
+    countryIsDefault?: boolean;
+  }) => (
+    <div
+      data-testid="moment-card"
+      data-remember-visit={String(rememberVisit)}
+      data-country-is-default={String(countryIsDefault)}
+    />
   ),
 }));
 vi.mock("@/components/tabs/overview/InflationMomentCard", () => ({
@@ -54,6 +66,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     hookState.inflationMoment = null;
     hookState.isLoading = false;
     hookState.countryCode = null;
+    hookState.countryIsDefault = false;
     hookState.onChangeCountry.mockReset();
   });
 
@@ -132,6 +145,19 @@ describe("NotConnectedState — Home's unconnected morph", () => {
       "data-remember-visit",
       "true",
     );
+  });
+
+  it("geo failed → the moment object still renders as a display-only default and stays out of visit memory", () => {
+    hookState.moment = { currencyCode: "NGN", benchmark: "USD" };
+    hookState.countryIsDefault = true;
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+
+    const card = screen.getByTestId("moment-card");
+    // The object stays alive — the card renders instead of a picker-only
+    // dead end — but the default is honest: flagged as default and kept
+    // out of visit memory (default views never read or write memory).
+    expect(card).toHaveAttribute("data-country-is-default", "true");
+    expect(card).toHaveAttribute("data-remember-visit", "false");
   });
 
   it("picking a country from the fallback re-points the moment (judge path: geo blocked → still lands on their currency)", () => {

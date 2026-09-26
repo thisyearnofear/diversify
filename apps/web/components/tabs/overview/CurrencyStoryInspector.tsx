@@ -8,7 +8,11 @@
 import React, { useState } from 'react';
 import { InspectorSheet } from '../../shared/InspectorSheet';
 import { useAdvisor } from '@/hooks/use-advisor';
-import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import {
+  CURRENCY_BY_CODE,
+  riskEventAge,
+  riskTrailCheckedAt,
+} from '@/constants/currency-risk';
 import { momentCardContent } from '@/lib/moment-card';
 import { trackFunnelEvent } from '@/lib/analytics';
 
@@ -72,9 +76,14 @@ function CurrencyStoryBody({
               key={`${ev.year}-${i}`}
               className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed"
             >
-              {ev.year}: {ev.event} — {ev.impact}
+              {ev.year} ({riskEventAge(ev.year)}): {ev.event} — {ev.impact}
             </p>
           ))}
+          {/* Freshness is disclosed, not implied — same provenance
+              grammar as the corridor trail. */}
+          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+            Checked {riskTrailCheckedAt(entry)} · curated, not a feed
+          </p>
         </div>
       )}
       {content && <MomentShareLine code={entry.code} />}

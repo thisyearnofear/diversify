@@ -15,7 +15,7 @@ import { render, screen, cleanup, fireEvent, act, within } from '@testing-librar
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, pairWhatIfFor } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
-import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import { CURRENCY_BY_CODE, riskEventAge } from '@/constants/currency-risk';
 
 afterEach(() => cleanup());
 
@@ -467,14 +467,31 @@ describe('CorridorDetail', () => {
   it('renders the full dated event trail, newest first', () => {
     render(<CorridorDetail fromToken="NGNm" toToken="USDC" />);
     const detail = screen.getByTestId('corridor-detail');
-    // Nigeria has two curated events (2023 unification, 2024 FX windows) —
-    // both render, 2024 before 2023.
+    // Nigeria's curated events render newest first — year + age label,
+    // then the event and its impact. Ages are computed so the test
+    // stays honest in any year.
     const t = detail.textContent!;
-    const y2024 = t.indexOf('2024: Multiple FX windows');
-    const y2023 = t.indexOf('2023: Tinubu unification');
-    expect(y2024).toBeGreaterThanOrEqual(0);
-    expect(y2023).toBeGreaterThanOrEqual(0);
-    expect(y2024).toBeLessThan(y2023);
+    const newest = t.indexOf(`2026 (${riskEventAge(2026)}): Rate-cut test`);
+    const older = t.indexOf(`2023 (${riskEventAge(2023)}): Tinubu unification`);
+    expect(newest).toBeGreaterThanOrEqual(0);
+    expect(older).toBeGreaterThanOrEqual(0);
+    expect(newest).toBeLessThan(older);
+  });
+
+  it('discloses when the trail was last verified — freshness is not implied', () => {
+    render(<CorridorDetail fromToken="NGNm" toToken="USDC" />);
+    const detail = screen.getByTestId('corridor-detail');
+    // NGN's trail was refreshed 2026-09-26; USD's too.
+    expect(detail).toHaveTextContent('Checked 2026-09-26 · curated, not a feed');
+  });
+
+  it('falls back to the dataset review date for trails that predate per-event verification', () => {
+    // GHS was not part of the freshness refresh — its trail honestly
+    // reports the dataset-level review date, not a check it never got.
+    render(<CorridorDetail fromToken="GHSm" toToken="USDC" />);
+    expect(screen.getByTestId('corridor-detail')).toHaveTextContent(
+      'Checked 2025-07-01 · curated, not a feed',
+    );
   });
 
   it('labels the gold side as the benchmark rather than inventing a track', () => {

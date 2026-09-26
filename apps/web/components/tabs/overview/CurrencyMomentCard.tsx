@@ -56,6 +56,10 @@ interface Props {
   /** A shared-card view — shows "← Your currency" to return. */
   viewingShared?: boolean;
   onClearSharedView?: () => void;
+  /** True when the moment's country is a display-only default (detection
+   *  produced no country and nothing was chosen). The country picker
+   *  stays unset — honest: nothing was detected or persisted. */
+  countryIsDefault?: boolean;
   rememberVisit?: boolean;
   className?: string;
 }
@@ -113,6 +117,7 @@ export function CurrencyMomentCard({
   currencySelected = false,
   viewingShared = false,
   onClearSharedView,
+  countryIsDefault = false,
   rememberVisit = true,
 }: Props) {
   const reducedMotion = useReducedMotion();
@@ -426,13 +431,22 @@ export function CurrencyMomentCard({
 
       {/* Whose savings — diaspora override. Detection is location, risk is
           personal; lets a London-dwelling Ghanaian re-point the moment at
-          GHS. Two controls max, so this stays quiet as the last line. */}
+          GHS. Two controls max, so this stays quiet as the last line. On a
+          display-only default country the picker stays unset and names the
+          default — nothing was detected, so nothing claims otherwise. */}
       {onChangeCountry && (
-        <CountryOverrideSelect
-          currentCountryCode={moment.iso2}
-          currentCountryName={moment.countryName}
-          onChange={onChangeCountry}
-        />
+        <>
+          {countryIsDefault && (
+            <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+              Country not detected — showing {moment.countryName} by default.
+            </p>
+          )}
+          <CountryOverrideSelect
+            currentCountryCode={countryIsDefault ? '' : moment.iso2}
+            currentCountryName={countryIsDefault ? '' : moment.countryName}
+            onChange={onChangeCountry}
+          />
+        </>
       )}
     </div>
   );

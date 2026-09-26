@@ -36,6 +36,7 @@ import {
   CURRENCY_BY_CODE,
   HORIZON_KEYS,
   exampleSavingsFor,
+  getCurrencyRisk,
   type Benchmark,
   type Horizon,
 } from '@/constants/currency-risk';
@@ -66,9 +67,23 @@ export interface UseCurrencyMomentReturn {
   viewingShared: boolean;
   /** Leave the shared view and return to the visitor's own currency. */
   clearSharedView: () => void;
+  /** True when the moment on screen is the display-only default country
+      (no detected or chosen country behind it). Nothing is persisted —
+      the country picker stays unset until the visitor chooses. */
+  countryIsDefault: boolean;
 }
 
-export function useCurrencyMoment(): UseCurrencyMomentReturn {
+export interface UseCurrencyMomentOptions {
+  /** ISO2 of a display-only default country used when detection yields
+      no country at all (geo blocked, VPN, locale-only match). Keeps the
+      moment object alive instead of collapsing to a picker-only state.
+      Display-only: it never writes user-country-code. */
+  fallbackCountryCode?: string;
+}
+
+export function useCurrencyMoment(
+  options?: UseCurrencyMomentOptions,
+): UseCurrencyMomentReturn {
   const risk = useCurrencyRisk();
   const { inflationData, dataSource, getDataFreshness } = useInflationData();
   const { config: profileConfig } = useProtectionProfile();
@@ -102,7 +117,21 @@ export function useCurrencyMoment(): UseCurrencyMomentReturn {
     if (viewCode && risk.currencyCode === viewCode) setViewCode(null);
   }, [viewCode, risk.currencyCode]);
   const viewEntry = viewCode ? CURRENCY_BY_CODE[viewCode] ?? null : null;
-  const activeEntry = viewEntry ?? risk.riskData;
+  // Geo failed entirely (no detected country, no override, detection
+  // finished): the object still renders — seeded with the caller's
+  // display-only default country. Nothing is persisted: the country
+  // picker stays unset and visit memory stays off until the visitor
+  // deliberately picks a country (demo-rule: default views never read
+  // or write memory).
+  const fallbackEntry =
+    options?.fallbackCountryCode &&
+    !risk.isLoading &&
+    !risk.countryCode &&
+    !risk.riskData
+      ? getCurrencyRisk(options.fallbackCountryCode)
+      : null;
+  const activeEntry = viewEntry ?? risk.riskData ?? fallbackEntry;
+  const countryIsDefault = !viewEntry && !risk.riskData && fallbackEntry !== null;
 
   useEffect(() => {
     if (!activeEntry) return;
@@ -191,6 +220,7 @@ export function useCurrencyMoment(): UseCurrencyMomentReturn {
     },
     /** The effective country code (detected or overridden) shown right now. */
     countryCode: risk.countryCode,
+    countryIsDefault,
     viewingShared: Boolean(viewEntry),
     clearSharedView: () => setViewCode(null),
     /** Philosophy-aware accent + consequence, or null when no philosophy.
