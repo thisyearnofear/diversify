@@ -1,18 +1,28 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import dbConnect from '../../../lib/mongodb';
-import { CreditClaim } from '../../../models/CreditClaim';
+import { getClientIp } from '../../../lib/rate-limit';
+import {
+  resolveSubject,
+  getAllowance,
+  grantEarnAction,
+  dailyLimitFor,
+} from '../../../models/AgentUsage';
 import type { RewardActionKey } from '../../../constants/credits';
-import { REWARD_ACTIONS, REQUIRES_PROOF } from '../../../constants/credits';
+import {
+  REWARD_ACTIONS,
+  REQUIRES_PROOF,
+  nextUtcMidnightIso,
+} from '../../../constants/credits';
 
 /**
- * Credits & Freemium Status API
+ * Daily-question allowance API (was: decorative "protection balance"
+ * credits — no money was ever involved, so the unit is now questions).
  *
- * Verifiable credit claims with server-side deduplication.
- * Each (userAddress, action) can only be claimed once — enforced at the
- * database level via a unique compound index.
- *
- * URL-based rewards (blog, video, tweet) are verified by fetching the URL
- * and checking for "DiversiFi" in the page text before granting credits.
+ * GET  ?subject=<wallet>  → { remaining, limit, bonus, resetsAt, earnedToday }
+ *       No subject → keyed by client IP (walletless allowance).
+ * POST { action, subject?, proof? } → grants the action's questions once
+ *       per subject per UTC day; dedupe is enforced on the AgentUsage day
+ *       doc. Proof-required actions still verify the URL mentions
+ *       DiversiFi before granting.
  */
 
 /** Verify a proof URL actually contains DiversiFi content */
@@ -45,57 +55,43 @@ async function verifyProofUrl(urlStr: string): Promise<boolean> {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // GET with ?userAddress — return all claims for a user (used to sync on
-  // connect). This MUST come before the plain-GET branch: an early return
-  // above would swallow the query and leave this branch unreachable.
-  if (req.method === 'GET' && req.query.userAddress) {
-    const userAddress = String(req.query.userAddress).toLowerCase();
+  const ip = getClientIp(req);
+
+  // GET ?subject= — today's allowance. Walletless callers omit subject and
+  // are keyed by IP (the hook can't know its own public IP).
+  if (req.method === 'GET') {
+    const { subject, kind } = resolveSubject(req.query.subject, ip);
     try {
-      await dbConnect();
-      const claims = await CreditClaim.find({ userAddress }).sort({ claimedAt: -1 }).lean();
-      const totalEarned = claims.reduce((sum, c) => sum + c.creditsEarned, 0);
-      const completedActions = claims.map(c => c.action);
-      return res.status(200).json({ claims, totalEarned, completedActions });
+      const status = await getAllowance(subject, kind);
+      return res.status(200).json(status);
     } catch {
-      return res.status(200).json({ claims: [], totalEarned: 0, completedActions: [] });
+      // DB unavailable — report the honest base allowance rather than 0.
+      const limit = dailyLimitFor(kind);
+      return res.status(200).json({
+        remaining: limit,
+        limit,
+        bonus: 0,
+        resetsAt: nextUtcMidnightIso(),
+        earnedToday: [],
+      });
     }
   }
 
-  // GET — return reward action definitions
-  if (req.method === 'GET') {
-    return res.status(200).json({ rewardActions: REWARD_ACTIONS });
-  }
-
-  // POST — verify a proof URL and grant credits (one-time per user per action)
+  // POST { action, subject?, proof? } — record an earn action; grants its
+  // questions once per subject per day.
   if (req.method === 'POST') {
-    const { action, proof, userAddress } = req.body as {
+    const { action, subject: subjectParam, proof } = (req.body ?? {}) as {
       action?: RewardActionKey;
+      subject?: string;
       proof?: string;
-      userAddress?: string;
     };
 
     if (!action || !(action in REWARD_ACTIONS)) {
       return res.status(400).json({ error: 'Invalid action' });
     }
 
-    // ── Rate limiting: max 3 POST claims per user per hour ──
-    if (userAddress) {
-      try {
-        await dbConnect();
-        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-        const recentCount = await CreditClaim.countDocuments({
-          userAddress: userAddress.toLowerCase(),
-          claimedAt: { $gte: oneHourAgo },
-        });
-        if (recentCount >= 3) {
-          return res.status(429).json({
-            error: 'Rate limit reached. You can claim up to 3 rewards per hour.',
-          });
-        }
-      } catch {
-        // DB unavailable — skip rate limiting
-      }
-    }
+    const { subject, kind } = resolveSubject(subjectParam, ip);
+    const reward = REWARD_ACTIONS[action];
 
     if (REQUIRES_PROOF.includes(action) && !proof) {
       return res.status(400).json({ error: 'Proof URL required for this action' });
@@ -115,31 +111,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    const reward = REWARD_ACTIONS[action];
-
-    // ── Server-side deduplication (MongoDB) ──
-    if (userAddress) {
-      try {
-        await dbConnect();
-
-        // Check if already claimed
-        const existing = await CreditClaim.findOne({
-          userAddress: userAddress.toLowerCase(),
-          action,
-        });
-
-        if (existing) {
-          return res.status(409).json({
-            error: `You've already claimed the ${reward.label} reward.`,
-            alreadyClaimed: true,
-          });
-        }
-      } catch (dbErr) {
-        // DB unavailable — fall through to client-side-only mode
-        console.warn('[Credits] DB unavailable, skipping server-side dedup:', (dbErr as Error).message);
-      }
-    }
-
     // ── URL content verification ──
     let proofVerified = false;
     if (proof && REQUIRES_PROOF.includes(action)) {
@@ -151,33 +122,39 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // ── Persist claim to MongoDB ──
-    if (userAddress) {
-      try {
-        await CreditClaim.create({
-          userAddress: userAddress.toLowerCase(),
-          action,
-          creditsEarned: reward.credits,
-          proof: proof || null,
-          proofVerified,
+    // ── Grant (dedupe is atomic on the day doc) ──
+    try {
+      const result = await grantEarnAction(subject, kind, action);
+      if (result.alreadyClaimed) {
+        return res.status(409).json({
+          error: `Already claimed "${reward.label}" today — it resets at midnight UTC.`,
+          alreadyClaimed: true,
+          remaining: result.remaining,
+          limit: result.limit,
+          bonus: result.bonus,
+          resetsAt: result.resetsAt,
+          earnedToday: result.earnedToday,
         });
-      } catch (dbErr) {
-        // If duplicate (race condition), still return success since client already incremented
-        console.warn('[Credits] Failed to persist claim:', (dbErr as Error).message);
       }
+      return res.status(200).json({
+        success: true,
+        action,
+        granted: reward.questions,
+        proofVerified,
+        remaining: result.remaining,
+        limit: result.limit,
+        bonus: result.bonus,
+        resetsAt: result.resetsAt,
+        earnedToday: result.earnedToday,
+        message: `${reward.emoji} +${reward.questions} questions for: ${reward.label}`,
+      });
+    } catch (dbErr) {
+      // Store unavailable — refuse the grant rather than credit an
+      // unrecorded bump; the base allowance still applies on reads.
+      console.warn('[Credits] allowance store unavailable:', (dbErr as Error).message);
+      return res.status(503).json({ error: 'Allowance store unavailable — try again in a moment.' });
     }
-
-    return res.status(200).json({
-      success: true,
-      action,
-      creditsEarned: reward.credits,
-      proofVerified,
-      message: `${reward.emoji} +$${reward.credits.toFixed(2)} USDC credits for: ${reward.label}`,
-    });
   }
-
-  // (GET ?userAddress claims branch lives above, before the plain-GET early
-  // return — a copy here would be unreachable dead code.)
 
   return res.status(405).json({ error: 'Method not allowed' });
 }

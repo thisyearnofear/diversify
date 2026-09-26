@@ -507,17 +507,36 @@ export default function AIChat() {
   const [soSoModalOpen, setSoSoModalOpen] = useState(false);
   const [soSoTradeProposal, setSoSoTradeProposal] = useState<SoSoTradeProposal | null>(null);
 
+  // Context line: the tab the user is looking at (+ the live Exchange pair
+  // when it's recoverable from session state — no new plumbing). The same
+  // pair+tab rides the advisor request as `view` so answers can reference
+  // the surface in front of the user.
+  const tabLabel = TAB_LABELS[activeTab as TabId] ?? 'Guardian';
+  const exchangePair =
+    activeTab === 'exchange' && typeof sessionStorage !== 'undefined'
+      ? readExchangePair()
+      : null;
+  const advisorView = {
+    tab: activeTab,
+    ...(exchangePair
+      ? { pair: { from: exchangePair.fromToken, to: exchangePair.toToken } }
+      : {}),
+  };
+  const contextLine = `Looking at: ${tabLabel}${
+    exchangePair ? ` · ${exchangePair.fromToken} → ${exchangePair.toToken}` : ''
+  }`;
+
   const submitPrompt = (prompt: string) => {
     if (!prompt.trim() || isChatting) return;
     addUserMessage(prompt);
-    sendChatMessage(prompt);
+    sendChatMessage(prompt, { view: advisorView });
     setInputValue("");
   };
 
   const submitResearchConfirmation = () => {
     if (isChatting) return;
     addUserMessage("Confirm");
-    sendChatMessage("confirm");
+    sendChatMessage("confirm", { view: advisorView });
     setInputValue("");
   };
 
@@ -644,16 +663,6 @@ export default function AIChat() {
   // Actions are now user-initiated via buttons below each AI response.
   // No auto-triggers — no tab switches, no claim popups, no navigation.
 
-  // Context line: the tab the user is looking at (+ the live Exchange pair
-  // when it's recoverable from session state — no new plumbing).
-  const tabLabel = TAB_LABELS[activeTab as TabId] ?? 'Guardian';
-  const exchangePair =
-    activeTab === 'exchange' && typeof sessionStorage !== 'undefined'
-      ? readExchangePair()
-      : null;
-  const contextLine = `Looking at: ${tabLabel}${
-    exchangePair ? ` · ${exchangePair.fromToken} → ${exchangePair.toToken}` : ''
-  }`;
   const mascotMood = activeGuardianReview ? 'alert' : isChatting ? 'thinking' : 'neutral';
   const starterIds = STARTERS_BY_TAB[activeTab as TabId] ?? DEFAULT_STARTERS;
   const starters = starterIds
@@ -1458,7 +1467,7 @@ export default function AIChat() {
             setSoSoTradeProposal(null);
             const q = `I'm interested in ${proposal.suggestedAction} based on this news: ${proposal.newsItem.title}. What should I consider?`;
             addUserMessage(q);
-            sendChatMessage(q);
+            sendChatMessage(q, { view: advisorView });
           }}
         />
       )}

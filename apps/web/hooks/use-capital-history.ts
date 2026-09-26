@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CapitalHistory } from '@diversifi/shared/src/services/capital-history';
 
-const CACHE_KEY = 'diversifi:capital-history:v1';
+const CACHE_KEY = 'diversifi:capital-history:v2';
 const CACHE_TTL_MS = 10 * 60 * 1000;
 
 interface CacheEntry {

@@ -312,6 +312,79 @@ export function whatIfSentence(whatIf: PairWhatIf): string {
 // page) — so a corridor beat that reacts to the world costs zero
 // additional Firecrawl credits.
 
+// ── Live overlay ───────────────────────────────────────────────────
+//
+// The curated 1yr figure ages between dataset reviews; the live feed
+// (/api/currency-risk/live — fawazahmed0 daily tables) carries the same
+// number as of today. Inspectors overlay it — labelled, never blended —
+// via liveOneYearOverlay, and the currency-story inspector draws the
+// feed's 12-month value series when it has one.
+
+export interface LiveCurrencyRisk {
+  /** Live 1yr depreciation vs USD — same sign convention as the curated
+   *  figures (negative = weakened) — or null when the feed can't compute
+   *  one for this currency. */
+  depreciation1yr: number | null;
+  /** The feed's own fetch date — the honest "as of" for the live figure. */
+  asOf: string | null;
+  /** Sampled 12-month path vs USD indexed to 100 — null on a feed miss. */
+  series: { dates: string[]; values: number[] } | null;
+}
+
+/** One read of the live overlay for a currency code. Null when the
+ *  route can't answer — callers fall back to the curated figure,
+ *  labelled as such. Silent by contract: a feed miss is absence,
+ *  never an error state. */
+export async function fetchLiveCurrencyRisk(
+  code: string | null | undefined,
+): Promise<LiveCurrencyRisk | null> {
+  if (!code) return null;
+  try {
+    const res = await fetch(
+      `/api/currency-risk/live?currency=${encodeURIComponent(code)}`,
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    // Never wear another currency's numbers — a late or mismatched
+    // response is a miss, not a merge.
+    if (data?.currency !== code.toUpperCase()) return null;
+    const dep = data?.depreciation;
+    return {
+      depreciation1yr: typeof dep?.['1yr'] === 'number' ? dep['1yr'] : null,
+      asOf: typeof dep?.asOf === 'string' ? dep.asOf : null,
+      series:
+        Array.isArray(data?.series?.dates) && Array.isArray(data?.series?.values)
+          ? { dates: data.series.dates, values: data.series.values }
+          : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/** The 1yr figure's provenance: live when the feed answered, curated
+ *  otherwise. The two sources are never blended into one number — the
+ *  caller labels whichever one it shows (`live · as of {date}` vs
+ *  `as of {asOf} · curated`). */
+export function liveOneYearOverlay(
+  curated1yr: number,
+  live: LiveCurrencyRisk | null | undefined,
+): { value: number; live: boolean; asOf: string } {
+  const v = live?.depreciation1yr;
+  if (typeof v === 'number' && Number.isFinite(v)) {
+    return { value: v, live: true, asOf: live!.asOf ?? CURRENCY_RISK_DATA_AS_OF };
+  }
+  return { value: curated1yr, live: false, asOf: CURRENCY_RISK_DATA_AS_OF };
+}
+
+/** First-mapped token per fiat code — a fiat-side lookup so non-pair
+ *  surfaces (the currency-story inspector) can ask for a currency's
+ *  freshest beat without knowing which token carries it. */
+const FIAT_TO_TOKEN: Record<string, string> = {};
+for (const [token, fiatCode] of Object.entries(TOKEN_TO_FIAT)) {
+  FIAT_TO_TOKEN[fiatCode] ??= token;
+}
+
 /** A dated macro beat — supersedes a side's standing watch cadence
  *  while fresh. The calendar produced a real event. */
 export interface CorridorSignal {
@@ -405,4 +478,18 @@ export function corridorSignalsFor(
     if (out.from && out.to) break;
   }
   return out;
+}
+
+/** The freshest dated macro signal for a bare fiat code (the currency
+ *  story inspector's trail row). Same freshness, echo and fiat-matching
+ *  rules as corridorSignalsFor; null when nothing fresh exists. */
+export function corridorSignalForCurrency(
+  records: CorridorSignalRecord[] | null | undefined,
+  code: string | null | undefined,
+  nowMs: number = Date.now(),
+): CorridorSignal | null {
+  const token = code ? FIAT_TO_TOKEN[code.toUpperCase()] : undefined;
+  if (!token) return null;
+  // Same fiat on both sides — the newest match lands on `from`.
+  return corridorSignalsFor(records, token, token, nowMs).from;
 }

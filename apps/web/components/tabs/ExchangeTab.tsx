@@ -57,8 +57,10 @@ function fmtDay(iso: string): string {
   });
 }
 
-/** The journey inspector body — settled legs, newest first, each linked
- *  to the explorer. Amounts are settled on-chain, so no "at quote". */
+/** The journey inspector body — settled moves, newest first. A tx that
+ *  sent one currency and received another reads as a swap and links to
+ *  its /receipt page; a bare one-sided move is labeled a transfer. Both
+ *  link the chain they settled on — never a Celo URL for an Arb tx. */
 function JourneyBody({
   history,
   readOnly = false,
@@ -67,6 +69,11 @@ function JourneyBody({
   readOnly?: boolean;
 }) {
   const legs = history?.legs ?? [];
+  // `chains` names every chain actually read — absent on older shapes.
+  const chains = history?.chains ?? [history?.chainId ?? 42220];
+  const chainsLabel = chains
+    .map((id) => (id === 42161 ? "Arbitrum" : id === 42220 ? "Celo" : `chain ${id}`))
+    .join(" + ");
   return (
     <div data-testid="journey-inspector">
       {legs.length === 0 ? (
@@ -75,29 +82,46 @@ function JourneyBody({
         </p>
       ) : (
         <ul className="space-y-2">
-          {legs.map((leg) => (
-            <li
-              key={leg.txHash}
-              className="flex items-center justify-between gap-3 text-xs text-gray-700 dark:text-gray-300"
-            >
-              <span className="tabular-nums">
-                {fmtDay(leg.at)} · {fmtAmount(leg.amountIn)} {leg.from} →{" "}
-                {fmtAmount(leg.amountOut)} {leg.to}
-              </span>
-              <a
-                href={explorerTxUrl(42220, leg.txHash)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-blue-600 hover:underline dark:text-blue-400"
+          {legs.map((leg) => {
+            const kind = leg.kind ?? "swap";
+            const legChain = leg.chainId ?? 42220;
+            const text =
+              kind === "swap"
+                ? `${fmtDay(leg.at)} · ${fmtAmount(leg.amountIn)} ${leg.from} → ${fmtAmount(leg.amountOut)} ${leg.to}`
+                : kind === "sent"
+                  ? `${fmtDay(leg.at)} · Sent ${fmtAmount(leg.amountIn)} ${leg.from}`
+                  : `${fmtDay(leg.at)} · Received ${fmtAmount(leg.amountOut)} ${leg.to}`;
+            return (
+              <li
+                key={`${legChain}:${leg.txHash}`}
+                className="flex items-center justify-between gap-3 text-xs text-gray-700 dark:text-gray-300"
               >
-                View ↗
-              </a>
-            </li>
-          ))}
+                <span className="tabular-nums">{text}</span>
+                <span className="flex shrink-0 items-center gap-2">
+                  <a
+                    href={`/receipt/${legChain}/${leg.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    {kind === "swap" ? "receipt →" : "transfer →"}
+                  </a>
+                  <a
+                    href={explorerTxUrl(legChain, leg.txHash)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline dark:text-blue-400"
+                  >
+                    View ↗
+                  </a>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
       <p className="mt-3 text-[11px] text-gray-400 dark:text-gray-500">
-        Read from Celo via Blockscout · as of{" "}
+        Read from {chainsLabel} via Blockscout · as of{" "}
         {history ? new Date(history.asOf).toLocaleString("en-US") : "—"}
         {history && !history.complete
           ? " · Showing your most recent transfers"

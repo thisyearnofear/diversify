@@ -426,10 +426,16 @@ export interface AgentChatActions {
    * `decisionRef` attaches a journaled Guardian record to the message —
    * the advisor answers grounded in that record (drill-down path from the
    * Shield inspector / Home activity line).
+   * `pair` is the pair being asked about (symbols only — the server
+   * rebuilds the facts); `view` is the tab + pair currently on screen.
    */
   sendChatMessage: (
     content: string,
-    options?: { decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef },
+    options?: {
+      decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef;
+      pair?: { from: string; to: string };
+      view?: { tab?: string; pair?: { from: string; to: string } };
+    },
   ) => Promise<void>;
   addMessage: (message: AIMessage) => void;
   clearMessages: () => void;

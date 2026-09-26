@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { runAdvisorAnalysis, runAdvisorConversation, runAdvisorConversationStream } from '@/lib/agent/advisor-core';
+import { consumeQuestion, resolveSubject } from '../../../models/AgentUsage';
 
 // In-memory per-IP rate limiter. The advisor calls paid LLM providers, so an
 // unauthenticated, unthrottled endpoint is an open spend faucet. Mirrors the
@@ -30,14 +31,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     const { mode = 'conversation', stream } = req.body || {};
 
+    const { message } = req.body || {};
+    if (mode !== 'analysis' && (!message || typeof message !== 'string')) {
+      return res.status(400).json({ error: 'Message is required for conversation mode' });
+    }
+
+    // ── Daily question allowance (server-enforced) ──────────────────────
+    // Subject = the wallet address in the request when well-formed, else the
+    // client IP. Demo-mode requests (flagged by the client, or the mock
+    // 0xDemo… address) skip counting entirely.
+    const isDemoRequest =
+      req.body?.demo === true ||
+      req.headers['x-demo-mode'] === '1' ||
+      (typeof req.body?.address === 'string' && /^0xdemo/i.test(req.body.address));
+
+    if (!isDemoRequest) {
+      try {
+        const { subject, kind } = resolveSubject(req.body?.address, clientIp);
+        const gate = await consumeQuestion(subject, kind);
+        if (!gate.allowed) {
+          return res.status(429).json({
+            error: 'daily_questions_exhausted',
+            message: 'Daily questions used up — earn more below',
+            remaining: 0,
+            limit: gate.limit,
+            resetsAt: gate.resetsAt,
+          });
+        }
+      } catch (gateError) {
+        // Allowance store unavailable — fail open so a Mongo outage can't
+        // silence the advisor; the per-minute limiter above still bounds
+        // spend.
+        console.warn('[Advisor API] allowance check failed open:', (gateError as Error).message);
+      }
+    }
+
     if (mode === 'analysis') {
       const result = await runAdvisorAnalysis(req.body || {});
       return res.status(200).json(result);
-    }
-
-    const { message } = req.body || {};
-    if (!message || typeof message !== 'string') {
-      return res.status(400).json({ error: 'Message is required for conversation mode' });
     }
 
     // ── Streaming path (SSE) ──────────────────────────────────────────────

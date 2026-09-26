@@ -503,6 +503,23 @@ const SwapInterface = forwardRef<
               }}
               claim={claim}
             />
+            {/* The settled receipt is shareable — a chain-derived page,
+                not a session artifact. Only chains the receipt route can
+                read get the link (Celo, Arbitrum). */}
+            {receipt?.txHash &&
+              (receipt.chainId === 42220 || receipt.chainId === 42161) && (
+                <p className="mt-1 text-center text-[11px]">
+                  <a
+                    href={`/receipt/${receipt.chainId}/${receipt.txHash}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid="receipt-share-link"
+                    className="text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                  >
+                    view receipt →
+                  </a>
+                </p>
+              )}
             {!receipt && storyPairs.length > 0 && (
               <StoryPairStrip
                 pairs={storyPairs}

@@ -17,14 +17,21 @@ import {
   corridorSideFor,
   pairWhatIfFor,
   whatIfSentence,
+  fetchLiveCurrencyRisk,
+  liveOneYearOverlay,
   HORIZON_LINE,
   type CorridorSide,
   type CorridorSignal,
   type Horizon,
+  type LiveCurrencyRisk,
   type PairWhatIf,
 } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
-import { riskEventAge, riskTrailCheckedAt } from '@/constants/currency-risk';
+import {
+  CURRENCY_RISK_DATA_AS_OF,
+  riskEventAge,
+  riskTrailCheckedAt,
+} from '@/constants/currency-risk';
 import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
 import { TokenIcon } from '../shared/TokenIcon';
 import { springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
@@ -345,7 +352,37 @@ export function CorridorLine({
   );
 }
 
+/** The live overlay fetch, shared by the corridor SideTrack and the
+ *  Home currency-story inspector — one silent-fail read of
+ *  /api/currency-risk/live per code. Null until the feed answers; a
+ *  miss stays null (curated figures carry the surface, labelled). */
+export function useLiveCurrencyRisk(
+  code: string | null | undefined,
+): LiveCurrencyRisk | null {
+  const [live, setLive] = useState<LiveCurrencyRisk | null>(null);
+  useEffect(() => {
+    setLive(null);
+    if (!code) return;
+    let cancelled = false;
+    void fetchLiveCurrencyRisk(code).then((d) => {
+      if (!cancelled && d) setLive(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [code]);
+  return live;
+}
+
+/** Signed percent for the overlay line — positive means the currency
+ *  firmed, negative that it weakened (the dataset's own convention);
+ *  never a signed "−0%". */
+function signedPct(n: number): string {
+  return `${n > 0 ? '+' : ''}${n}%`;
+}
+
 function SideTrack({ side }: { side: CorridorSide }) {
+  const live = useLiveCurrencyRisk(side.entry?.code ?? null);
   if (!side.entry) {
     return (
       <div>
@@ -360,6 +397,10 @@ function SideTrack({ side }: { side: CorridorSide }) {
   }
   const e = side.entry;
   const isAnchor = e.depreciation.vsUSD['5yr'] === 0;
+  // Live overlay: the feed's own 1yr figure when it answered, the curated
+  // one otherwise — labelled either way, never blended. 3y/5y are always
+  // curated (the live dataset only reaches back to 2024-03-02).
+  const oneYear = liveOneYearOverlay(e.depreciation.vsUSD['1yr'], live);
   return (
     <div>
       <p className="text-xs font-semibold text-gray-900 dark:text-white">
@@ -370,6 +411,16 @@ function SideTrack({ side }: { side: CorridorSide }) {
           ? `The anchor — still ${e.depreciation.vsXAU['5yr']}% vs gold (5y)`
           : `${e.depreciation.vsUSD['5yr']}% vs USD · ${e.depreciation.vsXAU['5yr']}% vs gold (5y)`}
       </p>
+      {/* The anchor can't depreciate against itself — the 1yr overlay
+          only exists where a vs-USD figure means something. */}
+      {!isAnchor && (
+        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+          {signedPct(oneYear.value)} vs USD (1y) ·{' '}
+          {oneYear.live
+            ? `live · as of ${oneYear.asOf}`
+            : `as of ${CURRENCY_RISK_DATA_AS_OF} · curated`}
+        </p>
+      )}
       {/* The dated trail — what geopolitics has already done to this
           currency, newest first. Curated events, not a feed. */}
       {e.riskEvents.length > 0 && (

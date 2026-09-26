@@ -82,3 +82,48 @@ jobs:
             gh issue comment "$ISSUE" --body "Recovered $(date -u +%Y-%m-%d)"
             gh issue close "$ISSUE"
           fi
+
+      # Curated-data staleness — a separate alarm on a separate label.
+      # Drift between curated 1yr figures and the live feed, plus
+      # trail/provenance asOf dates past their 90-day re-verify window,
+      # open or comment on one `data-review` issue; a clean run closes it.
+      - name: Check curated-data freshness
+        run: |
+          set +e
+          node scripts/check-data-freshness.mjs > /tmp/freshness.txt 2>&1
+          RC=$?
+          cat /tmp/freshness.txt
+          echo "FRESHNESS_RC=$RC" >> "$GITHUB_ENV"
+
+      - name: Create or update data-review issue
+        if: env.FRESHNESS_RC != '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create data-review --description "Curated FX/provenance data past its re-verify window" --color D4A017 2>/dev/null || true
+          DATE=$(date -u +%Y-%m-%d)
+          {
+            echo "## Curated data freshness — $DATE"
+            echo
+            echo '```'
+            head -80 /tmp/freshness.txt
+            echo '```'
+          } > /tmp/data-issue-body.md
+          ISSUE=$(gh issue list --label data-review --state open --json number --jq '.[0].number' || true)
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --body-file /tmp/data-issue-body.md
+          else
+            gh issue create --title "Curated currency data needs re-verification" --label data-review --body-file /tmp/data-issue-body.md
+          fi
+          exit 1
+
+      - name: Close data-review issue when clean
+        if: env.FRESHNESS_RC == '0'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ISSUE=$(gh issue list --label data-review --state open --json number --jq '.[0].number' || true)
+          if [ -n "$ISSUE" ]; then
+            gh issue comment "$ISSUE" --body "Curated data re-verified $(date -u +%Y-%m-%d)"
+            gh issue close "$ISSUE"
+          fi

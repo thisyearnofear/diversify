@@ -1,7 +1,9 @@
 import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
+import { getLiveDepreciation } from '@diversifi/shared/src/services/fx-rate.service';
 import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS, NETWORK_TOKENS } from '@/config';
-import { isTabId, LEGACY_TAB_MAP } from '@/constants/tabs';
+import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tabs';
+import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
 
 /**
@@ -50,6 +52,10 @@ type ConversationRequest = {
    *  rebuilt server-side from the curated registry; the client never
    *  sends fact text. */
   pairContext?: { from?: unknown; to?: unknown };
+  /** What the user's screen is showing — tab id + live pair. Symbols and
+   *  tab names are re-validated server-side; anything unrecognized is
+   *  dropped rather than echoed into the prompt. */
+  view?: { tab?: unknown; pair?: { from?: unknown; to?: unknown } };
 };
 
 type AnalysisRequest = {
@@ -94,19 +100,20 @@ type ResearchEvidenceSummary = {
 
 const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor. Be concise, authoritative, and data-driven. Never begin with a disclaimer, apology, or hedge — state your best answer immediately. If you lack data, note the limitation in one phrase and proceed.
 
-REAL ASSETS (mainnet only — recommend these):
-- Celo Mainnet: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
-- Arbitrum Mainnet: USDY (~5% APY), SYRUPUSDC (~4.5% APY), PAXG (gold-backed), USDC, EURC, MXNB (Bitso Mexican-peso stablecoin — LatAm/Mexico local-currency exposure, on/off-ramp to MXN via Bitso SPEI)
-- Robinhood Chain Mainnet: USDG (Paxos-backed USD stablecoin), SGOV (short-term Treasury ETF), SPY (S&P 500 ETF), QQQ (Nasdaq-100 ETF), AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN (tokenized stocks and ETFs on an Arbitrum Dedicated Blockchain)
-- Base Mainnet: LI.FI Earn vaults via Morpho, yoUSD, Aave (up to 16% APY)
+NUMBER RULE (hard): Only state figures that appear in this prompt's data blocks (FACTS, PAIR FACTS, portfolio snapshot, evidence, decision records) or are arithmetic on them. If a number isn't there, say it's unavailable — never estimate, never pad with a placeholder, never repeat figures from memory.
 
-TESTNET ONLY — testing purposes only. Do not recommend testnet assets for real portfolio allocation.
+REAL ASSETS — what the app actually lists today:
+- Celo Mainnet (swaps execute via Mento): USDm, EURm, BRLm, KESm, COPm, PHPm, GHSm, XOFm, GBPm, ZARm, CADm, AUDm, CHFm, JPYm, NGNm — plus CELO, USDT and G$.
+- Arbitrum Mainnet (swaps execute via LI.FI): USDC, MXNB (Bitso Mexican-peso stablecoin), PAXG (gold-backed), USDY (~5% APY per token metadata), SYRUPUSDC (~4.5% APY per token metadata).
+- Robinhood Chain (tracked only — users can research and watch these, NOT swap them in-app): USDG, SGOV, SPY, QQQ, SLV, WETH, AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN.
+- Executable swaps run on Celo and Arbitrum only, and every swap is quote-gated: the Exchange shows the ticket only after a live quote exists. Never promise a rate or an execution — describe the move and let the quote speak.
+- Testnet assets (Celo Sepolia, Arc Testnet) are play money — never recommend them for real allocation.
 
 TONE RULES:
 1. No filler. Strip: "I'd be happy to", "Consider", "You might want to", "Let me explain", "As DiversiFi Advisor..."
 2. Lead with the answer, not the caveat
-3. Max 60 words for simple answers. Max 4 bullets for complex ones. Never exceed 120 words.
-4. Use exact figures when available, skip adjectives when you have data
+3. Depth follows the question: one tight line for a simple ask; a factual question earns up to ~150 words, structured with a few bullets when comparing. Never pad to hit a length.
+4. Use exact figures when the context provides them; when it doesn't, say the figure is unavailable — don't adjective your way around it
 5. Never mention UBI, G$, or GoodDollar unless the user explicitly asked about it
 6. If user asks about portfolio protection: state their diversification status in 1 line, then list top 3 actions. No preamble.
 
@@ -115,42 +122,27 @@ RESPONSE FORMAT RULES:
 - If user asks "why", "what does this mean", "interpret", "learn", "insights" → answer in natural language. Do NOT append action cards unless the user explicitly asks for one.
 - If user asks "what should I do" or "propose a trade" → answer in 2-3 sentences, then append ONE action card.
 - If user input is ambiguous (pronouns with unclear antecedent) → ask a single clarifying question. Do not guess.
+- NEVER reply with only an action marker. When you attach an action card, the visible text must still say what to do and why — the marker is the button, not the answer.
 
 RESPONSE STRUCTURE:
 1. Direct answer (1-2 sentences)
-2. Supporting data or context (1-2 bullets max, only if needed)
+2. Supporting data or context — only what the data blocks above carry
 3. End with one action card ONLY when user explicitly requests data display or a specific action
 
 ACTION CARDS (append at end of response, exact format):
-[ACTION:SWAP:fromToken:toToken:amount:network] — e.g., [ACTION:SWAP:cUSD:EURm:5:Celo]
+[ACTION:SWAP:fromToken:toToken:amount:network] — e.g., [ACTION:SWAP:USDm:EURm:5:Celo]. Only for tokens on the executable chains above (Celo / Arbitrum).
 [ACTION:HOLD] — portfolio is balanced, no changes needed
 [ACTION:CLAIM_UBI] — direct to GoodDollar claim
 [ACTION:VERIFY_IDENTITY] — face verification required
 [ACTION:NAVIGATE:tab_name] — switch to a specific tab. Valid tab names: overview, protect, exchange, agent, info. Never use non-tab names (e.g. "guardian_setup" — use "protect" instead).
 
-AUTO-SAVER (the autonomous agent users see in the UI):
-Always call this feature "Auto-Saver" when talking to the user. Internally it has three autonomy tiers — never expose these names to the user, only behaviour:
-- ADVISORY (default): you recommend, user always executes manually. No spending.
-- COPILOT: you recommend + one-click execution. $100/day limit. User approves each action.
-- GUARDIAN: fully autonomous. You detect signals, execute within signed permission bounds.
-
-To set up Auto-Saver:
-1. Direct the user to the Protect tab — Auto-Saver setup is managed there, not in this chat
-2. On the Protect tab, the user picks a daily limit and approves it in their wallet (one signature)
-3. They choose: daily limit (default $10/day), allowed tokens, valid for 7 days
-4. Auto-Saver then watches macro signals (ECB, Fed, yield trackers, depeg alerts)
-5. When confidence > 60% and within their limits → it swaps on Celo via Mento
-6. Every decision is recorded on-chain so the user can verify it later
-7. The user can pause Auto-Saver any time
-
-When a user asks to set up, enable, or change Auto-Saver, respond briefly and use [ACTION:NAVIGATE:protect] to take them to the Protect tab. Do NOT collect signing parameters or walk through setup steps in this chat.
-
-SAFETY FACTS (use these when asked about safety):
-- Auto-Saver NEVER spends more than the daily limit the user signed
-- Old recommendations (>1 hour) are dropped automatically
-- Max 5 moves per 5-minute window
-- Every move is recorded so the user can audit it
-- Only the user's wallet signature can turn Auto-Saver on
+GUARDIAN & AUTONOMY (describe the product exactly as it is):
+- Default on every chain: Guardian proposes, the user taps "Review this move →" and signs the swap on Exchange in their own wallet. Nothing moves until they sign — there is no custodial account.
+- Autonomy is opt-in only: the user grants a MetaMask Advanced Permission (ERC-7715) enforced on-chain by their own smart account. Eligible chains today: Celo, Celo Sepolia, Arbitrum. Everywhere else it fails closed to one-tap proposals.
+- The grant bounds the user signs: a daily USD limit, allowed tokens, and a 7-day expiry — one wallet signature. If the user's signed values aren't in your context, don't quote numbers for them.
+- The autonomous loop runs every 5 minutes: it drops recommendations older than 60 minutes, executes at most 5 moves per tick, requires confidence at or above the configured threshold (default 60%), and journals every decision — including declines — so the user can audit it.
+- Only the user's wallet signature turns autonomy on; they can pause or revoke anytime.
+- Setup lives on the Shield tab — when asked to enable or change it, say so briefly and use [ACTION:NAVIGATE:protect]. Do NOT collect signing parameters in this chat.
 `;
 
 function cleanJsonResponse(text: string): string {
@@ -239,56 +231,34 @@ function getMainnetChainContext(chainId?: number): string {
 
   if (chainId === NETWORKS.CELO_MAINNET.chainId) {
     return `
-✅ CURRENT CHAIN: Celo Mainnet (REAL ASSETS)
+✅ CURRENT CHAIN: Celo Mainnet (REAL ASSETS — swaps execute here via Mento)
 - Low-fee chain for regional stablecoins and payments
-- Available: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR, cREAL
+- Available: USDm, EURm, BRLm, KESm, COPm, PHPm, GHSm, XOFm, GBPm, ZARm, CADm, AUDm, CHFm, JPYm, NGNm, CELO, USDT, G$
 - Recommend these for geographic diversification and inflation protection
 `;
   }
 
   if (chainId === NETWORKS.ARBITRUM_ONE.chainId) {
     return `
-✅ CURRENT CHAIN: Arbitrum Mainnet (REAL ASSETS)
+✅ CURRENT CHAIN: Arbitrum Mainnet (REAL ASSETS — swaps execute here via LI.FI)
 - Chain for RWAs and yield strategies
-- Available: USDY (~5% yield), PAXG (gold-backed), SYRUPUSDC (~4.5% yield), USDC, EURC
+- Available: USDC, MXNB, PAXG (gold-backed), USDY (~5% APY per token metadata), SYRUPUSDC (~4.5% APY per token metadata)
 - Recommend these for yield generation and commodity exposure
 `;
   }
 
   if (chainId === NETWORKS.RH_MAINNET.chainId) {
     return `
-✅ CURRENT CHAIN: Robinhood Chain Mainnet (TOKENIZED RWA)
+✅ CURRENT CHAIN: Robinhood Chain (TOKENIZED RWA — tracked, not swappable in-app)
 - Arbitrum Dedicated Blockchain (chainId 4663)
-- Available: USDG (Paxos-backed stablecoin), SGOV (short-term Treasury ETF), SPY (S&P 500), QQQ (Nasdaq-100), AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN
-- Recommend these for USD parking, Treasury exposure, and equity hedging against local-currency depreciation
-- One-tap swaps are coming next; today users can research and track these assets
-`;
-  }
-
-  if (chainId === NETWORKS.BASE_MAINNET.chainId) {
-    return `
-✅ CURRENT CHAIN: Base Mainnet (HIGH YIELD)
-- Chain for DeFi yield vaults via LI.FI Earn
-- LI.FI Earn supports 20+ protocols: Morpho, Aave, yoUSD, Ethena, EtherFi, Pendle + more
-- Available: USDC vaults with up to 16%+ APY (yoUSD), Morpho RE7USDC (~6.9% APY)
-- HIGHEST YIELD: Use LI.FI Earn API for live vault discovery across 16 chains
-- ONE-CLICK DEPOSIT: Swap + deposit in single transaction via LI.FI Composer
-`;
-  }
-
-  if (chainId === NETWORKS.ETHEREUM_MAINNET.chainId) {
-    return `
-✅ CURRENT CHAIN: Ethereum Mainnet (LIQUIDITY)
-- Mainnet DeFi via LI.FI Earn
-- LI.FI Earn supports Lido, Rocket Pool, Morpho, Aave on Ethereum
-- Available: stETH, rETH, cbETH vaults with 3-8% APY
-- BEST FOR: Liquid staking and established yield strategies
+- Available to research and track: USDG (Paxos-backed stablecoin), SGOV (short-term Treasury ETF), SPY (S&P 500), QQQ (Nasdaq-100), SLV, WETH, AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN
+- Do NOT propose [ACTION:SWAP] into these — in-app swaps execute on Celo and Arbitrum only
 `;
   }
 
   return `
 CURRENT CHAIN: Chain ID ${chainId}
-- Recommend switching to Celo Mainnet, Arbitrum Mainnet, or Base Mainnet for real asset strategies
+- Not an executable chain in DiversiFi today — swaps run on Celo Mainnet and Arbitrum Mainnet. Suggest switching to one of those for real moves.
 `;
 }
 
@@ -499,6 +469,191 @@ export function formatPairFacts(pair?: { from?: unknown; to?: unknown }): string
   return `${header}${kept.join('\n')}${rules}`;
 }
 
+// ── View context ──────────────────────────────────────────────────
+//
+// The client reports which tab (and which Exchange pair) the user is
+// looking at so answers can reference the screen. Both fields are
+// re-validated here — a hallucinated tab id or symbol is dropped, never
+// echoed into the prompt.
+
+export function formatViewContext(view?: ConversationRequest['view']): string {
+  if (!view || typeof view !== 'object') return '';
+
+  const rawTab = typeof view.tab === 'string' ? view.tab.toLowerCase() : '';
+  const tab: TabId | null = rawTab
+    ? isTabId(rawTab)
+      ? rawTab
+      : LEGACY_TAB_MAP[rawTab] ?? null
+    : null;
+
+  const pairFrom = canonicalPairSymbol(view.pair?.from);
+  const pairTo = canonicalPairSymbol(view.pair?.to);
+  const hasPair = Boolean(pairFrom && pairTo && pairFrom !== pairTo);
+
+  if (!tab && !hasPair) return '';
+
+  const parts: string[] = [];
+  if (tab) parts.push(`the ${TAB_LABELS[tab]} tab`);
+  if (hasPair) parts.push(`the ${pairFrom} → ${pairTo} pair`);
+  return `\nUSER'S CURRENT VIEW: ${parts.join(' · ')} — if the question is about what's on screen, answer against this surface.\n`;
+}
+
+// ── Question grounding (FACTS block) ──────────────────────────────
+//
+// When the user's message (or their current pair) names a currency, inject
+// a compact block of real figures: live 1yr depreciation vs USD from the
+// shared fawazahmed0 service when reachable (curated snapshot otherwise,
+// labelled), plus the currency's newest dated risk events. Anything that
+// can't be grounded is omitted — the block never carries placeholders.
+
+const FACTS_MAX_CURRENCIES = 3;
+const FACTS_MAX_LINES = 15;
+
+/** Colloquial currency names → ISO code. Only names that map to exactly
+ *  one currency in our coverage — 'peso', 'pound', 'rupee' and 'real'
+ *  are ambiguous (or plain English) and stay out on purpose. */
+const CURRENCY_NAME_ALIASES: Record<string, string> = {
+  naira: 'NGN', cedi: 'GHS', cedis: 'GHS',
+  shilling: 'KES', rand: 'ZAR',
+  lira: 'TRY', hryvnia: 'UAH', gourde: 'HTG',
+  ruble: 'RUB', rouble: 'RUB',
+  rupiah: 'IDR', baht: 'THB', dong: 'VND',
+  euro: 'EUR', euros: 'EUR',
+  dollar: 'USD', dollars: 'USD',
+};
+
+/** Extra country names not covered verbatim by `countryName`. */
+const COUNTRY_NAME_ALIASES: Record<string, string> = {
+  'united states': 'USD', 'usa': 'USD',
+  'uk': 'GBP', 'britain': 'GBP',
+  'turkiye': 'TRY', 'türkiye': 'TRY',
+};
+
+/** ISO codes that collide with everyday English words — matched only
+ *  when the user typed them uppercase ("NGN savings", never "try"). */
+const CODE_LOWERCASE_DENYLIST = new Set(['TRY', 'RUB', 'COP', 'PHP', 'ARS', 'BBD', 'TTD']);
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/**
+ * Fiat codes the question is about, in mention order — pair context
+ * first, then token symbols, ISO codes, country names and colloquial
+ * names. Deduped, capped; every entry resolves to a CURRENCY_RISK_DATA
+ * member (XAU gold has no entry and drops out here).
+ */
+function detectMentionedCurrencies(
+  message: string,
+  pair?: { from?: unknown; to?: unknown },
+): string[] {
+  const found: string[] = [];
+  const push = (code: string | null | undefined) => {
+    if (code && CURRENCY_BY_CODE[code] && !found.includes(code)) found.push(code);
+  };
+
+  for (const side of [pair?.from, pair?.to]) {
+    const symbol = canonicalPairSymbol(side);
+    if (symbol) push(corridorSideFor(symbol)?.code);
+  }
+
+  // Token symbols the user typed ("my KESm", "PAXG") → the fiat they mirror.
+  const seenSymbols = new Set<string>();
+  for (const chainId of PAIR_FACT_NETWORKS) {
+    for (const symbol of NETWORK_TOKENS[chainId] ?? []) {
+      if (seenSymbols.has(symbol) || symbol === 'G$') continue;
+      seenSymbols.add(symbol);
+      if (new RegExp(`\\b${escapeRegExp(symbol)}\\b`, 'i').test(message)) {
+        push(corridorSideFor(symbol)?.code);
+      }
+    }
+  }
+
+  // ISO codes — uppercase in the raw message always counts; lowercase only
+  // for codes that can't be mistaken for a word.
+  for (const code of Object.keys(CURRENCY_BY_CODE)) {
+    if (found.includes(code)) continue;
+    if (new RegExp(`\\b${code}\\b`).test(message)) {
+      push(code);
+    } else if (
+      !CODE_LOWERCASE_DENYLIST.has(code) &&
+      new RegExp(`\\b${code}\\b`, 'i').test(message)
+    ) {
+      push(code);
+    }
+  }
+
+  const lower = message.toLowerCase();
+  for (const [name, code] of Object.entries(CURRENCY_NAME_ALIASES)) {
+    if (new RegExp(`\\b${escapeRegExp(name)}\\b`, 'i').test(lower)) push(code);
+  }
+  for (const entry of CURRENCY_RISK_DATA) {
+    if (new RegExp(`\\b${escapeRegExp(entry.countryName.toLowerCase())}\\b`, 'i').test(lower)) {
+      push(entry.code);
+    }
+  }
+  for (const [name, code] of Object.entries(COUNTRY_NAME_ALIASES)) {
+    if (new RegExp(`\\b${escapeRegExp(name)}\\b`, 'i').test(lower)) push(code);
+  }
+
+  return found.slice(0, FACTS_MAX_CURRENCIES);
+}
+
+/** One depreciation line per currency — live 1yr when the shared FX
+ *  service answers, the curated snapshot otherwise (each labelled). */
+async function currencyFactLines(code: string): Promise<string[]> {
+  const entry = CURRENCY_BY_CODE[code];
+  if (!entry) return [];
+  const name = `${code} (${entry.countryName})`;
+
+  let live1yr: { value: number; asOf: string } | null = null;
+  try {
+    const live = await getLiveDepreciation(code);
+    if (live && typeof live['1yr'] === 'number') {
+      live1yr = { value: live['1yr'], asOf: live.asOf };
+    }
+  } catch { /* feed down — curated line below carries the story */ }
+
+  const lines: string[] = [];
+  if (live1yr) {
+    const direction = live1yr.value >= 0 ? 'gained' : 'lost';
+    lines.push(
+      `- ${name}: ${direction} ${Math.abs(live1yr.value)}% vs USD over the last 12 months (live mid-market, as of ${live1yr.asOf})`,
+    );
+  } else {
+    const d = entry.depreciation.vsUSD;
+    lines.push(
+      `- ${name}: vs USD — 1yr ${d['1yr']}%, 3yr ${d['3yr']}%, 5yr ${d['5yr']}% (curated snapshot, as of ${currencyRiskAsOfLabel()}; negative = weakened)`,
+    );
+  }
+
+  const events = [...entry.riskEvents].sort((a, b) => b.year - a.year).slice(0, 2);
+  for (const e of events) {
+    lines.push(`  ${e.year} — ${flatten(e.event)}: ${flatten(e.impact)}`);
+  }
+  return lines;
+}
+
+export async function buildCurrencyFacts(
+  message: string,
+  pair?: { from?: unknown; to?: unknown },
+): Promise<string> {
+  const codes = detectMentionedCurrencies(message ?? '', pair);
+  if (codes.length === 0) return '';
+
+  const lineSets = await Promise.all(
+    codes.map((code) => currencyFactLines(code).catch(() => [] as string[])),
+  );
+  const lines = lineSets.flat().filter(Boolean).slice(0, FACTS_MAX_LINES);
+  if (lines.length === 0) return '';
+
+  return (
+    `\nFACTS (real data for currencies in the user's question — ground your answer in these):\n` +
+    `${lines.join('\n')}\n` +
+    `Rules: quote these figures as labelled (live vs curated snapshot); if the user asks a number the FACTS don't carry, say it's unavailable — never estimate.\n`
+  );
+}
+
 function getPortfolioContext(portfolio?: ConversationRequest['portfolio']): string {
   if (!portfolio) return '';
 
@@ -536,8 +691,7 @@ ${chainLines}
 TOP HOLDINGS:
 ${holdingLines}
 
-⚠️ IMPORTANT: Only recommend mainnet assets (Celo/Arbitrum/Robinhood Chain/Base/Ethereum) for real portfolio allocation. Testnet assets are for testing only.
-💡 YIELD TIP: Switch to Base chain for LI.FI Earn vaults with up to 16% APY!
+⚠️ IMPORTANT: Only recommend the mainnet assets listed above for real portfolio allocation. Swaps execute on Celo and Arbitrum only; Robinhood Chain assets are tracked, not swappable. Testnet assets are for testing only.
 `;
 }
 
@@ -606,7 +760,120 @@ function extractBrightDataContext(macroData?: Record<string, any>): string {
   return lines.length > 0 ? lines.join('\n') : '';
 }
 
+// ──────────────────────────────────────────────────────────────────────────────
+// Shared action-marker parsing + empty-reply fallback
+// ──────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Strip [ACTION:…] markers from the model's reply and decode the first one
+ * into a UI action. A hallucinated NAVIGATE tab id resolves to no action but
+ * the marker is still removed — a dead button is worse than none.
+ */
+function parseActionMarkers(text: string): { responseText: string; action: any } {
+  let responseText = text;
+  let action: any = null;
+
+  if (responseText.includes('[ACTION:SWAP:')) {
+    const match = responseText.match(/\[ACTION:SWAP:([^:]+):([^:]+):([^:]+):([^\]]+)\]/);
+    if (match && match[1] && match[2] && match[3] && match[4]) {
+      action = {
+        type: 'execute_rwa',
+        fromToken: match[1].trim(),
+        targetAsset: match[2].trim(),
+        amount: match[3].trim(),
+        network: match[4].trim(),
+        reason: 'AI-recommended portfolio rebalance',
+      };
+      responseText = responseText.replace(match[0], '').trim();
+    }
+  } else if (responseText.includes('[ACTION:HOLD]')) {
+    action = { type: 'hold', message: 'Portfolio is well-balanced. No action needed.' };
+    responseText = responseText.replace('[ACTION:HOLD]', '').trim();
+  } else if (responseText.includes('[ACTION:CLAIM_UBI]')) {
+    action = { type: 'claim_ubi' };
+    responseText = responseText.replace('[ACTION:CLAIM_UBI]', '').trim();
+  } else if (responseText.includes('[ACTION:VERIFY_IDENTITY]')) {
+    action = { type: 'verify_identity' };
+    responseText = responseText.replace('[ACTION:VERIFY_IDENTITY]', '').trim();
+  } else if (responseText.includes('[ACTION:NAVIGATE:')) {
+    const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
+    if (match && match[1]) {
+      const tab = resolveNavTab(match[1]);
+      if (tab) {
+        action = { type: 'navigate', tab };
+      }
+      responseText = responseText.replace(match[0], '').trim();
+    }
+  }
+
+  return { responseText, action };
+}
+
+/**
+ * One honest line that describes the attached action — used when the model
+ * emitted only a marker and nothing else. Never invents data; it names the
+ * surface the button opens and what it does there.
+ */
+const NAVIGATE_CAPTIONS: Record<TabId, string> = {
+  exchange: 'Here is Exchange — pick a pair and the quote appears.',
+  protect: 'Here is Shield — your protection plan and Guardian controls live here.',
+  overview: 'Here is Home — your savings picture at a glance.',
+  agent: 'Here is Guardian — decisions and limits live here.',
+  info: 'Here is Learn — the background on how this works.',
+};
+
+function captionForAction(action: any): string | null {
+  if (!action || typeof action !== 'object') return null;
+  switch (action.type) {
+    case 'navigate': {
+      const rawTab = typeof action.tab === 'string' ? action.tab : '';
+      return isTabId(rawTab) ? NAVIGATE_CAPTIONS[rawTab] : `Opening ${rawTab}.`;
+    }
+    case 'execute_rwa':
+      return `Proposed move: ${action.fromToken} → ${action.targetAsset} on ${action.network} — review it below; nothing signs itself.`;
+    case 'hold':
+      return 'Your portfolio looks balanced — nothing to move right now.';
+    case 'claim_ubi':
+      return 'Your daily G$ claim is ready — the button below runs it.';
+    case 'verify_identity':
+      return 'Face verification lives on the Shield tab — the button below takes you there.';
+    default:
+      return 'See the action below.';
+  }
+}
+
+/**
+ * A stripped reply must never render as an empty bubble: an action gets a
+ * one-line caption that names what the button does; no action at all gets
+ * an honest "no grounded answer" line rather than silence.
+ */
+function ensureNonEmptyResponse(responseText: string, action: any): string {
+  if (responseText) return responseText;
+  if (action) return captionForAction(action) ?? 'See the action below.';
+  return "I don't have a grounded answer for that yet — ask me about a currency, a pair, or your savings.";
+}
+
+/** Info-level response metric for PM2 logs — no PII, no message text. */
+function logAdvisorResponse(meta: {
+  provider: string;
+  model?: string;
+  startedAt: number;
+  hadAction: boolean;
+  chars: number;
+  status?: 'ok' | 'error';
+}) {
+  console.info('[Advisor] response', {
+    provider: meta.provider,
+    model: meta.model ?? null,
+    ms: Date.now() - meta.startedAt,
+    hadAction: meta.hadAction,
+    chars: meta.chars,
+    status: meta.status ?? 'ok',
+  });
+}
+
 export async function runAdvisorConversation(input: ConversationRequest) {
+  const startedAt = Date.now();
   const { message, history = [], chainId, address, portfolio, financialStrategy } = input;
   const userMentionsG$ = /\b(g\$|ubi|gooddollar|good dollar|free money|claim.*g\$|face verif)/i.test(message);
   const gdContext = userMentionsG$ ? await getGoodDollarContext(address) : '';
@@ -615,6 +882,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
+  const factsContext = await buildCurrencyFacts(message, input.pairContext);
 
   // Cognee: recall relevant memories for this user (non-blocking, graceful fallback)
   let memoryContext = '';
@@ -628,9 +896,11 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     ADVISOR_SYSTEM_PROMPT +
     getTestDriveContext(chainId) +
     getMainnetChainContext(chainId) +
+    formatViewContext(input.view) +
     gdContext +
     portfolioContext +
     strategyContext +
+    factsContext +
     brightDataContext +
     formatDecisionRecords(input.contextRecords) +
     formatPairFacts(input.pairContext) +
@@ -656,45 +926,11 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     user: address,
   });
 
-  let responseText = result.content;
-  let action: any = null;
-
-  // Parse SWAP action: [ACTION:SWAP:fromToken:toToken:amount:network]
-  if (responseText.includes('[ACTION:SWAP:')) {
-    const match = responseText.match(/\[ACTION:SWAP:([^:]+):([^:]+):([^:]+):([^\]]+)\]/);
-    if (match && match[1] && match[2] && match[3] && match[4]) {
-      action = {
-        type: 'execute_rwa',
-        fromToken: match[1].trim(),
-        targetAsset: match[2].trim(),
-        amount: match[3].trim(),
-        network: match[4].trim(),
-        reason: 'AI-recommended portfolio rebalance'
-      };
-      responseText = responseText.replace(match[0], '').trim();
-    }
-  } else if (responseText.includes('[ACTION:HOLD]')) {
-    action = {
-      type: 'hold',
-      message: 'Portfolio is well-balanced. No action needed.'
-    };
-    responseText = responseText.replace('[ACTION:HOLD]', '').trim();
-  } else if (responseText.includes('[ACTION:CLAIM_UBI]')) {
-    action = { type: 'claim_ubi' };
-    responseText = responseText.replace('[ACTION:CLAIM_UBI]', '').trim();
-  } else if (responseText.includes('[ACTION:VERIFY_IDENTITY]')) {
-    action = { type: 'verify_identity' };
-    responseText = responseText.replace('[ACTION:VERIFY_IDENTITY]', '').trim();
-  } else if (responseText.includes('[ACTION:NAVIGATE:')) {
-    const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
-    if (match && match[1]) {
-      const tab = resolveNavTab(match[1]);
-      if (tab) {
-        action = { type: 'navigate', tab };
-      }
-      responseText = responseText.replace(match[0], '').trim();
-    }
-  }
+  // Strip action markers; when the model emitted only a marker, the reply
+  // still gets a one-line honest caption — never an empty bubble.
+  const parsedMarkers = parseActionMarkers(result.content ?? '');
+  const action = parsedMarkers.action;
+  const responseText = ensureNonEmptyResponse(parsedMarkers.responseText, action);
 
   // Assemble research evidence for transparency in the chat UI
   const SOURCE_REFERENCE_URLS: Record<string, string> = {
@@ -752,6 +988,14 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     ).catch(() => {});
   }
 
+  logAdvisorResponse({
+    provider: result.provider ?? 'unknown',
+    model: (result as any).model ?? (result as any).modelUsed,
+    startedAt,
+    hadAction: Boolean(action),
+    chars: responseText.length,
+  });
+
   return {
     response: responseText,
     provider: result.provider,
@@ -793,34 +1037,9 @@ function parseActionsAndSources(
   address: string | undefined,
   message: string,
 ): { responseText: string; action: any; researchSources: any[]; billing?: any } {
-  let responseText = fullText;
-  let action: any = null;
-
-  if (responseText.includes('[ACTION:SWAP:')) {
-    const match = responseText.match(/\[ACTION:SWAP:([^:]+):([^:]+):([^:]+):([^\]]+)\]/);
-    if (match && match[1] && match[2] && match[3] && match[4]) {
-      action = { type: 'execute_rwa', fromToken: match[1].trim(), targetAsset: match[2].trim(), amount: match[3].trim(), network: match[4].trim(), reason: 'AI-recommended portfolio rebalance' };
-      responseText = responseText.replace(match[0], '').trim();
-    }
-  } else if (responseText.includes('[ACTION:HOLD]')) {
-    action = { type: 'hold', message: 'Portfolio is well-balanced. No action needed.' };
-    responseText = responseText.replace('[ACTION:HOLD]', '').trim();
-  } else if (responseText.includes('[ACTION:CLAIM_UBI]')) {
-    action = { type: 'claim_ubi' };
-    responseText = responseText.replace('[ACTION:CLAIM_UBI]', '').trim();
-  } else if (responseText.includes('[ACTION:VERIFY_IDENTITY]')) {
-    action = { type: 'verify_identity' };
-    responseText = responseText.replace('[ACTION:VERIFY_IDENTITY]', '').trim();
-  } else if (responseText.includes('[ACTION:NAVIGATE:')) {
-    const match = responseText.match(/\[ACTION:NAVIGATE:(.*?)\]/);
-    if (match && match[1]) {
-      const tab = resolveNavTab(match[1]);
-      if (tab) {
-        action = { type: 'navigate', tab };
-      }
-      responseText = responseText.replace(match[0], '').trim();
-    }
-  }
+  const parsedMarkers = parseActionMarkers(fullText ?? '');
+  const action = parsedMarkers.action;
+  const responseText = ensureNonEmptyResponse(parsedMarkers.responseText, action);
 
   const SOURCE_REFERENCE_URLS: Record<string, string> = {
     macro_analysis: 'https://fred.stlouisfed.org/series/DFF',
@@ -864,6 +1083,7 @@ function parseActionsAndSources(
 }
 
 export async function* runAdvisorConversationStream(input: ConversationRequest): AsyncGenerator<AdvisorStreamEvent> {
+  const startedAt = Date.now();
   const { message, history = [], chainId, address, portfolio, financialStrategy } = input;
   const userMentionsG$ = /\b(g\$|ubi|gooddollar|good dollar|free money|claim.*g\$|face verif)/i.test(message);
   const gdContext = userMentionsG$ ? await getGoodDollarContext(address) : '';
@@ -872,6 +1092,7 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
+  const factsContext = await buildCurrencyFacts(message, input.pairContext);
 
   let memoryContext = '';
   try {
@@ -884,9 +1105,11 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
     ADVISOR_SYSTEM_PROMPT +
     getTestDriveContext(chainId) +
     getMainnetChainContext(chainId) +
+    formatViewContext(input.view) +
     gdContext +
     portfolioContext +
     strategyContext +
+    factsContext +
     brightDataContext +
     formatDecisionRecords(input.contextRecords) +
     formatPairFacts(input.pairContext) +
@@ -921,12 +1144,14 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
       }
     }
   } catch (error: any) {
+    logAdvisorResponse({ provider, model, startedAt, hadAction: false, chars: 0, status: 'error' });
     yield { type: 'error', message: error instanceof Error ? error.message : 'Stream failed' };
     return;
   }
 
   // Parse actions + build research sources (shared with runAdvisorConversation)
   const parsed = parseActionsAndSources(fullText, input, portfolio, chainId, financialStrategy, brightDataContext, memoryContext, address, message);
+  logAdvisorResponse({ provider, model, startedAt, hadAction: Boolean(parsed.action), chars: parsed.responseText.length });
   yield { type: 'done', response: parsed.responseText, provider, model, action: parsed.action, researchSources: parsed.researchSources, memoryEnabled: cogneeMemoryService.isAvailable(), billing: parsed.billing };
 }
 
@@ -1010,8 +1235,11 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
     portfolioAnalysis = analyzePortfolio({ chains, totalValue }, inflationData, config?.userGoal);
   }
 
-  let currentInflation = 3.2;
-  let treasuryYield = 4.5;
+  // Honest absence: no fabricated fallbacks — when a datum can't be
+  // resolved the prompt says 'unavailable' and the model is told not to
+  // invent it.
+  let currentInflation: number | null = null;
+  let treasuryYield: number | null = null;
 
   if (inflationData && Object.keys(inflationData).length > 0) {
     const regions = Object.values(inflationData) as RegionalInflationData[];
@@ -1021,38 +1249,44 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
     }
   }
 
-  try {
-    const fredRes = await fetch('https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=' + (process.env.FRED_API_KEY || 'DEMO_KEY') + '&sort_order=desc&limit=1&file_type=json');
-    if (fredRes.ok) {
-      const fredData = await fredRes.json();
-      const latestObs = fredData.observations?.[0];
-      if (latestObs?.value && latestObs.value !== '.') {
-        treasuryYield = parseFloat(latestObs.value);
+  if (process.env.FRED_API_KEY) {
+    try {
+      const fredRes = await fetch('https://api.stlouisfed.org/fred/series/observations?series_id=DGS10&api_key=' + process.env.FRED_API_KEY + '&sort_order=desc&limit=1&file_type=json');
+      if (fredRes.ok) {
+        const fredData = await fredRes.json();
+        const latestObs = fredData.observations?.[0];
+        if (latestObs?.value && latestObs.value !== '.') {
+          treasuryYield = parseFloat(latestObs.value);
+        }
       }
+    } catch (err) {
+      console.warn('[Advisor API] FRED fetch failed, treasury yield unavailable:', err);
     }
-  } catch (err) {
-    console.warn('[Advisor API] FRED fetch failed, using fallback treasury yield:', err);
   }
 
-  const realYield = treasuryYield - currentInflation;
+  const realYield =
+    treasuryYield != null && currentInflation != null
+      ? treasuryYield - currentInflation
+      : null;
   const systemInstruction = `
 You are DiversiFi Advisor in analysis mode. Deliver high-signal, data-backed recommendations only. No preamble, no hedging.
 
 RULES:
 - Max 100 words for any analysis. Lead with the recommendation, not the explanation.
-- Only recommend real mainnet assets (Celo, Arbitrum, Robinhood Chain, Base). Never suggest testnet assets or fictional stocks.
-- Prefer exact numbers over adjectives. If data is missing, skip the analysis rather than guessing.
+- Only recommend assets listed under REAL ASSETS below. Never suggest testnet assets or fictional stocks.
+- Prefer exact numbers over adjectives. Any line marked "unavailable" is unavailable — never state a figure for it, and never invent a substitute.
+- If too much of the request's data is unavailable to ground a recommendation, say so in "reasoning" and set "action": "HOLD" rather than guessing.
 
 ASSET GUIDANCE:
-- Real Yield > 2% → favor yield assets (USDY ~5%, SYRUPUSDC ~4.5%, LI.FI Earn vaults)
-- Real Yield 0-2% → balanced: mix yield + gold hedge + Robinhood Chain Treasuries (SGOV)
-- Real Yield < 0% → favor PAXG (gold-backed inflation hedge) or USDG/SGOV on Robinhood Chain for USD/Treasury parking
+- Real Yield > 2% → favor yield assets (USDY ~5%, SYRUPUSDC ~4.5%)
+- Real Yield 0-2% → balanced: mix yield + gold hedge (PAXG)
+- Real Yield < 0% → favor PAXG (gold-backed inflation hedge) or USD-pegged stablecoins
+- Real Yield "unavailable" → do not use real yield in the reasoning
 
 REAL ASSETS:
-- Arbitrum: USDY (~5%), SYRUPUSDC (~4.5%), PAXG, USDC, EURC
-- Robinhood Chain: USDG (Paxos-backed USD), SGOV (short-term Treasury ETF), SPY, QQQ, AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN
-- Celo: USDm, EURm, BRLm, KESm, GHSm, ZARm, XOFm, PHPm, USDC, cUSD, cEUR
-- Base: LI.FI Earn vaults — Morpho, yoUSD, Aave (up to 16% APY)
+- Arbitrum (executable): USDY (~5%), SYRUPUSDC (~4.5%), PAXG, USDC, MXNB
+- Celo (executable): USDm, EURm, BRLm, KESm, COPm, PHPm, GHSm, XOFm, GBPm, ZARm, CADm, AUDm, CHFm, JPYm, NGNm, USDT, CELO
+- Robinhood Chain (tracked only, not swappable in-app): USDG, SGOV, SPY, QQQ, SLV, WETH, AAPL, TSLA, MSFT, NVDA, AMZN, GOOGL, META, AMD, COIN
 
 ${strategyPrompt ? `USER STRATEGY: ${strategyPrompt} — align all recommendations with this strategy.` : ''}
 
@@ -1091,16 +1325,16 @@ ${formatMacroDataSummary(macroData) || 'Limited macro data available - rely on r
 BRIGHT DATA EVIDENCE (live scraped intelligence):
 ${extractBrightDataContext(macroData) || 'No Bright Data evidence available.'}
 
-NETWORK MOMENTUM:
-- Active Protections (24h): ${networkActivity?.activeProtections24h || 84} users
-- Total Protected Value: $${(networkActivity?.totalProtected / 1000000 || 1.2).toFixed(1)}M
-- Trending Region: ${networkActivity?.topTrendingRegion || 'Africa'}
-- Market Signal: Gold (PAXG) is ${networkActivity?.goldPriceChange24h > 0 ? 'UP' : 'DOWN'} ${Math.abs(networkActivity?.goldPriceChange24h || 1.25)}%
+NETWORK MOMENTUM (any "unavailable" line means the datum was not provided — do not state a figure for it):
+- Active Protections (24h): ${typeof networkActivity?.activeProtections24h === 'number' ? `${networkActivity.activeProtections24h} users` : 'unavailable'}
+- Total Protected Value: ${typeof networkActivity?.totalProtected === 'number' && networkActivity.totalProtected > 0 ? `$${(networkActivity.totalProtected / 1000000).toFixed(1)}M` : 'unavailable'}
+- Trending Region: ${networkActivity?.topTrendingRegion || 'unavailable'}
+- Market Signal: ${typeof networkActivity?.goldPriceChange24h === 'number' ? `Gold (PAXG) is ${networkActivity.goldPriceChange24h > 0 ? 'UP' : 'DOWN'} ${Math.abs(networkActivity.goldPriceChange24h)}%` : 'unavailable'}
 
 CURRENT MARKET CONTEXT:
-- 10-Year Treasury Yield: ${treasuryYield}%
-- Current Inflation Rate: ${currentInflation}%
-- Real Yield: ${realYield}%
+- 10-Year Treasury Yield: ${treasuryYield != null ? `${treasuryYield}%` : 'unavailable'}
+- Current Inflation Rate: ${currentInflation != null ? `${currentInflation}%` : 'unavailable'}
+- Real Yield: ${realYield != null ? `${realYield}%` : 'unavailable'}
 
 PORTFOLIO ANALYSIS:
 - Tokens Held: ${portfolioAnalysis.tokenCount} (${portfolioAnalysis.tokens.map((t) => t.symbol).join(', ')})

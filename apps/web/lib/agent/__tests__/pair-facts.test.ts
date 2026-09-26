@@ -10,6 +10,12 @@ const { mockChat } = vi.hoisted(() => ({
   ),
 }));
 
+// The FACTS block reads the shared FX service — stub it so tests never
+// touch the live dataset (absent → curated-labelled lines only).
+vi.mock("@diversifi/shared/src/services/fx-rate.service", () => ({
+  getLiveDepreciation: vi.fn(async () => null),
+}));
+
 vi.mock("@diversifi/shared", () => ({
   AIService: { chat: mockChat },
   chatStream: vi.fn(),
@@ -129,6 +135,8 @@ describe("formatPairFacts", () => {
     const system = mockChat.mock.calls[0][0].messages.find(
       (m) => m.role === "system",
     );
-    expect(system?.content).not.toContain("PAIR FACTS");
+    // The block header — the words "PAIR FACTS" also appear in the
+    // prompt's number-rule text, so assert on the header itself.
+    expect(system?.content).not.toContain("PAIR FACTS —");
   });
 });

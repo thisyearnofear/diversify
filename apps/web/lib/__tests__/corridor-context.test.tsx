@@ -13,9 +13,9 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
-import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, pairWhatIfFor } from '../corridor-context';
+import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, corridorSignalForCurrency, pairWhatIfFor, liveOneYearOverlay } from '../corridor-context';
 import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
-import { CURRENCY_BY_CODE, riskEventAge } from '@/constants/currency-risk';
+import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA_AS_OF, riskEventAge } from '@/constants/currency-risk';
 
 afterEach(() => cleanup());
 
@@ -147,9 +147,16 @@ describe('corridor drift — which side lost ground (feeds the beam tilt)', () =
 
 describe('corridorFor horizons — the same weighing at other windows', () => {
   it('uses the chosen horizon in the line and drift', () => {
+    // NGN's 1yr figure is live-derived and positive (the naira firmed
+    // through 2025–26) — the honest 1y line names USD the weaker side.
     const ngn = CURRENCY_BY_CODE['NGN'].depreciation.vsUSD;
+    const usd = CURRENCY_BY_CODE['USD'].depreciation.vsUSD;
+    const cross = ((1 + ngn['1yr'] / 100) / (1 + usd['1yr'] / 100) - 1) * 100;
+    const loss = cross < 0 ? -cross : (1 - 1 / (1 + cross / 100)) * 100;
+    const weaker = cross < 0 ? 'NGN' : 'USD';
+    const stronger = cross < 0 ? 'USD' : 'NGN';
     const one = corridorFor('NGNm', 'USDC', '1yr')!;
-    expect(one.line).toContain(`~${Math.abs(Math.round(((1 + ngn['1yr'] / 100) - 1) * 100))}%`);
+    expect(one.line).toContain(`${weaker} lost ~${Math.abs(Math.round(loss))}% to ${stronger}`);
     expect(one.line).toContain('in 1 year');
     expect(one.drift).not.toBeNull();
     const three = corridorFor('NGNm', 'USDC', '3yr')!;
@@ -445,6 +452,68 @@ describe('corridorSignalsFor — fresh dated beats from the anchored ledger', ()
     };
     const out = corridorSignalsFor([rec], 'KESm', 'USDC', NOW);
     expect(out.from?.text).toBe('CBK held the benchmark rate');
+  });
+});
+
+describe('corridorSignalForCurrency — the fiat-side trail beat', () => {
+  const NOW = Date.parse('2026-09-23T12:00:00Z');
+  const daysAgo = (d: number) => Math.floor((NOW - d * 86_400_000) / 1000);
+  const signal = (targetToken: string, oneLiner: string, days: number) => ({
+    action: 'MACRO_SIGNAL:RATE_DECISION',
+    targetToken,
+    reasoning: `${oneLiner}. Source: https://cb.example/page`,
+    timestamp: daysAgo(days),
+  });
+
+  it('returns the freshest fresh signal for a bare fiat code', () => {
+    const out = corridorSignalForCurrency(
+      [
+        signal('NGNm', 'Older CBN signal', 9),
+        signal('NGNm', 'CBN held the benchmark rate', 2),
+      ],
+      'NGN',
+      NOW,
+    );
+    expect(out?.text).toBe('CBN held the benchmark rate');
+    // Fiat matching is symbol-agnostic — a cUSD Fed signal lands on USD.
+    expect(
+      corridorSignalForCurrency([signal('cUSD', 'Fed held rates', 1)], 'USD', NOW)?.text,
+    ).toBe('Fed held rates');
+  });
+
+  it('returns null for stale, unmatched, or uncovered currencies', () => {
+    expect(
+      corridorSignalForCurrency([signal('KESm', 'Too old', 20)], 'KES', NOW),
+    ).toBeNull();
+    expect(
+      corridorSignalForCurrency([signal('KESm', 'CBK moved', 1)], 'NGN', NOW),
+    ).toBeNull();
+    expect(corridorSignalForCurrency([], 'NGN', NOW)).toBeNull();
+    // XOF has no dataset entry and XAU is the benchmark — honest absence.
+    expect(corridorSignalForCurrency([signal('XOFm', 'BCEAO held', 1)], 'XOF', NOW)).toBeNull();
+  });
+});
+
+describe('liveOneYearOverlay — the 1yr figure names its source', () => {
+  it('prefers the live figure with the feed date when the feed answered', () => {
+    const o = liveOneYearOverlay(-40, {
+      depreciation1yr: 13,
+      asOf: '2026-09-26',
+      series: null,
+    });
+    expect(o).toEqual({ value: 13, live: true, asOf: '2026-09-26' });
+  });
+
+  it('falls back to the curated figure and dataset date on a feed miss', () => {
+    expect(liveOneYearOverlay(-40, null)).toEqual({
+      value: -40,
+      live: false,
+      asOf: CURRENCY_RISK_DATA_AS_OF,
+    });
+    // A feed that answered but has no 1yr still falls back — never blends.
+    expect(
+      liveOneYearOverlay(-40, { depreciation1yr: null, asOf: '2026-09-26', series: null }),
+    ).toEqual({ value: -40, live: false, asOf: CURRENCY_RISK_DATA_AS_OF });
   });
 });
 

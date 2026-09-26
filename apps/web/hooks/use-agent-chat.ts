@@ -86,7 +86,7 @@ export function useAgentChat({
   const portfolio = useSharedMultichainBalances(address, config.goal);
   const { fetchPaidSource, quoteResearch } = useX402Payment();
   const { addActivity } = useAgentActivities();
-  const { deductCredits, status: creditsStatus } = useCredits();
+  useCredits(); // mounts the allowance fetch tap (x-demo-mode + 429 broadcast)
   const { settings: paymentSettings } = useResearchPaymentSettings();
   const visibilityCtx = useGuardianVisibilityOptional();
 
@@ -167,6 +167,10 @@ export function useAgentChat({
         /** The pair being asked about — symbols only; the server rebuilds
          *  the facts from its curated registry. */
         pair?: { from: string; to: string };
+        /** What the user's screen is showing — current tab + live pair.
+         *  Rendered server-side as "User is viewing …" so answers can
+         *  reference the surface in front of them. */
+        view?: { tab?: string; pair?: { from: string; to: string } };
       },
     ) => {
       // Legibility preference flips are a fixed utterance class handled
@@ -538,8 +542,6 @@ export function useAgentChat({
       // never silently downgrade a paid-eligible question.
       const explicitResearchRequest = /\b(deep research|premium research|research bundle|run research|paid research|evidence backed|with evidence)\b/i.test(normalizedContent);
       const shouldFetchResearch = (responseFormat === 'card' || responseFormat === 'action') || explicitResearchRequest || confirmedReview;
-      const currentCredits = creditsStatus?.credits.bonus ?? 0;
-      const hasCredits = currentCredits >= RESEARCH_BUNDLE_PRICE;
 
       const runFundedFetch = async () => {
         updateChatState({ thinkingStep: "Gathering evidence..." });
@@ -558,7 +560,7 @@ export function useAgentChat({
         // receipt to normal free answers — that makes every free response
         // look like an error.
         x402Receipt = null;
-      } else if (hasCredits || confirmedReview) {
+      } else if (confirmedReview) {
         try {
           await runFundedFetch();
         } catch (error: any) {
@@ -669,6 +671,12 @@ export function useAgentChat({
             macroData: Object.keys(macroData).length > 0 ? macroData : undefined,
             contextRecords: options?.decisionRef ? [{ ...options.decisionRef }] : undefined,
             pairContext: options?.pair ? { from: options.pair.from, to: options.pair.to } : undefined,
+            view: options?.view
+              ? {
+                  ...(options.view.tab ? { tab: options.view.tab } : {}),
+                  ...(options.view.pair ? { pair: { from: options.view.pair.from, to: options.view.pair.to } } : {}),
+                }
+              : undefined,
           }),
         });
 
@@ -882,13 +890,9 @@ export function useAgentChat({
             const isSpendEvent = x402Receipt.status === "paid" || x402Receipt.status === "credit";
             const isResearchEvent = isSpendEvent || x402Receipt.status === "failed";
 
-            // Always deduct from bonus credits when research sources are consumed.
-            // The gateway may grant free-tier access (cost=0 in receipt) but the
-            // user's research allowance should still reflect usage.
+            // The gateway may grant free-tier access (cost=0 in receipt) — the
+            // activity still records the bundle price so the ledger reflects usage.
             const effectiveCost = spent > 0 ? spent : (x402Receipt.status !== "failed" && x402Receipt.sources.length > 0 ? RESEARCH_BUNDLE_PRICE : 0);
-            if (effectiveCost > 0) {
-              deductCredits(effectiveCost);
-            }
 
             if (isResearchEvent || (x402Receipt.status !== "failed" && x402Receipt.sources.length > 0)) {
               addActivity({
@@ -943,7 +947,7 @@ export function useAgentChat({
 
           const errorMessage: AIMessage = {
             role: "assistant",
-            content: `⚠️ **Analysis Unavailable**\n\n${errorData.error || "The AI service is temporarily unavailable. Please try again in a moment."}`,
+            content: `⚠️ **Analysis Unavailable**\n\n${errorData.message || errorData.error || "The AI service is temporarily unavailable. Please try again in a moment."}`,
             timestamp: new Date(),
             type: "text",
           };
@@ -988,7 +992,6 @@ export function useAgentChat({
       portfolio.hasEstimates,
       portfolio.chains,
       portfolio.totalValue,
-      creditsStatus,
       messages,
       addMessage,
       addActivity,
@@ -996,7 +999,6 @@ export function useAgentChat({
       signMessage,
       quoteResearch,
       patchMessage,
-      deductCredits,
       updateChatState,
       visibilityCtx,
       paymentSettings.autoPayEnabled,

@@ -119,6 +119,12 @@ export interface CurrencyRiskEntry {
 /**
  * Curated dataset. Ordered roughly by 5-year depreciation severity
  * (most severe first) so iteration produces a descending risk gradient.
+ *
+ * Freshness: depreciation.vsUSD['1yr'] is synced from the live FX feed
+ * (fawazahmed0 via /api/currency-risk/live) — last sync 2026-09-26, verified
+ * daily by scripts/check-data-freshness.mjs (flags >3pp drift or sign flips
+ * as a data-review issue). 3yr/5yr and vsEUR/vsXAU remain curated — the feed
+ * only reaches back to 2024-03 — and riskEvents keep their own asOf dates.
  */
 export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
   {
@@ -128,7 +134,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'ARG',
     flag: '🇦🇷',
     depreciation: {
-      vsUSD: { '1yr': -27, '3yr': -65, '5yr': -78 },
+      vsUSD: { '1yr': -12, '3yr': -65, '5yr': -78 },
       vsEUR: { '1yr': -25, '3yr': -62, '5yr': -76 },
       vsXAU: { '1yr': -40, '3yr': -75, '5yr': -85 },
     },
@@ -144,7 +150,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'TUR',
     flag: '🇹🇷',
     depreciation: {
-      vsUSD: { '1yr': -18, '3yr': -55, '5yr': -80 },
+      vsUSD: { '1yr': -15, '3yr': -55, '5yr': -80 },
       vsEUR: { '1yr': -15, '3yr': -52, '5yr': -78 },
       vsXAU: { '1yr': -32, '3yr': -67, '5yr': -86 },
     },
@@ -160,7 +166,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'UKR',
     flag: '🇺🇦',
     depreciation: {
-      vsUSD: { '1yr': -3, '3yr': -22, '5yr': -35 },
+      vsUSD: { '1yr': -7, '3yr': -22, '5yr': -35 },
       vsEUR: { '1yr': -2, '3yr': -20, '5yr': -33 },
       vsXAU: { '1yr': -15, '3yr': -38, '5yr': -50 },
     },
@@ -176,7 +182,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'EGY',
     flag: '🇪🇬',
     depreciation: {
-      vsUSD: { '1yr': -10, '3yr': -50, '5yr': -68 },
+      vsUSD: { '1yr': -7, '3yr': -50, '5yr': -68 },
       vsEUR: { '1yr': -8, '3yr': -47, '5yr': -66 },
       vsXAU: { '1yr': -25, '3yr': -63, '5yr': -78 },
     },
@@ -192,7 +198,9 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'NGA',
     flag: '🇳🇬',
     depreciation: {
-      vsUSD: { '1yr': -40, '3yr': -55, '5yr': -60 },
+      // 1yr vsUSD is live-derived like every entry (see dataset header);
+      // note the sign: the naira GAINED ~13% vs USD over the trailing year.
+      vsUSD: { '1yr': 13, '3yr': -55, '5yr': -60 },
       vsEUR: { '1yr': -38, '3yr': -53, '5yr': -58 },
       vsXAU: { '1yr': -50, '3yr': -65, '5yr': -72 },
     },
@@ -211,7 +219,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'GHA',
     flag: '🇬🇭',
     depreciation: {
-      vsUSD: { '1yr': -5, '3yr': -45, '5yr': -63 },
+      vsUSD: { '1yr': 7, '3yr': -45, '5yr': -63 },
       vsEUR: { '1yr': -3, '3yr': -42, '5yr': -61 },
       vsXAU: { '1yr': -20, '3yr': -58, '5yr': -73 },
     },
@@ -228,7 +236,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'PAK',
     flag: '🇵🇰',
     depreciation: {
-      vsUSD: { '1yr': -3, '3yr': -35, '5yr': -46 },
+      vsUSD: { '1yr': 2, '3yr': -35, '5yr': -46 },
       vsEUR: { '1yr': -1, '3yr': -32, '5yr': -44 },
       vsXAU: { '1yr': -18, '3yr': -50, '5yr': -60 },
     },
@@ -244,7 +252,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'LKA',
     flag: '🇱🇰',
     depreciation: {
-      vsUSD: { '1yr': -5, '3yr': -40, '5yr': -45 },
+      vsUSD: { '1yr': -8, '3yr': -40, '5yr': -45 },
       vsEUR: { '1yr': -3, '3yr': -37, '5yr': -43 },
       vsXAU: { '1yr': -20, '3yr': -55, '5yr': -60 },
     },
@@ -260,7 +268,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'KEN',
     flag: '🇰🇪',
     depreciation: {
-      vsUSD: { '1yr': -8, '3yr': -22, '5yr': -28 },
+      vsUSD: { '1yr': 0, '3yr': -22, '5yr': -28 },
       vsEUR: { '1yr': -6, '3yr': -20, '5yr': -25 },
       vsXAU: { '1yr': -22, '3yr': -42, '5yr': -50 },
     },
@@ -279,7 +287,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'ZAF',
     flag: '🇿🇦',
     depreciation: {
-      vsUSD: { '1yr': -4, '3yr': -15, '5yr': -22 },
+      vsUSD: { '1yr': 7, '3yr': -15, '5yr': -22 },
       vsEUR: { '1yr': -2, '3yr': -13, '5yr': -20 },
       vsXAU: { '1yr': -18, '3yr': -35, '5yr': -45 },
     },
@@ -296,7 +304,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'HTI',
     flag: '🇭🇹',
     depreciation: {
-      vsUSD: { '1yr': -5, '3yr': -18, '5yr': -22 },
+      vsUSD: { '1yr': 0, '3yr': -18, '5yr': -22 },
       vsEUR: { '1yr': -3, '3yr': -16, '5yr': -20 },
       vsXAU: { '1yr': -20, '3yr': -38, '5yr': -45 },
     },
@@ -312,7 +320,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'RUS',
     flag: '🇷🇺',
     depreciation: {
-      vsUSD: { '1yr': -5, '3yr': -25, '5yr': -28 },
+      vsUSD: { '1yr': 0, '3yr': -25, '5yr': -28 },
       vsEUR: { '1yr': -3, '3yr': -22, '5yr': -25 },
       vsXAU: { '1yr': -19, '3yr': -40, '5yr': -48 },
     },
@@ -328,7 +336,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'BRA',
     flag: '🇧🇷',
     depreciation: {
-      vsUSD: { '1yr': -7, '3yr': -18, '5yr': -27 },
+      vsUSD: { '1yr': 4, '3yr': -18, '5yr': -27 },
       vsEUR: { '1yr': -5, '3yr': -15, '5yr': -24 },
       vsXAU: { '1yr': -21, '3yr': -35, '5yr': -49 },
     },
@@ -345,7 +353,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'COL',
     flag: '🇨🇴',
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -15, '5yr': -17 },
+      vsUSD: { '1yr': 16, '3yr': -15, '5yr': -17 },
       vsEUR: { '1yr': 0, '3yr': -12, '5yr': -14 },
       vsXAU: { '1yr': -16, '3yr': -33, '5yr': -41 },
     },
@@ -360,7 +368,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'THA',
     flag: '🇹🇭',
     depreciation: {
-      vsUSD: { '1yr': -4, '3yr': -12, '5yr': -17 },
+      vsUSD: { '1yr': -3, '3yr': -12, '5yr': -17 },
       vsEUR: { '1yr': -2, '3yr': -10, '5yr': -14 },
       vsXAU: { '1yr': -18, '3yr': -30, '5yr': -41 },
     },
@@ -375,7 +383,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'IND',
     flag: '🇮🇳',
     depreciation: {
-      vsUSD: { '1yr': -1, '3yr': -7, '5yr': -14 },
+      vsUSD: { '1yr': -7, '3yr': -7, '5yr': -14 },
       vsEUR: { '1yr': 1, '3yr': -5, '5yr': -11 },
       vsXAU: { '1yr': -15, '3yr': -26, '5yr': -38 },
     },
@@ -390,7 +398,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'IDN',
     flag: '🇮🇩',
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -8, '5yr': -12 },
+      vsUSD: { '1yr': -6, '3yr': -8, '5yr': -12 },
       vsEUR: { '1yr': 0, '3yr': -6, '5yr': -9 },
       vsXAU: { '1yr': -16, '3yr': -27, '5yr': -36 },
     },
@@ -405,7 +413,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'PHL',
     flag: '🇵🇭',
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -8, '5yr': -11 },
+      vsUSD: { '1yr': -6, '3yr': -8, '5yr': -11 },
       vsEUR: { '1yr': 0, '3yr': -6, '5yr': -8 },
       vsXAU: { '1yr': -16, '3yr': -26, '5yr': -35 },
     },
@@ -420,7 +428,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'TZA',
     flag: '🇹🇿',
     depreciation: {
-      vsUSD: { '1yr': -3, '3yr': -9, '5yr': -12 },
+      vsUSD: { '1yr': -7, '3yr': -9, '5yr': -12 },
       vsEUR: { '1yr': -1, '3yr': -7, '5yr': -9 },
       vsXAU: { '1yr': -17, '3yr': -28, '5yr': -36 },
     },
@@ -435,7 +443,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'JAM',
     flag: '🇯🇲',
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -7, '5yr': -10 },
+      vsUSD: { '1yr': 2, '3yr': -7, '5yr': -10 },
       vsEUR: { '1yr': 0, '3yr': -5, '5yr': -8 },
       vsXAU: { '1yr': -17, '3yr': -28, '5yr': -36 },
     },
@@ -451,7 +459,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'VNM',
     flag: '🇻🇳',
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -5, '5yr': -8 },
+      vsUSD: { '1yr': 2, '3yr': -5, '5yr': -8 },
       vsEUR: { '1yr': 0, '3yr': -3, '5yr': -5 },
       vsXAU: { '1yr': -16, '3yr': -23, '5yr': -32 },
     },
@@ -466,7 +474,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'MEX',
     flag: '🇲🇽',
     depreciation: {
-      vsUSD: { '1yr': 2, '3yr': -5, '5yr': -5 },
+      vsUSD: { '1yr': 4, '3yr': -5, '5yr': -5 },
       vsEUR: { '1yr': 4, '3yr': -3, '5yr': -2 },
       vsXAU: { '1yr': -12, '3yr': -22, '5yr': -30 },
     },
@@ -498,7 +506,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'UGA',
     flag: '🇺🇬',
     depreciation: {
-      vsUSD: { '1yr': -1, '3yr': -4, '5yr': -3 },
+      vsUSD: { '1yr': -11, '3yr': -4, '5yr': -3 },
       vsEUR: { '1yr': 1, '3yr': -2, '5yr': 0 },
       vsXAU: { '1yr': -15, '3yr': -21, '5yr': -28 },
     },
@@ -554,7 +562,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'GBR',
     flag: '🇬🇧',
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -8, '5yr': -12 },
+      vsUSD: { '1yr': -1, '3yr': -8, '5yr': -12 },
       vsEUR: { '1yr': 0, '3yr': -6, '5yr': -10 },
       vsXAU: { '1yr': -17, '3yr': -30, '5yr': -41 },
     },
@@ -571,7 +579,7 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
     iso3: 'DEU',
     flag: '🇪🇺',
     depreciation: {
-      vsUSD: { '1yr': -3, '3yr': -10, '5yr': -8 },
+      vsUSD: { '1yr': -2, '3yr': -10, '5yr': -8 },
       vsEUR: { '1yr': 0, '3yr': 0, '5yr': 0 },
       vsXAU: { '1yr': -18, '3yr': -32, '5yr': -38 },
     },

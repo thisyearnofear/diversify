@@ -23,11 +23,22 @@ export interface BlockscoutTransfer {
 }
 
 export interface CapitalLeg {
+    /** 'swap' = one currency out and a different one in, same tx.
+     *  'sent'/'received' = a bare one-sided transfer — labeled honestly
+     *  downstream, never dressed up as a swap. Optional only so older
+     *  literals keep compiling; deriveCapitalHistory always sets it. */
+    kind?: 'swap' | 'sent' | 'received';
+    /** The chain this leg settled on — optional for the same reason. */
+    chainId?: number;
+    /** Empty string on a 'received' leg (nothing went out). */
     from: string;
+    /** Empty string on a 'sent' leg (nothing came in). */
     to: string;
     txHash: string;
     at: string;
+    /** Amount out of the wallet — '' on 'received' legs. */
     amountIn: string;
+    /** Amount into the wallet — '' on 'sent' legs. */
     amountOut: string;
 }
 
@@ -39,7 +50,13 @@ export interface CapitalStation {
 
 export interface CapitalHistory {
     address: string;
-    chainId: 42220;
+    /** First chain read — kept for back-compat; consumers should prefer
+     *  `chains`, which names every chain actually read. */
+    chainId: number;
+    /** Chains this history was actually derived from — a chain whose
+     *  fetch failed isn't listed, so the footer never claims coverage
+     *  it didn't get. Optional for older literals. */
+    chains?: number[];
     stations: CapitalStation[];
     legs: CapitalLeg[];
     /** False when the transfer window was capped before the first page —
@@ -70,9 +87,18 @@ export function deriveCapitalHistory(args: {
     isCurrency(symbol: string): boolean;
     complete: boolean;
     now: string;
+    /** The chain these transfers were read from — defaults to Celo. */
+    chainId?: number;
 }): CapitalHistory {
-    const { wallet, transfers, tokenByAddress, isCurrency, complete, now } =
-        args;
+    const {
+        wallet,
+        transfers,
+        tokenByAddress,
+        isCurrency,
+        complete,
+        now,
+        chainId = 42220,
+    } = args;
     const w = wallet.toLowerCase();
 
     // Keep only transfers of tokens we can identify as currencies.
@@ -106,7 +132,9 @@ export function deriveCapitalHistory(args: {
         .sort((a, b) => a.firstSeen.localeCompare(b.firstSeen));
 
     // Legs: within one tx, exactly one currency out and exactly one
-    // different currency in. Anything else is skipped.
+    // different currency in is a swap. One-sided currency moves are kept
+    // too — labeled 'sent'/'received' so they read as transfers, not
+    // swaps. Anything more ambiguous is skipped — never guessed.
     const byTx = new Map<string, typeof relevant>();
     for (const t of relevant) {
         const arr = byTx.get(t.transaction_hash) ?? [];
@@ -130,27 +158,92 @@ export function deriveCapitalHistory(args: {
             cur.sum += BigInt(t.total.value);
             side.set(t.symbol, cur);
         }
-        if (out.size !== 1 || inn.size !== 1) continue;
-        const [[fromSym, outSum]] = out;
-        const [[toSym, inSum]] = inn;
-        if (fromSym === toSym) continue;
-        legs.push({
-            from: fromSym,
-            to: toSym,
-            txHash,
-            at: ts[0].timestamp,
-            amountIn: formatUnits(outSum.sum.toString(), outSum.decimals),
-            amountOut: formatUnits(inSum.sum.toString(), inSum.decimals),
-        });
+        const at = ts[0].timestamp;
+        if (out.size === 1 && inn.size === 1) {
+            const [[fromSym, outSum]] = out;
+            const [[toSym, inSum]] = inn;
+            if (fromSym === toSym) continue;
+            legs.push({
+                kind: 'swap',
+                chainId,
+                from: fromSym,
+                to: toSym,
+                txHash,
+                at,
+                amountIn: formatUnits(outSum.sum.toString(), outSum.decimals),
+                amountOut: formatUnits(inSum.sum.toString(), inSum.decimals),
+            });
+        } else if (out.size === 1 && inn.size === 0) {
+            const [[fromSym, outSum]] = out;
+            legs.push({
+                kind: 'sent',
+                chainId,
+                from: fromSym,
+                to: '',
+                txHash,
+                at,
+                amountIn: formatUnits(outSum.sum.toString(), outSum.decimals),
+                amountOut: '',
+            });
+        } else if (out.size === 0 && inn.size === 1) {
+            const [[toSym, inSum]] = inn;
+            legs.push({
+                kind: 'received',
+                chainId,
+                from: '',
+                to: toSym,
+                txHash,
+                at,
+                amountIn: '',
+                amountOut: formatUnits(inSum.sum.toString(), inSum.decimals),
+            });
+        }
+        // Multi-token txs stay ambiguous — skipped, never guessed.
     }
     legs.sort((a, b) => b.at.localeCompare(a.at));
 
     return {
         address: wallet,
-        chainId: 42220,
+        chainId,
+        chains: [chainId],
         stations,
         legs: legs.slice(0, MAX_LEGS),
         complete,
         asOf: now,
+    };
+}
+
+/** Merge per-chain histories into one wallet journey: stations dedupe by
+ *  symbol (earliest firstSeen wins), legs concat + re-sort newest first,
+ *  `chains` names every chain actually read, and `complete` holds only
+ *  when every source reached its first page. */
+export function mergeCapitalHistories(parts: CapitalHistory[]): CapitalHistory {
+    const stationMap = new Map<string, CapitalStation>();
+    for (const p of parts) {
+        for (const s of p.stations) {
+            const cur = stationMap.get(s.symbol);
+            if (!cur) {
+                stationMap.set(s.symbol, { ...s });
+            } else {
+                if (s.firstSeen < cur.firstSeen) cur.firstSeen = s.firstSeen;
+                if (s.lastSeen > cur.lastSeen) cur.lastSeen = s.lastSeen;
+            }
+        }
+    }
+    const stations = [...stationMap.values()].sort((a, b) =>
+        a.firstSeen.localeCompare(b.firstSeen),
+    );
+    const legs = parts
+        .flatMap((p) => p.legs)
+        .sort((a, b) => b.at.localeCompare(a.at))
+        .slice(0, MAX_LEGS);
+    return {
+        address: parts[0]?.address ?? '',
+        chainId: parts[0]?.chainId ?? 42220,
+        chains: parts.map((p) => p.chainId),
+        stations,
+        legs,
+        complete: parts.length > 0 && parts.every((p) => p.complete),
+        asOf: parts[0]?.asOf ?? new Date().toISOString(),
     };
 }

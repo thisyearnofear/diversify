@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     deriveCapitalHistory,
+    mergeCapitalHistories,
     type BlockscoutTransfer,
 } from '../capital-history';
 
@@ -152,16 +153,74 @@ describe('deriveCapitalHistory', () => {
         expect(h.legs).toHaveLength(0);
     });
 
-    it('a plain send is not a leg', () => {
+    it('a plain send is a transfer leg — labeled sent, never a swap', () => {
         const h = derive([
             xfer({
                 from: { hash: WALLET },
                 to: { hash: OTHER },
             }),
         ]);
-        expect(h.legs).toHaveLength(0);
+        expect(h.legs).toHaveLength(1);
+        expect(h.legs[0]).toMatchObject({
+            kind: 'sent',
+            from: 'USDm',
+            to: '',
+            amountIn: '1',
+            amountOut: '',
+        });
         // …but it also isn't a station — nothing was received.
         expect(h.stations).toHaveLength(0);
+    });
+
+    it('a bare receive is a transfer leg labeled received', () => {
+        const h = derive([xfer()]);
+        expect(h.legs).toHaveLength(1);
+        expect(h.legs[0]).toMatchObject({
+            kind: 'received',
+            from: '',
+            to: 'USDm',
+            amountIn: '',
+            amountOut: '1',
+        });
+    });
+
+    it('tags legs with the chain they were read from', () => {
+        const h = derive([xfer()], { chainId: 42161 });
+        expect(h.chainId).toBe(42161);
+        expect(h.chains).toEqual([42161]);
+        expect(h.legs[0].chainId).toBe(42161);
+    });
+
+    it('mergeCapitalHistories dedupes stations and lists read chains', () => {
+        const celo = derive([
+            xfer({ timestamp: '2024-01-01T00:00:00.000000Z' }),
+        ]);
+        const arb = derive(
+            [
+                xfer({
+                    timestamp: '2024-06-01T00:00:00.000000Z',
+                    transaction_hash: '0xarb',
+                    token: { address_hash: KESm_ADDR },
+                }),
+            ],
+            { chainId: 42161 },
+        );
+        const merged = mergeCapitalHistories([celo, arb]);
+        expect(merged.chains).toEqual([42220, 42161]);
+        expect(merged.stations.map((s) => s.symbol)).toEqual([
+            'USDm',
+            'KESm',
+        ]);
+        expect(merged.legs).toHaveLength(2);
+        // Newest first across chains.
+        expect(merged.legs[0].txHash).toBe('0xarb');
+        expect(merged.complete).toBe(true);
+    });
+
+    it('merged history is incomplete when any source was capped', () => {
+        const celo = derive([], { complete: false });
+        const arb = derive([], { chainId: 42161 });
+        expect(mergeCapitalHistories([celo, arb]).complete).toBe(false);
     });
 
     it('keeps exact decimal precision across 6- and 18-decimal tokens', () => {

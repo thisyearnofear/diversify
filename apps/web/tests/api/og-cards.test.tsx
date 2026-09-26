@@ -21,6 +21,7 @@ vi.mock('@vercel/og', () => ({
 
 import pairCardHandler from '@/pages/api/og/pair-card';
 import shareCardHandler from '@/pages/api/og/share-card';
+import receiptHandler from '@/pages/api/og/receipt';
 
 function textOf(node: React.ReactNode): string {
   if (node == null || typeof node === 'boolean') return '';
@@ -135,5 +136,65 @@ describe('/api/og/pair-card — the fresh beat', () => {
     expect(text).toContain('The naira lost ~60% to the dollar in 5 years');
     expect(text).not.toContain('CBN');
     expect((calls[0].options?.headers as Record<string, string>)['Cache-Control']).toContain('s-maxage=86400');
+  });
+});
+
+
+describe('/api/og/receipt — the lookup key is the only input', () => {
+  const HASH = `0x${'ab'.repeat(32)}`;
+  const SWAP_PAYLOAD = {
+    chainName: 'Celo',
+    blockNumber: 78456994,
+    timestamp: 1790357752,
+    rateText: '1 KESm ≈ 0.00764272 USDm',
+    legs: [
+      {
+        symbol: 'KESm',
+        amountFormatted: '10',
+        direction: 'sent',
+      },
+      {
+        symbol: 'USDm',
+        amountFormatted: '0.076427220442351482',
+        direction: 'received',
+      },
+    ],
+  };
+
+  it('renders the derived swap headline, rate, and chain trust line', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => SWAP_PAYLOAD,
+    } as never);
+    calls.length = 0;
+    await receiptHandler(
+      req(`https://x/api/og/receipt?chainId=42220&hash=${HASH}`),
+    );
+    const text = textOf(calls[0].children);
+    expect(text).toContain('10 KESm → 0.076427 USDm');
+    expect(text).toContain('1 KESm ≈ 0.00764272 USDm');
+    expect(text).toContain('derived from Celo · block 78,456,994');
+  });
+
+  it('a hash that resolves to nothing → neutral brand card', async () => {
+    mockFetch.mockResolvedValue({ ok: false } as never);
+    calls.length = 0;
+    await receiptHandler(
+      req(`https://x/api/og/receipt?chainId=42220&hash=${HASH}`),
+    );
+    const text = textOf(calls[0].children);
+    expect(text).toContain('DiversiFi');
+    expect(text).toContain('Savings, weighed in real currencies');
+  });
+
+  it('a malformed hash is rejected before any fetch', async () => {
+    mockFetch.mockClear();
+    calls.length = 0;
+    await receiptHandler(
+      req('https://x/api/og/receipt?chainId=42220&hash=0xnotahash'),
+    );
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(textOf(calls[0].children)).toContain('DiversiFi');
+    mockFetch.mockRejectedValue(new Error('no feed'));
   });
 });
