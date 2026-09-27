@@ -255,7 +255,9 @@ export default function TabContentRouter() {
 
   return (
     <motion.div
-      className="pt-2 pb-20 relative"
+      // pb-36 clears the nav AND the Ask Guardian FAB (bottom-20, 48px) so the
+      // last row of any tab is never hidden under it on mobile.
+      className="pt-2 pb-36 lg:pb-20 relative"
       drag="x"
       dragConstraints={{ left: 0, right: 0 }}
       dragElastic={0.05}

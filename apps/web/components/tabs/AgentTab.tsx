@@ -10,6 +10,8 @@ import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useExperience } from "../../context/app/ExperienceContext";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { useAdvisor } from "../../hooks/use-advisor";
+import { useStrategy } from "../../context/app/StrategyContext";
+import { STRATEGIES } from "../../hooks/useFinancialStrategies";
 import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import ErrorBoundary from "../ui/ErrorBoundary";
@@ -179,6 +181,10 @@ function ConnectedAgent({
   clearGuardianContext: () => void;
 }) {
   const g = useGuardianInstrument({ isMiniPay, onNavigateToFund });
+  const { financialStrategy: shieldPlan } = useStrategy();
+  const shieldPlanName = shieldPlan
+    ? STRATEGIES.find((s) => s.id === shieldPlan)?.name ?? null
+    : null;
   const [sel, setSel] = useState<"journal" | "bounds" | "settings" | null>(null);
 
   const budgetShowing =
@@ -337,6 +343,16 @@ function ConnectedAgent({
               onSetLimit={() => g.setShowPermissionModal(true)}
               vault={g.vault}
               onChangeStrategy={() => g.setShowStrategySwitcher(true)}
+              shieldPlan={shieldPlan}
+              shieldPlanName={shieldPlanName}
+              onFollowShieldPlan={
+                shieldPlan && address
+                  ? () =>
+                      void g.vault
+                        .updateStrategy(address, shieldPlan)
+                        .then(() => g.vault.refresh(address))
+                  : undefined
+              }
               walletStableBalanceUSD={g.stableBalanceOnChain.total}
               isMiniPay={isMiniPay}
               onNavigateToFund={onNavigateToFund}

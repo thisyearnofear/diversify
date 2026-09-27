@@ -43,13 +43,14 @@ afterEach(() => {
 });
 
 describe('AppHeader mobile layout', () => {
-  it('hides the "DiversiFi" wordmark only on very narrow screens', () => {
+  it('always shows the "DiversiFi" wordmark — a lone mascot read as a broken header', () => {
     render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={true} />);
 
     const wordmark = screen.getByRole('heading', { name: /DiversiFi/i });
     expect(wordmark).toBeInTheDocument();
-    expect(wordmark.className).toContain('hidden');
-    expect(wordmark.className).toContain('min-[400px]:inline');
+    expect(wordmark.className).not.toMatch(/(^|\s)hidden(\s|$)/);
+    // Narrow screens truncate instead of hiding.
+    expect(wordmark.className).toContain('truncate');
   });
 
   it('hides the "Verified" badge below the sm breakpoint', () => {

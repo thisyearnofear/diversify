@@ -11,6 +11,13 @@ const mockAskAdvisor = vi.fn();
 const mockClearGuardianContext = vi.fn();
 let mockGuardianContext: unknown = null;
 
+vi.mock("@/context/app/StrategyContext", () => ({
+  useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
+}));
+vi.mock("../../../context/app/StrategyContext", () => ({
+  useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
+}));
+
 vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress, chainId: 42220 }),
 }));

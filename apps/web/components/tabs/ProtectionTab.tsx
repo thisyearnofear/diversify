@@ -50,6 +50,7 @@ import { useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useVault } from "@/hooks/use-vault";
+import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import { useSessionKey } from "@/hooks/use-session-key";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import type { FinancialStrategy } from "@/context/app/types";
@@ -560,6 +561,20 @@ export default function ProtectionTab({
     setFocusedToken(null);
     setComparing(false);
     haptics.confirm();
+    // Keep the plan Guardian follows in step with the plan the user just
+    // chose — silently, only when a cached wallet proof exists (a plan
+    // commit must never surprise the user with a signature prompt). When
+    // there's no proof, Limits & controls shows the mismatch with a
+    // one-tap "Follow" instead.
+    if (
+      address &&
+      !isDemo &&
+      vault.vault?.strategy &&
+      vault.vault.strategy !== focusedPhilosophy &&
+      getCachedWalletAuth(address)
+    ) {
+      void vault.updateStrategy(address, focusedPhilosophy).catch(() => {});
+    }
     if (address && chainId) {
       void Promise.resolve(
         recordActivity({
@@ -569,7 +584,7 @@ export default function ProtectionTab({
         }),
       ).catch(() => {});
     }
-  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy]);
+  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy, isDemo, vault]);
 
   if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) {
     return <ProtectionSkeleton />;

@@ -98,6 +98,44 @@ function renderController(overrides: Partial<Parameters<typeof useSwapController
   );
 }
 
+describe("useSwapController — the visitor's own currency leads", () => {
+  beforeEach(() => sessionStorage.clear());
+
+  it("a listed local token defaults the pair to local → USDm", () => {
+    const { result } = renderController({ preferredFromSymbol: "BRLm", preferredFromRegion: "USA" });
+    expect(result.current.fromToken).toBe("BRLm");
+    expect(result.current.toToken).toBe("USDm");
+  });
+
+  it("a local currency that resolves after mount still leads, once", () => {
+    const { result, rerender } = renderHook(
+      ({ local }: { local?: string }) =>
+        useSwapController({ address: "0xtest", chainId: CELO_CHAIN_ID, availableTokens: CELO_TOKENS, preferredFromSymbol: local }),
+      { initialProps: { local: undefined as string | undefined } },
+    );
+    expect(result.current.fromToken).not.toBe("BRLm");
+    rerender({ local: "BRLm" });
+    expect(result.current.fromToken).toBe("BRLm");
+    expect(result.current.toToken).toBe("USDm");
+  });
+
+  it("a late local currency never overrides a pair the visitor picked", () => {
+    const { result, rerender } = renderHook(
+      ({ local }: { local?: string }) =>
+        useSwapController({ address: "0xtest", chainId: CELO_CHAIN_ID, availableTokens: CELO_TOKENS, preferredFromSymbol: local }),
+      { initialProps: { local: undefined as string | undefined } },
+    );
+    act(() => result.current.setFromToken("USDm"));
+    rerender({ local: "BRLm" });
+    expect(result.current.fromToken).toBe("USDm");
+  });
+
+  it("an unlisted local token falls back to the region default", () => {
+    const { result } = renderController({ preferredFromSymbol: "NGNm" });
+    expect(result.current.fromToken).not.toBe("NGNm");
+  });
+});
+
 describe("useSwapController — initial amount + completion", () => {
   it("starts with an empty amount — any amount forces the ticket", () => {
     // Regression: the "10" default meant forcedTicket in SwapInterface

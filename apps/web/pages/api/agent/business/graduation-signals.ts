@@ -37,6 +37,7 @@ import dbConnect from '@/lib/mongodb';
 import { Transaction } from '@/models/Transaction';
 import { PurchaseCycle } from '@/models/PurchaseCycle';
 import { GuardianState } from '@/models/GuardianState';
+import { FunnelEvent } from '@/models/FunnelEvent';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
 
@@ -107,6 +108,34 @@ const SHOW_THRESHOLD = 0.30;
 
 const RATE_LIMIT = 10; // req/min/IP — the endpoint is read-mostly
 const RATE_WINDOW_MS = 60_000;
+
+const SERVER_SESSION_ID = 'server:graduation-signals';
+
+async function recordSignalDetected(
+  userAddress: string,
+  signals: Signals,
+  confidence: number,
+): Promise<void> {
+  try {
+    // Claim the once-per-wallet slot atomically: `new: false` returns the
+    // PRE-update doc, so exactly one concurrent caller sees "not yet
+    // detected" and writes the event.
+    const before = (await GuardianState.findOneAndUpdate(
+      { userAddress },
+      { $set: { graduationSignalDetectedAt: new Date() }, $setOnInsert: { userAddress } },
+      { upsert: true, new: false },
+    )) as { graduationSignalDetectedAt?: Date | null } | null;
+    if (before?.graduationSignalDetectedAt) return;
+    const fired = (Object.keys(signals) as (keyof Signals)[]).filter((k) => signals[k]).sort().join('+');
+    await FunnelEvent.create({
+      sessionId: SERVER_SESSION_ID,
+      event: 'graduation_signal_detected',
+      props: { signals: fired || 'none', confidence: confidence >= 0.5 ? 'high' : 'medium' },
+    });
+  } catch {
+    // Analytics must never break signal evaluation.
+  }
+}
 
 function isLocalStableSymbol(symbol: string | null | undefined): boolean {
   if (!symbol) return false;
@@ -183,7 +212,7 @@ export default async function handler(
     // minimal response so we don't leak detection state (signals,
     // confidence, headline) to a user who explicitly opted out.
     const state = await GuardianState.findOne({ userAddress })
-      .select({ graduationPromptDismissedAt: 1 })
+      .select({ graduationPromptDismissedAt: 1, graduationSignalDetectedAt: 1 })
       .lean();
     if (state?.graduationPromptDismissedAt) {
       return res.status(200).json({
@@ -262,6 +291,15 @@ export default async function handler(
     // only used to clear the threshold; the public value is normalized.
     const normalizedConfidence = Math.min(1, confidence);
     const shouldShow = confidence >= SHOW_THRESHOLD;
+
+    // Funnel denominator: the first time a wallet clears the threshold,
+    // record one coarse `graduation_signal_detected` event — so the client's
+    // viewed/clicked/dismissed have something to be divided by. Once per
+    // wallet (GuardianState gate), never the address itself: the event
+    // carries only the confidence bucket and which signals fired.
+    if (shouldShow && !state?.graduationSignalDetectedAt) {
+      await recordSignalDetected(userAddress, signals, normalizedConfidence);
+    }
 
     return res.status(200).json({
       shouldShow,

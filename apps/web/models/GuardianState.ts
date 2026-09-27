@@ -51,6 +51,9 @@ export interface IGuardianState extends Document {
    * GuardianState is wallet-keyed), not per-browser like localStorage.
    */
   graduationPromptDismissedAt?: Date | null;
+  /** First time the graduation signal cleared the threshold for this wallet —
+   *  gates the one-per-wallet `graduation_signal_detected` funnel event. */
+  graduationSignalDetectedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -66,6 +69,7 @@ const GuardianStateSchema = new Schema<IGuardianState>(
     alertCooldowns: { type: Schema.Types.Mixed, default: undefined },
     executionLock: { type: Schema.Types.Mixed, default: null },
     graduationPromptDismissedAt: { type: Date, default: null },
+    graduationSignalDetectedAt: { type: Date, default: null },
   },
   { timestamps: true, minimize: false },
 );

@@ -73,6 +73,13 @@ function makeInstrument(over: Record<string, unknown> = {}) {
   };
 }
 
+vi.mock("@/context/app/StrategyContext", () => ({
+  useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
+}));
+vi.mock("../../../context/app/StrategyContext", () => ({
+  useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
+}));
+
 vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress, chainId: 42220 }),
 }));

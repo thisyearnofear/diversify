@@ -112,9 +112,9 @@ export default function AppHeader({
           <GuardianMascot size={32} mood="neutral" />
         </div>
         <div className="flex items-center gap-1.5 min-w-0">
-          {/* Keep the mark alone on very narrow screens; show the compact
-              wordmark once there is room beside the wallet controls. */}
-          <h1 className="hidden min-[400px]:inline text-xs sm:text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
+          {/* The wordmark always shows: below 400px the header was a lone
+              mascot in an empty white bar, which read as a broken load. */}
+          <h1 className="inline truncate min-w-0 text-xs sm:text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
             DiversiFi
           </h1>
           {/* Compact streak signal beside the wordmark — replaces the former full-bleed card at top of Home */}
@@ -124,7 +124,7 @@ export default function AppHeader({
           {address && (
             <div className="flex items-center gap-1 flex-shrink-0">
               <div
-                className={`w-2 h-2 rounded-full ring-2 ring-white dark:ring-gray-900 ${isWhitelisted ? "bg-emerald-500" : "bg-amber-500"} animate-pulse`}
+                className={`w-2 h-2 rounded-full ring-2 ring-white dark:ring-gray-900 ${isWhitelisted ? "bg-emerald-500" : "bg-amber-500"}`}
               />
               {isWhitelisted && (
                 <span className="hidden sm:inline-flex items-center text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1.5 py-0.5 rounded-full uppercase tracking-widest border border-emerald-100 dark:border-emerald-800">

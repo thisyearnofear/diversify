@@ -66,7 +66,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'Africapitalism',
     kicker: 'Protection Plan · Africapitalism',
     philosophy:
-      'Keep wealth in African economies. Every cUSD, cEUR, KESm stays close to home.',
+      'Keep wealth in African economies. Every USDm, EURm, KESm stays close to home.',
     allocation: ['KESm', 'GHSm', 'ZARm', 'cUSD', 'cEUR', 'PAXG'],
     accent: '#d97706',
     accentSoft: '#fbbf24',

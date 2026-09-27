@@ -611,15 +611,15 @@ export function ProtectionPlanRing({
       </div>
       {showProjections && (
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
-          3-year path: inflation takes{' '}
+          3-year path, projected: inflation takes{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
             {fmt(purchasingPowerLost)}
           </strong>{' '}
-          on the current mix; the optimized plan preserves{' '}
+          from the current mix; following the plan keeps{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
             {fmt(purchasingPowerPreserved)}
-          </strong>
-          .
+          </strong>{' '}
+          of it.
         </p>
       )}
     </div>  );

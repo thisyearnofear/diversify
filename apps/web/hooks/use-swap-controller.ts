@@ -97,6 +97,9 @@ interface UseSwapControllerParams {
   enableCrossChain?: boolean;
   preferredFromRegion?: string;
   preferredToRegion?: string;
+  /** The visitor's own currency token (e.g. NGNm) — beats the region default
+   *  so a Nigerian lands on NGNm → USDm, not a generic regional pair. */
+  preferredFromSymbol?: string;
 }
 
 export function useSwapController({
@@ -106,9 +109,14 @@ export function useSwapController({
   enableCrossChain = false,
   preferredFromRegion,
   preferredToRegion,
+  preferredFromSymbol,
 }: UseSwapControllerParams) {
   // 1. Initial State Setup
+  const localFrom = preferredFromSymbol
+    ? availableTokens.find((t) => t.symbol.toLowerCase() === preferredFromSymbol.toLowerCase())?.symbol
+    : undefined;
   const defaultFromToken = useMemo(() => {
+    if (localFrom) return localFrom;
     return preferredFromRegion
       ? availableTokens.find((token) => token.region === preferredFromRegion)
         ?.symbol ||
@@ -120,9 +128,14 @@ export function useSwapController({
         ?.symbol ||
       availableTokens[0]?.symbol ||
       "";
-  }, [preferredFromRegion, availableTokens]);
+  }, [preferredFromRegion, availableTokens, localFrom]);
 
   const defaultToToken = useMemo(() => {
+    // Local currency → the dollar reserve: the move this app exists for.
+    if (localFrom) {
+      const usd = availableTokens.find((t) => t.symbol === "USDm" && t.symbol !== localFrom)?.symbol;
+      if (usd) return usd;
+    }
     const candidate = (preferredToRegion
       ? availableTokens.find((token) => token.region === preferredToRegion)
         ?.symbol
@@ -143,7 +156,7 @@ export function useSwapController({
       );
     }
     return candidate;
-  }, [preferredToRegion, availableTokens, defaultFromToken]);
+  }, [preferredToRegion, availableTokens, defaultFromToken, localFrom]);
 
   // Restore the session-stored pair when both symbols are still in the
   // list (canonical spelling); region defaults otherwise.
@@ -255,6 +268,30 @@ export function useSwapController({
   }, [availableTokens]);
 
   // Persist the pair on every change — once the restore has settled.
+  // Local currency resolves late (geo/risk detection is async), after the
+  // pair state already initialised to the region default. Apply it once —
+  // only if the visitor arrived without a stored pair and hasn't picked one.
+  const arrivedWithStoredPairRef = useRef<boolean | null>(null);
+  if (arrivedWithStoredPairRef.current === null) {
+    try {
+      arrivedWithStoredPairRef.current = Boolean(
+        typeof window !== "undefined" && sessionStorage.getItem(PAIR_STORAGE_KEY),
+      );
+    } catch {
+      arrivedWithStoredPairRef.current = false;
+    }
+  }
+  const localAppliedRef = useRef(false);
+  useEffect(() => {
+    if (!localFrom || localAppliedRef.current) return;
+    localAppliedRef.current = true;
+    if (arrivedWithStoredPairRef.current || pairTouchedRef.current) return;
+    if (fromToken === localFrom) return;
+    setFromToken(localFrom);
+    setToToken(defaultToToken);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localFrom]);
+
   useEffect(() => {
     if (!pairRestoreDoneRef.current || !fromToken || !toToken) return;
     try {

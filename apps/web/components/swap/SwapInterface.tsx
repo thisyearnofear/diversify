@@ -59,6 +59,8 @@ interface SwapInterfaceProps {
   address?: string | null;
   preferredFromRegion?: string;
   preferredToRegion?: string;
+  /** Visitor's own currency token (e.g. NGNm) — the default "from". */
+  preferredFromSymbol?: string;
   chainId?: number | null;
   enableCrossChain?: boolean;
   zapMode?: boolean;
@@ -121,6 +123,7 @@ const SwapInterface = forwardRef<
     address,
     preferredFromRegion,
     preferredToRegion,
+    preferredFromSymbol,
     chainId,
     enableCrossChain = false,
     zapMode = false,
@@ -207,6 +210,7 @@ const SwapInterface = forwardRef<
     enableCrossChain,
     preferredFromRegion,
     preferredToRegion,
+    preferredFromSymbol,
   });
 
   // The story strip under the stage: pairs whose coins can tell their

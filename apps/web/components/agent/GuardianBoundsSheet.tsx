@@ -32,6 +32,9 @@ export function GuardianBoundsSheet({
   onSetLimit,
   vault,
   onChangeStrategy,
+  shieldPlan,
+  shieldPlanName,
+  onFollowShieldPlan,
   walletStableBalanceUSD,
   isMiniPay,
   onNavigateToFund,
@@ -59,6 +62,11 @@ export function GuardianBoundsSheet({
   onSetLimit: () => void;
   vault: ReturnType<typeof useVault>;
   onChangeStrategy: () => void;
+  /** The plan chosen on Shield (StrategyContext). */
+  shieldPlan?: string | null;
+  shieldPlanName?: string | null;
+  /** Point Guardian at the Shield plan (user-initiated; may sign). */
+  onFollowShieldPlan?: () => void;
   walletStableBalanceUSD: number;
   isMiniPay?: boolean;
   onNavigateToFund?: () => void;
@@ -72,6 +80,9 @@ export function GuardianBoundsSheet({
   /** Opens notifications & integrations — the non-limit preferences. */
   onOpenSettings: () => void;
 }) {
+  const planMismatch = Boolean(
+    vault.vault?.strategy && shieldPlan && vault.vault.strategy !== shieldPlan,
+  );
   const isWaitingForFunds =
     hasValidPermission && walletStableBalanceUSD < MIN_AUTO_SAVER_FUNDS_USD;
 
@@ -177,14 +188,29 @@ export function GuardianBoundsSheet({
               {vault.vault.strategy.replace(/-/g, ' ')}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={onChangeStrategy}
-            className="min-h-[44px] px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
-          >
-            Change plan
-          </button>
+          {planMismatch && onFollowShieldPlan ? (
+            <button
+              type="button"
+              onClick={onFollowShieldPlan}
+              className="min-h-[44px] px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
+            >
+              Follow {shieldPlanName ?? "Shield plan"}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={onChangeStrategy}
+              className="min-h-[44px] px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
+            >
+              Change plan
+            </button>
+          )}
         </div>
+      )}
+      {planMismatch && (
+        <p className="-mt-4 text-[11px] text-amber-700 dark:text-amber-300" data-testid="guardian-plan-mismatch">
+          Your Shield plan is {shieldPlanName ?? shieldPlan} — Guardian is still proposing for this one.
+        </p>
       )}
 
       {/* Optional wallet-enforced cap (ERC-7715). Only offered once a

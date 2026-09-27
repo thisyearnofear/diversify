@@ -36,6 +36,11 @@ vi.mock('@/models/GuardianState', () => ({
   },
 }));
 
+const mockFunnelCreate = vi.fn().mockResolvedValue(undefined);
+vi.mock('@/models/FunnelEvent', () => ({
+  FunnelEvent: { create: (...args: unknown[]) => mockFunnelCreate(...args) },
+}));
+
 vi.mock('@/lib/require-wallet-auth', () => ({
   requireWalletAuth: vi.fn().mockReturnValue('0xtestwallet'),
 }));
@@ -297,5 +302,45 @@ describe('/api/agent/business/graduation-signals', () => {
     const res = makeRes();
     await handler(req as never, res as never);
     expect(res.statusCode).toBe(401);
+  });
+
+  it('first detection writes one coarse graduation_signal_detected event (no address)', async () => {
+    mockTransactionQuery([
+      tx({ type: 'swap', tokenIn: 'KESm', tokenOut: 'USDC', amountUSD: 500 }),
+      tx({ type: 'swap', tokenIn: 'KESm', tokenOut: 'USDC', amountUSD: 700 }),
+    ]);
+    mockGuardianFindOneAndUpdate.mockResolvedValueOnce(null); // no prior row
+    const res = makeRes();
+    await handler({ method: 'GET', headers: {} } as never, res as never);
+    expect(mockFunnelCreate).toHaveBeenCalledTimes(1);
+    const arg = mockFunnelCreate.mock.calls[0][0] as { event: string; props: Record<string, string>; sessionId: string };
+    expect(arg.event).toBe('graduation_signal_detected');
+    expect(arg.props).toEqual({ signals: 'corridor', confidence: 'medium' });
+    expect(JSON.stringify(arg)).not.toContain('0xtestwallet');
+  });
+
+  it('a wallet already detected never writes a second event', async () => {
+    mockGuardianFindOne.mockReturnValueOnce({
+      select: () => ({ lean: () => Promise.resolve({ graduationPromptDismissedAt: null, graduationSignalDetectedAt: new Date() }) }),
+    });
+    mockTransactionQuery([
+      tx({ type: 'swap', tokenIn: 'KESm', tokenOut: 'USDC', amountUSD: 500 }),
+      tx({ type: 'swap', tokenIn: 'KESm', tokenOut: 'USDC', amountUSD: 700 }),
+    ]);
+    const res = makeRes();
+    await handler({ method: 'GET', headers: {} } as never, res as never);
+    expect((res.body as { shouldShow: boolean }).shouldShow).toBe(true);
+    expect(mockFunnelCreate).not.toHaveBeenCalled();
+  });
+
+  it('a concurrent caller that loses the claim does not double-count', async () => {
+    mockTransactionQuery([
+      tx({ type: 'swap', tokenIn: 'KESm', tokenOut: 'USDC', amountUSD: 500 }),
+      tx({ type: 'swap', tokenIn: 'KESm', tokenOut: 'USDC', amountUSD: 700 }),
+    ]);
+    mockGuardianFindOneAndUpdate.mockResolvedValueOnce({ graduationSignalDetectedAt: new Date() });
+    const res = makeRes();
+    await handler({ method: 'GET', headers: {} } as never, res as never);
+    expect(mockFunnelCreate).not.toHaveBeenCalled();
   });
 });

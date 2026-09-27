@@ -67,4 +67,43 @@ describe("DetectPhase — country picker empty-search state", () => {
     fireEvent.click(screen.getByRole("button", { name: /Clear search/i }));
     expect(setSearch).toHaveBeenCalledWith("");
   });
+
+  it("the country request form appears only when a search finds nothing", () => {
+    const { unmount } = render(<DetectPhase {...makeProps()} />);
+    expect(screen.queryByText(/Don.t see your country/i)).not.toBeInTheDocument();
+    unmount();
+    render(<DetectPhase {...makeProps({ manualCountrySearch: "zzz", filteredCountries: [] })} />);
+    expect(screen.getByText(/Don.t see your country/i)).toBeInTheDocument();
+  });
+});
+
+describe("DetectPhase — one tap to the numbers", () => {
+  it("picking a country advances once its data resolves — no second CTA tap", () => {
+    const onAdvance = vi.fn();
+    const props = makeProps({ onAdvance });
+    const { rerender } = render(<DetectPhase {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: /Ghana GHS/ }));
+    expect(props.setCountryOverride).toHaveBeenCalledWith("GH");
+    expect(onAdvance).not.toHaveBeenCalled();
+    rerender(
+      <DetectPhase
+        {...props}
+        showCountryPicker={false}
+        riskData={{ flag: "🇬🇭", countryName: "Ghana", code: "GHS" }}
+      />,
+    );
+    expect(onAdvance).toHaveBeenCalledTimes(1);
+  });
+
+  it("a detected country still waits for the visitor's tap", () => {
+    const onAdvance = vi.fn();
+    render(
+      <DetectPhase
+        {...makeProps({ onAdvance, showCountryPicker: false, riskData: { flag: "🇳🇬", countryName: "Nigeria", code: "NGN" } })}
+      />,
+    );
+    expect(onAdvance).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /Show me the numbers/ }));
+    expect(onAdvance).toHaveBeenCalledTimes(1);
+  });
 });

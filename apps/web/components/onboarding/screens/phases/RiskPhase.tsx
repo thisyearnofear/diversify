@@ -263,14 +263,18 @@ export function RiskPhase({
         )}
 
         <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
-          {isLive1yr && (
-            <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">● Live 1Y</span>
+          {/* The label names the data behind the number on screen: only
+              1Y vs USD is live; everything else is the curated set, so a
+              "Live" dot next to a 5Y figure would overclaim. */}
+          {selectedHorizon === '1yr' && isLive1yr ? (
+            <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">
+              ● Live · as of {dataAsOf}
+            </span>
+          ) : (
+            <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
+              Curated history · reviewed {CURRENCY_RISK_DATA_AS_OF}
+            </span>
           )}
-          {/* Date follows the selected horizon: only 1Y vsUSD is
-              live; 3Y/5Y (and 1Y EUR/XAU) are the curated set. */}
-          <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
-            Data as of {selectedHorizon === '1yr' && isLive1yr ? dataAsOf : CURRENCY_RISK_DATA_AS_OF}
-          </span>
           <span className="text-[9px] text-slate-500">·</span>
           <span className="text-[9px] text-slate-500">history, not advice.</span>
 
@@ -310,6 +314,16 @@ export function RiskPhase({
                 <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                   When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
                 </p>
+                {/* The business doorway that exists today: the public FX drag
+                    calculator — no wallet, real rates, then "Track your next
+                    payment" lands in Shield's cycle report. */}
+                <a
+                  href="/fx-drag-calculator"
+                  onClick={() => trackFunnelEvent('business_hint_expanded', { action: 'calculator', ...(countryCode ? { country: countryCode } : {}) })}
+                  className="mt-2 flex min-h-[44px] items-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                >
+                  See what FX timing costs your business →
+                </a>
                 <div className="mt-2 space-y-2">
                   {waitlistStatus === 'success' ? (
                     <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
@@ -318,7 +332,7 @@ export function RiskPhase({
                   ) : (
                     <>
                       <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                        Want early access when business protection launches?
+                        Want early access to automatic cycle protection?
                       </p>
                       <div className="flex gap-2">
                         <input
@@ -346,7 +360,7 @@ export function RiskPhase({
                         <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
                       )}
                       <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
-                        We&apos;ll only use this to invite you to early access when business protection launches — no other emails, ever. You can ask us to delete it anytime.
+                        We&apos;ll only use this to invite you to early access when automatic cycle protection launches — no other emails, ever. You can ask us to delete it anytime.
                       </p>
                     </>
                   )}
@@ -364,7 +378,7 @@ export function RiskPhase({
         whileHover={{ y: -2 }}
         whileTap={{ scale: 0.97 }}
       >
-        <ShimmerText>Choose Your Approach →</ShimmerText>
+        <ShimmerText>Choose your plan →</ShimmerText>
       </motion.button>
     </motion.div>
   );

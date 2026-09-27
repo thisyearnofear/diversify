@@ -12,6 +12,7 @@
  * Uncovered currencies get an honest inflation-only moment instead of a
  * fake currency-vs-benchmark delta.
  */
+import { readMomentHorizon } from '../constants/moment-horizon';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useCurrencyRisk } from './use-currency-risk';
@@ -88,7 +89,9 @@ export function useCurrencyMoment(
   const { inflationData, dataSource, getDataFreshness } = useInflationData();
   const { config: profileConfig } = useProtectionProfile();
   const [benchmark, setBenchmark] = useState<Benchmark>('USD');
-  const [horizon, setHorizon] = useState<Horizon>('1yr');
+  // Continue onboarding's horizon for this session so Home doesn't contradict
+  // the number the visitor just read (constants/moment-horizon).
+  const [horizon, setHorizon] = useState<Horizon>(() => readMomentHorizon() ?? '1yr');
   const [savingsAmount, setSavingsAmount] = useState(10000);
   // Re-seed whenever the effective country changes (detection resolved OR a
   // diaspora visitor overrides their country). Benchmark-currency visitors

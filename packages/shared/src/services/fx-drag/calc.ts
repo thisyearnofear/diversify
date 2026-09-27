@@ -160,7 +160,7 @@ export function analyzeCycle(
   const uncoveredUsd = usdNeeded;
   if (uncoveredUsd > 0.005) {
     warnings.push(
-      `Reported revenue covers only $${coveredUsd.toFixed(0)} of the $${payment.amountUsd.toFixed(0)} payment; ` +
+      `Reported revenue covers only $${Math.round(coveredUsd).toLocaleString('en-US')} of the $${Math.round(payment.amountUsd).toLocaleString('en-US')} payment; ` +
         `the remainder is modeled as converted on payment day (no timing benefit).`,
     );
   }

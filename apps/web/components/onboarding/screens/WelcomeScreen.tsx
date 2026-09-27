@@ -11,7 +11,8 @@
  * my-auto wrapper below centers short content and top-aligns tall content.
  */
 
-import { useEffect, useState, useMemo } from 'react';
+import { writeMomentHorizon } from '@/constants/moment-horizon';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { useCurrencyRisk } from '../../../hooks/use-currency-risk';
@@ -91,7 +92,13 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
     const [emergeKey, setEmergeKey] = useState(0);
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
-    const [selectedHorizon, setSelectedHorizon] = useState<Horizon>('5yr');
+    const [selectedHorizon, setSelectedHorizonState] = useState<Horizon>('5yr');
+    // Home continues the story the visitor read here (constants/moment-horizon).
+    const setSelectedHorizon = useCallback((h: Horizon) => {
+        setSelectedHorizonState(h);
+        writeMomentHorizon(h);
+    }, []);
+    useEffect(() => { writeMomentHorizon('5yr'); }, []);
     const [showBusinessContextOpen, setShowBusinessContextOpen] = useState(false);
     const [openEventKey, setOpenEventKey] = useState<string | null>(null);
     const [waitlistEmail, setWaitlistEmail] = useState('');

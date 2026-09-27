@@ -409,6 +409,14 @@ export function PaymentCycleReport({
         <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">
           Model currency drag before a supplier payment — then opt into cycle-aware Guardian monitoring.
         </p>
+        {/* The other engine: what past cycles actually cost (historical
+            rates). One quiet link so the two reports feel like one tool. */}
+        <a
+          href="/fx-drag-calculator"
+          className="mt-1 inline-flex min-h-[44px] items-center text-xs font-semibold text-teal-800 dark:text-teal-200 hover:underline"
+        >
+          What did your last cycle cost? →
+        </a>
       </div>
 
       {!address && (

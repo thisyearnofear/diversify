@@ -1,4 +1,5 @@
 import { NETWORKS } from '../../../config';
+import { getChainCapabilities, WALLET_ADDABLE_CHAIN_IDS } from '../../../config/chain-capabilities';
 
 export interface AddEthereumChainParameter {
   chainId: string;
@@ -8,17 +9,8 @@ export interface AddEthereumChainParameter {
   blockExplorerUrls: string[];
 }
 
-export const SUPPORTED_CHAIN_IDS = [
-  NETWORKS.CELO_MAINNET.chainId,
-  NETWORKS.CELO_SEPOLIA.chainId,
-  NETWORKS.ARBITRUM_ONE.chainId,
-  NETWORKS.ARBITRUM_SEPOLIA.chainId,
-  NETWORKS.ARC_TESTNET.chainId,
-  NETWORKS.RH_TESTNET.chainId,
-  NETWORKS.RH_MAINNET.chainId,
-  NETWORKS.HASHKEY_MAINNET.chainId,
-  NETWORKS.HASHKEY_TESTNET.chainId,
-] as const;
+// Wallet-addable chains — one table: config/chain-capabilities.ts.
+export const SUPPORTED_CHAIN_IDS: readonly number[] = WALLET_ADDABLE_CHAIN_IDS;
 
 // Default chain selection is environment-sensitive for onboarding/test-drive.
 // - Farcaster Mini App: prefer Celo mainnet
@@ -33,7 +25,7 @@ export function getDefaultChainId(opts?: { isFarcaster?: boolean }): number {
 export const DEFAULT_CHAIN_ID = NETWORKS.ARBITRUM_ONE.chainId;
 
 export function isSupportedChainId(chainId: number): boolean {
-  return SUPPORTED_CHAIN_IDS.includes(chainId as (typeof SUPPORTED_CHAIN_IDS)[number]);
+  return getChainCapabilities(chainId).walletAddable;
 }
 
 export function getAddChainParameter(targetChainId: number): AddEthereumChainParameter {

@@ -8,7 +8,7 @@
  * container — never add overflow-y-auto or justify-center here.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { NETWORKS } from '../../../../config';
 import { useWalletContext } from '../../../wallet/WalletProvider';
@@ -33,6 +33,7 @@ interface DetectPhaseProps {
   countryRequestError: string | null;
   handleCountryRequest: () => void;
   onAdvance: () => void;
+  /** Kept for callers; the modal's "Explore app" pill is the one exit now. */
   onSkip?: () => void;
 }
 
@@ -52,12 +53,21 @@ export function DetectPhase({
   countryRequestError,
   handleCountryRequest,
   onAdvance,
-  onSkip,
 }: DetectPhaseProps) {
   const { switchNetwork, isConnected } = useWalletContext();
   const [isSwitching, setIsSwitching] = useState(false);
   const [switchDone, setSwitchDone] = useState(false);
   const [showTestDetails, setShowTestDetails] = useState(false);
+  // A manual pick is an explicit answer — advance straight to the numbers
+  // once the chosen country's data resolves, instead of asking for a
+  // second "Show me the numbers" tap (onboarding lost ~89% here).
+  const [advanceOnPick, setAdvanceOnPick] = useState(false);
+  useEffect(() => {
+    if (advanceOnPick && riskData && !riskLoading) {
+      setAdvanceOnPick(false);
+      onAdvance();
+    }
+  }, [advanceOnPick, riskData, riskLoading, onAdvance]);
 
   const handleSwitchToTestnet = async () => {
     if (isSwitching) return;
@@ -197,35 +207,8 @@ export function DetectPhase({
                 >
                   ← Clear search
                 </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                {filteredCountries.map((c) => (
-                  <button
-                    key={c.iso2}
-                    onClick={() => {
-                      setCountryOverride(c.iso2);
-                      setShowCountryPicker(false);
-                      setManualCountrySearch('');
-                    }}
-                    className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                  >
-                    <span className="text-lg">{c.flag}</span>
-                    <div>
-                      <div className="text-xs font-bold text-white">{c.countryName}</div>
-                      <div className="text-[10px] text-slate-400">{c.code}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Request a country not listed — shown at the bottom of the
-          picker so users who can't find their country can request
-          it without leaving the dialog. */}
+                {/* Requesting a missing country lives exactly where the
+                    visitor discovers it's missing — not on the first screen. */}
       {countryRequestStatus === 'success' ? (
         <p className="text-[10px] text-emerald-400 font-bold text-center py-2">
           ✓ Request sent — we&apos;ll add it soon.
@@ -265,6 +248,33 @@ export function DetectPhase({
         </div>
       )}
 
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+                {filteredCountries.map((c) => (
+                  <button
+                    key={c.iso2}
+                    onClick={() => {
+                      setCountryOverride(c.iso2);
+                      setShowCountryPicker(false);
+                      setManualCountrySearch('');
+                      setAdvanceOnPick(true);
+                    }}
+                    className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                  >
+                    <span className="text-lg">{c.flag}</span>
+                    <div>
+                      <div className="text-xs font-bold text-white">{c.countryName}</div>
+                      <div className="text-[10px] text-slate-400">{c.code}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {riskData && (
         <motion.button
           variants={staggerChild}
@@ -274,17 +284,6 @@ export function DetectPhase({
           whileTap={{ scale: 0.97 }}
         >
           <ShimmerText>Show me the numbers →</ShimmerText>
-        </motion.button>
-      )}
-
-      {/* Friendly secondary path — for the curious, not a chore to skip */}
-      {onSkip && (
-        <motion.button
-          variants={staggerChild}
-          onClick={onSkip}
-          className="w-full px-6 py-3 mt-3 text-xs font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/50 rounded-lg"
-        >
-          Just looking around? Explore the app →
         </motion.button>
       )}
 

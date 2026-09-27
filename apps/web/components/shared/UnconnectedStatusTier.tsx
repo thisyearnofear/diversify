@@ -18,6 +18,11 @@ import { VerifiedEvidence } from "./VerifiedEvidence";
 interface UnconnectedStatusTierProps {
   /** Called when the visitor taps "Explore a sample plan". */
   onEnableDemo: () => void;
+  /** Sample data is already on (another tab enabled it). Offering "Explore a
+   *  sample plan" again would contradict the tab next door — say it's on and
+   *  offer the way out instead. */
+  demoActive?: boolean;
+  onDisableDemo?: () => void;
   className?: string;
   /** Optional extra quiet links (e.g. the FX netting hand-off on Exchange).
    *  Rendered between the trust line and the demo link — keep them text-links,
@@ -27,6 +32,8 @@ interface UnconnectedStatusTierProps {
 
 export function UnconnectedStatusTier({
   onEnableDemo,
+  demoActive = false,
+  onDisableDemo,
   className = "",
   children,
 }: UnconnectedStatusTierProps) {
@@ -34,13 +41,23 @@ export function UnconnectedStatusTier({
     <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 ${className}`.trim()}>
       <VerifiedEvidence />
       {children}
-      <button
-        type="button"
-        onClick={onEnableDemo}
-        className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-      >
-        Explore a sample plan
-      </button>
+      {demoActive && onDisableDemo ? (
+        <button
+          type="button"
+          onClick={onDisableDemo}
+          className="min-h-[44px] px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0"
+        >
+          Sample data on · Exit
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onEnableDemo}
+          className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+        >
+          Explore a sample plan
+        </button>
+      )}
     </div>
   );
 }

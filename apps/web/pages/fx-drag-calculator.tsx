@@ -12,7 +12,7 @@ import { analyzeCycles, requiredDates, DEFAULT_OPTIONS, type DragInput, type Cyc
 import { buildServerlessRateProvider } from '@diversifi/shared/src/services/fx-drag/rates-serverless';
 import { renderFxDragReportMarkdown } from '@diversifi/shared/src/services/fx-drag/fx-drag-report-renderer';
 import { GHANA_IMPORTER_SAMPLE } from '@diversifi/shared/src/services/fx-drag/sample-ghana';
-import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import { CURRENCY_BY_CODE, getCurrencyRisk } from '@/constants/currency-risk';
 import { trackFunnelEvent } from '@/lib/analytics';
 import { seedPaymentCycleDraft } from '@/hooks/use-payment-cycle';
 
@@ -161,10 +161,15 @@ function InputForm({
   onSubmit: (values: { earningsLocal: number; paymentUsd: number; achievedRate: number; feesLocal: number }) => void;
   isCalculating: boolean;
 }) {
-  const [earningsLocal, setEarningsLocal] = useState('720000');
-  const [paymentUsd, setPaymentUsd] = useState('50000');
-  const [achievedRate, setAchievedRate] = useState('15.90');
-  const [feesLocal, setFeesLocal] = useState('4500');
+  // The prefilled numbers are the Ghana importer sample — only meaningful in
+  // GHS. In any other currency a GHS/USD rate of 15.90 produced nonsense
+  // ("timing worked in your favour", "$468 of $50,000 covered"), so other
+  // currencies start empty and ask for the visitor's own numbers.
+  const isSample = currency === DEFAULT_CURRENCY;
+  const [earningsLocal, setEarningsLocal] = useState(isSample ? '720000' : '');
+  const [paymentUsd, setPaymentUsd] = useState(isSample ? '50000' : '');
+  const [achievedRate, setAchievedRate] = useState(isSample ? '15.90' : '');
+  const [feesLocal, setFeesLocal] = useState(isSample ? '4500' : '');
 
   const handle = useCallback(() => {
     const e = parseFloat(earningsLocal.replace(/,/g, ''));
@@ -203,7 +208,7 @@ function InputForm({
               value={earningsLocal}
               onChange={(e) => setEarningsLocal(e.target.value.replace(/[^0-9.,]/g, ''))}
               className="w-full pl-14 pr-4 py-3 text-xl font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="720000"
+              placeholder={isSample ? "720000" : "Your sales this cycle"}
             />
           </div>
         </div>
@@ -221,7 +226,7 @@ function InputForm({
               value={paymentUsd}
               onChange={(e) => setPaymentUsd(e.target.value.replace(/[^0-9.,]/g, ''))}
               className="w-full pl-10 pr-4 py-3 text-xl font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="50000"
+              placeholder={isSample ? "50000" : "Supplier payment"}
             />
           </div>
         </div>
@@ -241,7 +246,7 @@ function InputForm({
               value={achievedRate}
               onChange={(e) => setAchievedRate(e.target.value.replace(/[^0-9.]/g, ''))}
               className="w-full pl-20 pr-4 py-3 text-xl font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="15.90"
+              placeholder={isSample ? "15.90" : `${currency} per $1`}
             />
           </div>
         </div>
@@ -261,7 +266,7 @@ function InputForm({
               value={feesLocal}
               onChange={(e) => setFeesLocal(e.target.value.replace(/[^0-9.,]/g, ''))}
               className="w-full pl-14 pr-4 py-3 text-lg font-bold bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="4500"
+              placeholder={isSample ? "4500" : "0"}
             />
           </div>
           <p className="text-xs text-gray-400 mt-1.5">Optional — leave at 0 if you don't know</p>
@@ -316,7 +321,15 @@ function ResultCard({ data }: { data: DragResult }) {
   // Use the first cycle's depreciation for context
   const firstCycle = cycles[0];
   const lastCycle = cycles[cycles.length - 1];
-  const annualDrag = summary.totalDragLocal * (52 / (firstCycle?.exposureDays ?? 1) / 4);
+  // Annualize per cycle, not per week: a cycle lasts its exposure window, so
+  // a year holds ~365 / window cycles. (The old 52/window/4 factor made the
+  // "per year" figure SMALLER than one cycle.) Assumes each cycle looks like
+  // the average of these — stated in the label, never hidden.
+  const windowDays = Math.max(1, firstCycle?.exposureDays ?? 365);
+  const cyclesPerYear = Math.max(1, Math.round(365 / windowDays));
+  const perCycleDrag = summary.totalDragLocal / Math.max(1, cycles.length);
+  const annualDrag = perCycleDrag * cyclesPerYear;
+  const cameOutAhead = summary.totalDragLocal < 0;
   const savingsEquivalent = counterfactualLocalCost;
   const actualTotal = summary.totalActualLocal;
   const saved = actualTotal - counterfactualLocalCost;
@@ -329,11 +342,17 @@ function ResultCard({ data }: { data: DragResult }) {
           Across {cycles.length} cycle{cycles.length > 1 ? 's' : ''}, paying{' '}
           <span className="text-gray-900 dark:text-white">${fmt(summary.totalUsdPaid)}</span> to suppliers
         </p>
-        <div className="text-4xl sm:text-5xl font-black text-red-600 dark:text-red-400 my-3">
-          {money(currency, summary.totalDragLocal)}
+        <div
+          className={`text-4xl sm:text-5xl font-black my-3 ${
+            cameOutAhead ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"
+          }`}
+        >
+          {money(currency, Math.abs(summary.totalDragLocal))}
         </div>
         <p className="text-base font-medium text-gray-600 dark:text-gray-400">
-          This vanished to FX costs you never saw coming.
+          {cameOutAhead
+            ? "Timing worked in your favour this cycle — waiting cost you less than converting on arrival."
+            : "went to FX timing, bank spread and fees before it reached your supplier."}
         </p>
       </div>
 
@@ -392,7 +411,11 @@ function ResultCard({ data }: { data: DragResult }) {
           <span className="font-bold text-emerald-900 dark:text-emerald-200">{money(currency, actualTotal)}</span>
         </div>
         <div className="border-t border-emerald-200 dark:border-emerald-800 pt-2 flex justify-between">
-          <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">That {money(currency, saved)} stays in your business.</span>
+          <span className="text-sm font-bold text-emerald-800 dark:text-emerald-300">
+            {saved > 0
+              ? <>Converting on arrival would have kept {money(currency, saved)} in your business.</>
+              : <>Converting on arrival would not have helped this time.</>}
+          </span>
           <span className="text-sm font-bold text-emerald-900 dark:text-emerald-100">{fmt(summary.totalDragPct, 1)}%</span>
         </div>
       </div>
@@ -412,10 +435,10 @@ function ResultCard({ data }: { data: DragResult }) {
       {/* Annual context */}
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-5">
         <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">
-          At this rate, per year ({cycles.length} cycle{cycles.length > 1 ? 's' : ''})
+          If every cycle looks like this (~{cyclesPerYear} a year)
         </p>
         <p className="text-base font-bold text-gray-900 dark:text-white mb-3">
-          ~{money(currency, annualDrag)}
+          ~{money(currency, Math.abs(annualDrag))} {cameOutAhead ? "in your favour" : "a year"}
         </p>
         {/* Only the engine's own numbers — no uncurated rent/income anchors. */}
         <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -478,6 +501,12 @@ export default function FXDragCalculator() {
       const saved = localStorage.getItem('fx-drag-currency');
       if (saved && CURRENCY_BY_CODE[saved]) {
         setCurrency(saved);
+      } else {
+        // First visit: frame it in the currency the visitor already chose in
+        // the app (onboarding's country), not the Ghana sample.
+        const country = localStorage.getItem('user-country-code');
+        const code = country ? getCurrencyRisk(country)?.code : null;
+        if (code && code !== 'USD' && CURRENCY_BY_CODE[code]) setCurrency(code);
       }
     } catch { /* ignore */ }
     setCurrencyReady(true);
@@ -593,6 +622,7 @@ export default function FXDragCalculator() {
           {!results ? (
             <InputForm
               currency={currency}
+              key={currency}
               onSubmit={handleCalculate}
               isCalculating={isCalculating}
             />

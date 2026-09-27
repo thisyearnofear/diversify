@@ -2,6 +2,54 @@
 
 > Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](./roadmap.md).
 
+### Coherence pass from a live walkthrough; chain matrix phase 0 (2026-09-27)
+
+**Funnel first.** The funnel (`funnelevents`, db `DiversiFiCluster`; the local `.env.local` URI names `DiversifiCluster`, so `pnpm funnel-outcomes` reads an empty database) shows 30-day onboarding at 99 sessions → 11 risk moment → 5 philosophy. The first screen is the leak. A 390px walkthrough on production (Nigeria) found the causes, and each one is fixed and re-verified on a local build.
+
+**Onboarding.**
+- Picking a country now goes straight to the numbers. It used to take CTA → picker → pick → "Show me the numbers".
+- The country-request form only appears when a search finds nothing.
+- The duplicate bottom "Explore the app" exit is removed.
+- The risk card no longer shows "● Live 1Y" beside a 5Y curated figure. It reads "Curated history · reviewed …" or "Live · as of …" depending on the data behind the number.
+- The plan preview dropped "Followed gold over 5 years… preserved". That was the 20%-in-gold counterfactual shown under plans that hold no gold, and it repeated the risk step.
+- The preview chips, the Africapitalism tagline and the plan switcher now show canonical tickers (USDm/EURm, via `displayToken`) instead of cUSD/cEUR.
+- The plan stage grows with the lens panel. At 390px the panel had covered both the heading and the money-purpose control.
+- The money-purpose control has a visible label ("When will you need this money?").
+- Copy is in sentence case: "Choose your plan", "Connect wallet to start".
+
+**Continuity.**
+- Home continues the onboarding horizon for the session (`constants/moment-horizon.ts`). Onboarding said "−72% (5Y)" and Home then said "+12% (1Y)".
+- Exchange opens on the visitor's own currency → USDm (NGNm → USDm), including when geo resolves after mount. It used to open on EUR → GHS.
+- Walletless Exchange no longer offers "Explore a sample plan" while sample data is on elsewhere. It shows "Sample data on · Exit".
+- The mobile header always shows the wordmark. It had been an empty white bar.
+- Content clears the Ask Guardian FAB (`pb-36`).
+- The Shield projection reads "3-year path, projected… following the plan keeps $X of it".
+
+**FX drag calculator.**
+- Annualizing is fixed. The old `52/window/4` factor made "per year" (GHS 6.8k) smaller than one cycle (GHS 38k); it is now ~5 cycles → GHS 190k, with the assumption in the label.
+- A "came out ahead" state was added.
+- "That X stays in your business" had the meaning backwards. It now reads "Converting on arrival would have kept X".
+- USD amounts in the warning line are formatted.
+- The calculator defaults to the visitor's onboarding currency.
+- Non-GHS visitors start with empty fields instead of the GHS sample. A GHS/USD rate in NGN produced "timing worked in your favour".
+
+**Loops closed.**
+- `graduation_signal_detected` is written once per wallet (`GuardianState.graduationSignalDetectedAt`, atomic claim, coarse props, no address), so the client's viewed/clicked/dismissed events have a denominator.
+- The calculator is linked from onboarding's business hint and from the payment-cycle report.
+- A Shield plan commit syncs `vault.strategy` silently, but only with a cached wallet proof. Otherwise Limits & controls shows the drift and offers one-tap "Follow {plan}".
+
+**Chain-capability matrix, phase 0.**
+- `packages/shared/src/config/chain-capabilities.ts` (`getChainCapabilities`, `chainsWith`) is now the one table.
+- `ChainDetectionService.isSupported`, wallet `isSupportedChainId`/`SUPPORTED_CHAIN_IDS` and the Guardian daily-limit chains delegate to it.
+- It fixes a real divergence: the daily-limit list named retired Celo Alfajores (44787) and omitted Celo Sepolia.
+- Invariant tests cover: swap ⇒ walletAddable + RPC + explicit token map; limit ⇒ swap; autonomy ⇒ limit; unknown chain ⇒ nothing; and `hasTokenMap` ≡ the chains `getTokenAddresses` answers for itself.
+
+**Macro signal: diagnosed, not fixed.** `FIRECRAWL_API_KEY` is missing on the production server and locally. Only the webhook secret is set. There are zero Firecrawl lines in any PM2 log since 2026-07-31, so no monitor was ever registered and the webhook was never called. `--verify-only` against production shows 0 `MACRO_SIGNAL` rows. The key is not in `required-env.json`, so the drift check never flagged it. To fix: add the key, run `scripts/setup-firecrawl-monitors.ts`, then redeploy with `DEPLOY_SYNC_ENV=true`.
+
+**User testing.** A moderated script for 3–5 sessions on low-end Android (9 tasks) is kept locally at `docs/internal/user-testing-script.md`, which is gitignored like the rest of `docs/internal`.
+
+Verified: tsc, lint (0 errors), `pnpm build`, vitest 262 files / 2,392 tests, browser re-check at 390px.
+
 ### One agent name, one grant path, a business doorway (2026-09-27)
 
 **Naming.** Guardian is the only agent name users see. "Auto-Saver", "Advisor" (the system prompt said "You are DiversiFi Advisor"; chat errors, the email header and memory lines said it too), "Protection Settings" and "Custom Strategy" are retired from copy. The canonical table is `docs/product.md` § Vocabulary, and `lib/__tests__/vocabulary.test.ts` fails on any retired name in a string literal. Tab labels have one source (`TAB_LABELS`): TabNavigation and the adaptive configs read it, and the stale `packages/shared/src/constants/tabs.ts` is deleted.

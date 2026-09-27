@@ -7,13 +7,13 @@
  * plan, not a settlement ledger — so no per-token amounts (they just
  * recite percent × shield), no per-token bars, and no archetype name
  * (the strip card above already names it). What remains: one shield
- * line, a row of allocation chips, and the single gold-counterfactual
- * stat that carries the plan's meaning.
+ * line and a row of allocation chips.
  */
 import React from 'react';
 import type { PlanPreview } from './plan-preview';
 import { ARCHETYPES } from './tokens';
 import { TokenIcon } from '../shared/TokenIcon';
+import { displayToken } from '@/lib/plan-legs';
 
 export interface PlanPreviewCardProps {
   preview: PlanPreview;
@@ -54,8 +54,8 @@ export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' 
                 className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.08]"
                 style={{ borderColor: `${archetype.accent}4d` }}
               >
-                <TokenIcon symbol={slice.token} size={16} />
-                {slice.token}
+                <TokenIcon symbol={displayToken(slice.token)} size={16} />
+                {displayToken(slice.token)}
                 <span className="tabular-nums" style={{ color: archetype.accent }}>
                   {slice.percent}%
                 </span>
@@ -74,15 +74,9 @@ export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' 
         </p>
       )}
 
-      {preview.preservedValue != null && preview.preservedValue > 0 && (
-        <p className="text-[13px] text-gray-700 dark:text-slate-200 border-t border-gray-200 dark:border-white/15 mt-2 pt-2">
-          Followed gold over 5 years:{' '}
-          <strong className="text-gray-900 dark:text-white tabular-nums">
-            {currencyPrefix}{fmt(preview.preservedValue)}
-          </strong>{' '}
-          preserved.
-        </p>
-      )}
+      {/* No gold counterfactual here: it measured "20% in gold", not this
+          plan's legs (most plans hold no gold), and it repeated the risk
+          step's line. A number must describe the thing it sits under. */}
     </div>
   );
 }

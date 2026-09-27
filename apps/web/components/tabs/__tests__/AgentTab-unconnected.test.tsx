@@ -6,6 +6,13 @@ import "@testing-library/jest-dom/vitest";
 // Walletless: the morph under test.
 let mockAddress: string | null = null;
 
+vi.mock("@/context/app/StrategyContext", () => ({
+  useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
+}));
+vi.mock("../../../context/app/StrategyContext", () => ({
+  useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
+}));
+
 vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress }),
 }));

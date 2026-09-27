@@ -170,4 +170,18 @@ describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
     boundsSheet({ walletStableBalanceUSD: 1 });
     expect(screen.getByText(/Waiting for funds/)).toBeInTheDocument();
   });
+
+  it("plan drift: when Shield's plan differs, the sheet says so and offers one-tap Follow", () => {
+    const onFollowShieldPlan = vi.fn();
+    boundsSheet({ shieldPlan: "buen_vivir", shieldPlanName: "Buen Vivir", onFollowShieldPlan });
+    expect(screen.getByTestId("guardian-plan-mismatch")).toHaveTextContent("Your Shield plan is Buen Vivir");
+    fireEvent.click(screen.getByRole("button", { name: "Follow Buen Vivir" }));
+    expect(onFollowShieldPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it("no drift: no mismatch line, Change plan stays", () => {
+    boundsSheet({ shieldPlan: "africapitalism", shieldPlanName: "Africapitalism" });
+    expect(screen.queryByTestId("guardian-plan-mismatch")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change plan" })).toBeInTheDocument();
+  });
 });

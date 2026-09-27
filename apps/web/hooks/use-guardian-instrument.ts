@@ -56,7 +56,7 @@ const AUTO_SAVER_STABLE_SYMBOLS = new Set([
 export { MIN_AUTO_SAVER_FUNDS_USD };
 const CHAIN_DISPLAY_NAMES: Record<number, string> = {
   42220: "Celo",
-  44787: "Celo Alfajores",
+  11142220: "Celo Sepolia",
   42161: "Arbitrum",
 };
 

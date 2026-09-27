@@ -5,6 +5,7 @@ import React, {
   useMemo,
   useCallback,
 } from "react";
+import { useCurrencyRisk } from "../../hooks/use-currency-risk";
 import SwapInterface from "../swap/SwapInterface";
 import type { Region } from "../../hooks/use-user-region";
 import type { RegionalInflationData } from "../../hooks/use-inflation-data";
@@ -279,6 +280,10 @@ export default function SwapTab({
   // Memoize handlers to prevent unnecessary re-renders in child components
 
   const targetRegion = profileConfig.userRegion;
+  // The visitor's own currency as a Mento ticker (NGN → NGNm), when listed.
+  const { currencyCode: localCurrencyCode } = useCurrencyRisk();
+  const localCurrencyToken =
+    localCurrencyCode && localCurrencyCode !== "USD" ? `${localCurrencyCode}m` : undefined;
 
   // A hand-off that arrived as a swap prefill: the origin rides along so a
   // settled receipt can lead back to the surface that sent the user.
@@ -531,6 +536,7 @@ export default function SwapTab({
             onSwap={handleSwap}
             preferredFromRegion={userRegion}
             preferredToRegion={targetRegion ?? undefined}
+            preferredFromSymbol={localCurrencyToken}
             title=""
             chainId={walletChainId}
             enableCrossChain={true}

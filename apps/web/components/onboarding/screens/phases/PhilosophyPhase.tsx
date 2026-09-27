@@ -103,7 +103,7 @@ export function PhilosophyPhase({
         </span>
       </motion.h2>
       <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-4">
-        Tap a coin to see what it means — tap again to make it yours. Flick left or right to browse.
+        Tap a coin to preview it — tap again to choose.
       </motion.p>
 
       {/* Stage — a fixed-height canvas holding BOTH the coin
@@ -113,7 +113,10 @@ export function PhilosophyPhase({
           blooms out of the chosen coin's exact slot. Fixed
           height + overlapping layers — nothing below the
           stage ever moves. */}
-      <motion.div variants={staggerChild} className="relative h-[300px] mb-4">
+      {/* Height: fixed while the coins browse; grows with the lens panel so
+          the archetypes + plan preview never spill over the heading or the
+          money-purpose control (they used to overlap both at 390px). */}
+      <motion.div variants={staggerChild} className={`relative mb-4 ${activeLens ? 'min-h-[300px]' : 'h-[300px]'}`}>
         {/* Coin row — the combine choreography lives inside. */}
         <LensCoinSelector
           presentation="stage"
@@ -157,7 +160,7 @@ export function PhilosophyPhase({
               animate={panelEntrance.animate}
               exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
               transition={panelEntrance.transition}
-              className="absolute inset-0 flex flex-col justify-center px-2 z-10"
+              className="relative flex flex-col justify-center px-2 z-10 min-h-[300px]"
             >
               {/* Lens detail sits on a SOLID panel — the coin row
                   stays mounted behind it for the bloom
@@ -238,28 +241,17 @@ export function PhilosophyPhase({
           )}
         </AnimatePresence>
 
-        {/* Caption — names the next action, not a philosophy
-            lecture. Hidden when the lens detail is showing. */}
-        <AnimatePresence>
-          {!activeLens && (
-            <motion.p
-              key="coin-caption"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, transition: { delay: 0.2 } }}
-              exit={{ opacity: 0, transition: { duration: 0.1 } }}
-              className="absolute bottom-2 left-0 right-0 text-center text-[11px] leading-snug text-slate-400 px-2"
-            >
-              Tap a coin to see the plan, or ← Back to risk data.
-            </motion.p>
-          )}
-        </AnimatePresence>
       </motion.div>
 
       {/* Money purpose — compact single-line segmented control.
           Icon + label per chip; the heading + description caption
           are gone (chip labels already say it). */}
       <motion.div variants={staggerChild} className="mb-4">
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-label="When you will need this money">
+        {/* One visible label — "Soon / Years / By date" means nothing alone. */}
+        <p id="money-purpose-label" className="text-[11px] font-bold text-slate-300 mb-1.5 text-left">
+          When will you need this money?
+        </p>
+        <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-labelledby="money-purpose-label">
           {MONEY_PURPOSES.map((purpose) => (
             <button
               key={purpose.value}
@@ -320,7 +312,7 @@ export function PhilosophyPhase({
                 whileHover={{ y: -2 }}
                 whileTap={{ scale: 0.97 }}
               >
-                Connect Wallet to Get Started
+                Connect wallet to start
               </motion.button>
             )}
           </>

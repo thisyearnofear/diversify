@@ -312,7 +312,7 @@ export default function ExchangeTab({
   portfolio,
 }: ExchangeTabProps) {
   const { address } = useWalletContext();
-  const { demoMode, enableDemoMode } = useDemoMode();
+  const { demoMode, enableDemoMode, disableDemoMode } = useDemoMode();
   const router = useRouter();
   const { setSwapPrefill, swapPrefill, pendingIntent, consumeIntent } = useNavigation();
   const { financialStrategy } = useStrategy();
@@ -484,7 +484,11 @@ export default function ExchangeTab({
           />
         }
         status={
-          <UnconnectedStatusTier onEnableDemo={enableDemoMode}>
+          <UnconnectedStatusTier
+            onEnableDemo={enableDemoMode}
+            demoActive={demoMode.isActive}
+            onDisableDemo={disableDemoMode}
+          >
             {hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton}
           </UnconnectedStatusTier>
         }

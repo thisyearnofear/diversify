@@ -3,6 +3,7 @@
  * Single source of truth for chain-specific logic
  */
 
+import { getSwapExecutableChainIds } from '../../config/chain-capabilities';
 import { NETWORKS } from '../../config';
 
 // Helper to check if we're in development mode
@@ -100,14 +101,7 @@ export class ChainDetectionService {
      * Get supported chain IDs
      */
     static getSupportedChainIds(): number[] {
-        const devChains = isDev
-            ? [NETWORKS.ARC_TESTNET.chainId]
-            : [];
-        return [
-            NETWORKS.CELO_MAINNET.chainId,
-            NETWORKS.CELO_SEPOLIA.chainId,
-            NETWORKS.ARBITRUM_ONE.chainId,
-            ...devChains,
-        ];
+        // One table: config/chain-capabilities.ts (swapExecutable).
+        return getSwapExecutableChainIds();
     }
 }
