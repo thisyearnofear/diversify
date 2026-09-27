@@ -94,7 +94,11 @@ export interface ShieldSliceInspectorProps {
   userRegion: Region;
   isPaymentCycle: boolean;
   guardianState: GuardianTierState;
-  setShowMobileWizard: (v: boolean) => void;
+  /** Hands off to the Guardian tab — the one place a daily limit is set. */
+  onSetUpGuardian: () => void;
+  /** Payment-cycle inspector open (Shield `cycle` intent) — replaces the slice body. */
+  cycleOpen?: boolean;
+  onCloseCycle?: () => void;
   showToast: ReturnType<typeof useToast>["showToast"];
 }
 
@@ -187,8 +191,10 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     userRegion,
     isPaymentCycle,
     guardianState,
-    setShowMobileWizard,
+    onSetUpGuardian,
     showToast,
+    cycleOpen = false,
+    onCloseCycle,
   } = props;
 
   // The focused-token coin flips to its provenance back — reset when
@@ -205,6 +211,23 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     shape !== "picker" && !comparing && focusedToken && !isSleeveSelection(focusedToken)
       ? provenanceFor(focusedToken)
       : null;
+
+  // The business morph's own doorway: per-cycle FX drag, reachable with
+  // or without a plan slice. Same inspector, different body (§5 rail 4).
+  if (cycleOpen) {
+    return (
+      <InspectorSheet
+        selectedId="payment-cycle"
+        onClose={() => onCloseCycle?.()}
+        title="Payment cycle"
+      >
+        <PaymentCycleReport
+          defaultLocalCurrency={riskData?.code}
+          onAskGuardian={(prompt) => askAdvisor(prompt)}
+        />
+      </InspectorSheet>
+    );
+  }
 
   return (
     <InspectorSheet
@@ -556,7 +579,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                     prompt: `Guardian, keep monitoring my ${focusedToken} holding — it's on target at ${selectedHeld.toFixed(0)}% vs the ${selectedAlloc.percent}% plan for my ${planName} strategy. Flag me if it drifts.`,
                   });
                 } else {
-                  setShowMobileWizard(true);
+                  onSetUpGuardian();
                 }
               }}
               className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"

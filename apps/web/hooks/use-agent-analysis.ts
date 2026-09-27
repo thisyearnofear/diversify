@@ -157,7 +157,7 @@ export function useAgentAnalysis({
           });
           const lines = score == null ? ["No holdings to score yet"] : feedback;
           if (score != null && score < 60 && lines.length > 0) {
-            showToast(`⚠️ Strategy drift detected: ${lines[0]}`, "warning");
+            showToast(`⚠️ Your plan drifted: ${lines[0]}`, "warning");
           }
         }
 

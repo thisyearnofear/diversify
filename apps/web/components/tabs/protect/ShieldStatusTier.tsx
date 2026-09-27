@@ -41,7 +41,8 @@ export interface ShieldStatusTierProps {
   exitCompare: () => void;
   navigateToGuardian: ReturnType<typeof useNavigation>["navigateToGuardian"];
   setFocusedToken: (v: string | null) => void;
-  setShowMobileWizard: (v: boolean) => void;
+  /** Hands off to the Guardian tab — the one place a daily limit is set. */
+  onSetUpGuardian: () => void;
 }
 
 export function ShieldStatusTier({
@@ -66,7 +67,7 @@ export function ShieldStatusTier({
   exitCompare,
   navigateToGuardian,
   setFocusedToken,
-  setShowMobileWizard,
+  onSetUpGuardian,
 }: ShieldStatusTierProps) {
   // The compare/quiet/monitoring row is empty in the gap+biggestGap case
   // (the CTA beneath the ring names the job) — don't burn the slot on it.
@@ -175,7 +176,7 @@ export function ShieldStatusTier({
         (shape === "quiet" || (alignmentScore != null && alignmentScore >= 80)) && (
         <button
           type="button"
-          onClick={() => setShowMobileWizard(true)}
+          onClick={() => onSetUpGuardian()}
           className="min-h-[44px] px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
         >
           Set up Guardian

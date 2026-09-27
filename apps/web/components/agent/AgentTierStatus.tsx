@@ -83,7 +83,7 @@ export function useGuardianTierSnapshot() {
   return useGuardianTierSnapshotFrom(vault, sessionKey);
 }
 
-/** Compact Auto-Saver status — one headline, one CTA. */
+/** Compact Guardian status — one headline, one CTA. */
 export function GuardianStatusChip({
   onSetup,
   onDeposit,

@@ -210,7 +210,15 @@ every surface wears every motif, which is the cards problem in a nicer
 costume. Guardian's object is the mark (96px) + its state headline + two
 quiet lines: the budget line — `$X left of $Y today`, a sentence, never
 a ring — and the latest decision line. Journal and limits are inspector
-sheets behind those lines.
+sheets behind those lines. **Limits & controls holds limits only** —
+daily limit, used/left, expiry, pause, the plan Guardian follows, and the
+one autonomy opt-in; notifications, voice and integrations sit behind a
+single "Notifications & integrations →" link. **One grant path:** the
+object's "Set daily limit" signs a proposal-only (COPILOT) permission and
+its copy never says Guardian moves money on its own; "Let Guardian act
+for you" (ERC-7715 cap + GUARDIAN re-sign at the same, read-only limit)
+is the only place autonomy is granted and the only copy allowed to say
+Guardian acts without asking. Shield never signs — it hands off here.
 
 Tripwire: `corridor-context.test.tsx` asserts the resting corridor line
 stays under a word budget — sediment fails CI, not review.
@@ -305,7 +313,9 @@ A tab change that fails any of these is the old stack. Do not ship it.
    `ProfileWizard`, `RobinhoodRwaCard`, `ShieldGuardianRecommendation`,
    `AssetModal`, `RwaAssetCards`, `DisclosureSection` (and before them
    `BestYieldCard`, `SavingsLoopCard`) — is deleted. The Guardian card
-   stack joined it: the `AgentTierStatus` component, `GuardianMarquee`,
+   stack joined it: the `AgentTierStatus` component, `GuardianWDKStatus`,
+   the four-step `GuardianMobileWizard` (a second grant path — now the
+   change-only `GuardianPlanSwitcher`), `GuardianMarquee`,
    `GuardianProofTab`, `ActivityFeed`, `AdvisorMetrics`. "Total Savings"
    was retired with them — it summed projected `expectedSavings` as if
    they were realized money. Tokenized-asset (RWA) identity lives in
@@ -339,7 +349,14 @@ standing mechanism that produced it ("Decided at {event} · {cadence}"),
 then ← Story returns. Shield's floor lens IS the existing balance
 preview — ring re-slice, "Dollar reserve A% → B%", Use/Keep — nothing
 auto-commits. Home's transition order: banner > payment-cycle >
-concentration prompt > tip > compare. Shield's: sleeve back > compare
+graduation prompt > concentration prompt > tip > compare. Payment-cycle
+and graduation both open Shield's payment-cycle inspector (`lens:
+'cycle'`, plan-independent and walletless; also `?tab=protect&cycle=1`)
+— the per-cycle FX drag report is the business morph's doorway, netting
+stays an Exchange shape. The graduation line comes only from the
+wallet's own behaviour (`useGraduationSignal`), is phrased as a
+question, never renders in demo, dismisses for good, and logs
+`graduation_prompt_viewed/clicked/dismissed`. Shield's: sleeve back > compare
 row > floor prompt > status row. Exchange's: while a fresh beat offers
 the decision window the prompt owns the transition slot and netting
 drops to the rail; otherwise netting is the transition, no rail. Every

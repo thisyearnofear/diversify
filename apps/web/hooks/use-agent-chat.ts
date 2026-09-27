@@ -291,7 +291,7 @@ export function useAgentChat({
       if (!capabilities.chat) {
         addMessage({
           role: "assistant",
-          content: "The Advisor is currently unavailable — no AI provider is configured. Please try again later or contact support.",
+          content: "Guardian is unavailable right now — no AI provider is configured. Please try again later or contact support.",
           timestamp: new Date(),
           type: "text",
         });
@@ -365,7 +365,7 @@ export function useAgentChat({
 
           const result = await response.json().catch(() => ({}));
           const recommendationCount = result.recommendationCount ?? result.recommendations?.length ?? 0;
-          let guardianReply = result.message || "Guardian reviewed the latest Advisor recommendation.";
+          let guardianReply = result.message || "Guardian reviewed its latest recommendation.";
 
           if (!response.ok) {
             guardianReply = result.error || "Guardian could not review the latest opportunity right now.";

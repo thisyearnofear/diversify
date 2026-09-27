@@ -30,8 +30,15 @@ import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
 import { GuardianGrantModal } from "../agent/GuardianGrantModal";
-import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
-import type AutomationSettings from "../agent/AutomationSettings";
+import { GuardianPlanSwitcher } from "../agent/GuardianPlanSwitcher";
+import dynamic from "next/dynamic";
+import type AutomationSettingsType from "../agent/AutomationSettings";
+
+// Notifications & integrations is a leaf preference sheet — load it only
+// when the user opens it, never with the Guardian tab.
+const AutomationSettings = dynamic(() => import("../agent/AutomationSettings"), {
+  ssr: false,
+}) as typeof AutomationSettingsType;
 
 interface AgentTabProps {
   isMiniPay?: boolean;
@@ -51,7 +58,6 @@ export default function AgentTab({
   const { address } = useWalletContext();
   const { enableDemoMode } = useDemoMode();
   const {
-    autonomousStatus,
     isLoading: isStatusLoading,
     statusError,
     initializeAI: retryStatus,
@@ -132,7 +138,6 @@ export default function AgentTab({
       portfolio={portfolio}
       refreshBalances={refreshBalances}
       onNavigateToFund={onNavigateToFund}
-      autonomousStatus={autonomousStatus}
       isStatusLoading={isStatusLoading}
       config={config}
       updateConfig={updateConfig}
@@ -152,7 +157,6 @@ function ConnectedAgent({
   portfolio,
   refreshBalances,
   onNavigateToFund,
-  autonomousStatus,
   isStatusLoading,
   config,
   updateConfig,
@@ -166,9 +170,8 @@ function ConnectedAgent({
   portfolio?: MultichainPortfolio;
   refreshBalances?: () => Promise<void>;
   onNavigateToFund?: () => void;
-  autonomousStatus: { walletType?: string } | null;
   isStatusLoading: boolean;
-  config?: Parameters<typeof AutomationSettings>[0]["config"];
+  config?: Parameters<typeof AutomationSettingsType>[0]["config"];
   updateConfig?: (config: any) => void;
   experienceMode: string;
   askAdvisor: ReturnType<typeof useAdvisor>["askAdvisor"];
@@ -176,7 +179,7 @@ function ConnectedAgent({
   clearGuardianContext: () => void;
 }) {
   const g = useGuardianInstrument({ isMiniPay, onNavigateToFund });
-  const [sel, setSel] = useState<"journal" | "bounds" | null>(null);
+  const [sel, setSel] = useState<"journal" | "bounds" | "settings" | null>(null);
 
   const budgetShowing =
     g.hasValidPermission && g.sessionInfo != null && g.dailyLimit > 0;
@@ -198,13 +201,9 @@ function ConnectedAgent({
         },
       };
     }
-    if (g.guardianState === "authorized") {
-      return {
-        label: onNavigateToFund ? g.copy.cta : null,
-        action: () => onNavigateToFund?.(),
-      };
-    }
-    // idle | funded — setup lives on the object, not in a sheet.
+    // idle | funded | authorized (expired limit → renew) — setup lives on
+    // the object, not in a sheet. There is no deposit step, so no state's
+    // CTA routes to funding; the label always names what the tap does.
     return {
       label: g.copy.cta,
       action: () => g.setShowPermissionModal(true),
@@ -233,6 +232,7 @@ function ConnectedAgent({
             onCta={cta.action}
             onOpenJournal={() => setSel("journal")}
             onOpenBounds={() => setSel("bounds")}
+            isAutonomous={g.isAutonomous}
           />
         )}
       </ErrorBoundary>
@@ -243,7 +243,9 @@ function ConnectedAgent({
     ? "From your Shield plan"
     : sel === "journal"
       ? "Guardian journal"
-      : "Limits & controls";
+      : sel === "settings"
+        ? "Notifications & integrations"
+        : "Limits & controls";
 
   return (
     <>
@@ -314,11 +316,15 @@ function ConnectedAgent({
               onPreview={() => void g.runPreview()}
               onReviewMove={g.pendingMove ? g.reviewPendingMove : undefined}
             />
+          ) : sel === "settings" ? (
+            <AutomationSettings
+              config={config}
+              onConfigChange={updateConfig}
+            />
           ) : (
             <GuardianBoundsSheet
-              autonomousStatus={autonomousStatus}
               hasValidPermission={g.hasValidPermission}
-              guardianActive={g.guardianActive}
+              isAutonomous={g.isAutonomous}
               dailyLimit={g.dailyLimit}
               sessionInfo={g.sessionInfo}
               permissionExpiry={g.permissionExpiry}
@@ -328,9 +334,9 @@ function ConnectedAgent({
               sessionKeyError={g.sessionKeyError}
               isRevoking={g.isRevoking}
               onRevoke={() => void g.handleRevokePermission()}
+              onSetLimit={() => g.setShowPermissionModal(true)}
               vault={g.vault}
               onChangeStrategy={() => g.setShowStrategySwitcher(true)}
-              hasTokenVault={g.hasTokenVault}
               walletStableBalanceUSD={g.stableBalanceOnChain.total}
               isMiniPay={isMiniPay}
               onNavigateToFund={onNavigateToFund}
@@ -340,8 +346,7 @@ function ConnectedAgent({
               grantError={g.grantError}
               onOpenGrantModal={() => g.setShowGrantConfirmModal(true)}
               onSwitchToGrantChain={() => void g.switchToChain(GRANT_ELIGIBLE_CHAIN_IDS[0])}
-              config={config}
-              onConfigChange={updateConfig}
+              onOpenSettings={() => setSel("settings")}
             />
           )}
         </InspectorSheet>
@@ -368,7 +373,7 @@ function ConnectedAgent({
       }
     />
 
-      {/* Auto-Saver setup modal — user picks their daily limit BEFORE any signature. */}
+      {/* Daily-limit setup modal — user picks their daily limit BEFORE any signature. */}
       {g.showPermissionModal && (
         <GuardianPermissionModal
           pendingDailyLimit={g.pendingDailyLimit}
@@ -393,9 +398,7 @@ function ConnectedAgent({
           summary BEFORE MetaMask pops. */}
       {g.showGrantConfirmModal && (
         <GuardianGrantModal
-          pendingDailyLimit={g.pendingDailyLimit}
-          setPendingDailyLimit={g.setPendingDailyLimit}
-          DAILY_LIMIT_PRESETS={g.DAILY_LIMIT_PRESETS}
+          dailyLimit={g.dailyLimit}
           onCancel={() => g.setShowGrantConfirmModal(false)}
           onContinue={() => {
             g.setShowGrantConfirmModal(false);
@@ -404,20 +407,16 @@ function ConnectedAgent({
         />
       )}
 
-      {/* Strategy Switcher Wizard */}
+      {/* Plan switcher — changes the plan Guardian follows; never signs. */}
       {g.showStrategySwitcher && g.vault.vault && address && (
-        <GuardianMobileWizard
-          userAddress={address}
-          mode="change"
-          currentStrategy={g.vault.vault.strategy}
+        <GuardianPlanSwitcher
+          currentPlan={g.vault.vault.strategy}
           onComplete={() => {
             g.setShowStrategySwitcher(false);
             g.vault.refresh(address);
           }}
           onCancel={() => g.setShowStrategySwitcher(false)}
-          onUpdateStrategy={async (strategy) => g.vault.updateStrategy(address, strategy)}
-          onSaveStrategy={async () => false}
-          onRequestPermission={async () => false}
+          onUpdatePlan={async (plan) => g.vault.updateStrategy(address, plan)}
         />
       )}
     </>

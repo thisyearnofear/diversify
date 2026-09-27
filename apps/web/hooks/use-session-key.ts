@@ -37,7 +37,7 @@ const service = new ERC7715Service();
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 // Bound every session endpoint: a wedged Guardian server can't leave the
-// Auto-Saver modal stuck on "Loading..." forever.
+// daily-limit modal stuck on "Loading..." forever.
 const SESSION_FETCH_TIMEOUT_MS = 8000;
 
 export type SessionKeyStatus = 'idle' | 'requesting' | 'active' | 'expired' | 'error';
@@ -455,7 +455,7 @@ export function useSessionKey(): UseSessionKeyReturn {
                 setError(
                     e instanceof Error
                         ? e.message
-                        : 'Failed to revoke Guardian permission — Auto-Saver is still active. Please try again.',
+                        : 'Could not pause Guardian — your daily limit is still active. Please try again.',
                 );
                 return false;
             }

@@ -29,12 +29,19 @@ import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useNavigation } from "../context/app/NavigationContext";
 import { guardianProposalPrefill } from "../lib/guardian-proposal-prefill";
 import { GRANT_ELIGIBLE_CHAIN_IDS, guardianSessionAddress } from "../lib/erc7715-client-grant";
+import {
+  ARBITRUM_CHAIN_ID,
+  DAILY_LIMIT_PRESETS,
+  DEFAULT_DAILY_LIMIT_USD,
+  MIN_AUTO_SAVER_FUNDS_USD,
+  SUPPORTED_AUTO_SAVER_CHAINS,
+} from "../constants/guardian-limits";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
-// Symbols Auto-Saver treats as "stable enough to act on" when computing the
+// Symbols Guardian treats as "stable enough to act on" when computing the
 // readiness balance. Broader than the COPILOT default allowedTokens so the
-// user sees their Mento cash on Celo too — anything Auto-Saver could reach
+// user sees their Mento cash on Celo too — anything a proposal could reach
 // without bridging.
 const AUTO_SAVER_STABLE_SYMBOLS = new Set([
   "USDC", "USDT", "USDC.E", "USDCE",
@@ -45,9 +52,8 @@ const AUTO_SAVER_STABLE_SYMBOLS = new Set([
   "PAXG", "XAU₮", "XAUT",
 ]);
 
-export const MIN_AUTO_SAVER_FUNDS_USD = 5;
-const ARBITRUM_CHAIN_ID = 42161;
-const SUPPORTED_AUTO_SAVER_CHAINS = [42220, 44787, 42161];
+// Re-exported for existing importers; new code reads constants/guardian-limits.
+export { MIN_AUTO_SAVER_FUNDS_USD };
 const CHAIN_DISPLAY_NAMES: Record<number, string> = {
   42220: "Celo",
   44787: "Celo Alfajores",
@@ -139,11 +145,10 @@ export function useGuardianInstrument({
   // Pre-sign daily limit the user can adjust in the setup modal. Once a
   // permission is signed, dailyLimit reflects the on-chain value so the
   // ERC-7715 grant and UI agree without an extra round-trip.
-  const DAILY_LIMIT_PRESETS = [5, 10, 25, 50, 100] as const;
-  const [pendingDailyLimit, setPendingDailyLimit] = useState<number>(10);
+  const [pendingDailyLimit, setPendingDailyLimit] = useState<number>(DEFAULT_DAILY_LIMIT_USD);
   const dailyLimit = signedPermission?.permission.dailyLimitUSD ?? pendingDailyLimit;
 
-  // Onchain awareness — what Auto-Saver can actually see in the user's
+  // Onchain awareness — what Guardian can actually see in the user's
   // wallet on the chain they're currently connected to. Drives the
   // balance line, chip dimming, and the "Waiting for funds" runtime chip.
   const portfolio = useSharedMultichainBalances(address ?? undefined);
@@ -176,7 +181,7 @@ export function useGuardianInstrument({
   // If the user has non-stable balance on this chain (e.g., $30 in CELO with
   // $0 in cUSD), nudge them to convert rather than blindly tell them to
   // "deposit stablecoins" — they already have value here, just in the wrong
-  // shape for Auto-Saver to act on.
+  // shape for a proposal to act on.
   const chainTotalValueUSD = useMemo(() => {
     if (!chainId) return 0;
     const chain = portfolio.chains?.find((c) => c.chainId === chainId);
@@ -248,7 +253,7 @@ export function useGuardianInstrument({
           tier: "GUARDIAN",
           description: hasExecuted
             ? `Autonomous execution: Swapped USDC to ${advice?.targetToken || "target asset"}`
-            : "Auto-Saver received Guardian signal for follow-up review",
+            : "Guardian flagged a signal for follow-up review",
           status: hasExecuted ? "success" : "pending",
           details: {
             action: advice?.action,
@@ -273,12 +278,11 @@ export function useGuardianInstrument({
   const handleRequestPermission = useCallback(async () => {
     if (!address || !chainId) return;
     setShowPermissionModal(false);
-    const SUPPORTED_CHAINS = [42220, 44787, 42161];
-    if (!SUPPORTED_CHAINS.includes(chainId)) {
+    if (!SUPPORTED_AUTO_SAVER_CHAINS.includes(chainId)) {
       addActivity({
         type: "execution",
         tier: "GUARDIAN",
-        description: "Switch to Celo or Arbitrum to set up Auto-Saver",
+        description: "Switch to Celo or Arbitrum to set a daily limit",
         status: "failed",
       });
       return;
@@ -296,7 +300,7 @@ export function useGuardianInstrument({
       addActivity({
         type: "execution",
         tier: "GUARDIAN",
-        description: `Auto-Saver is on — up to $${pendingDailyLimit}/day for the next 7 days`,
+        description: `Daily limit set — Guardian may propose up to $${pendingDailyLimit}/day for the next 7 days`,
         status: "success",
       });
     } catch (e) {
@@ -304,7 +308,7 @@ export function useGuardianInstrument({
       addActivity({
         type: "execution",
         tier: "GUARDIAN",
-        description: "Auto-Saver setup was cancelled",
+        description: "Daily limit was not set",
         status: "failed",
       });
     }
@@ -357,6 +361,27 @@ export function useGuardianInstrument({
         chainId: targetChainId,
         periodAmount,
       });
+      // Autonomy needs BOTH halves of consent: the on-chain cap (above) and
+      // a GUARDIAN-tier EIP-712 permission — the loop never executes for
+      // COPILOT. The daily-limit setup signs COPILOT (proposal-only), so
+      // opting in here re-signs the same limit as GUARDIAN on the grant's
+      // chain. This is the ONE path to autonomy; nothing else requests it.
+      // Order matters: a rejected re-sign leaves an unattached grant, which
+      // redeems nothing (executor fails closed without a stored context).
+      const alreadyAutonomous =
+        signedPermission?.permission.autonomyLevel === 'GUARDIAN' &&
+        signedPermission.permission.chainId === targetChainId;
+      if (!alreadyAutonomous) {
+        const { ethers } = await import('ethers');
+        const signer = new ethers.providers.Web3Provider(ethereum).getSigner();
+        const resigned = await requestPermission('GUARDIAN', address, signer, targetChainId, {
+          dailyLimitUSD: dailyLimit,
+          spendingLimitUSD: dailyLimit * 10,
+        });
+        if (!resigned) {
+          throw new Error('Permission request was rejected. Try again when ready.');
+        }
+      }
       // Persist the grant context — without it the session account has
       // nothing to redeem and autonomy stays theoretical.
       const attached = await attachDelegationContext(address, targetChainId, grant);
@@ -367,7 +392,7 @@ export function useGuardianInstrument({
       addActivity({
         type: 'execution',
         tier: 'GUARDIAN',
-        description: `Stronger protection is on — MetaMask is enforcing a $${dailyLimit}/day limit on ${CHAIN_DISPLAY_NAMES[targetChainId] ?? `chain ${targetChainId}`}`,
+        description: `Guardian can now act on its own — up to $${dailyLimit}/day, enforced by MetaMask on ${CHAIN_DISPLAY_NAMES[targetChainId] ?? `chain ${targetChainId}`}`,
         status: 'success',
       });
     } catch (e: any) {
@@ -381,7 +406,7 @@ export function useGuardianInstrument({
         setGrantError('Advanced Permission request failed. Make sure you are on a supported network.');
       }
     }
-  }, [address, dailyLimit, addActivity, attachDelegationContext]);
+  }, [address, dailyLimit, addActivity, attachDelegationContext, requestPermission, signedPermission]);
 
   const guardianProofEvents = useMemo<GuardianProofEvent[]>(() => {
     const liveEvents = [
@@ -408,7 +433,7 @@ export function useGuardianInstrument({
       .map((execution) => ({
         id: `vault-${execution.txHash || execution.timestamp}`,
         source: "vault" as const,
-        title: execution.action === "rebalance" ? "Auto-Saver rebalance" : "Auto-Saver swap",
+        title: execution.action === "rebalance" ? "Guardian rebalance" : "Guardian swap",
         subtitle: execution.tokenIn && execution.tokenOut
           ? `${execution.tokenIn} -> ${execution.tokenOut} · $${execution.amountUSD}`
           : `$${execution.amountUSD}`,
@@ -495,6 +520,9 @@ export function useGuardianInstrument({
     navigateToSwap(pendingMove);
   }, [pendingMove, navigateToSwap]);
 
+  // GUARDIAN tier = the user opted into the wallet-enforced limit; the loop
+  // may execute without a per-move signature. Everything else is proposal-only.
+  const isAutonomous = signedPermission?.permission.autonomyLevel === "GUARDIAN";
   const copy = GUARDIAN_USER_COPY[guardianState];
 
   return {
@@ -546,8 +574,9 @@ export function useGuardianInstrument({
     setShowGrantConfirmModal,
     showStrategySwitcher,
     setShowStrategySwitcher,
-    grantStatus,
+    grantStatus: isAutonomous && grantStatus === "idle" ? ("granted" as const) : grantStatus,
     grantError,
+    isAutonomous,
     handleRequestPermission,
     handleGrantAdvanced,
     guardianProofEvents,

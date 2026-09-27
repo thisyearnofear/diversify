@@ -35,10 +35,6 @@ const stableToast = vi.hoisted(() => ({ showToast: vi.fn() }));
 vi.mock("@/components/ui/Toast", () => ({
   useToast: () => stableToast,
 }));
-vi.mock("@/components/shared/GuardianMascot", () => ({
-  GuardianMascot: () => <div data-testid="guardian-mascot" />,
-}));
-
 import AutomationSettings from "../AutomationSettings";
 
 describe("AutomationSettings — Guardian updates row", () => {
@@ -78,6 +74,10 @@ describe("AutomationSettings — Guardian updates row", () => {
     expect(
       screen.getByText(/You can also just tell Guardian/),
     ).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId("guardian-mascot")).toBeInTheDocument());
+    // Preferences only: no limit readouts, no raw identity strings.
+    await waitFor(() =>
+      expect(screen.getByText(/daily limit and pause live in Limits/)).toBeInTheDocument(),
+    );
+    expect(screen.queryByText(/Delegated Identity|DAILY LIMIT|SPENT TODAY|0xabc/)).not.toBeInTheDocument();
   });
 });

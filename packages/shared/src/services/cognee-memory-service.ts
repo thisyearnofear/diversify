@@ -377,7 +377,7 @@ class CogneeMemoryServiceImpl {
     // Condense the interaction into a memory-friendly format
     const summary = [
       `User asked: "${query.slice(0, 100)}"`,
-      `Advisor recommended: ${response.slice(0, 200)}`,
+      `Guardian recommended: ${response.slice(0, 200)}`,
       metadata?.action ? `Action suggested: ${metadata.action}` : '',
       metadata?.sources?.length ? `Sources used: ${metadata.sources.join(', ')}` : '',
     ].filter(Boolean).join('. ');

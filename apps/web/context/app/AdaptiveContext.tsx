@@ -17,6 +17,7 @@
 
 import React, { createContext, useContext, type ReactNode, useMemo } from "react";
 import { useSignalDetector, type AdaptiveConfig } from "../../hooks/use-signal-detector";
+import { TAB_LABELS } from "../../constants/tabs";
 
 interface AdaptiveContextValue {
   /** Current session's adaptive configuration */
@@ -45,13 +46,7 @@ export function useAdaptiveContext(): AdaptiveContextValue {
   const ctx = useContext(AdaptiveContext);
   if (!ctx) {
     // Fallback for tests and contexts outside AdaptiveProvider
-    const defaultLabels: Record<string, string> = {
-      overview: "Home",
-      protect: "Shield",
-      exchange: "Exchange",
-      agent: "Guardian",
-      info: "Learn",
-    };
+    const defaultLabels: Record<string, string> = { ...TAB_LABELS };
     const fallback: AdaptiveContextValue = {
       config: {
         persona: "generic_user",

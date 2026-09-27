@@ -338,11 +338,10 @@ function GoalDriftVariant({
 }
 
 /**
- * FxCorridorHintVariant — One-time discovery hint for the FX Corridor
- * section. Shows when the user has set `moneyPurpose === 'upcoming_payment'`
- * but hasn't expanded the business section yet. Click → dismiss +
- * scroll. After dismiss, never reappears (persisted in localStorage by
- * the parent hook).
+ * FxCorridorHintVariant — One-time discovery hint for the payment cycle.
+ * Shows when the user has set `moneyPurpose === 'upcoming_payment'`.
+ * Click → dismiss + open Shield's payment-cycle inspector. After dismiss,
+ * never reappears (persisted in localStorage by the parent hook).
  *
  * Visual: a 1-line dense card (44px touch target) in blue, the same
  * gradient family as the cold-start variant but visually distinct so
@@ -357,22 +356,22 @@ function FxCorridorHintVariant({ onAction }: { onAction: () => void }) {
       <button
         onClick={onAction}
         className="w-full flex items-center justify-between gap-3 p-3 min-h-[44px] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-colors text-left"
-        aria-label="Scroll to FX Corridor section"
+        aria-label="Open your payment cycle"
         data-testid="fx-corridor-hint"
       >
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xl shrink-0" aria-hidden="true">💼</span>
           <div className="min-w-0">
             <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-              Business Mode Active
+              Payment mode
             </div>
             <div className="text-sm font-bold text-blue-900 dark:text-blue-100 truncate">
-              Your FX Corridor dashboard is live below
+              See what FX timing costs this payment
             </div>
           </div>
         </div>
         <span className="text-blue-600 dark:text-blue-400 text-xs font-bold whitespace-nowrap shrink-0">
-          View ↓
+          Open →
         </span>
       </button>
     </Card>
@@ -527,13 +526,13 @@ function ContextualBannerStatus({
         className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
         data-testid="fx-corridor-hint"
       >
-        Review FX matching on Exchange
+        Payment mode is on — see what FX timing costs this payment →
       </button>
     );
   }
 
   if (kind === "fx-drag-warning") {
-    return <p className={STATUS_LINE}>FX drag is eating your margins — Ask Guardian for the cost breakdown.</p>;
+    return <p className={STATUS_LINE}>FX timing between a sale and a supplier payment can cost margin.</p>;
   }
   if (kind === "family-savings") {
     return <p className={STATUS_LINE}>Your savings could protect your family back home too.</p>;

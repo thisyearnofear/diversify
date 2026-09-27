@@ -391,7 +391,7 @@ export function PaymentCycleReport({
         },
         monitoringEnabled,
         guardianBounds: monitoringEnabled
-          ? 'Guardian will propose moves as the payment date approaches — execution stays within Auto-Saver limits.'
+          ? 'Guardian will propose moves as the payment date approaches — within your daily limit, and you approve each one.'
           : 'Enable monitoring below after you understand this scenario.',
       })
     : null;

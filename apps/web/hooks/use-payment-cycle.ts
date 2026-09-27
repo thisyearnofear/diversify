@@ -39,6 +39,15 @@ function saveDraft(draft: PaymentCycleDraft): void {
   }
 }
 
+/**
+ * Seed the draft from outside the app shell (the public FX drag calculator's
+ * "Track this cycle" hand-off). Only the fields the visitor actually typed
+ * are carried; the payment date stays empty — the calculator never asked.
+ */
+export function seedPaymentCycleDraft(patch: Partial<PaymentCycleDraft>): void {
+  saveDraft({ ...loadDraft(), ...patch });
+}
+
 export function usePaymentCycleDraft(defaultLocalCurrency?: string) {
   const [draft, setDraft] = useState<PaymentCycleDraft>(() => {
     const loaded = loadDraft();

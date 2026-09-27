@@ -173,7 +173,7 @@ export function buildCycleProtectionContract(
     guardianBounds:
       input.guardianBounds ??
       (input.monitoringEnabled
-        ? 'Guardian proposes only — execution stays within your Auto-Saver limits.'
+        ? 'Guardian proposes only — you approve each move within your daily limit.'
         : 'Monitoring off — Guardian will not propose cycle moves.'),
     costsAndRisks:
       `${input.dragLine ?? 'FX drag depends on timing, spread, and fees.'}${

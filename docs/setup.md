@@ -157,7 +157,7 @@ account — there is no Safe to create and no Privy execution path.
 1. **Session signer** → generate a dedicated key; its address is what users
    grant Advanced Permissions to: `GUARDIAN_SESSION_PRIVATE_KEY` (server) +
    `NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS` (client — when unset, the
-   "Stronger protection" option is hidden).
+   "Let Guardian act for you" option is hidden).
 2. **Bundler** → an ERC-4337 bundler per autonomy chain
    (`AA_BUNDLER_URL` or `AA_BUNDLER_URL_<chainId>`), optional
    `AA_RPC_URL_<chainId>` overrides. Eligible chains are derived from the

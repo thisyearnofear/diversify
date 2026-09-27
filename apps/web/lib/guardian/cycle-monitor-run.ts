@@ -57,10 +57,13 @@ export async function runCycleMonitor(now = new Date()): Promise<CycleMonitorSum
     }).lean();
 
     const dailyLimit = perm?.dailyLimitUSD ?? 0;
+    // Only a GUARDIAN-tier permission executes; COPILOT is proposal-only.
     const guardianBounds =
-      dailyLimit > 0
-        ? `Auto-Saver may act up to $${dailyLimit}/day within signed permission bounds.`
-        : 'No active Auto-Saver permission — proposal only.';
+      dailyLimit > 0 && perm?.autonomyLevel === 'GUARDIAN'
+        ? `Guardian may act up to $${dailyLimit}/day within signed permission bounds.`
+        : dailyLimit > 0
+          ? `Guardian proposes within your $${dailyLimit}/day limit — you approve each move.`
+          : 'No daily limit set — proposal only.';
 
     const contract = buildCycleProtectionContract({
       localCurrency: cycle.localCurrency,

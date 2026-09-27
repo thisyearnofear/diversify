@@ -1,8 +1,10 @@
 /**
  * Guardian protection state machine and recommendation contract.
  *
- * User-facing vocabulary: one agent identity (Guardian), with Auto-Saver as
- * the automated execution capability. Internal advisor services stay separate.
+ * User-facing vocabulary: one agent identity (Guardian). Its permission is a
+ * "daily limit"; the optional ERC-7715 grant is a "wallet-enforced limit".
+ * No second product name (Auto-Saver / Advisor / Agent) reaches the UI —
+ * see docs/product.md § Vocabulary. Internal advisor services stay separate.
  */
 
 import type { GuardianTierState } from '../services/vault/guardian-tier-state';

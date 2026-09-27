@@ -18,6 +18,8 @@ interface UseShieldIntentArgs {
   heldPctByToken: Map<string, number>;
   setComparing: (v: boolean) => void;
   setFocusedToken: (v: string | null) => void;
+  /** Opens the payment-cycle inspector (lens "cycle"). */
+  openCycle: () => void;
 }
 
 export function useShieldIntent({
@@ -32,6 +34,7 @@ export function useShieldIntent({
   heldPctByToken,
   setComparing,
   setFocusedToken,
+  openCycle,
 }: UseShieldIntentArgs): void {
   const { pendingIntent, consumeIntent } = useNavigation();
 
@@ -44,8 +47,17 @@ export function useShieldIntent({
     if (pendingIntent?.tab !== "protect") return;
     if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) return;
     const intent = pendingIntent.intent;
-    let outcome: "compare" | "focused" | "unfocused" | "preview_kept";
-    if (intent.lens === "compare") {
+    let outcome: "compare" | "cycle" | "focused" | "unfocused" | "preview_kept";
+    if (intent.lens === "cycle") {
+      // Plan-independent: a business user with no plan or allocation still
+      // reaches the per-cycle report. A balance draft is never discarded.
+      if (!isPreviewing) {
+        setComparing(false);
+        setFocusedToken(null);
+        openCycle();
+      }
+      outcome = isPreviewing ? "preview_kept" : "cycle";
+    } else if (intent.lens === "compare") {
       // No plan → the picker already IS the gallery; just consume.
       if (hasPlan && shape !== "picker") {
         setFocusedToken(null);
@@ -84,5 +96,6 @@ export function useShieldIntent({
     consumeIntent,
     setComparing,
     setFocusedToken,
+    openCycle,
   ]);
 }

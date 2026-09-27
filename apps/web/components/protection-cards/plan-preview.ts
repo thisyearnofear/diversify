@@ -14,7 +14,7 @@ export interface PlanLeg {
   why: string;
 }
 
-/** Financial-strategy ids (StrategyContext / GuardianMobileWizard). */
+/** Financial-strategy ids (StrategyContext / GuardianPlanSwitcher). */
 export const STRATEGY_ALLOCATIONS: Record<string, PlanLeg[]> = {
   africapitalism: [
     { token: 'KESm', region: 'Kenya', percent: 60, why: 'Kenyan shilling — wealth stays home' },

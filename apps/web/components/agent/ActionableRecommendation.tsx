@@ -56,8 +56,8 @@ export default function ActionableRecommendation({
 
     const guardianBounds =
         guardianState === 'monitoring' && signedPermission
-            ? `Guardian can act up to $${signedPermission.permission.dailyLimitUSD}/day within signed limits.`
-            : 'Manual review — set up Auto-Saver permissions for bounded execution.';
+            ? `Guardian proposes within your $${signedPermission.permission.dailyLimitUSD}/day limit — you approve each move.`
+            : 'Manual review — set a daily limit on the Guardian tab for bounded proposals.';
 
     if (!analysis && portfolioTotalValue > 0) {
         return (

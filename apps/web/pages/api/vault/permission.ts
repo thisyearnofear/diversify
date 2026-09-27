@@ -247,7 +247,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!vault) return res.status(404).json({ error: 'No vault found' });
 
       const permission = await vaultStore.findActivePermission(vault._id);
-      if (!permission) return res.status(404).json({ error: 'No active Auto-Saver permission found' });
+      if (!permission) return res.status(404).json({ error: 'No active Guardian permission found' });
       if (hasCycleToggle && autoExecuteCycleProtection && permission.autonomyLevel !== 'GUARDIAN') {
         return res.status(409).json({ error: 'Cycle auto-execution requires a GUARDIAN permission' });
       }

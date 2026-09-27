@@ -445,7 +445,7 @@ export class AutomationService {
         const html = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;">
-                    <h1>🧠 DiversiFi Advisor</h1>
+                    <h1>DiversiFi Guardian</h1>
                     <p>AI-Powered Wealth Protection</p>
                 </div>
                 

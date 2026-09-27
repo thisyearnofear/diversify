@@ -13,6 +13,7 @@ import {
   PROTECTION_STATE_LABELS,
 } from "@diversifi/shared/src/types/guardian-protection";
 import {
+  GUARDIAN_AUTONOMOUS_COPY,
   GUARDIAN_USER_COPY,
   type GuardianTierState,
 } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -39,6 +40,7 @@ export function GuardianObject({
   onCta,
   onOpenJournal,
   onOpenBounds,
+  isAutonomous = false,
 }: {
   guardianState: GuardianTierState;
   isAnalyzing: boolean;
@@ -51,8 +53,13 @@ export function GuardianObject({
   onCta?: () => void;
   onOpenJournal: () => void;
   onOpenBounds: () => void;
+  /** GUARDIAN-tier permission — Guardian may act without a per-move signature. */
+  isAutonomous?: boolean;
 }) {
-  const copy = GUARDIAN_USER_COPY[guardianState];
+  const copy =
+    guardianState === "monitoring" && isAutonomous
+      ? GUARDIAN_AUTONOMOUS_COPY
+      : GUARDIAN_USER_COPY[guardianState];
   const mood = isAnalyzing ? "thinking" : MOOD_BY_STATE[guardianState];
   const showBudget =
     hasValidPermission && sessionInfo != null && dailyLimit > 0;

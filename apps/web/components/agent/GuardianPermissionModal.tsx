@@ -1,16 +1,17 @@
 /**
- * GuardianPermissionModal - Auto-Saver setup modal
+ * GuardianPermissionModal — daily-limit setup.
  *
- * Extracted from AgentTierStatus. Lets the user pick their daily limit
- * BEFORE any signature. Shows on-chain awareness (chain + stable balance).
+ * Lets the user pick Guardian's daily limit BEFORE any signature and says
+ * exactly what the signature does. This permission (COPILOT) never
+ * auto-executes — the Guardian loop only proposes — so the copy must never
+ * claim Guardian moves money on its own.
  */
 
 import React, { useEffect, useRef } from "react";
 import Scrim from "../shared/Scrim";
 import { haptic } from "@/lib/haptics";
 
-const MIN_AUTO_SAVER_FUNDS_USD = 5;
-const ARBITRUM_CHAIN_ID = 42161;
+import { ARBITRUM_CHAIN_ID, CELO_CHAIN_ID, MIN_AUTO_SAVER_FUNDS_USD } from "@/constants/guardian-limits";
 
 export const GuardianPermissionModal: React.FC<{
   pendingDailyLimit: number;
@@ -99,16 +100,15 @@ export const GuardianPermissionModal: React.FC<{
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-2">
-          <span className="text-4xl">🛡️</span>
           <h3 id="guardian-permission-title" className="text-xl font-black text-gray-900 dark:text-gray-100">
-            Set up Auto-Saver
+            Set Guardian&apos;s daily limit
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Pick how much Auto-Saver can move each day. You can change or pause it any time.
+            Guardian proposes moves up to this amount a day. Nothing moves until you approve it.
           </p>
         </div>
 
-        {/* Onchain awareness: which chain + what Auto-Saver can see in
+        {/* Onchain awareness: which chain + what Guardian can see in
             the user's wallet. Sourced from useMultichainBalances so
             the figure matches the portfolio shown elsewhere. */}
         <div
@@ -137,12 +137,12 @@ export const GuardianPermissionModal: React.FC<{
           {!isChainSupported ? (
             <div className="space-y-2">
               <p className="text-red-700 dark:text-red-300">
-                Switch to Celo or Arbitrum to set up Auto-Saver.
+                Switch to Celo or Arbitrum to set a daily limit.
               </p>
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => switchToChain(42220)}
+                  onClick={() => switchToChain(CELO_CHAIN_ID)}
                   className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
                 >
                   Switch to Celo
@@ -160,8 +160,8 @@ export const GuardianPermissionModal: React.FC<{
             <div className="space-y-2">
               <p className="text-amber-700 dark:text-amber-300">
                 {hasNonStableButNoStable
-                  ? `You have $${nonStableBalanceOnChain.toFixed(0)} on ${currentChainName} but not in stables. Auto-Saver needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to act.`
-                  : `Auto-Saver needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to act. You can still approve now and top up later — it'll just wait.`}
+                  ? `You have $${nonStableBalanceOnChain.toFixed(0)} on ${currentChainName} but not in stables. Guardian needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to propose a move.`
+                  : `Guardian needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to propose a move. You can set the limit now and top up later — it'll just wait.`}
               </p>
               {isMiniPay ? (
                 <p className="text-[11px] text-amber-700 dark:text-amber-300 italic">
@@ -196,7 +196,7 @@ export const GuardianPermissionModal: React.FC<{
             </div>
           ) : (
             <p className="text-gray-500 dark:text-gray-400">
-              Auto-Saver only acts on funds it can see in your wallet on this chain.
+              Guardian only proposes moves with funds in your wallet on this chain.
             </p>
           )}
         </div>
@@ -247,12 +247,12 @@ export const GuardianPermissionModal: React.FC<{
 
         <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 border border-purple-100 dark:border-purple-800">
           <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
-            What you're approving
+            What you're signing
           </p>
           <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
             <li className="flex items-start gap-2">
               <span className="text-purple-500 mt-0.5">•</span>
-              <span>Auto-Saver may swap up to <strong>${pendingDailyLimit}</strong> of your stables each day.</span>
+              <span>Guardian may propose moves of up to <strong>${pendingDailyLimit}</strong> of your stables each day. You approve each one.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-500 mt-0.5">•</span>
@@ -264,11 +264,11 @@ export const GuardianPermissionModal: React.FC<{
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-500 mt-0.5">•</span>
-              <span>If your wallet is empty when it runs, it just waits — no errors, no fees.</span>
+              <span>Signing is free and moves nothing.</span>
             </li>
             <li className="flex items-start gap-2">
               <span className="text-purple-500 mt-0.5">•</span>
-              <span>You can pause it from this screen any time.</span>
+              <span>Pause any time from Limits &amp; controls.</span>
             </li>
           </ul>
         </div>
@@ -285,7 +285,7 @@ export const GuardianPermissionModal: React.FC<{
             disabled={!isChainSupported}
             className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 min-h-[44px] shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-[color,transform] active:scale-95"
           >
-            {isChainSupported ? "Approve in wallet" : "Switch network first"}
+            {isChainSupported ? "Sign in wallet" : "Switch network first"}
           </button>
         </div>
       </div>

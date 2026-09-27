@@ -13,6 +13,8 @@ import { buildServerlessRateProvider } from '@diversifi/shared/src/services/fx-d
 import { renderFxDragReportMarkdown } from '@diversifi/shared/src/services/fx-drag/fx-drag-report-renderer';
 import { GHANA_IMPORTER_SAMPLE } from '@diversifi/shared/src/services/fx-drag/sample-ghana';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import { trackFunnelEvent } from '@/lib/analytics';
+import { seedPaymentCycleDraft } from '@/hooks/use-payment-cycle';
 
 /**
  * Currency selector for the FX Drag Calculator landing page.
@@ -415,25 +417,39 @@ function ResultCard({ data }: { data: DragResult }) {
         <p className="text-base font-bold text-gray-900 dark:text-white mb-3">
           ~{money(currency, annualDrag)}
         </p>
-        <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-          <p>
-            {currency === 'GHS' && `That's ~${fmt(Math.round(annualDrag / 3000))} months of rent in Accra. Or enough to expand your inventory by 15%.`}
-            {currency === 'KES' && `That's ~${fmt(Math.round(annualDrag / 15000))} years of average income. Or enough to hire an extra employee.`}
-            {currency === 'NGN' && `That's ~${fmt(Math.round(annualDrag / 200000))} months of rent in Lagos. Or enough to restock your shop twice over.`}
-            {currency === 'PHP' && `That's ~${fmt(Math.round(annualDrag / 25000))} months of rent in Manila. Or enough to upgrade your equipment.`}
-            {!['GHS', 'KES', 'NGN', 'PHP'].includes(currency) && `That's a significant amount of working capital you could reinvest.`}
-          </p>
-        </div>
+        {/* Only the engine's own numbers — no uncurated rent/income anchors. */}
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Working capital that FX timing, spread and fees take before it reaches your supplier.
+        </p>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3">
+      {/* Actions — one CTA: carry this cycle into the app. */}
+      <div className="flex flex-col gap-2">
         <button
-          onClick={() => window.location.href = '/'}
-          className="flex-1 py-3 px-4 text-sm font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 rounded-xl transition-colors"
+          type="button"
+          onClick={() => {
+            // Seed Shield's payment-cycle draft with what the visitor typed,
+            // then land inside the instrument. Nothing is saved server-side
+            // until they connect and choose to.
+            seedPaymentCycleDraft({
+              localCurrency: currency,
+              targetCurrency: 'USD',
+              targetAmountUsd: String(Math.round(summary.totalUsdPaid)),
+            });
+            trackFunnelEvent('fx_drag_handoff', { currency, target: 'cycle' });
+            window.location.href = '/?tab=protect&cycle=1';
+          }}
+          className="min-h-[44px] w-full py-3 px-4 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
         >
-          Continue to DiversiFi →
+          Track your next payment →
         </button>
+        <a
+          href="/"
+          onClick={() => trackFunnelEvent('fx_drag_handoff', { currency, target: 'home' })}
+          className="min-h-[44px] flex items-center justify-center text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400"
+        >
+          Just explore DiversiFi
+        </a>
       </div>
     </div>
   );
@@ -466,8 +482,6 @@ export default function FXDragCalculator() {
     } catch { /* ignore */ }
     setCurrencyReady(true);
   }, []);
-
-  if (!currencyReady) return null; // SSR-safe
 
   const handleCalculate = useCallback(async (values: {
     earningsLocal: number;
@@ -538,6 +552,7 @@ export default function FXDragCalculator() {
         counterfactualRate: summary.cycles[0]?.counterfactualRate ?? values.achievedRate,
         counterfactualLocalCost: summary.totalActualLocal - summary.totalDragLocal,
       });
+      trackFunnelEvent('fx_drag_calculated', { currency: currency.toUpperCase() });
     } catch (err) {
       console.error('[FX Drag Calculator] Calculation failed:', err);
       setError('Could not compute drag report. Please check your numbers and try again.');
@@ -545,6 +560,8 @@ export default function FXDragCalculator() {
       setIsCalculating(false);
     }
   }, [currency]);
+
+  if (!currencyReady) return null; // SSR-safe — after every hook (rules of hooks)
 
   return (
     <>

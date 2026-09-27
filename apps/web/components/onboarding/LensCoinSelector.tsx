@@ -16,7 +16,7 @@ export interface LensCoinDef {
   label: string;
   /** Optional long-form description. Shown in the peek chip (stage) and
    *  carried on the lens; optional because some callers (e.g.
-   *  GuardianMobileWizard) only need label + glyph + accent. */
+   *  GuardianPlanSwitcher) only need label + glyph + accent. */
   description?: string;
   glyph: string;
   accent: string;
@@ -185,7 +185,7 @@ interface LensCoinSelectorProps {
   ariaLabel?: string;
   /**
    * 'row' (default) — a plain picker row: full stack stays visible,
-   * active coin spins on its turntable. Used by GuardianMobileWizard.
+   * active coin spins on its turntable. Used by GuardianPlanSwitcher.
    *
    * 'stage' — preview-then-commit: the first tap peeks (coin lifts,
    *   name + one-liner chip appears), the second tap on the same coin

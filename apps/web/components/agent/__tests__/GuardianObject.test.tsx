@@ -114,7 +114,7 @@ describe("GuardianObject — latest line + CTA", () => {
       latestEvent: {
         id: "e1",
         source: "vault",
-        title: "Auto-Saver swap",
+        title: "Guardian swap",
         subtitle: "USDC -> KESm · $10",
         timestamp: Date.now() - 60_000,
         status: "confirmed",
@@ -122,7 +122,7 @@ describe("GuardianObject — latest line + CTA", () => {
       latestCall: "rotate to KESm",
     });
     const latest = screen.getByTestId("guardian-latest");
-    expect(latest).toHaveTextContent("Auto-Saver swap · USDC -> KESm · $10");
+    expect(latest).toHaveTextContent("Guardian swap · USDC -> KESm · $10");
     expect(latest).not.toHaveTextContent("Latest call:");
     fireEvent.click(latest);
     expect(props.onOpenJournal).toHaveBeenCalledTimes(1);
@@ -141,8 +141,8 @@ describe("GuardianObject — latest line + CTA", () => {
   });
 
   it("fires onCta and hides when the label is null", () => {
-    const props = renderObject({ ctaLabel: "Set up Auto-Saver" });
-    fireEvent.click(screen.getByRole("button", { name: "Set up Auto-Saver" }));
+    const props = renderObject({ ctaLabel: "Set daily limit" });
+    fireEvent.click(screen.getByRole("button", { name: "Set daily limit" }));
     expect(props.onCta).toHaveBeenCalledTimes(1);
     cleanup();
     renderObject({ ctaLabel: null });
@@ -159,7 +159,7 @@ describe("GuardianObject — word budget", () => {
       latestEvent: {
         id: "e1",
         source: "vault",
-        title: "Auto-Saver swap",
+        title: "Guardian swap",
         subtitle: "USDC -> KESm · $10",
         timestamp: Date.now() - 60_000,
         status: "confirmed",

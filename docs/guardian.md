@@ -20,7 +20,10 @@ are actually enforced*.
     (`origin: guardian`), and signs in their own wallet. Nothing moves until
     they sign. ADVISORY and COPILOT tiers only ever get this path.
   - **Autonomous (opt-in, ERC-7715/7710 only):** the user grants a MetaMask
-    Advanced Permission ("Stronger protection"). The Guardian session account
+    Advanced Permission (UI: "Let Guardian act for you" in Limits & controls —
+    the only autonomy entry point; it signs the 7715 cap, then re-signs the
+    EIP-712 permission as GUARDIAN at the same limit, since the loop never
+    executes COPILOT). The Guardian session account
     redeems it on the user's **own smart account** — bounds enforced on-chain
     by the DelegationManager, not in app code.
 - The user signs an **EIP-712 permission** (`erc7715-service.ts`) — real

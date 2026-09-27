@@ -51,7 +51,7 @@ export function useWDKAgent() {
     try {
       const identity: WDKAgentIdentity = {
         agent_id: "wdk-settlement-001",
-        name: "Auto-Saver",
+        name: "Guardian",
         version: "1.0.0",
         chains: ["Celo", "Arbitrum", "Polygon", "Avalanche", "Tron"],
         wallets: [

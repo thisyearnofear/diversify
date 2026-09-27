@@ -8,6 +8,7 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { MIN_AUTO_SAVER_FUNDS_USD } from "@/constants/guardian-limits";
 
 export type GuardianProofEvent = {
   id: string;
@@ -72,15 +73,15 @@ export const GuardianJournalTab: React.FC<{
               {!hasValidPermission
                 ? "Nothing to show yet"
                 : isLowOnFunds
-                  ? "Auto-Saver is waiting for funds before its first move."
-                  : "Auto-Saver is watching. No moves yet."}
+                  ? "Guardian is waiting for funds before its first proposal."
+                  : "Guardian is watching. No moves yet."}
             </p>
             <p className="text-xs text-gray-500 dark:text-gray-400 max-w-xs mx-auto leading-relaxed">
               {!hasValidPermission
-                ? "Set up Auto-Saver to start tracking automatic moves and on-chain receipts."
+                ? "Set a daily limit and every proposal, move and on-chain receipt appears here."
                 : isLowOnFunds
-                  ? "Top up with at least $5 in stables. Auto-Saver will use the next chance it sees."
-                  : "Once it makes its first move, every action will appear here with a verifiable receipt."}
+                  ? `Top up with at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables. Guardian will propose at the next chance it sees.`
+                  : "Every proposal and move will appear here with a verifiable receipt."}
             </p>
             {hasValidPermission && (
               isLowOnFunds && onNavigateToFund ? (

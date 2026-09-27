@@ -54,8 +54,8 @@ async function resolveRecommendations(
   const reason = latestRecommendation.oneLiner
     || latestRecommendation.reasoning
     || (dryRun
-      ? 'Advisor recommendation converted into a Guardian dry-run.'
-      : 'Advisor recommendation converted into a Guardian execution.');
+      ? 'Guardian recommendation converted into a dry-run.'
+      : 'Guardian recommendation converted into an execution.');
 
   return buildDemoRecommendation(latestRecommendation.targetToken || 'cEUR', fallbackAmount, reason);
 }
@@ -175,8 +175,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         status: 'noop',
         reasonCode: guardianState?.latestRecommendation ? 'no_executable_recommendations' : 'missing_recommendation',
         message: guardianState?.latestRecommendation
-          ? 'Guardian found no executable swaps for the latest Advisor intent.'
-          : 'Run Advisor analysis first so Guardian has an intent to act on.',
+          ? 'Guardian found no executable swaps for its latest recommendation.'
+          : 'Ask Guardian for an analysis first so it has a recommendation to act on.',
         summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
         recommendations: [],
         transactions: [],

@@ -160,7 +160,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 1. **Connect** — Privy login or existing wallet (email, social login, embedded wallet onboarding)
 2. **Pick a Protection Plan** — Savings stay in your own wallet; the Guardian starts proposing moves
-3. **Approve a move** — One tap opens Exchange prefilled; you sign in your wallet. On supported chains, opt into stronger protection (ERC-7715/7710, enforced on-chain by your own smart account) and the Guardian can act within those limits
+3. **Approve a move** — One tap opens Exchange prefilled; you sign in your wallet. On supported chains, add a wallet-enforced limit (ERC-7715/7710, enforced on-chain by your own smart account) and the Guardian can act within those limits
 4. **Monitor** — Real-time receipts, allocations, P&L in a single dashboard
 5. **Your keys, always** — No deposit, no custodial account, revoke anytime
 
@@ -190,16 +190,27 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 6. **Purchasing-power vocabulary, not trading vocabulary.** A DEX shows price impact in basis points and a dollar equivalent; this ticket answers in staples and drift — "≈ 6 bags of rice · $292.80" sending, "≈ 6 bags of rice where it lands" receiving — priced from the curated `goodsAnchor` staples in `currency-risk.ts` (NGN/GHS rice, KES maize flour; absent where none is curated). The ticket also reacts to the world: a real dated `MACRO_SIGNAL:*` event from the anchored ledger supersedes the side's standing watch cadence for its freshness window ("Sep 18 🇳🇬: CBN held the benchmark rate"), read via the shared proof feed at zero incremental Firecrawl cost. Settlement is already sealed as a `PairReceipt` artifact on the pair itself — the spent coin travels the beam, the destination seals with a ✓, and the story, goods equivalent, and verified tx link replace any toast. The wallet's own capital history is shipped too: the journey rail under the pair stage reads the wallet's Celo transfers (Blockscout, mapped by contract address) and shows where the savings have lived — stations per currency received, settled swap legs in the inspector. The resting pair also carries a time machine: a 1y/3y/5y control on the corridor line re-weighs the beam to that window's drift and pins a labelled what-if ("moved to the dollar in 2020, 10 bags of rice would be ~25") — computed from curated depreciation ratios only, honest in both directions. Ask Guardian is shipped too: "Ask Guardian about this pair →" in the inspector sends only the two symbols and the server grounds the answer in the same registry facts (`formatPairFacts`), with rules that forbid uncurated claims and predictions. The remaining piece of the anti-DEX stack is the inspector naming that Mento routes at the reserve oracle — no bonding curve.
 
-## Terminology Guide
+## Vocabulary
 
-| Internal Term | User-Facing Term |
-|--------------|-----------------|
-| Agent | Advisor / Guardian |
-| Strategy | Protection Plan |
-| Exchange | Protect |
-| Agent Fuel | Protection Balance (intended product term; prepaid balance availability depends on deployment) |
-| Rebalance | Re-protect |
-| Vault | Savings |
+One name per concept in anything a user reads (UI, toasts, emails, the
+Guardian's own replies). Internal code may keep its identifiers.
+Tripwire: `apps/web/lib/__tests__/vocabulary.test.ts`.
+
+| Concept | User-facing name | Never say | Internal |
+|---|---|---|---|
+| The agent | **Guardian** ("Ask Guardian") | Advisor, Agent, Auto-Saver, AI assistant | `advisor-core`, `useAdvisor`, `agent` tab id |
+| Its permission (EIP-712, `COPILOT`) | **Daily limit** — proposal-only, you approve each move | "Auto-Saver is on", "Guardian may swap" | `requestPermission('COPILOT')` |
+| Optional ERC-7715 grant + GUARDIAN re-sign (the one autonomy path) | **Let Guardian act for you** (wallet-enforced limit) | "Stronger protection", "Advanced Permissions" (except MetaMask's own errors) | `requestAdvancedPermission`, `delegationContext` |
+| Pausing it | **Pause Guardian** | Revoke, stop Auto-Saver | `revokePermission` |
+| The allocation choice | **Protection plan** (Africapitalism, …, Custom plan) | Strategy | `FinancialStrategy`, `vault.strategy` |
+| Moving between currencies | **Move savings** | Rebalance, Re-protect, Execute | `rebalance` action type |
+| Tabs | **Shield · Home · Exchange · Guardian · Learn** | Protect, Overview, Agent, Info as tab names | `protect / overview / exchange / agent / info` |
+| Prepaid review credit | **Protection Balance** (intended; deployment-dependent) | Agent Fuel | x402 |
+| Where money sits | **Your wallet** / **Savings** | Vault, deposit | `vault` |
+
+"Protect" stays a verb ("Protect this", "Protect my savings"); it is never a
+tab or a noun. Tab labels have one source — `TAB_LABELS` in
+`apps/web/constants/tabs.ts` — and personas never rename tabs.
 
 ## Core Capabilities (What's Shipped)
 
@@ -216,7 +227,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 | **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — contract live, see `rails.md` § Implementation status), Robinhood (RWA ledger, chain 4663 — env-gated), 0G (evidence/anchoring), Arc (x402 settlement rail, chain 5042 — env-gated) |
 | **Wallet** | User's own wallet (MetaMask/MiniPay/Farcaster-compatible) + Privy for login and embedded-wallet onboarding — Privy never executes |
 | **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Surfaced + depositable via `BestYieldCard`. See `docs/roadmap-log.md` § Yield Engine Strategy. |
-| **Voice** | Advisor voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
+| **Voice** | Guardian voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
 | **Free web/news search** | TinyFish Search (web/news/research) feeds the Guardian region-specific context (FX news, central-bank moves) — free, replaces paid marketplace search. |
 | **Cost discipline** | Paid insights (e.g. vaults.fyi) are engagement-gated (`insight-tier.ts`): Free → Saver (≥$100 or 7-day streak) → Committed. Default-deny; free data open to all. |
 
@@ -236,17 +247,17 @@ Market evidence, competitive gap, archetype design, regulatory posture
 - Voice/automation features (until core flow is polished)
 - Separate research dashboards that duplicate advisor output
 
-## Ideal Navigation
+## Navigation
 
 | Tab | Purpose |
 |-----|---------|
-| **Protect (Shield)** | Choose plan, view allocation — savings stay in your wallet; compact Guardian status before connect |
-| **Overview (Home)** | Portfolio summary, inflation impact, quick actions |
-| **Exchange** | Swap stablecoins across regions and chains |
-| **Agent (Guardian)** | AI Guardian recommendations, verifiable proof, backtesting, Guardian tier state |
-| **Info (Learn)** | Wealth-protection calculator (cash vs your mix over time) |
+| **Shield** | Choose a protection plan, see its allocation ring — savings stay in your wallet |
+| **Home** | Risk Theater: your currency's moment + holdings coins |
+| **Exchange** | Move savings between currencies (pair stage → ticket → receipt) |
+| **Guardian** | The Guardian: daily limit, latest decision, journal and proof |
+| **Learn** | Wealth-protection calculator (cash vs your mix over time) |
 
-Tab IDs are `protect / overview / exchange / agent / info` (`apps/web/constants/tabs.ts`); Shield, Home, Guardian, Learn are the user-facing labels (`TabNavigation.tsx`).
+Tab IDs are `protect / overview / exchange / agent / info`; labels come only from `TAB_LABELS` (`apps/web/constants/tabs.ts`).
 
 **Simple mode** (beginner): Shield → Home → Exchange only. **Intermediate** adds Guardian. **Advanced** restores the full bar including Learn (the calculator also lives as the Shield empty-wallet inspector + optional Home amount-inspect). Exchange and Guardian remain reachable via the rail on other modes. See `design-language.md` §5.
 

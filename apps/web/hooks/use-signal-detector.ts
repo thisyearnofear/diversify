@@ -20,6 +20,7 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
+import { TAB_LABELS } from "../constants/tabs";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useUserRegion } from "./use-user-region";
 import { useCurrencyRisk } from "./use-currency-risk";
@@ -473,14 +474,8 @@ function buildConfig(
   const { currency, flag } = signals.geo;
   const walletConnected = signals.wallet.connected;
 
-  // Default tab labels
-  const defaultLabels: Record<string, string> = {
-    overview: "Home",
-    protect: "Shield",
-    exchange: "Exchange",
-    agent: "Guardian",
-    info: "Learn",
-  };
+  // Tab labels have one source (constants/tabs.ts) — personas never rename tabs.
+  const defaultLabels: Record<string, string> = { ...TAB_LABELS };
 
   // Build persona-aware content routing
   const content = buildContentRouting(persona, walletConnected);
@@ -497,7 +492,7 @@ function buildConfig(
       return {
         persona,
         guardianMode: "cycle",
-        tabLabels: { ...defaultLabels, protect: "Shield" },
+        tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
         displayCurrency: "GHS",
         currencyFlag: flag || "🇬🇭",
@@ -519,7 +514,7 @@ function buildConfig(
       return {
         persona,
         guardianMode: signals.history.hasCycles ? "cycle" : "savings",
-        tabLabels: { ...defaultLabels, protect: "Shield" },
+        tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
         displayCurrency: "PHP",
         currencyFlag: flag || "🇵🇭",

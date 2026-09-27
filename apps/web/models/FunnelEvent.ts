@@ -36,6 +36,10 @@ export const FUNNEL_EVENTS = [
   'graduation_prompt_viewed',
   'graduation_prompt_dismissed',
   'graduation_prompt_clicked',
+  // Public FX drag calculator — a result was computed, and the visitor
+  // carried it into the app (track) or just continued. Coarse: currency only.
+  'fx_drag_calculated',
+  'fx_drag_handoff',
   // Caribbean FX netting — coarse engagement signal (which pair was requested)
   'fx_netting_match_requested',
   // FX netting settlement — debtor tapped "send cUSD obligation"

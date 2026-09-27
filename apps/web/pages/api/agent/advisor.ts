@@ -96,7 +96,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const result = await runAdvisorConversation(req.body);
     return res.status(200).json(result);
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Advisor request failed';
+    const errorMessage = error instanceof Error ? error.message : 'Guardian request failed';
     console.error('[Advisor API] Error:', error);
 
     if (errorMessage.includes('All AI providers failed')) {
@@ -107,7 +107,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     return res.status(500).json({
-      error: 'Advisor request failed. Please try again.',
+      error: 'Guardian could not answer. Please try again.',
       details: process.env.NODE_ENV === 'development' ? errorMessage : undefined,
     });
   }

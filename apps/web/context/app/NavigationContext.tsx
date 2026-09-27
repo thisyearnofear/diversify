@@ -41,8 +41,9 @@ export interface TreasuryIntent {
   region?: string;
   /** Canonical mixed-case token symbol, e.g. "KESm". */
   asset?: string;
-  /** A specific mode the target tab should open in, not a slice. */
-  lens?: 'compare' | 'netting';
+  /** A specific mode the target tab should open in, not a slice.
+   *  `cycle` opens Shield's payment-cycle inspector (per-cycle FX drag). */
+  lens?: 'compare' | 'netting' | 'cycle';
 }
 
 export interface GuardianDecisionRef {

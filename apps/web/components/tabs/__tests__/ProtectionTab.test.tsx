@@ -135,7 +135,7 @@ const mockNavigateToSwap = vi.fn();
 const mockNavigateToGuardian = vi.fn();
 const mockConsumeIntent = vi.fn();
 const navState: {
-  pendingIntent: { tab: string; intent: { source: string; region?: string; asset?: string; lens?: "compare" | "netting" } } | null;
+  pendingIntent: { tab: string; intent: { source: string; region?: string; asset?: string; lens?: "compare" | "netting" | "cycle" } } | null;
 } = { pendingIntent: null };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
@@ -378,9 +378,9 @@ vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
     ),
 }));
 
-vi.mock("@/components/agent/GuardianMobileWizard", () => ({
-  GuardianMobileWizard: () =>
-    React.createElement("div", { "data-testid": "guardian-mobile-wizard" }),
+vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({
+  PaymentCycleReport: () =>
+    React.createElement("div", { "data-testid": "payment-cycle-report" }),
 }));
 
 vi.mock("@/components/ui/EmptyState", () => ({
@@ -602,7 +602,9 @@ describe("ProtectionTab — instrument shapes", () => {
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
     const cta = screen.getByRole("button", { name: "Have Guardian keep this aligned" });
     fireEvent.click(cta);
-    expect(screen.getByTestId("guardian-mobile-wizard")).toBeInTheDocument();
+    // One grant path: Shield hands off to the Guardian tab, it never signs.
+    expect(mockNavigateToGuardian).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToGuardian.mock.calls[0][0]?.summary).toContain("daily limit");
   });
 
   it("on-target slice while monitoring: the CTA carries the slice into Guardian", () => {
@@ -960,6 +962,22 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
     expect(mockConsumeIntent).toHaveBeenCalled();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("a cycle-lens intent opens the payment-cycle inspector — even with no plan", () => {
+    mockFinancialStrategy = null;
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "cycle" },
+    };
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    expect(screen.getByTestId("payment-cycle-report")).toBeInTheDocument();
+    expect(mockConsumeIntent).toHaveBeenCalled();
   });
 
   it("consumes a compare-lens intent without entering compare when there is no plan", () => {

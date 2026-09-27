@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { GuardianMascot } from "../shared/GuardianMascot";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { usePrivy } from "@privy-io/react-auth";
 import { useVoiceEnabled } from "../ui/VoiceButton";
 import { useToast } from "../ui/Toast";
 import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
 
-const isDev = process.env.NODE_ENV === "development";
 const AUTOMATION_STORAGE_KEY = "diversifi-automation-prefs";
 
 function getStorageKey(address: string) {
@@ -86,20 +84,11 @@ interface AutomationSettingsProps {
     walletProvider?: "CIRCLE_MPC" | "TETHER_WDK";
   };
   onConfigChange?: (config: any) => void;
-  autonomousStatus?: {
-    enabled: boolean;
-    isTestnet: boolean;
-    walletType: string;
-    spendingLimit: number;
-    spent: number;
-    remaining: number;
-  } | null;
 }
 
 export default function AutomationSettings({
   config,
   onConfigChange,
-  autonomousStatus,
 }: AutomationSettingsProps) {
   const { address } = useWalletContext();
   const { user } = usePrivy();
@@ -265,16 +254,16 @@ export default function AutomationSettings({
 
   if (!address) {
     return (
-      <div className="max-w-4xl mx-auto p-4 sm:p-6">
+      <div>
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300">
             <span className="text-2xl">🔐</span>
           </div>
           <h3 className="text-lg font-black text-gray-900 dark:text-white">
-            Connect a wallet to manage protection settings
+            Connect a wallet to manage notifications
           </h3>
           <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
-            Advanced notifications and automatic protection controls appear here once a wallet is connected.
+            Notification and integration settings appear here once a wallet is connected.
           </p>
         </div>
       </div>
@@ -323,105 +312,13 @@ export default function AutomationSettings({
     (preferences.email.enabled && !preferences.email.address?.trim());
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-6 sm:space-y-8">
-      <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-2 uppercase tracking-tight flex items-center justify-center gap-2">
-          <GuardianMascot size={28} mood="protective" />
-          Protection Settings
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-          Monitor and control your AI wealth protection agents
-        </p>
-
-        {/* Automation Hub Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left">
-          <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800 p-4 rounded-2xl">
-            <div className="text-[10px] font-black uppercase text-blue-500 mb-1">Vault Status</div>
-            <div className="flex items-center gap-2">
-              <span className={`h-2 w-2 rounded-full ${preferences.auth0RefreshToken ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
-              <span className="font-bold text-sm text-blue-900 dark:text-blue-100">
-                {preferences.auth0RefreshToken ? 'Connected' : 'Not Linked'}
-              </span>
-            </div>
-          </div>
-          <div className="bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800 p-4 rounded-2xl">
-            <div className="text-[10px] font-black uppercase text-orange-500 mb-1">Active Integrations</div>
-            <div className="text-sm font-bold text-orange-900 dark:text-orange-100">
-              {[preferences.slack.enabled, preferences.zapier.enabled, preferences.google.enabled].filter(Boolean).length} / 3 Services
-            </div>
-          </div>
-          <div className="bg-purple-50 dark:bg-purple-900/10 border border-purple-100 dark:border-purple-800 p-4 rounded-2xl">
-            <div className="text-[10px] font-black uppercase text-purple-500 mb-1">Delegated Identity</div>
-            <div className="text-[10px] font-mono text-purple-900 dark:text-purple-100 truncate">
-              {stableUserId}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Autonomous Guardian Wallet (if enabled) */}
-      {autonomousStatus?.enabled && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-purple-50 dark:bg-purple-900/10 rounded-2xl shadow-sm border border-purple-200 dark:border-purple-800 p-5 sm:p-6"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">🛡️</span>
-              <div>
-                <h3 className="font-black text-purple-900 dark:text-purple-100 uppercase tracking-tight text-sm">
-                  Auto-Saver Wallet
-                </h3>
-                <p className="text-xs sm:text-xs text-purple-700 dark:text-purple-300">
-                  Pays for its own market data — reviews never charge you.
-                </p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="text-xs font-black uppercase text-purple-400">
-                STATUS
-              </div>
-              <div className="text-xs font-black text-green-600">ACTIVE</div>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
-            <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-              <div className="text-xs text-gray-400 font-black uppercase tracking-wider">
-                WALLET TYPE
-              </div>
-              <div className="text-xs font-black text-gray-700 dark:text-gray-200">
-                {autonomousStatus.walletType.toUpperCase()}
-              </div>
-            </div>
-            <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-              <div className="text-xs text-gray-400 font-black uppercase tracking-wider">
-                DAILY LIMIT
-              </div>
-              <div className="text-xs font-black text-gray-700 dark:text-gray-200">
-                ${autonomousStatus.spendingLimit.toFixed(2)}
-              </div>
-            </div>
-            <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-              <div className="text-xs text-gray-400 font-black uppercase tracking-wider">
-                SPENT TODAY
-              </div>
-              <div className="text-xs font-black text-purple-600 dark:text-purple-400">
-                ${autonomousStatus.spent.toFixed(4)}
-              </div>
-            </div>
-            <div className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-purple-100 dark:border-purple-900/50">
-              <div className="text-xs text-gray-400 font-black uppercase tracking-wider">
-                REMAINING
-              </div>
-              <div className="text-xs font-black text-green-600 dark:text-green-400">
-                ${autonomousStatus.remaining.toFixed(4)}
-              </div>
-            </div>
-          </div>
-        </motion.div>
-      )}
+    <div className="space-y-6">
+      {/* This sheet is preferences only — limits and pause live in
+          Limits & controls. No status tiles, no raw identity strings. */}
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        How Guardian reaches you and which outside services it may use. Your
+        daily limit and pause live in Limits &amp; controls.
+      </p>
 
       {/* AI Strategy Core */}
       {config && onConfigChange && (
@@ -436,7 +333,7 @@ export default function AutomationSettings({
             </div>
             <div>
                 <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-tight text-sm">
-                  AI Strategy Core
+                  How Guardian advises
                 </h3>
               <p className="text-xs sm:text-xs text-gray-600 dark:text-gray-400">
                 Configure how Guardian analyzes your wealth
@@ -482,7 +379,7 @@ export default function AutomationSettings({
 
           <div className="mt-6">
             <label className="block text-xs font-black text-gray-400 uppercase tracking-widest mb-2">
-              AGENT WALLET INFRASTRUCTURE
+              GUARDIAN&apos;S FEE WALLET
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
@@ -845,7 +742,7 @@ export default function AutomationSettings({
               <div className="flex items-center justify-between">
                 <p className="text-xs text-green-800 dark:text-green-300">
                   {preferences.auth0RefreshToken ? (
-                    <>✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Zapier account.</>
+                    <>✅ <strong>Connected via Token Vault.</strong> Guardian has delegated access to your Zapier account.</>
                   ) : (
                     <>⚠️ <strong>Setup Required.</strong> Please use the CONNECT button above to authorize the agent.</>
                   )}
@@ -937,7 +834,7 @@ export default function AutomationSettings({
               <div className="flex items-center justify-between">
                 <p className="text-xs text-green-800 dark:text-green-300">
                   {preferences.auth0RefreshToken ? (
-                    <>✅ <strong>Connected via Token Vault.</strong> Agent has delegated access to your Google account.</>
+                    <>✅ <strong>Connected via Token Vault.</strong> Guardian has delegated access to your Google account.</>
                   ) : (
                     <>⚠️ <strong>Setup Required.</strong> Please use the CONNECT button above to authorize the agent.</>
                   )}
@@ -1115,24 +1012,6 @@ export default function AutomationSettings({
         )}
       </div>
 
-      {/* Info Box */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-        <div className="flex items-start gap-3">
-          <span className="text-blue-600 text-xl">💡</span>
-          <div>
-            <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-              How It Works
-            </h4>
-            <p className="text-sm text-blue-800 dark:text-blue-300">
-              Your AI agent analyzes your portfolio continuously and triggers
-              automations when it detects wealth protection opportunities that
-              meet your configured thresholds.
-              {isDev &&
-                " Paid reviews draw your Protection Balance; Auto-Saver execution uses the configured Auto-Saver Wallet."}
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

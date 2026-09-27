@@ -46,7 +46,6 @@ import { canonicalToken, configTokenFor, isLegFillable, pickBiggestFillableGap }
 import { strongerFloorOffer } from "@/lib/shield-lens";
 import { PlanFloorControl } from "./protect/PlanFloorControl";
 import { deriveShieldShape } from "./protect/shield-shape";
-import { GuardianMobileWizard } from "../agent/GuardianMobileWizard";
 import { useGuardianTierSnapshotFrom } from "../agent/AgentTierStatus";
 import { useCurrencyRisk } from "@/hooks/use-currency-risk";
 import { useStrategy } from "@/context/app/StrategyContext";
@@ -100,11 +99,10 @@ export default function ProtectionTab({
 
   const activePortfolio = (isDemo ? DEMO_PORTFOLIO : portfolio) as MultichainPortfolio;
 
-  const [showMobileWizard, setShowMobileWizard] = useState(false);
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const { recordActivity } = useStreakRewards();
   const vault = useVault();
-  const { requestPermission, signedPermission, sessionInfo, deriveGuardianState } =
+  const { signedPermission, sessionInfo, deriveGuardianState } =
     useSessionKey();
   const { guardianState } = useGuardianTierSnapshotFrom(vault, {
     signedPermission,
@@ -122,6 +120,13 @@ export default function ProtectionTab({
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
   const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
   const [comparing, setComparing] = useState(false);
+  // Payment-cycle inspector — opened by the `cycle` intent (Home's
+  // graduation / payment-cycle transition). Independent of any slice.
+  const [cycleOpen, setCycleOpen] = useState(false);
+  const openCycle = useCallback(() => setCycleOpen(true), []);
+  useEffect(() => {
+    if (focusedToken) setCycleOpen(false);
+  }, [focusedToken]);
   const [learnYear, setLearnYear] = useState(5);
   const [learnAmountOverride, setLearnAmountOverride] = useState<number | null>(null);
   const previousAddress = useRef(address);
@@ -158,6 +163,9 @@ export default function ProtectionTab({
   useEffect(() => {
     if (!router.isReady) return;
     if (router.query.sleeve === "rwa") setFocusedToken(SLEEVE_ID);
+    // ?cycle=1 opens the payment-cycle inspector — the FX drag
+    // calculator's "Track this cycle" hand-off (draft pre-seeded).
+    if (router.query.cycle === "1") setCycleOpen(true);
     if (router.query.serv === "1" || router.query.serv === "true") {
       setRwaServOn(true);
     }
@@ -189,6 +197,16 @@ export default function ProtectionTab({
   const hasPlan = Boolean(strategyKey);
   const planName =
     STRATEGIES.find((s) => s.id === strategyKey)?.name ?? currentGoalLabel;
+  // One grant path: Shield never signs a permission itself. It hands off to
+  // the Guardian tab, whose object owns "Set daily limit".
+  const setUpGuardian = useCallback(
+    () =>
+      navigateToGuardian({
+        summary: `Set a daily limit and Guardian will propose moves that keep your ${planName} plan aligned. You approve each one.`,
+        prompt: `How would Guardian keep my ${planName} plan aligned, and what does a daily limit let it do?`,
+      }),
+    [navigateToGuardian, planName],
+  );
   const planRingVisible = useMemo(() => {
     if (!strategyKey) return false;
     const archetypeId = strategyToArchetype(strategyKey);
@@ -484,6 +502,7 @@ export default function ProtectionTab({
     heldPctByToken,
     setComparing,
     setFocusedToken,
+    openCycle,
   });
 
   const learnMix = useMemo(() => {
@@ -746,8 +765,10 @@ export default function ProtectionTab({
       userRegion={userRegion}
       isPaymentCycle={isPaymentCycle}
       guardianState={guardianState}
-      setShowMobileWizard={setShowMobileWizard}
+      onSetUpGuardian={setUpGuardian}
       showToast={showToast}
+      cycleOpen={cycleOpen && !balance.isPreviewing}
+      onCloseCycle={() => setCycleOpen(false)}
     />
   );
 
@@ -774,7 +795,7 @@ export default function ProtectionTab({
       exitCompare={exitCompare}
       navigateToGuardian={navigateToGuardian}
       setFocusedToken={setFocusedToken}
-      setShowMobileWizard={setShowMobileWizard}
+      onSetUpGuardian={setUpGuardian}
     />
   );
 
@@ -786,7 +807,7 @@ export default function ProtectionTab({
       <ProtectionNotConnected
         experienceMode={experienceMode}
         onEnableDemo={enableDemoMode}
-        inspector={sleeveOpen ? inspector : undefined}
+        inspector={sleeveOpen || cycleOpen ? inspector : undefined}
         sleeveOpen={sleeveOpen}
         onOpenSleeve={() => setFocusedToken(SLEEVE_ID)}
         onCloseSleeve={() => setFocusedToken(null)}
@@ -810,40 +831,6 @@ export default function ProtectionTab({
         onRefresh={refreshBalances}
       />
 
-      {showMobileWizard && address && (
-        <GuardianMobileWizard
-          userAddress={address}
-          onComplete={() => {
-            setShowMobileWizard(false);
-            if (address) vault.refresh(address);
-          }}
-          onCancel={() => setShowMobileWizard(false)}
-          onSaveStrategy={async (strategy) => {
-            return vault.updateStrategy(address, strategy);
-          }}
-          onRequestPermission={async (dailyLimit) => {
-            if (!address || !chainId) return false;
-            try {
-              const provider = (window as any).ethereum;
-              if (!provider) return false;
-              const { ethers } = await import("ethers");
-              const ethersProvider = new ethers.providers.Web3Provider(provider);
-              const signer = ethersProvider.getSigner();
-              const result = await requestPermission("GUARDIAN", address, signer, chainId, {
-                spendingLimitUSD: dailyLimit * 30,
-                dailyLimitUSD: dailyLimit,
-              });
-              if (result) {
-                await vault.refresh(address);
-                return true;
-              }
-              return false;
-            } catch {
-              return false;
-            }
-          }}
-        />
-      )}
     </div>
   );
 }

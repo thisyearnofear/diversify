@@ -51,31 +51,46 @@ export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
     cta: string;
     hint: string;
 }> = {
+    // Copy contract: the default permission (COPILOT) never auto-executes —
+    // the Guardian loop only proposes. Nothing here may imply Guardian moves
+    // money on its own; "you approve each move" is the truth for this tier.
     idle: {
-        headline: 'Set up Auto-Saver',
-        description: 'Pick a strategy and set your daily limit to get started.',
-        cta: 'Set up Auto-Saver',
-        hint: 'Pick a strategy and set your daily limit.',
+        headline: 'Set a daily limit',
+        description: 'Guardian proposes moves up to your limit. Nothing moves until you approve it.',
+        cta: 'Set daily limit',
+        hint: 'You approve every move in your own wallet.',
     },
     authorized: {
-        headline: 'Auto-Saver is set up',
-        description: 'Auto-Saver proposes moves within your limits — you approve each with one tap in your own wallet.',
-        cta: 'View proposals',
+        headline: 'Your daily limit expired',
+        description: 'Renew it and Guardian will keep proposing moves — you still approve each one.',
+        cta: 'Renew daily limit',
         hint: 'Nothing moves until you approve it.',
     },
     funded: {
-        headline: 'Turn on protection',
-        description: 'Turn on Auto-Saver to start protecting your savings.',
-        cta: 'Turn on Auto-Saver',
-        hint: 'Turn on Auto-Saver to start protecting your savings.',
+        headline: 'Set a daily limit',
+        description: 'Guardian proposes moves up to your limit. Nothing moves until you approve it.',
+        cta: 'Set daily limit',
+        hint: 'You approve every move in your own wallet.',
     },
     monitoring: {
-        headline: 'Protection on',
-        description: 'Auto-Saver is watching markets and proposing moves within your limits.',
+        headline: 'Guardian is watching',
+        description: 'Guardian watches markets and proposes moves within your limit. You approve each one.',
         cta: 'View activity',
-        hint: 'Auto-Saver is working within the limits you set.',
+        hint: 'Guardian works within the limit you set.',
     },
 };
+
+/**
+ * Monitoring copy when the permission is GUARDIAN-tier (wallet-enforced
+ * limit granted). Here Guardian CAN execute without a per-move signature,
+ * so the proposal-only line ("you approve each one") would be false.
+ */
+export const GUARDIAN_AUTONOMOUS_COPY = {
+    headline: 'Guardian is acting for you',
+    description: 'Guardian can move savings on its own within your limit — your wallet enforces the cap on-chain. Pause any time.',
+    cta: 'View activity',
+    hint: 'Your wallet enforces the cap on-chain.',
+} as const;
 
 /** User-facing wallet connect prompts — no chain names. */
 export const WALLET_CONNECT_COPY = {

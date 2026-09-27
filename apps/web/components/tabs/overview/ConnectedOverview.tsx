@@ -33,6 +33,8 @@ import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import { GuardianCadenceLine } from "../../shared/LiveProofCard";
 import { StatusTier } from "../../shared/StatusTier";
 import { concentrationOf } from "@/lib/home-lens";
+import { useGraduationSignal } from "@/hooks/use-graduation-signal";
+import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-prompt";
 
 const HOME_LENS_KEY = "diversifi.home.lens";
 
@@ -82,7 +84,7 @@ export function ConnectedOverview({
   const { askAdvisor } = useAdvisor();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
   const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
-  const { navigateToCompare, navigateToNetting, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
+  const { navigateToCompare, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
   const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
   // The concentration lens is a state of the coin object — preview-only,
   // entered through the transition slot, left via the in-object ←.
@@ -206,11 +208,40 @@ export function ConnectedOverview({
   });
 
   const hasHoldings = totalValue > 0;
-  // Offered = the prompt is actually the chosen transition (banner and
-  // payment-cycle outrank it) on a live, non-demo surface.
+
+  // Retail → business graduation (strategy.md Phase 4). Behaviour, not
+  // self-declaration: the endpoint reads the wallet's own swaps and saved
+  // cycles. Demo views never read it. Users who already declared a payment
+  // purpose get the payment-cycle transition instead, so it never doubles.
+  const graduation = useGraduationSignal(isDemo ? null : address);
+  const graduationSignals = graduation.data?.signals ?? null;
+  const graduationLine =
+    !home.isPaymentCycle &&
+    graduation.data?.shouldShow &&
+    !graduation.isDismissed &&
+    graduationSignals
+      ? graduationPromptLine(graduationSignals)
+      : null;
+  const graduationLead = graduationSignals ? leadGraduationSignal(graduationSignals) ?? "none" : "none";
+  // Viewed = it's the rendered transition (a banner outranks it), once per mount.
+  const graduationShown = Boolean(graduationLine && !home.banner && isActive);
+  const graduationViewedRef = React.useRef(false);
+  useEffect(() => {
+    if (!graduationShown || graduationViewedRef.current) return;
+    graduationViewedRef.current = true;
+    trackFunnelEvent("graduation_prompt_viewed", { signal: graduationLead });
+  }, [graduationShown, graduationLead]);
+  const openCycle = useCallback(
+    () => navigateWithIntent("protect", { source: "home", lens: "cycle" }),
+    [navigateWithIntent],
+  );
+
+  // Offered = the prompt is actually the chosen transition (banner,
+  // payment-cycle and graduation outrank it) on a live, non-demo surface.
   const concentrationOffered = Boolean(
     !home.banner &&
       !home.isPaymentCycle &&
+      !graduationLine &&
       concentration &&
       lens === "moment" &&
       isActive &&
@@ -409,17 +440,44 @@ export function ConnectedOverview({
       onEnableDemo={onEnableDemo}
       onDismissFxCorridorHint={() => {
         home.dismissFxCorridorHint();
-        navigateToNetting();
+        openCycle();
       }}
     />
   ) : home.isPaymentCycle ? (
+    // Declared payment purpose → the signature business surface: what FX
+    // timing costs this cycle. Netting stays one tap away on Exchange.
     <button
       type="button"
-      onClick={() => navigateToNetting()}
+      data-testid="home-cycle-link"
+      onClick={openCycle}
       className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
     >
-      Match this payment against a counterparty →
+      See what FX timing costs this payment →
     </button>
+  ) : graduationLine ? (
+    <div className="flex items-center gap-1 min-w-0" data-testid="home-graduation">
+      <button
+        type="button"
+        onClick={() => {
+          trackFunnelEvent("graduation_prompt_clicked", { signal: graduationLead });
+          openCycle();
+        }}
+        className="min-h-[44px] text-left text-sm font-semibold text-blue-600 dark:text-blue-400"
+      >
+        {graduationLine}
+      </button>
+      <button
+        type="button"
+        aria-label="Not a business — hide this"
+        onClick={() => {
+          trackFunnelEvent("graduation_prompt_dismissed", { signal: graduationLead });
+          void graduation.dismiss();
+        }}
+        className="min-h-[44px] min-w-[44px] shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+      >
+        ×
+      </button>
+    </div>
   ) : concentration && lens === "moment" ? (
     <button
       type="button"

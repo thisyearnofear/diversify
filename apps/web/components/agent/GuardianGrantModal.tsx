@@ -1,8 +1,11 @@
 /**
- * GuardianGrantModal - ERC-7715 MetaMask grant confirmation modal
+ * GuardianGrantModal — the autonomy opt-in ("Let Guardian act for you").
  *
- * Extracted from AgentTierStatus. Shows the user a summary of what
- * MetaMask will ask them to sign BEFORE the wallet popup fires.
+ * The ONE place a user lets Guardian move money without a per-move
+ * signature. Says so plainly BEFORE any wallet prompt, and names both
+ * signatures that follow: MetaMask's on-chain cap (ERC-7715) and the
+ * Guardian permission re-signed at the same limit. The limit is not
+ * re-picked here — it is the daily limit already signed, stated read-only.
  */
 
 import React from "react";
@@ -10,18 +13,11 @@ import Scrim from "../shared/Scrim";
 import { haptic } from "@/lib/haptics";
 
 export const GuardianGrantModal: React.FC<{
-  pendingDailyLimit: number;
-  setPendingDailyLimit: (n: number) => void;
-  DAILY_LIMIT_PRESETS: readonly number[];
+  /** The signed daily limit — the cap MetaMask will enforce. */
+  dailyLimit: number;
   onCancel: () => void;
   onContinue: () => void;
-}> = ({
-  pendingDailyLimit,
-  setPendingDailyLimit,
-  DAILY_LIMIT_PRESETS,
-  onCancel,
-  onContinue,
-}) => {
+}> = ({ dailyLimit, onCancel, onContinue }) => {
   return (
     <>
       {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
@@ -32,63 +28,44 @@ export const GuardianGrantModal: React.FC<{
         onClick={onCancel}
       >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="guardian-grant-title"
         className="bg-white dark:bg-gray-900 rounded-t-[32px] w-full max-w-md p-8 space-y-5 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center space-y-2">
-          <span className="text-4xl">🦊</span>
-          <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
-            Stronger protection via MetaMask
+          <h3 id="guardian-grant-title" className="text-xl font-black text-gray-900 dark:text-gray-100">
+            Let Guardian act for you
           </h3>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Your wallet will enforce the daily limit on-chain. Keys never leave your device.
+            Guardian will be able to move up to{" "}
+            <strong className="text-gray-900 dark:text-gray-100">${dailyLimit} a day</strong>{" "}
+            without asking each time. MetaMask enforces that cap on-chain. Keys never leave your device.
           </p>
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
-              Daily limit
-            </span>
-            <span className="text-sm font-black text-orange-600 dark:text-orange-400">
-              ${pendingDailyLimit} / day
-            </span>
-          </div>
-          <div className="grid grid-cols-5 gap-2">
-            {DAILY_LIMIT_PRESETS.map((amount) => {
-              const selected = amount === pendingDailyLimit;
-              return (
-                <button
-                  key={amount}
-                  type="button"
-                  onClick={() => setPendingDailyLimit(amount)}
-                  className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
-                    selected
-                      ? "bg-orange-500 border-orange-500 text-white"
-                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-orange-400"
-                  }`}
-                >
-                  ${amount}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="space-y-2 bg-orange-50 dark:bg-orange-900/20 rounded-2xl p-4 border border-orange-100 dark:border-orange-800">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-orange-700 dark:text-orange-300">
-            What MetaMask will ask you to sign
+        <div className="space-y-2 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
+          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+            You&apos;ll sign twice
           </p>
           <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
             <li className="flex items-start gap-2">
-              <span className="text-orange-500 mt-0.5">•</span>
-              <span>Allow Auto-Saver to spend up to <strong>${pendingDailyLimit}</strong> of your dollar tokens per day on a supported network.</span>
+              <span className="text-gray-400 mt-0.5" aria-hidden="true">•</span>
+              <span>In MetaMask: a spending cap of <strong>${dailyLimit}</strong> of your dollar tokens per day, on this network.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-orange-500 mt-0.5">•</span>
-              <span>You can revoke this permission in your wallet at any time.</span>
+              <span className="text-gray-400 mt-0.5" aria-hidden="true">•</span>
+              <span>Then: your Guardian permission at the same limit, now allowed to act on its own.</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-gray-400 mt-0.5" aria-hidden="true">•</span>
+              <span>Pause Guardian here, or revoke the cap in your wallet, at any time.</span>
             </li>
           </ul>
+          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            To change the amount, pause Guardian and set a new daily limit first.
+          </p>
         </div>
 
         <div className="flex gap-3">
@@ -100,7 +77,7 @@ export const GuardianGrantModal: React.FC<{
           </button>
           <button
             onClick={() => { haptic("medium"); onContinue(); }}
-            className="flex-1 text-sm font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl py-4 min-h-[44px] shadow-lg shadow-orange-200 dark:shadow-orange-900/30 transition-[color,transform] active:scale-95"
+            className="flex-1 text-sm font-black bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white rounded-2xl py-4 min-h-[44px] transition-[color,transform] active:scale-95"
           >
             Continue to MetaMask
           </button>

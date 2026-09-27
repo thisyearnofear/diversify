@@ -98,7 +98,7 @@ type ResearchEvidenceSummary = {
   sources?: ResearchEvidenceSourceSummary[];
 };
 
-const ADVISOR_SYSTEM_PROMPT = `You are DiversiFi Advisor. Be concise, authoritative, and data-driven. Never begin with a disclaimer, apology, or hedge — state your best answer immediately. If you lack data, note the limitation in one phrase and proceed.
+const ADVISOR_SYSTEM_PROMPT = `You are Guardian, DiversiFi's savings-protection agent. Users only ever know you as "Guardian" — never call yourself an advisor, agent or assistant. Be concise, authoritative, and data-driven. Never begin with a disclaimer, apology, or hedge — state your best answer immediately. If you lack data, note the limitation in one phrase and proceed.
 
 NUMBER RULE (hard): Only state figures that appear in this prompt's data blocks (FACTS, PAIR FACTS, portfolio snapshot, evidence, decision records) or are arithmetic on them. If a number isn't there, say it's unavailable — never estimate, never pad with a placeholder, never repeat figures from memory.
 
@@ -110,7 +110,7 @@ REAL ASSETS — what the app actually lists today:
 - Testnet assets (Celo Sepolia, Arc Testnet) are play money — never recommend them for real allocation.
 
 TONE RULES:
-1. No filler. Strip: "I'd be happy to", "Consider", "You might want to", "Let me explain", "As DiversiFi Advisor..."
+1. No filler. Strip (vocabulary-allow): "I'd be happy to", "Consider", "You might want to", "Let me explain", "As DiversiFi Advisor...", "As Guardian..."
 2. Lead with the answer, not the caveat
 3. Depth follows the question: one tight line for a simple ask; a factual question earns up to ~150 words, structured with a few bullets when comparing. Never pad to hit a length.
 4. Use exact figures when the context provides them; when it doesn't, say the figure is unavailable — don't adjective your way around it
@@ -216,7 +216,7 @@ async function getGoodDollarContext(address?: string): Promise<string> {
       service.checkClaimEligibility(address),
     ]);
 
-    if (!isVerified) return `\nG$ UBI: Not verified. Face verification in Protect → then claim ${eligibility.claimAmount} G$.`;
+    if (!isVerified) return `\nG$ UBI: Not verified. Face verification on the Shield tab → then claim ${eligibility.claimAmount} G$.`;
     if (eligibility.alreadyClaimed) return `\nG$ UBI: Claimed today. Next claim in ~24h.`;
     if (eligibility.canClaim) return `\nG$ UBI: ${eligibility.claimAmount} G$ available. Use [ACTION:CLAIM_UBI] if user asks.`;
     return `\nG$ UBI: Not available right now.`;

@@ -165,22 +165,14 @@ describe("AgentTab — instrument composition", () => {
     expect(mockSetShowPermissionModal).toHaveBeenCalledWith(true);
   });
 
-  it("authorized: the one CTA routes to funding", () => {
+  it("authorized (expired limit): the one CTA renews the daily limit — never a funding route", () => {
     instrument = makeInstrument({ guardianState: "authorized" });
     render(<AgentTab onNavigateToFund={mockNavigateToFund} />);
     fireEvent.click(
       screen.getByRole("button", { name: GUARDIAN_USER_COPY.authorized.cta }),
     );
-    expect(mockNavigateToFund).toHaveBeenCalledTimes(1);
-    expect(mockSetShowPermissionModal).not.toHaveBeenCalled();
-  });
-
-  it("authorized without a funding route shows no CTA", () => {
-    instrument = makeInstrument({ guardianState: "authorized" });
-    render(<AgentTab />);
-    expect(
-      screen.queryByRole("button", { name: GUARDIAN_USER_COPY.authorized.cta }),
-    ).not.toBeInTheDocument();
+    expect(mockSetShowPermissionModal).toHaveBeenCalledWith(true);
+    expect(mockNavigateToFund).not.toHaveBeenCalled();
   });
 
   it("a pending proposal owns the one CTA — Review this move hands off to Exchange", () => {

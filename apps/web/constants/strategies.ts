@@ -96,7 +96,7 @@ export const STRATEGIES: Strategy[] = [
     },
     {
         id: 'custom',
-        name: 'Custom Strategy',
+        name: 'Custom plan',
         icon: '🎯',
         tagline: 'Your own path',
         description: 'Define your own financial philosophy. Mix and match approaches that align with your unique goals.',

@@ -141,12 +141,18 @@ vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ openAdvisor: vi.fn(), askAdvisor: vi.fn() }),
 }));
 
+const graduationMock = vi.hoisted(() => ({
+  data: null as null | {
+    shouldShow: boolean;
+    confidence: number;
+    signals: { cyclical: boolean; corridor: boolean; largerBalance: boolean; hasSavedCycle: boolean };
+    promptHeadline: string;
+  },
+  isDismissed: false,
+  dismiss: vi.fn(),
+}));
 vi.mock("@/hooks/use-graduation-signal", () => ({
-  useGraduationSignal: () => ({
-    data: null,
-    isDismissed: false,
-    dismiss: vi.fn(),
-  }),
+  useGraduationSignal: () => graduationMock,
 }));
 
 vi.mock("@diversifi/shared/src/services/strategy/strategy.service", () => ({
@@ -595,11 +601,57 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
     mockHomeSections = { ...defaultHomeSections, isPaymentCycle: true };
     renderOverview();
 
-    const link = screen.getByRole("button", { name: /Match this payment against a counterparty/ });
+    const link = screen.getByRole("button", { name: /See what FX timing costs this payment/ });
     expect(link).toBeInTheDocument();
     expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
     fireEvent.click(link);
-    expect(mockNavigateToNetting).toHaveBeenCalledTimes(1);
+    // The signature business surface: Shield's per-cycle report, not netting.
+    expect(mockNavigateWithIntent).toHaveBeenCalledWith("protect", { source: "home", lens: "cycle" });
+    expect(mockNavigateToNetting).not.toHaveBeenCalled();
+  });
+
+  it("graduation: a detected pattern owns the transition line, opens the cycle, and can be dismissed", () => {
+    mockMoment = GHANA_MOMENT;
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = { ...defaultHomeSections, banner: null, isPaymentCycle: false };
+    graduationMock.data = {
+      shouldShow: true,
+      confidence: 0.35,
+      signals: { cyclical: false, corridor: true, largerBalance: false, hasSavedCycle: false },
+      promptHeadline: "Patterns in your recent activity.",
+    };
+    mockNavigateWithIntent.mockClear();
+    try {
+      renderOverview();
+      const slots = document.querySelectorAll('[data-status-slot="transition"]');
+      expect(slots).toHaveLength(1);
+      expect(screen.getByTestId("home-graduation")).toBeInTheDocument();
+      expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Moving local savings into dollars often/ }));
+      expect(mockNavigateWithIntent).toHaveBeenCalledWith("protect", { source: "home", lens: "cycle" });
+      fireEvent.click(screen.getByRole("button", { name: "Not a business — hide this" }));
+      expect(graduationMock.dismiss).toHaveBeenCalledTimes(1);
+    } finally {
+      graduationMock.data = null;
+    }
+  });
+
+  it("graduation never doubles the declared payment-cycle line", () => {
+    mockMoment = GHANA_MOMENT;
+    mockHomeSections = { ...defaultHomeSections, banner: null, isPaymentCycle: true };
+    graduationMock.data = {
+      shouldShow: true,
+      confidence: 0.5,
+      signals: { cyclical: false, corridor: false, largerBalance: false, hasSavedCycle: true },
+      promptHeadline: "Patterns in your recent activity.",
+    };
+    try {
+      renderOverview();
+      expect(screen.queryByTestId("home-graduation")).not.toBeInTheDocument();
+      expect(screen.getByTestId("home-cycle-link")).toBeInTheDocument();
+    } finally {
+      graduationMock.data = null;
+    }
   });
 
   it("with no payment cycle and no tip, the compare link is the one transition line", () => {
@@ -662,7 +714,7 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
 
     const slots = document.querySelectorAll('[data-status-slot="transition"]');
     expect(slots).toHaveLength(1);
-    expect(slots[0].textContent).toContain("Match this payment against a counterparty");
+    expect(slots[0].textContent).toContain("See what FX timing costs this payment");
     expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
   });
 
