@@ -211,9 +211,34 @@ Why Arc (not Celo/Arb/0G):
 What Arc does NOT do:
 
 - **No user savings.** Permissioned PoA validator set at launch — right-sized for billing tolls, not for custodying saver balances.
-- **No regional stables.** Arc's fiat roster (JPYC/KRW1/TRYB/EURC) is institutional corridor coverage, not M2 consumer stables — complementary to Mento, not a replacement.
-- **No user-facing chain surface.** Arc is excluded from wallet chain lists and swap-executable sets by design — settlement rail only.
-- **StableFX parked.** Arc's RFQ fiat-FX venue is a Phase 3+ inquiry — revisit when corridor execution needs it.
+- **No EM consumer stables.** Arc's fiat roster (EURC plus Circle Partner Stablecoins — AUD, BRL, CAD, CHF, EUR, GBP, JPY, KRW, MXN, SEK, TRY, ZAR per Circle's supported-currencies page, checked 2026-09-28) is institutional corridor coverage. It has no NGN, GHS, KES, XOF, COP or PHP — complementary to Mento, not a replacement.
+- **No user-facing chain surface.** Arc is excluded from wallet chain lists and swap-executable sets by design — settlement rail only. (The StableFX business pilot below would be the first exception, and only for KYB'd business users.)
+
+### StableFX — business execution venue (under evaluation, 2026-09-28)
+
+StableFX went live on Arc mainnet on 2026-09-22 (Arc blog). What it is, from Circle's docs and public OpenAPI spec:
+
+- **RFQ + atomic PvP.** A taker requests a quote; competing makers answer in under 500 ms (priced via Talos); on acceptance both legs are escrowed in `FxEscrow` on Arc and settle together or not at all. Settlement windows (`tenor`): `instant` (30 min), `hourly` (1 h), `daily` (24 h). 24/7. Minimum trade 10 USDC. The documented console flow requires one side of every pair to be USDC.
+- **Permissioned.** Takers and makers must pass Circle KYB/AML; read-write users are individually screened. Trading wallets must be individually owned — not omnibus.
+- **Non-custodial mechanics.** Traders sign EIP-712 / Permit2 from their own wallet; Circle states it does not accept or transmit digital assets. A taker risk buffer (`collateral`) may be escrowed per maker/pair.
+- **API surfaces that matter to us:** `quoteType: reference` (indicative) vs `tradable` quotes; `delegate` funding mode (trader signs a zero-amount authorization, a separate funder wallet delivers and a `recipientAddress` receives — maker and taker); webhooks for trade lifecycle; settlement advances (a maker credit line).
+- **Escrow addresses** (already in `packages/shared/src/config/index.ts` → `STABLEFX_ESCROW`): Arc `0xe2E5…DFe6`, Arc testnet `0x8676…a9f8`.
+
+Where it fits DiversiFi:
+
+- **Business tier execution (the fit).** The payment-cycle report decides *when* to convert; StableFX would execute for KYB'd business users with multi-maker pricing, PvP settlement and an on-chain tx for the ledger. A `daily` tenor lets a business commit to a rate today and settle within 24 hours.
+- **Weekend continuity.** Mento v3 pools stop quoting when FX markets close (`market_closed`); StableFX runs 24/7 on the overlapping currencies (EUR, GBP, BRL, ZAR, CAD, AUD, JPY, CHF).
+- **Executable pricing in the cycle report** for supported pairs via reference quotes — subject to display terms.
+- **New corridors** Mento lacks: MXN, KRW, SEK, TRY.
+
+Where it does not fit:
+
+- **Retail savers** cannot be KYB'd takers, and DiversiFi trading for them from a shared wallet is both excluded by the omnibus rule and would make DiversiFi the regulated party. Mento stays the savings venue.
+- **Core EM corridors** (NGN, GHS, KES, XOF, COP, PHP) are not supported. PHPC appeared in Circle's launch post but is not in the current supported-currencies table.
+- **No forward protection.** The longest settlement window is 24 hours; a payment weeks away is still protected by converting early, never by a locked forward rate.
+- **Arc-only settlement.** Users' funds live mostly on Celo; CCTP code covers Arc↔Arbitrum, not Celo.
+
+Open questions for Circle (must be answered before any build): see [`integrations.md`](./integrations.md) § StableFX (Circle) — business pilot plan.
 
 ## Caribbean Rail — Future Caribbean 2026
 

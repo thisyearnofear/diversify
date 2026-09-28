@@ -79,7 +79,7 @@ submits buyer authorizations and pays gas; it is not a user-funds vault.
 | **1 — Current code defaults** | Current | ZERO_G/testnet | `SETTLEMENT_NETWORK=ZERO_G`, `SETTLEMENT_ENV=testnet` |
 | **2 — Arc mainnet integration** | Implemented; production activation unconfirmed | Arc | EIP-3009 settlement, CCTP V2 and Gateway Nanopayments are integrated; validate deployment config and a real settlement before describing production as live |
 | **3 — Protection Balance product** | Planned; deployment not established here | — | A cross-chain prepaid balance is distinct from Gateway Nanopayments; do not infer production availability from the settlement integration |
-| **4 — Venue eval (parked)** | Corridor execution needs it | — | StableFX RFQ fiat-FX inquiry deferred; Arc fiat-stable roster complements Mento, not a rotation venue yet |
+| **4 — StableFX business venue (under evaluation)** | Circle answers on platform model + delegate funding | Arc | Live on Arc mainnet since 2026-09-22. Fit: execution for KYB'd business users behind the payment-cycle report, plus a 24/7 route on Mento-overlapping pairs. Not a retail or EM-corridor venue. Plan + open questions: [`integrations.md`](./integrations.md) § StableFX (Circle) |
 
 Intended billing unit: a user funds a Protection Balance once and pays for
 **decision artifacts** (Protection Reviews), not per-source feeds — source

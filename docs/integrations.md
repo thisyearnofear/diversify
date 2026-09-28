@@ -316,6 +316,34 @@ The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stal
 - **Developer-Controlled Wallets**: per-user custodial agent wallets were removed. Privy remains for user login/embedded-wallet onboarding; Guardian execution uses the user's own wallet and signed permissions. `VAULT_PRIVATE_KEY` is a separate legacy-named server-side x402 settlement signer, not a user wallet or balance.
 - **Hackathon Default**: prefer the simplest externally verifiable proof path for judges; keep experimental payment variants out of the core demo unless they are fully verified end to end
 
+## StableFX (Circle) — business pilot plan
+
+**Status:** under evaluation (2026-09-28). Nothing is integrated beyond the `STABLEFX_ESCROW` addresses in `packages/shared/src/config/index.ts`. What StableFX is and where it does and does not fit: [`rails.md`](./rails.md) § StableFX. Sources: developers.circle.com/stablefx (technical guide, risk buffers, supported currencies, console roles), the public OpenAPI spec (`/openapi/stablefx.yaml`), and the Arc launch post (2026-09-22).
+
+### Open questions for Circle (gate for any build)
+
+1. **Platform model.** Can DiversiFi onboard its business customers as individual takers (a partner or sub-account arrangement), or must each business complete KYB with Circle directly?
+2. **Delegate funding.** Is it permitted for DiversiFi to be the trader while the customer's own wallet is the `delegate` funder and `recipientAddress`? This keeps DiversiFi non-custodial; the API supports the mechanics, the question is compliance.
+3. **Live pairs.** Which pairs are live on mainnet today? The supported-currencies page lists 16 tokens; the OpenAPI `Currency` enum lists only USDC and EURC; the launch post says "select pairs". PHPC was announced but is absent from the table.
+4. **Economics.** Taker fee schedule and risk-buffer (`collateral`) settings for a small-notional taker.
+5. **Display rights.** May `reference` quotes be shown to users who are not KYB'd takers, and does fetching them require a taker account?
+6. **Jurisdictions.** Which countries' businesses can be takers (Ghana, Nigeria, Kenya, Caribbean)?
+7. **Roadmap.** African or Caribbean partner stablecoins; settlement windows longer than 24 hours.
+
+### Phases
+
+| Phase | Gate | Scope | Done when |
+|---|---|---|---|
+| **0 — Sandbox probe** | none | `TEST` API key (base URL `api-sandbox.circle.com`, Arc testnet `5042002`). Script-only probe: reference + tradable quotes per candidate pair; record which pairs quote, response shape, fee and `collateral`. No app code. | A dated table of pairs that actually quote on testnet, committed alongside this section. |
+| **1 — One business pilot** | Circle answers Q1–Q3 favourably; one importer on a live pair (BRL, MXN or ZAR, whichever is live) | "Next payment" gains one CTA, "Convert via StableFX", for a KYB'd business with funds on Arc. Server-side API key only (never client). An Arc-only `StableFxStrategy` behind `SwapOrchestratorService`, gated by `getChainCapabilities` (Arc stays out of retail wallet and swap lists). The business signs EIP-712 / Permit2 in its own wallet; settlement tx → `RecommendationLedger` on Arc; reasoning echo per the hash-only rule. A failed quote renders nothing — never an estimated rate. | One real mainnet trade settled end to end with a ledger record, verifiable via `?verify=`. |
+| **2 — Weekend route** | Phase 1 shipped; Q5 answered | When Mento returns `market_closed` on an overlapping pair (EUR, GBP, BRL, ZAR, CAD, AUD, JPY, CHF), Exchange offers the StableFX route to eligible business users only; retail keeps the honest "FX market closed" state. | `pnpm check-swap-routes` reports StableFX alongside Mento. |
+| **3 — Executable pricing in the cycle report** | Q5 allows display | "Next payment" shows a StableFX reference quote for supported pairs, labelled indicative, in place of the open-dataset mid-market rate. | Labelling covered by tests; unsupported pairs keep the dataset rate. |
+
+### Non-goals
+
+- No retail execution, no DiversiFi-held omnibus wallet, no FX forwards (max tenor is 24 h — the cycle report keeps saying "convert early", never "rate locked for your payment date").
+- Mento remains the venue for NGN, GHS, KES, XOF, COP and PHP savings.
+
 ## Wallet Integration
 
 Provider priority: Farcaster > MiniPay > Injected > AppKit

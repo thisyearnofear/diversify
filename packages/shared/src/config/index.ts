@@ -469,8 +469,9 @@ export const CIRCLE_CONFIG = {
             ARC_TESTNET: '0x0022222ABE238Cc2C7Bb1f21003F0a260052475B',
         },
     },
-    // StableFX FxEscrow — institutional RFQ stablecoin FX venue. Parked:
-    // partnership/onboarding-gated, not a code path (docs/roadmap.md § payment-rail phases).
+    // StableFX FxEscrow — institutional RFQ stablecoin FX venue (live on Arc
+    // mainnet). Under evaluation as a business execution venue; KYB-gated,
+    // not a code path yet (docs/integrations.md § StableFX business pilot plan).
     STABLEFX_ESCROW: {
         ARC: '0xe2E5F173576B513d994073CCbDaCBE027d43DFe6',
         ARC_TESTNET: '0x867650F5eAe8df91445971f14d89fd84F0C9a9f8',
