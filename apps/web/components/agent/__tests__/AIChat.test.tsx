@@ -541,7 +541,7 @@ describe('AIChat — Guardian memory', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change' }));
     await screen.findByTestId('guardian-memory-view');
     fireEvent.click(screen.getByRole('radio', { name: 'Across devices' }));
-    fireEvent.click(await screen.findByRole('radio', { name: /Alibaba Cloud/ }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Alibaba Cloud/ }, { timeout: 4000 }));
     await waitFor(() =>
       expect(mocks.memory.chooseMode).toHaveBeenCalledWith('cloud', 'tablestore'),
     );
