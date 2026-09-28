@@ -59,11 +59,11 @@ export function WorldAnswerCard({ answer }: WorldAnswerCardProps) {
                                 shine={!reduced && e.isLive ? 'once' : false}
                                 shineDelay={0.4 + i * STAGGER_STEP_S}
                             />
-                            <span className="text-[11px] font-bold">
+                            <span className="text-2xs font-bold">
                                 {e.code ?? e.country}
                             </span>
                             <span
-                                className={`text-[11px] font-black tabular-nums ${
+                                className={`text-2xs font-black tabular-nums ${
                                     e.value < 0
                                         ? 'text-rose-600 dark:text-rose-400'
                                         : 'text-emerald-700 dark:text-emerald-300'
@@ -81,14 +81,14 @@ export function WorldAnswerCard({ answer }: WorldAnswerCardProps) {
             )}
 
             {omittedCount > 0 && (
-                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                <p className="text-3xs text-gray-400 dark:text-gray-500">
                     {omittedCount} {omittedCount === 1 ? 'entry' : 'entries'} without
                     data were left out.
                 </p>
             )}
 
             <p
-                className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug"
+                className="text-3xs text-gray-500 dark:text-gray-400 leading-snug"
                 data-testid="world-answer-badge"
             >
                 {worldBadgeCopy(badge)}

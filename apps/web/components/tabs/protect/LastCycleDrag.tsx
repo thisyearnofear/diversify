@@ -134,7 +134,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Local currency</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Local currency</span>
           <input
             value={currency}
             onChange={(e) => onCurrencyChange(e.target.value.toUpperCase().slice(0, 3))}
@@ -143,7 +143,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
           />
         </label>
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Earnings this cycle ({code || 'local'})</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Earnings this cycle ({code || 'local'})</span>
           <input
             type="text"
             inputMode="numeric"
@@ -154,7 +154,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
           />
         </label>
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">USD paid to suppliers</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">USD paid to suppliers</span>
           <input
             type="text"
             inputMode="numeric"
@@ -165,7 +165,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
           />
         </label>
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Bank rate ({code || 'local'} per $1)</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Bank rate ({code || 'local'} per $1)</span>
           <input
             type="text"
             inputMode="decimal"
@@ -176,7 +176,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
           />
         </label>
         <label className="col-span-2 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Fees — wire, conversion (optional)</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Fees — wire, conversion (optional)</span>
           <input
             type="text"
             inputMode="numeric"
@@ -210,7 +210,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
           <button
             type="button"
             onClick={calculate}
-            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400"
+            className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400"
           >
             Try again
           </button>
@@ -219,7 +219,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
 
       {results && <LastCycleResult data={results} onTrackNext={onTrackNext} />}
 
-      <p className="text-[10px] text-gray-400 italic">
+      <p className="text-3xs text-gray-400 italic">
         Historical scenario, not advice. Indicative mid-market, not tradeable quotes.
       </p>
     </div>
@@ -263,7 +263,7 @@ function LastCycleResult({
             ? 'Timing worked in your favour this cycle — waiting cost you less than converting on arrival.'
             : `${fmt(Math.abs(summary.totalDragPct), 1)}% of what you paid went to FX timing, bank spread and fees before it reached your supplier.`}
         </p>
-        <p className="text-[11px] text-gray-400 mt-1">
+        <p className="text-2xs text-gray-400 mt-1">
           {fmtDate(w.start)} – {fmtDate(w.end)} · {LAST_CYCLE_DAYS} days · mid-market from the open currency dataset
         </p>
       </div>
@@ -275,7 +275,7 @@ function LastCycleResult({
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               {currency} movement while money sat exposed
             </p>
-            <p className="text-[11px] text-gray-400 mt-0.5">Depreciation during your {firstCycle?.exposureDays}-day window</p>
+            <p className="text-2xs text-gray-400 mt-0.5">Depreciation during your {firstCycle?.exposureDays}-day window</p>
           </div>
           <span className={`text-xs font-bold ${summary.totalTimingLocal < 0 ? 'text-emerald-500' : 'text-amber-600 dark:text-amber-400'}`}>
             {money(currency, summary.totalTimingLocal)}
@@ -284,7 +284,7 @@ function LastCycleResult({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Bank rate vs real market rate</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">What your bank charged vs mid-market</p>
+            <p className="text-2xs text-gray-400 mt-0.5">What your bank charged vs mid-market</p>
           </div>
           <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
             {money(currency, summary.totalSpreadLocal)}
@@ -293,7 +293,7 @@ function LastCycleResult({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Explicit fees</p>
-            <p className="text-[11px] text-gray-400 mt-0.5">Wire, conversion, service charges</p>
+            <p className="text-2xs text-gray-400 mt-0.5">Wire, conversion, service charges</p>
           </div>
           <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
             {money(currency, summary.totalFeesLocal)}
@@ -308,7 +308,7 @@ function LastCycleResult({
 
       {/* Warnings — plain amber text, no card */}
       {warnings.map((wText, i) => (
-        <p key={i} className="text-[11px] text-amber-700 dark:text-amber-300">
+        <p key={i} className="text-2xs text-amber-700 dark:text-amber-300">
           {wText}
         </p>
       ))}
@@ -320,7 +320,7 @@ function LastCycleResult({
           trackFunnelEvent('fx_drag_handoff', { currency, target: 'cycle', source: 'inspector' });
           onTrackNext({ currency, paymentUsd: summary.totalUsdPaid });
         }}
-        className="min-h-[44px] w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors"
+        className="min-h-tap w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors"
       >
         Track your next payment →
       </button>

@@ -56,7 +56,7 @@ export default function FarcasterWalletButton() {
                   disconnect();
                   setShowDropdown(false);
                 }}
-                className="w-full text-left min-h-[44px] px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
+                className="w-full text-left min-h-tap px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors"
                 aria-label="Disconnect Farcaster wallet"
               >
                 <span className="flex items-center gap-2">

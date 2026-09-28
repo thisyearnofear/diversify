@@ -50,7 +50,7 @@ function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white/80 dark:bg-gray-900/60 p-3 space-y-2">
-      <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">
+      <p className="text-3xs font-black uppercase tracking-wider text-gray-500">
         {title}
       </p>
       {cycle.paymentOutcome && (
@@ -62,12 +62,12 @@ function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
               : ''}
           </p>
           {cycle.paymentOutcome.achievedRate != null && (
-            <p className="text-[11px] text-gray-500">
+            <p className="text-2xs text-gray-500">
               Achieved rate: {cycle.paymentOutcome.achievedRate.toLocaleString()} {cycle.localCurrency}/USD
             </p>
           )}
           {cycle.paymentOutcome.notes && (
-            <p className="text-[11px] text-gray-500 italic">{cycle.paymentOutcome.notes}</p>
+            <p className="text-2xs text-gray-500 italic">{cycle.paymentOutcome.notes}</p>
           )}
         </div>
       )}
@@ -75,11 +75,11 @@ function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
         <>
           <p className="text-xs font-bold text-gray-900 dark:text-white">{report.narrativeHeadline}</p>
           <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{report.dragLine}</p>
-          <p className="text-[10px] text-gray-400 italic">{report.disclaimer}</p>
+          <p className="text-3xs text-gray-400 italic">{report.disclaimer}</p>
         </>
       )}
       {hasOutcome && !hasPostEvent && cycle.lastReport && (
-        <p className="text-[11px] text-gray-500">
+        <p className="text-2xs text-gray-500">
           Pre-payment scenario remains illustrative and is not shown as realized P&amp;L.
         </p>
       )}
@@ -138,12 +138,12 @@ function PaymentDueConfirm({
       <p className="text-xs text-gray-700 dark:text-gray-300">
         {cycle.localCurrency} → {cycle.targetCurrency} ${cycle.targetAmountUsd.toLocaleString()} · {cycle.paymentDate}
       </p>
-      <p className="text-[11px] text-gray-500">
+      <p className="text-2xs text-gray-500">
         Payment date passed — confirm outcome. Any earlier scenario stays an illustrative snapshot until you enter what you paid.
       </p>
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-2 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">
+          <span className="text-3xs font-bold uppercase text-gray-500">
             Amount paid ({cycle.localCurrency})
           </span>
           <input
@@ -156,7 +156,7 @@ function PaymentDueConfirm({
           />
         </label>
         <label className="space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Rate (optional)</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Rate (optional)</span>
           <input
             type="number"
             min="0"
@@ -168,7 +168,7 @@ function PaymentDueConfirm({
           />
         </label>
         <label className="space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Fees (optional)</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Fees (optional)</span>
           <input
             type="number"
             min="0"
@@ -179,7 +179,7 @@ function PaymentDueConfirm({
           />
         </label>
         <label className="col-span-2 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Notes (optional)</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Notes (optional)</span>
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
@@ -258,7 +258,7 @@ function CycleModeControl({ mode, onChange }: { mode: CycleMode; onChange: (m: C
             aria-checked={isSelected}
             tabIndex={isSelected ? 0 : -1}
             onClick={() => onChange(opt)}
-            className={`min-h-[44px] px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+            className={`min-h-tap px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
               isSelected
                 ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -555,7 +555,7 @@ export function PaymentCycleReport({
                 <p className="text-xs font-bold text-gray-900 dark:text-white">
                   Allow Guardian to execute supported cycle protection
                 </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                <p className="text-2xs text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
                   Separate consent: Guardian may make one verified Celo local-stable → cUSD trade for the full cycle amount, only within your active GUARDIAN limits. Unsupported currencies and insufficient balances stay advisory-only.
                 </p>
               </div>
@@ -577,7 +577,7 @@ export function PaymentCycleReport({
               Download CSV
             </button>
           </div>
-          <p className="text-[10px] text-gray-400 italic">{report.provenance.rateSourceNote}</p>
+          <p className="text-3xs text-gray-400 italic">{report.provenance.rateSourceNote}</p>
         </div>
       ) : view === 'cycles' ? (
         <div className="space-y-3">
@@ -605,7 +605,7 @@ export function PaymentCycleReport({
           )}
           {upcomingCycles.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Active cycles</p>
+              <p className="text-3xs font-black uppercase tracking-wider text-gray-500">Active cycles</p>
               {upcomingCycles.map((c) => {
                 const isHighlighted = highlightedCycleId === c.id;
                 return (
@@ -629,7 +629,7 @@ export function PaymentCycleReport({
           )}
           {dueCycles.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+              <p className="text-3xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
                 Payment date passed — confirm outcome
               </p>
               {dueCycles.map((cycle) => (
@@ -648,7 +648,7 @@ export function PaymentCycleReport({
           )}
           {completedCycles.length > 0 && (
             <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Completed cycles</p>
+              <p className="text-3xs font-black uppercase tracking-wider text-gray-500">Completed cycles</p>
               {completedCycles.map((c) => (
                 <CyclePostEventCard key={c.id} cycle={c} />
               ))}
@@ -661,7 +661,7 @@ export function PaymentCycleReport({
       <>
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Local currency</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Local currency</span>
           <input
             value={draft.localCurrency}
             onChange={(e) => updateDraft({ localCurrency: e.target.value.toUpperCase().slice(0, 3) })}
@@ -670,7 +670,7 @@ export function PaymentCycleReport({
           />
         </label>
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Target</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Target</span>
           <input
             value={targetCurrency}
             readOnly
@@ -679,7 +679,7 @@ export function PaymentCycleReport({
           />
         </label>
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Payment date</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Payment date</span>
           <input
             type="date"
             value={draft.paymentDate}
@@ -689,7 +689,7 @@ export function PaymentCycleReport({
           />
         </label>
         <label className="col-span-1 space-y-1">
-          <span className="text-[10px] font-bold uppercase text-gray-500">Target amount</span>
+          <span className="text-3xs font-bold uppercase text-gray-500">Target amount</span>
           <input
             inputMode="decimal"
             value={draft.targetAmountUsd}
@@ -699,7 +699,7 @@ export function PaymentCycleReport({
           />
         </label>
       </div>
-      <p id="payment-target-note" className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+      <p id="payment-target-note" className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
         USD targets only for now. This applies one recent historical stress move to today’s indicative rate at the payment date—not compounded over the full horizon, and not a forecast or locked quote.
       </p>
 
@@ -738,7 +738,7 @@ export function PaymentCycleReport({
           <p className="text-xs font-semibold text-gray-800 dark:text-gray-200 leading-relaxed">
             {report.narrative.protectionCostLine}
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="text-2xs text-gray-500 dark:text-gray-400">
             {report.narrative.netBenefitDisclaimer}
           </p>
         </div>
@@ -753,7 +753,7 @@ export function PaymentCycleReport({
             >
               Let Guardian watch this payment
             </button>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+            <p className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
               Guardian may propose protection as the date approaches — you approve each move. Watching never authorizes a trade.
             </p>
           </div>

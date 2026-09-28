@@ -268,7 +268,7 @@ function BitsoMxnbOpportunity({
                                 MXNB is available on Arbitrum as a Mexican peso stablecoin. DiversiFi can route a Mexico hedge into MXNB, then use Juno for sandbox balances, SPEI issuance, USD stablecoin conversion, or redemption.
                             </p>
                         </div>
-                        <span className={`shrink-0 px-2 py-1 rounded text-[10px] font-black uppercase ${
+                        <span className={`shrink-0 px-2 py-1 rounded text-3xs font-black uppercase ${
                             junoConfigured ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-700 border border-emerald-200'
                         }`}>
                             {junoConfigured ? 'Juno API ready' : 'Keys needed'}
@@ -277,11 +277,11 @@ function BitsoMxnbOpportunity({
 
                     <div className="mt-3 grid grid-cols-2 gap-2">
                         <div className="bg-white rounded-lg border border-emerald-100 px-3 py-2">
-                            <p className="text-[10px] font-black uppercase text-emerald-600">On-chain leg</p>
+                            <p className="text-3xs font-black uppercase text-emerald-600">On-chain leg</p>
                             <p className="text-xs font-bold text-gray-900 mt-0.5">USDC to MXNB</p>
                         </div>
                         <div className="bg-white rounded-lg border border-emerald-100 px-3 py-2">
-                            <p className="text-[10px] font-black uppercase text-emerald-600">Juno leg</p>
+                            <p className="text-3xs font-black uppercase text-emerald-600">Juno leg</p>
                             <p className="text-xs font-bold text-gray-900 mt-0.5">
                                 {junoMutationsEnabled ? 'Conversion/redeem enabled' : 'Read-only sandbox'}
                             </p>

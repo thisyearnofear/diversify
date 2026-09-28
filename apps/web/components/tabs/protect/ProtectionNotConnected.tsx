@@ -261,7 +261,7 @@ export function ProtectionNotConnected({
             testId="shield-live-line"
             beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
             alive
-            className="mt-2 block text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+            className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
           />
         )}
       </div>
@@ -273,7 +273,7 @@ export function ProtectionNotConnected({
               type="button"
               data-testid="back-to-plan"
               onClick={exitCompare}
-              className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 rounded"
+              className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white min-h-tap focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 rounded"
             >
               ← Your plan
             </button>
@@ -294,7 +294,7 @@ export function ProtectionNotConnected({
                 type="button"
                 data-testid="walletless-commit"
                 onClick={commitFocusedPlan}
-                className="min-h-[44px] px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
               >
                 Use this plan
               </button>
@@ -329,7 +329,7 @@ export function ProtectionNotConnected({
                 onCloseSleeve();
                 haptics.tap();
               }}
-              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
             >
               ← Back to plan
             </button>
@@ -341,7 +341,7 @@ export function ProtectionNotConnected({
                 onOpenCycle();
                 haptics.tap();
               }}
-              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
             >
               What FX timing costs your next payment →
             </button>
@@ -353,7 +353,7 @@ export function ProtectionNotConnected({
                 onOpenSleeve();
                 haptics.tap();
               }}
-              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
             >
               Tokenized assets you can hold →
             </button>

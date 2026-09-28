@@ -159,7 +159,7 @@ export function GuardianMemoryView({
                 tabIndex={isSelected ? 0 : -1}
                 disabled={pending}
                 onClick={() => void choose(opt.id, opt.id === 'cloud' ? pref.provider : undefined)}
-                className={`min-h-[44px] px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                className={`min-h-tap px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                   isSelected
                     ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white'
                     : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -185,14 +185,14 @@ export function GuardianMemoryView({
               aria-checked={pref.mode === 'cloud' && pref.provider === p.id}
               disabled={!p.available || pending}
               onClick={() => void choose('cloud', p.id)}
-              className={`w-full min-h-[44px] px-3 py-2 rounded-xl border text-left text-xs transition-colors ${
+              className={`w-full min-h-tap px-3 py-2 rounded-xl border text-left text-xs transition-colors ${
                 pref.mode === 'cloud' && pref.provider === p.id
                   ? 'border-blue-400 dark:border-blue-600 bg-blue-50 dark:bg-blue-900/20 text-gray-900 dark:text-white'
                   : 'border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
               } disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <span className="font-bold">{p.location.split(' — ')[0]}</span>
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="block text-2xs text-gray-500 dark:text-gray-400">
                 {p.available
                   ? p.location.split(' — ')[1] ?? p.location
                   : p.reason === 'unreachable'
@@ -202,16 +202,16 @@ export function GuardianMemoryView({
             </button>
           ))}
           {providers === null && (
-            <p className="text-[11px] text-gray-400">Checking available providers…</p>
+            <p className="text-2xs text-gray-400">Checking available providers…</p>
           )}
           {providers !== null && providers.length === 0 && (
-            <p className="text-[11px] text-gray-400">No memory providers are set up yet.</p>
+            <p className="text-2xs text-gray-400">No memory providers are set up yet.</p>
           )}
         </div>
       )}
 
       {pref.mode !== draftMode && pref.mode !== 'off' && draftMode !== 'off' ? (
-        <p className="text-[11px] text-gray-400">
+        <p className="text-2xs text-gray-400">
           Facts do not move between stores automatically.
         </p>
       ) : null}
@@ -244,7 +244,7 @@ export function GuardianMemoryView({
 
       {draftMode !== 'off' && (
         <div className="space-y-1">
-          <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          <p className="text-3xs font-black uppercase tracking-wider text-gray-400 dark:text-gray-500">
             What Guardian remembers
           </p>
           {cloudNeedsAuth ? (
@@ -277,7 +277,7 @@ export function GuardianMemoryView({
             <button
               type="button"
               onClick={() => void forgetAll()}
-              className="text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2"
+              className="text-2xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2"
             >
               Forget everything
             </button>

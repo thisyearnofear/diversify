@@ -143,14 +143,14 @@ export const GuardianPermissionModal: React.FC<{
                 <button
                   type="button"
                   onClick={() => switchToChain(CELO_CHAIN_ID)}
-                  className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
+                  className="flex-1 text-2xs font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-tap py-1.5 transition-colors"
                 >
                   Switch to Celo
                 </button>
                 <button
                   type="button"
                   onClick={() => switchToChain(ARBITRUM_CHAIN_ID)}
-                  className="flex-1 text-[11px] font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
+                  className="flex-1 text-2xs font-bold text-red-700 dark:text-red-200 bg-white dark:bg-gray-900 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 rounded-lg min-h-tap py-1.5 transition-colors"
                 >
                   Switch to Arbitrum
                 </button>
@@ -164,7 +164,7 @@ export const GuardianPermissionModal: React.FC<{
                   : `Guardian needs at least $${MIN_AUTO_SAVER_FUNDS_USD} in stables to propose a move. You can set the limit now and top up later — it'll just wait.`}
               </p>
               {isMiniPay ? (
-                <p className="text-[11px] text-amber-700 dark:text-amber-300 italic">
+                <p className="text-2xs text-amber-700 dark:text-amber-300 italic">
                   Tap "Add Cash" in your MiniPay wallet — fastest way to top up.
                 </p>
               ) : onNavigateToFund ? (
@@ -176,7 +176,7 @@ export const GuardianPermissionModal: React.FC<{
                         onCancel();
                         onNavigateToFund();
                       }}
-                      className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
+                      className="flex-1 text-2xs font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg min-h-tap py-1.5 transition-colors"
                     >
                       Convert to stables
                     </button>
@@ -187,7 +187,7 @@ export const GuardianPermissionModal: React.FC<{
                       onCancel();
                       onNavigateToFund();
                     }}
-                    className="flex-1 text-[11px] font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg min-h-[44px] py-1.5 transition-colors"
+                    className="flex-1 text-2xs font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 hover:bg-amber-100 dark:hover:bg-amber-900/40 border border-amber-200 dark:border-amber-800 rounded-lg min-h-tap py-1.5 transition-colors"
                   >
                     Add funds
                   </button>
@@ -240,13 +240,13 @@ export const GuardianPermissionModal: React.FC<{
               );
             })}
           </div>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 text-center">
+          <p className="text-2xs text-gray-400 dark:text-gray-500 text-center">
             Start small. You can raise the limit later.
           </p>
         </div>
 
         <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 border border-purple-100 dark:border-purple-800">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+          <p className="text-2xs font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
             What you're signing
           </p>
           <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
@@ -283,7 +283,7 @@ export const GuardianPermissionModal: React.FC<{
           <button
             onClick={() => { haptic("medium"); onApprove(); }}
             disabled={!isChainSupported}
-            className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 min-h-[44px] shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-[color,transform] active:scale-95"
+            className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 min-h-tap shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-[color,transform] active:scale-95"
           >
             {isChainSupported ? "Sign in wallet" : "Switch network first"}
           </button>

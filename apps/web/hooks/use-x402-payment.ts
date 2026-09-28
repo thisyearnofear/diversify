@@ -20,7 +20,7 @@
 import { useCallback, useState } from 'react';
 import { ethers } from 'ethers';
 import { createWalletClient, custom, parseUnits, type Hex, type Address } from 'viem';
-import { useWallets } from '@privy-io/react-auth';
+import { useWallets } from '@/context/PrivyProvider';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { getTokenAddresses, getNetworkConfig, NETWORKS } from '../config';
 import { getAddChainParameter } from '@diversifi/shared/src/modules/wallet/core/chains';

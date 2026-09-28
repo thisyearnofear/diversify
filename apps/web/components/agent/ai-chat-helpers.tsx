@@ -110,13 +110,13 @@ export function useUserGeminiKey() {
 export function ProviderBadge({ provider }: { provider?: string }) {
   if (!provider) return null;
   if (provider === "gemini") return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-500 dark:text-blue-400 opacity-70 mt-0.5">
+    <span className="inline-flex items-center gap-0.5 text-3xs font-bold text-blue-500 dark:text-blue-400 opacity-70 mt-0.5">
       <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
       Gemini
     </span>
   );
   if (provider === "venice") return (
-    <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 opacity-70 mt-0.5">
+    <span className="inline-flex items-center gap-0.5 text-3xs font-bold text-slate-500 dark:text-slate-400 opacity-70 mt-0.5">
       ✦ Venice
     </span>
   );

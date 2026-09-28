@@ -6,6 +6,7 @@ import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import AskAIButton from "../ui/AskAIButton";
 import { STATUS_COLORS } from "./palette";
+import { springPress } from "@/lib/motion-tokens";
 
 // ============================================================================
 // NEW: Progressive Disclosure Components (following Core Principles)
@@ -467,7 +468,7 @@ export const ProtectionDashboard = ({
           <motion.div
             className="shrink-0 relative w-24 h-24"
             whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            transition={springPress}
           >
             {/* Pulsing Outer Glow */}
             <div
@@ -552,10 +553,10 @@ export const ProtectionDashboard = ({
                   </div>
                   <div className="h-1.5 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden shadow-inner">
                     <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: `${factor.value}%` }}
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: Math.min(100, Math.max(0, factor.value)) / 100 }}
                       transition={{ duration: 1, delay: 0.5 + idx * 0.1, ease: "easeOut" }}
-                      className={`h-full rounded-full ${
+                      className={`h-full w-full origin-left rounded-full ${
                         factor.value >= 80 ? 'bg-gradient-to-r from-emerald-400 to-emerald-500' :
                         factor.value >= 60 ? 'bg-gradient-to-r from-amber-400 to-amber-500' : 'bg-gradient-to-r from-red-400 to-red-500'
                       }`}
@@ -850,7 +851,7 @@ export const PrimaryButton = ({
       disabled={disabled || loading}
       whileTap={!disabled && !loading ? { scale: 0.97 } : undefined}
       whileHover={!disabled && !loading ? { scale: 1.02 } : undefined}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      transition={springPress}
       className={`
         ${sizes[size]}
         ${fullWidth ? "w-full" : ""}
@@ -897,7 +898,7 @@ export const SecondaryButton = ({
       disabled={disabled}
       whileTap={!disabled ? { scale: 0.97 } : undefined}
       whileHover={!disabled ? { scale: 1.02 } : undefined}
-      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      transition={springPress}
       className={`
         ${sizes[size]}
         ${fullWidth ? "w-full" : ""}

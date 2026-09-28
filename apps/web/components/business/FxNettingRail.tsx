@@ -178,7 +178,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
     const known = isKnownCurrency(value);
     return (
       <label className="flex-1 min-w-0">
-        <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+        <span className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
           {side === "sell" ? "You have" : "You want"}
         </span>
         <input
@@ -206,7 +206,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
         ))}
       </datalist>
       <div className="mb-3">
-        <p className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+        <p className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
           Counterparty match
         </p>
         <p className="text-xs text-teal-700/90 dark:text-teal-300/90 mt-1 leading-relaxed">
@@ -220,7 +220,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
           <div className="flex flex-col sm:flex-row gap-3">
             {currencyField("sell", sellCurrency, setSellCurrency)}
             <label className="flex-1 min-w-0">
-              <span className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+              <span className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
                 Amount
               </span>
               <input
@@ -240,7 +240,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
           {(sellCurrency && !isKnownCurrency(sellCurrency)) ||
           (buyCurrency && !isKnownCurrency(buyCurrency)) ? (
             <p
-              className="mt-2 text-[11px] text-amber-700 dark:text-amber-300"
+              className="mt-2 text-2xs text-amber-700 dark:text-amber-300"
               role="status"
             >
               Unsupported currency code — pick a 3-letter ISO code from the list.
@@ -256,7 +256,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
                   setSellCurrency(p.sell);
                   setBuyCurrency(p.buy);
                 }}
-                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-teal-200 dark:border-teal-800 text-[11px] font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100/60 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-teal-200 dark:border-teal-800 text-2xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100/60 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
               >
                 {p.label}
               </button>
@@ -265,7 +265,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
 
           {midQuote && (
             <p
-              className="mt-3 text-[11px] text-teal-700/80 dark:text-teal-300/80 tabular-nums"
+              className="mt-3 text-2xs text-teal-700/80 dark:text-teal-300/80 tabular-nums"
               data-testid="fx-mid-rate"
             >
               Mid-market now · 1 {sellCurrency.toUpperCase()} ={" "}
@@ -297,7 +297,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             </button>
           </div>
 
-          <p className="mt-3 text-[10px] text-teal-700/60 dark:text-teal-300/60 leading-snug">
+          <p className="mt-3 text-3xs text-teal-700/60 dark:text-teal-300/60 leading-snug">
             Weighing a future payment instead?{" "}
             <button
               type="button"
@@ -351,25 +351,25 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
               )}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matched</div>
+                  <div className="text-3xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matched</div>
                   <div className="mt-1 text-lg font-black text-teal-900 dark:text-teal-100 tabular-nums">
                     {isLoading ? "…" : data ? `$${data.totalMatchedUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "$0"}
                   </div>
                 </div>
                 <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Saved</div>
+                  <div className="text-3xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Saved</div>
                   <div className="mt-1 text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
                     {isLoading ? "…" : data ? `~$${data.totalSavingsUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "~$0"}
                   </div>
                 </div>
                 <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matches</div>
+                  <div className="text-3xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matches</div>
                   <div className="mt-1 text-lg font-black text-teal-900 dark:text-teal-100 tabular-nums">
                     {isLoading ? "…" : data ? data.matches.length : 0}
                   </div>
                 </div>
                 <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-[10px] font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Unmatched</div>
+                  <div className="text-3xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Unmatched</div>
                   <div className="mt-1 text-lg font-black text-teal-900 dark:text-teal-100 tabular-nums">
                     {isLoading ? "…" : data ? data.unmatchedCount : 0}
                   </div>
@@ -387,7 +387,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
                     flows exactly; it never invents one.
                   </p>
                   {address ? (
-                    <p className="mt-1.5 text-[11px] text-teal-700 dark:text-teal-300 leading-relaxed">
+                    <p className="mt-1.5 text-2xs text-teal-700 dark:text-teal-300 leading-relaxed">
                       Your intent stays open for the next matching cycle — the
                       first counterparty who posts the opposing leg gets matched
                       automatically, and you settle the net from your wallet.
@@ -395,7 +395,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
                       TTD↔JMD at mid-market.
                     </p>
                   ) : (
-                    <p className="mt-1.5 text-[11px] text-teal-700 dark:text-teal-300 leading-relaxed">
+                    <p className="mt-1.5 text-2xs text-teal-700 dark:text-teal-300 leading-relaxed">
                       Connect a wallet to post your intent into the pool so the
                       next counterparty — tomorrow, next week — matches against
                       it. BBD↔JMD and TTD↔JMD carry Guardian standing liquidity
@@ -422,7 +422,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
                         matched at <span className="font-mono">{m.rate.toFixed(4)}</span>
                         {guardianLeg && (
                           <span
-                            className="mt-1 block text-[10px] font-bold text-teal-600 dark:text-teal-400"
+                            className="mt-1 block text-3xs font-bold text-teal-600 dark:text-teal-400"
                             data-testid={`fx-guardian-match-${m.matchId}`}
                           >
                             Filled by Guardian standing liquidity — the pool’s
@@ -437,14 +437,14 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
 
               {data?.bootstrapNote && (
                 <p
-                  className="mt-3 text-[10px] text-teal-700/80 dark:text-teal-300/80 leading-snug"
+                  className="mt-3 text-3xs text-teal-700/80 dark:text-teal-300/80 leading-snug"
                   data-testid="fx-bootstrap-note"
                 >
                   {data.bootstrapNote}
                 </p>
               )}
 
-              <footer className="mt-4 text-[10px] text-teal-700/70 dark:text-teal-300/70 leading-snug">
+              <footer className="mt-4 text-3xs text-teal-700/70 dark:text-teal-300/70 leading-snug">
                 {data && data.rateSourceNote
                   ? `Mid-market via ${data.rateSourceNote}.`
                   : "Matching against the live mid-market."}{" "}
@@ -510,21 +510,21 @@ function CreditFileSection({
       data-testid="fx-credit-file"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-[10px] font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+        <p className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
           Your credit file
         </p>
         <p className="text-xs font-black text-teal-900 dark:text-teal-100" data-testid="fx-credit-score">
           {profile.score !== null ? profile.score : strengthLabel}
         </p>
       </div>
-      <p className="text-[11px] text-teal-800/90 dark:text-teal-200/90 mt-1" data-testid="fx-credit-summary">
+      <p className="text-2xs text-teal-800/90 dark:text-teal-200/90 mt-1" data-testid="fx-credit-summary">
         {profile.settlementsCompleted >= 3
           ? `${profile.settlementsCompleted} verified settlements · $${Math.round(profile.settledVolumeUsd).toLocaleString()} · ${profile.counterparties} counterpart${profile.counterparties === 1 ? 'y' : 'ies'} · every settled trade builds this file.`
           : profile.settlementsCompleted > 0
             ? `${profile.settlementsCompleted} verified settlement${profile.settlementsCompleted === 1 ? '' : 's'} so far — your next settled trade strengthens this file.`
             : 'No verified settlements yet — your first settled trade starts this file. Like a sou-sou, the circle remembers who honours their hand; coordination today underwrites working capital tomorrow.'}
       </p>
-      <p className="text-[10px] text-teal-700/70 dark:text-teal-300/70 mt-0.5">
+      <p className="text-3xs text-teal-700/70 dark:text-teal-300/70 mt-0.5">
         {profile.lendingReadiness}
       </p>
     </div>
@@ -562,7 +562,7 @@ function SettlementSection({
             You owe {s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
             {s.settlementCurrency} to {s.toParticipant.slice(0, 6)}…{s.toParticipant.slice(-4)}
           </p>
-          <p className="text-[10px] text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+          <p className="text-3xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
             Sent from your wallet on Celo — the transfer is verified on-chain
             before the match is marked settled.
           </p>
@@ -577,7 +577,7 @@ function SettlementSection({
         </div>
       ))}
       {settleError && (
-        <p className="text-[11px] text-red-500" data-testid="fx-settle-error">{settleError}</p>
+        <p className="text-2xs text-red-500" data-testid="fx-settle-error">{settleError}</p>
       )}
       {myReceipts.map((s) => (
         <div

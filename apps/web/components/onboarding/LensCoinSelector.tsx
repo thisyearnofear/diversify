@@ -11,6 +11,7 @@ import {
 } from "framer-motion";
 import { Coin } from "../shared/FloatingCoins";
 import { FlickScrollRow, useDidDrag } from "../shared/FlickScrollRow";
+import { spring, springPop, springPress } from "@/lib/motion-tokens";
 
 export interface LensCoinDef {
   id: string;
@@ -347,7 +348,7 @@ export function LensCoinSelector({
               initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.9 }}
               animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.12 } }}
-              transition={{ type: "spring", stiffness: 420, damping: 28 }}
+              transition={springPress}
               role="status"
               aria-live="polite"
               className="flex items-center gap-2 max-w-full rounded-full bg-slate-900/90 border px-3 py-1.5 shadow-lg"
@@ -357,7 +358,7 @@ export function LensCoinSelector({
                 {peekedLens.label}
               </span>
               {peekedLens.description && (
-                <span className="text-[10px] text-slate-400 truncate max-w-[180px] sm:max-w-[240px]">
+                <span className="text-3xs text-slate-400 truncate max-w-[180px] sm:max-w-[240px]">
                   {peekedLens.description}
                 </span>
               )}
@@ -442,9 +443,9 @@ function LensCoinButton({
       opacity: 1,
     };
     transition = {
-      x: { type: "spring", stiffness: 280, damping: 20 },
+      x: spring,
       rotateY: { duration: 4, repeat: Infinity, ease: "linear" },
-      scale: { type: "spring", stiffness: 280, damping: 18 },
+      scale: springPop,
     };
   } else {
     // Idle (or peeked — the peek lifts the coin and stills the breath).
@@ -469,8 +470,8 @@ function LensCoinButton({
         opacity: 0,
       };
       transition = {
-        x: { type: "spring", stiffness: 300, damping: 26, delay: 0.05 * dist },
-        scale: { type: "spring", stiffness: 300, damping: 24, delay: 0.05 * dist },
+        x: { ...spring, delay: 0.05 * dist },
+        scale: { ...spring, delay: 0.05 * dist },
         opacity: { duration: 0.25, delay: 0.05 * dist },
         y: { duration: breath, repeat: Infinity, ease: "easeInOut" },
         rotate: { duration: breath * 0.9, repeat: Infinity, ease: "easeInOut" },
@@ -480,8 +481,8 @@ function LensCoinButton({
       const entryDelay = reduceMotion ? 0 : index * 0.05;
       initial = reduceMotion ? { opacity: 0 } : { scale: 0.4, opacity: 0 };
       transition = {
-        x: { type: "spring", stiffness: 300, damping: 26, delay: entryDelay },
-        scale: { type: "spring", stiffness: 260, damping: 22, delay: entryDelay },
+        x: { ...spring, delay: entryDelay },
+        scale: { ...spring, delay: entryDelay },
         opacity: { duration: 0.2, delay: entryDelay },
         y: { duration: breath, repeat: Infinity, ease: "easeInOut" },
         rotate: { duration: breath * 0.9, repeat: Infinity, ease: "easeInOut" },
@@ -504,7 +505,7 @@ function LensCoinButton({
       }}
       whileTap={combining ? undefined : { scale: 0.92 }}
       whileHover={combining || isActive || peeked ? undefined : { scale: 1.1, y: -3 }}
-      transition={{ type: "spring", stiffness: 320, damping: 22 }}
+      transition={springPress}
       // Fixed slot width == pitch: centres stay exactly pitch apart no
       // matter how wide the label, keeping the combine math honest.
       style={{ width: pitch }}
@@ -548,7 +549,7 @@ function LensCoinButton({
         }`}
         style={isActive || peeked ? { color: lens.accent } : undefined}
       >
-        <span className="text-[10px] font-bold block truncate">{shortLabel}</span>
+        <span className="text-3xs font-bold block truncate">{shortLabel}</span>
         <span className="text-[9px] block truncate opacity-80">
           {lens.description ? truncate(lens.description, 60) : ''}
         </span>

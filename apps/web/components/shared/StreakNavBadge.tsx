@@ -57,15 +57,15 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
       } ${variant === "header" ? "px-2.5 py-1 min-h-[28px]" : "px-2 py-1.5 min-h-[32px]"}`}
       aria-label={`Streak ${daysActive} days, ${canClaim ? "reward ready" : `${daysUntilReward} days to reward`}`}
     >
-      <span aria-hidden="true" className="text-[11px] leading-none">{canClaim ? "🎁" : "🔥"}</span>
+      <span aria-hidden="true" className="text-2xs leading-none">{canClaim ? "🎁" : "🔥"}</span>
       <span>{variant === "header" && canClaim ? "Claim" : `${daysActive}`}</span>
-      <span className="hidden sm:inline opacity-70 text-[11px]">{canClaim ? "" : daysUntilReward === 7 ? "days" : `· ${daysUntilReward}d`}</span>
+      <span className="hidden sm:inline opacity-70 text-2xs">{canClaim ? "" : daysUntilReward === 7 ? "days" : `· ${daysUntilReward}d`}</span>
       {!canClaim && (
         <span className="ml-0.5 hidden sm:inline-flex h-1 w-8 rounded-full overflow-hidden bg-black/10 dark:bg-white/20" aria-hidden="true">
           <motion.span
-            className="h-full bg-current opacity-30"
-            initial={reducedMotion ? false : { width: 0 }}
-            animate={{ width: `${Math.min(100, Math.max(0, progressPercent))}%` }}
+            className="block h-full w-full origin-left bg-current opacity-30"
+            initial={reducedMotion ? false : { scaleX: 0 }}
+            animate={{ scaleX: Math.min(100, Math.max(0, progressPercent)) / 100 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
           />
         </span>
@@ -84,7 +84,7 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
           className="flex flex-col items-center gap-1"
         >
           {pill}
-          <span className="text-[10px] font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">Streak</span>
+          <span className="text-3xs font-bold uppercase tracking-wide text-gray-400 dark:text-gray-500">Streak</span>
         </motion.div>
       </div>
     );

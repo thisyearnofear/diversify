@@ -73,12 +73,12 @@ export function VerifiedEvidence({ className = "" }: Props) {
         type="button"
         aria-expanded={expanded}
         onClick={() => setExpanded((v) => !v)}
-        className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
+        className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
       >
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-[10px] font-black" aria-hidden="true">✓</span>
+        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-3xs font-black" aria-hidden="true">✓</span>
         <span className="font-semibold tracking-wide">Verified</span>
         <span className="opacity-60">· Evidence mirrored</span>
-        <span className="text-[10px] opacity-50 ml-0.5" aria-hidden="true">{expanded ? "−" : "+"}</span>
+        <span className="text-3xs opacity-50 ml-0.5" aria-hidden="true">{expanded ? "−" : "+"}</span>
       </button>
 
       <AnimatePresence initial={false}>
@@ -95,25 +95,25 @@ export function VerifiedEvidence({ className = "" }: Props) {
                 {CHAINS.map((c) => (
                   <span
                     key={c.label}
-                    className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full border"
+                    className="inline-flex items-center gap-1 text-3xs font-bold px-1.5 py-0.5 rounded-full border"
                     style={{ background: `${c.color}14`, color: c.color, borderColor: `${c.color}30` }}
                   >
                     <span className="w-1.5 h-1.5 rounded-full" style={{ background: c.color }} />
                     {c.label}
                   </span>
                 ))}
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 ml-1">same ledger</span>
+                <span className="text-2xs text-gray-500 dark:text-gray-400 ml-1">same ledger</span>
               </div>
 
-              <div className="font-mono text-[11px] text-gray-700 dark:text-gray-300 break-all">
+              <div className="font-mono text-2xs text-gray-700 dark:text-gray-300 break-all">
                 {LEDGER_ADDRESS}
               </div>
 
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-600 dark:text-gray-300">
-                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-900 text-white text-[10px] font-black">G</span>
+              <div className="flex items-center gap-1.5 text-2xs text-gray-600 dark:text-gray-300">
+                <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-900 text-white text-3xs font-black">G</span>
                 <span className="font-bold">Guardian #1</span>
                 <span className="font-mono opacity-70 break-all">{AGENTIC_ID_ADDRESS}</span>
-                <span className="hidden sm:inline text-[10px] text-gray-500">· 0G Storage root, portable</span>
+                <span className="hidden sm:inline text-3xs text-gray-500">· 0G Storage root, portable</span>
               </div>
 
               {/* Working verify: paste a tx hash, check it against the chain
@@ -132,13 +132,13 @@ export function VerifiedEvidence({ className = "" }: Props) {
                     }}
                     placeholder="0x… ledger tx hash"
                     aria-label="Ledger transaction hash to verify"
-                    className="min-w-0 flex-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent px-2 py-1.5 font-mono text-[11px] text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-400"
+                    className="min-w-0 flex-1 rounded-lg border border-gray-200 dark:border-white/10 bg-transparent px-2 py-1.5 font-mono text-2xs text-gray-700 dark:text-gray-300 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-400"
                   />
                   <button
                     type="button"
                     onClick={() => void runVerify()}
                     disabled={!hashValid || verify.kind === "loading"}
-                    className="min-h-[28px] shrink-0 rounded-lg bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-white/10 hover:bg-blue-700 disabled:hover:bg-gray-300 dark:disabled:hover:bg-white/10 text-white disabled:text-gray-500 dark:disabled:text-gray-500 text-[11px] font-bold px-2.5 transition-colors disabled:cursor-not-allowed"
+                    className="min-h-[28px] shrink-0 rounded-lg bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-white/10 hover:bg-blue-700 disabled:hover:bg-gray-300 dark:disabled:hover:bg-white/10 text-white disabled:text-gray-500 dark:disabled:text-gray-500 text-2xs font-bold px-2.5 transition-colors disabled:cursor-not-allowed"
                   >
                     {verify.kind === "loading" ? "Checking…" : "Verify"}
                   </button>
@@ -149,7 +149,7 @@ export function VerifiedEvidence({ className = "" }: Props) {
                         only; the result copy + link stay in the DOM. */}
                     {verify.verified && <RiveVerifiedSeal size={40} verified />}
                     <p
-                      className={`text-[11px] leading-relaxed ${
+                      className={`text-2xs leading-relaxed ${
                         verify.verified
                           ? "text-emerald-600 dark:text-emerald-400"
                           : "text-amber-600 dark:text-amber-400"
@@ -174,7 +174,7 @@ export function VerifiedEvidence({ className = "" }: Props) {
                   </div>
                 )}
                 {verify.kind === "error" && (
-                  <p role="alert" className="text-[11px] text-red-600 dark:text-red-400">
+                  <p role="alert" className="text-2xs text-red-600 dark:text-red-400">
                     {verify.message}
                   </p>
                 )}

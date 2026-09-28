@@ -42,10 +42,10 @@ const InflationInsightRow: React.FC<InflationInsightRowProps> = ({
           <span className="text-[9px] font-semibold text-gray-400 w-6">{fromToken}</span>
           <div className="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
             <motion.div
-              initial={reducedMotion ? { opacity: 1 } : { width: 0 }}
-              animate={{ width: `${fromPct}%` }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="h-full rounded-full bg-red-400"
+              initial={reducedMotion ? false : { scaleX: 0 }}
+              animate={{ scaleX: fromPct / 100 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.8, ease: "easeOut" }}
+              className="h-full w-full origin-left rounded-full bg-red-400"
             />
           </div>
         </div>
@@ -53,10 +53,10 @@ const InflationInsightRow: React.FC<InflationInsightRowProps> = ({
           <span className="text-[9px] font-semibold text-gray-400 w-6">{toToken}</span>
           <div className="w-16 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
             <motion.div
-              initial={reducedMotion ? { opacity: 1 } : { width: 0 }}
-              animate={{ width: `${toPct}%` }}
-              transition={{ duration: 0.8, ease: "easeOut", delay: 0.1 }}
-              className="h-full rounded-full bg-emerald-500"
+              initial={reducedMotion ? false : { scaleX: 0 }}
+              animate={{ scaleX: toPct / 100 }}
+              transition={reducedMotion ? { duration: 0 } : { duration: 0.8, ease: "easeOut", delay: 0.1 }}
+              className="h-full w-full origin-left rounded-full bg-emerald-500"
             />
           </div>
         </div>
@@ -81,7 +81,7 @@ const InflationInsightRow: React.FC<InflationInsightRowProps> = ({
         <button
           type="button"
           onClick={onAskAI}
-          className="shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 px-2 py-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
+          className="shrink-0 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 px-2 py-1 text-3xs font-bold text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200 dark:hover:bg-emerald-800/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 transition-colors"
         >
           Ask AI
         </button>

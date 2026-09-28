@@ -110,7 +110,7 @@ export function ChainPill() {
                     role="menu"
                     className="absolute right-0 top-full mt-1.5 w-44 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl z-50 overflow-hidden"
                 >
-                    <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-800">
+                    <div className="px-3 py-2 text-3xs font-black uppercase tracking-widest text-gray-400 dark:text-gray-500 border-b border-gray-100 dark:border-gray-800">
                         Switch chain
                     </div>
                     <button
@@ -122,7 +122,7 @@ export function ChainPill() {
                         <span aria-hidden>{other.icon}</span>
                         <span>{other.short}</span>
                     </button>
-                    <div className="px-3 py-1.5 text-[10px] text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
+                    <div className="px-3 py-1.5 text-3xs text-gray-400 dark:text-gray-500 border-t border-gray-100 dark:border-gray-800">
                         For more networks, use the wallet menu.
                     </div>
                 </div>

@@ -22,6 +22,7 @@ import {
   type Benchmark,
 } from '../../../../constants/currency-risk';
 import { trackFunnelEvent } from '../../../../lib/analytics';
+import { springPop } from "@/lib/motion-tokens";
 
 interface RiskPhaseProps {
   riskData: { flag: string; countryName: string; code: string } | null;
@@ -112,7 +113,7 @@ export function RiskPhase({
                 type="button"
                 onClick={() => setSelectedHorizon(horizon)}
                 aria-pressed={selectedHorizon === horizon}
-                className={`px-2 min-h-[44px] py-1 rounded-md text-[10px] font-black transition-colors ${
+                className={`px-2 min-h-tap py-1 rounded-md text-3xs font-black transition-colors ${
                   selectedHorizon === horizon ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
                 }`}
               >
@@ -162,14 +163,14 @@ export function RiskPhase({
               const pct = Math.max(4, Math.round((Math.abs(row.value) / maxAbs) * 100));
               return (
                 <div key={row.bench} className="flex items-center gap-2">
-                  <span className="w-[64px] flex-shrink-0 text-[11px] font-bold text-slate-300 whitespace-nowrap text-left">
+                  <span className="w-[64px] flex-shrink-0 text-2xs font-bold text-slate-300 whitespace-nowrap text-left">
                     {b.flag} {b.label}
                   </span>
                   <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
                     <motion.div
-                      className="h-full rounded-full bg-white/40"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${pct}%` }}
+                      className="h-full w-full origin-left rounded-full bg-white/40"
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: Math.min(100, Math.max(0, pct)) / 100 }}
                       transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
                     />
                   </div>
@@ -201,13 +202,13 @@ export function RiskPhase({
               <motion.span
                 initial={{ scale: 0.6, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: 0.5, type: 'spring', stiffness: 300, damping: 18 }}
+                transition={{ ...springPop, delay: 0.5 }}
                 className="drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
               >
                 <Coin size={24} symbol={BENCHMARKS.XAU.flag} color={GOLD_METAL} variant="asset" />
               </motion.span>
             </div>
-            <p className="text-[11px] leading-snug text-amber-200">
+            <p className="text-2xs leading-snug text-amber-200">
               20% in gold:{' '}
               <AnimatedNumber
                 value={xauPreserved}
@@ -232,7 +233,7 @@ export function RiskPhase({
               type="button"
               onClick={() => setOpenEventKey(openEventKey === '__events__' ? null : '__events__')}
               aria-expanded={openEventKey === '__events__'}
-              className="w-full min-h-[28px] flex items-center justify-center gap-1.5 text-[10px] text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
+              className="w-full min-h-[28px] flex items-center justify-center gap-1.5 text-3xs text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
             >
               <span>
                 Context: {riskEvents.map((ev) => ev.year).join(', ')}
@@ -249,7 +250,7 @@ export function RiskPhase({
                   className="overflow-hidden text-left space-y-1 pt-1.5"
                 >
                   {riskEvents.map((ev) => (
-                    <li key={`${ev.year}-${ev.event}`} className="text-[11px] leading-relaxed text-slate-300">
+                    <li key={`${ev.year}-${ev.event}`} className="text-2xs leading-relaxed text-slate-300">
                       <span className="font-black text-slate-100">{ev.year}</span>
                       <span className="text-slate-500"> · </span>
                       <span className="text-slate-400">{ev.event}</span>
@@ -286,7 +287,7 @@ export function RiskPhase({
           business sub-disclosure. Tap once for context, tap again
           for the email capture. */}
       <motion.div variants={staggerChild} className="mb-4">
-        <p className="text-[11px] leading-relaxed text-slate-300">
+        <p className="text-2xs leading-relaxed text-slate-300">
           DiversiFi never holds your fiat — buy stablecoins anywhere you trust, we allocate from there.
         </p>
         <button
@@ -298,7 +299,7 @@ export function RiskPhase({
               trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
             }
           }}
-          className="mt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
+          className="mt-1 text-2xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
         >
           {showBusinessContextOpen ? '− Hide business context' : '+ How this can affect a business'}
         </button>
@@ -321,7 +322,7 @@ export function RiskPhase({
                 <a
                   href="/fx-drag-calculator"
                   onClick={() => trackFunnelEvent('business_hint_expanded', { action: 'calculator', ...(countryCode ? { country: countryCode } : {}) })}
-                  className="mt-2 flex min-h-[44px] items-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                  className="mt-2 flex min-h-tap items-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
                 >
                   See what FX timing costs your business →
                 </a>
@@ -346,21 +347,21 @@ export function RiskPhase({
                           onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
                           onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
                           disabled={waitlistStatus === 'submitting'}
-                          className="flex-1 min-w-0 min-h-[44px] rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
+                          className="flex-1 min-w-0 min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                         />
                         <button
                           type="button"
                           onClick={handleJoinWaitlist}
                           disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
-                          className="shrink-0 min-h-[44px] rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
+                          className="shrink-0 min-h-tap rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
                         >
                           {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
                         </button>
                       </div>
                       {waitlistStatus === 'error' && waitlistError && (
-                        <p className="text-[11px] font-semibold text-red-500">{waitlistError}</p>
+                        <p className="text-2xs font-semibold text-red-500">{waitlistError}</p>
                       )}
-                      <p className="text-[10px] leading-relaxed text-gray-400 dark:text-gray-500">
+                      <p className="text-3xs leading-relaxed text-gray-400 dark:text-gray-500">
                         We&apos;ll only use this to invite you to early access when automatic cycle protection launches — no other emails, ever. You can ask us to delete it anytime.
                       </p>
                     </>

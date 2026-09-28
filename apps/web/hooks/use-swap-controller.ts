@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useContext, useMemo, useRef } from "react";
+import { isBrowserOffline } from "./use-online-status";
 import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
@@ -483,6 +484,12 @@ export function useSwapController({
     [refreshBalances],
   );
 
+  // Synchronous in-flight latch. `isLoading` only blocks the button after
+  // React re-renders, so two taps inside one frame could both start a swap
+  // (two signature prompts, possibly two transactions). The ref flips
+  // before the first await and is released in `finally`.
+  const swapInFlightRef = useRef(false);
+
   const executeSwap = useCallback(
     async (
       onSwapProp?: (
@@ -514,6 +521,13 @@ export function useSwapController({
         setLocalError("Please connect your wallet first");
         return;
       }
+      if (isBrowserOffline()) {
+        // Fail before any wallet prompt — nothing is queued or sent.
+        setLocalError("You're offline. Reconnect to swap — nothing was sent.");
+        return;
+      }
+      if (swapInFlightRef.current) return;
+      swapInFlightRef.current = true;
 
       setIsLoading(true);
       setLocalError(null);
@@ -589,6 +603,7 @@ export function useSwapController({
         setLocalErrorClass(anyErr?.errorClass ?? "error");
         setStatus("error");
       } finally {
+        swapInFlightRef.current = false;
         setIsLoading(false);
       }
     },

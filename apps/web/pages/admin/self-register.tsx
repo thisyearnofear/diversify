@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy } from '@/context/PrivyProvider';
 import { SelfAgentRegistration } from "../../components/agent/SelfAgentRegistration";
 
 export default function SelfRegisterAdmin() {

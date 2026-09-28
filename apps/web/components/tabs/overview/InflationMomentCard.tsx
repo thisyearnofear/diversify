@@ -72,7 +72,7 @@ export function InflationMomentCard({
         <div className="text-4xl font-black tabular-nums" style={{ color: GOLD.color }}>
           {moment.inflationRate.toFixed(1)}%
         </div>
-        <div className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
+        <div className="text-2xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
           average inflation · {moment.region} a year
         </div>
       </motion.div>
@@ -101,7 +101,7 @@ export function InflationMomentCard({
         <button
           type="button"
           onClick={onProtect}
-          className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+          className="mt-4 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
         >
           {protectLabel ?? "Protect this"}
         </button>

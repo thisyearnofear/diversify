@@ -290,7 +290,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
             onClick={() => setPickerOpen(true)}
             disabled={disabled}
             aria-label={`Select ${label} token`}
-            className="flex items-center gap-2 px-3 min-h-[44px] my-1.5 mr-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-3 min-h-tap my-1.5 mr-1.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {/* Mint flip — the LensCoinSelector moment-of-choice beat:
                 picking a token mints it into the pill (§5 confirms the
@@ -360,7 +360,7 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
           lands. Remittance vocabulary: "6 bags of rice in Lagos", not
           "500.12 USD". */}
       {destinationGoods && (
-        <p className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+        <p className="mt-1.5 text-2xs text-gray-500 dark:text-gray-400">
           ≈ {destinationGoods} where it lands
         </p>
       )}

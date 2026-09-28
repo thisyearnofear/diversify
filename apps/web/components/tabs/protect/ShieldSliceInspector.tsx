@@ -140,7 +140,7 @@ function PlanShareLine({ id }: { id: string }) {
     <button
       type="button"
       onClick={share}
-      className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+      className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
     >
       {copied ? "Link copied" : "Share this plan ↗"}
     </button>
@@ -293,7 +293,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                 {values.slice(0, 3).map((v) => (
                   <span
                     key={v}
-                    className="text-[11px] rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-gray-500"
+                    className="text-2xs rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 text-gray-500"
                   >
                     {v}
                   </span>
@@ -319,7 +319,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                 {!isLegFillable(leg.token, chainId) && (
                   <p
                     data-testid="leg-unfillable"
-                    className="mt-1 text-[11px] text-amber-600 dark:text-amber-400"
+                    className="mt-1 text-2xs text-amber-600 dark:text-amber-400"
                   >
                     Not on this network — needs a bridge
                   </p>
@@ -347,7 +347,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                 `I'm considering the ${STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? focusedPhilosophy} protection plan. How does this mix protect ${currencyCode} savings over ${learnYear} years?`,
               )
             }
-            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             Ask Guardian about this plan
           </button>
@@ -483,7 +483,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                     href={anchor.explorerUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="block text-[11px] text-gray-500 dark:text-gray-400 underline decoration-gray-300 dark:decoration-gray-600"
+                    className="block text-2xs text-gray-500 dark:text-gray-400 underline decoration-gray-300 dark:decoration-gray-600"
                   >
                     On-chain receipt ({anchor.status})
                   </a>
@@ -494,7 +494,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
           {!isLegFillable(focusedToken, chainId) && (
             <p
               data-testid="leg-unfillable"
-              className="text-[11px] text-amber-600 dark:text-amber-400"
+              className="text-2xs text-amber-600 dark:text-amber-400"
             >
               Not on this network — needs a bridge
             </p>
@@ -511,7 +511,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                   type="button"
                   data-testid="rwa-sleeve-rail"
                   onClick={() => setFocusedToken(SLEEVE_ID)}
-                  className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
+                  className="min-h-tap text-xs font-semibold text-blue-600 dark:text-blue-400"
                 >
                   Compare every tokenized asset →
                 </button>
@@ -529,7 +529,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
             <button
               type="button"
               onClick={() => openProtectionFlow(selectedAlloc.token)}
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
             >
               Review move to {selectedAlloc.token} (~
               {fmt((gapPct / 100) * totalValue)})
@@ -544,7 +544,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                 <button
                   type="button"
                   onClick={() => void refreshBalances()}
-                  className="min-h-[44px] w-full rounded-xl border border-blue-600 text-blue-600 dark:text-blue-400 text-sm font-bold px-4 transition-colors"
+                  className="min-h-tap w-full rounded-xl border border-blue-600 text-blue-600 dark:text-blue-400 text-sm font-bold px-4 transition-colors"
                 >
                   Refresh wallet data
                 </button>
@@ -562,7 +562,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                   showToast("Could not copy address", "error");
                 }
               }}
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
             >
               Fund this plan — copy deposit address
             </button>
@@ -580,7 +580,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                   onSetUpGuardian();
                 }
               }}
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
             >
               {guardianState === "monitoring"
                 ? "See Guardian activity"
@@ -595,7 +595,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                   `My ${focusedToken} holding (${selectedHeld.toFixed(0)}% of my wallet) is outside my ${planName} plan. What are my options — hold, swap into a plan token, or something else in ${userRegion}?`,
                 )
               }
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
             >
               Ask Guardian what to do with {focusedToken}
             </button>
@@ -608,7 +608,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                   `I'm focused on my ${focusedToken} wallet holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ''}). How should I correct this for my ${planName} plan in ${userRegion}?`,
                 )
               }
-              className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
             >
               Ask Guardian about this slice
             </button>
@@ -618,7 +618,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
               type="button"
               data-testid="slice-cycle-entry"
               onClick={onOpenCycle}
-              className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+              className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
             >
               What FX timing costs your next payment →
             </button>

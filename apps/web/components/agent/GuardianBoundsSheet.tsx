@@ -126,14 +126,14 @@ export function GuardianBoundsSheet({
                 Waiting for funds — Guardian needs at least ${MIN_AUTO_SAVER_FUNDS_USD} in stables on this network to propose a move.
               </p>
               {isMiniPay ? (
-                <p className="text-[11px] font-bold text-amber-800 dark:text-amber-200">
+                <p className="text-2xs font-bold text-amber-800 dark:text-amber-200">
                   Tip: tap &quot;Add Cash&quot; in your MiniPay wallet.
                 </p>
               ) : onNavigateToFund ? (
                 <button
                   type="button"
                   onClick={onNavigateToFund}
-                  className="min-h-[44px] w-full text-xs font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-lg transition-colors"
+                  className="min-h-tap w-full text-xs font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-lg transition-colors"
                 >
                   Add funds
                 </button>
@@ -145,7 +145,7 @@ export function GuardianBoundsSheet({
             type="button"
             onClick={onRunNow}
             disabled={isRunningLoop}
-            className="min-h-[44px] w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors disabled:opacity-50"
+            className="min-h-tap w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors disabled:opacity-50"
           >
             {isRunningLoop ? "Checking…" : "Check for a move now"}
           </button>
@@ -159,7 +159,7 @@ export function GuardianBoundsSheet({
             type="button"
             onClick={onRevoke}
             disabled={isRevoking}
-            className="min-h-[44px] w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-tap w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRevoking ? "Pausing…" : "Pause Guardian"}
           </button>
@@ -172,7 +172,7 @@ export function GuardianBoundsSheet({
           <button
             type="button"
             onClick={onSetLimit}
-            className="min-h-[44px] w-full text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors"
+            className="min-h-tap w-full text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors"
           >
             Set daily limit
           </button>
@@ -192,7 +192,7 @@ export function GuardianBoundsSheet({
             <button
               type="button"
               onClick={onFollowShieldPlan}
-              className="min-h-[44px] px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
             >
               Follow {shieldPlanName ?? "Shield plan"}
             </button>
@@ -200,7 +200,7 @@ export function GuardianBoundsSheet({
             <button
               type="button"
               onClick={onChangeStrategy}
-              className="min-h-[44px] px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
             >
               Change plan
             </button>
@@ -208,7 +208,7 @@ export function GuardianBoundsSheet({
         </div>
       )}
       {planMismatch && (
-        <p className="-mt-4 text-[11px] text-amber-700 dark:text-amber-300" data-testid="guardian-plan-mismatch">
+        <p className="-mt-4 text-2xs text-amber-700 dark:text-amber-300" data-testid="guardian-plan-mismatch">
           Your Shield plan is {shieldPlanName ?? shieldPlan} — Guardian is still proposing for this one.
         </p>
       )}
@@ -217,7 +217,7 @@ export function GuardianBoundsSheet({
           limit is signed — the grant attaches to that permission. */}
       {hasValidPermission && (
         <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+          <p className="text-2xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Optional · Let Guardian act for you
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -235,7 +235,7 @@ export function GuardianBoundsSheet({
             <button
               type="button"
               onClick={onSwitchToGrantChain}
-              className="min-h-[44px] w-full text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition-colors"
+              className="min-h-tap w-full text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition-colors"
             >
               Switch to a supported network
             </button>
@@ -245,7 +245,7 @@ export function GuardianBoundsSheet({
                 type="button"
                 onClick={onOpenGrantModal}
                 disabled={grantStatus === 'requesting'}
-                className="min-h-[44px] w-full text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="min-h-tap w-full text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {grantStatus === 'requesting' ? 'Waiting for MetaMask…' : 'Let Guardian act (MetaMask)'}
               </button>
@@ -261,7 +261,7 @@ export function GuardianBoundsSheet({
         <button
           type="button"
           onClick={onOpenSettings}
-          className="min-h-[44px] w-full text-left text-sm font-semibold text-blue-600 dark:text-blue-400"
+          className="min-h-tap w-full text-left text-sm font-semibold text-blue-600 dark:text-blue-400"
         >
           Notifications &amp; integrations →
         </button>

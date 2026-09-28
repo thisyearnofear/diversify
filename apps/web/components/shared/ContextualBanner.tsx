@@ -292,7 +292,7 @@ function DemoVariant({
             {onDisableDemo && (
               <button
                 onClick={onDisableDemo}
-                className="px-3 min-h-[44px] py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
+                className="px-3 min-h-tap py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-bold rounded-lg transition-colors"
               >
                 Exit Demo
               </button>
@@ -319,7 +319,7 @@ function GoalDriftVariant({
       <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 flex items-center gap-3">
         <div className="text-2xl shrink-0">🎯</div>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+          <div className="text-3xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400">
             Goal Drift
           </div>
           <p className="text-sm font-bold text-amber-900 dark:text-amber-100 mt-0.5 truncate">
@@ -355,14 +355,14 @@ function FxCorridorHintVariant({ onAction }: { onAction: () => void }) {
     >
       <button
         onClick={onAction}
-        className="w-full flex items-center justify-between gap-3 p-3 min-h-[44px] bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-colors text-left"
+        className="w-full flex items-center justify-between gap-3 p-3 min-h-tap bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 hover:from-blue-100 hover:to-indigo-100 dark:hover:from-blue-900/30 dark:hover:to-indigo-900/30 transition-colors text-left"
         aria-label="Open your payment cycle"
         data-testid="fx-corridor-hint"
       >
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-xl shrink-0" aria-hidden="true">💼</span>
           <div className="min-w-0">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            <div className="text-3xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">
               Payment mode
             </div>
             <div className="text-sm font-bold text-blue-900 dark:text-blue-100 truncate">
@@ -396,7 +396,7 @@ function FxDragWarningVariant() {
       <div className="bg-gradient-to-r from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 p-4 flex items-center gap-3">
         <span className="text-xl shrink-0">⚠️</span>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
+          <div className="text-3xs font-bold uppercase tracking-wide text-red-600 dark:text-red-400">
             FX Drag Alert
           </div>
           <div className="text-sm font-bold text-red-900 dark:text-red-100">
@@ -425,7 +425,7 @@ function FamilySavingsVariant() {
       <div className="bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-4 flex items-center gap-3">
         <span className="text-xl shrink-0">👨‍👩‍👧‍👦</span>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-purple-600 dark:text-purple-400">
+          <div className="text-3xs font-bold uppercase tracking-wide text-purple-600 dark:text-purple-400">
             Family Savings
           </div>
           <div className="text-sm font-bold text-purple-900 dark:text-purple-100">
@@ -454,7 +454,7 @@ function CurrencyRiskVariant() {
       <div className="bg-gradient-to-r from-teal-50 to-cyan-50 dark:from-teal-900/20 dark:to-cyan-900/20 p-4 flex items-center gap-3">
         <span className="text-xl shrink-0">📉</span>
         <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-bold uppercase tracking-wide text-teal-600 dark:text-teal-400">
+          <div className="text-3xs font-bold uppercase tracking-wide text-teal-600 dark:text-teal-400">
             Currency Risk
           </div>
           <div className="text-sm font-bold text-teal-900 dark:text-teal-100">
@@ -502,7 +502,7 @@ function ContextualBannerStatus({
           <button
             type="button"
             onClick={onDisableDemo}
-            className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+            className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
           >
             Exit demo
           </button>
@@ -523,7 +523,7 @@ function ContextualBannerStatus({
       <button
         type="button"
         onClick={() => onDismissFxCorridorHint?.()}
-        className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
+        className="min-h-tap text-xs font-semibold text-blue-600 dark:text-blue-400"
         data-testid="fx-corridor-hint"
       >
         Payment mode is on — see what FX timing costs this payment →

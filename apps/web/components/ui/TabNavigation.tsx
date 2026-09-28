@@ -5,6 +5,7 @@ import { getVisibleTabIds, TAB_LABELS } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
 import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
+import { preloadTab } from "@/lib/tab-preload";
 import { haptics } from "@/lib/haptics";
 import { spring } from "@/lib/motion-tokens";
 import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
@@ -122,6 +123,9 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
               ref={el => { tabRefs.current[index] = el; }}
+              // Touch-down is the intent signal: start fetching the chunk
+              // ~100ms before the click lands.
+              onPointerDown={() => preloadTab(tab.id)}
               onClick={() => {
                 haptics.tap();
                 setActiveTab(tab.id);
@@ -216,7 +220,10 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
             key={tab.id}
             role="tab"
             aria-selected={isActive}
-            onMouseEnter={canDock ? () => setHoverIndex(index) : undefined}
+            onMouseEnter={() => {
+              preloadTab(tab.id);
+              if (canDock) setHoverIndex(index);
+            }}
             onFocus={canDock ? () => setHoverIndex(index) : undefined}
             onBlur={canDock ? () => setHoverIndex((cur) => (cur === index ? null : cur)) : undefined}
             animate={
@@ -240,12 +247,12 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
             }`}
           >
             {hasBadge && (
-              <span className="absolute top-1 right-2 bg-orange-500 text-white text-[10px] font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
+              <span className="absolute top-1 right-2 bg-orange-500 text-white text-3xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm">
                 {badgeCount > 99 ? "99+" : badgeCount}
               </span>
             )}
             <div className="[&>svg]:size-6">{tab.icon}</div>
-            <span className="text-[10px] font-bold uppercase tracking-wider text-center leading-tight px-0.5">
+            <span className="text-3xs font-bold uppercase tracking-wider text-center leading-tight px-0.5">
               {label}
             </span>
           </motion.button>

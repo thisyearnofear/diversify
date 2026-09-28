@@ -55,6 +55,7 @@ import { CoinSteps } from './phases/CoinSteps';
 import { DetectPhase } from './phases/DetectPhase';
 import { RiskPhase } from './phases/RiskPhase';
 import { PhilosophyPhase } from './phases/PhilosophyPhase';
+import { spring, springSoft } from "@/lib/motion-tokens";
 
 interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue?: () => void;
@@ -312,7 +313,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
       : {
           initial: { opacity: 0, scale: 0.4 },
           animate: { opacity: 1, scale: 1 },
-          transition: { type: 'spring', stiffness: 240, damping: 20, delay: panelDelay },
+          transition: { ...springSoft, delay: panelDelay },
         };
 
     // Content turns: V1 cascades downward, V2 assembles outward from the
@@ -335,7 +336,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
       return {
         initial: { opacity: 0, y: 10, scale: 0.65 },
         animate: { opacity: 1, y: 0, scale: 1 },
-        transition: { type: 'spring', stiffness: 300, damping: 22, delay: panelDelay + 0.06 * i },
+        transition: { ...spring, delay: panelDelay + 0.06 * i },
       };
     };
 
@@ -372,7 +373,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
                 className="mb-5 relative mt-4 md:mt-2"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', duration: 1 }}
+                transition={springSoft}
             >
                 {phase === 'detect' ? (
                   <div className="flex items-center justify-center gap-3 text-left">

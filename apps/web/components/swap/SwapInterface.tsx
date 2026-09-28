@@ -513,7 +513,7 @@ const SwapInterface = forwardRef<
                 read get the link (Celo, Arbitrum). */}
             {receipt?.txHash &&
               (receipt.chainId === 42220 || receipt.chainId === 42161) && (
-                <p className="mt-1 text-center text-[11px]">
+                <p className="mt-1 text-center text-2xs">
                   <a
                     href={`/receipt/${receipt.chainId}/${receipt.txHash}`}
                     target="_blank"
@@ -563,7 +563,7 @@ const SwapInterface = forwardRef<
             type="button"
             aria-label="Back to pair view"
             onClick={collapseToStage}
-            className="mb-1 -ml-1 px-1 text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
+            className="mb-1 -ml-1 px-1 text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
           >
             ← Pair
           </button>
@@ -621,7 +621,7 @@ const SwapInterface = forwardRef<
             <button
               type="button"
               onClick={() => { setPhoneNumber(null); setRecipientAddress(null); }}
-              className="ml-auto text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 shrink-0 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              className="ml-auto text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-900 dark:hover:text-emerald-100 shrink-0 min-h-tap min-w-tap flex items-center justify-center"
             >
               Clear
             </button>
@@ -767,7 +767,7 @@ const SwapInterface = forwardRef<
             <button
               type="button"
               onClick={() => setRecipientOpen((o) => !o)}
-              className="mt-1 text-left text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
+              className="mt-1 text-left text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
               data-testid="recipient-affordance"
             >
               Sending to someone?{" "}
@@ -808,7 +808,7 @@ const SwapInterface = forwardRef<
             />
           )}
           {isCrossChainRoute && onInspectQuote && (
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-2xs text-gray-500 dark:text-gray-400">
               Quote includes bridge fee · <button type="button" onClick={() => onInspectQuote(fromToken, toToken)} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">tap to see route</button>
             </p>
           )}
@@ -837,7 +837,7 @@ const SwapInterface = forwardRef<
           {/* Leg-2 hint — after the via-hub recovery's first swap lands,
               the ticket has advanced to the final leg already. */}
           {leg2Hint && status === "idle" && (
-            <p className="mt-1 px-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-300" data-testid="leg2-hint">
+            <p className="mt-1 px-1 text-2xs font-medium text-emerald-700 dark:text-emerald-300" data-testid="leg2-hint">
               {leg2Hint}
             </p>
           )}
@@ -850,7 +850,7 @@ const SwapInterface = forwardRef<
               type="button"
               data-testid="via-hub-proactive"
               onClick={applyViaHub}
-              className="mt-1 px-1 text-left text-[11px] font-medium text-emerald-700 hover:underline dark:text-emerald-300"
+              className="mt-1 px-1 text-left text-2xs font-medium text-emerald-700 hover:underline dark:text-emerald-300"
             >
               Route via {viaHub} instead →
             </button>

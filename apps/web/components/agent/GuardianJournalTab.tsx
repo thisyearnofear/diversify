@@ -88,7 +88,7 @@ export const GuardianJournalTab: React.FC<{
                 <button
                   type="button"
                   onClick={onNavigateToFund}
-                  className="mt-2 text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2 transition-colors"
+                  className="mt-2 text-2xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-200 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-4 py-2 transition-colors"
                 >
                   Add funds
                 </button>
@@ -97,7 +97,7 @@ export const GuardianJournalTab: React.FC<{
                   type="button"
                   onClick={onPreview}
                   disabled={isRunningLoop}
-                  className="mt-2 text-[11px] font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="mt-2 text-2xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isRunningLoop ? "Previewing…" : "Preview next move"}
                 </button>
@@ -139,7 +139,7 @@ export const GuardianJournalTab: React.FC<{
                       target="_blank"
                       rel="noopener noreferrer"
                       data-testid="anchor-chip"
-                      className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 mt-1 text-2xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/60 px-1.5 py-0.5 rounded-full"
                       title={anchor.id && anchor.id > 0 ? `0G RecommendationLedger #${anchor.id}` : 'Anchored on 0G (awaiting event index)'}
                     >
                       <span className="w-1 h-1 rounded-full bg-emerald-500" />
@@ -152,7 +152,7 @@ export const GuardianJournalTab: React.FC<{
                       target="_blank"
                       rel="noopener noreferrer"
                       data-testid="anchor-chip-no-evidence"
-                      className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 mt-1 text-2xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
                       title="On-chain record is real, but the 0G Storage evidence upload did not complete"
                     >
                       <span className="w-1 h-1 rounded-full bg-amber-500" />
@@ -162,7 +162,7 @@ export const GuardianJournalTab: React.FC<{
                   {anchor && anchor.status === 'pending' && (
                     <span
                       data-testid="anchor-chip-pending"
-                      className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 mt-1 text-2xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800/60 px-1.5 py-0.5 rounded-full"
                     >
                       <span className="w-1 h-1 rounded-full bg-amber-500 animate-pulse" />
                       0G pending
@@ -170,7 +170,7 @@ export const GuardianJournalTab: React.FC<{
                   )}
                   {anchor && anchor.status === 'failed' && (
                     <span
-                      className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold uppercase tracking-wide text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
+                      className="inline-flex items-center gap-1 mt-1 text-2xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800/60 px-1.5 py-0.5 rounded-full"
                       title={anchor.error ?? '0G anchor failed'}
                     >
                       <span className="w-1 h-1 rounded-full bg-red-500" />
@@ -200,7 +200,7 @@ export const GuardianJournalTab: React.FC<{
                           No explorer receipt
                         </span>
                       )}
-                      <span className={`text-[11px] uppercase font-bold px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
+                      <span className={`text-2xs uppercase font-bold px-1.5 py-0.5 rounded italic flex items-center gap-1 ${
                         event.status === "confirmed"
                           ? "text-green-500 bg-green-50 dark:bg-green-900/20"
                           : event.status === "failed"

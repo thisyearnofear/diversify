@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy } from '@/context/PrivyProvider';
 import { useWalletContext } from "../components/wallet/WalletProvider";
 // Deep leaf imports — NOT the barrel — keeps the portfolio-analysis + strategy stacks out of first-load.
 import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";

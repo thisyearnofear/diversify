@@ -142,13 +142,13 @@ const TradeIntelligence: React.FC<TradeIntelligenceProps> = ({
         aria-label={impactLabel}
       />
       <span className="text-xs font-bold text-gray-900 dark:text-white truncate flex-1 min-w-0">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-1.5">
+        <span className="text-3xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mr-1.5">
           Macro
         </span>
         {latest.title}
       </span>
       {latest.impactAsset && (
-        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0 hidden sm:inline">
+        <span className="text-3xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 shrink-0 hidden sm:inline">
           {latest.impactAsset}
         </span>
       )}

@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
 import Scrim from "../shared/Scrim";
 import { haptics } from "@/lib/haptics";
-import { springPop } from "@/lib/motion-tokens";
+import { spring, springPop } from "@/lib/motion-tokens";
+import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
+import { shouldDismissDrag } from "../shared/InspectorSheet";
 // Deep leaf import — provenance facts are curated constants.
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { ProvenanceCoinBack } from "./ProvenanceCoinBack";
@@ -49,6 +51,10 @@ export default function TokenPickerSheet({
   const [query, setQuery] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
   const reducedMotion = useReducedMotion();
+  const dragControls = useDragControls();
+
+  // Escape + back gesture close the picker (topmost layer only).
+  useDismissibleLayer(isOpen, onClose);
 
   // Reset search each time the sheet opens, then focus it
   useEffect(() => {
@@ -58,20 +64,15 @@ export default function TokenPickerSheet({
     return () => clearTimeout(t);
   }, [isOpen]);
 
-  // Escape closes; lock body scroll while open
+  // Lock body scroll while open
   useEffect(() => {
     if (!isOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = originalOverflow;
-      window.removeEventListener("keydown", onKey);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -158,25 +159,50 @@ export default function TokenPickerSheet({
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="relative w-full sm:max-w-md max-h-[80dvh] bg-white dark:bg-gray-900 rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            transition={spring}
+            className="relative w-full sm:max-w-md max-h-[80dvh] bg-surface rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
             onClick={(e) => e.stopPropagation()}
+            // Bottom sheet tracks the finger from its header; a long drag
+            // or a downward flick dismisses, anything else springs back.
+            drag="y"
+            dragControls={dragControls}
+            dragListener={false}
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.05, bottom: 0.9 }}
+            onDragEnd={(_e, info) => {
+              if (shouldDismissDrag(info)) onClose();
+            }}
           >
-            {/* Header */}
-            <div className="px-4 pt-4 pb-3 border-b border-gray-100 dark:border-gray-800">
+            {/* Header — the drag handle. Controls inside it opt out. */}
+            <div
+              className="px-4 pt-2 pb-3 border-b border-gray-100 dark:border-gray-800"
+              style={{ touchAction: "none" }}
+              data-testid="token-picker-handle"
+              onPointerDown={(e) => {
+                const target = e.target as HTMLElement;
+                if (target.closest("input, button")) return;
+                dragControls.start(e);
+              }}
+            >
+              <div className="flex justify-center pb-2 sm:hidden" aria-hidden="true">
+                <span className="block w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
+              </div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black uppercase tracking-tight text-gray-900 dark:text-gray-100">
+                <h3 className="text-sm font-black uppercase tracking-tight text-ink">
                   {title}
                 </h3>
                 <button
                   type="button"
                   onClick={onClose}
                   aria-label="Close token picker"
-                  className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                  className="group size-tap -my-1.5 -mr-1.5 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
+                  {/* 32px visual disc inside a 44px hit area. */}
+                  <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </span>
                 </button>
               </div>
               <div className="relative">
@@ -273,7 +299,7 @@ export default function TokenPickerSheet({
                         </span>
                         {item.badge && (
                           <span
-                            className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
+                            className="shrink-0 inline-flex items-center gap-1 text-3xs font-bold px-1.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300"
                             title={`Aligned with your strategy: ${item.badge.label}`}
                           >
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,7 +309,7 @@ export default function TokenPickerSheet({
                           </span>
                         )}
                         {item.yieldBadge && (
-                          <span className={`shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.yieldBadge.color}`}>
+                          <span className={`shrink-0 text-3xs font-bold px-1.5 py-0.5 rounded-full ${item.yieldBadge.color}`}>
                             {item.yieldBadge.text}
                           </span>
                         )}
@@ -308,7 +334,7 @@ export default function TokenPickerSheet({
                           <div className="text-sm font-bold text-gray-900 dark:text-gray-100">
                             {formatBalance(item.balance)}
                           </div>
-                          <div className="text-[10px] text-gray-400">balance</div>
+                          <div className="text-3xs text-gray-400">balance</div>
                         </>
                       )}
                     </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWalletContext } from './WalletProvider';
+import { spring } from "@/lib/motion-tokens";
 
 /**
  * WalletTutorial — one screen, one job: connect.
@@ -58,7 +59,7 @@ export const WalletTutorial: React.FC<{
             initial={{ scale: 0.95, opacity: 0, y: 12 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.95, opacity: 0, y: 12 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={spring}
             className="relative w-full max-w-md max-h-[90dvh] overflow-y-auto custom-scrollbar bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-[2rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] border border-white/20 dark:border-white/10 p-6 md:p-8 text-center"
             onClick={(e) => e.stopPropagation()}
           >
@@ -141,13 +142,13 @@ export const WalletTutorial: React.FC<{
             )}
 
             {/* Trust — one quiet line instead of three cards and an amber box */}
-            <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">
+            <p className="text-2xs font-medium text-gray-400 dark:text-gray-500">
               🔒 Non-custodial · read-only access · you approve every transaction
             </p>
 
             <button
               onClick={onClose}
-              className="mt-3 min-h-[44px] px-4 rounded-lg text-xs font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60"
+              className="mt-3 min-h-tap px-4 rounded-lg text-xs font-bold text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors uppercase tracking-widest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60"
             >
               Maybe later
             </button>

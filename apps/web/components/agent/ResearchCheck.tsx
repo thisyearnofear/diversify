@@ -33,7 +33,7 @@ export function ResearchCheck({ isActive }: ResearchCheckProps) {
         />
       </div>
 
-      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+      <span className="text-2xs font-bold text-slate-400 uppercase tracking-wider">
         {isActive ? 'Responding...' : 'Ready'}
       </span>
     </div>

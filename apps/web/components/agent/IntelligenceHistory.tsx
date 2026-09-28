@@ -42,19 +42,19 @@ export default function IntelligenceHistory() {
       <div className="sticky top-0 z-10 -mx-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur pb-2">
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="rounded-xl border border-purple-100 dark:border-purple-800/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-2">
-            <p className="text-[10px] font-black uppercase tracking-wider text-purple-500">Funding wallet</p>
+            <p className="text-3xs font-black uppercase tracking-wider text-purple-500">Funding wallet</p>
             <p className="text-xs font-black text-purple-800 dark:text-purple-200">
               ${Number.parseFloat(researchAccount.arcWalletBalance || "0").toFixed(3)}
             </p>
           </div>
           <div className="rounded-xl border border-amber-100 dark:border-amber-800/40 bg-amber-50 dark:bg-amber-900/20 px-3 py-2">
-            <p className="text-[10px] font-black uppercase tracking-wider text-amber-600">Spent today</p>
+            <p className="text-3xs font-black uppercase tracking-wider text-amber-600">Spent today</p>
             <p className="text-xs font-black text-amber-800 dark:text-amber-200">
               ${researchAccount.spentToday.toFixed(3)}
             </p>
           </div>
           <div className="rounded-xl border border-emerald-100 dark:border-emerald-800/40 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2">
-            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-600">Earned credits</p>
+            <p className="text-3xs font-black uppercase tracking-wider text-emerald-600">Earned credits</p>
             <p className="text-xs font-black text-emerald-800 dark:text-emerald-200">
               ${researchAccount.bonusCredits.toFixed(3)}
             </p>
@@ -63,13 +63,13 @@ export default function IntelligenceHistory() {
         <div className="inline-flex rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1">
           <button
             onClick={() => setView('research')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-colors ${view === 'research' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
+            className={`px-3 py-1.5 text-3xs font-black uppercase rounded-lg transition-colors ${view === 'research' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
           >
             Review Ledger
           </button>
           <button
             onClick={() => setView('insights')}
-            className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-colors ${view === 'insights' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
+            className={`px-3 py-1.5 text-3xs font-black uppercase rounded-lg transition-colors ${view === 'insights' ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500'}`}
           >
             Insights
           </button>
@@ -100,7 +100,7 @@ export default function IntelligenceHistory() {
                     {item.description}
                   </h4>
                 </div>
-                <p className="mt-1 text-[11px] text-gray-400">
+                <p className="mt-1 text-2xs text-gray-400">
                   {new Date(item.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                 </p>
               </div>
@@ -108,7 +108,7 @@ export default function IntelligenceHistory() {
                 <p className="text-sm font-black text-gray-900 dark:text-white">
                   ${(item.details?.cost || 0).toFixed(3)}
                 </p>
-                <p className="text-[10px] text-gray-400">USDC</p>
+                <p className="text-3xs text-gray-400">USDC</p>
               </div>
             </div>
 
@@ -121,7 +121,7 @@ export default function IntelligenceHistory() {
             {item.details?.sources && item.details.sources.length > 0 && (
               <div className="mt-3 space-y-1.5">
                 {item.details.sources.map((source) => (
-                  <div key={`${item.id}-${source.label}`} className="flex items-center gap-2 text-[11px]">
+                  <div key={`${item.id}-${source.label}`} className="flex items-center gap-2 text-2xs">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${source.tier === 'paid' ? 'bg-emerald-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
                     <span className="truncate text-gray-500 dark:text-gray-400">{source.label}</span>
                   </div>
@@ -134,7 +134,7 @@ export default function IntelligenceHistory() {
                 href={item.details.explorer}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-3 block truncate text-[10px] font-mono text-blue-500 hover:text-blue-600"
+                className="mt-3 block truncate text-3xs font-mono text-blue-500 hover:text-blue-600"
               >
                 {item.details.txHash?.slice(0, 18)}...{item.details.txHash?.slice(-6)} ↗
               </a>
@@ -152,7 +152,7 @@ export default function IntelligenceHistory() {
           >
             {/* Timestamp Ribbon */}
             <div className="absolute top-0 right-0 px-3 py-1 bg-amber-100 dark:bg-amber-900/30 rounded-tr-2xl rounded-bl-xl border-l border-b border-amber-200/50 dark:border-amber-700/30">
-              <span className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-tighter">
+              <span className="text-3xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-tighter">
                 {new Date(item.timestamp).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </span>
             </div>
@@ -173,19 +173,19 @@ export default function IntelligenceHistory() {
 
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {item.tags.map(tag => (
-                  <span key={tag} className="text-[10px] font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400">
+                  <span key={tag} className="text-3xs font-bold px-2 py-0.5 bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400">
                     #{tag}
                   </span>
                 ))}
               </div>
 
               <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-2">
-                <h5 className="text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1">
+                <h5 className="text-3xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1">
                   🎯 Retrospective Action Items
                 </h5>
                 <ul className="grid grid-cols-1 gap-1.5">
                   {item.actionItems.map((ai, i) => (
-                    <li key={i} className="text-[11px] flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <li key={i} className="text-2xs flex items-center gap-2 text-gray-600 dark:text-gray-400">
                       <div className="w-1 h-1 rounded-full bg-amber-500 shrink-0" />
                       <span className="line-clamp-1 group-hover:line-clamp-none transition-colors">{ai}</span>
                     </li>

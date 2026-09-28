@@ -32,7 +32,7 @@ export function CaribbeanRailHonestyBanner({
     );
   }
 
-  const titleClass = "text-[10px] font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400";
+  const titleClass = "text-3xs font-bold uppercase tracking-wide text-amber-600 dark:text-amber-400";
   const bodyClass = isHome
     ? "text-sm font-medium text-amber-900 dark:text-amber-100 mt-0.5 leading-relaxed"
     : "text-xs font-medium text-amber-900 dark:text-amber-100 mt-0.5 leading-relaxed";
@@ -47,7 +47,7 @@ export function CaribbeanRailHonestyBanner({
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <div className={titleClass}>{copy.title}</div>
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-[10px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-3xs font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
               <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden />
               Live on Celo
             </span>
@@ -58,7 +58,7 @@ export function CaribbeanRailHonestyBanner({
               href={CELO_EXPLORER_ADDRESS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:underline mt-2"
+              className="inline-flex items-center gap-1 text-2xs font-semibold text-amber-600 dark:text-amber-400 hover:underline mt-2"
             >
               Verify savings ledger{CELO_LEDGER_SHORT_ADDRESS ? ` (${CELO_LEDGER_SHORT_ADDRESS})` : ""} on Celo explorer →
             </a>

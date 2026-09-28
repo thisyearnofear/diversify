@@ -34,7 +34,7 @@ export function CurrencyVisitReview({
       <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
         <div className="min-w-0 flex flex-col items-center gap-1">
           <Coin size={72} symbol={moment.currencyCode} color="#94a3b8" />
-          <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">{elapsed}</span>
+          <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">{elapsed}</span>
           <span className="text-lg font-bold tabular-nums text-gray-500 dark:text-gray-400">
             {formatCurrencyVisitPercent(previous.delta)}
           </span>
@@ -44,7 +44,7 @@ export function CurrencyVisitReview({
         </div>
         <div className="min-w-0 flex flex-col items-center gap-1">
           <Coin size={72} symbol={moment.currencyCode} color={accent} shine={reducedMotion ? false : 'once'} />
-          <span className="text-[11px] font-semibold text-gray-400 dark:text-gray-500">Now</span>
+          <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">Now</span>
           <span className="text-lg font-bold tabular-nums" style={{ color: accent }}>
             {formatCurrencyVisitPercent(current.delta)}
           </span>

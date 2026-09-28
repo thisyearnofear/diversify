@@ -108,7 +108,7 @@ function RegionCoin({
           ? { duration: 0 }
           : { ...springSoft, delay: arrived.current ? 0 : index * STAGGER_STEP_S }
       }
-      className="flex flex-col items-center gap-1 min-w-[44px] min-h-[44px] rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+      className="flex flex-col items-center gap-1 min-w-tap min-h-tap rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
     >
       <span className="relative inline-flex">
         <Coin variant="asset" size={size} symbol={regionGlyph(region.region)} color={region.color} />
@@ -126,16 +126,16 @@ function RegionCoin({
         {isSealed && (
           <MintMark
             data-testid="region-coin-sealed"
-            className="h-4 w-4 bg-emerald-500 text-[10px] leading-none text-white ring-emerald-600 dark:bg-emerald-600"
+            className="h-4 w-4 bg-emerald-500 text-3xs leading-none text-white ring-emerald-600 dark:bg-emerald-600"
           >
             ✓
           </MintMark>
         )}
       </span>
-      <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[72px]">
+      <span className="text-2xs font-semibold text-gray-600 dark:text-gray-300 truncate max-w-[72px]">
         {region.region}
       </span>
-      <span className="text-[11px] tabular-nums text-gray-400 dark:text-gray-500">
+      <span className="text-2xs tabular-nums text-gray-400 dark:text-gray-500">
         {Math.round(pct)}%
       </span>
     </motion.button>
@@ -287,11 +287,11 @@ export function HomeRiskTheater({
       className="mt-4 border-t border-gray-100 dark:border-white/[0.06] pt-3"
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+        <p className="text-2xs font-semibold text-gray-500 dark:text-gray-400">
           Your savings · <span className="font-bold text-gray-900 dark:text-white tabular-nums">{fmt(totalValue)}</span>
         </p>
         {isDemo && (
-          <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
+          <span className="text-3xs font-bold uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-white/10 text-gray-500 dark:text-gray-400">
             Sample
           </span>
         )}
@@ -343,7 +343,7 @@ export function HomeRiskTheater({
           type="button"
           data-testid="home-lens-back"
           onClick={onLensBack}
-          className="mb-3 min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          className="mb-3 min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
         >
           ← Your currency
         </button>
@@ -389,7 +389,7 @@ export function HomeRiskTheater({
       <section id="home-hero" aria-labelledby="home-hero-title" data-testid="home-risk-theater">
         <h2 id="home-hero-title" className="sr-only">Your currency this year</h2>
         {isDemo && !hasHoldings && (
-          <p className="text-[11px] text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
+          <p className="text-2xs text-gray-400 dark:text-gray-500 mb-1">Sample data</p>
         )}
         <CurrencyMomentCard
           moment={moment}
@@ -416,7 +416,7 @@ export function HomeRiskTheater({
             onClick={() =>
               navigateToGuardian({ summary: guardianAway.summary, prompt: guardianAway.prompt })
             }
-            className="mt-1 block w-full text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+            className="mt-1 block w-full text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
           >
             {guardianAway.line} <span className="text-blue-600 dark:text-blue-400">→</span>
           </button>
@@ -424,7 +424,7 @@ export function HomeRiskTheater({
         {holdingsStrip}
         <div
           data-testid="home-horizon-baseplate"
-          className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400"
+          className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center justify-between text-2xs text-gray-500 dark:text-gray-400"
         >
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true" />
@@ -452,7 +452,7 @@ export function HomeRiskTheater({
         {holdingsStrip}
         <div
           data-testid="home-horizon-baseplate"
-          className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400"
+          className="mt-4 pt-3 border-t border-gray-100 dark:border-white/[0.06] flex items-center justify-between text-2xs text-gray-500 dark:text-gray-400"
         >
           <span className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500" aria-hidden="true" />

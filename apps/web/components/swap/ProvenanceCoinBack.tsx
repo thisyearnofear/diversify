@@ -19,7 +19,7 @@ export function ProvenanceCoinBack({
       <p
         className={
           compact
-            ? "text-[11px] font-semibold leading-snug text-gray-900 dark:text-white line-clamp-2"
+            ? "text-2xs font-semibold leading-snug text-gray-900 dark:text-white line-clamp-2"
             : "text-sm font-bold text-gray-900 dark:text-gray-100 truncate"
         }
       >
@@ -28,7 +28,7 @@ export function ProvenanceCoinBack({
       <p
         className={
           compact
-            ? "mt-0.5 text-[10px] leading-snug text-gray-500 dark:text-gray-400 line-clamp-3"
+            ? "mt-0.5 text-3xs leading-snug text-gray-500 dark:text-gray-400 line-clamp-3"
             : "text-xs text-gray-400 dark:text-gray-500 truncate"
         }
       >

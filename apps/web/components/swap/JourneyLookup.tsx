@@ -51,7 +51,7 @@ export function JourneyLookup({
     if (lookupAddress) {
         if (error) {
             return (
-                <p className="mt-3 flex min-h-[44px] items-center gap-2 px-1 text-[11px] text-gray-500 dark:text-gray-400">
+                <p className="mt-3 flex min-h-tap items-center gap-2 px-1 text-2xs text-gray-500 dark:text-gray-400">
                     Couldn&rsquo;t read that wallet right now.
                     <ClearButton onClear={() => onLookup(null)} />
                 </p>
@@ -59,7 +59,7 @@ export function JourneyLookup({
         }
         if (history && history.stations.length < 2) {
             return (
-                <p className="mt-3 flex min-h-[44px] items-center gap-2 px-1 text-[11px] text-gray-500 dark:text-gray-400">
+                <p className="mt-3 flex min-h-tap items-center gap-2 px-1 text-2xs text-gray-500 dark:text-gray-400">
                     No currency history found for {shortAddress(lookupAddress)}{' '}
                     on Celo.
                     <ClearButton onClear={() => onLookup(null)} />
@@ -68,7 +68,7 @@ export function JourneyLookup({
         }
         if (!history) {
             return isLoading ? (
-                <p className="mt-3 min-h-[44px] px-1 pt-2 text-[11px] text-gray-400 dark:text-gray-500">
+                <p className="mt-3 min-h-tap px-1 pt-2 text-2xs text-gray-400 dark:text-gray-500">
                     Reading that wallet…
                 </p>
             ) : null;
@@ -104,25 +104,25 @@ export function JourneyLookup({
                         placeholder="Paste a Celo address"
                         aria-label="Paste a Celo address"
                         aria-invalid={invalid}
-                        className="min-h-[44px] min-w-0 flex-1 rounded-lg border border-gray-200 bg-transparent px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:text-gray-200"
+                        className="min-h-tap min-w-0 flex-1 rounded-lg border border-gray-200 bg-transparent px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-blue-400 focus:outline-none dark:border-gray-700 dark:text-gray-200"
                     />
                     <button
                         type="button"
                         onClick={submit}
-                        className="min-h-[44px] rounded-lg px-3 text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
+                        className="min-h-tap rounded-lg px-3 text-sm font-semibold text-blue-600 hover:underline dark:text-blue-400"
                     >
                         View
                     </button>
                     <button
                         type="button"
                         onClick={collapse}
-                        className="min-h-[44px] rounded-lg px-2 text-[11px] text-gray-500 hover:underline dark:text-gray-400"
+                        className="min-h-tap rounded-lg px-2 text-2xs text-gray-500 hover:underline dark:text-gray-400"
                     >
                         Cancel
                     </button>
                 </div>
                 {invalid && (
-                    <p className="mt-1 text-[11px] text-red-500">
+                    <p className="mt-1 text-2xs text-red-500">
                         That doesn&rsquo;t look like a Celo address.
                     </p>
                 )}
@@ -131,11 +131,11 @@ export function JourneyLookup({
     }
 
     return (
-        <p className="mt-3 flex min-h-[44px] items-center px-1 text-[11px] text-gray-500 dark:text-gray-400">
+        <p className="mt-3 flex min-h-tap items-center px-1 text-2xs text-gray-500 dark:text-gray-400">
             <button
                 type="button"
                 onClick={() => void connect()}
-                className="min-h-[44px] hover:underline"
+                className="min-h-tap hover:underline"
             >
                 Your own journey appears here when you connect
             </button>
@@ -145,7 +145,7 @@ export function JourneyLookup({
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="min-h-[44px] font-semibold text-gray-600 hover:underline dark:text-gray-300"
+                className="min-h-tap font-semibold text-gray-600 hover:underline dark:text-gray-300"
             >
                 View any wallet →
             </button>
@@ -158,7 +158,7 @@ function ClearButton({ onClear }: { onClear(): void }) {
         <button
             type="button"
             onClick={onClear}
-            className="min-h-[44px] font-semibold text-gray-600 underline decoration-dotted underline-offset-2 hover:text-gray-800 dark:text-gray-300"
+            className="min-h-tap font-semibold text-gray-600 underline decoration-dotted underline-offset-2 hover:text-gray-800 dark:text-gray-300"
         >
             Clear
         </button>

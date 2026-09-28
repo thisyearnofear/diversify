@@ -39,7 +39,7 @@ export function PhilosophyPromptCard({
       <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mb-1">
         Different communities respond differently
       </p>
-      <p className="text-[11px] text-emerald-500 dark:text-emerald-300">
+      <p className="text-2xs text-emerald-500 dark:text-emerald-300">
         Choose a protection philosophy that matches your values — from Africapitalism to Islamic Finance.
       </p>
     </div>

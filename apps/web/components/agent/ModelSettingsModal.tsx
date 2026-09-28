@@ -40,7 +40,7 @@ export function ModelSettingsModal({ onClose, userGeminiKey, onSaveKey }: {
         <div className="flex items-center justify-between mb-4">
           <div>
             <h3 id="model-settings-title" className="font-black text-sm text-gray-900 dark:text-white uppercase tracking-tight">AI Model Settings</h3>
-            <p id="model-settings-desc" className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">Default: Gemini (shared key). Add your own for higher limits.</p>
+            <p id="model-settings-desc" className="text-2xs text-gray-500 dark:text-gray-400 mt-0.5">Default: Gemini (shared key). Add your own for higher limits.</p>
           </div>
           <button
             onClick={onClose}
@@ -55,14 +55,14 @@ export function ModelSettingsModal({ onClose, userGeminiKey, onSaveKey }: {
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3 mb-4 border border-blue-100 dark:border-blue-800/30">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-black text-blue-700 dark:text-blue-300">✦ Default: Gemini Flash</span>
-            <span className="text-[10px] bg-blue-100 dark:bg-blue-800/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
+            <span className="text-3xs bg-blue-100 dark:bg-blue-800/40 text-blue-600 dark:text-blue-300 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
           </div>
-          <p className="text-[11px] text-blue-600 dark:text-blue-400">Powered by Google Gemini 3.1 Flash · No setup needed · Shared rate limits apply</p>
+          <p className="text-2xs text-blue-600 dark:text-blue-400">Powered by Google Gemini 3.1 Flash · No setup needed · Shared rate limits apply</p>
         </div>
 
         {/* User's own Gemini key */}
         <div className="mb-4">
-          <label className="block text-[11px] font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+          <label className="block text-2xs font-black text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
             Your Gemini API Key <span className="text-gray-400 font-normal normal-case">(optional — removes rate limits)</span>
           </label>
           <input
@@ -72,7 +72,7 @@ export function ModelSettingsModal({ onClose, userGeminiKey, onSaveKey }: {
             placeholder="AIza..."
             className="w-full text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-400 font-mono"
           />
-          <p className="text-[10px] text-gray-400 mt-1">
+          <p className="text-3xs text-gray-400 mt-1">
             Stored locally only · Never sent to our servers ·{" "}
             <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-blue-500 underline">Get a free key →</a>
           </p>

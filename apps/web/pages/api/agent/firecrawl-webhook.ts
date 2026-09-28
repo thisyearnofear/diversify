@@ -149,10 +149,12 @@ Respond in JSON:
   "actionable": true/false,
   "signal": "rate_hike" | "rate_cut" | "yield_change" | "depeg_risk" | "inflation_shift" | "none",
   "confidence": 0.0-1.0,
-  "targetToken": "cEUR" | "cREAL" | "KESm" | "cUSD" | "USDY" | null,
+  "targetToken": "cEUR" | "cREAL" | "KESm" | "cUSD" | "USDY" | "PAXG" | null,
   "oneLiner": "Brief summary of the signal",
   "reasoning": "Why this matters for portfolio allocation"
 }
+
+targetToken is the token savers should shift TOWARD given this signal (or the token most directly affected). If the signal concerns a currency or asset none of the listed tokens tracks — e.g. a Caribbean currency — return null. NEVER pick the closest token as a substitute.
 
 Only set actionable=true if the change clearly implies a portfolio action. Be conservative.`,
         },
@@ -241,14 +243,17 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       $or: [{ expiresAt: { $gt: now } }, { expiresAt: 0 }],
     }).lean();
 
-    const targetToken = parsed.targetToken || 'cEUR';
-    const targetTokenLc = targetToken.toLowerCase();
+    // No target token = the signal concerns a currency we can't hedge
+    // (e.g. a Caribbean fiat). Anchor it as an event, but never map it to
+    // a default token — fan-out and beats would misattribute it.
+    const targetToken = parsed.targetToken || null;
+    const targetTokenLc = targetToken?.toLowerCase() ?? null;
 
     let usersUpdated = 0;
     let usersWouldUpdate = 0;
     const skipped: Array<{ userAddress: string; reason: string }> = [];
 
-    for (const perm of activePermissions) {
+    for (const perm of targetTokenLc ? activePermissions : []) {
       // (1) Permission must allow the destination token.
       const allowedTokens = (perm.allowedTokens || []).map((t: string) => t.toLowerCase());
       const tokenAllowed = allowedTokens.length === 0
@@ -282,7 +287,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
         capturedAt,
         source: 'firecrawl-webhook',
         action: 'REBALANCE',
-        targetToken,
+        targetToken: targetToken!, // loop only runs when targetToken is set
         oneLiner: parsed.oneLiner || 'Macro signal detected from monitored source',
         reasoning: parsed.reasoning || `Signal: ${parsed.signal}. Source: ${url}`,
         confidence: parsed.confidence,
@@ -315,7 +320,10 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       // every prior macro anchor silently failed on-chain.
       user: GUARDIAN_AGENT_ADDRESS,
       action: anchorAction,
-      targetToken,
+      // 'NONE' keeps an untracked-currency signal honest: the record
+      // anchors, but no corridor side can claim it (corridorSideFor('NONE')
+      // is empty) and no permission can match it.
+      targetToken: targetToken ?? 'NONE',
       reasoning: anchorReasoning,
       evidenceCid: '', // Could store full page content in 0G Storage
       servingModel: 'firecrawl-monitor',
@@ -333,7 +341,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
         recordId: anchor.status === 'anchored' ? anchor.id : undefined,
         txHash: anchor.txHash,
         action: anchorAction,
-        targetToken,
+        targetToken: targetToken ?? 'NONE',
         reasoning: anchorReasoning,
       });
     }

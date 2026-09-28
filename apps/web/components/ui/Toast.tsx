@@ -1,6 +1,7 @@
 import React, { useState, useEffect, createContext, useCallback, useContext } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNetworkActivity } from '../../hooks/use-network-activity';
+import { spring } from "@/lib/motion-tokens";
 
 interface ToastData {
     cost?: number;
@@ -37,7 +38,7 @@ export const Toast: React.FC<{
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.98 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={spring}
             className={`fixed bottom-6 right-6 z-50 p-4 rounded-lg shadow-lg border ${typeStyles[type]} max-w-sm`}
         >
             <div className="flex items-center justify-between">

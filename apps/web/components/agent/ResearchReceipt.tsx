@@ -66,7 +66,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
       <button
         onClick={() => setOpen(!open)}
         aria-label={open ? 'Hide review receipt' : 'Show review receipt'}
-        className={`inline-flex items-center gap-1.5 text-[11px] font-bold ${statusColor} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
+        className={`inline-flex items-center gap-1.5 text-2xs font-bold ${statusColor} opacity-80 hover:opacity-100 transition-opacity cursor-pointer`}
       >
         <span>{receipt.status === 'failed' ? '!' : '⛓'}</span>
         <span>
@@ -81,7 +81,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
         <motion.span
           animate={reducedMotion ? undefined : { rotate: open ? 180 : 0 }}
           transition={{ duration: 0.2 }}
-          className="text-[10px]"
+          className="text-3xs"
         >
           ▾
         </motion.span>
@@ -98,22 +98,22 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
           >
             <div className="bg-white/5 dark:bg-white/5 border border-white/10 rounded-xl p-3 space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                <span className="text-3xs font-bold uppercase tracking-wider text-slate-400">
                   Protection review
                 </span>
-                <span className={`text-[10px] font-mono ${statusColor}`}>
+                <span className={`text-3xs font-mono ${statusColor}`}>
                   ${Number.parseFloat(receipt.amount || '0').toFixed(3)} USDC
                 </span>
               </div>
 
               {receipt.reason && (
-                <p className="text-[10px] leading-snug text-slate-400">
+                <p className="text-3xs leading-snug text-slate-400">
                   {receipt.reason}
                 </p>
               )}
 
               {receipt.error && (
-                <p className="text-[10px] leading-snug text-amber-500 dark:text-amber-400">
+                <p className="text-3xs leading-snug text-amber-500 dark:text-amber-400">
                   {receipt.error}
                 </p>
               )}
@@ -121,7 +121,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
               {receipt.sources.length > 0 && (
                 <div className="space-y-1">
                   {receipt.sources.map((source) => (
-                    <div key={source.sourceId} className="flex items-center justify-between gap-3 text-[10px]">
+                    <div key={source.sourceId} className="flex items-center justify-between gap-3 text-3xs">
                       <span className="truncate text-slate-400">{source.label}</span>
                       <span className={source.tier === 'paid' ? 'font-mono text-emerald-400' : 'font-mono text-slate-500'}>
                         ${source.cost.toFixed(3)}
@@ -133,15 +133,15 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
 
               {anchor && (
                 <div className="border-t border-white/10 pt-2 space-y-1">
-                  <div className="flex items-center justify-between text-[10px]">
+                  <div className="flex items-center justify-between text-3xs">
                     <span className="text-slate-400">0G Recommendation Ledger</span>
                     <span className={`font-bold ${anchorColor}`}>{anchorLabel}</span>
                   </div>
                   {anchor.status === 'failed' && anchor.error && (
-                    <p className="text-[10px] text-rose-400">{anchor.error}</p>
+                    <p className="text-3xs text-rose-400">{anchor.error}</p>
                   )}
                   {anchorHasNoEvidence && (
-                    <p className="text-[10px] text-amber-500 dark:text-amber-400">
+                    <p className="text-3xs text-amber-500 dark:text-amber-400">
                       On-chain record is real, but the 0G Storage evidence upload did not complete — no reasoning CID is attached.
                     </p>
                   )}
@@ -150,7 +150,7 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                       href={anchor.explorerUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block text-[10px] font-mono text-blue-400 hover:text-blue-300 truncate"
+                      className="block text-3xs font-mono text-blue-400 hover:text-blue-300 truncate"
                     >
                       {anchor.txHash.slice(0, 18)}...{anchor.txHash.slice(-6)} ↗
                     </a>
@@ -158,12 +158,12 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between text-[10px] text-slate-400">
+              <div className="flex items-center justify-between text-3xs text-slate-400">
                 <div className="flex items-center gap-1">
-                  <span className="inline-block w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-[10px]">
+                  <span className="inline-block w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-3xs">
                     {receipt.status === 'failed' ? '!' : '✓'}
                   </span>
-                  <span className={`${statusColor} font-bold text-[10px]`}>
+                  <span className={`${statusColor} font-bold text-3xs`}>
                     {settlementTxHash ? 'Verified on-chain' : statusLabel}
                   </span>
                 </div>
@@ -176,13 +176,13 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
 
               {receipt.fundedAmount &&
                 Number.parseFloat(receipt.fundedAmount) > Number.parseFloat(receipt.amount || '0') && (
-                <div className="text-[10px] text-slate-500">
+                <div className="text-3xs text-slate-500">
                   Balance funded: <span className="font-mono">${receipt.fundedAmount}</span>
                 </div>
               )}
 
               {receipt.remainingCredit && (
-                <div className="text-[10px] text-slate-500">
+                <div className="text-3xs text-slate-500">
                   Balance left: <span className="font-mono">${receipt.remainingCredit}</span>
                 </div>
               )}
@@ -192,14 +192,14 @@ export function ResearchReceipt({ receipt, provider }: ResearchReceiptProps) {
                   href={settlementExplorer}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-[10px] font-mono text-blue-400 hover:text-blue-300 truncate"
+                  className="block text-3xs font-mono text-blue-400 hover:text-blue-300 truncate"
                 >
                   {settlementTxHash.slice(0, 18)}...{settlementTxHash.slice(-6)} ↗
                 </a>
               )}
 
               {gatewaySettlementId && (
-                <p className="text-[10px] text-slate-500">
+                <p className="text-3xs text-slate-500">
                   Paid from your Gateway balance · settles on-chain in Circle&rsquo;s next batch
                   <span className="font-mono"> · {gatewaySettlementId.slice(0, 8)}…</span>
                 </p>

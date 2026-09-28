@@ -123,13 +123,13 @@ export default function AgentTab({
         <div className="flex gap-3">
           <button
             onClick={() => retryStatus()}
-            className="min-h-[44px] px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors"
+            className="min-h-tap px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl transition-colors"
           >
             Try again
           </button>
           <button
             onClick={() => setDismissError(true)}
-            className="min-h-[44px] px-4 text-sm font-bold rounded-xl border border-gray-200 dark:border-gray-700"
+            className="min-h-tap px-4 text-sm font-bold rounded-xl border border-gray-200 dark:border-gray-700"
           >
             Continue anyway
           </button>
@@ -305,7 +305,7 @@ function ConnectedAgent({
                 return (
                   <div
                     data-testid="guardian-decision-ref"
-                    className="mt-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-[11px] text-gray-600 dark:text-gray-300 space-y-0.5"
+                    className="mt-2 rounded-lg bg-gray-50 dark:bg-gray-900/40 px-3 py-2 text-2xs text-gray-600 dark:text-gray-300 space-y-0.5"
                   >
                     <p className="font-bold text-gray-900 dark:text-white">
                       {kindLabel}
@@ -329,7 +329,7 @@ function ConnectedAgent({
                   askAdvisor(guardianContext.prompt, { decisionRef: guardianContext.decisionRef });
                   clearGuardianContext();
                 }}
-                className="mt-2 min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 transition-colors"
+                className="mt-2 min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-3 transition-colors"
               >
                 Ask Guardian about this
               </button>
@@ -404,7 +404,7 @@ function ConnectedAgent({
               <button
                 type="button"
                 onClick={() => setSel("bounds")}
-                className="min-h-[44px] px-3 text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+                className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400 shrink-0"
               >
                 Change limits
               </button>

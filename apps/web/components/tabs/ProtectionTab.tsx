@@ -720,7 +720,7 @@ export default function ProtectionTab({
                 type="button"
                 data-testid="picker-commit"
                 onClick={commitFocusedPlan}
-                className="min-h-[44px] px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
               >
                 Use this plan
               </button>
@@ -785,7 +785,7 @@ export default function ProtectionTab({
               testId="shield-live-line"
               beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
               alive
-              className="mt-2 block text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+              className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
             />
           )}
           {/* Compare transformation: the coin rail slides in under the
@@ -806,7 +806,7 @@ export default function ProtectionTab({
                       type="button"
                       data-testid="compare-commit"
                       onClick={commitFocusedPlan}
-                      className="min-h-[44px] px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                      className="min-h-tap px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
                     >
                       Use this plan
                     </button>
@@ -823,7 +823,7 @@ export default function ProtectionTab({
                 type="button"
                 data-testid="shield-biggest-gap-cta"
                 onClick={() => handleMarqueeSelect(biggestGap.token)}
-                className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+                className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
               >
                 Close the biggest gap: {biggestGap.token} ~
                 {fmt((biggestGap.gap / 100) * totalValue)}
@@ -848,7 +848,7 @@ export default function ProtectionTab({
                       showToast("Could not copy address", "error");
                     }
                   }}
-                  className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+                  className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
                 >
                   Copy address
                 </button>

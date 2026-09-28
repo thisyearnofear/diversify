@@ -95,9 +95,9 @@ export function CapitalJourney({
                     onInspectJourney?.();
                 }
             }}
-            className="mt-3 w-full cursor-pointer rounded-xl px-1 py-2 text-left min-h-[44px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            className="mt-3 w-full cursor-pointer rounded-xl px-1 py-2 text-left min-h-tap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         >
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="text-2xs text-gray-500 dark:text-gray-400">
                 {readOnly ? (
                     <>
                         Viewing {shortAddress(readOnly.address)} · read-only
@@ -172,7 +172,7 @@ export function CapitalJourney({
                     );
                 })}
             </FlickScrollRow>
-            <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-2xs text-gray-500 dark:text-gray-400">
                 {line}
             </p>
             {readOnly && <ReadOnlyConnectLine />}
@@ -185,7 +185,7 @@ export function CapitalJourney({
 function ReadOnlyConnectLine() {
     const { connect } = useWalletContext();
     return (
-        <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+        <p className="mt-0.5 text-2xs text-gray-500 dark:text-gray-400">
             Is this your wallet?{' '}
             <button
                 type="button"

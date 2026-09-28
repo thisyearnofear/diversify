@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy } from '@/context/PrivyProvider';
 import { useWalletContext } from './WalletProvider';
 import { useToast } from '../ui/Toast';
 import { SmartBuyCryptoButton, SmartSellCryptoButton } from '../onramp';
@@ -241,7 +241,7 @@ export default function WalletButton({
           {needsFunds && (
             <span
               data-testid="wallet-add-funds"
-              className="text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+              className="text-2xs font-semibold text-amber-600 dark:text-amber-400"
             >
               Add funds
             </span>
@@ -273,7 +273,7 @@ export default function WalletButton({
                     <div className="flex items-center justify-between mb-2">
                       <button
                         onClick={() => setShowChainSelector(true)}
-                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-[44px] py-1 rounded hover:brightness-95 dark:hover:brightness-110 transition-[filter] ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-tap py-1 rounded hover:brightness-95 dark:hover:brightness-110 transition-[filter] ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
                       >
                         {isTestnet ? 'TESTNET' : 'MAINNET'}
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -320,7 +320,7 @@ export default function WalletButton({
 
               <button
                 onClick={copyAddress}
-                className="flex items-center w-full min-h-[44px] px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                className="flex items-center w-full min-h-tap px-4 py-2 text-sm text-gray-900 dark:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                 aria-label="Copy wallet address"
               >
                 <svg
@@ -341,7 +341,7 @@ export default function WalletButton({
               </button>
               <button
                 onClick={handleDisconnect}
-                className="flex items-center w-full min-h-[44px] px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                className="flex items-center w-full min-h-tap px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                 aria-label="Disconnect wallet"
               >
                 <svg
@@ -413,7 +413,7 @@ export default function WalletButton({
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleConnect}
-        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 min-h-[44px] rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
+        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 min-h-tap rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
         title={hasInjectedWallet ? "Connect with MetaMask/Coinbase or other browser wallet" : "Connect via WalletConnect, Email, or Social login"}
       >
         {variant === 'primary' && (

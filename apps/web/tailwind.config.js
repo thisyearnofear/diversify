@@ -99,9 +99,36 @@ module.exports = {
           error: "#DC2626", // Red
           info: "#2563EB", // Blue
         },
+        // Semantic roles backed by CSS variables (styles/tokens.css) — one
+        // class covers light AND dark. Prefer these over gray-N + dark:gray-M.
+        surface: {
+          DEFAULT: "rgb(var(--surface-raised) / <alpha-value>)",
+          page: "rgb(var(--surface-page) / <alpha-value>)",
+          raised: "rgb(var(--surface-raised) / <alpha-value>)",
+          sunken: "rgb(var(--surface-sunken) / <alpha-value>)",
+        },
+        ink: {
+          DEFAULT: "rgb(var(--ink) / <alpha-value>)",
+          muted: "rgb(var(--ink-muted) / <alpha-value>)",
+          subtle: "rgb(var(--ink-subtle) / <alpha-value>)",
+        },
+        line: "rgb(var(--line) / <alpha-value>)",
+      },
+      // Micro text in rem so it scales with browser zoom / root font size.
+      // Replaces text-[11px] / text-[10px]; nothing smaller should ship.
+      // Size only (no line-height), matching the arbitrary values they
+      // replace — pair with leading-* where a line box matters.
+      fontSize: {
+        "2xs": "0.6875rem",
+        "3xs": "0.625rem",
+      },
+      // min-h-tap / min-w-tap / size-tap — the 44px touch-target floor.
+      spacing: {
+        tap: "var(--tap-min)",
       },
       fontFamily: {
-        sans: ["Inter", "sans-serif"],
+        // --font-sans is set on :root by next/font in pages/_app.tsx.
+        sans: ["var(--font-sans)", "Inter", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       boxShadow: {
         card: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",

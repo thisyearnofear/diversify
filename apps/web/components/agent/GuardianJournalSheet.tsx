@@ -48,7 +48,7 @@ export function GuardianJournalSheet({
             <h5 className="text-xs font-bold uppercase tracking-wide text-blue-600 dark:text-blue-300">
               Latest suggestion
             </h5>
-            <span className="text-[11px] text-gray-400">
+            <span className="text-2xs text-gray-400">
               {new Date(sessionInfo.latestRecommendation.capturedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
@@ -62,7 +62,7 @@ export function GuardianJournalSheet({
             {sessionInfo.latestRecommendation.oneLiner || sessionInfo.latestRecommendation.reasoning}
           </p>
           {sessionInfo.latestRecommendation.researchEvidence?.bundle && (
-            <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-gray-600 dark:text-gray-300">
+            <div className="mt-3 flex flex-wrap gap-2 text-2xs font-bold text-gray-600 dark:text-gray-300">
               <span className="px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 rounded-full">
                 Confidence {(sessionInfo.latestRecommendation.researchEvidence.bundle.confidence * 100).toFixed(0)}%
               </span>
@@ -78,7 +78,7 @@ export function GuardianJournalSheet({
             <button
               type="button"
               onClick={onReviewMove}
-              className="mt-3 w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
+              className="mt-3 w-full min-h-tap rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-colors"
             >
               Review this move →
             </button>

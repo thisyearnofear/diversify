@@ -63,7 +63,7 @@ function WhatIfStatement({ whatIf }: { whatIf: PairWhatIf }) {
   const sentence = whatIfSentence(whatIf);
   return (
     <span className="block" data-testid="pair-whatif">
-      <span className="mr-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+      <span className="mr-1 text-3xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
         What if · data to {whatIf.dataAsOfLabel}
       </span>
       <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
@@ -159,7 +159,7 @@ export function CorridorLine({
   const topLine = decisionOpen ? (
     <span className="block" data-testid="decision-window">
       <span className="flex items-center justify-between gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
+        <span className="text-3xs font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">
           Decision window
         </span>
         <button
@@ -169,7 +169,7 @@ export function CorridorLine({
             e.stopPropagation();
             onExitDecisionWindow?.();
           }}
-          className="min-h-[24px] text-[10px] font-semibold text-blue-600 dark:text-blue-400"
+          className="min-h-[24px] text-3xs font-semibold text-blue-600 dark:text-blue-400"
         >
           ← Story
         </button>
@@ -180,7 +180,7 @@ export function CorridorLine({
             {s.sig!.dateLabel} {corridorSideFor(s.token)?.flag ?? ''}: {s.sig!.text}
           </span>
           {s.provenance?.watch && (
-            <span className="block text-[11px] text-gray-500 dark:text-gray-400">
+            <span className="block text-2xs text-gray-500 dark:text-gray-400">
               Decided at {s.provenance.watch.event} · {s.provenance.watch.cadence}
             </span>
           )}
@@ -251,10 +251,10 @@ export function CorridorLine({
               setExplored(true);
               onHorizon?.(h.key);
             }}
-            className="-my-2 flex min-h-[44px] items-center px-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+            className="-my-2 flex min-h-tap items-center px-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
           >
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors ${
+              className={`rounded-full px-2 py-0.5 text-3xs font-bold transition-colors ${
                 selected
                   ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-900 dark:text-white'
                   : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
@@ -271,7 +271,7 @@ export function CorridorLine({
     <>
       {topLine}
       {corridor && (
-        <span className={`block text-[11px] text-gray-500 dark:text-gray-400${beats.length > 0 || pinned ? ' mt-0.5' : ''}`}>
+        <span className={`block text-2xs text-gray-500 dark:text-gray-400${beats.length > 0 || pinned ? ' mt-0.5' : ''}`}>
           {corridorText}
           {control} {!control && arrow}
           {control && onInspect && arrow}
@@ -282,7 +282,7 @@ export function CorridorLine({
 
   if (!onInspect && !control) {
     return (
-      <p data-testid="corridor-line" className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+      <p data-testid="corridor-line" className="mt-1 text-2xs text-gray-500 dark:text-gray-400">
         {body}
       </p>
     );
@@ -294,13 +294,13 @@ export function CorridorLine({
     return (
       <div
         data-testid="corridor-line"
-        className="mt-1 text-left text-[11px] text-gray-500 dark:text-gray-400 min-h-[32px]"
+        className="mt-1 text-left text-2xs text-gray-500 dark:text-gray-400 min-h-[32px]"
       >
         {(control || decisionOpen) && onInspect ? (
           <>
             {topLine}
             {corridor && (
-              <span className="mt-0.5 block text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="mt-0.5 block text-2xs text-gray-500 dark:text-gray-400">
                 <button
                   type="button"
                   onClick={onInspect}
@@ -323,7 +323,7 @@ export function CorridorLine({
       type="button"
       data-testid="corridor-line"
       onClick={onInspect}
-      className="mt-1 text-left text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
+      className="mt-1 text-left text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 min-h-[32px] transition-colors"
     >
       {body}
     </button>
@@ -367,7 +367,7 @@ function SideTrack({ side }: { side: CorridorSide }) {
         <p className="text-xs font-semibold text-gray-900 dark:text-white">
           {side.flag} {side.name}
         </p>
-        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="mt-0.5 text-2xs text-gray-400 dark:text-gray-500">
           The benchmark everything here is measured against.
         </p>
       </div>
@@ -384,7 +384,7 @@ function SideTrack({ side }: { side: CorridorSide }) {
       <p className="text-xs font-semibold text-gray-900 dark:text-white">
         {side.flag} {e.countryName} — {e.code}
       </p>
-      <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+      <p className="mt-0.5 text-2xs text-gray-500 dark:text-gray-400">
         {isAnchor
           ? `The anchor — still ${e.depreciation.vsXAU['5yr']}% vs gold (5y)`
           : `${e.depreciation.vsUSD['5yr']}% vs USD · ${e.depreciation.vsXAU['5yr']}% vs gold (5y)`}
@@ -392,7 +392,7 @@ function SideTrack({ side }: { side: CorridorSide }) {
       {/* The anchor can't depreciate against itself — the 1yr overlay
           only exists where a vs-USD figure means something. */}
       {!isAnchor && (
-        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="mt-0.5 text-2xs text-gray-400 dark:text-gray-500">
           {signedPct(oneYear.value)} vs USD (1y) ·{' '}
           {oneYear.live
             ? `live · as of ${oneYear.asOf}`
@@ -404,19 +404,19 @@ function SideTrack({ side }: { side: CorridorSide }) {
       {e.riskEvents.length > 0 && (
         <div className="mt-0.5 space-y-0.5">
           {[...e.riskEvents].reverse().map((ev, i) => (
-            <p key={`${ev.year}-${i}`} className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+            <p key={`${ev.year}-${i}`} className="text-2xs text-gray-400 dark:text-gray-500 leading-relaxed">
               {ev.year} ({riskEventAge(ev.year)}): {ev.event} — {ev.impact}
             </p>
           ))}
           {/* Freshness is disclosed, not implied — the trail reports when
               it was last verified against named sources. */}
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          <p className="text-3xs text-gray-400 dark:text-gray-500">
             Checked {riskTrailCheckedAt(e)} · curated, not a feed
           </p>
         </div>
       )}
       {e.goodsAnchor && (
-        <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="mt-0.5 text-2xs text-gray-400 dark:text-gray-500">
           Risk is priced in {e.goodsAnchor.unit} locally.
         </p>
       )}
@@ -485,7 +485,7 @@ function StoryPairChip({
       onClick={() => {
         if (!didDragRef.current) onPick(from, to);
       }}
-      className={`flex shrink-0 snap-start items-center rounded-full border px-2.5 py-1.5 text-[10px] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
+      className={`flex shrink-0 snap-start items-center rounded-full border px-2.5 py-1.5 text-3xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60 ${
         isActive
           ? 'border-blue-300 bg-blue-50 text-blue-800 dark:border-blue-700 dark:bg-blue-950/40 dark:text-blue-200'
           : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300'
@@ -534,21 +534,21 @@ function ProvenanceSide({
         {p.origin.flag} {p.symbol} · {p.issuer}
       </p>
       {rows.map((row) => (
-        <p key={row.key} className="mt-1 text-[11px] leading-relaxed text-gray-600 dark:text-gray-300">
+        <p key={row.key} className="mt-1 text-2xs leading-relaxed text-gray-600 dark:text-gray-300">
           <span className="font-semibold text-gray-900 dark:text-white">{row.label}</span> {row.text}
         </p>
       ))}
       {p.moment && (
-        <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="mt-1 text-2xs text-gray-400 dark:text-gray-500">
           {p.moment.year}: {p.moment.text}
         </p>
       )}
       {p.watch && (
-        <p className="mt-1 text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="mt-1 text-2xs text-gray-400 dark:text-gray-500">
           <span className="font-semibold">Watch</span> {p.watch.event} ({p.watch.cadence})
         </p>
       )}
-      <p className="mt-1 text-[10px] text-gray-400">
+      <p className="mt-1 text-3xs text-gray-400">
         Checked {p.asOf} · {p.sources.map((s, i) => (
           <React.Fragment key={s.url}>
             {i > 0 && ' · '}
@@ -580,7 +580,7 @@ export function CorridorDetail({
     <div data-testid="corridor-detail" className="mt-4 border-t border-gray-100 dark:border-gray-800 pt-3 space-y-3">
       {corridor && (
         <>
-          <p className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
+          <p className="text-2xs font-semibold text-gray-700 dark:text-gray-300">
             {corridor.line}
           </p>
           <div className="grid grid-cols-2 gap-3">

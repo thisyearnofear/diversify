@@ -145,7 +145,7 @@ export default function AppHeader({
                 aria-checked={isSelected}
                 tabIndex={isSelected ? 0 : -1}
                 onClick={() => setExperienceMode(mode)}
-                className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                   isSelected
                     ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white"
                     : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"

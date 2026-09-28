@@ -71,7 +71,7 @@ const SwapActionButton: React.FC<SwapActionButtonProps> = ({
     );
 
     const buttonClass =
-        "relative w-full min-h-[44px] py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none";
+        "relative w-full min-h-tap py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] motion-reduce:transition-none motion-reduce:transform-none";
 
     // Sticky mobile: fixed bottom button with safe-area support (mobile only,
     // non-instrument contexts — in instrument mode the dock owns the bottom edge)

@@ -188,26 +188,26 @@ const ExpectedOutputCard: React.FC<ExpectedOutputCardProps> = ({
             <div className="mt-1 px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
               <dl className="grid grid-cols-2 gap-2">
                 <div>
-                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">You send</dt>
+                  <dt className="text-3xs font-semibold uppercase tracking-wide text-gray-400">You send</dt>
                   <dd className="text-xs font-bold text-gray-900 dark:text-gray-100">
                     {parsedAmount.toFixed(4)} {fromToken}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">You receive</dt>
+                  <dt className="text-3xs font-semibold uppercase tracking-wide text-gray-400">You receive</dt>
                   <dd className="text-xs font-bold text-gray-900 dark:text-gray-100">
                     {parsedOutput.toFixed(4)} {toToken}
                   </dd>
                 </div>
                 {fromChainName && (
                   <div>
-                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">From</dt>
+                    <dt className="text-3xs font-semibold uppercase tracking-wide text-gray-400">From</dt>
                     <dd className="text-xs font-bold text-gray-900 dark:text-gray-100">{fromChainName}</dd>
                   </div>
                 )}
                 {toChainName && (
                   <div>
-                    <dt className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">To</dt>
+                    <dt className="text-3xs font-semibold uppercase tracking-wide text-gray-400">To</dt>
                     <dd className="text-xs font-bold text-gray-900 dark:text-gray-100">{toChainName}</dd>
                   </div>
                 )}

@@ -45,7 +45,7 @@ export function UnconnectedStatusTier({
         <button
           type="button"
           onClick={onDisableDemo}
-          className="min-h-[44px] px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0"
+          className="min-h-tap px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0"
         >
           Sample data on · Exit
         </button>
@@ -53,7 +53,7 @@ export function UnconnectedStatusTier({
         <button
           type="button"
           onClick={onEnableDemo}
-          className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+          className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
         >
           Explore a sample plan
         </button>

@@ -105,6 +105,21 @@
   --motion-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
   --motion-ease-in: cubic-bezier(0.4, 0, 1, 1);
   --motion-ease-out: cubic-bezier(0, 0, 0.2, 1);
+
+  /* ── Semantic surface / ink (RGB channels → Tailwind `bg-surface`,
+        `text-ink-muted`, `border-line`, with /alpha support). Dark values
+        live in .dark below — components never hand-pair dark: classes
+        for these roles. ─────────────────────────────────────────────── */
+  --surface-page:    243 244 246;  /* gray-100 — body */
+  --surface-raised:  255 255 255;  /* white — cards, sheets */
+  --surface-sunken:  249 250 251;  /* gray-50 — inputs, wells */
+  --ink:             17 24 39;     /* gray-900 — primary text */
+  --ink-muted:       107 114 128;  /* gray-500 — secondary text */
+  --ink-subtle:      156 163 175;  /* gray-400 — tertiary, captions */
+  --line:            229 231 235;  /* gray-200 — hairlines */
+
+  /* ── Touch target — 44px (Apple HIG) floor for anything tappable ── */
+  --tap-min: 2.75rem;
 }
 
 /* ── Dark Mode Overrides ──────────────────────────────────────────────── */
@@ -124,4 +139,12 @@
   --surface-glass-dark:    rgba(15,23,42,0.92);
 
   --shadow-glass:          0 8px 32px 0 rgba(0,0,0,0.3);
+
+  --surface-page:    17 24 39;     /* gray-900 */
+  --surface-raised:  17 24 39;     /* gray-900 */
+  --surface-sunken:  31 41 55;     /* gray-800 */
+  --ink:             255 255 255;  /* white */
+  --ink-muted:       156 163 175;  /* gray-400 */
+  --ink-subtle:      107 114 128;  /* gray-500 */
+  --line:            31 41 55;     /* gray-800 */
 }

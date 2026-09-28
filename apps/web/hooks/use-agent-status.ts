@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy } from '@/context/PrivyProvider';
 import { AI_FEATURES, AUTONOMOUS_FEATURES } from "../config/features";
 import type { AICapabilities, AutonomousStatus } from "./agent-types";
 

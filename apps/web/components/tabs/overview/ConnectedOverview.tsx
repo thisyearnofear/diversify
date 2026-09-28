@@ -334,7 +334,7 @@ export function ConnectedOverview({
           <div className="mt-5">
             <button
               onClick={() => setActiveTab("protect")}
-              className="min-h-[44px] px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+              className="min-h-tap px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
             >
               {ctaLabel}
             </button>
@@ -381,7 +381,7 @@ export function ConnectedOverview({
                 region: selected.region,
               })
             }
-            className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+            className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
           >
             Strengthen {selected.region} coverage in Shield
           </button>
@@ -392,7 +392,7 @@ export function ConnectedOverview({
                 `How exposed am I to ${selected.region}? Review my ${selected.region} holdings and tell me whether that concentration fits my goal.`,
               )
             }
-            className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             Ask Guardian about this region
           </button>
@@ -431,7 +431,7 @@ export function ConnectedOverview({
       type="button"
       data-testid="home-cycle-link"
       onClick={openCycle}
-      className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+      className="min-h-tap text-sm font-semibold text-blue-600 dark:text-blue-400"
     >
       See what FX timing costs this payment →
     </button>
@@ -443,7 +443,7 @@ export function ConnectedOverview({
           trackFunnelEvent("graduation_prompt_clicked", { signal: graduationLead });
           openCycle();
         }}
-        className="min-h-[44px] text-left text-sm font-semibold text-blue-600 dark:text-blue-400"
+        className="min-h-tap text-left text-sm font-semibold text-blue-600 dark:text-blue-400"
       >
         {graduationLine}
       </button>
@@ -454,7 +454,7 @@ export function ConnectedOverview({
           trackFunnelEvent("graduation_prompt_dismissed", { signal: graduationLead });
           void graduation.dismiss();
         }}
-        className="min-h-[44px] min-w-[44px] shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+        className="min-h-tap min-w-tap shrink-0 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
       >
         ×
       </button>
@@ -469,7 +469,7 @@ export function ConnectedOverview({
           trackFunnelEvent("lens_open", { tab: "home", lens: "concentration" });
         }
       }}
-      className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+      className="min-h-tap text-sm font-semibold text-blue-600 dark:text-blue-400"
     >
       See your concentration →
     </button>
@@ -479,7 +479,7 @@ export function ConnectedOverview({
     <button
       type="button"
       onClick={() => navigateToCompare()}
-      className="min-h-[44px] text-sm font-semibold text-blue-600 dark:text-blue-400"
+      className="min-h-tap text-sm font-semibold text-blue-600 dark:text-blue-400"
       data-testid="home-compare-link"
     >
       Compare philosophies →

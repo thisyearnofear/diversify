@@ -19,6 +19,12 @@ interface InstrumentWaitProps {
   symbol?: string;
   color?: string;
   className?: string;
+  /**
+   * Spring the coin in on mount. Off for the server-rendered boot shell:
+   * framer serialises `initial` into the HTML, so a spring-in would ship an
+   * invisible (opacity 0) coin until JavaScript hydrates.
+   */
+  animateIn?: boolean;
 }
 
 export function InstrumentWait({
@@ -26,6 +32,7 @@ export function InstrumentWait({
   symbol = "$",
   color = GOLD,
   className = "",
+  animateIn = true,
 }: InstrumentWaitProps) {
   const reducedMotion = useReducedMotion();
 
@@ -38,7 +45,7 @@ export function InstrumentWait({
       className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${className}`.trim()}
     >
       <motion.div
-        initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
+        initial={reducedMotion || !animateIn ? false : { scale: 0.86, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={reducedMotion ? { duration: 0 } : spring}
       >
@@ -49,7 +56,7 @@ export function InstrumentWait({
           shine={reducedMotion ? false : "once"}
         />
       </motion.div>
-      <p className="mt-4 text-sm font-medium text-gray-500 dark:text-gray-400 text-center">
+      <p className="mt-4 text-sm font-medium text-ink-muted text-center">
         {label}
       </p>
     </div>

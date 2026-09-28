@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, Variants } from "framer-motion";
 import type { ReactNode } from "react";
+import { springPress } from "@/lib/motion-tokens";
 
 // ============================================================================
 // ANIMATION UTILITIES
@@ -242,7 +243,7 @@ export const staggerItemVariants: Variants = {
 export const pressableMotion = {
   whileTap: { scale: 0.97 },
   whileHover: { scale: 1.02 },
-  transition: { type: "spring", stiffness: 400, damping: 17 },
+  transition: springPress,
 };
 
 /**
@@ -257,7 +258,7 @@ export const liftableMotion = {
   whileHover: { 
     y: -4, 
     boxShadow: "0 12px 24px rgba(0,0,0,0.1)",
-    transition: { type: "spring", stiffness: 300, damping: 20 }
+    transition: springPress
   },
   whileTap: { scale: 0.98 },
 };

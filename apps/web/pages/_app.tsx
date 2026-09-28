@@ -3,9 +3,20 @@ import type { AppProps } from "next/app";
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import dynamic from "next/dynamic";
+import { Inter } from "next/font/google";
 
 import { useAppInit } from "../hooks/use-app-init";
 import ProviderTree from "../components/app/ProviderTree";
+import { InstrumentWait } from "../components/shared/InstrumentWait";
+import { OfflineBanner } from "../components/ui/OfflineBanner";
+
+// Self-hosted at build time (no runtime request to Google), with a
+// metric-matched fallback so the swap doesn't shift layout. Exposed as
+// --font-sans on :root so portalled sheets and dialogs inherit it too.
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const AIChat = dynamic(() => import("../components/agent/AIChat"), {
   ssr: false,
@@ -29,6 +40,11 @@ const headMeta = (
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="/icon.png" />
     <link rel="apple-touch-icon" href="/icon.png" />
+    <style
+      dangerouslySetInnerHTML={{
+        __html: `:root{--font-sans:${inter.style.fontFamily};}`,
+      }}
+    />
   </Head>
 );
 
@@ -43,7 +59,17 @@ export default function App({ Component, pageProps }: AppProps) {
   }, []);
 
   if (!ready) {
-    return <>{headMeta}</>;
+    // Server-rendered boot shell: the same waiting object the tabs use, so
+    // first paint is the brand coin + one line instead of a blank page.
+    // Static (no spring-in) — framer would serialise opacity 0 into the HTML.
+    return (
+      <>
+        {headMeta}
+        <main className="min-h-screen flex items-center justify-center">
+          <InstrumentWait label="Opening DiversiFi" animateIn={false} />
+        </main>
+      </>
+    );
   }
 
   return (
@@ -53,6 +79,7 @@ export default function App({ Component, pageProps }: AppProps) {
         <ProactiveAgentRunner />
         <Component {...pageProps} isInMiniPay={isInMiniPay} />
         <AIChat />
+        <OfflineBanner />
       </ProviderTree>
     </>
   );

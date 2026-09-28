@@ -49,7 +49,7 @@ function MomentShareLine({ code }: { code: string }) {
     <button
       type="button"
       onClick={share}
-      className="mt-2 min-h-11 px-1 text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+      className="mt-2 min-h-11 px-1 text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
     >
       {copied ? 'Link copied' : "Share this currency's story ↗"}
     </button>
@@ -188,7 +188,7 @@ function CurrencyStoryBody({
       {trail.length > 0 && (
         <div className="space-y-0.5">
           {signal && (
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed">
+            <p className="text-2xs text-gray-400 dark:text-gray-500 leading-relaxed">
               <span className="mr-1 text-[9px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400">
                 live
               </span>
@@ -198,14 +198,14 @@ function CurrencyStoryBody({
           {trail.map((ev, i) => (
             <p
               key={`${ev.year}-${i}`}
-              className="text-[11px] text-gray-400 dark:text-gray-500 leading-relaxed"
+              className="text-2xs text-gray-400 dark:text-gray-500 leading-relaxed"
             >
               {ev.year} ({riskEventAge(ev.year)}): {ev.event} — {ev.impact}
             </p>
           ))}
           {/* Freshness is disclosed, not implied — same provenance
               grammar as the corridor trail. */}
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          <p className="text-3xs text-gray-400 dark:text-gray-500">
             Checked {riskTrailCheckedAt(entry)} · curated, not a feed
           </p>
         </div>
@@ -219,7 +219,7 @@ function CurrencyStoryBody({
             `Tell me the story of the ${entry.code} (${entry.countryName}): what has happened to this currency — devaluations, pegs, central-bank events — and what does its history mean for someone saving in it?`,
           );
         }}
-        className="mt-2 min-h-11 px-1 text-[11px] font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        className="mt-2 min-h-11 px-1 text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
       >
         Ask Guardian about the {entry.code} →
       </button>

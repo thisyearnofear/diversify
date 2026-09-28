@@ -107,7 +107,7 @@ export function PlanFloorControl({
               aria-checked={isSelected}
               tabIndex={isSelected ? 0 : -1}
               onClick={() => onChange(opt)}
-              className={`min-h-[44px] px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              className={`min-h-tap px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected
                   ? `bg-white dark:bg-gray-900 shadow-sm ${accent ? "" : "text-gray-900 dark:text-white"}`
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
@@ -135,12 +135,12 @@ export function PlanFloorControl({
                 restoreFocus.current = true;
                 onApply();
               }}
-              className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             >
               Use this balance
             </button>
           ) : (
-            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="text-2xs text-gray-500 dark:text-gray-400">
               Sample preview only — nothing will be saved.
             </p>
           )}
@@ -150,7 +150,7 @@ export function PlanFloorControl({
               restoreFocus.current = true;
               onCancel();
             }}
-            className="min-h-[44px] w-full text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded-xl"
+            className="min-h-tap w-full text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded-xl"
           >
             Keep current balance
           </button>

@@ -52,7 +52,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
 
         <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-2xl text-center border border-emerald-100 dark:border-emerald-800">
-            <div className="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest mb-1">
+            <div className="text-3xs text-emerald-600 dark:text-emerald-400 font-black uppercase tracking-widest mb-1">
               Received
             </div>
             <div className="text-xl font-black text-emerald-700 dark:text-emerald-300">
@@ -60,7 +60,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
             </div>
           </div>
           <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-2xl text-center border border-blue-100 dark:border-blue-800">
-            <div className="text-[10px] text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mb-1">
+            <div className="text-3xs text-blue-600 dark:text-blue-400 font-black uppercase tracking-widest mb-1">
               Streak
             </div>
             <div className="text-xl font-black text-blue-700 dark:text-blue-300">

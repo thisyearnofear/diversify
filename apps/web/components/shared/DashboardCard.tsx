@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { springPress } from "@/lib/motion-tokens";
 
 interface DashboardCardProps {
     title: string;
@@ -56,7 +57,7 @@ export default function DashboardCard({
             onClick={onClick}
             whileHover={isInteractive ? { scale: 1.02 } : undefined}
             whileTap={isInteractive ? { scale: 0.97 } : undefined}
-            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            transition={springPress}
             className={`
         bg-gradient-to-br ${colorClasses[color]}
         rounded-xl shadow-sm backdrop-blur-sm

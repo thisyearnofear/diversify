@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { usePrivy, useWallets } from "@privy-io/react-auth";
+import { usePrivy, useWallets, useEnsurePrivyReady } from '@/context/PrivyProvider';
 // Deep leaf imports — NOT the barrel. These wallet-core modules are light
 // (farcaster SDK is lazy-loaded inside), but importing them via the
 // @diversifi/shared barrel drags the whole AI/swap/ethers stack into
@@ -48,6 +48,10 @@ export function useWallet() {
   // Privy hooks (always call hooks, check enabled status separately)
   const privy = usePrivy();
   const { wallets: privyWallets } = useWallets();
+  const ensurePrivyReady = useEnsurePrivyReady();
+  // Aliases for connect(), which may swap in a freshly-mounted snapshot.
+  const privyState = privy;
+  const privyStateWallets = privyWallets;
   const privyEnabled =
     WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID;
 
@@ -283,7 +287,20 @@ export function useWallet() {
         }
       }
 
-      // PRIORITY 2: No injected wallet or user rejected - use Privy for social login
+      // PRIORITY 2: No injected wallet or user rejected - use Privy for social login.
+      // The Privy host is deferred for walletless visitors; a connect tap
+      // mounts it now and waits for it, so the first tap still opens login.
+      let privy = privyState;
+      let privyWallets = privyStateWallets;
+      if (privyEnabled && !privy.ready) {
+        try {
+          const live = await ensurePrivyReady();
+          privy = live.privy;
+          privyWallets = live.wallets;
+        } catch (hostError) {
+          console.warn("[Wallet] Privy host not ready:", hostError);
+        }
+      }
       if (privyEnabled && privy.ready) {
         // Check if already authenticated
         if (privy.authenticated) {

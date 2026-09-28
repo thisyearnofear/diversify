@@ -73,7 +73,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         {action && (
           <button
             onClick={action.onClick}
-            className="mt-2 min-h-[44px] px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md"
+            className="mt-2 min-h-tap px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-md"
           >
             {action.label}
           </button>
@@ -83,7 +83,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
         {secondaryAction && (
           <button
             onClick={secondaryAction.onClick}
-            className="min-h-[44px] px-5 py-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+            className="min-h-tap px-5 py-2 text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
           >
             {secondaryAction.label}
           </button>

@@ -105,14 +105,14 @@ export function GuardianCadenceLine() {
     return (
         <div className="mt-3 space-y-1" data-testid="guardian-cadence">
             {guardian && (
-                <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 tabular-nums">
+                <p className="text-2xs font-semibold text-emerald-700 dark:text-emerald-300 tabular-nums">
                     <motion.span>{checks}</motion.span> checks this week
                     {guardian.executions > 0 ? ` · ${guardian.executions} executed` : ''}
                     {median ? ` · median decision ${median}` : ''}
                 </p>
             )}
             {lens && lens.reviews > 0 && (
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                <p className="text-3xs text-gray-500 dark:text-gray-400">
                     Signal Lens: {lens.reviews.toLocaleString()} advisory shadow reviews
                     {lensMedian ? ` · median ${lensMedian}` : ''}
                     {lens.agreement && lens.agreement.compared >= 5 && (
@@ -125,7 +125,7 @@ export function GuardianCadenceLine() {
                 </p>
             )}
             {askWorld && askWorld.comparisons > 0 && (
-                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                <p className="text-3xs text-gray-500 dark:text-gray-400">
                     Ask the World: {askWorld.comparisons.toLocaleString()} TypeSafe router comparisons
                     {askWorldMedian ? ` · median ${askWorldMedian}` : ''}
                     {askWorld.agreement && askWorld.agreement.compared >= 5 && (
@@ -273,7 +273,7 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
                         <div className="text-2xl font-black text-emerald-900 dark:text-emerald-100 tabular-nums" aria-hidden="true">
                             {stats.totalRecommendations.toLocaleString()}
                         </div>
-                        <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider" aria-hidden="true">
+                        <div className="text-3xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider" aria-hidden="true">
                             on-chain receipts
                         </div>
                     </div>
@@ -304,7 +304,7 @@ export function LiveProofCard({ variant = 'full' }: LiveProofCardProps) {
             <GuardianCadenceLine />
 
             {isStale && data?.capturedAt && (
-                <p className="mt-2 text-[10px] text-amber-600 dark:text-amber-400 font-bold" role="status">
+                <p className="mt-2 text-3xs text-amber-600 dark:text-amber-400 font-bold" role="status">
                     Showing last known data ({timeAgo(data.capturedAt)}).
                 </p>
             )}
@@ -351,13 +351,13 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
             className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-white dark:bg-gray-900 p-3"
             data-testid="live-proof-ticker"
         >
-            <h4 className="text-[10px] font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-1">
+            <h4 className="text-3xs font-black uppercase tracking-widest text-emerald-700 dark:text-emerald-300 mb-1">
                 Recent on-chain activity
             </h4>
             {/* §7 chain-agnostic trust: the badges name the chains (data);
                 prose stays rail-blind. Which chains exist is not this
                 line's job — the ✓ explainer is. */}
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug mb-2">
+            <p className="text-3xs text-gray-500 dark:text-gray-400 leading-snug mb-2">
                 Live Guardian receipts across our settlement networks — the badge on each row
                 names its chain. A <span className="font-bold text-emerald-600 dark:text-emerald-400">✓</span> means
                 the chain&apos;s RPC confirmed the receipt against the ledger contract.
@@ -382,7 +382,7 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                             <span className="size-1.5 rounded-full bg-emerald-500 shrink-0" aria-hidden />
                             {rec.chainId != null && (
                                 <span
-                                    className={`text-[10px] font-bold uppercase tracking-wider shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${badge?.color ?? 'bg-emerald-100 text-emerald-700 border-emerald-200'} ${badge?.darkColor ?? 'dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'}`}
+                                    className={`text-3xs font-bold uppercase tracking-wider shrink-0 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border ${badge?.color ?? 'bg-emerald-100 text-emerald-700 border-emerald-200'} ${badge?.darkColor ?? 'dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-800'}`}
                                 >
                                     <span aria-hidden="true">{badge?.icon ?? '🔗'}</span>
                                     <span>{getLedgerProofLabel(rec.chainId)}</span>
@@ -427,7 +427,7 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                         </>
                     );
                     return (
-                        <li key={`${rec.chainId ?? 0}-${rec.id}`} className="text-[11px] text-emerald-900 dark:text-emerald-100">
+                        <li key={`${rec.chainId ?? 0}-${rec.id}`} className="text-2xs text-emerald-900 dark:text-emerald-100">
                             {verifyUrl ? (
                                 <a
                                     href={verifyUrl}
@@ -447,7 +447,7 @@ export function LiveProofTicker({ limit = 3 }: { limit?: number }) {
                             )}
                             {rec.reasoning && (
                                 <p
-                                    className="text-[10px] text-gray-500 dark:text-gray-400 leading-snug line-clamp-1 pl-3.5 pb-1"
+                                    className="text-3xs text-gray-500 dark:text-gray-400 leading-snug line-clamp-1 pl-3.5 pb-1"
                                     title={rec.reasoning}
                                 >
                                     {rec.reasoning}

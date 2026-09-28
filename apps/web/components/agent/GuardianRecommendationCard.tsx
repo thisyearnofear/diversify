@@ -34,7 +34,7 @@ function ContractRow({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
     <div className="space-y-0.5">
-      <p className="text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+      <p className="text-3xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
         {label}
       </p>
       <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed">{value}</p>
@@ -58,14 +58,14 @@ export function GuardianRecommendationCard({
       data-lifecycle={contract.lifecycleState}
     >
       <div className="flex items-start justify-between gap-2">
-        <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-full ${stateStyle}`}>
+        <span className={`text-3xs font-black uppercase tracking-wider px-2 py-1 rounded-full ${stateStyle}`}>
           {RECOMMENDATION_STATE_LABELS[contract.lifecycleState]}
         </span>
         {contract.provenance && (
           <button
             type="button"
             onClick={() => setShowProvenance((v) => !v)}
-            className="min-h-11 px-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 uppercase tracking-wide"
+            className="min-h-11 px-2 text-3xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 uppercase tracking-wide"
           >
             {showProvenance ? 'Hide data' : 'Data source'}
           </button>
@@ -73,7 +73,7 @@ export function GuardianRecommendationCard({
       </div>
 
       {showProvenance && contract.provenance && (
-        <div className="text-[10px] text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 space-y-1">
+        <div className="text-3xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg p-2 space-y-1">
           {contract.provenance.timestamp && <p>As of: {contract.provenance.timestamp}</p>}
           {contract.provenance.benchmark && <p>Benchmark: {contract.provenance.benchmark}</p>}
           {contract.provenance.period && <p>Period: {contract.provenance.period}</p>}
@@ -96,7 +96,7 @@ export function GuardianRecommendationCard({
         {(contract.whatChanged || contract.whyItMatters || contract.costsAndRisks || contract.proofTrail) && (
           <details className="group rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/40">
             <summary className="min-h-11 flex items-center px-3 cursor-pointer list-none select-none">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 flex-1">
+              <span className="text-3xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400 flex-1">
                 Why this proposal — context, risks, proof
               </span>
               <span

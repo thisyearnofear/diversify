@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { useReducedMotion } from 'framer-motion';
 import { Coin } from '../../../shared/FloatingCoins';
 import type { Phase } from './phase-config';
+import { springPop } from "@/lib/motion-tokens";
 
 export const STEPS: { id: Phase; label: string }[] = [
   { id: 'detect', label: 'You' },
@@ -34,9 +35,9 @@ export function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p:
             {i > 0 && (
               <div className="w-10 h-[2px] rounded-full mt-[15px] mx-1 overflow-hidden bg-gray-200 dark:bg-gray-700">
                 <motion.div
-                  className="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
+                  className="h-full w-full origin-left rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
                   initial={false}
-                  animate={{ width: i <= idx ? '100%' : '0%' }}
+                  animate={{ scaleX: i <= idx ? 1 : 0 }}
                   transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
                 />
               </div>
@@ -63,7 +64,7 @@ export function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p:
                   <motion.span
                     initial={{ scale: 0, rotate: -90 }}
                     animate={{ scale: 1, rotate: 0 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 18 }}
+                    transition={springPop}
                     className="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-black flex items-center justify-center shadow-sm"
                   >
                     ✓
@@ -78,7 +79,7 @@ export function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p:
                 )}
               </span>
               <span
-                className={`text-[10px] font-black uppercase tracking-widest ${
+                className={`text-3xs font-black uppercase tracking-widest ${
                   isActive
                     ? 'text-amber-500'
                     : isDone

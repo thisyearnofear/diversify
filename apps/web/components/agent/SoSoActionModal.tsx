@@ -14,6 +14,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { SoSoNewsItem } from './SoSoIntelligenceCard';
 import { Scrim } from '@/components/shared/Scrim';
+import { spring } from "@/lib/motion-tokens";
 
 export interface SoSoTradeProposal {
   newsItem: SoSoNewsItem;
@@ -87,7 +88,7 @@ export default function SoSoActionModal({
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            transition={spring}
             className="fixed inset-x-4 bottom-4 top-auto md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md z-50"
           >
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl overflow-hidden">
@@ -100,7 +101,7 @@ export default function SoSoActionModal({
                     </div>
                     <div>
                       <p className="text-sm font-bold text-gray-900 dark:text-white">Propose Trade</p>
-                      <p className="text-[10px] text-gray-500">SoSoValue Intelligence</p>
+                      <p className="text-3xs text-gray-500">SoSoValue Intelligence</p>
                     </div>
                   </div>
                   <button
@@ -122,14 +123,14 @@ export default function SoSoActionModal({
                     <span className={`text-xs font-bold px-2 py-1 rounded-full ${isBullish ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-red-600 bg-red-100 dark:bg-red-900/30'}`}>
                       {isBullish ? '🟢' : '🔴'} {sentimentLabel}
                     </span>
-                    <span className="text-[10px] text-gray-400">{newsItem.sentiment}/100</span>
+                    <span className="text-3xs text-gray-400">{newsItem.sentiment}/100</span>
                   </div>
                   <p className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                     {newsItem.title}
                   </p>
                   <div className="flex flex-wrap gap-1">
                     {newsItem.tags.slice(0, 4).map(tag => (
-                      <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-gray-500 dark:text-gray-400">
+                      <span key={tag} className="text-3xs font-medium px-1.5 py-0.5 bg-white dark:bg-gray-700 rounded text-gray-500 dark:text-gray-400">
                         #{tag}
                       </span>
                     ))}
@@ -138,7 +139,7 @@ export default function SoSoActionModal({
                 
                 {/* Suggested Trade */}
                 <div className="p-3 border border-gray-200 dark:border-gray-700 rounded-xl">
-                  <p className="text-[10px] text-gray-500 uppercase font-bold mb-2">Suggested Action</p>
+                  <p className="text-3xs text-gray-500 uppercase font-bold mb-2">Suggested Action</p>
                   <div className="flex items-center gap-3">
                     <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${actionColor}`}>
                       <span className="text-2xl font-black">
@@ -157,7 +158,7 @@ export default function SoSoActionModal({
                       )}
                     </div>
                     <div className="text-right">
-                      <p className="text-[10px] text-gray-400 uppercase font-bold">Confidence</p>
+                      <p className="text-3xs text-gray-400 uppercase font-bold">Confidence</p>
                       <p className="text-lg font-black text-purple-600 dark:text-purple-400">
                         {confidence}%
                       </p>
@@ -168,7 +169,7 @@ export default function SoSoActionModal({
                 {/* Reasoning (if available) */}
                 {reasoning && (
                   <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                    <p className="text-[10px] text-blue-600 dark:text-blue-400 uppercase font-bold mb-1">AI Reasoning</p>
+                    <p className="text-3xs text-blue-600 dark:text-blue-400 uppercase font-bold mb-1">AI Reasoning</p>
                     <p className="text-xs text-gray-700 dark:text-gray-300">{reasoning}</p>
                   </div>
                 )}
@@ -179,7 +180,7 @@ export default function SoSoActionModal({
                     <span className="text-amber-500 mt-0.5">⚠️</span>
                     <div>
                       <p className="text-xs font-bold text-amber-700 dark:text-amber-400">Risk Disclaimer</p>
-                      <p className="text-[10px] text-amber-600 dark:text-amber-500 mt-0.5">
+                      <p className="text-3xs text-amber-600 dark:text-amber-500 mt-0.5">
                         This is not financial advice. Market sentiment can change rapidly. 
                         Always do your own research before executing trades.
                       </p>

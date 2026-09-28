@@ -120,12 +120,12 @@ export default function SoSoIntelligenceCard({
           <div className="flex items-center gap-1.5">
             <span className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">SoSoValue</span>
             {tier === 'premium' && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded">
+              <span className="text-3xs font-bold px-1.5 py-0.5 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded">
                 PRO
               </span>
             )}
           </div>
-          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${newsSentiment.className}`}>
+          <span className={`inline-flex items-center gap-1 text-3xs font-bold px-2 py-0.5 rounded-full ${newsSentiment.className}`}>
             {newsSentiment.emoji} {topNews.sentiment}/100
           </span>
         </div>
@@ -137,12 +137,12 @@ export default function SoSoIntelligenceCard({
         <div className="flex items-center justify-between">
           <div className="flex flex-wrap gap-1">
             {topNews.tags.slice(0, 2).map(tag => (
-              <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400">
+              <span key={tag} className="text-3xs font-medium px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded text-gray-600 dark:text-gray-400">
                 #{tag}
               </span>
             ))}
           </div>
-          <span className="text-[10px] text-gray-400">
+          <span className="text-3xs text-gray-400">
             {formatTimeAgo(topNews.publishedAt)}
           </span>
         </div>
@@ -166,11 +166,11 @@ export default function SoSoIntelligenceCard({
             </div>
             <div>
               <span className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">SoSoValue</span>
-              <span className="text-[10px] text-gray-400 ml-2">Market Intelligence</span>
+              <span className="text-3xs text-gray-400 ml-2">Market Intelligence</span>
             </div>
           </div>
           {tier === 'premium' && (
-            <span className="text-[10px] font-bold px-2 py-1 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
+            <span className="text-3xs font-bold px-2 py-1 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded-full">
               PRO ✦ SSI
             </span>
           )}
@@ -179,7 +179,7 @@ export default function SoSoIntelligenceCard({
         {/* Market overview */}
         <div className="grid grid-cols-3 gap-3">
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2.5">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Sentiment</p>
+            <p className="text-3xs text-gray-500 uppercase font-bold mb-1">Sentiment</p>
             <div className="flex items-center gap-1">
               <span className="text-base">{marketSentiment.emoji}</span>
               <span className="text-sm font-black text-gray-900 dark:text-white">{market.marketSentiment}</span>
@@ -187,12 +187,12 @@ export default function SoSoIntelligenceCard({
           </div>
           
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2.5">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">BTC Dominance</p>
+            <p className="text-3xs text-gray-500 uppercase font-bold mb-1">BTC Dominance</p>
             <p className="text-sm font-black text-gray-900 dark:text-white">{market.btcDominance.toFixed(1)}%</p>
           </div>
           
           <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-2.5">
-            <p className="text-[10px] text-gray-500 uppercase font-bold mb-1">Total MCap</p>
+            <p className="text-3xs text-gray-500 uppercase font-bold mb-1">Total MCap</p>
             <p className="text-sm font-black text-gray-900 dark:text-white">{formatMarketCap(market.totalMcap)}</p>
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function SoSoIntelligenceCard({
           <div className="mt-3 p-3 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-[10px] text-purple-600 dark:text-purple-400 uppercase font-bold mb-0.5">
+                <p className="text-3xs text-purple-600 dark:text-purple-400 uppercase font-bold mb-0.5">
                   SSI Protocol Index
                 </p>
                 <p className="text-lg font-black text-gray-900 dark:text-white">
@@ -222,7 +222,7 @@ export default function SoSoIntelligenceCard({
       
       {/* News items */}
       <div className="p-3 space-y-2 max-h-64 overflow-y-auto">
-        <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-2">Flash News</p>
+        <p className="text-3xs font-black text-gray-500 uppercase tracking-wider mb-2">Flash News</p>
         {news.map((item) => {
           const sentiment = getSentimentBadge(item.sentiment);
           return (
@@ -236,7 +236,7 @@ export default function SoSoIntelligenceCard({
                 <h4 className="text-xs font-medium text-gray-900 dark:text-gray-100 flex-1 line-clamp-2">
                   {item.title}
                 </h4>
-                <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${sentiment.className}`}>
+                <span className={`inline-flex items-center gap-0.5 text-3xs font-bold px-1.5 py-0.5 rounded-full shrink-0 ${sentiment.className}`}>
                   {sentiment.emoji} {item.sentiment}
                 </span>
               </div>
@@ -244,12 +244,12 @@ export default function SoSoIntelligenceCard({
               <div className="flex items-center justify-between">
                 <div className="flex flex-wrap gap-1">
                   {item.tags.slice(0, 3).map(tag => (
-                    <span key={tag} className="text-[10px] font-medium px-1.5 py-0.5 bg-white dark:bg-gray-800 rounded text-gray-500 dark:text-gray-400">
+                    <span key={tag} className="text-3xs font-medium px-1.5 py-0.5 bg-white dark:bg-gray-800 rounded text-gray-500 dark:text-gray-400">
                       #{tag}
                     </span>
                   ))}
                 </div>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-3xs text-gray-400">
                   {formatTimeAgo(item.publishedAt)}
                 </span>
               </div>
@@ -259,7 +259,7 @@ export default function SoSoIntelligenceCard({
                 {onAnalyze && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onAnalyze(item); }}
-                    className="text-[10px] font-bold px-2 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
+                    className="text-3xs font-bold px-2 py-1 bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors"
                   >
                     Analyze
                   </button>
@@ -267,7 +267,7 @@ export default function SoSoIntelligenceCard({
                 {onProposeTrade && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onProposeTrade(item); }}
-                    className="text-[10px] font-bold px-2 py-1 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
+                    className="text-3xs font-bold px-2 py-1 bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400 rounded hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors"
                   >
                     Propose Trade
                   </button>
@@ -280,7 +280,7 @@ export default function SoSoIntelligenceCard({
       
       {/* Footer */}
       <div className="px-4 py-2 bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-700/50">
-        <p className="text-[10px] text-gray-400 text-center">
+        <p className="text-3xs text-gray-400 text-center">
           Powered by SoSoValue • {formatTimeAgo(data.timestamp)}
         </p>
       </div>

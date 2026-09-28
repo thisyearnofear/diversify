@@ -73,7 +73,7 @@ export function RouteSchematic({ fromToken, toToken, caption }: RouteSchematicPr
         </span>
       </div>
 
-      <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+      <p className="mt-2 text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
         {sameToken
           ? `Send-only route: ${fromToken} leaves your wallet on the source chain's settlement rail.`
           : `Schematic route ${fromToken} → ${toToken}. The executable quote (hops, fees, slippage floor) is finalized in the ticket below before you confirm.`}

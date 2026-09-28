@@ -21,25 +21,29 @@ import { useShareLanding } from "@/hooks/use-share-landing";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { TabSkeleton } from "@/components/ui/Skeleton";
+import { TAB_LOADERS, preloadNeighbourTabs } from "@/lib/tab-preload";
 
 // ── Dynamic tab imports ──
+// Loaders are named so the same chunk can be warmed ahead of a tap
+// (lib/tab-preload.ts) — webpack dedupes, so a preloaded tab opens without
+// the InstrumentWait beat.
 
-const OverviewTab = dynamic(() => import("@/components/tabs/OverviewTab"), {
+const OverviewTab = dynamic(TAB_LOADERS.overview, {
   ssr: false,
   loading: () => <TabSkeleton label="Opening Home" />,
 });
 
-const ProtectionTab = dynamic(() => import("@/components/tabs/ProtectionTab"), {
+const ProtectionTab = dynamic(TAB_LOADERS.protect, {
   ssr: false,
   loading: () => <TabSkeleton label="Opening Shield" />,
 });
 
-const ExchangeTab = dynamic(() => import("@/components/tabs/ExchangeTab"), {
+const ExchangeTab = dynamic(TAB_LOADERS.exchange, {
   ssr: false,
   loading: () => <TabSkeleton label="Opening Exchange" />,
 });
 
-const AgentTab = dynamic(() => import("@/components/tabs/AgentTab"), {
+const AgentTab = dynamic(TAB_LOADERS.agent, {
   ssr: false,
   loading: () => <TabSkeleton label="Opening Guardian" />,
 });
@@ -216,6 +220,10 @@ export default function TabContentRouter() {
     // tabOrder is derived config; identity changes don't alter direction math
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
+
+  // Warm the dock neighbours once the browser is idle, so a swipe or tap
+  // to the next tab usually lands on a loaded chunk.
+  useEffect(() => preloadNeighbourTabs(activeTab, tabOrder), [activeTab, tabOrder]);
 
   // Keep-mounted Home — the one pane that never unmounts. Kill switch:
   // NEXT_PUBLIC_KEEP_MOUNTED_HOME=false reverts without a code change.

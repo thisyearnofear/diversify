@@ -17,6 +17,9 @@ export const springSoft = { type: "spring", stiffness: 180, damping: 32 } as con
 /** Confirmation pop — selection and plan changes ONLY, one occurrence, never a loop. */
 export const springPop = { type: "spring", stiffness: 420, damping: 16 } as const;
 
+/** Press/hover micro-interaction — quick, no visible overshoot. */
+export const springPress = { type: "spring", stiffness: 400, damping: 25 } as const;
+
 /** Quiet reveal — matches the tab transition timing (0.18s ease-out). */
 export const reveal = { duration: 0.18, ease: "easeOut" } as const;
 

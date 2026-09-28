@@ -275,7 +275,7 @@ export default function RwaVaultsPage() {
                         />
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{a.why}</p>
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+                      <p className="text-3xs text-gray-400 dark:text-gray-500 mt-1">
                         Indicative {vault.indicativeApyLow}–{vault.indicativeApyHigh}% APY · {vault.riskTier} risk · {vault.liquidity} · KYC via IXS
                       </p>
                     </div>
@@ -315,12 +315,12 @@ export default function RwaVaultsPage() {
 
         {/* Honesty footnotes */}
         <div className="w-full max-w-lg mx-auto mt-8 space-y-2 text-center">
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+          <p className="text-2xs text-gray-400 dark:text-gray-500">
             Advisory only — nothing here executes a deposit. IXS vaults are licensed under the Bahamas
             DARE Act and settle in USDC/USDT through IXS&rsquo;s own KYC perimeter; eligibility varies by
             jurisdiction. Indicative APY ranges are published estimates, not guarantees.
           </p>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+          <p className="text-2xs text-gray-400 dark:text-gray-500">
             Free tier: deterministic heuristic, $0, no keys. SERV tier: Reasoning-enhanced weighting +
             explanation — the freemium line for premium allocation advice.
           </p>

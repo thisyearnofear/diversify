@@ -68,10 +68,10 @@ export function GuardianUpdates({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-black uppercase tracking-wider text-blue-800 dark:text-blue-200">
+                <p className="text-3xs font-black uppercase tracking-wider text-blue-800 dark:text-blue-200">
                   {GUARDIAN_UPDATES_LABEL} · {active.length} update{active.length === 1 ? '' : 's'}
                 </p>
-                <time className="text-[10px] text-gray-400 shrink-0">
+                <time className="text-3xs text-gray-400 shrink-0">
                   {latest.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </time>
               </div>
@@ -79,7 +79,7 @@ export function GuardianUpdates({
                 {latest.summary}
               </p>
               {expandedWhy === latest.id && latest.whyReason && (
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+                <p className="text-2xs text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
                   {latest.whyReason}
                 </p>
               )}
@@ -88,7 +88,7 @@ export function GuardianUpdates({
                   <button
                     type="button"
                     onClick={() => setExpandedWhy(expandedWhy === latest.id ? null : latest.id)}
-                    className="min-h-11 px-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    className="min-h-11 px-2 text-3xs font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                   >
                     Why am I seeing this?
                   </button>
@@ -96,28 +96,28 @@ export function GuardianUpdates({
                 <button
                   type="button"
                   onClick={() => onOpenReview(latest)}
-                  className="min-h-11 px-2 text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline"
+                  className="min-h-11 px-2 text-3xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Open review
                 </button>
                 <button
                   type="button"
                   onClick={() => onSnooze(latest.id)}
-                  className="min-h-11 px-2 text-[10px] font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  className="min-h-11 px-2 text-3xs font-bold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
                 >
                   Snooze
                 </button>
                 <button
                   type="button"
                   onClick={() => onDismiss(latest.id)}
-                  className="min-h-11 px-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="min-h-11 px-2 text-3xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   Dismiss
                 </button>
                 <button
                   type="button"
                   onClick={() => onMuteType(latest.type)}
-                  className="min-h-11 px-2 text-[10px] font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                  className="min-h-11 px-2 text-3xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   Mute this type
                 </button>

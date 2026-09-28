@@ -270,7 +270,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
 
           {/* Faucet footnote — first-time claimers may need a free CELO top-up */}
           {canClaim && claimStatus !== 'claiming' && (
-            <p className="mt-2 text-[10px] text-gray-400 dark:text-gray-500 text-center">
+            <p className="mt-2 text-3xs text-gray-400 dark:text-gray-500 text-center">
               Free to claim · first time may sign a one-time gas top-up
             </p>
           )}

@@ -111,11 +111,11 @@ function HoldableRow({
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
             {asset.symbol}
-            <span className="ml-1.5 text-[11px] font-normal text-gray-500 dark:text-gray-400">
+            <span className="ml-1.5 text-2xs font-normal text-gray-500 dark:text-gray-400">
               {provenance?.phrase ?? asset.kind}
             </span>
           </p>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="text-2xs text-gray-500 dark:text-gray-400">
             {excluded
               ? 'Interest-bearing — outside this lens'
               : routable
@@ -136,15 +136,15 @@ function HoldableRow({
         <div className="mt-2 space-y-1 pl-[34px]">
           {provenance && (
             <>
-              <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
+              <p className="text-2xs text-gray-600 dark:text-gray-300 leading-relaxed">
                 {provenance.backing}.
               </p>
-              <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              <p className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
                 {provenance.keys}.
               </p>
             </>
           )}
-          <p className="text-[10px] text-gray-400 dark:text-gray-500">
+          <p className="text-3xs text-gray-400 dark:text-gray-500">
             {asset.kind} · {asset.chain}
             {figure && ` · ${figure.source}, ${formatAge(figure.capturedAt)}`}
             {provenance && ` · issuer facts checked ${provenance.asOf}`}
@@ -193,11 +193,11 @@ function VaultRow({
       </div>
       {focused && (
         <div className="mt-1.5 space-y-1">
-          <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">
+          <p className="text-2xs text-gray-600 dark:text-gray-300 leading-relaxed">
             {allocation.why}
           </p>
           {vault && (
-            <p className="text-[11px] text-gray-400 dark:text-gray-500">
+            <p className="text-2xs text-gray-400 dark:text-gray-500">
               {vault.indicativeApyLow}–{vault.indicativeApyHigh}% indicative · {vault.liquidity} ·
               KYC at IXS
             </p>
@@ -269,7 +269,7 @@ export function RwaVaultSleeve({
           >
             Hold in your wallet
           </h4>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="text-2xs text-gray-500 dark:text-gray-400">
             {planRwaPct > 0 ? `${planRwaPct}% of your plan` : 'none in your plan yet'} · Arbitrum
           </p>
         </div>
@@ -296,7 +296,7 @@ export function RwaVaultSleeve({
             type="button"
             data-testid="rwa-review-move"
             onClick={() => onReviewMove(target)}
-            className="min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+            className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
           >
             Review move to {target}
           </button>
@@ -317,7 +317,7 @@ export function RwaVaultSleeve({
           >
             Licensed vaults, off-app
           </h4>
-          <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+          <p className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
             Where a dollar reserve could earn through IXS — money-market, bond and credit
             vaults on Ethereum. KYC and deposits happen on IXS, not here.
             {philosophy === 'islamic' && ' None is Sharia-certified; all pay conventional interest.'}
@@ -325,7 +325,7 @@ export function RwaVaultSleeve({
         </div>
 
         {source === 'serv' && (
-          <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed">{summary}</p>
+          <p className="text-2xs text-gray-600 dark:text-gray-300 leading-relaxed">{summary}</p>
         )}
 
         <div className="space-y-0.5">
@@ -341,7 +341,7 @@ export function RwaVaultSleeve({
 
         {/* Enhancement rail — instant estimate by default; the deeper
             allocation is one tap and always reversible. */}
-        <p data-testid="serv-rail" className="text-[11px] text-gray-500 dark:text-gray-400">
+        <p data-testid="serv-rail" className="text-2xs text-gray-500 dark:text-gray-400">
           {loading ? (
             'Weighing a deeper allocation…'
           ) : source === 'serv' ? (
@@ -384,7 +384,7 @@ export function RwaVaultSleeve({
           )}
         </p>
 
-        <p className="text-[11px] text-gray-400 dark:text-gray-500">
+        <p className="text-2xs text-gray-400 dark:text-gray-500">
           Indicative APY ranges, not quotes · advisory ·{' '}
           <a
             href="https://ixs.finance"

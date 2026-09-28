@@ -395,7 +395,7 @@ export default function AIChat() {
               <button
                 onClick={handleForgetMemory}
                 disabled={isForgetting}
-                className="mt-3 w-full text-center text-[11px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2 transition-colors disabled:opacity-50"
+                className="mt-3 w-full text-center text-2xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 underline underline-offset-2 transition-colors disabled:opacity-50"
               >
                 {isForgetting ? "Forgetting…" : "Also forget what it remembers"}
               </button>
@@ -484,7 +484,7 @@ export default function AIChat() {
           className="flex flex-col min-h-0 flex-1"
         >
         {address && walletView.freshness !== "ready" && walletView.freshness !== "empty" && (
-          <p className="px-6 py-2 text-[11px] text-amber-700 dark:text-amber-300" role="status">
+          <p className="px-6 py-2 text-2xs text-amber-700 dark:text-amber-300" role="status">
             Guardian is working with {walletView.freshness === "stale" ? "stale" : "partial"} wallet data. Refresh balances before acting.
           </p>
         )}
@@ -583,7 +583,7 @@ export default function AIChat() {
               >
                 {activeGuardianReview && (
                   <div className="space-y-2">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                    <p className="text-3xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
                       Guardian review
                     </p>
                     {activeGuardianReview.contract ? (() => {
@@ -799,7 +799,7 @@ export default function AIChat() {
                       }`}
                     >
                       {msg.role === "assistant" && msg.portfolioContext && (
-                        <p className="text-[10px] text-gray-400 dark:text-gray-500 font-mono mb-2 pb-1.5 border-b border-gray-100 dark:border-gray-700">
+                        <p className="text-3xs text-gray-400 dark:text-gray-500 font-mono mb-2 pb-1.5 border-b border-gray-100 dark:border-gray-700">
                           {msg.portfolioContext}
                         </p>
                       )}
@@ -811,7 +811,7 @@ export default function AIChat() {
                           <p className="font-bold leading-tight">{msg.insights.summary}</p>
                           <div className="flex flex-wrap gap-1.5">
                             {msg.insights.tags.map(tag => (
-                              <span key={tag} className="text-[10px] font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
+                              <span key={tag} className="text-3xs font-bold px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 rounded border border-gray-200 dark:border-gray-600">
                                 #{tag}
                               </span>
                             ))}
@@ -839,16 +839,16 @@ export default function AIChat() {
                         <div className="mt-3 pt-2.5 border-t border-gray-100 dark:border-gray-700">
                           <div className="flex items-center justify-between mb-1.5">
                             <div className="flex items-center gap-1.5">
-                              <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                              <span className="text-3xs font-bold text-gray-400 dark:text-gray-500">
                                 {msg.researchSources.length} source{msg.researchSources.length > 1 ? 's' : ''} consulted
                               </span>
                               {msg.researchSources.some(s => s.tier === 'paid') && (
-                                <span className="text-[10px] px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold">
+                                <span className="text-3xs px-1 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold">
                                   ${msg.researchSources.reduce((sum, s) => sum + (s.cost || 0), 0).toFixed(3)} USDC
                                 </span>
                               )}
                               {msg.billing?.confidence != null && (
-                                <span className="text-[10px] px-1 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                                <span className="text-3xs px-1 py-0.5 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold">
                                   {(msg.billing.confidence * 100).toFixed(0)}% confidence
                                 </span>
                               )}
@@ -858,7 +858,7 @@ export default function AIChat() {
                                 href={msg.x402Receipt.explorer}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-[10px] text-blue-500 hover:text-blue-600 font-bold"
+                                className="text-3xs text-blue-500 hover:text-blue-600 font-bold"
                               >
                                 tx ↗
                               </a>
@@ -867,7 +867,7 @@ export default function AIChat() {
                           <div className="flex flex-wrap gap-1">
                             {msg.researchSources.map((s, j) => {
                               const badge = (
-                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} ${s.url ? 'hover:opacity-80 cursor-pointer' : ''}`}>
+                                <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-3xs font-medium ${s.tier === 'paid' ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 ring-1 ring-amber-200 dark:ring-amber-800' : 'bg-gray-50 dark:bg-gray-800 text-gray-500 dark:text-gray-400'} ${s.url ? 'hover:opacity-80 cursor-pointer' : ''}`}>
                                   <span className={`w-1.5 h-1.5 rounded-full ${s.tier === 'paid' ? 'bg-amber-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
                                   {s.label}
                                   {s.url && <span className="opacity-60">↗</span>}
@@ -918,17 +918,17 @@ export default function AIChat() {
                         <div className="mt-3 rounded-xl border border-amber-200/70 dark:border-amber-800/40 bg-amber-50/80 dark:bg-amber-900/10 p-2.5">
                           {msg.action.fundingAmount &&
                             Number.parseFloat(msg.action.fundingAmount) > Number.parseFloat(msg.action.quoteAmount || '0') && (
-                            <p className="text-[10px] text-amber-700/80 dark:text-amber-300/70 mb-2">
+                            <p className="text-3xs text-amber-700/80 dark:text-amber-300/70 mb-2">
                               Funds your Protection Balance with ${msg.action.fundingAmount} — this review draws ${msg.action.quoteAmount} USDC.
                             </p>
                           )}
                           {msg.action.quoteSources && msg.action.quoteSources.length > 0 && (
                             <div className="mb-2 space-y-1">
-                              <p className="text-[10px] text-amber-700/80 dark:text-amber-300/70 mb-1">
+                              <p className="text-3xs text-amber-700/80 dark:text-amber-300/70 mb-1">
                                 Evidence that will inform this review:
                               </p>
                               {msg.action.quoteSources.map((source) => (
-                                <div key={source.label} className="flex items-center gap-2 text-[10px]">
+                                <div key={source.label} className="flex items-center gap-2 text-3xs">
                                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${source.tier === "paid" ? "bg-amber-400" : "bg-gray-300 dark:bg-gray-600"}`} />
                                   <span className="truncate text-amber-800 dark:text-amber-200">{source.label}</span>
                                 </div>
@@ -967,7 +967,7 @@ export default function AIChat() {
                         <div
                           key={fact.id}
                           data-testid="remembered-fact"
-                          className="mt-1.5 text-[11px] text-gray-400"
+                          className="mt-1.5 text-2xs text-gray-400"
                         >
                           Remembered: {fact.text}
                           {' · '}
@@ -992,7 +992,7 @@ export default function AIChat() {
                       ))}
 
                       <div className={`flex items-center gap-2 mt-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                        <span className={`text-[10px] opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
+                        <span className={`text-3xs opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
                           {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                         {msg.role === "assistant" && <ProviderBadge provider={msg.provider} />}
@@ -1027,7 +1027,7 @@ export default function AIChat() {
                       <button
                         key={label}
                         onClick={() => submitPrompt(prompt)}
-                        className="px-2.5 py-1 text-[10px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        className="px-2.5 py-1 text-3xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       >
                         {label}
                       </button>
@@ -1113,7 +1113,7 @@ export default function AIChat() {
             {/* Memory mode footnote — one quiet line naming where Guardian
                 memory lives (or that it's off), with Change opening the
                 in-drawer memory view. */}
-            <p className="px-1 text-[11px] text-gray-400" data-testid="memory-status-line">
+            <p className="px-1 text-2xs text-gray-400" data-testid="memory-status-line">
               Memory:{' '}
               {memory.pref.mode === 'off'
                 ? 'Off'

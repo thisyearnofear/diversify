@@ -10,6 +10,7 @@ import { motion } from 'framer-motion';
 import { Coin } from '../../../shared/FloatingCoins';
 import FlickScrollRow, { useDidDrag } from '../../../shared/FlickScrollRow';
 import { ARCHETYPES, type ArchetypeId } from '../../../protection-cards/tokens';
+import { springSoft } from "@/lib/motion-tokens";
 
 /**
  * One archetype card. A CHILD COMPONENT — useDidDrag() must be called
@@ -38,7 +39,7 @@ function ArchetypeCard({
         if (didDragRef.current) return; // release after a drag is not a choice
         onSelect(id);
       }}
-      className={`w-[190px] flex-shrink-0 snap-start min-h-[44px] p-3 rounded-2xl border-2 text-left flex items-start gap-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 ${
+      className={`w-[190px] flex-shrink-0 snap-start min-h-tap p-3 rounded-2xl border-2 text-left flex items-start gap-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/60 ${
         isActive
           ? 'bg-white dark:bg-gray-800'
           : isDimmed
@@ -51,14 +52,14 @@ function ArchetypeCard({
       <motion.span
         className="w-8 h-8 flex-shrink-0"
         animate={isActive ? { rotateY: 360, scale: 1.1 } : { rotateY: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 120, damping: 14 }}
+        transition={springSoft}
         style={{ transformPerspective: 400 }}
       >
         <Coin size={32} symbol={a.name[0]} color={a.accent} variant="selection" />
       </motion.span>
       <span className="flex-1 min-w-0">
         <span className="block text-[13px] font-black text-gray-900 dark:text-white truncate">{a.name}</span>
-        <span className="block mt-0.5 text-[11px] leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">{a.philosophy}</span>
+        <span className="block mt-0.5 text-2xs leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">{a.philosophy}</span>
       </span>
     </button>
   );

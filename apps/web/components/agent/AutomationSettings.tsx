@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
-import { usePrivy } from "@privy-io/react-auth";
+import { usePrivy } from '@/context/PrivyProvider';
 import { useVoiceEnabled } from "../ui/VoiceButton";
 import { useToast } from "../ui/Toast";
 import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
@@ -399,7 +399,7 @@ export default function AutomationSettings({
                     Circle Managed Wallet
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                <p className="text-3xs text-gray-500 dark:text-gray-400 leading-tight">
                   Hands-off wallet that pays gas + evidence fees in USDC. Powered by
                   Circle Programmable Wallets.
                 </p>
@@ -421,13 +421,13 @@ export default function AutomationSettings({
                     Tether Settlement (WDK)
                   </span>
                 </div>
-                <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                <p className="text-3xs text-gray-500 dark:text-gray-400 leading-tight">
                   You hold the keys. Built-in USD₮ and gold (XAU₮) support across
                   Celo, Arbitrum, Polygon, Avalanche, and Tron.
                 </p>
               </button>
             </div>
-            <p className="mt-3 text-[10px] text-gray-400 italic">
+            <p className="mt-3 text-3xs text-gray-400 italic">
               * Tether Settlement (WDK) adds gold-hedging and cross-chain reach.
             </p>
           </div>
@@ -561,7 +561,7 @@ export default function AutomationSettings({
               <span className="font-black text-sm uppercase tracking-tight">
                 {mode === "quiet" ? "Quiet" : "Informed"}
               </span>
-              <span className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight mt-1">
+              <span className="text-3xs text-gray-500 dark:text-gray-400 leading-tight mt-1">
                 {mode === "quiet"
                   ? "Decisions stay behind Ask Guardian — surfaces stay minimal."
                   : "Attribution lines, activity counts, and cadence stats on Home and Shield."}
@@ -570,7 +570,7 @@ export default function AutomationSettings({
           ))}
         </div>
 
-        <p className="mt-3 text-[10px] text-gray-400 dark:text-gray-500">
+        <p className="mt-3 text-3xs text-gray-400 dark:text-gray-500">
           {origin === "persona"
             ? "Following your Simple/Advanced mode. Choose above to decide independently."
             : origin === "agent"
@@ -751,14 +751,14 @@ export default function AutomationSettings({
                   <button
                     onClick={() => verifyConnection('zapier')}
                     disabled={verifyingConnection === 'zapier'}
-                    className="text-[10px] font-black uppercase text-green-700 dark:text-green-300 hover:underline disabled:opacity-50"
+                    className="text-3xs font-black uppercase text-green-700 dark:text-green-300 hover:underline disabled:opacity-50"
                   >
                     {verifyingConnection === 'zapier' ? 'Verifying...' : 'Test Connection'}
                   </button>
                 )}
               </div>
               {connectionStatus['zapier']?.status === 'error' && (
-                <p className="mt-2 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">
+                <p className="mt-2 text-3xs text-red-600 dark:text-red-400 font-bold uppercase">
                   Error: {connectionStatus['zapier'].message}
                 </p>
               )}
@@ -843,14 +843,14 @@ export default function AutomationSettings({
                   <button
                     onClick={() => verifyConnection('google-oauth2')}
                     disabled={verifyingConnection === 'google-oauth2'}
-                    className="text-[10px] font-black uppercase text-green-700 dark:text-green-300 hover:underline disabled:opacity-50"
+                    className="text-3xs font-black uppercase text-green-700 dark:text-green-300 hover:underline disabled:opacity-50"
                   >
                     {verifyingConnection === 'google-oauth2' ? 'Verifying...' : 'Test Connection'}
                   </button>
                 )}
               </div>
               {connectionStatus['google-oauth2']?.status === 'error' && (
-                <p className="mt-2 text-[10px] text-red-600 dark:text-red-400 font-bold uppercase">
+                <p className="mt-2 text-3xs text-red-600 dark:text-red-400 font-bold uppercase">
                   Error: {connectionStatus['google-oauth2'].message}
                 </p>
               )}

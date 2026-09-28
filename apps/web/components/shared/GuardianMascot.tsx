@@ -14,6 +14,7 @@ import {
   SHIELD_D,
   VISOR_D,
 } from './guardian-mark';
+import { springSoft } from "@/lib/motion-tokens";
 type Mood = 'happy' | 'neutral' | 'thinking' | 'protective' | 'alert';
 type Gaze = 'off' | 'pointer' | { x: number; y: number };
 
@@ -201,7 +202,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
         aria-label={`DiversiFi Guardian mascot, ${mood}`}
         initial={staticMode || compact ? false : { scale: 0.92, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+        transition={springSoft}
       >
         {/* Shield body — pale ice armor with the blue edge defining the form.
             One-time draw-in on mount, then still (no ambient bob/glow). */}

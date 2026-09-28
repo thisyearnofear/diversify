@@ -76,7 +76,7 @@ export function TrustFootnote({
       {!expanded && (
         <span
           aria-hidden="true"
-          className="block text-[10px] font-semibold uppercase tracking-wider text-gray-300 dark:text-gray-600 mt-0.5"
+          className="block text-3xs font-semibold uppercase tracking-wider text-gray-300 dark:text-gray-600 mt-0.5"
         >
           Details
         </span>

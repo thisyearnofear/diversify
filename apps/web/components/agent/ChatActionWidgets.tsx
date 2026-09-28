@@ -91,20 +91,20 @@ export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplet
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
            <span className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center text-xs">⛽</span>
-           <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Guardian wallet</span>
+           <span className="text-3xs font-black uppercase text-gray-500 tracking-wider">Guardian wallet</span>
         </div>
-        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
+        <span className="text-3xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full uppercase">
           {action.network}
         </span>
       </div>
 
       <div className="flex items-end justify-between mb-4">
         <div>
-           <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Target Asset</p>
+           <p className="text-3xs uppercase text-gray-400 font-bold mb-1">Target Asset</p>
            <p className="text-sm font-black text-gray-800 dark:text-gray-100">{action.targetAsset}</p>
         </div>
         <div className="text-right">
-           <p className="text-[10px] uppercase text-gray-400 font-bold mb-1">Est. Amount</p>
+           <p className="text-3xs uppercase text-gray-400 font-bold mb-1">Est. Amount</p>
            <p className="text-sm font-black text-gray-800 dark:text-gray-100">${action.amount}</p>
         </div>
       </div>
@@ -132,7 +132,7 @@ export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplet
 
       {/* Error message */}
       {status === 'error' && errorMessage && (
-        <p className="text-[10px] text-center text-red-500 mt-2 font-medium">
+        <p className="text-3xs text-center text-red-500 mt-2 font-medium">
           ⚠ {errorMessage}
         </p>
       )}
@@ -140,7 +140,7 @@ export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplet
       {/* Success with tx hash */}
       {status === 'success' && txHash && (
         <div className="mt-2 text-center">
-          <p className="text-[10px] text-gray-400 font-medium">
+          <p className="text-3xs text-gray-400 font-medium">
             Tx: {txHash.slice(0, 10)}...{txHash.slice(-8)}
           </p>
           {explorerUrl && (
@@ -148,7 +148,7 @@ export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplet
               href={explorerUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[10px] text-blue-500 hover:text-blue-600 underline mt-0.5 inline-block"
+              className="text-3xs text-blue-500 hover:text-blue-600 underline mt-0.5 inline-block"
             >
               View on Explorer →
             </a>
@@ -157,7 +157,7 @@ export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplet
       )}
 
       {status === 'idle' && (
-        <p className="text-[10px] text-center text-gray-400 mt-2 font-medium">
+        <p className="text-3xs text-center text-gray-400 mt-2 font-medium">
           Gas covered autonomously via local MPC wallet
         </p>
       )}
@@ -177,7 +177,7 @@ export const HoldActionWidget = ({ action }: { action: any }) => {
           <p className="text-xs font-black uppercase text-green-700 dark:text-green-300 tracking-wider">
             Portfolio Status
           </p>
-          <p className="text-[10px] text-green-600 dark:text-green-400 font-medium">
+          <p className="text-3xs text-green-600 dark:text-green-400 font-medium">
             Well-Balanced
           </p>
         </div>
@@ -189,7 +189,7 @@ export const HoldActionWidget = ({ action }: { action: any }) => {
         </p>
       </div>
 
-      <div className="flex items-center justify-center gap-2 text-[10px] text-green-600 dark:text-green-400 font-bold">
+      <div className="flex items-center justify-center gap-2 text-3xs text-green-600 dark:text-green-400 font-bold">
         <span>💎</span>
         <span>HOLD STEADY</span>
         <span>💎</span>

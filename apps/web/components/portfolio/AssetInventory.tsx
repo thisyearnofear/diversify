@@ -127,20 +127,20 @@ const AssetGroupSection: React.FC<{
             <div className="flex items-center justify-between px-1">
                 <div className="flex items-center gap-2">
                     <span className={`size-1.5 rounded-full ${accentDot}`} />
-                    <span className={`text-[10px] font-black uppercase tracking-widest ${labelColor}`}>
+                    <span className={`text-3xs font-black uppercase tracking-widest ${labelColor}`}>
                         {label} · {count}
                     </span>
                     {showNotCountedHint && (
-                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 normal-case tracking-normal">
+                        <span className="text-3xs font-bold text-amber-600 dark:text-amber-400 normal-case tracking-normal">
                             (not counted in score)
                         </span>
                     )}
                 </div>
-                <span className="text-[10px] font-black text-gray-400 dark:text-gray-500 tabular-nums">
+                <span className="text-3xs font-black text-gray-400 dark:text-gray-500 tabular-nums">
                     ${value.toFixed(2)}
                 </span>
             </div>
-            <div className="text-[10px] text-gray-400 dark:text-gray-500 px-1 -mt-0.5">
+            <div className="text-3xs text-gray-400 dark:text-gray-500 px-1 -mt-0.5">
                 {sublabel}
             </div>
             <div className="space-y-1.5 pt-0.5">{children}</div>
@@ -166,7 +166,7 @@ const SocialProofLine: React.FC<{ tokens: TokenBalance[] }> = ({ tokens }) => {
     if (!bracket) return null;
     return (
         <div className="pt-2 mt-1 border-t border-gray-100 dark:border-gray-800">
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed text-center">
+            <p className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed text-center">
                 {bracket.copy}
             </p>
         </div>

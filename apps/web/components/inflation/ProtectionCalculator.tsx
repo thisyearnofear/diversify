@@ -119,7 +119,7 @@ export function ProtectionCalculator({
               aria-selected={selected}
               aria-label={`Year ${p.year}`}
               onClick={() => onSelectYear(p.year)}
-              className="flex-1 min-h-[44px] flex flex-col items-center justify-end gap-1"
+              className="flex-1 min-h-tap flex flex-col items-center justify-end gap-1"
             >
               <div className="relative w-full max-w-[28px] h-20 mx-auto">
                 <motion.div
@@ -143,7 +143,7 @@ export function ProtectionCalculator({
                 />
               </div>
               <span
-                className={`text-[11px] font-bold tabular-nums ${
+                className={`text-2xs font-bold tabular-nums ${
                   selected
                     ? "text-blue-600 dark:text-blue-400"
                     : "text-gray-400"
@@ -159,7 +159,7 @@ export function ProtectionCalculator({
       <button
         type="button"
         onClick={onProtect}
-        className="mt-5 min-h-[44px] w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+        className="mt-5 min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
         style={{ backgroundColor: ACCENT }}
       >
         {ctaLabel}

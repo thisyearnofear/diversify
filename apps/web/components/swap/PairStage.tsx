@@ -274,14 +274,19 @@ export function PairStage({
               aria-hidden
               className="pointer-events-none absolute inset-x-[44px] top-1/2 h-0"
             >
+              {/* A full-width carrier translates 0% → 100% of its own
+                  width (= the beam), so the coin travels on the compositor
+                  instead of animating `left` (layout every frame). */}
               <motion.span
                 data-testid="receipt-travel"
-                className="absolute -ml-[10px] -mt-[10px] inline-flex"
-                initial={{ left: '0%', opacity: 0 }}
-                animate={{ left: '100%', opacity: [0, 1, 1, 0] }}
+                className="absolute left-0 top-0 block w-full h-0"
+                initial={{ x: '0%', opacity: 0 }}
+                animate={{ x: '100%', opacity: [0, 1, 1, 0] }}
                 transition={{ duration: 0.9, ease: 'easeInOut', delay: 0.35 }}
               >
-                <TokenIcon symbol={receipt.fromToken} size={20} />
+                <span className="absolute left-0 top-0 -ml-[10px] -mt-[10px] inline-flex">
+                  <TokenIcon symbol={receipt.fromToken} size={20} />
+                </span>
               </motion.span>
             </div>
           )}
@@ -315,7 +320,7 @@ export function PairStage({
                 }}
                 whileTap={reduced ? undefined : { scale: 0.9 }}
                 aria-label="Switch tokens"
-                className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
+                className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
               >
                 <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine shineDuration={5.5} />
               </motion.button>
@@ -378,15 +383,15 @@ export function PairStage({
           <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
             {receiptTitle}
           </p>
-          <p className="mt-1 text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
+          <p className="mt-1 text-2xs tabular-nums text-gray-500 dark:text-gray-400">
             {receiptAmounts}
           </p>
           {receiptGoods && (
-            <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+            <p className="mt-0.5 text-2xs text-gray-500 dark:text-gray-400">
               ≈ {receiptGoods} where it lands
             </p>
           )}
-          <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="mt-0.5 text-2xs text-gray-500 dark:text-gray-400">
             Settled on {chainDisplayName(receipt.chainId)}
             {receipt.txHash && (
               <>
@@ -403,7 +408,7 @@ export function PairStage({
             )}
           </p>
           {claim && (
-            <p className="mt-0.5 text-[11px] text-emerald-700 dark:text-emerald-300">
+            <p className="mt-0.5 text-2xs text-emerald-700 dark:text-emerald-300">
               {claim.label}
               {' · '}
               <button
@@ -427,7 +432,7 @@ export function PairStage({
                   asset: receipt.origin?.asset,
                 })
               }
-              className="mt-1 w-full min-h-[32px] text-[11px] text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+              className="mt-1 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
             >
               {receipt.origin.label
                 ? `Back to your ${receipt.origin.label} plan →`
@@ -442,7 +447,7 @@ export function PairStage({
               type="button"
               data-testid="receipt-return"
               onClick={() => navigateToGuardian()}
-              className="mt-1 w-full min-h-[32px] text-[11px] text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+              className="mt-1 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
             >
               Back to Guardian →
             </button>
@@ -462,7 +467,7 @@ export function PairStage({
             type="button"
             data-testid="receipt-move-more"
             onClick={onMoveMore}
-            className="mt-1 w-full min-h-[32px] text-[11px] text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+            className="mt-1 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
           >
             Move more
           </button>

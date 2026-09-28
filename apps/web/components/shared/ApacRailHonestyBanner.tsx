@@ -31,8 +31,8 @@ export function ApacRailHonestyBanner({ variant = "default" }: ApacRailHonestyBa
   }
 
   const titleClass = isHome
-    ? "text-[10px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400"
-    : "text-[10px] font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400";
+    ? "text-3xs font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400"
+    : "text-3xs font-bold uppercase tracking-wide text-sky-600 dark:text-sky-400";
   const bodyClass = isHome
     ? "text-sm font-medium text-sky-900 dark:text-sky-100 mt-0.5 leading-relaxed"
     : "text-xs font-medium text-sky-900 dark:text-sky-100 mt-0.5 leading-relaxed";
@@ -48,7 +48,7 @@ export function ApacRailHonestyBanner({ variant = "default" }: ApacRailHonestyBa
           <div className="flex flex-wrap items-center gap-2">
             <div className={titleClass}>{copy.title}</div>
             {live && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-[10px] font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-3xs font-bold uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
                 <span className="size-1.5 rounded-full bg-emerald-500 motion-safe:animate-pulse" aria-hidden />
                 Live on mainnet
               </span>
@@ -60,7 +60,7 @@ export function ApacRailHonestyBanner({ variant = "default" }: ApacRailHonestyBa
               href={HASHKEY_EXPLORER_ADDRESS_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline mt-2"
+              className="inline-flex items-center gap-1 text-2xs font-semibold text-sky-600 dark:text-sky-400 hover:underline mt-2"
             >
               Verify savings ledger{HASHKEY_LEDGER_SHORT_ADDRESS ? ` (${HASHKEY_LEDGER_SHORT_ADDRESS})` : ""} on HashKey explorer →
             </a>

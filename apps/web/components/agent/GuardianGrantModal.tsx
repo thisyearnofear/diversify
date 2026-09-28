@@ -46,7 +46,7 @@ export const GuardianGrantModal: React.FC<{
         </div>
 
         <div className="space-y-2 rounded-2xl p-4 border border-gray-200 dark:border-gray-700">
-          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+          <p className="text-2xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
             You&apos;ll sign twice
           </p>
           <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
@@ -63,7 +63,7 @@ export const GuardianGrantModal: React.FC<{
               <span>Pause Guardian here, or revoke the cap in your wallet, at any time.</span>
             </li>
           </ul>
-          <p className="text-[11px] text-gray-400 dark:text-gray-500">
+          <p className="text-2xs text-gray-400 dark:text-gray-500">
             To change the amount, pause Guardian and set a new daily limit first.
           </p>
         </div>
@@ -77,7 +77,7 @@ export const GuardianGrantModal: React.FC<{
           </button>
           <button
             onClick={() => { haptic("medium"); onContinue(); }}
-            className="flex-1 text-sm font-black bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white rounded-2xl py-4 min-h-[44px] transition-[color,transform] active:scale-95"
+            className="flex-1 text-sm font-black bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white rounded-2xl py-4 min-h-tap transition-[color,transform] active:scale-95"
           >
             Continue to MetaMask
           </button>

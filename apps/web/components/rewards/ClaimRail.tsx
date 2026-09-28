@@ -65,7 +65,7 @@ export function ClaimRail() {
         type="button"
         data-testid="claim-rail"
         onClick={() => void flow.handleClaim()}
-        className="min-h-[44px] text-left text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 transition-colors"
+        className="min-h-tap text-left text-xs font-semibold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 transition-colors"
       >
         🪙 Daily G$ ready ({streak.estimatedReward}) — <span className="font-black">Claim Daily G$ →</span>
       </button>
@@ -88,7 +88,7 @@ export function ClaimRail() {
         data-testid="claim-rail"
         onClick={() => void flow.handleVerify()}
         disabled={flow.verifyStatus === "opening"}
-        className="min-h-[44px] text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-60"
+        className="min-h-tap text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-60"
       >
         {flow.verifyStatus === "opening"
           ? "Opening verification…"

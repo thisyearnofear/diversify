@@ -93,7 +93,7 @@ export function GuardianPlanSwitcher({
         <button
           type="button"
           onClick={onCancel}
-          className="p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-gray-500 hover:text-gray-700"
+          className="p-2 min-h-tap min-w-tap flex items-center justify-center text-gray-500 hover:text-gray-700"
         >
           Cancel
         </button>
@@ -105,7 +105,7 @@ export function GuardianPlanSwitcher({
         >
           Change plan
         </h2>
-        <span className="min-w-[44px]" aria-hidden="true" />
+        <span className="min-w-tap" aria-hidden="true" />
       </div>
 
       <div className="flex-1 overflow-auto p-4 space-y-4">

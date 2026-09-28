@@ -132,7 +132,7 @@ export default function VoiceButton({
 
     // Touch-friendly sizes (min 44px for mobile accessibility)
     const sizeClasses = {
-        sm: 'w-11 h-11 text-sm min-w-[44px] min-h-[44px]', // 44px minimum
+        sm: 'w-11 h-11 text-sm min-w-tap min-h-tap', // 44px minimum
         md: 'w-12 h-12 text-lg min-w-[48px] min-h-[48px]', // 48px
         lg: 'w-14 h-14 text-xl' // 56px
     };

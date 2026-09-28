@@ -51,7 +51,7 @@ function BudgetButton({
       type="button"
       data-testid="guardian-budget"
       onClick={onOpenBounds}
-      className="mt-2 min-h-[44px] text-sm font-semibold text-gray-700 dark:text-gray-200"
+      className="mt-2 min-h-tap text-sm font-semibold text-gray-700 dark:text-gray-200"
     >
       <motion.span>{formatted}</motion.span> left of ${limit} today
     </button>
@@ -141,7 +141,7 @@ export function GuardianObject({
           type="button"
           data-testid="guardian-latest"
           onClick={onOpenJournal}
-          className="mt-1 min-h-[44px] text-xs text-gray-500 dark:text-gray-400"
+          className="mt-1 min-h-tap text-xs text-gray-500 dark:text-gray-400"
         >
           {latestEvent.title} · {latestEvent.subtitle} · {timeAgo(latestEvent.timestamp)}
         </button>
@@ -150,7 +150,7 @@ export function GuardianObject({
           type="button"
           data-testid="guardian-latest"
           onClick={onOpenJournal}
-          className="mt-1 min-h-[44px] text-xs text-gray-500 dark:text-gray-400"
+          className="mt-1 min-h-tap text-xs text-gray-500 dark:text-gray-400"
         >
           Latest call: {latestCall}
         </button>
@@ -160,14 +160,14 @@ export function GuardianObject({
         testId="guardian-live-line"
         beats={(liveBeats ?? []).map((b) => ({ key: b.key, content: b.text }))}
         alive={liveAlive ?? false}
-        className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400"
+        className="mt-1 block text-2xs text-gray-500 dark:text-gray-400"
       />
 
       {ctaLabel && (
         <button
           type="button"
           onClick={onCta}
-          className="mt-4 w-full min-h-[44px] rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+          className="mt-4 w-full min-h-tap rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
         >
           {ctaLabel}
         </button>

@@ -42,7 +42,7 @@ export function CountryOverrideSelect({
   if (!currentCountryCode) {
     return (
       <label
-        className={`mt-3 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 ${className}`}
+        className={`mt-3 flex items-center justify-center gap-1.5 text-2xs text-gray-400 dark:text-gray-500 ${className}`}
       >
         <span className="font-semibold">Whose savings?</span>
         <span aria-hidden="true">·</span>
@@ -52,7 +52,7 @@ export function CountryOverrideSelect({
             if (e.target.value) onChange(e.target.value);
           }}
           aria-label="Select the country where your savings live"
-          className="max-w-[11rem] min-h-[44px] truncate rounded-full bg-transparent px-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer"
+          className="max-w-[11rem] min-h-tap truncate rounded-full bg-transparent px-2 text-2xs font-bold text-gray-500 dark:text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer"
         >
           <option value="" disabled>
             Choose a country…
@@ -93,7 +93,7 @@ export function CountryOverrideSelect({
 
   return (
     <label
-      className={`mt-3 flex items-center justify-center gap-1.5 text-[11px] text-gray-400 dark:text-gray-500 ${className}`}
+      className={`mt-3 flex items-center justify-center gap-1.5 text-2xs text-gray-400 dark:text-gray-500 ${className}`}
     >
       <span className="font-semibold">Whose savings?</span>
       <span aria-hidden="true">·</span>
@@ -101,7 +101,7 @@ export function CountryOverrideSelect({
         value={currentCountryCode}
         onChange={(e) => onChange(e.target.value)}
         aria-label="Select the country where your savings live"
-        className="max-w-[11rem] min-h-[44px] truncate rounded-full bg-transparent px-2 text-[11px] font-bold text-gray-500 dark:text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer"
+        className="max-w-[11rem] min-h-tap truncate rounded-full bg-transparent px-2 text-2xs font-bold text-gray-500 dark:text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer"
       >
         {options.map((o) => (
           <option key={o.iso2} value={o.iso2}>

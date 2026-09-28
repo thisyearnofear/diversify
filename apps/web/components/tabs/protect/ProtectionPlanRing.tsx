@@ -416,7 +416,7 @@ export function ProtectionPlanRing({
                 aria-describedby="stress-test-description"
                 onClick={handleStressTest}
                 disabled={isStressTesting}
-                className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+                className={`text-3xs font-bold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
                   isStressTesting
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ring-2 ring-emerald-500/30"
                     : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
@@ -443,7 +443,7 @@ export function ProtectionPlanRing({
               holeHintOverride ? "Exit compare" : "Compare philosophies"
             }
             onClick={onHoleTap}
-            className="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full inline-block min-h-[32px] min-w-[44px] hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            className="text-3xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full inline-block min-h-[32px] min-w-tap hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             style={{ background: `${archetype.accent}18`, color: archetype.accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -455,7 +455,7 @@ export function ProtectionPlanRing({
         ) : (
           <motion.span
             key={archetype.id}
-            className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
+            className="text-3xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
             style={{ background: `${archetype.accent}18`, color: archetype.accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -537,7 +537,7 @@ export function ProtectionPlanRing({
                     {hole.label}
                   </span>
                   <span
-                    className="text-[11px] text-gray-500 dark:text-gray-400"
+                    className="text-2xs text-gray-500 dark:text-gray-400"
                     aria-live={isStressTesting ? "polite" : undefined}
                   >
                     {hole.hint}
@@ -550,13 +550,13 @@ export function ProtectionPlanRing({
                     holeHintOverride === undefined && (
                       <span
                         data-testid="shield-since-last-visit"
-                        className="text-[10px] text-gray-400 dark:text-gray-500"
+                        className="text-3xs text-gray-400 dark:text-gray-500"
                       >
                         {sinceHint}
                       </span>
                     )}
                   {onHoleTap && !holeHintOverride && !holeOverride && (
-                    <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                    <span className="text-3xs uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       Compare plans ▾
                     </span>
                   )}
@@ -569,7 +569,7 @@ export function ProtectionPlanRing({
                     data-testid="ring-hole"
                     aria-label={holeActionLabel ?? "Compare philosophies"}
                     onClick={onHoleTap}
-                    className="flex flex-col items-center min-h-[44px] min-w-[44px] p-2 pointer-events-auto"
+                    className="flex flex-col items-center min-h-tap min-w-tap p-2 pointer-events-auto"
                   >
                     {holeContent}
                   </button>
@@ -607,7 +607,7 @@ export function ProtectionPlanRing({
               initial={reducedMotion ? false : { opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, delay: idx * STAGGER_STEP_S, ease: "easeOut" }}
-              className={`w-full min-h-[44px] lg:min-h-[38px] flex items-center gap-3 py-2.5 lg:py-1.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              className={`w-full min-h-tap lg:min-h-[38px] flex items-center gap-3 py-2.5 lg:py-1.5 text-left rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
             >
@@ -616,7 +616,7 @@ export function ProtectionPlanRing({
                 <span className="block text-sm font-bold text-gray-900 dark:text-white">
                   {displayToken(a.token)}
                 </span>
-                <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">
                   {a.region}
                 </span>
               </span>
@@ -624,7 +624,7 @@ export function ProtectionPlanRing({
                 {a.percent > 0 ? `${a.percent}% ${balancePreview ? 'preview' : 'plan'}` : 'not in plan'}
               </span>
               <span
-                className={`text-[11px] font-bold tabular-nums w-20 text-right ${
+                className={`text-2xs font-bold tabular-nums w-20 text-right ${
                   !balancePreview && held >= a.percent - 2
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-gray-500 dark:text-gray-400'
@@ -648,12 +648,12 @@ export function ProtectionPlanRing({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: primary.length * STAGGER_STEP_S }}
             data-testid="shield-other"
-            className="w-full min-h-[44px] flex items-center gap-3 py-2.5 text-left rounded-lg bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            className="w-full min-h-tap flex items-center gap-3 py-2.5 text-left rounded-lg bg-gray-50 dark:bg-white/[0.04] hover:bg-gray-100 dark:hover:bg-white/[0.06] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
           >
-            <span className="w-[22px] h-[22px] rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-[10px] font-black text-gray-600 dark:text-gray-300 shrink-0">+{dust.length}</span>
+            <span className="w-[22px] h-[22px] rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-3xs font-black text-gray-600 dark:text-gray-300 shrink-0">+{dust.length}</span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-gray-900 dark:text-white">Other</span>
-              <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions · {dust.length > 1 ? `${dustTotalPlan.toFixed(0)}% plan` : dust[0]?.alloc.region ?? ""}</span>
+              <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions · {dust.length > 1 ? `${dustTotalPlan.toFixed(0)}% plan` : dust[0]?.alloc.region ?? ""}</span>
             </span>
             <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{balancePreview ? `${dustTotalPlan.toFixed(0)}% preview` : `${fmt(dustTotalHeld)} held`}</span>
           </motion.button>
@@ -671,7 +671,7 @@ export function ProtectionPlanRing({
               <button
                 type="button"
                 onClick={() => { haptics.tap(); setShowDust(false); }}
-                className="w-full min-h-[44px] py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                className="w-full min-h-tap py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               >
                 Show less
               </button>
@@ -681,7 +681,7 @@ export function ProtectionPlanRing({
       </div>
       )}
       {!compact && showProjections && (
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
+        <p className="text-2xs text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
           3-year path, projected: inflation takes{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
             {fmt(purchasingPowerLost)}

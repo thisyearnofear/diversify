@@ -159,7 +159,7 @@ export function GuardianStatusChip({
           </p>
           {isActive && lastActivity && (
             <p
-              className="text-[10px] font-semibold mt-1.5"
+              className="text-3xs font-semibold mt-1.5"
               style={{ color: archetype.accent }}
             >
               Last action {timeAgo(lastActivity.timestamp)}

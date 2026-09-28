@@ -32,7 +32,7 @@ import { useCurrencyVisit } from '@/hooks/use-currency-visit';
 import { useProofFeed } from '@/hooks/use-proof-feed';
 import { homeBeats } from '@/lib/live-lines';
 import { LiveLine } from '@/components/shared/LiveLine';
-import { reveal, springPop, springSoft } from '@/lib/motion-tokens';
+import { reveal, springPop, springSoft } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from '@/lib/analytics';
 
 interface Props {
@@ -180,7 +180,7 @@ export function CurrencyMomentCard({
           <button
             type="button"
             onClick={onClearSharedView}
-            className="ml-2 min-h-[44px] align-middle font-semibold normal-case tracking-normal text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            className="ml-2 min-h-tap align-middle font-semibold normal-case tracking-normal text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             ← Your currency
           </button>
@@ -206,7 +206,7 @@ export function CurrencyMomentCard({
                 setView(v);
                 trackFunnelEvent('marquee_select', { source: 'home_visit', view: v });
               }}
-              className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 (showVisit && v === 'visit') || (!showVisit && v === 'history')
                   ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
                   : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
@@ -240,7 +240,7 @@ export function CurrencyMomentCard({
             >
               <motion.div
                 animate={{ scale: reducedMotion ? 1 : localScale }}
-                transition={{ type: 'spring', stiffness: 120, damping: 20 }}
+                transition={springSoft}
                 className="shrink-0"
               >
                 {/* The local coin is a door: tap flips it to its back —
@@ -267,7 +267,7 @@ export function CurrencyMomentCard({
                       {currencySelected && newest ? (
                         <span className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full border-2 border-gray-200 bg-white px-1 text-center dark:border-gray-700 dark:bg-gray-900">
                           <span aria-hidden="true" className="text-xl leading-none">{moment.flag}</span>
-                          <span className="mt-1 line-clamp-3 text-[10px] font-semibold leading-tight text-gray-500 dark:text-gray-400">
+                          <span className="mt-1 line-clamp-3 text-3xs font-semibold leading-tight text-gray-500 dark:text-gray-400">
                             {newest.year} · {newest.event}
                           </span>
                         </span>
@@ -320,7 +320,7 @@ export function CurrencyMomentCard({
               className="mt-3"
             >
               <DeltaNumber delta={moment.delta} accent={accent} />
-              <div className="text-[11px] font-semibold text-gray-400 dark:text-gray-500 mt-1">
+              <div className="text-2xs font-semibold text-gray-400 dark:text-gray-500 mt-1">
                 buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
               </div>
             </motion.div>
@@ -370,7 +370,7 @@ export function CurrencyMomentCard({
               testId="home-live-line"
               beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
               alive={liveAlive && !currencySelected}
-              className="mt-1.5 block text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+              className="mt-1.5 block text-2xs font-semibold text-gray-500 dark:text-gray-400"
             />
 
             {/* Goods framing — a percentage is abstract where people price risk in
@@ -393,7 +393,7 @@ export function CurrencyMomentCard({
                     haptics.tap();
                     onSelectHorizon(h);
                   }}
-                  className={`min-h-[44px] min-w-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                  className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                     moment.horizon === h
                       ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
@@ -417,7 +417,7 @@ export function CurrencyMomentCard({
                         haptics.tap();
                         onSelectBenchmark(b);
                       }}
-                      className={`min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                      className={`min-h-tap min-w-tap inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                         selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
                       }`}
                     >
@@ -436,7 +436,7 @@ export function CurrencyMomentCard({
         <button
           type="button"
           onClick={onProtect}
-          className="mt-4 min-h-[44px] w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          className="mt-4 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           {protectLabel ?? "Protect this"}
         </button>
@@ -468,7 +468,7 @@ export function CurrencyMomentCard({
       {onChangeCountry && (
         <>
           {countryIsDefault && (
-            <p className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
+            <p className="mt-2 text-2xs text-gray-400 dark:text-gray-500">
               Country not detected — showing {moment.countryName} by default.
             </p>
           )}

@@ -154,7 +154,14 @@ cognify entirely. `add` reports only confirmed writes — a failed write
 never shows as "Remembered".
 
 Every call is timeout-bounded (~800 ms for `list` inside the chat path) and
-fails soft. `DELETE /api/agent/memory` without an id forgets the dedicated
+fails soft. **Activation is intentionally deferred:** neither provider is
+enabled in production yet — Tablestore needs its account-level 邀测 beta
+allowlist (DingTalk group 36165029092) *and* the RAM user enabled
+(`docs/ops.md`), and Cognee needs `COGNEE_API_URL` + `COGNEE_TENANT_ID`
+from the tenant dashboard (`COGNEE_API_KEY` is already set). Until then
+the app shows Off / This device only.
+
+`DELETE /api/agent/memory` without an id forgets the dedicated
 namespaces **and** the legacy scopes; with `?provider=&id=` it removes one
 fact. Extraction (`POST action=extract`) runs only after a reply lands and
 post-filters for secrets (seed phrases, private keys, account numbers)

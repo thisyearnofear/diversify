@@ -129,7 +129,7 @@ export function ShieldStatusTier({
                 trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
               }
             }}
-            className="min-h-[44px] text-xs font-semibold text-blue-600 dark:text-blue-400"
+            className="min-h-tap text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
             Your wallet keeps {floorOffer.heldFloor}% in dollars — try a stronger floor →
           </button>
@@ -178,7 +178,7 @@ export function ShieldStatusTier({
                 : undefined,
             );
           }}
-          className="min-h-[44px] px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+          className="min-h-tap px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
         >
           Guardian activity
         </button>
@@ -189,7 +189,7 @@ export function ShieldStatusTier({
         <button
           type="button"
           onClick={() => onSetUpGuardian()}
-          className="min-h-[44px] px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+          className="min-h-tap px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
         >
           Set up Guardian
         </button>

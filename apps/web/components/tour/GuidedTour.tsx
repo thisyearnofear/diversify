@@ -102,7 +102,7 @@ export default function GuidedTour() {
                 </div>
                 <button
                     onClick={handleSkip}
-                    className="text-white/60 hover:text-white text-sm font-bold min-h-[44px] min-w-[44px] flex items-center justify-center px-2 ml-2"
+                    className="text-white/60 hover:text-white text-sm font-bold min-h-tap min-w-tap flex items-center justify-center px-2 ml-2"
                     title="Skip tour"
                 >
                     ✕
@@ -124,14 +124,14 @@ export default function GuidedTour() {
                     {!isLastStep && (
                         <button
                             onClick={handleSkip}
-                            className="text-xs font-bold text-white/80 hover:text-white min-h-[44px] px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+                            className="text-xs font-bold text-white/80 hover:text-white min-h-tap px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
                         >
                             Skip
                         </button>
                     )}
                     <button
                         onClick={handleNext}
-                        className="text-xs font-bold min-h-[44px] px-4 py-2 rounded-lg transition-colors shadow-lg bg-white text-gray-900 hover:bg-white/90"
+                        className="text-xs font-bold min-h-tap px-4 py-2 rounded-lg transition-colors shadow-lg bg-white text-gray-900 hover:bg-white/90"
                     >
                         {isLastStep ? "Let's Go!" : isFirstStep ? "Show Me" : "Next →"}
                     </button>

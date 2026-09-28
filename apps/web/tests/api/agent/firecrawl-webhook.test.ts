@@ -278,4 +278,23 @@ describe('POST /api/agent/firecrawl-webhook rehearsal handling', () => {
       }),
     );
   });
+
+  it('a signal about an untracked currency anchors as NONE and fans out to nobody', async () => {
+    // A Jamaican CPI signal has no JMD token — the model must return
+    // targetToken: null rather than misattributing it (e.g. KESm).
+    arrangeEligibleUser();
+    mockGenerateChatCompletion.mockResolvedValue({
+      data: JSON.stringify({ ...ACTIONABLE_MODEL, signal: 'inflation_shift', targetToken: null }),
+    });
+    const res = await post(baseData);
+
+    expect(res.body).toMatchObject({ action: 'signal_propagated', targetToken: null, usersUpdated: 0 });
+    expect(enqueueRecommendation).not.toHaveBeenCalled();
+    expect(mockRecordRecommendation).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'MACRO_SIGNAL:INFLATION_SHIFT', targetToken: 'NONE' }),
+    );
+    expect(mockRememberLedgerReasoning).toHaveBeenCalledWith(
+      expect.objectContaining({ targetToken: 'NONE' }),
+    );
+  });
 });

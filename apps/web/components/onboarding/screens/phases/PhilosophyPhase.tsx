@@ -21,6 +21,7 @@ import type { PlanPreview } from '../../../protection-cards/plan-preview';
 import { MONEY_PURPOSES, type MoneyPurpose } from '../../../../constants/money-purpose';
 import { ArchetypeStrip } from './ArchetypeStrip';
 import { PHILOSOPHY_CTA, VALUES_LENSES, staggerChild, phaseVariants, type ValuesLens } from './phase-config';
+import { springPress } from "@/lib/motion-tokens";
 
 export interface PanelEntrance {
   initial: TargetAndTransition;
@@ -175,7 +176,7 @@ export function PhilosophyPhase({
                   <p className="text-sm font-black text-white truncate">
                     {showAllApproaches ? 'All approaches' : activeLens.label}
                   </p>
-                  <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                  <p className="text-2xs text-slate-400 truncate mt-0.5">
                     {showAllApproaches
                       ? 'Every approach in one list.'
                       : activeLens.description}
@@ -186,7 +187,7 @@ export function PhilosophyPhase({
                     <button
                       type="button"
                       onClick={() => setShowAllApproaches(true)}
-                      className="min-h-[44px] px-1 text-[11px] font-bold text-slate-400 hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
+                      className="min-h-tap px-1 text-2xs font-bold text-slate-400 hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
                     >
                       All 8 →
                     </button>
@@ -194,7 +195,7 @@ export function PhilosophyPhase({
                   <button
                     type="button"
                     onClick={handleBackToCoins}
-                    className="min-h-[44px] px-2 rounded-lg text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+                    className="min-h-tap px-2 rounded-lg text-2xs font-bold text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
                   >
                     ← Coins
                   </button>
@@ -229,7 +230,7 @@ export function PhilosophyPhase({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                      className="px-2 text-[11px] text-slate-400 text-center"
+                      className="px-2 text-2xs text-slate-400 text-center"
                     >
                       Tap an approach to preview its plan.
                     </motion.p>
@@ -248,7 +249,7 @@ export function PhilosophyPhase({
           are gone (chip labels already say it). */}
       <motion.div variants={staggerChild} className="mb-4">
         {/* One visible label — "Soon / Years / By date" means nothing alone. */}
-        <p id="money-purpose-label" className="text-[11px] font-bold text-slate-300 mb-1.5 text-left">
+        <p id="money-purpose-label" className="text-2xs font-bold text-slate-300 mb-1.5 text-left">
           When will you need this money?
         </p>
         <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-labelledby="money-purpose-label">
@@ -260,7 +261,7 @@ export function PhilosophyPhase({
               aria-checked={moneyPurpose === purpose.value}
               onClick={() => setMoneyPurpose(purpose.value)}
               aria-label={purpose.label}
-              className={`min-h-[44px] rounded-lg px-1 py-2 text-[11px] font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
+              className={`min-h-tap rounded-lg px-1 py-2 text-2xs font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
                 moneyPurpose === purpose.value
                   ? 'bg-emerald-500 text-white shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
@@ -283,7 +284,7 @@ export function PhilosophyPhase({
           <motion.button
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            transition={springPress}
             onClick={async () => {
               if (onConnectWallet && !isWalletConnected) {
                 try { await onConnectWallet(); } catch { /* fall through */ }

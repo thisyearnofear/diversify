@@ -16,6 +16,7 @@ import { showTestnetUi, optIntoTestnetUi } from '../../../../constants/testnet';
 import { ShimmerText } from '../../../shared/ShimmerText';
 import { phaseVariants, staggerChild } from './phase-config';
 import { BENCHMARKS, type Benchmark } from '../../../../constants/currency-risk';
+import { spring } from "@/lib/motion-tokens";
 
 interface DetectPhaseProps {
   riskLoading: boolean;
@@ -132,7 +133,7 @@ export function DetectPhase({
               {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => (
                 <span
                   key={bench}
-                  className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-full bg-white/70 dark:bg-gray-900/40 border border-blue-100 dark:border-blue-900/40 text-gray-700 dark:text-gray-200"
+                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full bg-white/70 dark:bg-gray-900/40 border border-blue-100 dark:border-blue-900/40 text-gray-700 dark:text-gray-200"
                 >
                   <span>{BENCHMARKS[bench].flag}</span>
                   {BENCHMARKS[bench].label}
@@ -157,7 +158,7 @@ export function DetectPhase({
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 28 }}
+            transition={spring}
             role="dialog"
             aria-modal="true"
             aria-label="Choose your country"
@@ -188,7 +189,7 @@ export function DetectPhase({
               }}
               className="w-full px-3 py-3 mb-3 text-sm rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none"
             />
-            <p className="text-[10px] uppercase tracking-widest font-black text-slate-500 mb-2">
+            <p className="text-3xs uppercase tracking-widest font-black text-slate-500 mb-2">
               {manualCountrySearch ? 'Matches' : 'Suggested countries'}
             </p>
             {manualCountrySearch && filteredCountries.length === 0 ? (
@@ -203,19 +204,19 @@ export function DetectPhase({
                 <button
                   type="button"
                   onClick={() => setManualCountrySearch('')}
-                  className="mt-2 px-3 py-1.5 text-[11px] font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
+                  className="mt-2 px-3 py-1.5 text-2xs font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
                 >
                   ← Clear search
                 </button>
                 {/* Requesting a missing country lives exactly where the
                     visitor discovers it's missing — not on the first screen. */}
       {countryRequestStatus === 'success' ? (
-        <p className="text-[10px] text-emerald-400 font-bold text-center py-2">
+        <p className="text-3xs text-emerald-400 font-bold text-center py-2">
           ✓ Request sent — we&apos;ll add it soon.
         </p>
       ) : (
         <div className="mt-2 pt-2 border-t border-white/10">
-          <p className="text-[10px] text-slate-400 text-center mb-1.5">
+          <p className="text-3xs text-slate-400 text-center mb-1.5">
             Don&apos;t see your country?
           </p>
           <div className="flex items-center justify-center gap-2">
@@ -231,13 +232,13 @@ export function DetectPhase({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleCountryRequest();
               }}
-              className="w-12 px-2 py-1.5 text-[10px] font-bold text-center rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 outline-none uppercase"
+              className="w-12 px-2 py-1.5 text-3xs font-bold text-center rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 outline-none uppercase"
             />
             <button
               type="button"
               onClick={handleCountryRequest}
               disabled={countryRequestStatus === 'submitting'}
-              className="px-3 py-1.5 text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 disabled:opacity-50"
+              className="px-3 py-1.5 text-3xs font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 disabled:opacity-50"
             >
               {countryRequestStatus === 'submitting' ? 'Sending…' : 'Request'}
             </button>
@@ -265,7 +266,7 @@ export function DetectPhase({
                     <span className="text-lg">{c.flag}</span>
                     <div>
                       <div className="text-xs font-bold text-white">{c.countryName}</div>
-                      <div className="text-[10px] text-slate-400">{c.code}</div>
+                      <div className="text-3xs text-slate-400">{c.code}</div>
                     </div>
                   </button>
                 ))}
@@ -292,7 +293,7 @@ export function DetectPhase({
       <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800/60">
         <button
           onClick={() => setShowTestDetails(!showTestDetails)}
-          className="text-[11px] text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 rounded"
+          className="text-2xs text-gray-300 dark:text-gray-600 hover:text-gray-500 dark:hover:text-gray-400 transition-colors font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/40 rounded"
         >
           {showTestDetails ? '− Hide developer options' : 'Developer options'}
         </button>
