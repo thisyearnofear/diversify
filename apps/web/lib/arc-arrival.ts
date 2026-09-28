@@ -34,6 +34,12 @@ export interface ArcArrivalRoute {
 }
 
 const ROUTES: Record<ArcArrivalEnv, ArcArrivalRoute> = {
+  // Arc mainnet params verified live 2026-09-28: eth_chainId → 0x13b2 (5042)
+  // against rpc.mainnet.arc.io, and explorer.arc.io/tx/{hash} → 200 — both
+  // match Circle/Blockscout's own published values (docs.chainstack.com,
+  // blog.blockscout.com "Arc mainnet is live, and Blockscout is its
+  // official block explorer"). NETWORKS.ARC_MAINNET is the same config the
+  // rest of the app already trusts for the x402 settlement rail.
   mainnet: {
     env: "mainnet",
     sourceKey: "arc",
@@ -180,17 +186,39 @@ interface IrisMessage {
   forwardState?: string;
 }
 
+/**
+ * `forwardState` values seen in Circle's own example response: "PENDING"
+ * while the mint hasn't landed yet. Circle's reference doesn't publish a
+ * full enum, so this is deliberately narrow: only these two lowercase
+ * forms count as delivered/failed; anything else (including an absent
+ * forwardState, for API versions that predate the field) is still
+ * in flight. Getting this wrong in the optimistic direction would mark a
+ * pending transfer "delivered" while `forwardTxHash` is still a
+ * not-yet-mined placeholder — verified against Circle's documented
+ * example at developers.circle.com/api-reference/cctp/all/get-messages-v2,
+ * where forwardTxHash is present AND forwardState is "PENDING" in the
+ * same object.
+ */
+const FORWARD_DELIVERED = new Set(["complete", "completed", "success", "confirmed"]);
+const FORWARD_FAILED = new Set(["failed", "error", "reverted"]);
+
 /** Interpret one Iris `/v2/messages` response. Pure — unit-tested. */
 export function interpretIris(body: unknown): DeliveryStatus {
   const msg = (body as { messages?: IrisMessage[] } | null)?.messages?.[0];
   if (!msg) return { state: "pending" };
-  if (msg.forwardTxHash) return { state: "delivered", forwardTxHash: msg.forwardTxHash };
+
+  const forwardState = (msg.forwardState ?? "").toLowerCase();
+  // Delivered only when Circle's own state says so — a present forwardTxHash
+  // is not itself proof; Circle's docs show it populated while still PENDING.
+  if (msg.forwardTxHash && FORWARD_DELIVERED.has(forwardState)) {
+    return { state: "delivered", forwardTxHash: msg.forwardTxHash };
+  }
   if (msg.status === "complete" && msg.message && msg.attestation) {
     return {
       state: "attested",
       message: msg.message,
       attestation: msg.attestation,
-      forwardFailed: (msg.forwardState ?? "").toUpperCase() === "FAILED",
+      forwardFailed: FORWARD_FAILED.has(forwardState),
     };
   }
   return { state: "pending" };

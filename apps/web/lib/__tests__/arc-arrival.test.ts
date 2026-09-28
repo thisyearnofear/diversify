@@ -60,7 +60,7 @@ describe("fees and max", () => {
 });
 
 describe("interpretIris", () => {
-  it("reads pending, attested, failed-forward and delivered", () => {
+  it("reads pending, attested, and a clean delivery", () => {
     expect(interpretIris({})).toEqual({ state: "pending" });
     expect(interpretIris({ messages: [{ status: "pending_confirmations" }] })).toEqual({ state: "pending" });
     expect(
@@ -68,12 +68,42 @@ describe("interpretIris", () => {
     ).toEqual({ state: "attested", message: "0xm", attestation: "0xa", forwardFailed: false });
     expect(
       interpretIris({
+        messages: [{ status: "complete", forwardTxHash: "0xf", forwardState: "complete" }],
+      }),
+    ).toEqual({ state: "delivered", forwardTxHash: "0xf" });
+  });
+
+  it("a present forwardTxHash with forwardState PENDING is NOT delivered yet — matches Circle's own documented example response (developers.circle.com/api-reference/cctp/all/get-messages-v2), where the field is populated ahead of the mint landing", () => {
+    expect(
+      interpretIris({
+        messages: [
+          {
+            status: "complete",
+            message: "0xm",
+            attestation: "0xa",
+            forwardTxHash: "0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            forwardState: "PENDING",
+          },
+        ],
+      }),
+    ).toEqual({ state: "attested", message: "0xm", attestation: "0xa", forwardFailed: false });
+  });
+
+  it("a failed forward is reported as attested+forwardFailed, not silently pending forever", () => {
+    expect(
+      interpretIris({
         messages: [{ status: "complete", message: "0xm", attestation: "0xa", forwardState: "FAILED" }],
       }),
     ).toMatchObject({ state: "attested", forwardFailed: true });
-    expect(interpretIris({ messages: [{ status: "complete", forwardTxHash: "0xf" }] })).toEqual({
-      state: "delivered",
-      forwardTxHash: "0xf",
-    });
+  });
+
+  it("an unrecognised forwardState (future API values) stays conservatively attested, not delivered", () => {
+    expect(
+      interpretIris({
+        messages: [
+          { status: "complete", message: "0xm", attestation: "0xa", forwardTxHash: "0xf", forwardState: "SOMETHING_NEW" },
+        ],
+      }),
+    ).toMatchObject({ state: "attested", forwardFailed: false });
   });
 });
