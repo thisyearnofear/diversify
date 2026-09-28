@@ -28,7 +28,9 @@
 #   DEPLOY_RUNTIME_DIR  Runtime path on server (default: /home/deploy/diversifi-api-runtime)
 #   DEPLOY_APP_NAME     PM2 app name (default: diversifi-api)
 #   DEPLOY_SKIP_BUILD   Set to "true" to skip the local build step
-#   DEPLOY_SYNC_ENV     Set to "true" to also sync .env.local to the server
+#   DEPLOY_SYNC_ENV     Set to "true" to MERGE .env.local into the server .env
+#                       (upserts local keys; server-only keys are preserved —
+#                       it no longer overwrites the whole file)
 #   DEPLOY_HEALTH_URL   URL to gate on (default: http://127.0.0.1:6174/api/healthz)
 #   DEPLOY_SKIP_GATE    Set to "true" to skip the post-deploy healthz gate
 #                       (use only for emergency deploys; you take the risk)
@@ -276,9 +278,14 @@ ok "Rsync complete"
 # ── 5. Optionally sync .env.local ───────────────────────────────────────────
 if [ "$SYNC_ENV" = "true" ]; then
     if [ -f ".env.local" ]; then
-        info "Syncing .env.local → $RUNTIME_DIR/.env on server..."
-        scp ".env.local" "$REMOTE:$RUNTIME_DIR/.env"
-        ok "Environment synced"
+        # Merge, never overwrite: the server .env holds runtime-only keys that
+        # do not exist in .env.local (signer keys, Tablestore, 0G endpoints).
+        # A wholesale scp silently deleted them — upsert instead.
+        info "Merging .env.local into $RUNTIME_DIR/.env on server (server-only keys preserved)..."
+        scp ".env.local" "$REMOTE:$RUNTIME_DIR/.env.incoming"
+        scp "scripts/merge-env.awk" "$REMOTE:$RUNTIME_DIR/.env.merge.awk"
+        ssh "$REMOTE" "cd '$RUNTIME_DIR' && awk -f .env.merge.awk .env.incoming .env > .env.merged && mv .env.merged .env && rm -f .env.incoming .env.merge.awk"
+        ok "Environment merged (pre-merge backup is in the deploy snapshot)"
     else
         warn ".env.local not found locally — skipping env sync"
     fi
