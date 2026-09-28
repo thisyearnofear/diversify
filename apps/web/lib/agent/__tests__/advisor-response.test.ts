@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 // Mock the AI seam at the shared barrel — advisor-core must never reach a
 // real provider; tests only inspect the prompt it builds and the text it
 // returns.
-const { mockChat, mockChatStream, mockCompletion, mockLiveDep, mockAnalyze } =
+const { mockChat, mockChatStream, mockCompletion, mockLiveDep, mockLiveRate, mockAppendDecision, mockAnalyze } =
   vi.hoisted(() => ({
     mockChat: vi.fn(
       async (_opts: {
@@ -19,6 +19,8 @@ const { mockChat, mockChatStream, mockCompletion, mockLiveDep, mockAnalyze } =
       }),
     ),
     mockLiveDep: vi.fn(async () => null as any),
+    mockLiveRate: vi.fn(async () => null as { rate: number } | null),
+    mockAppendDecision: vi.fn(async () => {}),
     mockAnalyze: vi.fn(() => ({
       totalValue: 0,
       tokenCount: 0,
@@ -62,6 +64,11 @@ vi.mock("@diversifi/shared", () => ({
 // Never let tests reach the live FX dataset — controlled stubs only.
 vi.mock("@diversifi/shared/src/services/fx-rate.service", () => ({
   getLiveDepreciation: mockLiveDep,
+  getLiveRate: mockLiveRate,
+}));
+
+vi.mock("@/lib/vault/guardian-state", () => ({
+  appendDecisionLog: mockAppendDecision,
 }));
 
 import {
@@ -312,5 +319,95 @@ describe("response logging", () => {
     expect(entry).toBeDefined();
     expect((entry![1] as any).provider).toBe("stream-p");
     spy.mockRestore();
+  });
+});
+
+describe("Guardian plan tilts (analysis mode)", () => {
+  const planContext = {
+    strategy: "pan_caribbean",
+    anchor: "USD",
+    band: 10,
+    rules: {},
+    slices: [
+      { exposure: "USD", target: 50, held: 100, gap: -50 },
+      { exposure: "XAU", target: 30, held: 0, gap: 30 },
+      { exposure: "EUR", target: 20, held: 0, gap: 20 },
+    ],
+    candidates: { USD: "USDC@42161", XAU: "PAXG@42161", EUR: "EURm@42220" },
+    totalUsd: 1000,
+  };
+  const reply = (guardianPlan: unknown) =>
+    mockCompletion.mockResolvedValueOnce({
+      content: JSON.stringify({ action: "SWAP", reasoning: "r", targetToken: "PAXG", targetChainId: 42161, guardianPlan }),
+      provider: "mock",
+      model: "mock-model",
+    });
+
+  it("puts the compact plan and citable signals in the prompt", async () => {
+    await runAdvisorAnalysis({ planContext, networkActivity: { goldPriceChange24h: 2.1 } });
+    const user = mockCompletion.mock.calls.at(-1)?.[0].messages.find((m) => m.role === "user")?.content ?? "";
+    expect(user).toContain("PLAN CONTEXT");
+    expect(user).toContain("XAU target 30 held 0 gap +30 → PAXG@42161");
+    expect(user).toContain("goldChange24h=2.1");
+  });
+
+  it("ships validated tilts with their instrument and journals the rejected ones", async () => {
+    mockAppendDecision.mockClear();
+    reply({
+      tilts: [
+        { exposure: "XAU", delta: 5, reason: "Gold bid", evidence: [{ signal: "goldChange24h", value: 2.1 }] },
+        { exposure: "EUR", delta: 9, reason: "Too big", evidence: [{ signal: "goldChange24h", value: 2.1 }] },
+      ],
+      nextMove: { exposure: "XAU", amountAnchor: 50 },
+    });
+    const { advice } = await runAdvisorAnalysis({
+      planContext,
+      networkActivity: { goldPriceChange24h: 2.1 },
+      verifiedAddress: "0xabc",
+    });
+    expect(advice.guardianPlan.tilts).toEqual([
+      expect.objectContaining({ exposure: "XAU", delta: 5, instrument: { symbol: "PAXG", chainId: 42161 } }),
+    ]);
+    expect(advice.guardianPlan.nextMove).toMatchObject({ amountUsd: 50, instrument: { symbol: "PAXG", chainId: 42161 } });
+    expect(advice.guardianPlan.fx).toEqual({ rate: 1, source: "identity" });
+    expect(mockAppendDecision).toHaveBeenCalledWith(
+      "0xabc",
+      expect.objectContaining({ status: "tilt_rejected", reason: expect.stringContaining("more than ±5 points") }),
+    );
+  });
+
+  it("without a verified address a rejected tilt is not journaled", async () => {
+    mockAppendDecision.mockClear();
+    reply({
+      tilts: [
+        { exposure: "EUR", delta: 9, reason: "Too big", evidence: [{ signal: "goldChange24h", value: 2.1 }] },
+      ],
+    });
+    const { advice } = await runAdvisorAnalysis({
+      planContext,
+      networkActivity: { goldPriceChange24h: 2.1 },
+    });
+    expect(advice.guardianPlan.tilts).toEqual([]);
+    expect(mockAppendDecision).not.toHaveBeenCalled();
+  });
+
+  it("sizes a non-USD next move with live FX, disclosing the fallback table when live fails", async () => {
+    const kes = { ...planContext, anchor: "KES" };
+    mockLiveRate.mockResolvedValueOnce({ rate: 130 });
+    reply({ tilts: [], nextMove: { exposure: "EUR", amountAnchor: 1300 } });
+    const live = await runAdvisorAnalysis({ planContext: kes });
+    expect(live.advice.guardianPlan.fx).toEqual({ rate: 130, source: "live" });
+    expect(live.advice.guardianPlan.nextMove.amountUsd).toBe(10);
+
+    mockLiveRate.mockResolvedValueOnce(null);
+    reply({ tilts: [] });
+    const fallback = await runAdvisorAnalysis({ planContext: kes });
+    expect(fallback.advice.guardianPlan.fx?.source).toBe("fallback");
+  });
+
+  it("without a plan context the advice carries no guardianPlan", async () => {
+    reply({ tilts: [{ exposure: "XAU", delta: 5 }] });
+    const { advice } = await runAdvisorAnalysis({});
+    expect(advice.guardianPlan).toBeUndefined();
   });
 });

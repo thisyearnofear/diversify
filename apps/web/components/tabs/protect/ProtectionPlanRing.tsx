@@ -18,7 +18,7 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
-import { floorPercent, reserveLabel, resolvePlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
+import { floorPercent, reserveLabel, resolvePlan, type CustomPlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView, heldAsLine, heldAsSymbol } from '@/lib/wallet-portfolio-view';
@@ -69,6 +69,8 @@ interface Props {
   /** Faint concentric outer track of the current plan's legs — the
    *  contrast baseline while a different plan previews in compare. */
   ghostLegs?: PlanLeg[];
+  /** Names the ghost track (default "current plan"; Guardian: "Guardian suggestion"). */
+  ghostLabel?: string;
   /** Hole copy override — compare/picker carries the focused plan name +
    *  compact delta instead of the computed alignment content. */
   holeOverride?: { label: React.ReactNode; hint?: string };
@@ -87,6 +89,8 @@ interface Props {
   controls?: React.ReactNode;
   /** Reserve exposure the hole names (the anchor when the plan holds it). */
   floor?: Exposure;
+  /** The saved (or draft) Custom plan — `custom` resolves its legs and rules only from this. */
+  customPlan?: CustomPlan | null;
 }
 
 export function ProtectionPlanRing({
@@ -103,6 +107,7 @@ export function ProtectionPlanRing({
   forcePlanLegs = false,
   compact = false,
   ghostLegs,
+  ghostLabel = 'current plan',
   holeOverride,
   holeActionLabel,
   sleeveOpen = false,
@@ -111,14 +116,15 @@ export function ProtectionPlanRing({
   sinceHint,
   controls,
   floor = 'USD',
+  customPlan = null,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
   const allocations = useMemo(
-    () => legs ?? resolvePlan({ strategy: archetypeId }).legs,
-    [legs, archetypeId],
+    () => legs ?? resolvePlan({ strategy: archetypeId, customPlan }).legs,
+    [legs, archetypeId, customPlan],
   );
-  const planRules = resolvePlan({ strategy: archetypeId }).rules;
+  const planRules = resolvePlan({ strategy: archetypeId, customPlan }).rules;
 
   const walletView = useMemo(
     () => buildWalletPortfolioView(portfolio, allocations, planRules),
@@ -283,7 +289,7 @@ export function ProtectionPlanRing({
   const ringThickness = compact ? 16 : 24;
   const ghostSlices: RingSlice[] = (ghostLegs ?? []).map((a, i) => ({
     id: a.token,
-    label: `${a.label ?? displayToken(a.token)} — current plan`,
+    label: `${a.label ?? displayToken(a.token)} — ${ghostLabel}`,
     percent: a.percent,
     color: TOKEN_COLORS[a.token] ?? (i === 0 ? archetype?.accent : i === 1 ? archetype?.accentSoft : undefined) ?? QUIET_GRAY,
   }));

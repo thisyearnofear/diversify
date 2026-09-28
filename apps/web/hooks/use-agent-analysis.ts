@@ -9,7 +9,8 @@ import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { canonicalToken } from "@/lib/plan-legs";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { resolveAnchorCurrency } from "@/lib/anchor-currency";
-import { loadAnchorCurrency } from "./use-protection-profile";
+import { buildPlanContext, type PlanContext } from "@/lib/guardian-tilts";
+import { loadAnchorCurrency, loadCustomPlan } from "./use-protection-profile";
 import { readPaymentCycleDraft } from "./use-payment-cycle";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
@@ -19,6 +20,16 @@ import { readPaymentCycleDraft } from "./use-payment-cycle";
 const ADVISOR_ANALYSIS_TIMEOUT_MS = 30000;
 const DEEP_ANALYZE_TIMEOUT_MS = 12000;
 const GUARDIAN_STATE_TIMEOUT_MS = 6000;
+
+/** Headers from this session's cached wallet proof — never prompts for a signature. */
+function cachedAuthHeaders(address: string | null | undefined): Record<string, string> {
+  const proof = address ? getCachedWalletAuth(address) : null;
+  if (!proof) return {};
+  return {
+    "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
+    "X-Wallet-Auth-Signature": proof.signature,
+  };
+}
 import { useToast } from "../components/ui/Toast";
 import { getPersistedStrategy, getStrategyPrompt } from "./useFinancialStrategies";
 import { agentEventBus } from "./agent-event-bus";
@@ -63,6 +74,19 @@ const updateState = (
   cachedState = { ...cachedState, ...partial };
   notify();
 };
+
+/** Latest advisor analysis, for surfaces that render it without running one. */
+export function useLatestAdvice(): AIAdvice | null {
+  const [advice, setAdvice] = useState<AIAdvice | null>(cachedState.advice);
+  useEffect(() => {
+    const listener = (state: AnalysisStoreState) => setAdvice(state.advice);
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+  return advice;
+}
 
 export function useAgentAnalysis({
   apiBase,
@@ -125,6 +149,7 @@ export function useAgentAnalysis({
         updateState({ portfolioAnalysis: localAnalysis });
 
         const strategy = getPersistedStrategy();
+        let planContext: PlanContext | undefined;
         if (strategy) {
           // Same risk-adjusted legs the ring draws — drift feedback can't
           // disagree with what the user sees.
@@ -135,8 +160,23 @@ export function useAgentAnalysis({
           });
           const { legs, rules } = resolvePlan({
             strategy,
+            customPlan: loadCustomPlan(),
             riskTolerance: config.riskTolerance,
             anchorCurrency,
+          });
+          planContext = buildPlanContext({
+            strategy,
+            legs,
+            rules,
+            risk: config.riskTolerance,
+            anchor: anchorCurrency,
+            holdings: (portfolio.chains ?? []).flatMap((c) =>
+              (c.balances ?? []).map((b) => ({
+                symbol: b.symbol,
+                chainId: b.chainId ?? c.chainId,
+                value: b.value,
+              })),
+            ),
           });
           const heldPctByToken = new Map<string, number>();
           if (portfolio.totalValue > 0) {
@@ -213,7 +253,9 @@ export function useAgentAnalysis({
           `${apiBase}/api/agent/advisor`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            // The cached proof lets the server journal rejected tilts against
+            // the verified address.
+            headers: { "Content-Type": "application/json", ...cachedAuthHeaders(address) },
             body: JSON.stringify({
               mode: "analysis",
               portfolio,
@@ -227,6 +269,7 @@ export function useAgentAnalysis({
               },
               userRegion: userRegion,
               strategyPrompt: strategyPrompt || getStrategyPrompt(),
+              planContext,
             }),
           },
           ADVISOR_ANALYSIS_TIMEOUT_MS,
@@ -257,17 +300,13 @@ export function useAgentAnalysis({
             // budget is plenty for a same-origin POST and a hang here
             // shouldn't block the user from seeing the analysis result.
             // Uses cached auth only — never prompts for a signature.
-            const proof = getCachedWalletAuth(address);
-            if (proof) {
+            const authHeaders = cachedAuthHeaders(address);
+            if (authHeaders["X-Wallet-Auth-Signature"]) {
               fetchWithTimeout(
                 `${apiBase}/api/vault/guardian-state`,
                 {
                   method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
-                    "X-Wallet-Auth-Signature": proof.signature,
-                  },
+                  headers: { "Content-Type": "application/json", ...authHeaders },
                   body: JSON.stringify({
                     latestRecommendation: {
                       capturedAt: new Date().toISOString(),

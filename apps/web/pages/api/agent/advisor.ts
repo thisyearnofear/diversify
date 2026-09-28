@@ -75,9 +75,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Cloud Guardian memory is keyed by the signature-verified address only
     // — the body's `address` is unauthenticated and never scopes memory.
     const verifiedAddress = requireWalletAuth(req) ?? undefined;
-    const advisorInput = verifiedAddress
-      ? { ...req.body, verifiedAddress }
-      : req.body || {};
+    const advisorInput = { ...(req.body || {}), verifiedAddress };
 
     if (mode === 'analysis') {
       const result = await runAdvisorAnalysis(advisorInput);

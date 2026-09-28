@@ -29,8 +29,10 @@ vi.mock("@/hooks/use-advisor", () => ({
 const profileState = {
   riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
   anchorCurrency: null as string | null,
+  customPlan: null as unknown,
 };
 const mockSetRiskTolerance = vi.fn();
+const mockSetCustomPlan = vi.fn();
 const mockTrackFunnelEvent = vi.fn();
 vi.mock("@/lib/analytics", async (importOriginal) => {
   const mod = await importOriginal<typeof import("@/lib/analytics")>();
@@ -49,6 +51,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
       userGoal: "inflation_protection",
       riskTolerance: profileState.riskTolerance,
       anchorCurrency: profileState.anchorCurrency,
+      customPlan: profileState.customPlan,
       timeHorizon: "medium",
       moneyPurpose: mockMoneyPurpose,
     },
@@ -64,6 +67,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
     completeEditing: vi.fn(),
     setUserGoal: vi.fn(),
     setRiskTolerance: mockSetRiskTolerance,
+    setCustomPlan: mockSetCustomPlan,
     setTimeHorizon: vi.fn(),
   }),
   USER_GOALS: [
@@ -129,6 +133,11 @@ vi.mock("@diversifi/shared", () => ({
   },
 }));
 
+const mockLatestAdvice: { current: unknown } = { current: null };
+vi.mock("@/hooks/use-agent-analysis", () => ({
+  useLatestAdvice: () => mockLatestAdvice.current,
+}));
+
 vi.mock("@/hooks/use-agent-status", () => ({
   useAgentStatus: () => ({ isLoading: false }),
 }));
@@ -162,12 +171,21 @@ vi.mock("@/components/agent/AgentTierStatus", () => ({
   AgentTierStatus: () => null,
 }));
 
+const vaultState = vi.hoisted(() => ({
+  vault: null as { strategy: string } | null,
+  updateStrategy: (() => Promise.resolve()) as (...args: unknown[]) => Promise<void>,
+  cachedProof: null as { message: string; signature: string } | null,
+}));
 vi.mock("@/hooks/use-vault", () => ({
   useVault: () => ({
-    vault: null,
+    vault: vaultState.vault,
     refresh: vi.fn(),
-    updateStrategy: vi.fn(),
+    updateStrategy: vaultState.updateStrategy,
   }),
+}));
+vi.mock("@/lib/wallet-auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/wallet-auth")>()),
+  getCachedWalletAuth: () => vaultState.cachedProof,
 }));
 
 const mockSessionInfo = vi.hoisted(() => ({ current: null as unknown }));
@@ -400,7 +418,7 @@ vi.mock("@/components/tabs/protect/PhilosophyCoinRail", () => ({
     React.createElement(
       "div",
       { "data-testid": "philosophy-coin-rail" },
-      ["africapitalism", "buen_vivir"].map((id) =>
+      ["africapitalism", "buen_vivir", "custom"].map((id) =>
         React.createElement(
           "button",
           {
@@ -2063,5 +2081,205 @@ describe("ProtectionTab — live line", () => {
     fireEvent.click(screen.getByTestId("ring-hole"));
     expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
     expect(screen.queryByTestId("shield-live-line")).not.toBeInTheDocument();
+  });
+});
+
+describe("ProtectionTab — Guardian tilt on the ring", () => {
+  const instrument = { symbol: "EURm", chainId: 42220 };
+  const advice = (strategy: string) => ({
+    guardianPlan: {
+      strategy,
+      anchor: "USD",
+      tilts: [{ exposure: "EUR", delta: 5, reason: "Euro steadier than the shilling", evidence: [], instrument }],
+      nextMove: { exposure: "EUR", amountAnchor: 40, amountUsd: 40, instrument },
+      rejected: [],
+      fx: { rate: 1, source: "identity" },
+    },
+  });
+  const connected = () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({ address: "0xabc", chainId: 42220 } as any);
+  };
+  afterEach(() => {
+    mockLatestAdvice.current = null;
+  });
+
+  it("shows the suggestion as a ghost arc, previews the reshaped ring, and hands off to Exchange", () => {
+    mockLatestAdvice.current = advice("africapitalism");
+    connected();
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    const ring = screen.getByTestId("protection-plan-ring");
+    const saved = ring.getAttribute("data-legs");
+    const chip = screen.getByTestId("guardian-tilt-chip");
+    expect(chip.textContent).toContain("Guardian suggests +5 Euro");
+    expect(ring.getAttribute("data-ghost-legs")).not.toBe("[]");
+
+    fireEvent.click(chip);
+    const previewRing = screen.getByTestId("protection-plan-ring");
+    expect(previewRing.getAttribute("data-legs")).not.toBe(saved);
+    expect(previewRing.getAttribute("data-ghost-legs")).toBe(saved);
+    expect(screen.getByText("Guardian suggestion · not saved")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("guardian-tilt-review"));
+    expect(mockNavigateToSwap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toToken: "EURm",
+        toChainId: 42220,
+        amount: "40",
+        reason: "Euro steadier than the shilling",
+        origin: { source: "guardian" },
+      }),
+    );
+  });
+
+  it("stays silent when the suggestion was made for a different plan, or there is none", () => {
+    mockLatestAdvice.current = advice("pan_caribbean");
+    connected();
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.queryByTestId("guardian-tilt-chip")).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring").getAttribute("data-ghost-legs")).toBe("[]");
+  });
+});
+
+describe("ProtectionTab — Custom plan editor on the ring", () => {
+  const legsOf = () =>
+    JSON.parse(screen.getByTestId("protection-plan-ring").getAttribute("data-legs") ?? "[]") as [string, number][];
+  const sum = (legs: [string, number][]) => legs.reduce((s, [, p]) => s + p, 0);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = "africapitalism";
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    mockLatestAdvice.current = null;
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    profileState.customPlan = null;
+    vi.mocked(useWalletContext).mockReturnValue({ address: "0xabc", chainId: 42220 } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+    profileState.customPlan = null;
+  });
+
+  it("'Tweak this plan' opens the philosophy as a Custom draft on the same ring", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("ring-hole-static").textContent).toContain("Custom · from Africapitalism");
+    expect(legsOf()).toEqual([["KESm", 60], ["cUSD", 25], ["cEUR", 15]]);
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+  });
+
+  it("the slice stepper moves 5 points and the rest rebalance to 100", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    expect(screen.getByTestId("custom-slice-stepper").textContent).toContain("Shilling 60%");
+    fireEvent.click(screen.getByTestId("custom-step-up"));
+    expect(legsOf()).toEqual([["KESm", 65], ["cUSD", 20], ["cEUR", 15]]);
+    fireEvent.click(screen.getByTestId("custom-step-down"));
+    fireEvent.click(screen.getByTestId("custom-step-down"));
+    expect(sum(legsOf())).toBe(100);
+    expect(legsOf()[0]).toEqual(["KESm", 55]);
+  });
+
+  it("stepping a slice to zero removes it", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    for (let i = 0; i < 12; i++) fireEvent.click(screen.getByTestId("custom-step-down"));
+    expect(legsOf().map(([t]) => t)).toEqual(["cUSD", "cEUR"]);
+    expect(sum(legsOf())).toBe(100);
+    expect(screen.queryByTestId("custom-slice-stepper")).not.toBeInTheDocument();
+  });
+
+  it("+ Add offers exposures with a chain hint and adds a 5% slice", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    fireEvent.click(screen.getByTestId("custom-add"));
+    expect(screen.getByTestId("custom-add-XAU").textContent).toBe("Gold · Arbitrum");
+    expect(screen.queryByTestId("custom-add-KES")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("custom-add-XAU"));
+    expect(legsOf()).toContainEqual(["PAXG", 5]);
+    expect(sum(legsOf())).toBe(100);
+  });
+
+  it("Save plan commits into customPlan and switches to Custom", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    fireEvent.click(screen.getByTestId("custom-step-up"));
+    fireEvent.click(screen.getByTestId("custom-save"));
+    expect(mockSetCustomPlan).toHaveBeenCalledWith({
+      from: "africapitalism",
+      rules: {},
+      slices: [
+        { exposure: "KES", target: 65 },
+        { exposure: "USD", target: 20 },
+        { exposure: "EUR", target: 15 },
+      ],
+    });
+    expect(mockSetFinancialStrategy).toHaveBeenCalledWith("custom");
+    expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
+  });
+
+  it("saving a Custom plan never repoints the server Guardian, even with a cached proof", () => {
+    const updateStrategy = vi.fn(() => Promise.resolve());
+    vaultState.vault = { strategy: "africapitalism" };
+    vaultState.updateStrategy = updateStrategy;
+    vaultState.cachedProof = { message: "m", signature: "0xsig" };
+    try {
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("custom-tweak"));
+      fireEvent.click(screen.getByTestId("ring-select-kesm"));
+      fireEvent.click(screen.getByTestId("custom-step-up"));
+      fireEvent.click(screen.getByTestId("custom-save"));
+      expect(mockSetFinancialStrategy).toHaveBeenCalledWith("custom");
+      expect(updateStrategy).not.toHaveBeenCalled();
+    } finally {
+      vaultState.vault = null;
+      vaultState.updateStrategy = () => Promise.resolve();
+      vaultState.cachedProof = null;
+    }
+  });
+
+  it("Cancel leaves the saved plan untouched", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    fireEvent.click(screen.getByTestId("custom-cancel"));
+    expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
+    expect(mockSetCustomPlan).not.toHaveBeenCalled();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("choosing Custom directly starts from the wallet's current exposures", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    fireEvent.click(screen.getByTestId("coin-custom"));
+    expect(screen.getByTestId("ring-hole-static").textContent).toContain("Custom · from your wallet");
+    // $3,200 dollars across Celo + Arbitrum, $1,000 shillings; WETH has no plan exposure.
+    expect(legsOf()).toEqual([["cUSD", 75], ["KESm", 25]]);
+  });
+
+  it("a saved Custom plan draws on the ring and reopens in the editor", () => {
+    mockFinancialStrategy = "custom";
+    profileState.customPlan = {
+      from: "pan_caribbean",
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 50 },
+        { exposure: "XAU", target: 30 },
+        { exposure: "EUR", target: 20 },
+      ],
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("shield-ring")).toBeInTheDocument();
+    expect(legsOf()).toEqual([["cUSD", 50], ["PAXG", 30], ["cEUR", 20]]);
+    expect(screen.getByTestId("custom-tweak").textContent).toBe("Edit custom plan");
+    fireEvent.click(screen.getByTestId("custom-tweak"));
+    expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
+    expect(legsOf()).toEqual([["cUSD", 50], ["PAXG", 30], ["cEUR", 20]]);
   });
 });

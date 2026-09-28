@@ -38,6 +38,7 @@ import { ResearchFundingLine } from "../agent/ResearchFundingLine";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
 import { GuardianGrantModal } from "../agent/GuardianGrantModal";
 import { GuardianPlanSwitcher } from "../agent/GuardianPlanSwitcher";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import dynamic from "next/dynamic";
 import type AutomationSettingsType from "../agent/AutomationSettings";
 
@@ -187,6 +188,8 @@ function ConnectedAgent({
 }) {
   const g = useGuardianInstrument({ isMiniPay, onNavigateToFund });
   const { financialStrategy: shieldPlan } = useStrategy();
+  const { config: profileConfig } = useProtectionProfile();
+  const customPlan = profileConfig.customPlan;
   const shieldPlanName = shieldPlan
     ? STRATEGIES.find((s) => s.id === shieldPlan)?.name ?? null
     : null;
@@ -198,14 +201,14 @@ function ConnectedAgent({
   const { data: liveFeed } = useProofFeed();
   const { cycles: liveCycles } = usePurchaseCycles(address);
   const liveBeats = React.useMemo(() => {
-    const { legs } = resolvePlan({ strategy: shieldPlan });
+    const { legs } = resolvePlan({ strategy: shieldPlan, customPlan });
     return guardianBeats({
       records: liveFeed?.recent,
       cycles: liveCycles,
       planTokens: legs.map((l) => l.token),
       primaryLocalToken: primaryLocalToken(legs),
     });
-  }, [liveFeed, liveCycles, shieldPlan]);
+  }, [liveFeed, liveCycles, shieldPlan, customPlan]);
   const liveAlive =
     sel === null && !guardianContext && !g.showPermissionModal;
 
@@ -370,7 +373,7 @@ function ConnectedAgent({
               shieldPlan={shieldPlan}
               shieldPlanName={shieldPlanName}
               onFollowShieldPlan={
-                shieldPlan && address
+                shieldPlan && shieldPlan !== "custom" && address
                   ? () =>
                       void g.vault
                         .updateStrategy(address, shieldPlan)

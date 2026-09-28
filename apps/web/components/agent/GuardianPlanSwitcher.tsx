@@ -17,9 +17,9 @@ import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 import { displayToken } from "@/lib/plan-legs";
 
-// Canonical plans (same ids/names as StrategyContext). `custom` has no
-// archetype allocation, so it isn't selectable here.
-const PLANS = CANONICAL_STRATEGIES.filter((s) => s.id !== "custom").map((s) => ({
+// Canonical plans (same ids/names as StrategyContext). `custom` joins once
+// the user has saved one on the Shield ring.
+const ALL_PLANS = CANONICAL_STRATEGIES.map((s) => ({
   id: s.id,
   name: s.name,
   icon: s.icon,
@@ -45,6 +45,11 @@ export function GuardianPlanSwitcher({
   const reducedMotion = useReducedMotion();
   const { config: profileConfig } = useProtectionProfile();
   const { anchorCurrency } = useAnchorCurrency();
+  const customPlan = profileConfig.customPlan ?? null;
+  const PLANS = useMemo(
+    () => ALL_PLANS.filter((p) => p.id !== "custom" || customPlan),
+    [customPlan],
+  );
 
   useEffect(() => {
     const id = setTimeout(() => headingRef.current?.focus(), 50);
@@ -62,8 +67,8 @@ export function GuardianPlanSwitcher({
   const plan = PLANS.find((p) => p.id === selected) ?? PLANS[0];
   // Same risk-adjusted legs the Shield ring draws.
   const legs = useMemo(
-    () => resolvePlan({ strategy: plan.id, riskTolerance: profileConfig.riskTolerance, anchorCurrency }).legs,
-    [plan, profileConfig.riskTolerance, anchorCurrency],
+    () => resolvePlan({ strategy: plan.id, customPlan, riskTolerance: profileConfig.riskTolerance, anchorCurrency }).legs,
+    [plan, customPlan, profileConfig.riskTolerance, anchorCurrency],
   );
 
   const save = async () => {

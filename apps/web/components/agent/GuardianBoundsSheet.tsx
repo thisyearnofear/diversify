@@ -16,6 +16,7 @@ import type {
 } from "@/hooks/use-session-key";
 import type { useVault } from "@/hooks/use-vault";
 import { MIN_AUTO_SAVER_FUNDS_USD } from "@/constants/guardian-limits";
+import { STRATEGIES } from "@/hooks/useFinancialStrategies";
 
 export function GuardianBoundsSheet({
   hasValidPermission,
@@ -86,6 +87,11 @@ export function GuardianBoundsSheet({
   const planMismatch = Boolean(
     vault.vault?.strategy && shieldPlan && vault.vault.strategy !== shieldPlan,
   );
+  // Custom slices live only in this browser — the server Guardian can't follow them.
+  const localCustom = planMismatch && shieldPlan === "custom";
+  const serverPlanName = vault.vault?.strategy
+    ? STRATEGIES.find((s) => s.id === vault.vault?.strategy)?.name ?? vault.vault.strategy.replace(/-/g, " ")
+    : null;
   const isWaitingForFunds =
     hasValidPermission && walletStableBalanceUSD < MIN_AUTO_SAVER_FUNDS_USD;
 
@@ -191,7 +197,7 @@ export function GuardianBoundsSheet({
               {vault.vault.strategy.replace(/-/g, ' ')}
             </p>
           </div>
-          {planMismatch && onFollowShieldPlan ? (
+          {planMismatch && !localCustom && onFollowShieldPlan ? (
             <button
               type="button"
               onClick={onFollowShieldPlan}
@@ -210,7 +216,11 @@ export function GuardianBoundsSheet({
           )}
         </div>
       )}
-      {planMismatch && (
+      {localCustom ? (
+        <p className="-mt-4 text-2xs text-gray-500 dark:text-gray-400" data-testid="guardian-plan-custom-local">
+          Guardian keeps following {serverPlanName} — Custom plans live on this device.
+        </p>
+      ) : planMismatch && (
         <p className="-mt-4 text-2xs text-amber-700 dark:text-amber-300" data-testid="guardian-plan-mismatch">
           Your Shield plan is {shieldPlanName ?? shieldPlan} — Guardian is still proposing for this one.
         </p>
