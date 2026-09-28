@@ -4,7 +4,7 @@ import { useAgentStatus } from '../../hooks/use-agent-status';
 import { useAgentVoice } from '../../hooks/use-agent-voice';
 import { useNetworkActivity } from '../../hooks/use-network-activity';
 import { useToast } from './Toast';
-import sdk from '@farcaster/miniapp-sdk';
+import { haptics } from '@/lib/haptics';
 
 const VOICE_DISABLED_KEY = 'diversifi-voice-disabled';
 const VOICE_FIRST_SEEN_KEY = 'diversifi-voice-first-seen';
@@ -319,13 +319,8 @@ export default function VoiceButton({
     const handleToggle = () => {
         if (recordingState === 'processing') return; // Don't interrupt processing
 
-        // Haptic feedback for mobile
-        try {
-            interface HapticSDK {
-                hapticFeedback: (options: { type: 'selection' | 'impact' | 'notification' }) => void;
-            }
-            (sdk.actions as unknown as HapticSDK).hapticFeedback({ type: 'selection' });
-        } catch { /* Ignore haptic errors */ }
+        // Selection tick — lib/haptics routes to the Farcaster host when present.
+        haptics.tap();
 
         if (recordingState === 'recording') {
             stopRecording();

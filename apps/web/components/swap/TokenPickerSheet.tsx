@@ -5,7 +5,7 @@ import Scrim from "../shared/Scrim";
 import { haptics } from "@/lib/haptics";
 import { spring, springPop } from "@/lib/motion-tokens";
 import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
-import { shouldDismissDrag } from "../shared/InspectorSheet";
+import { shouldDismissDrag, useDismissDetent } from "../shared/InspectorSheet";
 // Deep leaf import — provenance facts are curated constants.
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { ProvenanceCoinBack } from "./ProvenanceCoinBack";
@@ -52,6 +52,7 @@ export default function TokenPickerSheet({
   const searchRef = useRef<HTMLInputElement>(null);
   const reducedMotion = useReducedMotion();
   const dragControls = useDragControls();
+  const detent = useDismissDetent();
 
   // Escape + back gesture close the picker (topmost layer only).
   useDismissibleLayer(isOpen, onClose);
@@ -169,6 +170,8 @@ export default function TokenPickerSheet({
             dragListener={false}
             dragConstraints={{ top: 0, bottom: 0 }}
             dragElastic={{ top: 0.05, bottom: 0.9 }}
+            onDragStart={detent.onDragStart}
+            onDrag={detent.onDrag}
             onDragEnd={(_e, info) => {
               if (shouldDismissDrag(info)) onClose();
             }}

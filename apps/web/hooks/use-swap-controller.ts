@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useContext, useMemo, useRef } from "react";
 import { isBrowserOffline } from "./use-online-status";
+import { haptics } from "@/lib/haptics";
 import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
@@ -332,6 +333,11 @@ export function useSwapController({
       if (demoActive) return;
       if (reportedAttemptRef.current === attemptSeqRef.current) return;
       reportedAttemptRef.current = attemptSeqRef.current;
+      // One felt beat per attempt, deduped with the funnel event above:
+      // success taps once, a real failure buzzes, a cancel stays silent
+      // (the user already knows — they pressed it).
+      if (outcome === "success") haptics.confirm();
+      else if (outcome !== "cancelled") haptics.error();
       trackFunnelEvent("swap_outcome", {
         outcome,
         provider: quoteProvider ?? "unknown",

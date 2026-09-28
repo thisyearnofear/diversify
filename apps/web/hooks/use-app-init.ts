@@ -4,6 +4,7 @@
  */
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/router";
+import { registerHapticHost } from "../lib/haptics";
 
 export function useAppInit() {
   const [isInMiniPay, setIsInMiniPay] = useState(false);
@@ -31,6 +32,14 @@ export function useAppInit() {
             sdk.actions.ready();
           } else if ((sdk as any)?.ready) {
             (sdk as any).ready();
+          }
+          // Native haptics: only when we're really hosted and the host says
+          // it can — otherwise lib/haptics keeps the vibrate path.
+          if (sdk?.haptics && (await sdk.isInMiniApp?.())) {
+            const caps = await sdk.getCapabilities?.().catch(() => [] as string[]);
+            if (caps?.some((c) => c.startsWith("haptics."))) {
+              registerHapticHost(sdk.haptics);
+            }
           }
         } catch {
           // Farcaster SDK not available — not in a Farcaster context

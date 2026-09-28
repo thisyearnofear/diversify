@@ -8,7 +8,7 @@
  * Reduced-motion skips the fold; content is identical.
  */
 
-import React from "react";
+import React, { useRef } from "react";
 import {
   AnimatePresence,
   motion,
@@ -18,6 +18,7 @@ import {
 } from "framer-motion";
 import { spring } from "@/lib/motion-tokens";
 import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
+import { haptics } from "@/lib/haptics";
 
 interface InspectorSheetProps {
   /** Selection key. Null/undefined closes the sheet. */
@@ -52,6 +53,25 @@ export function shouldDismissDrag(info: Pick<PanInfo, "offset" | "velocity">): b
   );
 }
 
+/**
+ * The detent: one light tick the moment a drag crosses the dismiss line,
+ * so you feel "let go now closes it" before you let go. Dragging back
+ * above the line re-arms it; it never repeats while you hover past it.
+ */
+export function useDismissDetent() {
+  const pastRef = useRef(false);
+  return {
+    onDragStart: () => {
+      pastRef.current = false;
+    },
+    onDrag: (_e: unknown, info: Pick<PanInfo, "offset">) => {
+      const past = info.offset.y > DISMISS_OFFSET_PX;
+      if (past && !pastRef.current) haptics.tap();
+      pastRef.current = past;
+    },
+  };
+}
+
 export function InspectorSheet({
   selectedId,
   onClose,
@@ -63,6 +83,7 @@ export function InspectorSheet({
   const dragControls = useDragControls();
   const open = Boolean(selectedId);
   const variants = reducedMotion ? INSTANT : FOLD;
+  const detent = useDismissDetent();
 
   useDismissibleLayer(open, onClose);
 
@@ -89,6 +110,8 @@ export function InspectorSheet({
           dragListener={false}
           dragConstraints={{ top: 0, bottom: 0 }}
           dragElastic={{ top: 0.05, bottom: 0.9 }}
+          onDragStart={detent.onDragStart}
+          onDrag={detent.onDrag}
           onDragEnd={(_e, info) => {
             if (shouldDismissDrag(info)) onClose();
           }}
