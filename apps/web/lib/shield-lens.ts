@@ -5,8 +5,8 @@
  * gap CTA's job, never this prompt's.
  */
 import {
-  FLOOR_TOKENS,
   floorPercent,
+  isFloorHolding,
   type PlanLeg,
   type RiskTolerance,
 } from "@/components/protection-cards/plan-preview";
@@ -27,15 +27,15 @@ export function strongerFloorOffer({
 }: {
   savedRisk: RiskTolerance | null;
   planLegs: PlanLeg[];
-  /** Held % keyed by canonical (plan-leg) token names — cUSD/USDC. */
+  /** Held % by token; every liquid dollar token (any issuer/chain) counts. */
   heldPctByToken: ReadonlyMap<string, number>;
 }): StrongerFloorOffer | null {
   const risk = savedRisk ?? "Balanced";
   if (risk === "Conservative") return null;
-  const heldFloor = [...FLOOR_TOKENS].reduce(
-    (sum, t) => sum + (heldPctByToken.get(t) ?? 0),
-    0,
-  );
+  let heldFloor = 0;
+  for (const [symbol, pct] of heldPctByToken) {
+    if (isFloorHolding(symbol)) heldFloor += pct;
+  }
   const planFloor = floorPercent(planLegs);
   if (heldFloor - planFloor < 10) return null;
   return {

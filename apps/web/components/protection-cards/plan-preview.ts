@@ -4,57 +4,156 @@
  *
  * Percent splits also power the Guardian vault wizard preview bar.
  */
-import { ARCHETYPES, archetypeToStrategy, type ArchetypeId } from './tokens';
-import { displayToken } from '@/lib/plan-legs';
+import { ARCHETYPES, archetypeToStrategy, strategyToArchetype, type ArchetypeId } from './tokens';
+import { canonicalToken, displayToken } from '@/lib/plan-legs';
+import { NETWORKS } from '@/config';
+import {
+  exposureLabel,
+  exposureOf,
+  instrumentsFor,
+  isYieldBearing,
+  type Exposure,
+} from '@diversifi/shared/src/config/exposures';
 
+export type { Exposure };
+
+/**
+ * One ring slice. `token` is the slice id and the instrument the resolver
+ * would buy to fill it; the slice itself is an exposure — any token with the
+ * same exposure counts toward it (plan-alignment).
+ */
 export interface PlanLeg {
   token: string;
   region: string;
   percent: number;
   /** One line about the user's money — never the taxonomy. */
   why: string;
+  exposure?: Exposure;
+  prefer?: SlicePreference;
+  /** Exposure name for the ring ("Gold", "Dollar"). */
+  label?: string;
+}
+
+export type SlicePreference = 'yield' | 'liquid';
+
+export interface PlanSlice {
+  exposure: Exposure;
+  target: number;
+  region: string;
+  why: string;
+  prefer?: SlicePreference;
+}
+
+export interface PlanRules {
+  /** No yield-bearing instruments (riba). */
+  excludeYield?: boolean;
+}
+
+export interface ExposurePlan {
+  slices: PlanSlice[];
+  rules: PlanRules;
 }
 
 /** Financial-strategy ids (StrategyContext / GuardianPlanSwitcher). */
-export const STRATEGY_ALLOCATIONS: Record<string, PlanLeg[]> = {
-  africapitalism: [
-    { token: 'KESm', region: 'Kenya', percent: 60, why: 'Kenyan shilling — wealth stays home' },
-    { token: 'cUSD', region: 'US', percent: 25, why: 'Dollar floor for the plan' },
-    { token: 'cEUR', region: 'EU', percent: 15, why: 'Euro leg — a second anchor' },
-  ],
-  buen_vivir: [
-    { token: 'cREAL', region: 'Brazil', percent: 45, why: "Brazil's real — the LatAm anchor" },
-    { token: 'COPm', region: 'Colombia', percent: 35, why: 'Colombian peso — the second LatAm leg' },
-    { token: 'cUSD', region: 'US', percent: 20, why: 'Dollar floor for the plan' },
-  ],
-  pan_caribbean: [
-    { token: 'cUSD', region: 'US', percent: 50, why: 'USD-pegged core against imported inflation' },
-    { token: 'PAXG', region: 'Global', percent: 30, why: 'Gold — hedge for food and fuel shocks' },
-    { token: 'cEUR', region: 'EU', percent: 20, why: 'Euro leg — a second anchor' },
-  ],
-  confucian: [
-    { token: 'USDC', region: 'APAC savings (HashKey)', percent: 70, why: 'Regulated APAC savings core' },
-    { token: 'USDY', region: 'Yield (Arbitrum)', percent: 30, why: 'Treasury yield, low volatility' },
-  ],
-  gotong_royong: [
-    { token: 'USDC', region: 'APAC savings (HashKey)', percent: 50, why: 'Regulated APAC savings core' },
-    { token: 'PHPm', region: 'Philippines', percent: 30, why: 'Philippine peso — local leg' },
-    { token: 'USDY', region: 'Yield (Arbitrum)', percent: 20, why: 'Treasury yield, shared upside' },
-  ],
-  global: [
-    { token: 'USDC', region: 'Global', percent: 25, why: 'Global liquid core' },
-    { token: 'cEUR', region: 'EU', percent: 20, why: 'Europe' },
-    { token: 'KESm', region: 'Kenya', percent: 20, why: 'Africa' },
-    { token: 'cREAL', region: 'Brazil', percent: 15, why: 'Latin America' },
-    { token: 'COPm', region: 'Colombia', percent: 10, why: 'Latin America — second leg' },
-    { token: 'PHPm', region: 'Philippines', percent: 10, why: 'Asia' },
-  ],
-  islamic: [
-    { token: 'PAXG', region: 'Global', percent: 50, why: 'Gold — asset-backed, no riba' },
-    { token: 'cUSD', region: 'US', percent: 30, why: 'Dollar floor, no interest' },
-    { token: 'USDC', region: 'US', percent: 20, why: 'Liquid reserve, no interest' },
-  ],
+export const STRATEGY_PLANS: Record<string, ExposurePlan> = {
+  africapitalism: {
+    rules: {},
+    slices: [
+      { exposure: 'KES', target: 60, region: 'Kenya', why: 'Kenyan shilling — wealth stays home' },
+      { exposure: 'USD', target: 25, region: 'US', why: 'Dollar floor for the plan' },
+      { exposure: 'EUR', target: 15, region: 'EU', why: 'Euro leg — a second anchor' },
+    ],
+  },
+  buen_vivir: {
+    rules: {},
+    slices: [
+      { exposure: 'BRL', target: 45, region: 'Brazil', why: "Brazil's real — the LatAm anchor" },
+      { exposure: 'COP', target: 35, region: 'Colombia', why: 'Colombian peso — the second LatAm leg' },
+      { exposure: 'USD', target: 20, region: 'US', why: 'Dollar floor for the plan' },
+    ],
+  },
+  pan_caribbean: {
+    rules: {},
+    slices: [
+      { exposure: 'USD', target: 50, region: 'US', why: 'USD-pegged core against imported inflation' },
+      { exposure: 'XAU', target: 30, region: 'Global', why: 'Gold — hedge for food and fuel shocks' },
+      { exposure: 'EUR', target: 20, region: 'EU', why: 'Euro leg — a second anchor' },
+    ],
+  },
+  confucian: {
+    rules: {},
+    slices: [
+      { exposure: 'USD', target: 70, region: 'Savings core', why: 'Liquid dollar savings core' },
+      { exposure: 'USD', target: 30, region: 'Treasury yield', why: 'Treasury yield, low volatility', prefer: 'yield' },
+    ],
+  },
+  gotong_royong: {
+    rules: {},
+    slices: [
+      { exposure: 'USD', target: 50, region: 'Savings core', why: 'Liquid dollar savings core' },
+      { exposure: 'PHP', target: 30, region: 'Philippines', why: 'Philippine peso — local leg' },
+      { exposure: 'USD', target: 20, region: 'Treasury yield', why: 'Treasury yield, shared upside', prefer: 'yield' },
+    ],
+  },
+  global: {
+    rules: {},
+    slices: [
+      { exposure: 'USD', target: 25, region: 'Global', why: 'Global liquid core' },
+      { exposure: 'EUR', target: 20, region: 'EU', why: 'Europe' },
+      { exposure: 'KES', target: 20, region: 'Kenya', why: 'Africa' },
+      { exposure: 'BRL', target: 15, region: 'Brazil', why: 'Latin America' },
+      { exposure: 'COP', target: 10, region: 'Colombia', why: 'Latin America — second leg' },
+      { exposure: 'PHP', target: 10, region: 'Philippines', why: 'Asia' },
+    ],
+  },
+  islamic: {
+    rules: { excludeYield: true },
+    slices: [
+      { exposure: 'XAU', target: 50, region: 'Global', why: 'Gold — asset-backed, no riba' },
+      { exposure: 'USD', target: 50, region: 'US', why: 'Dollar floor, no interest' },
+    ],
+  },
 };
+
+const CELO_MAINNET = NETWORKS.CELO_MAINNET.chainId;
+
+/**
+ * The instrument a slice is bought as: executable on a mainnet rail, yield
+ * only when the slice prefers it and the rules allow, Celo before Arbitrum.
+ * Returned under the plan-leg name (cUSD, cEUR, …).
+ */
+export function instrumentForSlice(slice: PlanSlice, rules: PlanRules = {}): string | null {
+  const wantYield = slice.prefer === 'yield' && !rules.excludeYield;
+  const pick = instrumentsFor(slice.exposure, { executableOnly: true })
+    .filter((i) => i.yieldBearing === wantYield)
+    .sort((a, b) => Number(b.chainId === CELO_MAINNET) - Number(a.chainId === CELO_MAINNET))[0];
+  return pick ? canonicalToken(pick.symbol) : null;
+}
+
+export function sliceLabel(exposure: Exposure, prefer?: SlicePreference): string {
+  return prefer === 'yield' ? `${exposureLabel(exposure)} · yield` : exposureLabel(exposure);
+}
+
+function legsFromPlan({ slices, rules }: ExposurePlan): PlanLeg[] {
+  return slices.flatMap((slice) => {
+    const token = instrumentForSlice(slice, rules);
+    if (!token) return [];
+    return [{
+      token,
+      region: slice.region,
+      percent: slice.target,
+      why: slice.why,
+      exposure: slice.exposure,
+      ...(slice.prefer ? { prefer: slice.prefer } : {}),
+      label: sliceLabel(slice.exposure, slice.prefer),
+    }];
+  });
+}
+
+/** Balanced legs per strategy, derived from STRATEGY_PLANS. */
+export const STRATEGY_ALLOCATIONS: Record<string, PlanLeg[]> = Object.fromEntries(
+  Object.entries(STRATEGY_PLANS).map(([id, plan]) => [id, legsFromPlan(plan)]),
+);
 
 const TRADABLE_TOKEN = /^[A-Z][A-Za-z0-9]{1,5}$/;
 
@@ -62,9 +161,6 @@ const TRADABLE_TOKEN = /^[A-Z][A-Za-z0-9]{1,5}$/;
 // Dollar-floor dial — riskTolerance shapes the plan legs (one truth: ring,
 // score, learn mix, Guardian feedback all read the adjusted legs).
 // ============================================================================
-
-/** Legs that count as the plan's dollar floor. */
-export const FLOOR_TOKENS = new Set(['cUSD', 'USDC']);
 
 export type RiskTolerance = 'Conservative' | 'Balanced' | 'Aggressive';
 
@@ -74,9 +170,23 @@ const FLOOR_SHIFT: Record<RiskTolerance, number> = {
   Aggressive: -15,
 };
 
+export function legExposure(leg: Pick<PlanLeg, 'token' | 'exposure'>): Exposure | null {
+  return leg.exposure ?? exposureOf(leg.token);
+}
+
+/** Liquid dollar legs form the plan's floor; yield dollars don't. */
+export function isFloorLeg(leg: PlanLeg): boolean {
+  return legExposure(leg) === 'USD' && leg.prefer !== 'yield' && !isYieldBearing(leg.token);
+}
+
+/** A held token that counts toward the dollar floor (any issuer, any chain). */
+export function isFloorHolding(symbol: string): boolean {
+  return exposureOf(symbol) === 'USD' && !isYieldBearing(symbol);
+}
+
 /** Sum of dollar-floor legs in a plan. */
 export function floorPercent(legs: PlanLeg[]): number {
-  return legs.reduce((sum, leg) => sum + (FLOOR_TOKENS.has(leg.token) ? leg.percent : 0), 0);
+  return legs.reduce((sum, leg) => sum + (isFloorLeg(leg) ? leg.percent : 0), 0);
 }
 
 /**
@@ -90,8 +200,8 @@ export function legsForRisk(
 ): PlanLeg[] {
   const shift = risk ? FLOOR_SHIFT[risk] : undefined;
   if (shift == null || shift === 0) return legs;
-  const floorLegs = legs.filter((l) => FLOOR_TOKENS.has(l.token));
-  const identityLegs = legs.filter((l) => !FLOOR_TOKENS.has(l.token));
+  const floorLegs = legs.filter(isFloorLeg);
+  const identityLegs = legs.filter((l) => !isFloorLeg(l));
   if (floorLegs.length === 0 || identityLegs.length === 0) return legs;
 
   const baseFloor = floorPercent(legs);
@@ -101,9 +211,7 @@ export function legsForRisk(
 
   const adjusted = legs.map((leg) => ({
     ...leg,
-    percent: Math.round(
-      leg.percent * (FLOOR_TOKENS.has(leg.token) ? floorScale : identityScale),
-    ),
+    percent: Math.round(leg.percent * (isFloorLeg(leg) ? floorScale : identityScale)),
   }));
   const drift = 100 - adjusted.reduce((sum, l) => sum + l.percent, 0);
   if (drift !== 0) {
@@ -111,6 +219,48 @@ export function legsForRisk(
     largest.percent += drift;
   }
   return adjusted;
+}
+
+// ============================================================================
+// resolvePlan — the one reader of "what plan is this user on".
+// ============================================================================
+
+export interface PlanProfile {
+  /** Strategy id or archetype id (either spelling resolves). */
+  strategy?: string | null;
+  riskTolerance?: RiskTolerance | null;
+}
+
+export interface ResolvedPlan {
+  strategy: string | null;
+  archetypeId: ArchetypeId | null;
+  /** Risk-adjusted legs — the ring, score, and Guardian all read these. */
+  legs: PlanLeg[];
+  rules: PlanRules;
+}
+
+const EMPTY_PLAN: ResolvedPlan = { strategy: null, archetypeId: null, legs: [], rules: {} };
+const resolved = new Map<string, ResolvedPlan>();
+
+/** Memoised: the same profile always returns the same object (stable React deps). */
+export function resolvePlan({ strategy, riskTolerance }: PlanProfile): ResolvedPlan {
+  const archetypeId = strategy
+    ? strategyToArchetype(strategy) ?? (strategy in ARCHETYPES ? (strategy as ArchetypeId) : null)
+    : null;
+  if (!archetypeId) return EMPTY_PLAN;
+  const key = `${archetypeId}|${riskTolerance ?? ''}`;
+  const hit = resolved.get(key);
+  if (hit) return hit;
+  const strategyId = archetypeToStrategy(archetypeId);
+  const base = STRATEGY_ALLOCATIONS[strategyId] ?? [];
+  const plan: ResolvedPlan = {
+    strategy: strategyId,
+    archetypeId,
+    legs: legsForRisk(base, riskTolerance),
+    rules: STRATEGY_PLANS[strategyId]?.rules ?? {},
+  };
+  resolved.set(key, plan);
+  return plan;
 }
 
 /**
@@ -183,7 +333,7 @@ export interface PlanPreviewInput {
 }
 
 export function getArchetypeAllocations(archetypeId: ArchetypeId): PlanLeg[] {
-  return STRATEGY_ALLOCATIONS[archetypeToStrategy(archetypeId)] ?? [];
+  return resolvePlan({ strategy: archetypeId }).legs;
 }
 
 function equalSplitFallback(tokens: string[], shieldAmount: number): PlanPreviewSlice[] {
@@ -211,7 +361,7 @@ export function getPlanPreview({
 }: PlanPreviewInput): PlanPreview {
   const archetype = ARCHETYPES[archetypeId];
   const shieldAmount = savingsAmount * (shieldPercent / 100);
-  const allocations = legsForRisk(getArchetypeAllocations(archetypeId), riskTolerance);
+  const allocations = resolvePlan({ strategy: archetypeId, riskTolerance }).legs;
 
   const slices: PlanPreviewSlice[] =
     allocations.length > 0

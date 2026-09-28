@@ -31,8 +31,7 @@ import { GuardianObject } from "../agent/GuardianObject";
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
-import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
-import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
 import { ResearchFundingLine } from "../agent/ResearchFundingLine";
@@ -199,8 +198,7 @@ function ConnectedAgent({
   const { data: liveFeed } = useProofFeed();
   const { cycles: liveCycles } = usePurchaseCycles(address);
   const liveBeats = React.useMemo(() => {
-    const archetype = shieldPlan ? strategyToArchetype(shieldPlan) : null;
-    const legs = archetype ? getArchetypeAllocations(archetype) : [];
+    const { legs } = resolvePlan({ strategy: shieldPlan });
     return guardianBeats({
       records: liveFeed?.recent,
       cycles: liveCycles,

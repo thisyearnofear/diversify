@@ -11,7 +11,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { strategyAccent } from "../shared/palette";
 import { STRATEGIES as CANONICAL_STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { STRATEGY_ALLOCATIONS, legsForRisk } from "@/components/protection-cards/plan-preview";
+import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 import { displayToken } from "@/lib/plan-legs";
@@ -23,7 +23,6 @@ const PLANS = CANONICAL_STRATEGIES.filter((s) => s.id !== "custom").map((s) => (
   name: s.name,
   icon: s.icon,
   tagline: s.tagline,
-  allocation: STRATEGY_ALLOCATIONS[s.id] ?? [],
 }));
 
 export function GuardianPlanSwitcher({
@@ -61,7 +60,7 @@ export function GuardianPlanSwitcher({
   const plan = PLANS.find((p) => p.id === selected) ?? PLANS[0];
   // Same risk-adjusted legs the Shield ring draws.
   const legs = useMemo(
-    () => legsForRisk(plan.allocation, profileConfig.riskTolerance),
+    () => resolvePlan({ strategy: plan.id, riskTolerance: profileConfig.riskTolerance }).legs,
     [plan, profileConfig.riskTolerance],
   );
 
@@ -145,7 +144,7 @@ export function GuardianPlanSwitcher({
           <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 space-y-1.5">
             {legs.map((a) => (
               <div key={a.token} className="flex items-center gap-2 text-xs">
-                <span className="w-14 font-bold text-gray-900 dark:text-white truncate">{displayToken(a.token)}</span>
+                <span className="w-14 font-bold text-gray-900 dark:text-white truncate">{a.label ?? displayToken(a.token)}</span>
                 <div className="flex-1 h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                   <div
                     className="h-full rounded-full"

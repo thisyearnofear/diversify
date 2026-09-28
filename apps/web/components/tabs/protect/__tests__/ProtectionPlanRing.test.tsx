@@ -166,7 +166,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
   });
 
-  it('merges a USDm holding into the plan leg row — rendered under the canonical USDm name', () => {
+  it('merges a USDm holding into the plan leg row — rendered under the Dollar exposure', () => {
     const usdmWallet = {
       ...DEMO_PORTFOLIO,
       totalValue: 100,
@@ -200,7 +200,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     );
     // One row under the canonical ticker — never a stray "not in plan" row,
     // never the legacy cUSD spelling on the surface.
-    expect(screen.getAllByText('USDm').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Dollar').length).toBeGreaterThan(0);
     expect(screen.queryByText('cUSD')).not.toBeInTheDocument();
     expect(screen.queryByText('not in plan')).not.toBeInTheDocument();
   });
@@ -257,7 +257,7 @@ describe('ProtectionPlanRing — projections shape', () => {
       screen.queryByRole('group', { name: 'Allocation ring' }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole('button', { name: /BRLm — plan/ }),
+      screen.queryByRole('button', { name: /Real — plan/ }),
     ).not.toBeInTheDocument();
     unmount();
 
@@ -272,7 +272,7 @@ describe('ProtectionPlanRing — projections shape', () => {
       />,
     );
     expect(
-      screen.getByRole('button', { name: /BRLm — plan/ }),
+      screen.getByRole('button', { name: /Real — plan/ }),
     ).toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: /wallet holding/ }),
@@ -297,7 +297,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     // The ghost draws the current plan's legs, not the preview — its
     // track is decorative, so the wedges carry labels without a role.
     expect(
-      within(outline).getByLabelText(/KESm — current plan/),
+      within(outline).getByLabelText(/Shilling — current plan/),
     ).toBeInTheDocument();
   });
 
@@ -386,10 +386,10 @@ describe('ProtectionPlanRing — tokenized-asset lens', () => {
       />,
     );
     // The PAXG leg stays itself — gold never decomposes into credit vaults.
-    expect(screen.getByRole('button', { name: /^PAXG — plan/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Gold — plan/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /RWA vault/ })).not.toBeInTheDocument();
     // Other plan legs are still drawn (quiet), still tappable.
-    expect(screen.getByRole('button', { name: /^USDm — plan/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Dollar — plan/ })).toBeInTheDocument();
     expect(screen.getByText('tokenized assets')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
     expect(screen.getByText('PAXG · of this plan')).toBeInTheDocument();
@@ -421,7 +421,7 @@ describe('ProtectionPlanRing — tokenized-asset lens', () => {
         sleeveOpen
       />,
     );
-    expect(screen.getByRole('button', { name: /^KESm — plan/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Shilling — plan/ })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Tokenized assets — preview, not in your plan/ }),
     ).toBeInTheDocument();
@@ -451,7 +451,7 @@ describe('ProtectionPlanRing — tokenized-asset lens', () => {
         sleeveOpen
       />,
     );
-    fireEvent.click(screen.getByRole('button', { name: /^PAXG — plan/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Gold — plan/ }));
     expect(onSelect).toHaveBeenCalledWith('PAXG');
   });
 });
@@ -676,9 +676,9 @@ describe('ProtectionPlanRing — balance preview', () => {
         onSelectToken={() => {}}
       />,
     );
-    expect(screen.getByRole('button', { name: /KESm — preview target: 48%/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /USDm — preview target: 40%/ })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /EURm — preview target: 12%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Shilling — preview target: 48%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Dollar — preview target: 40%/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Euro — preview target: 12%/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /wallet holding/ })).not.toBeInTheDocument();
     expect(screen.getByText('Your shield plan')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
@@ -716,7 +716,7 @@ describe('ProtectionPlanRing — balance preview', () => {
         onSelectToken={() => {}}
       />,
     );
-    expect(screen.getAllByText('KESm').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Shilling').length).toBeGreaterThan(0);
     expect(screen.getByText('48%')).toBeInTheDocument();
     expect(screen.getByText('60% in saved plan')).toBeInTheDocument();
     expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
@@ -736,7 +736,7 @@ describe('ProtectionPlanRing — balance preview', () => {
       />,
     );
     const controls = screen.getByTestId('ring-controls');
-    const firstRow = screen.getByText('KESm').closest('button')!;
+    const firstRow = screen.getByText('Shilling').closest('button')!;
     expect(controls.compareDocumentPosition(firstRow) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(
       screen.getByRole('group', { name: 'Allocation ring' })
@@ -824,10 +824,10 @@ describe('ProtectionPlanRing — balance preview', () => {
       );
     }
     render(<Wrapper />);
-    const kesm = screen.getByRole('button', { name: /KESm — preview target: 48%/ });
+    const kesm = screen.getByRole('button', { name: /Shilling — preview target: 48%/ });
     expect(kesm).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(kesm);
-    expect(screen.getByRole('button', { name: /KESm — preview target: 48%/ })).toHaveAttribute(
+    expect(screen.getByRole('button', { name: /Shilling — preview target: 48%/ })).toHaveAttribute(
       'aria-pressed',
       'true',
     );

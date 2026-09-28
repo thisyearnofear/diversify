@@ -7,8 +7,7 @@ import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { canonicalToken } from "@/lib/plan-legs";
-import { getArchetypeAllocations, legsForRisk } from "@/components/protection-cards/plan-preview";
-import { strategyToArchetype } from "@/components/protection-cards/tokens";
+import { resolvePlan } from "@/components/protection-cards/plan-preview";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
 // full convention). 30s preserves the original AbortController budget for the
@@ -124,11 +123,9 @@ export function useAgentAnalysis({
 
         const strategy = getPersistedStrategy();
         if (strategy) {
-          const archetypeId = strategyToArchetype(strategy);
-          const baseLegs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
           // Same risk-adjusted legs the ring draws — drift feedback can't
           // disagree with what the user sees.
-          const legs = legsForRisk(baseLegs, config.riskTolerance);
+          const { legs, rules } = resolvePlan({ strategy, riskTolerance: config.riskTolerance });
           const heldPctByToken = new Map<string, number>();
           if (portfolio.totalValue > 0) {
             for (const b of (portfolio.chains ?? []).flatMap((c) => c.balances ?? [])) {
@@ -145,6 +142,7 @@ export function useAgentAnalysis({
             legs,
             heldPctByToken,
             portfolio.totalValue,
+            rules,
           );
           const feedback = alignedLegs.map((leg) => {
             if (leg.gap > 2) {

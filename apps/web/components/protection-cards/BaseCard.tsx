@@ -46,7 +46,7 @@ export function BaseCard({
   const planLegs = getArchetypeAllocations(archetype.id);
   const pills =
     planLegs.length > 0
-      ? planLegs.map((leg) => `${leg.token} ${leg.percent}`)
+      ? planLegs.map((leg) => `${leg.label ?? leg.token} ${leg.percent}`)
       : archetype.allocation;
 
   return (

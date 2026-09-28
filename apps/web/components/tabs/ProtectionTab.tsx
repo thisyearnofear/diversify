@@ -41,8 +41,7 @@ import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype }
 import { shieldPatternFor } from "./protect/shield-pattern";
 import {
   compactPlanDelta,
-  getArchetypeAllocations,
-  legsForRisk,
+  resolvePlan,
 } from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { canonicalToken, configTokenFor, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
@@ -69,7 +68,7 @@ import {
 } from "@/lib/learn/protection-calculator";
 import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 import { InstrumentShell } from "../shared/InstrumentShell";
-import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
+import { buildWalletPortfolioView, heldAsLine } from "@/lib/wallet-portfolio-view";
 import { rwaLegFor } from "./protect/rwa-assets";
 import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
@@ -228,20 +227,15 @@ export default function ProtectionTab({
     [navigateToGuardian, planName],
   );
   const planRingVisible = useMemo(() => {
-    if (!strategyKey) return false;
-    const archetypeId = strategyToArchetype(strategyKey);
-    return archetypeId ? getArchetypeAllocations(archetypeId).length > 0 : false;
+    return resolvePlan({ strategy: strategyKey }).legs.length > 0;
   }, [strategyKey]);
 
   const allocations = useMemo(() => {
-    if (!strategyKey) return [];
-    const archetypeId = strategyToArchetype(strategyKey);
-    const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
-    return legsForRisk(legs, config.riskTolerance);
+    return resolvePlan({ strategy: strategyKey, riskTolerance: config.riskTolerance }).legs;
   }, [strategyKey, config.riskTolerance]);
+  const planRules = resolvePlan({ strategy: strategyKey }).rules;
   const balanceAllocations = useMemo(() => {
-    const id = strategyToArchetype(strategyKey);
-    return id ? legsForRisk(getArchetypeAllocations(id), balance.risk) : [];
+    return resolvePlan({ strategy: strategyKey, riskTolerance: balance.risk }).legs;
   }, [strategyKey, balance.risk]);
 
   const heldPctByToken = useMemo(() => {
@@ -261,8 +255,7 @@ export default function ProtectionTab({
   // committed strategy, else the onboarding philosophy (walletless ghost).
   const sleeveLegs = useMemo(() => {
     if (allocations.length > 0) return allocations;
-    const id = strategyToArchetype(config.philosophy ?? null);
-    return id ? legsForRisk(getArchetypeAllocations(id), config.riskTolerance) : [];
+    return resolvePlan({ strategy: config.philosophy, riskTolerance: config.riskTolerance }).legs;
   }, [allocations, config.philosophy, config.riskTolerance]);
   const sleevePhilosophy = strategyKey ?? config.philosophy ?? null;
   const planPctBySymbol = useMemo(
@@ -287,14 +280,12 @@ export default function ProtectionTab({
       ? focusedPhilosophy
       : strategyKey;
   const previewAllocations = useMemo(() => {
-    if (!previewKey) return [];
-    const archetypeId = strategyToArchetype(previewKey);
-    const legs = archetypeId ? getArchetypeAllocations(archetypeId) : [];
-    return legsForRisk(legs, config.riskTolerance);
+    return resolvePlan({ strategy: previewKey, riskTolerance: config.riskTolerance }).legs;
   }, [previewKey, config.riskTolerance]);
+  const previewRules = resolvePlan({ strategy: previewKey }).rules;
   const previewAlignment = useMemo(
-    () => scorePlanAlignment(previewAllocations, heldPctByToken, totalValue),
-    [previewAllocations, heldPctByToken, totalValue],
+    () => scorePlanAlignment(previewAllocations, heldPctByToken, totalValue, previewRules),
+    [previewAllocations, heldPctByToken, totalValue, previewRules],
   );
   const exitCompare = useCallback(() => {
     setFocusedToken(null);
@@ -424,11 +415,11 @@ export default function ProtectionTab({
     return (balance * percentage).toFixed(2);
   };
 
-  // One truth: the ring's own slices are the plan. The score is pure
-  // token overlap — how much of the wallet already follows it.
+  // One truth: the ring's own slices are the plan. The score is exposure
+  // overlap — how much of the wallet already follows it.
   const alignment = useMemo(
-    () => scorePlanAlignment(allocations, heldPctByToken, totalValue),
-    [allocations, heldPctByToken, totalValue],
+    () => scorePlanAlignment(allocations, heldPctByToken, totalValue, planRules),
+    [allocations, heldPctByToken, totalValue, planRules],
   );
 
   const prevStrategyRef = useRef(selectedStrategy);
@@ -494,8 +485,8 @@ export default function ProtectionTab({
   });
 
   const walletView = useMemo(
-    () => buildWalletPortfolioView(activePortfolio, allocations),
-    [activePortfolio, allocations],
+    () => buildWalletPortfolioView(activePortfolio, allocations, planRules),
+    [activePortfolio, allocations, planRules],
   );
 
   // "Try a stronger floor" lens — only helps when the wallet already holds
@@ -580,16 +571,8 @@ export default function ProtectionTab({
   });
 
   const learnMix = useMemo(() => {
-    const archetypeId = focusedPhilosophy
-      ? strategyToArchetype(focusedPhilosophy)
-      : null;
-    if (archetypeId) {
-      const legs = legsForRisk(
-        getArchetypeAllocations(archetypeId),
-        config.riskTolerance,
-      );
-      if (legs.length > 0) return mixFromLegs(legs);
-    }
+    const legs = resolvePlan({ strategy: focusedPhilosophy, riskTolerance: config.riskTolerance }).legs;
+    if (legs.length > 0) return mixFromLegs(legs);
     return mixForPhilosophy(focusedPhilosophy);
   }, [focusedPhilosophy, config.riskTolerance]);
   const learnMixLabel = mixLabelFor(
@@ -882,6 +865,10 @@ export default function ProtectionTab({
       comparing={comparing}
       focusedPhilosophy={focusedPhilosophy}
       focusedToken={focusedToken}
+      focusedHeldAs={heldAsLine(
+        walletView.holdings.find((h) => h.symbol === focusedToken),
+        walletView.totalUsd,
+      )}
       shape={shape}
       strategyKey={strategyKey}
       setFocusedToken={setFocusedToken}

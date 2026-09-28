@@ -18,10 +18,10 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
-import { floorPercent, getArchetypeAllocations, type PlanLeg } from '@/components/protection-cards/plan-preview';
+import { floorPercent, resolvePlan, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
-import { buildWalletPortfolioView } from '@/lib/wallet-portfolio-view';
+import { buildWalletPortfolioView, heldAsLine, heldAsSymbol } from '@/lib/wallet-portfolio-view';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
 import { rwaLegFor } from './rwa-assets';
@@ -112,13 +112,18 @@ export function ProtectionPlanRing({
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
   const allocations = useMemo(
-    () => legs ?? (archetypeId ? getArchetypeAllocations(archetypeId) : []),
+    () => legs ?? resolvePlan({ strategy: archetypeId }).legs,
     [legs, archetypeId],
   );
+  const planRules = resolvePlan({ strategy: archetypeId }).rules;
 
   const walletView = useMemo(
-    () => buildWalletPortfolioView(portfolio, allocations),
-    [portfolio, allocations],
+    () => buildWalletPortfolioView(portfolio, allocations, planRules),
+    [portfolio, allocations, planRules],
+  );
+  const holdingByToken = useMemo(
+    () => new Map(walletView.holdings.map((holding) => [holding.symbol, holding])),
+    [walletView.holdings],
   );
   const totalValue = walletView.totalUsd;
   // Memoized: it is a dependency of the enriched/primary memos below.
@@ -145,7 +150,7 @@ export function ProtectionPlanRing({
     }
     return allocations.map((a, i) => ({
       id: a.token,
-      label: `${displayToken(a.token)} — ${balancePreview ? 'preview target' : 'plan'}`,
+      label: `${a.label ?? displayToken(a.token)} — ${balancePreview ? 'preview target' : 'plan'}`,
       percent: a.percent,
         color:
           TOKEN_COLORS[a.token] ??
@@ -194,7 +199,8 @@ export function ProtectionPlanRing({
   // Enrich slices with plan/held meta once, then partition.
   const enriched = useMemo(() => {
     return slices.map((s) => {
-      const a = allocations.find((alloc) => alloc.token === s.id) ?? { token: s.id, region: 'Wallet holding', percent: 0 };
+      const a: Pick<PlanLeg, 'token' | 'region' | 'percent' | 'label'> =
+        allocations.find((alloc) => alloc.token === s.id) ?? { token: s.id, region: 'Wallet holding', percent: 0 };
       const held = heldPctByToken.get(a.token) ?? 0;
       // Sort key: largest of plan target or actual holding — gap matters too
       const rank = balancePreview ? a.percent : Math.max(a.percent, held);
@@ -274,7 +280,7 @@ export function ProtectionPlanRing({
   const ringThickness = compact ? 16 : 24;
   const ghostSlices: RingSlice[] = (ghostLegs ?? []).map((a, i) => ({
     id: a.token,
-    label: `${displayToken(a.token)} — current plan`,
+    label: `${a.label ?? displayToken(a.token)} — current plan`,
     percent: a.percent,
     color: TOKEN_COLORS[a.token] ?? (i === 0 ? archetype?.accent : i === 1 ? archetype?.accentSoft : undefined) ?? QUIET_GRAY,
   }));
@@ -319,7 +325,7 @@ export function ProtectionPlanRing({
     }
     if (balancePreview) {
       return selected
-        ? { number: `${selected.percent}%` as React.ReactNode, label: displayToken(selected.token), hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
+        ? { number: `${selected.percent}%` as React.ReactNode, label: selected.label ?? displayToken(selected.token), hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
         : { number: `${floorPercent(allocations)}%` as React.ReactNode, label: 'Dollar reserve', hint: 'Preview · not saved' };
     }
     // Tokenized-asset lens — checked before the empty/walletless branches so
@@ -339,7 +345,7 @@ export function ProtectionPlanRing({
           };
     }
     if (empty && selected) {
-      return { number: `${selected.percent}%` as React.ReactNode, label: displayToken(selected.token), hint: 'Target only · not funded' };
+      return { number: `${selected.percent}%` as React.ReactNode, label: selected.label ?? displayToken(selected.token), hint: 'Target only · not funded' };
     }
     // The plan name lives in the badge above — the hole never repeats it.
     if (empty && walletless) {
@@ -611,13 +617,13 @@ export function ProtectionPlanRing({
                 isSelected ? 'bg-gray-50 dark:bg-gray-700/40' : 'hover:bg-gray-50 dark:hover:bg-gray-700/30'
               }`}
             >
-              <TokenIcon symbol={displayToken(a.token)} size={22} />
+              <TokenIcon symbol={heldAsSymbol(holdingByToken.get(a.token)) ?? displayToken(a.token)} size={22} />
               <span className="flex-1 min-w-0">
                 <span className="block text-sm font-bold text-gray-900 dark:text-white">
-                  {displayToken(a.token)}
+                  {a.label ?? displayToken(a.token)}
                 </span>
                 <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">
-                  {a.region}
+                  {(!balancePreview && heldAsLine(holdingByToken.get(a.token), totalValue)) || a.region}
                 </span>
               </span>
               <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">
