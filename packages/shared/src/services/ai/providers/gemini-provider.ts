@@ -76,12 +76,21 @@ export class GeminiProvider extends BaseAIProvider {
 
         const response = await result.response;
         const content = response.text();
-        
+
+        // A blank reply (e.g. thinking spent the whole output budget)
+        // must fail over to the next provider, not render as silence.
+        if (!content.trim()) {
+          throw new Error('Gemini returned an empty response');
+        }
+
         // Note: Gemini JSON mode is unreliable, so we rely on prompt engineering
         // and clean the response
-        
+
         return {
           data: this.cleanJsonResponse(content),
+          // Raw trimmed prose — `data` is the cleaned JSON span, which would
+          // truncate any chat reply that merely contains braces.
+          content: content.trim(),
           provider: 'gemini',
           modelUsed: modelName,
           citations: undefined // Gemini doesn't provide citations in the same way
@@ -123,6 +132,7 @@ export class GeminiProvider extends BaseAIProvider {
 
     for (const modelName of modelNames) {
       let emittedText = false;
+      let accumulated = '';
       try {
         const model = this.client!.getGenerativeModel({ model: modelName });
 
@@ -141,7 +151,8 @@ export class GeminiProvider extends BaseAIProvider {
           try {
             const text = chunk.text();
             if (text) {
-              emittedText = true;
+              accumulated += text;
+              if (accumulated.trim()) emittedText = true;
               yield { type: 'chunk', text };
             }
           } catch {

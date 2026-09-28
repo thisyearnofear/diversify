@@ -46,6 +46,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       req.headers['x-demo-mode'] === '1' ||
       (typeof req.body?.address === 'string' && /^0xdemo/i.test(req.body.address));
 
+    // Echoed back on success so the client can refresh its allowance
+    // mirror without a second fetch — only set when the gate consumed.
+    let allowance: { remaining: number; limit: number; resetsAt: string } | undefined;
+
     if (!isDemoRequest) {
       try {
         const { subject, kind } = resolveSubject(req.body?.address, clientIp);
@@ -59,6 +63,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             resetsAt: gate.resetsAt,
           });
         }
+        allowance = { remaining: gate.remaining, limit: gate.limit, resetsAt: gate.resetsAt };
       } catch (gateError) {
         // Allowance store unavailable — fail open so a Mongo outage can't
         // silence the advisor; the per-minute limiter above still bounds
@@ -76,7 +81,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     if (mode === 'analysis') {
       const result = await runAdvisorAnalysis(advisorInput);
-      return res.status(200).json(result);
+      return res.status(200).json(allowance ? { ...result, allowance } : result);
     }
 
     // ── Streaming path (SSE) ──────────────────────────────────────────────
@@ -89,7 +94,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       try {
         for await (const event of runAdvisorConversationStream(advisorInput)) {
-          res.write(`data: ${JSON.stringify(event)}\n\n`);
+          const payload =
+            event.type === 'done' && allowance ? { ...event, allowance } : event;
+          res.write(`data: ${JSON.stringify(payload)}\n\n`);
         }
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : 'Stream failed';
@@ -102,7 +109,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ── Non-streaming path (backward compatible) ──────────────────────────
     const result = await runAdvisorConversation(advisorInput);
-    return res.status(200).json(result);
+    return res.status(200).json(allowance ? { ...result, allowance } : result);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Guardian request failed';
     console.error('[Advisor API] Error:', error);

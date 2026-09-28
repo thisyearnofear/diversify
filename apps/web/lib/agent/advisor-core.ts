@@ -7,6 +7,12 @@ import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tab
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
 
+// The model answers with labels as often as ids ("the Shield tab") — map
+// display labels back to ids so a correct word doesn't die as a dead button.
+const TAB_LABEL_TO_ID: Record<string, TabId> = Object.fromEntries(
+  Object.entries(TAB_LABELS).map(([id, label]) => [label.toLowerCase(), id as TabId]),
+);
+
 /**
  * Resolve a raw [ACTION:NAVIGATE:xxx] tab name from the LLM into a real
  * tab id, or null if it hallucinated one. The system prompt tells the model
@@ -15,9 +21,9 @@ import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, wha
  * nothing (see the "Open EARN" bug).
  */
 function resolveNavTab(raw: string): string | null {
-  const tab = raw.toLowerCase();
+  const tab = raw.trim().toLowerCase().replace(/^["']|["']$/g, '').trim();
   if (isTabId(tab)) return tab;
-  return LEGACY_TAB_MAP[tab] ?? null;
+  return TAB_LABEL_TO_ID[tab] ?? LEGACY_TAB_MAP[tab] ?? null;
 }
 
 type ConversationRequest = {
@@ -195,7 +201,7 @@ ACTION CARDS (append at end of response, exact format):
 [ACTION:HOLD] — portfolio is balanced, no changes needed
 [ACTION:CLAIM_UBI] — direct to GoodDollar claim
 [ACTION:VERIFY_IDENTITY] — face verification required
-[ACTION:NAVIGATE:tab_name] — switch to a specific tab. Valid tab names: overview, protect, exchange, agent, info. Never use non-tab names (e.g. "guardian_setup" — use "protect" instead).
+[ACTION:NAVIGATE:tab_name] — switch to a specific tab. Valid tab names: protect (Shield), overview (Home), exchange (Exchange), agent (Guardian). Never use non-tab names (e.g. "guardian_setup" — use "protect" instead).
 
 GUARDIAN & AUTONOMY (describe the product exactly as it is):
 - Default on every chain: Guardian proposes, the user taps "Review this move →" and signs the swap on Exchange in their own wallet. Nothing moves until they sign — there is no custodial account.
@@ -981,6 +987,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     temperature: 0.7,
     maxTokens: getAdaptiveTokenLimit('chat'),
     user: address,
+    disableReasoning: true,
   });
 
   // Strip action markers; when the model emitted only a marker, the reply
@@ -1167,6 +1174,7 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
       temperature: 0.7,
       maxTokens: getAdaptiveTokenLimit('chat'),
       user: address,
+      disableReasoning: true,
     })) {
       provider = event.provider;
       model = event.model ?? model;

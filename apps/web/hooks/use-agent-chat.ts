@@ -15,6 +15,7 @@ import { AgentActionService } from "@diversifi/shared/src/services/ai/agent-acti
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
+import { reportAllowance } from "./use-allowance";
 import { useResearchPaymentSettings } from "./use-research-account";
 import { trackFunnelEvent } from "../lib/analytics";
 import { addDeviceFacts } from "../lib/guardian-memory";
@@ -766,6 +767,15 @@ export function useAgentChat({
           }
 
           const result = finalResult;
+          // The server counted this question — snap the allowance mirror
+          // to the consumed count instead of waiting for a refetch.
+          if (
+            result.allowance &&
+            typeof result.allowance.remaining === "number" &&
+            typeof result.allowance.limit === "number"
+          ) {
+            reportAllowance(result.allowance);
+          }
           // The `done` event reports whether server-side long-term memory
           // (Cognee) is active — surface it as the drawer's disclosure line.
           updateChatState({ memoryEnabled: result.memoryEnabled === true });

@@ -67,7 +67,9 @@ export function generateCacheKey(prefix: string, options: any): string {
 
 // Adaptive token limits (backward compatibility)
 const TOKEN_LIMITS = {
-  chat: 800,
+  // Reasoning fallbacks (e.g. Gemini 3) share the output budget with
+  // hidden thinking — 800 was exhausted before any visible text.
+  chat: 2048,
   analysis: 1200,
   research: 2000,
   simple: 400,
@@ -455,13 +457,17 @@ export async function* chatStream(options: ChatCompletionOptions): AsyncGenerato
 
       for await (const event of protectedStream) {
         if (event.type === 'chunk') {
-          emittedText = true;
           fullText += event.text;
+          // Whitespace chunks may still be forwarded, but only real text
+          // counts as visible output for the empty-stream check below.
+          if (fullText.trim()) emittedText = true;
           yield { type: 'chunk', text: event.text, provider: providerName, model: modelUsed };
-        } else {
+        } else if (event.type === 'done') {
           completed = true;
           modelUsed = event.modelUsed;
         }
+        // 'heartbeat' — hidden reasoning in progress; withStreamTimeout
+        // already reset on the yield, nothing to forward.
       }
 
       if (!completed || !emittedText) {

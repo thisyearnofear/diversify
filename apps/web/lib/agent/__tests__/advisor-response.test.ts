@@ -153,6 +153,53 @@ describe("empty-reply fix (action-only responses)", () => {
   });
 });
 
+describe("NAVIGATE display-label resolution", () => {
+  it("resolves the Shield label the view context teaches", async () => {
+    mockChat.mockResolvedValueOnce({
+      content: "[ACTION:NAVIGATE:shield]",
+      provider: "mock",
+      model: "m",
+    });
+    const result = await runAdvisorConversation({ message: "take me to Shield" });
+    expect(result.action).toEqual({ type: "navigate", tab: "protect" });
+    expect(result.response).toContain("Shield");
+    expect(result.response).not.toContain("grounded answer");
+  });
+
+  it("resolves Home → overview and guardian → agent", async () => {
+    mockChat.mockResolvedValueOnce({ content: "[ACTION:NAVIGATE:Home]", provider: "m", model: "m" });
+    let result = await runAdvisorConversation({ message: "home" });
+    expect(result.action).toEqual({ type: "navigate", tab: "overview" });
+
+    mockChat.mockResolvedValueOnce({ content: "[ACTION:NAVIGATE:guardian]", provider: "m", model: "m" });
+    result = await runAdvisorConversation({ message: "guardian" });
+    expect(result.action).toEqual({ type: "navigate", tab: "agent" });
+  });
+
+  it("tolerates quotes and stray spacing around the tab name", async () => {
+    mockChat.mockResolvedValueOnce({ content: '[ACTION:NAVIGATE: "Shield" ]', provider: "m", model: "m" });
+    const result = await runAdvisorConversation({ message: "shield please" });
+    expect(result.action).toEqual({ type: "navigate", tab: "protect" });
+  });
+});
+
+describe("reasoning disabled for chat", () => {
+  it("passes disableReasoning to the non-stream chat call", async () => {
+    await runAdvisorConversation({ message: "hi" });
+    expect(mockChat.mock.calls.at(-1)?.[0]).toMatchObject({ disableReasoning: true });
+  });
+
+  it("passes disableReasoning to the streaming chat call", async () => {
+    mockChatStream.mockReturnValueOnce(
+      (async function* () {
+        yield { type: "chunk", text: "hi", provider: "mock", model: "m" };
+      })(),
+    );
+    await drainStream({ message: "hi" });
+    expect(mockChatStream.mock.calls.at(-1)?.[0]).toMatchObject({ disableReasoning: true });
+  });
+});
+
 describe("FACTS grounding", () => {
   it("detects 'naira'/'Nigeria' and injects live 1yr depreciation + dated events", async () => {
     mockLiveDep.mockResolvedValue({ "1yr": 13.2, "3yr": null, "5yr": null, asOf: "2026-01-15", source: "fawazahmed0" });

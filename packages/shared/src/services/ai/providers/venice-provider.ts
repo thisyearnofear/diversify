@@ -71,11 +71,19 @@ export class VeniceProvider extends BaseAIProvider {
         max_tokens: options.maxTokens,
         stream: false,
         venice_parameters: veniceParameters,
+        ...(options.disableReasoning ? { reasoning: { enabled: false } } : {}),
       } as any),
       30000 // 30 second timeout
     );
 
     const content = (completion as any).choices?.[0]?.message?.content || "";
+
+    // A blank reply (e.g. a reasoning model that spent the whole token
+    // budget thinking) must fail over — returning '' produces the
+    // "no grounded answer" fallback upstream.
+    if (!content.trim()) {
+      throw new Error('Venice returned an empty response');
+    }
 
     if (options.responseFormat?.type === "json_object") {
       try {
@@ -87,6 +95,9 @@ export class VeniceProvider extends BaseAIProvider {
 
     return {
       data: this.cleanJsonResponse(content),
+      // Raw trimmed prose — `data` is the cleaned JSON span, which would
+      // truncate any chat reply that merely contains braces.
+      content: content.trim(),
       provider: 'venice',
       modelUsed: options.model ?? "deepseek-v4-flash",
       citations: this.extractCitations(content)
@@ -119,14 +130,25 @@ export class VeniceProvider extends BaseAIProvider {
       max_tokens: options.maxTokens,
       stream: true,
       venice_parameters: veniceParameters,
+      ...(options.disableReasoning ? { reasoning: { enabled: false } } : {}),
     } as any) as any; // Cast: stream:true returns AsyncIterable but SDK types don't narrow
 
     let emittedText = false;
+    let accumulated = '';
     for await (const chunk of stream) {
-      const text = chunk?.choices?.[0]?.delta?.content;
+      const delta = chunk?.choices?.[0]?.delta;
+      const text = delta?.content;
       if (text) {
-        emittedText = true;
+        accumulated += text;
+        if (accumulated.trim()) emittedText = true;
         yield { type: 'chunk', text };
+        continue;
+      }
+      // Reasoning models stream hidden thinking in reasoning_content /
+      // reasoning for seconds before the first content delta — signal
+      // liveness so the inactivity timeout doesn't kill a working stream.
+      if (delta?.reasoning_content || delta?.reasoning) {
+        yield { type: 'heartbeat' };
       }
     }
     if (!emittedText) {

@@ -56,6 +56,8 @@ export interface ChatCompletionOptions {
    * confidence score. The orchestrator also sets this when the gate fires.
    */
   useDirectCompute?: boolean;
+  /** Ask reasoning-capable providers to skip hidden thinking — latency-sensitive chat. */
+  disableReasoning?: boolean;
 }
 
 /**
@@ -78,7 +80,10 @@ export interface ChatCompletionResult {
 /** Events emitted by a provider while producing a chat completion. */
 export type ProviderChatStreamEvent =
   | { type: 'chunk'; text: string }
-  | { type: 'done'; modelUsed?: string };
+  | { type: 'done'; modelUsed?: string }
+  /** Provider is alive but producing hidden reasoning; resets the stream
+   *  inactivity timeout, never forwarded to callers. */
+  | { type: 'heartbeat' };
 
 /** Provider-attributed events exposed by the shared AI streaming service. */
 export type ChatStreamEvent =

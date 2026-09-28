@@ -26,6 +26,7 @@ import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 const FETCH_TIMEOUT_MS = 8000;
 const CHANGED_EVENT = 'diversifi-allowance-changed';
 const EXHAUSTED_EVENT = 'diversifi-allowance-exhausted';
+const CONSUMED_EVENT = 'diversifi-allowance-consumed';
 
 export interface AllowanceState {
   remaining: number;
@@ -75,6 +76,16 @@ function ensureFetchPatched() {
     }
     return res;
   };
+}
+
+/**
+ * The advisor response carries the post-consumption allowance; callers
+ * (use-agent-chat) report it here so every mounted hook instance snaps to
+ * the real remaining count instead of waiting for a refetch.
+ */
+export function reportAllowance(detail: { remaining: number; limit: number; resetsAt: string }) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new CustomEvent(CONSUMED_EVENT, { detail }));
 }
 
 function broadcast(state: AllowanceState) {
@@ -154,11 +165,25 @@ export function useAllowance() {
         void refresh();
       }
     };
+    const onConsumed = (e: Event) => {
+      const d = (e as CustomEvent<{ remaining: number; limit: number; resetsAt: string }>).detail;
+      if (!d || typeof d.remaining !== 'number' || typeof d.limit !== 'number') return;
+      setState((prev) => ({
+        remaining: d.remaining,
+        limit: d.limit,
+        resetsAt: d.resetsAt,
+        bonus: prev?.bonus ?? 0,
+        earnedToday: prev?.earnedToday ?? [],
+      }));
+      setLoading(false);
+    };
     window.addEventListener(CHANGED_EVENT, onChanged);
     window.addEventListener(EXHAUSTED_EVENT, onExhausted);
+    window.addEventListener(CONSUMED_EVENT, onConsumed);
     return () => {
       window.removeEventListener(CHANGED_EVENT, onChanged);
       window.removeEventListener(EXHAUSTED_EVENT, onExhausted);
+      window.removeEventListener(CONSUMED_EVENT, onConsumed);
     };
   }, [refresh]);
 

@@ -163,3 +163,77 @@ describe('advisor daily-question gate', () => {
     expect(res.statusCode).toBe(200);
   });
 });
+
+describe('advisor allowance echo', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    allow();
+  });
+
+  function writtenEvents(res: ResMock): any[] {
+    return res.written
+      .join('')
+      .split('\n\n')
+      .filter((line) => line.startsWith('data: '))
+      .map((line) => JSON.parse(line.slice(6)));
+  }
+
+  it('includes the post-consumption allowance in the non-stream response', async () => {
+    const res = makeRes();
+    await handler(req({ message: 'hi', address: WALLET }), res as never);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      allowance: { remaining: 4, limit: 10, resetsAt: RESETS },
+    });
+  });
+
+  it('includes the allowance in the analysis response too', async () => {
+    const res = makeRes();
+    await handler(req({ mode: 'analysis', address: WALLET }), res as never);
+    expect(res.body).toMatchObject({
+      allowance: { remaining: 4, limit: 10, resetsAt: RESETS },
+    });
+  });
+
+  it('attaches allowance to the done SSE event only — never to chunks', async () => {
+    mocks.runStream.mockReturnValueOnce(
+      (async function* () {
+        yield { type: 'chunk', text: 'working…' };
+        yield {
+          type: 'done',
+          response: 'ok',
+          provider: 'mock',
+          action: null,
+          researchSources: [],
+          memoryEnabled: false,
+        };
+      })(),
+    );
+    const res = makeRes();
+    await handler(req({ message: 'hi', address: WALLET, stream: true }), res as never);
+    const events = writtenEvents(res);
+    const chunk = events.find((e) => e.type === 'chunk');
+    const done = events.find((e) => e.type === 'done');
+    expect(chunk).toBeDefined();
+    expect('allowance' in chunk).toBe(false);
+    expect(done.allowance).toEqual({ remaining: 4, limit: 10, resetsAt: RESETS });
+  });
+
+  it('sends no allowance for demo requests', async () => {
+    const res = makeRes();
+    await handler(
+      req({ message: 'hi', address: '0xDemo1234567890123456789012345678901234' }),
+      res as never,
+    );
+    expect(res.statusCode).toBe(200);
+    expect('allowance' in (res.body as any)).toBe(false);
+  });
+
+  it('sends no allowance when the gate fails open', async () => {
+    mocks.consumeQuestion.mockRejectedValueOnce(new Error('mongo down'));
+    const res = makeRes();
+    await handler(req({ message: 'hi', address: WALLET }), res as never);
+    expect(res.statusCode).toBe(200);
+    expect('allowance' in (res.body as any)).toBe(false);
+  });
+});
