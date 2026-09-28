@@ -108,6 +108,8 @@ or Arbitrum). The philosophy stays the user's choice; Guardian works inside it.
 - Optional `anchorCurrency` on the existing profile (no storage migration).
 - Default: payment-cycle `localCurrency` → largest held local-currency
   stablecoin → USD. `userRegion` is continent-level, so it can't decide this.
+  Holdings only set a local anchor when that currency outweighs the wallet's
+  dollars (a dollar-majority wallet is a USD user).
   Editable in Home's "Settings & region" disclosure.
 - The risk-dial floor becomes the anchor exposure (replaces `FLOOR_TOKENS`);
   unchanged for USD users.

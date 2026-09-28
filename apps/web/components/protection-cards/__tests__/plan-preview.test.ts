@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  floorExposure,
   compactPlanDelta,
   describePlanDelta,
   floorPercent,
@@ -246,5 +247,33 @@ describe('resolvePlan — exposure plans', () => {
 
   it('labels slices by exposure', () => {
     expect(STRATEGY_ALLOCATIONS.africapitalism.map((l) => l.label)).toEqual(['Shilling', 'Dollar', 'Euro']);
+  });
+});
+
+describe('anchor currency — the risk dial reserve', () => {
+  it('a USD anchor, or an anchor the plan does not hold, keeps the dollar floor', () => {
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, 'USD')).toBe('USD');
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, null)).toBe('USD');
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, 'BRL')).toBe('USD');
+    expect(
+      resolvePlan({ strategy: 'africapitalism', riskTolerance: 'Conservative', anchorCurrency: 'BRL' }),
+    ).toBe(resolvePlan({ strategy: 'africapitalism', riskTolerance: 'Conservative' }));
+  });
+
+  it('a KES anchor makes the shilling leg the reserve the dial shifts', () => {
+    const plan = resolvePlan({
+      strategy: 'africapitalism',
+      riskTolerance: 'Conservative',
+      anchorCurrency: 'KES',
+    });
+    expect(plan.floor).toBe('KES');
+    expect(floorPercent(plan.legs, 'KES')).toBe(75);
+    expect(plan.legs.reduce((sum, l) => sum + l.percent, 0)).toBe(100);
+  });
+
+  it('describes a reserve shift in the anchor', () => {
+    const base = STRATEGY_ALLOCATIONS.africapitalism;
+    const conservative = legsForRisk(base, 'Conservative', 'KES');
+    expect(describePlanDelta(base, conservative, 'KES')).toBe('shilling floor 60% → 75%');
   });
 });

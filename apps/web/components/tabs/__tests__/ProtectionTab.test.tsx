@@ -28,6 +28,7 @@ vi.mock("@/hooks/use-advisor", () => ({
 
 const profileState = {
   riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
+  anchorCurrency: null as string | null,
 };
 const mockSetRiskTolerance = vi.fn();
 const mockTrackFunnelEvent = vi.fn();
@@ -47,6 +48,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
     config: {
       userGoal: "inflation_protection",
       riskTolerance: profileState.riskTolerance,
+      anchorCurrency: profileState.anchorCurrency,
       timeHorizon: "medium",
       moneyPurpose: mockMoneyPurpose,
     },
@@ -1738,6 +1740,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
   afterEach(() => {
     cleanup();
     profileState.riskTolerance = "Balanced";
+    profileState.anchorCurrency = null;
   });
 
   it("shows when the wallet's dollar share beats the plan floor by ≥10 points", () => {
@@ -1750,6 +1753,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
   });
 
   it("stays hidden below the surplus, on Conservative, and while previewing", () => {
+    profileState.anchorCurrency = "USD";
     render(<ProtectionTab userRegion="USA" portfolio={underReserved} />);
     expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
     cleanup();
@@ -1763,6 +1767,14 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+  });
+
+  it("a shilling-majority wallet anchors the floor in KES", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={underReserved} />);
+    expect(screen.getByTestId("shield-floor-prompt")).toHaveTextContent(
+      "Your wallet keeps 70% in KES — try a stronger floor",
+    );
+    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Shilling reserve · 60%");
   });
 
   it("hides while comparing and while a slice is focused", () => {

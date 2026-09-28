@@ -9,7 +9,7 @@
  */
 import React from "react";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
-import type { PlanLeg } from "@/components/protection-cards/plan-preview";
+import type { Exposure, PlanLeg } from "@/components/protection-cards/plan-preview";
 import type { strongerFloorOffer } from "@/lib/shield-lens";
 import type { useNavigation } from "@/context/app/NavigationContext";
 import type { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
@@ -40,6 +40,8 @@ export interface ShieldStatusTierProps {
   alignmentScore: number | null;
   floorOffer: NonNullable<ReturnType<typeof strongerFloorOffer>> | null;
   showFloorPrompt: boolean;
+  /** Reserve exposure the floor prompt names; defaults to USD. */
+  floorExposure?: Exposure;
   balanceSelect: ReturnType<typeof usePlanBalancePreview>["select"];
   exitCompare: () => void;
   navigateToGuardian: ReturnType<typeof useNavigation>["navigateToGuardian"];
@@ -72,6 +74,7 @@ export function ShieldStatusTier({
   alignmentScore,
   floorOffer,
   showFloorPrompt,
+  floorExposure = "USD",
   balanceSelect,
   exitCompare,
   navigateToGuardian,
@@ -131,7 +134,7 @@ export function ShieldStatusTier({
             }}
             className="min-h-tap text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
-            Your wallet keeps {floorOffer.heldFloor}% in dollars — try a stronger floor →
+            Your wallet keeps {floorOffer.heldFloor}% in {floorExposure === "USD" ? "dollars" : floorExposure} — try a stronger floor →
           </button>
         ) : statusRowEmpty ? undefined : (
           <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">

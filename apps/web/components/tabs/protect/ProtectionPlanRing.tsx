@@ -18,7 +18,7 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
-import { floorPercent, resolvePlan, type PlanLeg } from '@/components/protection-cards/plan-preview';
+import { floorPercent, reserveLabel, resolvePlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView, heldAsLine, heldAsSymbol } from '@/lib/wallet-portfolio-view';
@@ -85,6 +85,8 @@ interface Props {
   /** Quiet memory — alignment change since the last visit; idle hole only. */
   sinceHint?: string;
   controls?: React.ReactNode;
+  /** Reserve exposure the hole names (the anchor when the plan holds it). */
+  floor?: Exposure;
 }
 
 export function ProtectionPlanRing({
@@ -108,6 +110,7 @@ export function ProtectionPlanRing({
   savedLegs = [],
   sinceHint,
   controls,
+  floor = 'USD',
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -320,13 +323,13 @@ export function ProtectionPlanRing({
           </motion.span>
         ),
         label: "Illustrative 30% shock",
-        hint: `${floorPercent(allocations)}% dollar reserve remains available`,
+        hint: `${floorPercent(allocations, floor)}% ${reserveLabel(floor).toLowerCase()} reserve remains available`,
       };
     }
     if (balancePreview) {
       return selected
         ? { number: `${selected.percent}%` as React.ReactNode, label: selected.label ?? displayToken(selected.token), hint: `${savedLegs.find((leg) => leg.token === selected.token)?.percent ?? 0}% in saved plan` }
-        : { number: `${floorPercent(allocations)}%` as React.ReactNode, label: 'Dollar reserve', hint: 'Preview · not saved' };
+        : { number: `${floorPercent(allocations, floor)}%` as React.ReactNode, label: `${reserveLabel(floor)} reserve`, hint: 'Preview · not saved' };
     }
     // Tokenized-asset lens — checked before the empty/walletless branches so
     // the deep-linked lens reads the same with or without a wallet.
@@ -350,8 +353,8 @@ export function ProtectionPlanRing({
     // The plan name lives in the badge above — the hole never repeats it.
     if (empty && walletless) {
       return {
-        number: `${floorPercent(allocations)}%` as React.ReactNode,
-        label: 'dollar reserve',
+        number: `${floorPercent(allocations, floor)}%` as React.ReactNode,
+        label: `${reserveLabel(floor).toLowerCase()} reserve`,
         hint: 'plan target',
       };
     }

@@ -170,48 +170,67 @@ const FLOOR_SHIFT: Record<RiskTolerance, number> = {
   Aggressive: -15,
 };
 
+/** "Dollar", "Shilling" — how the reserve is named in the dial and hole. */
+export function reserveLabel(floor: Exposure): string {
+  return exposureLabel(floor);
+}
+
 export function legExposure(leg: Pick<PlanLeg, 'token' | 'exposure'>): Exposure | null {
   return leg.exposure ?? exposureOf(leg.token);
 }
 
-/** Liquid dollar legs form the plan's floor; yield dollars don't. */
-export function isFloorLeg(leg: PlanLeg): boolean {
-  return legExposure(leg) === 'USD' && leg.prefer !== 'yield' && !isYieldBearing(leg.token);
+/**
+ * The exposure the risk dial treats as the plan's reserve: the user's anchor
+ * currency when the plan holds it as a liquid leg, else the dollar.
+ */
+export function floorExposure(
+  legs: readonly PlanLeg[],
+  anchor: Exposure | null | undefined,
+): Exposure {
+  if (anchor && anchor !== 'USD' && legs.some((leg) => isFloorLeg(leg, anchor))) return anchor;
+  return 'USD';
 }
 
-/** A held token that counts toward the dollar floor (any issuer, any chain). */
-export function isFloorHolding(symbol: string): boolean {
-  return exposureOf(symbol) === 'USD' && !isYieldBearing(symbol);
+/** Liquid legs of the floor exposure form the plan's reserve; yield legs don't. */
+export function isFloorLeg(leg: PlanLeg, floor: Exposure = 'USD'): boolean {
+  return legExposure(leg) === floor && leg.prefer !== 'yield' && !isYieldBearing(leg.token);
 }
 
-/** Sum of dollar-floor legs in a plan. */
-export function floorPercent(legs: PlanLeg[]): number {
-  return legs.reduce((sum, leg) => sum + (isFloorLeg(leg) ? leg.percent : 0), 0);
+/** A held token that counts toward the reserve (any issuer, any chain). */
+export function isFloorHolding(symbol: string, floor: Exposure = 'USD'): boolean {
+  return exposureOf(symbol) === floor && !isYieldBearing(symbol);
+}
+
+/** Sum of reserve legs in a plan. */
+export function floorPercent(legs: readonly PlanLeg[], floor: Exposure = 'USD'): number {
+  return legs.reduce((sum, leg) => sum + (isFloorLeg(leg, floor) ? leg.percent : 0), 0);
 }
 
 /**
- * Re-slice a plan for a risk tolerance: shift weight between the dollar
- * floor and the identity legs, preserving order and proportions inside
- * each group. Balanced/unset returns the same reference.
+ * Re-slice a plan for a risk tolerance: shift weight between the reserve
+ * and the identity legs, preserving order and proportions inside each
+ * group. Balanced/unset returns the same reference.
  */
 export function legsForRisk(
   legs: PlanLeg[],
   risk: RiskTolerance | null | undefined,
+  floor: Exposure = 'USD',
 ): PlanLeg[] {
   const shift = risk ? FLOOR_SHIFT[risk] : undefined;
   if (shift == null || shift === 0) return legs;
-  const floorLegs = legs.filter(isFloorLeg);
-  const identityLegs = legs.filter((l) => !isFloorLeg(l));
+  const isFloor = (leg: PlanLeg) => isFloorLeg(leg, floor);
+  const floorLegs = legs.filter(isFloor);
+  const identityLegs = legs.filter((l) => !isFloor(l));
   if (floorLegs.length === 0 || identityLegs.length === 0) return legs;
 
-  const baseFloor = floorPercent(legs);
+  const baseFloor = floorPercent(legs, floor);
   const targetFloor = Math.min(90, Math.max(10, baseFloor + shift));
   const floorScale = targetFloor / baseFloor;
   const identityScale = (100 - targetFloor) / (100 - baseFloor);
 
   const adjusted = legs.map((leg) => ({
     ...leg,
-    percent: Math.round(leg.percent * (isFloorLeg(leg) ? floorScale : identityScale)),
+    percent: Math.round(leg.percent * (isFloor(leg) ? floorScale : identityScale)),
   }));
   const drift = 100 - adjusted.reduce((sum, l) => sum + l.percent, 0);
   if (drift !== 0) {
@@ -229,6 +248,8 @@ export interface PlanProfile {
   /** Strategy id or archetype id (either spelling resolves). */
   strategy?: string | null;
   riskTolerance?: RiskTolerance | null;
+  /** The user's anchor currency; the risk dial's reserve when the plan holds it. */
+  anchorCurrency?: Exposure | null;
 }
 
 export interface ResolvedPlan {
@@ -237,27 +258,31 @@ export interface ResolvedPlan {
   /** Risk-adjusted legs — the ring, score, and Guardian all read these. */
   legs: PlanLeg[];
   rules: PlanRules;
+  /** Exposure the risk dial shifts weight into and out of. */
+  floor: Exposure;
 }
 
-const EMPTY_PLAN: ResolvedPlan = { strategy: null, archetypeId: null, legs: [], rules: {} };
+const EMPTY_PLAN: ResolvedPlan = { strategy: null, archetypeId: null, legs: [], rules: {}, floor: 'USD' };
 const resolved = new Map<string, ResolvedPlan>();
 
 /** Memoised: the same profile always returns the same object (stable React deps). */
-export function resolvePlan({ strategy, riskTolerance }: PlanProfile): ResolvedPlan {
+export function resolvePlan({ strategy, riskTolerance, anchorCurrency }: PlanProfile): ResolvedPlan {
   const archetypeId = strategy
     ? strategyToArchetype(strategy) ?? (strategy in ARCHETYPES ? (strategy as ArchetypeId) : null)
     : null;
   if (!archetypeId) return EMPTY_PLAN;
-  const key = `${archetypeId}|${riskTolerance ?? ''}`;
-  const hit = resolved.get(key);
-  if (hit) return hit;
   const strategyId = archetypeToStrategy(archetypeId);
   const base = STRATEGY_ALLOCATIONS[strategyId] ?? [];
+  const floor = floorExposure(base, anchorCurrency);
+  const key = `${archetypeId}|${riskTolerance ?? ''}|${floor}`;
+  const hit = resolved.get(key);
+  if (hit) return hit;
   const plan: ResolvedPlan = {
     strategy: strategyId,
     archetypeId,
-    legs: legsForRisk(base, riskTolerance),
+    legs: legsForRisk(base, riskTolerance, floor),
     rules: STRATEGY_PLANS[strategyId]?.rules ?? {},
+    floor,
   };
   resolved.set(key, plan);
   return plan;
@@ -267,7 +292,11 @@ export function resolvePlan({ strategy, riskTolerance }: PlanProfile): ResolvedP
  * One line describing what changes between two plans — token swaps and
  * the dollar-floor shift. "Same mix as your current plan" when identical.
  */
-export function describePlanDelta(current: PlanLeg[], preview: PlanLeg[]): string {
+export function describePlanDelta(
+  current: PlanLeg[],
+  preview: PlanLeg[],
+  floor: Exposure = 'USD',
+): string {
   const currentTokens = new Set(current.map((l) => l.token));
   const previewTokens = new Set(preview.map((l) => l.token));
   const removed = current.filter((l) => !previewTokens.has(l.token)).map((l) => l.token);
@@ -281,10 +310,10 @@ export function describePlanDelta(current: PlanLeg[], preview: PlanLeg[]): strin
   } else if (removed.length > 0) {
     parts.push(`Drops ${removed.join(', ')}`);
   }
-  const floorFrom = floorPercent(current);
-  const floorTo = floorPercent(preview);
+  const floorFrom = floorPercent(current, floor);
+  const floorTo = floorPercent(preview, floor);
   if (floorFrom !== floorTo) {
-    parts.push(`dollar floor ${floorFrom}% → ${floorTo}%`);
+    parts.push(`${reserveLabel(floor).toLowerCase()} floor ${floorFrom}% → ${floorTo}%`);
   }
   return parts.length > 0 ? parts.join(' · ') : 'Same mix as your current plan';
 }

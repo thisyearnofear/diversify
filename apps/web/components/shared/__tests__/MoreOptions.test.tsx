@@ -198,3 +198,45 @@ describe("MoreOptions", () => {
     expect(screen.getByRole("button", { name: /Settings & region/ })).toBeInTheDocument();
   });
 });
+
+describe("MoreOptions — anchor currency", () => {
+  const renderAnchor = (props: Partial<React.ComponentProps<typeof MoreOptions>> = {}) =>
+    render(
+      <MoreOptions
+        userRegion="Africa"
+        setUserRegion={vi.fn()}
+        regions={REGIONS}
+        anchorCurrency="KES"
+        anchorSource="payment-cycle"
+        onAnchorChange={vi.fn()}
+        {...props}
+      />,
+    );
+
+  it("shows the anchor, where it came from, and a live rate", () => {
+    renderAnchor({ anchorFx: { rate: 129.3, source: "live", date: "2026-09-28" } });
+    fireEvent.click(screen.getByRole("button", { name: /Settings & region/ }));
+    expect(screen.getByLabelText("Your currency")).toHaveValue("KES");
+    expect(screen.getByText(/Auto · from your payment cycle/)).toBeInTheDocument();
+    expect(screen.getByTestId("anchor-fx")).toHaveTextContent("1 USD ≈ 129.3 KES · live rate (2026-09-28)");
+  });
+
+  it("discloses the fallback table and never invents a rate", () => {
+    renderAnchor({ anchorFx: { rate: 128.2, source: "fallback" } });
+    fireEvent.click(screen.getByRole("button", { name: /Settings & region/ }));
+    expect(screen.getByTestId("anchor-fx")).toHaveTextContent("fallback table — live FX unavailable");
+    cleanup();
+
+    renderAnchor({ anchorFx: null });
+    fireEvent.click(screen.getByRole("button", { name: /Settings & region/ }));
+    expect(screen.queryByTestId("anchor-fx")).not.toBeInTheDocument();
+  });
+
+  it("changing the currency saves it", () => {
+    const onAnchorChange = vi.fn();
+    renderAnchor({ onAnchorChange });
+    fireEvent.click(screen.getByRole("button", { name: /Settings & region/ }));
+    fireEvent.change(screen.getByLabelText("Your currency"), { target: { value: "EUR" } });
+    expect(onAnchorChange).toHaveBeenCalledWith("EUR");
+  });
+});

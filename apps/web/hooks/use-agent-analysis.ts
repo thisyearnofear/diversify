@@ -8,6 +8,9 @@ import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { canonicalToken } from "@/lib/plan-legs";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
+import { resolveAnchorCurrency } from "@/lib/anchor-currency";
+import { loadAnchorCurrency } from "./use-protection-profile";
+import { readPaymentCycleDraft } from "./use-payment-cycle";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
 // full convention). 30s preserves the original AbortController budget for the
@@ -125,7 +128,16 @@ export function useAgentAnalysis({
         if (strategy) {
           // Same risk-adjusted legs the ring draws — drift feedback can't
           // disagree with what the user sees.
-          const { legs, rules } = resolvePlan({ strategy, riskTolerance: config.riskTolerance });
+          const { currency: anchorCurrency } = resolveAnchorCurrency({
+            saved: loadAnchorCurrency(),
+            cycleLocalCurrency: readPaymentCycleDraft().localCurrency,
+            holdings: (portfolio.chains ?? []).flatMap((c) => c.balances ?? []),
+          });
+          const { legs, rules } = resolvePlan({
+            strategy,
+            riskTolerance: config.riskTolerance,
+            anchorCurrency,
+          });
           const heldPctByToken = new Map<string, number>();
           if (portfolio.totalValue > 0) {
             for (const b of (portfolio.chains ?? []).flatMap((c) => c.balances ?? [])) {

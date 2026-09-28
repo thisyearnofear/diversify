@@ -35,6 +35,7 @@ import { concentrationOf } from "@/lib/home-lens";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
 import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-prompt";
 import { MoreOptions } from "../../shared/MoreOptions";
+import { useAnchorCurrency, useAnchorFx } from "@/hooks/use-anchor-currency";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { REGIONS as ALL_REGIONS } from "@/hooks/use-user-region";
 
@@ -144,6 +145,8 @@ export function ConnectedOverview({
     clearSharedView,
   } = useCurrencyMoment();
   const { config: profileConfig } = useProtectionProfile();
+  const anchor = useAnchorCurrency(portfolio);
+  const anchorFx = useAnchorFx(anchor.anchorCurrency);
   const philosophyName = profileConfig.philosophy
     ? STRATEGIES.find((s) => s.id === profileConfig.philosophy)?.name ?? null
     : null;
@@ -539,6 +542,10 @@ export function ConnectedOverview({
           showTwoChainsBanner={false}
           experienceMode={experienceMode}
           setExperienceMode={setExperienceMode}
+          anchorCurrency={anchor.anchorCurrency}
+          anchorSource={anchor.source}
+          anchorFx={anchorFx}
+          onAnchorChange={anchor.setAnchorCurrency}
         />
       </div>
     </div>

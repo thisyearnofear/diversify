@@ -33,6 +33,8 @@ export interface ProtectionConfig {
   philosophy: FinancialStrategy | null;
   /** What this money is for — separate from values/philosophy. */
   moneyPurpose: MoneyPurpose | null;
+  /** ISO code the user thinks in; unset → derived (payment cycle, holdings, USD). */
+  anchorCurrency?: string | null;
 }
 
 export type ProfileMode = 'editing' | 'viewing' | 'complete';
@@ -214,6 +216,7 @@ function loadConfig(): ProtectionConfig {
         timeHorizon: parsed.timeHorizon || null,
         philosophy: parsed.philosophy || null,
         moneyPurpose: parsed.moneyPurpose || null,
+        anchorCurrency: parsed.anchorCurrency || null,
       });
     }
   } catch {
@@ -246,6 +249,11 @@ export function saveMoneyPurpose(purpose: MoneyPurpose | null): void {
 
 export function loadMoneyPurpose(): MoneyPurpose | null {
   return loadConfig().moneyPurpose;
+}
+
+/** Saved anchor currency without React (analysis hooks outside the provider). */
+export function loadAnchorCurrency(): string | null {
+  return loadConfig().anchorCurrency ?? null;
 }
 
 function saveConfig(config: ProtectionConfig): void {

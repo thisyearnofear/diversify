@@ -18,6 +18,13 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Region } from "@/hooks/use-user-region";
 import type { UserExperienceMode } from "@/context/app/types";
+import { exposureLabel, type Exposure } from "@diversifi/shared/src/config/exposures";
+import {
+  ANCHOR_CURRENCIES,
+  ANCHOR_SOURCE_LABEL,
+  type AnchorFx,
+  type AnchorSource,
+} from "@/lib/anchor-currency";
 import RegionalIconography from "../regional/RegionalIconography";
 
 const MODES: readonly UserExperienceMode[] = ["simple", "full"];
@@ -47,6 +54,20 @@ export interface MoreOptionsProps {
    */
   experienceMode?: UserExperienceMode;
   setExperienceMode?: (mode: UserExperienceMode) => void;
+  /** The currency the user thinks in — names the plan reserve. */
+  anchorCurrency?: Exposure;
+  anchorSource?: AnchorSource;
+  /** USD→anchor rate; null renders no rate line (never a guess). */
+  anchorFx?: AnchorFx | null;
+  onAnchorChange?: (currency: Exposure) => void;
+}
+
+function anchorRateLine(currency: Exposure, fx: AnchorFx | null | undefined): string | null {
+  if (!fx || fx.source === "identity") return null;
+  const rate = fx.rate.toLocaleString(undefined, { maximumFractionDigits: fx.rate < 10 ? 4 : 2 });
+  return fx.source === "live"
+    ? `1 USD ≈ ${rate} ${currency} · live rate${fx.date ? ` (${fx.date})` : ""}`
+    : `1 USD ≈ ${rate} ${currency} · fallback table — live FX unavailable`;
 }
 
 export function MoreOptions({
@@ -61,6 +82,10 @@ export function MoreOptions({
   onOpenAdvisor,
   experienceMode,
   setExperienceMode,
+  anchorCurrency,
+  anchorSource,
+  anchorFx,
+  onAnchorChange,
 }: MoreOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const modeGroupRef = React.useRef<HTMLDivElement>(null);
@@ -68,9 +93,11 @@ export function MoreOptions({
   const hasPowerActions =
     showPowerActions && (onNavigateToExchange || onOpenAdvisor);
   const hasModeToggle = Boolean(experienceMode && setExperienceMode);
+  const hasAnchor = Boolean(anchorCurrency && onAnchorChange);
+  const rateLine = anchorCurrency ? anchorRateLine(anchorCurrency, anchorFx) : null;
 
   const hasAnyContent =
-    showTwoChainsBanner || isMiniPay || regions.length > 0 || hasPowerActions || hasModeToggle;
+    showTwoChainsBanner || isMiniPay || regions.length > 0 || hasPowerActions || hasModeToggle || hasAnchor;
 
   if (!hasAnyContent) return null;
 
@@ -183,6 +210,40 @@ export function MoreOptions({
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {hasAnchor && anchorCurrency && (
+                <div className="pt-3" data-testid="anchor-currency-setting">
+                  <div className="flex items-center justify-between gap-3">
+                    <label
+                      htmlFor={`${id}-anchor`}
+                      className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                    >
+                      Your currency
+                    </label>
+                    <select
+                      id={`${id}-anchor`}
+                      value={anchorCurrency}
+                      onChange={(e) => onAnchorChange?.(e.target.value as Exposure)}
+                      className="min-h-tap rounded-full bg-gray-100 dark:bg-gray-800 px-3 text-xs font-bold text-gray-900 dark:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+                    >
+                      {ANCHOR_CURRENCIES.map((code) => (
+                        <option key={code} value={code}>
+                          {code} · {exposureLabel(code)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <p className="mt-1 text-2xs text-gray-500 dark:text-gray-400">
+                    {anchorSource ? `${ANCHOR_SOURCE_LABEL[anchorSource]} · ` : ""}
+                    Names your plan&apos;s reserve.
+                  </p>
+                  {rateLine && (
+                    <p data-testid="anchor-fx" className="text-2xs text-gray-500 dark:text-gray-400">
+                      {rateLine}
+                    </p>
+                  )}
                 </div>
               )}
 
