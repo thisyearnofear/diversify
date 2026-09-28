@@ -443,10 +443,16 @@ stage as a `PairReceipt`. Provenance, the journey rail, the time
 machine, pair sharing, and Ask Guardian live in the pair inspector.
 Full spec: [`exchange-instrument.md`](./exchange-instrument.md).
 
-Header: `ChainPill` is **always visible** on `sm+` — including Simple
-mode (2026-09-03 tester feedback supersedes Wave 3's hidden-in-beginner
-rule). "See the chain without hunting" beats mode-based hiding; the
-toggle, not the pill, is the thing Simple mode hides.
+Header: chain visibility ("see the chain without hunting", 2026-09-03
+tester feedback) is now the wallet button's job, not a second header
+control. The closed button face shows the current chain's icon + short
+name (`sm+`) beside the address/email; opening it reaches the full
+`ChainSelector`. The standalone header `ChainPill` was removed
+2026-09-28 — it duplicated that same switcher with a narrower chain
+list, and testers found the header itself crowded (streak badge, mode
+toggle, voice, chain pill, wallet button all competing at once). The
+Simple/Full toggle moved to Home's region/settings disclosure; the
+voice button lives only where voice input is contextual (Ask Guardian).
 
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see

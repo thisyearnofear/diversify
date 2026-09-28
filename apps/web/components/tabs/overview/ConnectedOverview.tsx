@@ -34,6 +34,9 @@ import { StatusTier } from "../../shared/StatusTier";
 import { concentrationOf } from "@/lib/home-lens";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
 import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-prompt";
+import { MoreOptions } from "../../shared/MoreOptions";
+import { useExperience } from "@/context/app/ExperienceContext";
+import { REGIONS as ALL_REGIONS } from "@/hooks/use-user-region";
 
 const HOME_LENS_KEY = "diversifi.home.lens";
 
@@ -74,12 +77,15 @@ export function ConnectedOverview({
   chainId,
   isDemo,
   userRegion,
+  setUserRegion,
+  REGIONS,
   setActiveTab,
   refreshBalances,
   onDisableDemo,
   onEnableDemo,
 }: ConnectedOverviewProps) {
   const { askAdvisor } = useAdvisor();
+  const { experienceMode, setExperienceMode } = useExperience();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
   const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
   const { navigateToCompare, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
@@ -525,6 +531,16 @@ export function ConnectedOverview({
         }}
         onRefresh={refreshBalances ? handleRefresh : undefined}
       />
+      <div className="mt-3">
+        <MoreOptions
+          userRegion={userRegion}
+          setUserRegion={setUserRegion}
+          regions={REGIONS ?? ALL_REGIONS}
+          showTwoChainsBanner={false}
+          experienceMode={experienceMode}
+          setExperienceMode={setExperienceMode}
+        />
+      </div>
     </div>
   );
 }

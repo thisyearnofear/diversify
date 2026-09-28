@@ -17,7 +17,14 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Region } from "@/hooks/use-user-region";
+import type { UserExperienceMode } from "@/context/app/types";
 import RegionalIconography from "../regional/RegionalIconography";
+
+const MODES: readonly UserExperienceMode[] = ["simple", "full"];
+const MODE_LABEL: Record<UserExperienceMode, string> = {
+  simple: "Simple",
+  full: "Full",
+};
 
 export interface MoreOptionsProps {
   userRegion: Region;
@@ -33,6 +40,13 @@ export interface MoreOptionsProps {
   showPowerActions?: boolean;
   onNavigateToExchange?: () => void;
   onOpenAdvisor?: () => void;
+  /**
+   * Simple | Full — moved here 2026-09-28 from the always-visible header
+   * (nav decluttering). A once-in-a-while preference belongs one tap
+   * deep, not permanent chrome.
+   */
+  experienceMode?: UserExperienceMode;
+  setExperienceMode?: (mode: UserExperienceMode) => void;
 }
 
 export function MoreOptions({
@@ -45,16 +59,46 @@ export function MoreOptions({
   showPowerActions = false,
   onNavigateToExchange,
   onOpenAdvisor,
+  experienceMode,
+  setExperienceMode,
 }: MoreOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const modeGroupRef = React.useRef<HTMLDivElement>(null);
 
   const hasPowerActions =
     showPowerActions && (onNavigateToExchange || onOpenAdvisor);
+  const hasModeToggle = Boolean(experienceMode && setExperienceMode);
 
   const hasAnyContent =
-    showTwoChainsBanner || isMiniPay || regions.length > 0 || hasPowerActions;
+    showTwoChainsBanner || isMiniPay || regions.length > 0 || hasPowerActions || hasModeToggle;
 
   if (!hasAnyContent) return null;
+
+  const focusModeOption = (index: number) => {
+    modeGroupRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [index]?.focus();
+  };
+  const chooseMode = (index: number) => {
+    setExperienceMode?.(MODES[index]);
+    focusModeOption(index);
+  };
+  const onModeKeyDown = (e: React.KeyboardEvent) => {
+    const index = MODES.indexOf(experienceMode!);
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      chooseMode((index + 1) % MODES.length);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      chooseMode((index + MODES.length - 1) % MODES.length);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      chooseMode(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      chooseMode(MODES.length - 1);
+    }
+  };
 
   return (
     <section
@@ -106,6 +150,42 @@ export function MoreOptions({
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 space-y-4 border-t border-gray-100 dark:border-gray-800">
+              {hasModeToggle && (
+                <div className="pt-3 flex items-center justify-between gap-3">
+                  <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                    Experience
+                  </span>
+                  <div
+                    ref={modeGroupRef}
+                    role="radiogroup"
+                    aria-label="Experience mode"
+                    className="grid grid-cols-2 gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-1"
+                    onKeyDown={onModeKeyDown}
+                  >
+                    {MODES.map((mode) => {
+                      const isSelected = experienceMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          tabIndex={isSelected ? 0 : -1}
+                          onClick={() => setExperienceMode?.(mode)}
+                          className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                            isSelected
+                              ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white"
+                              : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                          }`}
+                        >
+                          {MODE_LABEL[mode]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {hasPowerActions && (
                 <div className="pt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {onNavigateToExchange && (

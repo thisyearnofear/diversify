@@ -71,13 +71,12 @@ export default function AppShell() {
 function AppShellInner() {
   const {
     activeTab, setActiveTab,
-    experienceMode, setExperienceMode,
+    experienceMode,
     address, isWhitelisted, isFarcaster, walletChainId,
     connectWallet, openAdvisor, unreadCount,
     guardianUpdates, openGuardianReview, dismissGuardianUpdate, snoozeGuardianUpdate, muteGuardianUpdateType,
     isMiniPay,
     openWalletTutorial, closeTutorial, isTutorialOpen,
-    handleTranscription,
   } = useAppShellContext();
 
   const showTestnetBanner = shouldShowTestnetBanner(walletChainId);
@@ -174,14 +173,11 @@ function AppShellInner() {
 
       {/* Header */}
       <AppHeader
-        experienceMode={experienceMode}
-        setExperienceMode={setExperienceMode}
         address={address}
         isWhitelisted={isWhitelisted}
         isFarcaster={isFarcaster}
         isMiniPay={isMiniPay}
         activeTab={activeTab}
-        handleTranscription={handleTranscription}
       />
 
       <TabDiscoveryProvider>

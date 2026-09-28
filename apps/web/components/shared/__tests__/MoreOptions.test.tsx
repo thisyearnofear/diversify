@@ -14,7 +14,7 @@
 
 import React from "react";
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { MoreOptions } from "../MoreOptions";
 
@@ -161,5 +161,40 @@ describe("MoreOptions", () => {
     const section = container.querySelector("#custom-id");
     expect(section).toBeInTheDocument();
     expect(section).toHaveAttribute("data-home-section", "custom-id");
+  });
+
+  it("renders the Experience mode toggle when provided, moved here from the header (2026-09-28)", () => {
+    const setExperienceMode = vi.fn();
+    render(
+      <MoreOptions
+        userRegion="Africa"
+        setUserRegion={vi.fn()}
+        regions={REGIONS}
+        showTwoChainsBanner={false}
+        experienceMode="simple"
+        setExperienceMode={setExperienceMode}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /Settings & region/ }));
+    const group = screen.getByRole("radiogroup", { name: /experience mode/i });
+    const radios = within(group).getAllByRole("radio");
+    expect(radios.map((r) => r.textContent)).toEqual(["Simple", "Full"]);
+    expect(radios[0]).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(radios[1]);
+    expect(setExperienceMode).toHaveBeenCalledWith("full");
+  });
+
+  it("shows content and expands even with no regions, when only the mode toggle is present", () => {
+    render(
+      <MoreOptions
+        userRegion="Africa"
+        setUserRegion={vi.fn()}
+        regions={[]}
+        showTwoChainsBanner={false}
+        experienceMode="full"
+        setExperienceMode={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /Settings & region/ })).toBeInTheDocument();
   });
 });

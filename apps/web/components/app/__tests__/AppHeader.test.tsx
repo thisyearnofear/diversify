@@ -1,27 +1,22 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within, cleanup, fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi, afterEach } from 'vitest';
+import { render, screen, cleanup } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
 
 /**
- * Regression tests for the responsive header hierarchy. The mark remains
- * visible at every size, while the compact wordmark and Verified badge are
- * hidden on very narrow screens to preserve room for wallet controls.
+ * Regression tests for the responsive header hierarchy, post-decluttering
+ * (2026-09-28): ChainPill, the Simple|Full toggle and the header VoiceButton
+ * were removed — testers found the header itself crowded across both
+ * desktop and mobile. Chain switching now lives only on the wallet button
+ * (which shows the current chain on its face); the mode toggle moved into
+ * Home's MoreOptions disclosure; voice stays only in Ask Guardian.
  */
 
-vi.mock('@/components/ui/VoiceButton', () => ({
-  default: () => <div data-testid="voice-button" />,
-}));
 vi.mock('@/components/wallet/WalletButton', () => ({
   default: () => <div data-testid="wallet-button" />,
 }));
 vi.mock('@/components/wallet/FarcasterWalletButton', () => ({
   default: () => <div data-testid="farcaster-wallet-button" />,
-}));
-// ChainPill pulls in useWalletContext → use-wallet → @diversifi/shared → dist → @diversifi/shared-0g
-// (not built). Mock it here so the AppHeader layout test stays focused.
-vi.mock('../ChainPill', () => ({
-  ChainPill: () => <div data-testid="chain-pill" />,
 }));
 vi.mock('@/components/shared/GuardianMascot', () => ({
   GuardianMascot: () => <div data-testid="guardian-mascot" />,
@@ -31,11 +26,8 @@ vi.mock('@/components/shared/StreakNavBadge', () => ({
 }));
 
 const baseProps = {
-  experienceMode: 'full' as const,
-  setExperienceMode: vi.fn(),
   isWhitelisted: false,
   isFarcaster: false,
-  handleTranscription: vi.fn(),
 };
 
 afterEach(() => {
@@ -53,53 +45,40 @@ describe('AppHeader mobile layout', () => {
     expect(wordmark.className).toContain('truncate');
   });
 
-  it('hides the "Verified" badge below the sm breakpoint', () => {
+  it('keeps the logo and the status dot at every screen size, with no separate "Verified" text chip', () => {
     const { container } = render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={true} />);
 
-    // The badge is a span with the emerald styling. There may be other
-    // spans with similar styling in tooltips; we filter to the one whose
-    // className specifically marks it as the responsive badge.
-    const badge = container.querySelector('span.uppercase.tracking-widest');
-    expect(badge).toBeTruthy();
-    expect(badge!.className).toContain('hidden');
-    expect(badge!.className).toContain('sm:inline');
-  });
-
-  it('keeps the logo and the status dot at every screen size', () => {
-    const { container } = render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={true} />);
-
-    // The Guardian mark replaces the former blue "D" square — compact shield.
     const logoMark = screen.getByTestId('guardian-mascot');
     expect(logoMark).toBeInTheDocument();
     expect(logoMark.closest('div')!.className).not.toContain('hidden');
 
-    // The status dot
     const dot = container.querySelector('div.w-2.h-2.rounded-full');
     expect(dot).toBeTruthy();
     expect((dot as HTMLElement).className).not.toContain('hidden');
+    // The dot alone carries the "Verified" meaning now (title/aria-label),
+    // not a duplicate always-on text badge.
+    expect(dot).toHaveAttribute('aria-label', 'Verified');
+    expect(screen.queryByText('Verified')).not.toBeInTheDocument();
   });
 
-  it('does not render the "Verified" badge for non-whitelisted users', () => {
+  it('does not render a status dot for non-whitelisted users beyond the amber colour', () => {
     const { container } = render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={false} />);
-
-    const badge = container.querySelector('span.uppercase.tracking-widest');
-    expect(badge).toBeNull();
+    const dot = container.querySelector('div.w-2.h-2.rounded-full');
+    expect(dot).toBeTruthy();
+    expect(dot).not.toHaveAttribute('aria-label', 'Verified');
   });
 
   it('does not render any status indicator for users without a wallet', () => {
     const { container } = render(<AppHeader {...baseProps} address={null} />);
-
     const dot = container.querySelector('div.w-2.h-2.rounded-full');
     expect(dot).toBeNull();
   });
 
-  it('shows the mode toggle in simple mode too, but keeps voice Full-only', () => {
-    render(<AppHeader {...baseProps} experienceMode="simple" address="0xabc" />);
-
-    expect(screen.getByTestId('chain-pill')).toBeInTheDocument();
+  it('no longer renders a chain pill, mode toggle, or voice button — decluttered into other surfaces', () => {
+    render(<AppHeader {...baseProps} address="0xabc" />);
+    expect(screen.queryByTestId('chain-pill')).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: /experience mode/i })).not.toBeInTheDocument();
     expect(screen.queryByTestId('voice-button')).not.toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: /experience mode/i })).toBeInTheDocument();
-    expect(screen.getByTestId('wallet-button')).toBeInTheDocument();
   });
 });
 
@@ -141,41 +120,5 @@ describe('AppHeader — one connect affordance below sm', () => {
     render(<AppHeader {...baseProps} address={null} isFarcaster activeTab="overview" />);
     expect(screen.getByTestId('farcaster-wallet-button')).toBeInTheDocument();
     expect(screen.queryByTestId('wallet-button')).not.toBeInTheDocument();
-  });
-});
-
-describe('AppHeader — Simple | Full mode control', () => {
-  const group = () => screen.getByRole('radiogroup', { name: /experience mode/i });
-  const radios = () => within(group()).getAllByRole('radio');
-
-  beforeEach(() => {
-    window.localStorage.clear();
-  });
-
-  it('shows Simple | Full in both modes and marks the current one', () => {
-    render(<AppHeader {...baseProps} experienceMode="simple" address={null} />);
-    expect(radios().map((r) => r.textContent)).toEqual(['Simple', 'Full']);
-    expect(radios()[0]).toHaveAttribute('aria-checked', 'true');
-    expect(radios()[1]).toHaveAttribute('aria-checked', 'false');
-    cleanup();
-    render(<AppHeader {...baseProps} experienceMode="full" address={null} />);
-    expect(radios()[1]).toHaveAttribute('aria-checked', 'true');
-  });
-
-  it('flips the mode on click', () => {
-    const setExperienceMode = vi.fn();
-    render(<AppHeader {...baseProps} experienceMode="simple" setExperienceMode={setExperienceMode} address={null} />);
-    fireEvent.click(radios()[1]);
-    expect(setExperienceMode).toHaveBeenCalledWith('full');
-  });
-
-  it('arrow keys wrap between the two options', () => {
-    const setExperienceMode = vi.fn();
-    render(<AppHeader {...baseProps} experienceMode="simple" setExperienceMode={setExperienceMode} address={null} />);
-    fireEvent.keyDown(group(), { key: 'ArrowRight' });
-    expect(setExperienceMode).toHaveBeenCalledWith('full');
-    setExperienceMode.mockClear();
-    fireEvent.keyDown(group(), { key: 'ArrowLeft' });
-    expect(setExperienceMode).toHaveBeenCalledWith('full'); // wraps from simple → full
   });
 });

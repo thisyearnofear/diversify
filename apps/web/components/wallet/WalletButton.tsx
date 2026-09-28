@@ -29,6 +29,19 @@ const CHAIN_METADATA: Record<number, { icon: string; color: string; farcasterSup
   [NETWORKS.CELO_SEPOLIA.chainId]: { icon: '🧪', color: 'yellow', farcasterSupported: true },
 };
 
+// Short chain label shown on the closed wallet button face — merges the
+// job the old header ChainPill did ("see the chain without hunting",
+// 2026-09-03 tester feedback) into the ONE control that owns chain state,
+// instead of two controls doing the same job differently (docs/rails.md
+// ChainPill was a duplicate of this component's own ChainSelector).
+const CHAIN_SHORT_NAME: Record<number, string> = {
+  [NETWORKS.CELO_MAINNET.chainId]: 'Celo',
+  [NETWORKS.ARBITRUM_ONE.chainId]: 'Arbitrum',
+  [NETWORKS.ARC_TESTNET.chainId]: 'Arc',
+  [NETWORKS.RH_TESTNET.chainId]: 'Robinhood',
+  [NETWORKS.CELO_SEPOLIA.chainId]: 'Celo Sepolia',
+};
+
 type ButtonVariant = 'primary' | 'secondary' | 'inline' | 'minimal';
 
 interface WalletButtonProps {
@@ -216,6 +229,8 @@ export default function WalletButton({
 
     const displayText = privyEmail || formatAddress(address);
     const displayIcon = privyEmail ? '📧' : '🔗';
+    const chainIcon = chainId ? CHAIN_METADATA[chainId]?.icon : undefined;
+    const chainShort = chainId ? CHAIN_SHORT_NAME[chainId] ?? networkName : undefined;
 
     return (
       <div className="relative" ref={wrapperRef}>
@@ -228,7 +243,11 @@ export default function WalletButton({
               ? "border-amber-300 dark:border-amber-700"
               : "border-gray-200 dark:border-gray-700"
           } hover:border-blue-300 hover:shadow-md transition-colors ${className}`}
-          aria-label={needsFunds ? "Wallet menu — add funds" : "Wallet menu"}
+          aria-label={
+            needsFunds
+              ? `Wallet menu — add funds. On ${chainShort ?? "an unknown network"}.`
+              : `Wallet menu. On ${chainShort ?? "an unknown network"}.`
+          }
           aria-expanded={showDropdown}
           aria-haspopup="true"
         >
@@ -238,6 +257,16 @@ export default function WalletButton({
             compact
           />
           <span className="text-sm font-medium">{displayIcon} {displayText}</span>
+          {chainIcon && (
+            <span
+              className="hidden sm:inline-flex items-center gap-1 text-xs font-bold text-gray-500 dark:text-gray-400"
+              aria-hidden="true"
+            >
+              <span>·</span>
+              <span>{chainIcon}</span>
+              <span>{chainShort}</span>
+            </span>
+          )}
           {needsFunds && (
             <span
               data-testid="wallet-add-funds"

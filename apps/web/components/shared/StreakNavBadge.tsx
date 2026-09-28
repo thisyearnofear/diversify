@@ -6,6 +6,12 @@
  * progress), quiet presentation: a pill in the header + a footer chip in
  * the desktop rail. 0px when there is nothing to show (no skeleton).
  *
+ * Idle state (header variant only) is icon-only — the day count and
+ * progress bar are L2 facts, promoted only on tap/hover/focus (2026-09-28
+ * nav decluttering: testers found the always-expanded pill added to a
+ * crowded header). `canClaim` always shows its full "Claim" pill — that's
+ * a real action worth surfacing, not ambient status.
+ *
  * Motion: one-time scale settle, no ambient bob/glow. Reduced-motion: static.
  */
 
@@ -21,6 +27,7 @@ interface Props {
 
 export function StreakNavBadge({ variant = "header", className = "", onClaim }: Props) {
   const reducedMotion = useReducedMotion();
+  const [expanded, setExpanded] = React.useState(false);
   let streak: ReturnType<typeof useStreakRewards>["streak"] = null;
   let canClaim = false;
   let isLoading = false;
@@ -42,6 +49,11 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
   if (isLoading) return null;
   if (daysActive === 0 && !canClaim) return null;
 
+  // Idle header state collapses to the flame icon alone; tap/hover/focus
+  // promotes to the day count (L0 → L1, per the app's disclosure grammar).
+  // Claimable and the rail variant always show the full pill.
+  const collapsed = variant === "header" && !canClaim && !expanded;
+
   const label = canClaim
     ? "Claim ready"
     : daysUntilReward === 7
@@ -50,25 +62,35 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
 
   const pill = (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border text-xs font-bold tabular-nums ${
+      className={`inline-flex items-center gap-1.5 rounded-full border text-xs font-bold tabular-nums transition-[padding] ${
         canClaim
           ? "bg-blue-600 text-white border-blue-600 shadow-sm"
           : "bg-gray-100 dark:bg-white/10 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-white/10"
-      } ${variant === "header" ? "px-2.5 py-1 min-h-[28px]" : "px-2 py-1.5 min-h-[32px]"}`}
+      } ${
+        variant === "header"
+          ? collapsed
+            ? "px-1.5 py-1 min-h-[28px] min-w-[28px] justify-center"
+            : "px-2.5 py-1 min-h-[28px]"
+          : "px-2 py-1.5 min-h-[32px]"
+      }`}
       aria-label={`Streak ${daysActive} days, ${canClaim ? "reward ready" : `${daysUntilReward} days to reward`}`}
     >
       <span aria-hidden="true" className="text-2xs leading-none">{canClaim ? "🎁" : "🔥"}</span>
-      <span>{variant === "header" && canClaim ? "Claim" : `${daysActive}`}</span>
-      <span className="hidden sm:inline opacity-70 text-2xs">{canClaim ? "" : daysUntilReward === 7 ? "days" : `· ${daysUntilReward}d`}</span>
-      {!canClaim && (
-        <span className="ml-0.5 hidden sm:inline-flex h-1 w-8 rounded-full overflow-hidden bg-black/10 dark:bg-white/20" aria-hidden="true">
-          <motion.span
-            className="block h-full w-full origin-left bg-current opacity-30"
-            initial={reducedMotion ? false : { scaleX: 0 }}
-            animate={{ scaleX: Math.min(100, Math.max(0, progressPercent)) / 100 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-          />
-        </span>
+      {!collapsed && (
+        <>
+          <span>{variant === "header" && canClaim ? "Claim" : `${daysActive}`}</span>
+          <span className="hidden sm:inline opacity-70 text-2xs">{canClaim ? "" : daysUntilReward === 7 ? "days" : `· ${daysUntilReward}d`}</span>
+          {!canClaim && (
+            <span className="ml-0.5 hidden sm:inline-flex h-1 w-8 rounded-full overflow-hidden bg-black/10 dark:bg-white/20" aria-hidden="true">
+              <motion.span
+                className="block h-full w-full origin-left bg-current opacity-30"
+                initial={reducedMotion ? false : { scaleX: 0 }}
+                animate={{ scaleX: Math.min(100, Math.max(0, progressPercent)) / 100 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+              />
+            </span>
+          )}
+        </>
       )}
       <span className="sr-only">{label}</span>
     </span>
@@ -90,7 +112,8 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
     );
   }
 
-  // header — interactive only when a claim is ready (otherwise pure signal)
+  // header — interactive only when a claim is ready (otherwise pure signal
+  // that expands to L1 detail on tap/hover/focus, never navigates).
   if (canClaim && onClaim) {
     return (
       <button
@@ -106,7 +129,17 @@ export function StreakNavBadge({ variant = "header", className = "", onClaim }: 
   }
 
   return (
-    <span data-testid="streak-nav-badge" className={className}>
+    <span
+      data-testid="streak-nav-badge"
+      className={`inline-flex rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${className}`}
+      tabIndex={0}
+      role="status"
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+      onFocus={() => setExpanded(true)}
+      onBlur={() => setExpanded(false)}
+      onClick={() => setExpanded((v) => !v)}
+    >
       {pill}
     </span>
   );
