@@ -8,16 +8,26 @@
  * Guardian" line keys off it).
  *
  * Returns null for proposals that aren't a user-signable move (HOLD,
- * observation-only, or no target token). A `chainId` the swap rail can't
- * serve is dropped — the ticket's own chain flow handles switching.
+ * observation-only, no target token, or a token no executable rail holds).
+ * The prefill always names the destination chain: a requested chain that
+ * can't serve the token falls back to the token's own rail, so the ticket
+ * never swaps in a different asset on the wallet's current chain.
  */
 
 import type { SwapPrefill } from "../context/app/types";
-import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
+import { resolveTargetChainId } from "./target-chain";
+
+function destinationChain(token: string, requested?: number): number | null {
+  return (
+    (requested != null ? resolveTargetChainId(token, requested) : null) ??
+    resolveTargetChainId(token)
+  );
+}
 
 export function guardianProposalPrefill(rec: {
   action?: string;
   targetToken?: string;
+  targetChainId?: number;
   oneLiner?: string;
   reasoning?: string;
   tradeAmountUSD?: number;
@@ -37,22 +47,25 @@ export function guardianProposalPrefill(rec: {
   const origin = { source: "guardian" as const };
   const action = rec.contract?.action;
   if (action?.type === "open_swap_review") {
+    if (!action.toToken) return null;
+    const toChainId = destinationChain(action.toToken, action.chainId);
+    if (toChainId == null) return null;
     return {
       fromToken: action.fromToken,
       toToken: action.toToken,
       amount: action.amount ?? (rec.tradeAmountUSD ? String(rec.tradeAmountUSD) : undefined),
-      toChainId:
-        action.chainId && ChainDetectionService.isSupported(action.chainId)
-          ? action.chainId
-          : undefined,
+      toChainId,
       reason: action.reason ?? reason,
       origin,
     };
   }
   if (action?.type === "observation_only") return null;
   if (!rec.targetToken) return null;
+  const toChainId = destinationChain(rec.targetToken, rec.targetChainId);
+  if (toChainId == null) return null;
   return {
     toToken: rec.targetToken,
+    toChainId,
     amount: rec.tradeAmountUSD ? String(rec.tradeAmountUSD) : undefined,
     reason,
     origin,

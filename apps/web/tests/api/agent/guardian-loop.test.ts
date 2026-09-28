@@ -620,4 +620,30 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     expect(firstCallArgs.action).toBe('AUTONOMOUS_REBALANCE');
     expect(firstCallArgs.servingModel).toBe('guardian-loop');
   });
+
+  it('never auto-executes an off-rail target (PAXG on Arbitrum) as a Celo swap', async () => {
+    const { rebalance } = setupTestMocks({
+      autoExecuteCycleProtection: false,
+      cycleDoc: null,
+      recommendationQueue: [
+        {
+          capturedAt: new Date().toISOString(),
+          source: 'advisor-analysis',
+          action: 'BUY',
+          targetToken: 'PAXG',
+          targetChainId: 42161,
+          tradeAmountUSD: 100,
+          confidence: 0.9,
+          executionEligibility: 'guardian_eligible',
+        },
+      ],
+    });
+
+    const mod = await import('@/pages/api/agent/guardian-loop');
+    const body = await runTick(mod);
+
+    expect(body.executionsSucceeded).toBe(0);
+    expect(rebalance).not.toHaveBeenCalled();
+    expect(body.results.find((r: any) => r.status === 'advisory_pending_user_review')).toBeDefined();
+  });
 });

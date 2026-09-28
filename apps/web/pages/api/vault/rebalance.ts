@@ -4,7 +4,11 @@ import { vaultStore } from '@/lib/vault/store';
 import { smartAccountExecutor } from '@/lib/vault/executor';
 import { VaultService, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
-import { CELO_TOKEN_ADDRESS_BY_SYMBOL, isKnownCeloToken } from '@diversifi/shared/src/config/celo-tokens';
+import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared/src/config/celo-tokens';
+import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
+import { celoExecutionTarget } from '@/lib/target-chain';
+import { guardianProposalPrefill } from '@/lib/guardian-proposal-prefill';
+import type { SwapPrefill } from '@/context/app/types';
 import {
   getGuardianState,
 } from '@/lib/vault/guardian-state';
@@ -15,35 +19,59 @@ type GuardianLoopStatus = 'ready' | 'executed' | 'partial' | 'blocked' | 'noop' 
 const rebalanceRateMap = new Map<string, number>();
 
 function buildDemoRecommendation(
-  targetToken: string,
+  celoTarget: string,
   amountUSD: number,
   reason: string,
 ): RebalanceRecommendation[] {
-  const normalizedTarget = isKnownCeloToken(targetToken) ? targetToken : 'cEUR';
   return [{
     action: 'swap',
     urgency: 'high',
     tokenIn: 'cUSD',
     tokenInAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL.cUSD,
-    tokenOut: normalizedTarget,
-    tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[normalizedTarget],
+    tokenOut: celoTarget,
+    tokenOutAddress: CELO_TOKEN_ADDRESS_BY_SYMBOL[celoTarget],
     amountIn: `${Math.max(1, Math.round(amountUSD))}000000000000000000`,
     reason,
     estimatedAmountUSD: Math.max(1, Math.round(amountUSD)),
   }];
 }
 
+interface OffRailTarget {
+  targetToken: string;
+  /** Exchange ticket for the user's own signature; null when no rail holds the token. */
+  handoff: SwapPrefill | null;
+}
+
+interface ResolvedRecommendations {
+  recommendations: RebalanceRecommendation[];
+  offRail?: OffRailTarget;
+}
+
 async function resolveRecommendations(
   userAddress: string | undefined,
   recommendations: RebalanceRecommendation[],
   dryRun: boolean,
-): Promise<RebalanceRecommendation[]> {
-  if (recommendations.length > 0) return recommendations;
-  if (!userAddress) return [];
+): Promise<ResolvedRecommendations> {
+  if (recommendations.length > 0) return { recommendations };
+  if (!userAddress) return { recommendations: [] };
 
   const guardianState = await getGuardianState(userAddress);
   const latestRecommendation = guardianState?.latestRecommendation;
-  if (!latestRecommendation) return [];
+  if (!latestRecommendation?.targetToken) return { recommendations: [] };
+
+  const celoTarget = celoExecutionTarget(
+    latestRecommendation.targetToken,
+    latestRecommendation.targetChainId,
+  );
+  if (!celoTarget) {
+    return {
+      recommendations: [],
+      offRail: {
+        targetToken: latestRecommendation.targetToken,
+        handoff: guardianProposalPrefill(latestRecommendation),
+      },
+    };
+  }
 
   // Size from the explicit trade notional when present. Fall back to a
   // bounded default — never derive the spend from expectedSavings, which is
@@ -57,7 +85,15 @@ async function resolveRecommendations(
       ? 'Guardian recommendation converted into a dry-run.'
       : 'Guardian recommendation converted into an execution.');
 
-  return buildDemoRecommendation(latestRecommendation.targetToken || 'cEUR', fallbackAmount, reason);
+  return { recommendations: buildDemoRecommendation(celoTarget, fallbackAmount, reason) };
+}
+
+function offRailMessage({ targetToken, handoff }: OffRailTarget): string {
+  if (!handoff?.toChainId) {
+    return `${targetToken} isn't buyable in-app, so Guardian is only watching it.`;
+  }
+  const chain = ChainDetectionService.getNetworkName(handoff.toChainId);
+  return `Guardian executes on Celo only. Review ${targetToken} on ${chain} in Exchange and sign it yourself.`;
 }
 
 /**
@@ -126,12 +162,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       id = vault._id;
     }
 
-    const resolvedRecommendations = await resolveRecommendations(
+    const resolved = await resolveRecommendations(
       auth,
       recommendations as RebalanceRecommendation[],
       dryRun,
     );
+    const resolvedRecommendations = resolved.recommendations;
     const timestamp = new Date().toISOString();
+
+    if (resolved.offRail) {
+      return res.status(200).json({
+        success: true,
+        dryRun,
+        status: 'noop',
+        reasonCode: 'target_not_on_rail',
+        message: offRailMessage(resolved.offRail),
+        summary: { total: 0, executed: 0, skipped: 0, failed: 0 },
+        recommendations: [],
+        transactions: [],
+        handoff: resolved.offRail.handoff,
+        timestamp,
+      });
+    }
     const summary = await service.getSummary(id);
     const permission = summary.permission;
     const now = Math.floor(Date.now() / 1000);
