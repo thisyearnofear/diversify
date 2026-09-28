@@ -244,9 +244,42 @@ export function legsForRisk(
 // resolvePlan — the one reader of "what plan is this user on".
 // ============================================================================
 
+/**
+ * A user-built plan: exposures and targets only (5-point steps, 2–6 slices,
+ * sums to 100). Rules carry over from the philosophy it was tweaked from.
+ */
+export interface CustomPlan {
+  /** Strategy id it was tweaked from; null when started from holdings. */
+  from: string | null;
+  slices: Array<{ exposure: Exposure; target: number; prefer?: SlicePreference }>;
+  rules: PlanRules;
+}
+
+let savedCustomPlan: CustomPlan | null = null;
+
+/** The profile's saved Custom plan — the fallback for readers that don't pass one. */
+export function registerCustomPlan(plan: CustomPlan | null | undefined): void {
+  savedCustomPlan = plan ?? null;
+}
+
+export function customPlanToExposurePlan(plan: CustomPlan): ExposurePlan {
+  return {
+    rules: plan.rules,
+    slices: plan.slices.map((slice) => ({
+      exposure: slice.exposure,
+      target: slice.target,
+      region: exposureLabel(slice.exposure),
+      why: 'Your custom slice',
+      ...(slice.prefer ? { prefer: slice.prefer } : {}),
+    })),
+  };
+}
+
 export interface PlanProfile {
   /** Strategy id or archetype id (either spelling resolves). */
   strategy?: string | null;
+  /** Custom plan to resolve when strategy is `custom` (defaults to the saved one). */
+  customPlan?: CustomPlan | null;
   riskTolerance?: RiskTolerance | null;
   /** The user's anchor currency; the risk dial's reserve when the plan holds it. */
   anchorCurrency?: Exposure | null;
@@ -266,24 +299,28 @@ const EMPTY_PLAN: ResolvedPlan = { strategy: null, archetypeId: null, legs: [], 
 const resolved = new Map<string, ResolvedPlan>();
 
 /** Memoised: the same profile always returns the same object (stable React deps). */
-export function resolvePlan({ strategy, riskTolerance, anchorCurrency }: PlanProfile): ResolvedPlan {
+export function resolvePlan({ strategy, customPlan, riskTolerance, anchorCurrency }: PlanProfile): ResolvedPlan {
   const archetypeId = strategy
     ? strategyToArchetype(strategy) ?? (strategy in ARCHETYPES ? (strategy as ArchetypeId) : null)
     : null;
   if (!archetypeId) return EMPTY_PLAN;
   const strategyId = archetypeToStrategy(archetypeId);
-  const base = STRATEGY_ALLOCATIONS[strategyId] ?? [];
+  const custom = archetypeId === 'custom' ? customPlan ?? savedCustomPlan : null;
+  if (archetypeId === 'custom' && !custom) return EMPTY_PLAN;
+  const exposurePlan = custom ? customPlanToExposurePlan(custom) : STRATEGY_PLANS[strategyId];
+  const base = custom ? legsFromPlan(exposurePlan) : STRATEGY_ALLOCATIONS[strategyId] ?? [];
   const floor = floorExposure(base, anchorCurrency);
-  const key = `${archetypeId}|${riskTolerance ?? ''}|${floor}`;
+  const key = `${archetypeId}|${riskTolerance ?? ''}|${floor}${custom ? `|${JSON.stringify(custom)}` : ''}`;
   const hit = resolved.get(key);
   if (hit) return hit;
   const plan: ResolvedPlan = {
     strategy: strategyId,
     archetypeId,
     legs: legsForRisk(base, riskTolerance, floor),
-    rules: STRATEGY_PLANS[strategyId]?.rules ?? {},
+    rules: exposurePlan?.rules ?? {},
     floor,
   };
+  if (resolved.size > 200) resolved.clear();
   resolved.set(key, plan);
   return plan;
 }

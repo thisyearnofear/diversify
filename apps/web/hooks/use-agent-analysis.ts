@@ -10,7 +10,7 @@ import { canonicalToken } from "@/lib/plan-legs";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { resolveAnchorCurrency } from "@/lib/anchor-currency";
 import { buildPlanContext, type PlanContext } from "@/lib/guardian-tilts";
-import { loadAnchorCurrency } from "./use-protection-profile";
+import { loadAnchorCurrency, loadCustomPlan } from "./use-protection-profile";
 import { readPaymentCycleDraft } from "./use-payment-cycle";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
@@ -150,6 +150,7 @@ export function useAgentAnalysis({
           });
           const { legs, rules } = resolvePlan({
             strategy,
+            customPlan: loadCustomPlan(),
             riskTolerance: config.riskTolerance,
             anchorCurrency,
           });
