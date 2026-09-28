@@ -409,6 +409,16 @@ export interface CorridorSignalRecord {
 }
 
 const MACRO_SIGNAL_PREFIX = 'MACRO_SIGNAL:';
+/** Marker source of `scripts/send-test-macro-signal.ts`. A rehearsal is a
+ *  real on-chain record, but its text is synthetic — and the model may drop
+ *  the "[Rehearsal]" label while summarising — so it must never render as a
+ *  market event. */
+const REHEARSAL_SOURCE_HOST = 'rehearsal.local';
+
+export function isRehearsalSignal(reasoning: string | undefined | null): boolean {
+  return typeof reasoning === 'string' &&
+    (reasoning.includes(REHEARSAL_SOURCE_HOST) || /\[rehearsal\b/i.test(reasoning));
+}
 /** A beat stays "fresh" for two weeks — recent development, not flash. */
 export const SIGNAL_FRESH_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_BEAT_LEN = 110;
@@ -466,6 +476,7 @@ export function corridorSignalsFor(
     // Hash-only records (no off-chain echo) carry no renderable text —
     // skip them rather than crash or fabricate a beat.
     if (typeof rec.reasoning !== 'string') continue;
+    if (isRehearsalSignal(rec.reasoning)) continue;
     const text = extractOneLiner(rec.reasoning);
     if (!text) continue;
     const signal = {
