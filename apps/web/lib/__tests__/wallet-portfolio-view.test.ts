@@ -1,8 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
-import { buildWalletPortfolioView, canSafelyExecute, getProtectionGaps, getWalletHoldings } from "../wallet-portfolio-view";
+import { STRATEGY_ALLOCATIONS } from "@/components/protection-cards/plan-preview";
+import {
+  buildWalletPortfolioView,
+  canSafelyExecute,
+  getProtectionGaps,
+  getWalletHoldings,
+  heldAsLine,
+  heldAsSymbol,
+} from "../wallet-portfolio-view";
 
-const balance = (symbol: string, value: number, chainId = 42220) => ({
+const balance = (symbol: string, value: number, chainId = 42220, chainName = "Celo") => ({
   symbol,
   value,
   balance: String(value),
@@ -10,7 +18,7 @@ const balance = (symbol: string, value: number, chainId = 42220) => ({
   name: symbol,
   region: "Global" as never,
   chainId,
-  chainName: "Celo",
+  chainName,
 });
 
 const portfolio = (chains: any[], extra: any = {}) => ({
@@ -79,5 +87,35 @@ describe("wallet portfolio view", () => {
       portfolio([{ balances: [balance("USDm", 100)] }]),
     );
     expect(result.holdings.map((h) => h.symbol)).toEqual(["USDm"]);
+  });
+});
+
+describe("wallet portfolio view — exposure buckets", () => {
+  it("buckets USD tokens on every chain under the Dollar leg and says what they're held as", () => {
+    const view = buildWalletPortfolioView(
+      portfolio([
+        { balances: [balance("USDm", 10), balance("PAXG", 50, 42161, "Arbitrum")] },
+        { balances: [balance("USDC", 40, 42161, "Arbitrum")] },
+      ]),
+      STRATEGY_ALLOCATIONS.islamic,
+      { excludeYield: true },
+    );
+    const dollar = view.holdings.find((h) => h.symbol === "cUSD");
+    expect(dollar?.percent).toBe(50);
+    expect(heldAsLine(dollar, view.totalUsd)).toBe("Held as: USDC · Arbitrum 40%, USDm · Celo 10%");
+    expect(heldAsSymbol(dollar)).toBe("USDC");
+  });
+
+  it("keeps a yield dollar out of an Islamic Dollar leg", () => {
+    const view = buildWalletPortfolioView(
+      portfolio([{ balances: [balance("USDY", 50, 42161, "Arbitrum"), balance("USDm", 50)] }]),
+      STRATEGY_ALLOCATIONS.islamic,
+      { excludeYield: true },
+    );
+    expect(view.holdings.map((h) => h.symbol).sort()).toEqual(["USDY", "cUSD"]);
+  });
+
+  it("has no held-as line without balances", () => {
+    expect(heldAsLine(undefined, 100)).toBeNull();
   });
 });

@@ -616,7 +616,7 @@ describe("ProtectionTab — instrument shapes", () => {
     // Select the KESm slice: 20% held vs 60% plan → 40pts light.
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
-    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(screen.getByText("Shilling position")).toBeInTheDocument();
     expect(screen.getByText(/40 points light/)).toBeInTheDocument();
     // The one CTA: a single review action carrying the gap magnitude.
     const review = screen.getByRole("button", { name: /Review move to KESm/ });
@@ -855,7 +855,7 @@ describe("ProtectionTab — instrument shapes", () => {
     // object's CTA steps aside (the button says the job — §3).
     fireEvent.click(cta);
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
-    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(screen.getByText("Shilling position")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Review move to KESm/ })).toBeInTheDocument();
     expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
   });
@@ -1656,7 +1656,7 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     // africapitalism's only Africa leg is KESm — the slice inspector opens.
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-selected", "KESm");
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
-    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(screen.getByText("Shilling position")).toBeInTheDocument();
     expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
   });
 
@@ -1698,7 +1698,7 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-selected", "KESm");
-    expect(screen.getByText("KESm position")).toBeInTheDocument();
+    expect(screen.getByText("Shilling position")).toBeInTheDocument();
     expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
   });
 });

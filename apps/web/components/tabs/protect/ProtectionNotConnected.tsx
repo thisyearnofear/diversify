@@ -37,8 +37,7 @@ import { useAmbientOrigin } from "./ProtectionAmbient";
 import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype } from "@/components/protection-cards/tokens";
 import {
   compactPlanDelta,
-  getArchetypeAllocations,
-  legsForRisk,
+  resolvePlan,
 } from "@/components/protection-cards/plan-preview";
 import { STRATEGIES } from "@/constants/strategies";
 import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
@@ -101,17 +100,10 @@ export function ProtectionNotConnected({
   });
   const ringLegs = React.useMemo(
     () =>
-      ringArchetype
-        ? legsForRisk(
-            getArchetypeAllocations(ringArchetype),
-            profileConfig.riskTolerance,
-          )
-        : [],
+      resolvePlan({ strategy: ringArchetype, riskTolerance: profileConfig.riskTolerance }).legs,
     [ringArchetype, profileConfig.riskTolerance],
   );
-  const balanceLegs = ringArchetype
-    ? legsForRisk(getArchetypeAllocations(ringArchetype), balance.risk)
-    : [];
+  const balanceLegs = resolvePlan({ strategy: ringArchetype, riskTolerance: balance.risk }).legs;
   const [selectedToken, setSelectedToken] = React.useState<string | null>(null);
   React.useEffect(() => setSelectedToken(null), [ringKey]);
   const effectiveToken = ringLegs.some((leg) => leg.token === selectedToken)
@@ -132,12 +124,10 @@ export function ProtectionNotConnected({
   const focusedArchetype = focusedPhilosophy
     ? strategyToArchetype(focusedPhilosophy)
     : null;
-  const focusedLegs = focusedArchetype
-    ? legsForRisk(
-        getArchetypeAllocations(focusedArchetype),
-        profileConfig.riskTolerance,
-      )
-    : [];
+  const focusedLegs = resolvePlan({
+    strategy: focusedArchetype,
+    riskTolerance: profileConfig.riskTolerance,
+  }).legs;
   const focusedName =
     STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "";
 

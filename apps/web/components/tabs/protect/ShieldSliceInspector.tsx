@@ -51,6 +51,8 @@ export interface ShieldSliceInspectorProps {
   comparing: boolean;
   focusedPhilosophy: string | null;
   focusedToken: string | null;
+  /** "Held as: USDC · Arbitrum 40%, …" for the focused slice. */
+  focusedHeldAs?: string | null;
   shape: ShieldShape;
   strategyKey: string | null;
   setFocusedToken: (v: string | null) => void;
@@ -154,6 +156,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     comparing,
     focusedPhilosophy,
     focusedToken,
+    focusedHeldAs,
     shape,
     setFocusedToken,
     setFocusedPhilosophy,
@@ -393,7 +396,12 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
               <TokenIcon symbol={focusedToken} size={22} />
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-gray-900 dark:text-white">{focusedToken} position</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{selectedAlloc?.label ?? focusedToken} position</p>
+              {focusedHeldAs && (
+                <p data-testid="held-as" className="text-2xs text-gray-500 dark:text-gray-400">
+                  {focusedHeldAs}
+                </p>
+              )}
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 <StatusBadge
                   label={`${selectedHeld.toFixed(0)}% held${totalValue > 0 ? ` · ${fmt((selectedHeld / 100) * totalValue)}` : ""}`}

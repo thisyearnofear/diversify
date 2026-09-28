@@ -1,6 +1,7 @@
 import type { MultichainPortfolio, TokenBalance } from "@/hooks/use-multichain-balances";
-import type { PlanLeg } from "@/components/protection-cards/plan-preview";
-import { canonicalToken } from "@/lib/plan-legs";
+import type { PlanLeg, PlanRules } from "@/components/protection-cards/plan-preview";
+import { canonicalToken, displayToken } from "@/lib/plan-legs";
+import { planLegIndexFor } from "@/lib/plan-alignment";
 
 export interface WalletHolding {
   symbol: string;
@@ -76,14 +77,21 @@ export function getProtectionGaps(
 }
 
 /**
- * Same asset, two names: a wallet can report USDm while the plan leg is cUSD.
- * When a plan is in scope, re-bucket holdings by canonical (plan-facing) name
- * so the legend shows one cUSD row instead of a stray "not in plan" USDm row.
+ * Same exposure, many tokens: a wallet can report USDm on Celo and USDC on
+ * Arbitrum while the plan's Dollar leg is cUSD. When a plan is in scope,
+ * re-bucket holdings under the plan leg they count toward (else their
+ * canonical name) so the legend shows one Dollar row, not stray
+ * "not in plan" rows. `balances` keeps what it is held as.
  */
-function canonicaliseHoldings(holdings: WalletHolding[]): WalletHolding[] {
+function canonicaliseHoldings(
+  holdings: WalletHolding[],
+  targets: PlanLeg[],
+  rules: PlanRules,
+): WalletHolding[] {
   const byToken = new Map<string, WalletHolding>();
   for (const holding of holdings) {
-    const key = canonicalToken(holding.symbol);
+    const legIndex = planLegIndexFor(holding.symbol, targets, rules);
+    const key = legIndex >= 0 ? targets[legIndex].token : canonicalToken(holding.symbol);
     const existing = byToken.get(key);
     if (existing) {
       existing.valueUsd += holding.valueUsd;
@@ -99,9 +107,10 @@ function canonicaliseHoldings(holdings: WalletHolding[]): WalletHolding[] {
 export function buildWalletPortfolioView(
   portfolio: MultichainPortfolio | null | undefined,
   targets: PlanLeg[] = [],
+  rules: PlanRules = {},
 ): WalletPortfolioView {
   const rawHoldings = getWalletHoldings(portfolio);
-  const holdings = targets.length > 0 ? canonicaliseHoldings(rawHoldings) : rawHoldings;
+  const holdings = targets.length > 0 ? canonicaliseHoldings(rawHoldings, targets, rules) : rawHoldings;
   const totalUsd = holdings.reduce((sum, holding) => sum + holding.valueUsd, 0);
   const hasErrors = (portfolio?.errors?.length ?? 0) > 0;
   const freshness = portfolio?.isLoading
@@ -121,4 +130,30 @@ export function buildWalletPortfolioView(
     freshness,
     hasEstimates: Boolean(portfolio?.hasEstimates),
   };
+}
+
+function heldAsParts(holding: WalletHolding | undefined): [string, string, number][] {
+  const parts = new Map<string, [string, string, number]>();
+  for (const b of holding?.balances ?? []) {
+    if (!(b.value > 0)) continue;
+    const symbol = displayToken(b.symbol);
+    const key = `${symbol}|${b.chainName}`;
+    const prev = parts.get(key);
+    parts.set(key, [symbol, b.chainName, (prev?.[2] ?? 0) + b.value]);
+  }
+  return [...parts.values()].sort((a, b) => b[2] - a[2]);
+}
+
+/** "Held as: USDC · Arbitrum 40%, USDm · Celo 10%" — shares of the whole wallet. */
+export function heldAsLine(holding: WalletHolding | undefined, totalUsd: number): string | null {
+  const parts = heldAsParts(holding);
+  if (parts.length === 0 || totalUsd <= 0) return null;
+  return `Held as: ${parts
+    .map(([symbol, chain, value]) => `${symbol} · ${chain} ${Math.round((value / totalUsd) * 100)}%`)
+    .join(', ')}`;
+}
+
+/** The token a slice is mostly held as, for the coin face. */
+export function heldAsSymbol(holding: WalletHolding | undefined): string | null {
+  return heldAsParts(holding)[0]?.[0] ?? null;
 }

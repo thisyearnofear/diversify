@@ -75,3 +75,55 @@ describe('scorePlanAlignment', () => {
     expect(scorePlanAlignment(BUEN_VIVIR, held, 1000).biggestGap).toBeNull();
   });
 });
+
+describe('scorePlanAlignment — exposure against exposure', () => {
+  const ISLAMIC = STRATEGY_ALLOCATIONS.islamic; // XAU 50 / USD 50
+  const CONFUCIAN = STRATEGY_ALLOCATIONS.confucian; // USD 70 / USD-yield 30
+
+  it('counts USDC, USDT and USDG toward the Dollar slice', () => {
+    const held = new Map([
+      ['PAXG', 50],
+      ['USDC', 20],
+      ['USDT', 20],
+      ['USDG', 10],
+    ]);
+    const result = scorePlanAlignment(ISLAMIC, held, 1000, { excludeYield: true });
+    expect(result.score).toBe(100);
+    expect(result.legs.find((l) => l.token === 'cUSD')?.heldAs.map((h) => h.symbol)).toEqual([
+      'USDC',
+      'USDT',
+      'USDG',
+    ]);
+  });
+
+  it('counts Hyperliquid GOLD as gold when held', () => {
+    const result = scorePlanAlignment(ISLAMIC, new Map([['GOLD', 50], ['USDm', 50]]), 1000);
+    expect(result.score).toBe(100);
+  });
+
+  it('a yield dollar never counts toward an Islamic plan', () => {
+    const result = scorePlanAlignment(
+      ISLAMIC,
+      new Map([['PAXG', 50], ['USDY', 50]]),
+      1000,
+      { excludeYield: true },
+    );
+    expect(result.legs.find((l) => l.token === 'cUSD')?.held).toBe(0);
+    expect(result.score).toBe(50); // 100 − 0.5 × (50 gap + 50 outside)
+  });
+
+  it('splits one exposure across a liquid and a yield leg by instrument', () => {
+    const result = scorePlanAlignment(
+      CONFUCIAN,
+      new Map([['USDC', 70], ['SYRUPUSDC', 30]]),
+      1000,
+    );
+    expect(result.score).toBe(100);
+    expect(result.legs.map((l) => l.held)).toEqual([70, 30]);
+  });
+
+  it('non-currency holdings sit outside the plan', () => {
+    const result = scorePlanAlignment(BUEN_VIVIR, new Map([['ETH', 100]]), 1000);
+    expect(result.legs.every((l) => l.held === 0)).toBe(true);
+  });
+});

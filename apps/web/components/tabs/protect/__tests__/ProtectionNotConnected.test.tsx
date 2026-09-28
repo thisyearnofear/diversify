@@ -159,7 +159,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       // Walletless legend says funding status once — no per-row "Not funded".
       expect(screen.queryByText("Not funded")).not.toBeInTheDocument();
       // Canonical tickers, not legacy cUSD/cEUR.
-      expect(within(ring).getByText("USDm")).toBeInTheDocument();
+      expect(within(ring).getByText("Dollar")).toBeInTheDocument();
       expect(within(ring).queryByText("cUSD")).not.toBeInTheDocument();
 
       // The plan badge is the morph control — the compare affordance.
@@ -308,7 +308,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.riskTolerance = "Balanced";
     try {
       render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
-      fireEvent.click(screen.getByRole("button", { name: /KESm — plan: 60%/ }));
+      fireEvent.click(screen.getByRole("button", { name: /Shilling — plan: 60%/ }));
       expect(screen.getByText("60%")).toBeInTheDocument();
       expect(screen.getByText("Target only · not funded")).toBeInTheDocument();
       expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();

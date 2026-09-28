@@ -5,10 +5,10 @@ import React from "react";
 import { BuenVivirCard } from "../cards";
 
 describe("plan cards — allocation pills carry real splits", () => {
-  it("Buen Vivir shows token + percent pills", () => {
+  it("Buen Vivir shows exposure + percent pills", () => {
     render(<BuenVivirCard />);
-    expect(screen.getByText("cREAL 45")).toBeInTheDocument();
-    expect(screen.getByText("COPm 35")).toBeInTheDocument();
-    expect(screen.getByText("cUSD 20")).toBeInTheDocument();
+    expect(screen.getByText("Real 45")).toBeInTheDocument();
+    expect(screen.getByText("Colombian peso 35")).toBeInTheDocument();
+    expect(screen.getByText("Dollar 20")).toBeInTheDocument();
   });
 });

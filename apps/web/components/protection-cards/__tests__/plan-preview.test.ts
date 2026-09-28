@@ -5,8 +5,11 @@ import {
   floorPercent,
   getPlanPreview,
   getArchetypeAllocations,
+  instrumentForSlice,
   legsForRisk,
+  resolvePlan,
   STRATEGY_ALLOCATIONS,
+  STRATEGY_PLANS,
   type PlanLeg,
 } from '../plan-preview';
 
@@ -60,10 +63,12 @@ describe('getArchetypeAllocations', () => {
     expect(allocations.reduce((s, a) => s + a.percent, 0)).toBe(100);
   });
 
-  it('maps confucian archetype to APAC savings + Arbitrum yield split', () => {
+  // Updated for exposure plans: the old "USDC (HashKey)" leg is plain USD
+  // (HashKey isn't executable in-app), filled on Celo by default.
+  it('maps confucian archetype to a USD core + USD-yield split', () => {
     const allocations = getArchetypeAllocations('confucian');
-    expect(allocations[0]).toMatchObject({ token: 'USDC', region: 'APAC savings (HashKey)', percent: 70 });
-    expect(allocations[1]).toMatchObject({ token: 'USDY', region: 'Yield (Arbitrum)', percent: 30 });
+    expect(allocations[0]).toMatchObject({ token: 'cUSD', exposure: 'USD', label: 'Dollar', percent: 70 });
+    expect(allocations[1]).toMatchObject({ token: 'USDY', exposure: 'USD', prefer: 'yield', label: 'Dollar · yield', percent: 30 });
   });
 });
 
@@ -82,20 +87,26 @@ describe('floorPercent / legsForRisk — the dollar-floor dial', () => {
     expect(legsForRisk(islamic, undefined)).toBe(islamic);
   });
 
-  it('Conservative raises the floor by 15 (islamic: PAXG 35 / cUSD 39 / USDC 26)', () => {
-    expect(legsForRisk(islamic, 'Conservative')).toEqual([
-      { token: 'PAXG', region: 'Global', percent: 35, why: 'Gold — asset-backed, no riba' },
-      { token: 'cUSD', region: 'US', percent: 39, why: 'Dollar floor, no interest' },
-      { token: 'USDC', region: 'US', percent: 26, why: 'Liquid reserve, no interest' },
+  // Updated for exposure plans: islamic's cUSD 30 + USDC 20 legs were the
+  // same exposure and are now one USD 50 slice.
+  it('Conservative raises the floor by 15 (islamic: XAU 35 / USD 65)', () => {
+    expect(legsForRisk(islamic, 'Conservative')).toMatchObject([
+      { token: 'PAXG', exposure: 'XAU', percent: 35, why: 'Gold — asset-backed, no riba' },
+      { token: 'cUSD', exposure: 'USD', percent: 65, why: 'Dollar floor, no interest' },
     ]);
   });
 
   it('Aggressive lowers the floor with a 10% clamp (buen_vivir: cREAL 51 / COPm 39 / cUSD 10)', () => {
-    expect(legsForRisk(buenVivir, 'Aggressive')).toEqual([
+    expect(legsForRisk(buenVivir, 'Aggressive')).toMatchObject([
       { token: 'cREAL', region: 'Brazil', percent: 51, why: "Brazil's real — the LatAm anchor" },
       { token: 'COPm', region: 'Colombia', percent: 39, why: 'Colombian peso — the second LatAm leg' },
       { token: 'cUSD', region: 'US', percent: 10, why: 'Dollar floor for the plan' },
     ]);
+  });
+
+  it('yield dollars are not part of the floor', () => {
+    expect(floorPercent(STRATEGY_ALLOCATIONS.confucian)).toBe(70);
+    expect(floorPercent(STRATEGY_ALLOCATIONS.gotong_royong)).toBe(50);
   });
 
   it('every strategy × every risk still sums to exactly 100', () => {
@@ -196,5 +207,44 @@ describe('compactPlanDelta', () => {
     const legs: PlanLeg[] = [{ token: 'PAXG', region: 'Global', percent: 100, why: 'x' }];
     expect(compactPlanDelta(legs, legs)).toBe('Same mix');
     expect(compactPlanDelta([], [])).toBe('Same mix');
+  });
+});
+
+describe('resolvePlan — exposure plans', () => {
+  it('accepts strategy and archetype ids and memoises', () => {
+    const a = resolvePlan({ strategy: 'islamic', riskTolerance: 'Balanced' });
+    const b = resolvePlan({ strategy: 'islamic_finance', riskTolerance: 'Balanced' });
+    expect(a).toBe(b);
+    expect(a.rules.excludeYield).toBe(true);
+    expect(resolvePlan({ strategy: null }).legs).toEqual([]);
+  });
+
+  it('every named philosophy converts to executable exposures summing to 100', () => {
+    for (const [id, plan] of Object.entries(STRATEGY_PLANS)) {
+      const legs = STRATEGY_ALLOCATIONS[id];
+      expect(legs).toHaveLength(plan.slices.length);
+      expect(legs.reduce((s, l) => s + l.percent, 0)).toBe(100);
+      for (const leg of legs) expect(leg.exposure).toBeTruthy();
+    }
+  });
+
+  it('pan_caribbean = USD 50 / XAU 30 / EUR 20', () => {
+    expect(STRATEGY_ALLOCATIONS.pan_caribbean.map((l) => [l.exposure, l.percent])).toEqual([
+      ['USD', 50], ['XAU', 30], ['EUR', 20],
+    ]);
+  });
+
+  it('never picks a yield instrument under Islamic rules', () => {
+    expect(
+      instrumentForSlice({ exposure: 'USD', target: 50, region: 'US', why: 'x', prefer: 'yield' }, { excludeYield: true }),
+    ).toBe('cUSD');
+  });
+
+  it('fills gold with executable PAXG, never Hyperliquid GOLD', () => {
+    expect(instrumentForSlice({ exposure: 'XAU', target: 30, region: 'Global', why: 'x' })).toBe('PAXG');
+  });
+
+  it('labels slices by exposure', () => {
+    expect(STRATEGY_ALLOCATIONS.africapitalism.map((l) => l.label)).toEqual(['Shilling', 'Dollar', 'Euro']);
   });
 });
