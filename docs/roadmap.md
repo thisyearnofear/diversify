@@ -20,7 +20,7 @@ settlement rails: [`rails.md`](./rails.md).
 | **Caribbean evidence** | User/partner evidence (LOI) for the FX netting track; rail parity, settlement execution, credit-layer embryo, and liquidity bootstrap are all shipped. | Future Caribbean |
 | **SME FX — remaining phases** | Importer `FinancialStrategy` archetype, GHS on/off-ramp partner, rails design partner, graduation funnel. Phased plan: [`strategy.md`](./strategy.md). | North star |
 | **Macro signal write path — verify in production** | The read + echo path is fixed and tested, but all five deployed ledgers hold **zero** `MACRO_SIGNAL` records (1,610 records scanned; the only families present are `ADVISORY_HEARTBEAT` and `EVIDENCE_MIRROR`). So the beats engine currently has no data source. **Diagnosed 2026-09-27:** `FIRECRAWL_API_KEY` is absent on the server (only the webhook secret is set) and PM2 logs show zero Firecrawl traffic since 2026-07-31 — no monitor was ever registered. Add the key (and to `required-env.json`), run `scripts/setup-firecrawl-monitors.ts`, redeploy with `DEPLOY_SYNC_ENV=true`, then exercise the path on demand with `pnpm rehearse-macro-signal` ([`setup.md`](./setup.md) § Macro path rehearsal). | "Continuously reads macro signals" and the corridor beats are only demonstrable once a signal actually anchors; the capture playbook §2 depends on it. |
-| **SERV Hackathon Ed. 01 close-out** | RWA Vaults allocator shipped (free heuristic + opt-in SERV Reasoning over the IXS catalog; `roadmap-log.md` § SERV Hackathon). Remaining: `SERV_API_KEY` on the backend, data-collection toggle at console.openserv.ai, demo video, public X post + form. Submission package: [`submission/serv-edition-01.md`](./submission/serv-edition-01.md). | Deadline 28 Sep 00:00 UTC |
+| **SERV Hackathon Ed. 01 close-out** | RWA Vaults allocator shipped, holdable-asset lens live, `SERV_API_KEY` set on production (verified 2026-09-27: `?serv=1` returns `source: serv`, `gpt-5.4-mini-2026-03-17`, no degraded reason), demo video rebuilt. Remaining: data-collection toggle at console.openserv.ai, public X post + form. Submission package: [`submission/serv-edition-01.md`](./submission/serv-edition-01.md). | Deadline 28 Sep 00:00 UTC |
 
 ### Instrument lenses
 
@@ -45,7 +45,7 @@ A lens is a state of a tab's existing object, entered through the transition slo
 | Qwen MemoryAgent | Shipped — Tablestore/DashScope memory, Function Compute proof, +38% eval | — |
 | Product quality plan | 14-day plan closed (details + close-out notes in `roadmap-log.md`) | axe-core CI pass unverified |
 | SME FX north star | Vertical slice + fail-closed cycle protection shipped | Phases above |
-| SERV Hackathon Ed. 01 | Allocator + demo page shipped (`/rwa-vaults`, free-default, SERV opt-in) | Deploy key, video, X post, form |
+| SERV Hackathon Ed. 01 | Allocator + holdable-asset lens live; `SERV_API_KEY` verified in prod; video rebuilt | Data-collection toggle, X post, form |
 
 ---
 
