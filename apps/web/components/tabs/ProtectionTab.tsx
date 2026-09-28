@@ -828,6 +828,7 @@ export default function ProtectionTab({
     <div data-testid="shield-custom-editor">
       <ProtectionPlanRing
         strategyKey="custom"
+        customPlan={customDraft}
         legs={draftPlan.legs}
         forcePlanLegs
         balancePreview
@@ -934,6 +935,7 @@ export default function ProtectionTab({
               details, "Use this plan" commits. Nothing appends below. */}
           <ProtectionPlanRing
             strategyKey={previewKey ?? archetypeToStrategy(ARCHETYPE_ORDER[0])}
+            customPlan={config.customPlan}
             legs={previewAllocations}
             savedLegs={[]}
             portfolio={activePortfolio as MultichainPortfolio}
@@ -971,6 +973,7 @@ export default function ProtectionTab({
         <div data-testid="shield-ring" data-comparing={comparing || undefined}>
           <ProtectionPlanRing
             strategyKey={previewKey}
+            customPlan={config.customPlan}
             legs={
               comparing
                 ? previewAllocations

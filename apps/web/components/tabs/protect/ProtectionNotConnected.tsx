@@ -79,6 +79,7 @@ export function ProtectionNotConnected({
   const walletlessPortfolio = React.useMemo(() => createEmptyPortfolio(), []);
   const { config: profileConfig, setRiskTolerance } = useProtectionProfile();
   const { anchorCurrency } = useAnchorCurrency();
+  const customPlan = profileConfig.customPlan;
   const { region: detectedRegion } = useUserRegion();
   // Identity travels with the morph: the moment a philosophy is chosen
   // (walletless commits work), the surface picks up its archetype tint.
@@ -102,11 +103,11 @@ export function ProtectionNotConnected({
   });
   const ringLegs = React.useMemo(
     () =>
-      resolvePlan({ strategy: ringArchetype, riskTolerance: profileConfig.riskTolerance, anchorCurrency }).legs,
-    [ringArchetype, profileConfig.riskTolerance, anchorCurrency],
+      resolvePlan({ strategy: ringArchetype, customPlan, riskTolerance: profileConfig.riskTolerance, anchorCurrency }).legs,
+    [ringArchetype, customPlan, profileConfig.riskTolerance, anchorCurrency],
   );
-  const ringFloor = resolvePlan({ strategy: ringArchetype, anchorCurrency }).floor;
-  const balanceLegs = resolvePlan({ strategy: ringArchetype, riskTolerance: balance.risk, anchorCurrency }).legs;
+  const ringFloor = resolvePlan({ strategy: ringArchetype, customPlan, anchorCurrency }).floor;
+  const balanceLegs = resolvePlan({ strategy: ringArchetype, customPlan, riskTolerance: balance.risk, anchorCurrency }).legs;
   const [selectedToken, setSelectedToken] = React.useState<string | null>(null);
   React.useEffect(() => setSelectedToken(null), [ringKey]);
   const effectiveToken = ringLegs.some((leg) => leg.token === selectedToken)
@@ -129,10 +130,11 @@ export function ProtectionNotConnected({
     : null;
   const focusedLegs = resolvePlan({
     strategy: focusedArchetype,
+    customPlan,
     riskTolerance: profileConfig.riskTolerance,
     anchorCurrency,
   }).legs;
-  const focusedFloor = resolvePlan({ strategy: focusedArchetype, anchorCurrency }).floor;
+  const focusedFloor = resolvePlan({ strategy: focusedArchetype, customPlan, anchorCurrency }).floor;
   const focusedName =
     STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "";
 
@@ -180,6 +182,7 @@ export function ProtectionNotConnected({
     <div className="space-y-4" data-testid="shield-unconnected-object">
       <div data-testid="shield-ring" data-walletless data-comparing={comparing || undefined}>
         <ProtectionPlanRing
+          customPlan={customPlan}
           strategyKey={
             (picking ? focusedPhilosophy : ringKey) ??
             archetypeToStrategy(ARCHETYPE_ORDER[0])

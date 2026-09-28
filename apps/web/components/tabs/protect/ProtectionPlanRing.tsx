@@ -18,7 +18,7 @@ import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
-import { floorPercent, reserveLabel, resolvePlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
+import { floorPercent, reserveLabel, resolvePlan, type CustomPlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView, heldAsLine, heldAsSymbol } from '@/lib/wallet-portfolio-view';
@@ -89,6 +89,8 @@ interface Props {
   controls?: React.ReactNode;
   /** Reserve exposure the hole names (the anchor when the plan holds it). */
   floor?: Exposure;
+  /** The saved (or draft) Custom plan — `custom` resolves its legs and rules only from this. */
+  customPlan?: CustomPlan | null;
 }
 
 export function ProtectionPlanRing({
@@ -114,14 +116,15 @@ export function ProtectionPlanRing({
   sinceHint,
   controls,
   floor = 'USD',
+  customPlan = null,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
   const allocations = useMemo(
-    () => legs ?? resolvePlan({ strategy: archetypeId }).legs,
-    [legs, archetypeId],
+    () => legs ?? resolvePlan({ strategy: archetypeId, customPlan }).legs,
+    [legs, archetypeId, customPlan],
   );
-  const planRules = resolvePlan({ strategy: archetypeId }).rules;
+  const planRules = resolvePlan({ strategy: archetypeId, customPlan }).rules;
 
   const walletView = useMemo(
     () => buildWalletPortfolioView(portfolio, allocations, planRules),

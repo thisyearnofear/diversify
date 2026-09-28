@@ -269,13 +269,6 @@ export interface CustomPlan {
   rules: PlanRules;
 }
 
-let savedCustomPlan: CustomPlan | null = null;
-
-/** The profile's saved Custom plan — the fallback for readers that don't pass one. */
-export function registerCustomPlan(plan: CustomPlan | null | undefined): void {
-  savedCustomPlan = plan ?? null;
-}
-
 export function customPlanToExposurePlan(plan: CustomPlan): ExposurePlan {
   return {
     rules: plan.rules,
@@ -292,7 +285,7 @@ export function customPlanToExposurePlan(plan: CustomPlan): ExposurePlan {
 export interface PlanProfile {
   /** Strategy id or archetype id (either spelling resolves). */
   strategy?: string | null;
-  /** Custom plan to resolve when strategy is `custom` (defaults to the saved one). */
+  /** Custom plan to resolve when strategy is `custom`; without one, `custom` resolves empty. */
   customPlan?: CustomPlan | null;
   riskTolerance?: RiskTolerance | null;
   /** The user's anchor currency; the risk dial's reserve only when it is a stable anchor the plan holds. */
@@ -319,7 +312,7 @@ export function resolvePlan({ strategy, customPlan, riskTolerance, anchorCurrenc
     : null;
   if (!archetypeId) return EMPTY_PLAN;
   const strategyId = archetypeToStrategy(archetypeId);
-  const custom = archetypeId === 'custom' ? customPlan ?? savedCustomPlan : null;
+  const custom = archetypeId === 'custom' ? customPlan ?? null : null;
   if (archetypeId === 'custom' && !custom) return EMPTY_PLAN;
   const exposurePlan = custom ? customPlanToExposurePlan(custom) : STRATEGY_PLANS[strategyId];
   const base = custom ? legsFromPlan(exposurePlan) : STRATEGY_ALLOCATIONS[strategyId] ?? [];

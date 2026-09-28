@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import {
   STRATEGY_ALLOCATIONS,
   STRATEGY_PLANS,
-  registerCustomPlan,
   resolvePlan,
   type CustomPlan,
 } from "@/components/protection-cards/plan-preview";
@@ -146,12 +145,10 @@ describe("custom plan — resolvePlan and storage", () => {
     expect(eurAnchor.floor).toBe("EUR");
   });
 
-  it("falls back to the registered (saved) Custom plan, and is empty without one", () => {
-    registerCustomPlan(null);
+  it("resolves custom only from an explicit customPlan — empty without one", () => {
+    expect(resolvePlan({ strategy: "custom", customPlan: panCaribbean }).legs).toHaveLength(3);
     expect(resolvePlan({ strategy: "custom" }).legs).toEqual([]);
-    registerCustomPlan(panCaribbean);
-    expect(resolvePlan({ strategy: "custom" }).legs).toHaveLength(3);
-    registerCustomPlan(null);
+    expect(resolvePlan({ strategy: "custom", customPlan: null }).legs).toEqual([]);
   });
 
   it("normalizeCustomPlan accepts a valid plan and drops malformed ones", () => {

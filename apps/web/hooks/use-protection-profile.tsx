@@ -8,7 +8,7 @@
 import { useState, useCallback, useEffect, useMemo, createContext, useContext, type ReactNode } from 'react';
 import type { FinancialStrategy } from '@diversifi/shared';
 import type { MoneyPurpose } from '@/constants/money-purpose';
-import { registerCustomPlan, type CustomPlan } from '@/components/protection-cards/plan-preview';
+import type { CustomPlan } from '@/components/protection-cards/plan-preview';
 import { normalizeCustomPlan } from '@/lib/custom-plan';
 
 // ============================================================================
@@ -267,7 +267,6 @@ export function loadCustomPlan(): CustomPlan | null {
 }
 
 function saveConfig(config: ProtectionConfig): void {
-  registerCustomPlan(config.customPlan);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch {

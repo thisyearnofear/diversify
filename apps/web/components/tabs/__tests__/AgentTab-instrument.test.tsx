@@ -80,6 +80,9 @@ vi.mock("../../../context/app/StrategyContext", () => ({
   useStrategy: () => ({ financialStrategy: null, setFinancialStrategy: () => {} }),
 }));
 
+vi.mock("@/hooks/use-protection-profile", () => ({
+  useProtectionProfile: () => ({ config: { customPlan: null } }),
+}));
 vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress, chainId: 42220 }),
 }));
