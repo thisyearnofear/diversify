@@ -20,6 +20,16 @@ import { readPaymentCycleDraft } from "./use-payment-cycle";
 const ADVISOR_ANALYSIS_TIMEOUT_MS = 30000;
 const DEEP_ANALYZE_TIMEOUT_MS = 12000;
 const GUARDIAN_STATE_TIMEOUT_MS = 6000;
+
+/** Headers from this session's cached wallet proof — never prompts for a signature. */
+function cachedAuthHeaders(address: string | null | undefined): Record<string, string> {
+  const proof = address ? getCachedWalletAuth(address) : null;
+  if (!proof) return {};
+  return {
+    "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
+    "X-Wallet-Auth-Signature": proof.signature,
+  };
+}
 import { useToast } from "../components/ui/Toast";
 import { getPersistedStrategy, getStrategyPrompt } from "./useFinancialStrategies";
 import { agentEventBus } from "./agent-event-bus";
@@ -243,7 +253,9 @@ export function useAgentAnalysis({
           `${apiBase}/api/agent/advisor`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            // The cached proof lets the server journal rejected tilts against
+            // the verified address.
+            headers: { "Content-Type": "application/json", ...cachedAuthHeaders(address) },
             body: JSON.stringify({
               mode: "analysis",
               portfolio,
@@ -288,17 +300,13 @@ export function useAgentAnalysis({
             // budget is plenty for a same-origin POST and a hang here
             // shouldn't block the user from seeing the analysis result.
             // Uses cached auth only — never prompts for a signature.
-            const proof = getCachedWalletAuth(address);
-            if (proof) {
+            const authHeaders = cachedAuthHeaders(address);
+            if (authHeaders["X-Wallet-Auth-Signature"]) {
               fetchWithTimeout(
                 `${apiBase}/api/vault/guardian-state`,
                 {
                   method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    "X-Wallet-Auth-Message": encodeURIComponent(proof.message),
-                    "X-Wallet-Auth-Signature": proof.signature,
-                  },
+                  headers: { "Content-Type": "application/json", ...authHeaders },
                   body: JSON.stringify({
                     latestRecommendation: {
                       capturedAt: new Date().toISOString(),

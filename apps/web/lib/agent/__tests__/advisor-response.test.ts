@@ -376,6 +376,21 @@ describe("Guardian plan tilts (analysis mode)", () => {
     );
   });
 
+  it("without a verified address a rejected tilt is not journaled", async () => {
+    mockAppendDecision.mockClear();
+    reply({
+      tilts: [
+        { exposure: "EUR", delta: 9, reason: "Too big", evidence: [{ signal: "goldChange24h", value: 2.1 }] },
+      ],
+    });
+    const { advice } = await runAdvisorAnalysis({
+      planContext,
+      networkActivity: { goldPriceChange24h: 2.1 },
+    });
+    expect(advice.guardianPlan.tilts).toEqual([]);
+    expect(mockAppendDecision).not.toHaveBeenCalled();
+  });
+
   it("sizes a non-USD next move with live FX, disclosing the fallback table when live fails", async () => {
     const kes = { ...planContext, anchor: "KES" };
     mockLiveRate.mockResolvedValueOnce({ rate: 130 });
