@@ -180,14 +180,28 @@ export function legExposure(leg: Pick<PlanLeg, 'token' | 'exposure'>): Exposure 
 }
 
 /**
+ * Stable, low-inflation currencies that can stand in for the dollar reserve.
+ * A soft home currency (KES, BRL, NGN, …) is what the saver is protecting
+ * against, so it never becomes the reserve — it stays a measurement unit.
+ */
+export const STABLE_ANCHORS: readonly Exposure[] = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD'];
+
+/**
  * The exposure the risk dial treats as the plan's reserve: the user's anchor
- * currency when the plan holds it as a liquid leg, else the dollar.
+ * when it is a stable anchor the plan holds as a liquid leg, else the dollar.
  */
 export function floorExposure(
   legs: readonly PlanLeg[],
   anchor: Exposure | null | undefined,
 ): Exposure {
-  if (anchor && anchor !== 'USD' && legs.some((leg) => isFloorLeg(leg, anchor))) return anchor;
+  if (
+    anchor &&
+    anchor !== 'USD' &&
+    STABLE_ANCHORS.includes(anchor) &&
+    legs.some((leg) => isFloorLeg(leg, anchor))
+  ) {
+    return anchor;
+  }
   return 'USD';
 }
 
@@ -248,7 +262,7 @@ export interface PlanProfile {
   /** Strategy id or archetype id (either spelling resolves). */
   strategy?: string | null;
   riskTolerance?: RiskTolerance | null;
-  /** The user's anchor currency; the risk dial's reserve when the plan holds it. */
+  /** The user's anchor currency; the risk dial's reserve only when it is a stable anchor the plan holds. */
   anchorCurrency?: Exposure | null;
 }
 
