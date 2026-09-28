@@ -32,6 +32,8 @@ import { enqueueRecommendation } from '@/lib/vault/guardian-state';
 import { loadGatewayEvaluate } from '@/lib/agent/load-gateway-evaluate';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
+import { recordMacroReceipt } from '@/lib/macro-signal-receipt';
+import { GUARDIAN_AGENT_ADDRESS } from '../../../constants/guardian-identity';
 import { Permission } from '../../../models/Permission';
 import { Vault } from '../../../models/Vault';
 import { TypeSafeSignalReview } from '../../../models/TypeSafeSignalReview';
@@ -84,20 +86,34 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   const payload = req.body as FirecrawlWebhookPayload;
 
+  // One receipt per authenticated call, written at each terminal return —
+  // "is the path being hit, and did the last hit succeed" is the signal the
+  // health check needs. Detached: a receipt failure never blocks the signal.
+  const mark = (outcome: string, extra: { signal?: string; anchorStatus?: 'pending' | 'anchored' | 'failed' } = {}) =>
+    void recordMacroReceipt({
+      outcome,
+      monitorId: payload.data?.monitorId,
+      url: payload.data?.url,
+      ...extra,
+    }).catch((e) => console.warn('[firecrawl-webhook] receipt write failed:', e));
+
   // Only process page-level change events
   if (payload.type !== 'monitor.page' && payload.type !== 'monitor.check.completed') {
+    mark('ignored');
     return res.status(200).json({ acknowledged: true, action: 'ignored', reason: 'non-page event' });
   }
 
   const { url, markdown, changeDetected, diff, summary } = payload.data || {};
 
   if (!changeDetected && !diff && !summary) {
+    mark('no_change');
     return res.status(200).json({ acknowledged: true, action: 'no_change' });
   }
 
   // Extract the signal from the page change using AI
   const changeContent = summary || diff || markdown?.slice(0, 2000) || '';
   if (!changeContent) {
+    mark('empty_content');
     return res.status(200).json({ acknowledged: true, action: 'empty_content' });
   }
 
@@ -147,6 +163,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     try {
       parsed = JSON.parse(analysis.data || analysis.content || '{}');
     } catch {
+      mark('parse_failed');
       return res.status(200).json({ acknowledged: true, action: 'parse_failed' });
     }
 
@@ -191,6 +208,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     );
 
     if (!parsed.actionable || parsed.confidence < 0.6) {
+      mark('not_actionable', { signal: parsed.signal });
       return res.status(200).json({
         acknowledged: true,
         action: 'not_actionable',
@@ -270,7 +288,10 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     const anchorAction = `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`;
     const anchorReasoning = `${parsed.oneLiner}. Source: ${url}`;
     const anchor = await recommendationLedgerService.recordRecommendation({
-      user: '0x0000000000000000000000000000000000000000', // System-level signal
+      // System-level signal — anchored under the Guardian's identity. The
+      // contract reverts on address(0) (ZeroAddress guard), which is why
+      // every prior macro anchor silently failed on-chain.
+      user: GUARDIAN_AGENT_ADDRESS,
       action: anchorAction,
       targetToken,
       reasoning: anchorReasoning,
@@ -302,6 +323,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       { metadata: { type: 'macro_signal', url, signal: parsed.signal } }
     ).catch(() => {});
 
+    mark('signal_propagated', { signal: parsed.signal, anchorStatus: anchor.status });
     return res.status(200).json({
       acknowledged: true,
       action: 'signal_propagated',
@@ -323,6 +345,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     });
   } catch (error: any) {
     console.error('[Firecrawl Webhook] Error:', error.message);
+    mark('error');
     return res.status(200).json({ acknowledged: true, action: 'error', error: error.message });
   }
 }

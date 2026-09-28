@@ -16,9 +16,10 @@
 
 const STATUS_URL = process.env.STATUS_URL || 'https://api.diversifi.famile.xyz/api/status';
 const AGENT_STATUS_URL = process.env.AGENT_STATUS_URL || 'https://api.diversifi.famile.xyz/api/agent/status';
+const MACRO_FEED_URL = process.env.MACRO_FEED_URL || 'https://api.diversifi.famile.xyz/api/agent/zero-g-ledger?limit=10';
 
 /** Pure evaluator — exported for tests. */
-export function evaluateHealth({ status, agentStatus, routesOk, routesOutput }) {
+export function evaluateHealth({ status, agentStatus, routesOk, routesOutput, macroFeed }) {
   const problems = [];
   const warnings = [];
 
@@ -39,6 +40,41 @@ export function evaluateHealth({ status, agentStatus, routesOk, routesOutput }) 
     }
     if (run.freshness === 'stale' || run.freshness === 'never') {
       problems.push(`guardian ${kind} is ${run.freshness} (lastRunAt: ${run.lastRunAt ?? 'none'})`);
+    }
+  }
+
+  // Macro-signal silence alarm. Anchor count CANNOT distinguish "monitors
+  // quiet" from "path dead" — most sources change a few times a year and the
+  // NHC monitor needs an actual storm — so receipts, not feed rows, carry
+  // the evidence. Failures are problems; ambiguous silence is warn-only.
+  const macro = agentStatus?.macroSignal;
+  if (agentStatus && macro === undefined) {
+    warnings.push('warn: agentStatus.macroSignal absent — runtime predates the receipt block');
+  }
+  if (macro) {
+    if (macro.configured === false) {
+      problems.push('FIRECRAWL_WEBHOOK_SECRET missing on the API — webhook rejects or skips auth by design');
+    }
+    if (!macro.receivedCount) {
+      warnings.push('warn: macro webhook has received zero monitor events — path unproven organically');
+    } else {
+      if (typeof macro.lastReceivedAgeDays === 'number' && macro.lastReceivedAgeDays > 30) {
+        warnings.push(`warn: last macro monitor event ${Math.floor(macro.lastReceivedAgeDays)}d ago (sources change rarely — warn-only, not proven dead)`);
+      }
+      if (macro.lastOutcome === 'error') {
+        problems.push(`last macro webhook call errored (at ${macro.lastReceivedAt ?? 'unknown time'})`);
+      }
+      if (macro.lastAnchorStatus === 'failed') {
+        problems.push('last macro signal on-chain anchor failed');
+      }
+    }
+  }
+  if (macroFeed === null) {
+    problems.push('zero-g-ledger feed unreachable or non-2xx (verification + corridor beats read it)');
+  } else if (macroFeed !== undefined) {
+    const macroRows = (macroFeed.recent ?? []).filter((r) => String(r.action || '').startsWith('MACRO_SIGNAL'));
+    if (macroRows.length === 0) {
+      warnings.push('warn: feed holds no MACRO_SIGNAL rows — beats engine still has no data source');
     }
   }
 
@@ -71,10 +107,14 @@ async function main() {
     }
   };
 
-  const [status, agentStatus] = await Promise.all([fetchJson(STATUS_URL), fetchJson(AGENT_STATUS_URL)]);
+  const [status, agentStatus, macroFeed] = await Promise.all([
+    fetchJson(STATUS_URL),
+    fetchJson(AGENT_STATUS_URL),
+    fetchJson(MACRO_FEED_URL),
+  ]);
   const routesOutput = routesOutputPath ? readFileSync(routesOutputPath, 'utf8') : '';
 
-  const { problems, warnings } = evaluateHealth({ status, agentStatus, routesOk, routesOutput });
+  const { problems, warnings } = evaluateHealth({ status, agentStatus, routesOk, routesOutput, macroFeed });
 
   for (const w of warnings) console.log(w);
 

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { AIService } from '@diversifi/shared';
 import { getGuardianRunHealth } from '../../../lib/guardian-run-status';
+import { getMacroSignalReceipt } from '../../../lib/macro-signal-receipt';
 
 /**
  * Agent Status API Endpoint
@@ -53,6 +54,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         guardian = null;
     }
 
+    // Macro-signal receipt: is the Firecrawl webhook being hit, and did the
+    // last hit succeed? Anchor scarcity cannot answer that (monitors fire on
+    // rare source changes) — receipts can. The daily health check reads this.
+    let macroSignal = null;
+    try {
+        const receipt = await getMacroSignalReceipt();
+        macroSignal = {
+            configured: !!process.env.FIRECRAWL_WEBHOOK_SECRET,
+            receivedCount: receipt?.receivedCount ?? 0,
+            firstReceivedAt: receipt?.firstReceivedAt ?? null,
+            lastReceivedAt: receipt?.lastReceivedAt ?? null,
+            lastReceivedAgeDays: receipt?.lastReceivedAt
+                ? (Date.now() - new Date(receipt.lastReceivedAt).getTime()) / 86_400_000
+                : null,
+            lastOutcome: receipt?.lastOutcome ?? null,
+            lastSignal: receipt?.lastSignal ?? null,
+            lastAnchorStatus: receipt?.lastAnchorStatus ?? null,
+        };
+    } catch (error: any) {
+        console.warn('[Status API] Macro-signal receipt read failed:', error?.message ?? error);
+    }
+
     return res.status(200).json({
         // Arc Agent status
         enabled: arcEnabled,
@@ -97,5 +120,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Guardian cron health (null when the read failed — the status page
         // can still answer "is the app itself up" without Mongo).
         guardian,
+
+        // Macro-signal webhook receipt health (null when the read failed).
+        macroSignal,
     });
 }

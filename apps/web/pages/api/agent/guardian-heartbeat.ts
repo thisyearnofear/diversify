@@ -34,6 +34,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
 import { recordGuardianRun } from '../../../lib/guardian-run-status';
+import { GUARDIAN_AGENT_ADDRESS } from '../../../constants/guardian-identity';
 // Phase 0 (unified Guardian reasoning): the deterministic synthesizer moved
 // to @diversifi/shared so the loop, heartbeat, and marketplace agent can
 // share one reasoning floor. This module re-exports it for compatibility;
@@ -58,8 +59,6 @@ const GUARDIAN_LOOP_SECRET = (() => {
   }
   return 'dev-guardian-loop';
 })();
-
-const GUARDIAN_AGENT_ADDRESS = process.env.GUARDIAN_AGENT_ADDRESS || '0x803798fb6AC2ab3234f482350FB2aF6422b2B8f2';
 
 // The snapshot shape moved to shared (`HeartbeatMarketSnapshot`) with the
 // synthesizer; re-exported under the original names so existing importers

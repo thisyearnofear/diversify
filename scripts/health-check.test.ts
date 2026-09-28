@@ -76,6 +76,41 @@ describe('health-check evaluateHealth', () => {
   it('warns (not fails) when a guardian run block is absent', () => {
     const { problems, warnings } = evaluateHealth({ status: okStatus, agentStatus: { guardian: {} }, routesOk: true, routesOutput: '' });
     expect(problems).toEqual([]);
-    expect(warnings.length).toBe(2);
+    expect(warnings.filter((w: string) => w.includes('guardian.')).length).toBe(2);
+  });
+
+  const okMacro = {
+    configured: true, receivedCount: 3, lastReceivedAgeDays: 2,
+    lastOutcome: 'signal_propagated', lastAnchorStatus: 'pending',
+  };
+  const okFeed = { recent: [{ action: 'MACRO_SIGNAL:RATE_CUT', reasoning: 'x', timestamp: 1 }] };
+
+  it('flags an unconfigured macro webhook, failed outcome and failed anchor as problems', () => {
+    const agentStatus = { ...okAgent, macroSignal: { ...okMacro, configured: false, lastOutcome: 'error', lastAnchorStatus: 'failed' } };
+    const { problems } = evaluateHealth({ status: okStatus, agentStatus, routesOk: true, routesOutput: '', macroFeed: okFeed });
+    expect(problems.join('\n')).toContain('FIRECRAWL_WEBHOOK_SECRET');
+    expect(problems.join('\n')).toContain('webhook call errored');
+    expect(problems.join('\n')).toContain('anchor failed');
+  });
+
+  it('warns but never fails on ambiguous silence — zero receipts, old receipt, empty feed', () => {
+    const agentStatus = { ...okAgent, macroSignal: { ...okMacro, receivedCount: 0 } };
+    const { problems, warnings } = evaluateHealth({ status: okStatus, agentStatus, routesOk: true, routesOutput: '', macroFeed: { recent: [] } });
+    expect(problems).toEqual([]);
+    expect(warnings.join('\n')).toContain('zero monitor events');
+    expect(warnings.join('\n')).toContain('no MACRO_SIGNAL rows');
+
+    const old = { ...okAgent, macroSignal: { ...okMacro, lastReceivedAgeDays: 45 } };
+    const res2 = evaluateHealth({ status: okStatus, agentStatus: old, routesOk: true, routesOutput: '', macroFeed: okFeed });
+    expect(res2.problems).toEqual([]);
+    expect(res2.warnings.join('\n')).toContain('45d ago');
+  });
+
+  it('fails when the proof feed is unreachable; passes on a healthy macro block', () => {
+    const bad = evaluateHealth({ status: okStatus, agentStatus: okAgent, routesOk: true, routesOutput: '', macroFeed: null });
+    expect(bad.problems.join('\n')).toContain('zero-g-ledger feed unreachable');
+
+    const good = evaluateHealth({ status: okStatus, agentStatus: { ...okAgent, macroSignal: okMacro }, routesOk: true, routesOutput: '', macroFeed: okFeed });
+    expect(good.problems).toEqual([]);
   });
 });
