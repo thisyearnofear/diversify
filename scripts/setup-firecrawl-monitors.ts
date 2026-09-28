@@ -134,11 +134,22 @@ async function createMonitor(config: MonitorConfig) {
 async function main() {
   console.log('🔥 Setting up Firecrawl monitors for DiversiFi Guardian...\n');
   console.log(`   Webhook URL: ${WEBHOOK_URL}/api/agent/firecrawl-webhook`);
-  console.log(`   Monitors to create: ${MONITORS.length}\n`);
+
+  // MONITOR_ONLY=name1,name2 restricts creation to a subset (re-runs after a
+  // partial failure without duplicating monitors that already exist).
+  const only = process.env.MONITOR_ONLY?.split(',').map((s) => s.trim()).filter(Boolean);
+  const selected = only ? MONITORS.filter((m) => only.includes(m.name)) : MONITORS;
+  // Firecrawl free/standard plans rate-limit monitor creates (~3/min) — pace
+  // them so a full setup doesn't 429 partway through.
+  const delayMs = Number(process.env.MONITOR_DELAY_MS || 21_000);
+  console.log(`   Monitors to create: ${selected.length}${only ? ` (filtered from ${MONITORS.length})` : ''}\n`);
 
   const results: Array<{ name: string; id?: string; error?: string }> = [];
 
-  for (const config of MONITORS) {
+  let first = true;
+  for (const config of selected) {
+    if (!first) await new Promise((r) => setTimeout(r, delayMs));
+    first = false;
     try {
       const result = await createMonitor(config);
       const id = result.data?.id || result.id || 'unknown';
@@ -151,7 +162,7 @@ async function main() {
   }
 
   console.log('\n📋 Summary:');
-  console.log(`   Created: ${results.filter(r => r.id).length}/${MONITORS.length}`);
+  console.log(`   Created: ${results.filter(r => r.id).length}/${selected.length}`);
   console.log(`   Failed: ${results.filter(r => r.error).length}/${MONITORS.length}`);
 
   if (results.some(r => r.id)) {
