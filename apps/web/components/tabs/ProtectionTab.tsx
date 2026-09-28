@@ -18,7 +18,7 @@ import { useExperience } from "@/context/app/ExperienceContext";
 import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { useReducedMotion } from "framer-motion";
+import { AnimatePresence, useReducedMotion } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
@@ -35,10 +35,12 @@ import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
-import { ProtectionPlanGallery } from "./protect/ProtectionPlanGallery";
-import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { PhilosophyCoinRail, FocusedPlanLine } from "./protect/PhilosophyCoinRail";
+import { useAmbientOrigin } from "./protect/ProtectionAmbient";
+import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype } from "@/components/protection-cards/tokens";
 import { shieldPatternFor } from "./protect/shield-pattern";
 import {
+  compactPlanDelta,
   getArchetypeAllocations,
   legsForRisk,
 } from "@/components/protection-cards/plan-preview";
@@ -123,6 +125,10 @@ export default function ProtectionTab({
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
   const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
   const [comparing, setComparing] = useState(false);
+  // The second tap on the already-focused coin opens the details sheet
+  // ("About {plan}") — a first tap only previews in the ring.
+  const [philosophyDetailsOpen, setPhilosophyDetailsOpen] = useState(false);
+  const ambient = useAmbientOrigin();
   // Payment-cycle inspector — opened by the `cycle` intent (Home's
   // graduation / payment-cycle transition). Independent of any slice.
   const [cycleOpen, setCycleOpen] = useState(false);
@@ -185,6 +191,7 @@ export default function ProtectionTab({
     const plan = router.query.plan;
     if (typeof plan === "string" && STRATEGIES.some((s) => s.id === plan)) {
       setFocusedPhilosophy(plan as FinancialStrategy);
+      setPhilosophyDetailsOpen(true);
     }
     // One-shot URL consumption on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -269,11 +276,13 @@ export default function ProtectionTab({
   }, [heldPctByToken, sleeveLegs]);
   const rwaMarket = useRwaMarket(sleeveOpen);
 
-  // Compare mode (Wave D): the ring previews the focused philosophy's plan
+  // Compare/picker mode: the ring previews the focused philosophy's plan
   // without committing it — the committed alignment/shape/since-last-visit
   // stay on strategyKey; only the ring and its hole read the preview.
   const previewKey =
-    comparing && focusedPhilosophy ? focusedPhilosophy : strategyKey;
+    (comparing || !hasPlan) && focusedPhilosophy
+      ? focusedPhilosophy
+      : strategyKey;
   const previewAllocations = useMemo(() => {
     if (!previewKey) return [];
     const archetypeId = strategyToArchetype(previewKey);
@@ -288,12 +297,35 @@ export default function ProtectionTab({
     setFocusedToken(null);
     setComparing(false);
     setFocusedPhilosophy(null);
+    setPhilosophyDetailsOpen(false);
   }, []);
   const toggleCompare = useCallback(() => {
     setFocusedToken(null);
     setComparing((c) => !c);
-    if (comparing) setFocusedPhilosophy(null);
+    if (comparing) {
+      setFocusedPhilosophy(null);
+      setPhilosophyDetailsOpen(false);
+    }
   }, [comparing]);
+  // A coin tap previews; a second tap on the already-focused coin opens
+  // the details sheet. The ambient layer blooms from the tap point.
+  const handlePhilosophySelect = useCallback(
+    (id: string) => {
+      const strategyId = id as FinancialStrategy;
+      setFocusedToken(null);
+      if (strategyId === focusedPhilosophy) {
+        setPhilosophyDetailsOpen(true);
+        return;
+      }
+      setPhilosophyDetailsOpen(false);
+      setFocusedPhilosophy(strategyId);
+      trackFunnelEvent("marquee_select", {
+        strategy: strategyId,
+        source: hasPlan ? "shield_compare" : "shield_picker",
+      });
+    },
+    [focusedPhilosophy, hasPlan],
+  );
   // While comparing, a slice tap only reads the previewed plan's leg —
   // the inspector stays on the philosophy, not the token.
   const handleCompareSliceSelect = useCallback((token: string | null) => {
@@ -574,6 +606,7 @@ export default function ProtectionTab({
     setFocusedPhilosophy(null);
     setFocusedToken(null);
     setComparing(false);
+    setPhilosophyDetailsOpen(false);
     haptics.confirm();
     // Keep the plan Guardian follows in step with the plan the user just
     // chose — silently, only when a cached wallet proof exists (a plan
@@ -606,24 +639,66 @@ export default function ProtectionTab({
 
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
+  // In compare the rail's checked coin falls back to the current plan, so
+  // the hole names that plan even before the user picks another.
+  const effectiveFocus = comparing
+    ? focusedPhilosophy ?? strategyKey
+    : focusedPhilosophy;
+  const focusedStrategyName =
+    STRATEGIES.find((s) => s.id === effectiveFocus)?.name ?? "";
+  // Hole copy for compare/picker — the focused plan's name and a compact
+  // delta ("+15% PAXG · −10% KESm") against the committed plan.
+  const compareHole = (() => {
+    if (!effectiveFocus) {
+      return { label: "Choose a philosophy", hint: "" };
+    }
+    if (hasPlan && effectiveFocus === strategyKey) {
+      return { label: focusedStrategyName, hint: "Your plan" };
+    }
+    return {
+      label: focusedStrategyName,
+      hint: hasPlan ? compactPlanDelta(allocations, previewAllocations) : "",
+    };
+  })();
+
   const object = (
     <>
       {shape === "picker" && (
         <div data-testid="shield-picker">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-            Choose a protection philosophy
-          </p>
-          <ProtectionPlanGallery
-            selectedId={focusedPhilosophy}
-            onInspect={(id) => {
-              setFocusedToken(null);
-              setFocusedPhilosophy((prev) => (prev === id ? null : id));
-              trackFunnelEvent("marquee_select", {
-                strategy: id,
-                source: "shield_picker",
-              });
-            }}
+          {/* The picker IS the compact ring + coin rail: a coin previews
+              the philosophy's legs in the empty track, a second tap opens
+              details, "Use this plan" commits. Nothing appends below. */}
+          <ProtectionPlanRing
+            strategyKey={previewKey ?? archetypeToStrategy(ARCHETYPE_ORDER[0])}
+            legs={previewAllocations}
+            savedLegs={[]}
+            portfolio={activePortfolio as MultichainPortfolio}
+            selectedToken={null}
+            onSelectToken={() => {}}
+            alignmentScore={null}
+            empty
+            compact
+            holeOverride={compareHole}
+            sinceHint={alignmentSinceHint ?? undefined}
           />
+          <PhilosophyCoinRail
+            selected={focusedPhilosophy}
+            onSelect={handlePhilosophySelect}
+            onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
+          />
+          <FocusedPlanLine strategyId={focusedPhilosophy} />
+          {focusedPhilosophy && (
+            <div className="mt-1 flex justify-center">
+              <button
+                type="button"
+                data-testid="picker-commit"
+                onClick={commitFocusedPlan}
+                className="min-h-[44px] px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+              >
+                Use this plan
+              </button>
+            </div>
+          )}
         </div>
       )}
       {planRingVisible && shape !== "picker" && (
@@ -631,6 +706,11 @@ export default function ProtectionTab({
           <ProtectionPlanRing
             strategyKey={previewKey}
             legs={comparing ? previewAllocations : balance.isPreviewing ? balanceAllocations : allocations}
+            forcePlanLegs={comparing}
+            compact={comparing}
+            ghostLegs={comparing ? allocations : undefined}
+            holeOverride={comparing ? compareHole : undefined}
+            holeActionLabel={comparing ? "Exit compare" : undefined}
             balancePreview={balance.isPreviewing}
             savedLegs={allocations}
             portfolio={activePortfolio as MultichainPortfolio}
@@ -673,21 +753,33 @@ export default function ProtectionTab({
               </div>
             ) : undefined}
           />
-          {comparing && (
-            <div data-testid="shield-compare" className="mt-3">
-              <ProtectionPlanGallery
-                selectedId={focusedPhilosophy}
-                onInspect={(id) => {
-                  setFocusedToken(null);
-                  setFocusedPhilosophy((prev) => (prev === id ? null : id));
-                  trackFunnelEvent("marquee_select", {
-                    strategy: id,
-                    source: "shield_compare",
-                  });
-                }}
-              />
-            </div>
-          )}
+          {/* Compare transformation: the coin rail slides in under the
+              compact ring — a tap previews, a second tap opens details,
+              "Use this plan" commits. */}
+          <AnimatePresence>
+            {comparing && (
+              <div data-testid="shield-compare" className="mt-3 space-y-2">
+                <PhilosophyCoinRail
+                  selected={focusedPhilosophy ?? strategyKey}
+                  onSelect={handlePhilosophySelect}
+                  onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
+                />
+                <FocusedPlanLine strategyId={focusedPhilosophy ?? strategyKey} />
+                {focusedPhilosophy && focusedPhilosophy !== strategyKey && (
+                  <div className="flex justify-center">
+                    <button
+                      type="button"
+                      data-testid="compare-commit"
+                      onClick={commitFocusedPlan}
+                      className="min-h-[44px] px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                    >
+                      Use this plan
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </AnimatePresence>
           {!comparing && !balance.isPreviewing && shape === "gap" && !focusedToken &&
             biggestGap && address &&
             guardianState !== "monitoring" && (
@@ -736,13 +828,17 @@ export default function ProtectionTab({
   // The sleeve is shape-independent: a deep-link (?sleeve=rwa) or a vault
   // tap opens it even on the picker shape — the doorway must work
   // walletless and planless.
+  // A coin tap only previews — the philosophy inspector opens on the
+  // second tap (philosophyDetailsOpen). Slice taps still route normally.
   const inspectorSel = balance.isPreviewing
     ? null
     : comparing
-    ? focusedPhilosophy
+    ? focusedToken ?? (philosophyDetailsOpen ? focusedPhilosophy : null)
     : isSleeveSelection(focusedToken) || shape !== "picker"
       ? focusedToken
-      : focusedPhilosophy;
+      : philosophyDetailsOpen
+        ? focusedPhilosophy
+        : null;
 
   const inspector = (
     <ShieldSliceInspector

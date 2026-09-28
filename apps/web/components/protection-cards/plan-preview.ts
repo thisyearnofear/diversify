@@ -5,6 +5,7 @@
  * Percent splits also power the Guardian vault wizard preview bar.
  */
 import { ARCHETYPES, archetypeToStrategy, type ArchetypeId } from './tokens';
+import { displayToken } from '@/lib/plan-legs';
 
 export interface PlanLeg {
   token: string;
@@ -136,6 +137,25 @@ export function describePlanDelta(current: PlanLeg[], preview: PlanLeg[]): strin
     parts.push(`dollar floor ${floorFrom}% → ${floorTo}%`);
   }
   return parts.length > 0 ? parts.join(' · ') : 'Same mix as your current plan';
+}
+
+/**
+ * The compare hole's delta line — the largest absolute leg changes first,
+ * signed with a real minus, canonical tickers. `"+15% PAXG · −10% KESm"`;
+ * "Same mix" when nothing differs.
+ */
+export function compactPlanDelta(current: PlanLeg[], preview: PlanLeg[], max = 2): string {
+  const currentPct = new Map(current.map((l) => [l.token, l.percent]));
+  const previewPct = new Map(preview.map((l) => [l.token, l.percent]));
+  const deltas = [...new Set([...currentPct.keys(), ...previewPct.keys()])]
+    .map((token) => ({ token, delta: (previewPct.get(token) ?? 0) - (currentPct.get(token) ?? 0) }))
+    .filter((d) => d.delta !== 0)
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta))
+    .slice(0, max);
+  if (deltas.length === 0) return 'Same mix';
+  return deltas
+    .map((d) => `${d.delta > 0 ? '+' : '−'}${Math.abs(d.delta)}% ${displayToken(d.token)}`)
+    .join(' · ');
 }
 
 export interface PlanPreviewSlice {

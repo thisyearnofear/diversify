@@ -32,7 +32,7 @@ import { PaymentCycleReport } from "./PaymentCycleReport";
 import { RwaVaultSleeve } from "./RwaVaultSleeve";
 import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./ProtectionPlanRing";
 import { STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { describePlanDelta } from "@/components/protection-cards/plan-preview";
+
 import { isLegFillable } from "@/lib/plan-legs";
 import { rwaLegFor } from "./rwa-assets";
 import { IXS_VAULT_BY_ID } from "@diversifi/shared/src/services/serv/ixs-vault-catalog";
@@ -155,7 +155,6 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     focusedPhilosophy,
     focusedToken,
     shape,
-    strategyKey,
     setFocusedToken,
     setFocusedPhilosophy,
     sleeveOpen,
@@ -166,7 +165,6 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     planPctBySymbol,
     heldPctBySymbol,
     sleevePhilosophy,
-    allocations,
     previewAllocations,
     alignmentLegs,
     chainId,
@@ -286,16 +284,6 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
       )}
       {(shape === "picker" || comparing) && focusedPhilosophy && (
         <div className="space-y-3">
-          {comparing && (
-            <p
-              data-testid="plan-delta"
-              className="text-xs text-gray-600 dark:text-gray-300"
-            >
-              {focusedPhilosophy !== strategyKey
-                ? describePlanDelta(allocations, previewAllocations)
-                : "Your current plan"}
-            </p>
-          )}
           {(() => {
             const values =
               STRATEGIES.find((s) => s.id === focusedPhilosophy)?.values ?? [];

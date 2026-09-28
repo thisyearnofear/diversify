@@ -143,7 +143,11 @@ export function FlickScrollRow({
         data-testid="flick-row-track"
         className={`flex overflow-x-auto snap-x snap-proximity scrollbar-hide ${dragClassName ?? ""} ${className}`}
       >
-        {children}
+        {/* Children read didDragRef via useDidDrag() — the provider was
+            missing, so drag-release clicks used to select. */}
+        <FlickScrollRowContext.Provider value={{ didDragRef }}>
+          {children}
+        </FlickScrollRowContext.Provider>
       </div>
     </div>
   );

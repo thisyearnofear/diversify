@@ -302,15 +302,18 @@ A tab change that fails any of these is the old stack. Do not ship it.
    below `sm` the header `WalletButton` yields to the in-object CTA on tabs
    that carry one (Home, Shield, Guardian); it survives where the resting
    object has none (Exchange's pair stage, Info), when connected, on desktop,
-   and in Farcaster/MiniPay contexts. **Shield morphs ring ↔ gallery in
-   place:** with a philosophy the ghost ring is the object and the plan
-   badge ("Africapitalism ▾") swaps the picker in; "← Your plan" or a
-   card commit returns to the re-sliced ring without a blank frame.
-   Walletless Shield copy separates the jobs: the badge names the plan,
-   the hole states its dollar-reserve target and compare affordance, and
-   the CTA says "Connect wallet" — no duplicate plan name or connect ask
-   in the hole. Leg rows render canonical tickers (USDm/EURm/BRLm) though
-   leg ids stay wallet-facing internally.
+   and in Farcaster/MiniPay contexts. **Shield transforms ring ↔ rail in
+   place:** compare and the picker transform the ring — it goes compact
+   with a faint outline of the current plan behind it — and the
+   philosophy coin rail (the onboarding `LensCoinSelector`, scrollable)
+   slides in beneath; a coin previews (re-slicing the ring in place), a
+   second tap opens the details sheet, "Use this plan" commits, the hole
+   tap exits — nothing appends below. Walletless Shield copy separates
+   the jobs: the badge names the plan, the hole states its
+   dollar-reserve target and compare affordance, and the CTA says
+   "Connect wallet" — no duplicate plan name or connect ask in the hole.
+   Leg rows render canonical tickers (USDm/EURm/BRLm) though leg ids
+   stay wallet-facing internally.
 6. **Nothing sits above the object** except a real error. Banners,
    scorecards, honesty strips, and “next step” journeys are object /
    status / footnote — or they leave.

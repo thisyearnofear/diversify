@@ -59,6 +59,21 @@ interface Props {
   holeHintOverride?: string;
   /** Plan legs override — callers pass risk-adjusted legs so the ring, score, and mix agree. */
   legs?: PlanLeg[];
+  /** Compare morph — draw `legs` (the previewed plan) even when the wallet
+   *  has holdings; without this a funded wallet's holdings shadow the
+   *  preview and compare never re-slices. */
+  forcePlanLegs?: boolean;
+  /** Compact morph (compare/picker): smaller ring, hole kept, header,
+   *  legend rows and controls hidden. */
+  compact?: boolean;
+  /** Faint concentric outer track of the current plan's legs — the
+   *  contrast baseline while a different plan previews in compare. */
+  ghostLegs?: PlanLeg[];
+  /** Hole copy override — compare/picker carries the focused plan name +
+   *  compact delta instead of the computed alignment content. */
+  holeOverride?: { label: React.ReactNode; hint?: string };
+  /** Accessible label for the hole tap (compare: "Exit compare"). */
+  holeActionLabel?: string;
   /**
    * Tokenized-asset lens is open (selection is 'sleeve' or 'vault:<id>').
    * The hatched RWA wedges keep their color and everything else goes
@@ -83,6 +98,11 @@ export function ProtectionPlanRing({
   onHoleTap,
   holeHintOverride,
   legs,
+  forcePlanLegs = false,
+  compact = false,
+  ghostLegs,
+  holeOverride,
+  holeActionLabel,
   sleeveOpen = false,
   balancePreview = false,
   savedLegs = [],
@@ -107,10 +127,12 @@ export function ProtectionPlanRing({
     [walletView.holdings],
   );
 
-  // Funded: ring is live holdings. Empty: ring is the plan waiting for funds.
+  // Funded: ring is live holdings — unless the caller forces the plan
+  // legs (compare mode previews a different philosophy's slices). Empty:
+  // ring is the plan waiting for funds.
   const slices: RingSlice[] = useMemo(() => {
     if (!archetype) return [];
-    if (!balancePreview && walletView.holdings.length > 0) {
+    if (!forcePlanLegs && !balancePreview && walletView.holdings.length > 0) {
       return walletView.holdings.map((holding, i) => ({
         id: holding.symbol,
         label: `${displayToken(holding.symbol)} — wallet holding`,
@@ -130,7 +152,7 @@ export function ProtectionPlanRing({
           (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(a.token)),
     }));
-  }, [archetype, walletView.holdings, allocations, balancePreview]);
+  }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs]);
 
   // Selection derivations feed the count-up hook below — and every hook
   // must run before the early return (rules of hooks): the ring simply
@@ -242,7 +264,20 @@ export function ProtectionPlanRing({
     ];
   }, [sleeveOpen, ringSlicesForDisplay, rwaSlices.length, archetype]);
 
-  if (!archetype || allocations.length === 0 || slices.length === 0) return null;
+  if (!archetype) return null;
+  // A compact ring with a holeOverride still draws — the empty track +
+  // "Choose a philosophy" hole IS the picker's object.
+  const emptyTrack = allocations.length === 0 || slices.length === 0;
+  if (emptyTrack && !holeOverride) return null;
+
+  const ringSize = compact ? 130 : 200;
+  const ringThickness = compact ? 16 : 24;
+  const ghostSlices: RingSlice[] = (ghostLegs ?? []).map((a, i) => ({
+    id: a.token,
+    label: `${displayToken(a.token)} — current plan`,
+    percent: a.percent,
+    color: TOKEN_COLORS[a.token] ?? (i === 0 ? archetype?.accent : i === 1 ? archetype?.accentSoft : undefined) ?? QUIET_GRAY,
+  }));
 
   const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
   const selectedSymbol = selectedLive?.id ?? selected?.token ?? null;
@@ -258,6 +293,13 @@ export function ProtectionPlanRing({
   const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   const hole = (() => {
+    if (holeOverride) {
+      return {
+        number: null as React.ReactNode,
+        label: holeOverride.label,
+        hint: holeOverride.hint ?? '',
+      };
+    }
     if (isStressTesting) {
       return {
         number: (
@@ -357,6 +399,7 @@ export function ProtectionPlanRing({
 
   return (
     <div className="w-full">
+      {compact ? null : (
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
           Your shield plan
@@ -423,9 +466,12 @@ export function ProtectionPlanRing({
         )}
         </div>
       </div>
+      )}
 
       <div className="flex justify-center">
         <motion.div
+          layout={reducedMotion ? undefined : true}
+          className="relative"
           animate={
             isStressTesting && !reducedMotion
               ? {
@@ -438,6 +484,29 @@ export function ProtectionPlanRing({
           style={{ ...tilt.style, transformPerspective: 900 }}
           {...tilt.props}
         >
+          {/* The current plan's outline — a thin concentric track in its
+              own colours at ~35% opacity just outside the ring edge,
+              fading in/out with compare. */}
+          <AnimatePresence>
+            {ghostSlices.length > 0 && (
+              <motion.div
+                key="ghost-plan-outline"
+                data-testid="ghost-plan-outline"
+                aria-hidden="true"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.35 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: reducedMotion ? 0 : 0.25 }}
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+              >
+                <AllocationRing
+                  slices={ghostSlices}
+                  size={ringSize + 8}
+                  thickness={4}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
           <AllocationRing
             slices={displaySlices}
             selectedId={isSleeveSelection(selectedToken) ? null : selectedToken}
@@ -453,8 +522,8 @@ export function ProtectionPlanRing({
                 ? { id: selected.token, extraPercent: gapPts }
                 : null
             }
-            size={200}
-            thickness={24}
+            size={ringSize}
+            thickness={ringThickness}
           >
             {(() => {
               const holeContent = (
@@ -486,7 +555,7 @@ export function ProtectionPlanRing({
                         {sinceHint}
                       </span>
                     )}
-                  {onHoleTap && !holeHintOverride && (
+                  {onHoleTap && !holeHintOverride && !holeOverride && (
                     <span className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       Compare plans ▾
                     </span>
@@ -498,7 +567,7 @@ export function ProtectionPlanRing({
                   <button
                     type="button"
                     data-testid="ring-hole"
-                    aria-label="Compare philosophies"
+                    aria-label={holeActionLabel ?? "Compare philosophies"}
                     onClick={onHoleTap}
                     className="flex flex-col items-center min-h-[44px] min-w-[44px] p-2 pointer-events-auto"
                   >
@@ -523,8 +592,9 @@ export function ProtectionPlanRing({
         </motion.div>
       </div>
 
-      {controls}
+      {!compact && controls}
 
+      {!compact && (
       <div className="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
         {(showDust ? enriched : primary).map(({ slice, alloc: a, held }, idx) => {
           const isSelected = selectedToken === a.token;
@@ -609,7 +679,8 @@ export function ProtectionPlanRing({
           )}
         </AnimatePresence>
       </div>
-      {showProjections && (
+      )}
+      {!compact && showProjections && (
         <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
           3-year path, projected: inflation takes{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">

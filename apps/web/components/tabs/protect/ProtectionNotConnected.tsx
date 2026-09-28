@@ -3,12 +3,14 @@
  *
  * §5 rail 5 (unconnected is a morph too): when a philosophy is resolvable
  * the ghost plan ring IS the object — walletless, so it renders the
- * plan's slices with the plan's dollar reserve in the hole. The plan badge morphs the
- * object in place: tap "Africapitalism ▾" and the gallery replaces the
- * ring; "← Your plan" or choosing a card returns to the ring re-sliced.
- * With no philosophy the gallery alone is the object. The connect CTA
- * attaches below; trust + demo live in the shared status tier. No hero
- * card, no proof card, no how-it-works stack.
+ * plan's slices with the plan's dollar reserve in the hole. Compare and
+ * picker transform the same object: the ring goes compact, a faint
+ * outline of the current plan sits behind it, and the philosophy coin
+ * rail slides in beneath — a coin previews (re-slices in place), "Use
+ * this plan" commits, "← Your plan" (or the hole) exits without
+ * committing. With no philosophy the picker is the same layout minus the
+ * ghost. The connect CTA attaches below when not comparing; trust + demo
+ * live in the shared status tier. No hero card, no proof card.
  *
  * Persona morphs the object (rail 4): an APAC philosophy shows the APAC
  * honesty banner in the status tier; a Caribbean philosophy shows the
@@ -16,13 +18,11 @@
  */
 
 import React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import WalletButton from "../../wallet/WalletButton";
-import type { UserExperienceMode } from "@/context/app/types";
+import type { FinancialStrategy, UserExperienceMode } from "@/context/app/types";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { shieldPatternFor } from "./shield-pattern";
 import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
-import { ProtectionPlanGallery } from "./ProtectionPlanGallery";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useUserRegion } from "@/hooks/use-user-region";
@@ -32,11 +32,15 @@ import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBan
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { ProtectionPlanRing, SLEEVE_ID } from "./ProtectionPlanRing";
 import { PlanFloorControl } from "./PlanFloorControl";
-import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { PhilosophyCoinRail, FocusedPlanLine } from "./PhilosophyCoinRail";
+import { useAmbientOrigin } from "./ProtectionAmbient";
+import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype } from "@/components/protection-cards/tokens";
 import {
+  compactPlanDelta,
   getArchetypeAllocations,
   legsForRisk,
 } from "@/components/protection-cards/plan-preview";
+import { STRATEGIES } from "@/constants/strategies";
 import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
@@ -65,7 +69,7 @@ export function ProtectionNotConnected({
   onOpenCycle,
 }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
-  const reducedMotion = useReducedMotion();
+  const ambient = useAmbientOrigin();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
   // holdings, no loading shimmer. Fresh instance per mount — never a
   // shared mutable const.
@@ -107,68 +111,112 @@ export function ProtectionNotConnected({
     ? selectedToken
     : null;
 
-  // Ring↔gallery morph: with a plan the ring is the object and the plan
-  // badge swaps the gallery in place; a card commit (or ← Your plan)
-  // returns to the ring. No plan → the gallery is the object outright.
-  const [galleryOpen, setGalleryOpen] = React.useState(false);
-  React.useEffect(() => setGalleryOpen(false), [ringKey]);
-  const showPicker = !balance.isPreviewing && (!showRing || galleryOpen);
+  // Compare morph: with a plan the hole tap enters compare — the ring
+  // goes compact, the current plan's outline sits behind it, and the
+  // coin rail previews philosophies in place. A coin tap previews (it no
+  // longer commits instantly); "Use this plan" commits and exits.
+  const [comparing, setComparing] = React.useState(false);
+  const [focusedPhilosophy, setFocusedPhilosophy] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    setComparing(false);
+    setFocusedPhilosophy(null);
+  }, [ringKey]);
+
+  const focusedArchetype = focusedPhilosophy
+    ? strategyToArchetype(focusedPhilosophy)
+    : null;
+  const focusedLegs = focusedArchetype
+    ? legsForRisk(
+        getArchetypeAllocations(focusedArchetype),
+        profileConfig.riskTolerance,
+      )
+    : [];
+  const focusedName =
+    STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "";
+
+  const picking = !showRing;
+  const ringCompact = comparing || picking;
+  const hole = (() => {
+    if (!comparing && !picking) return undefined;
+    if (!focusedPhilosophy) {
+      return { label: "Choose a philosophy", hint: "" };
+    }
+    if (showRing && focusedPhilosophy === ringKey) {
+      return { label: focusedName, hint: "Your plan" };
+    }
+    return {
+      label: focusedName,
+      hint: showRing ? compactPlanDelta(ringLegs, focusedLegs) : "",
+    };
+  })();
+
+  const exitCompare = () => {
+    setComparing(false);
+    setFocusedPhilosophy(null);
+    haptics.tap();
+  };
+  const commitFocusedPlan = () => {
+    if (!focusedPhilosophy) return;
+    setFinancialStrategy(focusedPhilosophy as FinancialStrategy);
+    setComparing(false);
+    setFocusedPhilosophy(null);
+    haptics.confirm();
+  };
 
   const object = (
     <div className="space-y-4" data-testid="shield-unconnected-object">
-      {/* Crossfade in one grid cell: the outgoing view fades while the
-          incoming one is already painted, so the morph never shows an
-          empty card (mode="wait" left a blank frame between the two). The
-          cell sizes to the incoming view; the leaving one is taken out of
-          flow so the height snaps once instead of stacking. */}
-      <div className="grid [&>*]:col-start-1 [&>*]:row-start-1">
-      <AnimatePresence initial={false}>
-        <motion.div
-          key={showPicker ? "picker" : "ring"}
-          initial={reducedMotion ? false : { opacity: 0, scale: 0.985 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={
-            reducedMotion
-              ? undefined
-              : { opacity: 0, scale: 0.985, position: "absolute", inset: 0, pointerEvents: "none" }
+      <div data-testid="shield-ring" data-walletless data-comparing={comparing || undefined}>
+        <ProtectionPlanRing
+          strategyKey={
+            (picking ? focusedPhilosophy : ringKey) ??
+            archetypeToStrategy(ARCHETYPE_ORDER[0])
           }
-          transition={{ duration: 0.18, ease: "easeOut" }}
-          className="relative min-w-0"
-        >
-      {showRing && !showPicker && (
-        <div data-testid="shield-ring" data-walletless>
-          <ProtectionPlanRing
-            strategyKey={ringKey}
-            legs={balance.isPreviewing ? balanceLegs : ringLegs}
-            balancePreview={balance.isPreviewing}
-            savedLegs={ringLegs}
-            portfolio={walletlessPortfolio}
-            selectedToken={sleeveOpen ? SLEEVE_ID : effectiveToken}
-            onSelectToken={(token) => {
-              // A wedge tap inside the lens steps out of it to that leg.
-              if (sleeveOpen) onCloseSleeve?.();
-              setSelectedToken(token === SLEEVE_ID ? null : token);
-            }}
-            sleeveOpen={sleeveOpen}
-            alignmentScore={null}
-            empty
-            walletless
-            onHoleTap={
-              balance.isPreviewing
-                ? undefined
+          legs={
+            picking
+              ? focusedLegs
+              : comparing && focusedPhilosophy
+                ? focusedLegs
+                : balance.isPreviewing
+                  ? balanceLegs
+                  : ringLegs
+          }
+          forcePlanLegs={comparing || picking}
+          compact={ringCompact}
+          ghostLegs={comparing ? ringLegs : undefined}
+          holeOverride={hole}
+          holeActionLabel={comparing ? "Exit compare" : undefined}
+          balancePreview={!comparing && balance.isPreviewing}
+          savedLegs={ringLegs}
+          portfolio={walletlessPortfolio}
+          selectedToken={sleeveOpen ? SLEEVE_ID : effectiveToken}
+          onSelectToken={(token) => {
+            // A wedge tap inside the lens steps out of it to that leg.
+            if (sleeveOpen) onCloseSleeve?.();
+            setSelectedToken(token === SLEEVE_ID ? null : token);
+          }}
+          sleeveOpen={sleeveOpen}
+          alignmentScore={null}
+          empty
+          walletless
+          onHoleTap={
+            balance.isPreviewing || picking
+              ? undefined
+              : comparing
+                ? exitCompare
                 : () => {
-                    setGalleryOpen(true);
+                    setComparing(true);
                     haptics.tap();
                   }
-            }
-            controls={
+          }
+          controls={
+            !ringCompact ? (
               <div className="mt-3">
                 <PlanFloorControl
                   value={balance.risk}
                   legs={balance.isPreviewing ? balanceLegs : ringLegs}
                   savedLegs={ringLegs}
                   isPreviewing={balance.isPreviewing}
-                  accent={ARCHETYPES[ringArchetype].accent}
+                  accent={ringArchetype ? ARCHETYPES[ringArchetype].accent : undefined}
                   onChange={(risk) => {
                     setSelectedToken(null);
                     balance.select(risk);
@@ -187,45 +235,51 @@ export function ProtectionNotConnected({
                   }}
                 />
               </div>
-            }
-          />
-        </div>
-      )}
-      {showPicker && (
-        <div data-testid="shield-picker">
-          {galleryOpen && showRing ? (
+            ) : undefined
+          }
+        />
+      </div>
+
+      {(comparing || picking) && (
+        <div data-testid="shield-philosophy-rail" className="space-y-2">
+          {comparing && (
             <button
               type="button"
               data-testid="back-to-plan"
-              onClick={() => {
-                setGalleryOpen(false);
-                haptics.tap();
-              }}
-              className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white mb-3 min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 rounded"
+              onClick={exitCompare}
+              className="text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white min-h-[44px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 rounded"
             >
               ← Your plan
             </button>
-          ) : (
-            <p className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              Choose a protection philosophy
-            </p>
           )}
-          <ProtectionPlanGallery
-            onInspect={(id) => {
-              setFinancialStrategy(id);
-              setGalleryOpen(false);
-              haptics.confirm();
+          <PhilosophyCoinRail
+            selected={focusedPhilosophy ?? ringKey}
+            onSelect={(id) => {
+              setSelectedToken(null);
+              setFocusedPhilosophy((prev) => (prev === id ? prev : id));
+              haptics.tap();
             }}
+            onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
           />
+          <FocusedPlanLine strategyId={focusedPhilosophy ?? ringKey} />
+          {focusedPhilosophy && focusedPhilosophy !== ringKey && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                data-testid="walletless-commit"
+                onClick={commitFocusedPlan}
+                className="min-h-[44px] px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+              >
+                Use this plan
+              </button>
+            </div>
+          )}
         </div>
       )}
-        </motion.div>
-      </AnimatePresence>
-      </div>
 
-      {/* The one CTA — attaches to the object, no card wrapper. The plan
-          name already lives in the badge; the button just says the verb. */}
-      {!balance.isPreviewing && (
+      {/* The one CTA — attaches to the object, no card wrapper. While
+          comparing, "Use this plan" is the one CTA instead. */}
+      {!comparing && !balance.isPreviewing && (
         <WalletButton variant="primary" className="w-full" connectLabel="Connect wallet" />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
@@ -203,6 +203,11 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       savedLegs,
       sinceHint,
       controls,
+      holeOverride,
+      holeActionLabel,
+      compact,
+      forcePlanLegs,
+      ghostLegs,
     }: {
       strategyKey: string | null;
       selectedToken: string | null;
@@ -215,9 +220,24 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       savedLegs?: { token: string; percent: number }[];
       sinceHint?: string;
       controls?: React.ReactNode;
+      holeOverride?: { label: React.ReactNode; hint?: string };
+      holeActionLabel?: string;
+      compact?: boolean;
+      forcePlanLegs?: boolean;
+      ghostLegs?: { token: string; percent: number }[];
     }) => {
       const archetypeId = strategyToArchetype(strategyKey);
       const name = archetypeId ? ARCHETYPES[archetypeId].name : "";
+      const holeContent = holeOverride
+        ? React.createElement(
+            React.Fragment,
+            null,
+            React.createElement("span", null, holeOverride.label as string),
+            holeOverride.hint
+              ? React.createElement("span", null, holeOverride.hint)
+              : null,
+          )
+        : null;
       const hole =
         onHoleTap && !selectedToken
           ? React.createElement(
@@ -225,17 +245,26 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
               {
                 type: "button",
                 "data-testid": "ring-hole",
+                "aria-label": holeActionLabel ?? "Compare philosophies",
                 onClick: onHoleTap,
               },
-              React.createElement("span", null, name),
-              holeHintOverride
-                ? React.createElement("span", null, holeHintOverride)
-                : null,
-              alignmentScore != null
-                ? React.createElement("span", null, `${alignmentScore}%`)
-                : null,
+              holeOverride
+                ? holeContent
+                : React.createElement(
+                    React.Fragment,
+                    null,
+                    React.createElement("span", null, name),
+                    holeHintOverride
+                      ? React.createElement("span", null, holeHintOverride)
+                      : null,
+                    alignmentScore != null
+                      ? React.createElement("span", null, `${alignmentScore}%`)
+                      : null,
+                  ),
             )
-          : null;
+          : holeContent
+            ? React.createElement("div", { "data-testid": "ring-hole-static" }, holeContent)
+            : null;
       const selectButton = (token: string, testid: string) =>
         React.createElement(
           "button",
@@ -263,6 +292,9 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
         {
           "data-testid": "protection-plan-ring",
           "data-balance-preview": String(Boolean(balancePreview)),
+          "data-compact": String(Boolean(compact)),
+          "data-force-plan-legs": String(Boolean(forcePlanLegs)),
+          "data-ghost-legs": JSON.stringify((ghostLegs ?? []).map((l) => [l.token, l.percent])),
           "data-legs": JSON.stringify((legs ?? []).map((l) => [l.token, l.percent])),
           "data-saved-legs": JSON.stringify((savedLegs ?? []).map((l) => [l.token, l.percent])),
           "data-selected": selectedToken ?? "",
@@ -354,39 +386,40 @@ vi.mock("../../shared/GuardianMascot", () => ({
     }),
 }));
 
-vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
-  ProtectionPlanGallery: ({
-    onInspect,
+vi.mock("@/components/tabs/protect/PhilosophyCoinRail", () => ({
+  PhilosophyCoinRail: ({
+    onSelect,
+    onTapPoint,
   }: {
-    onInspect?: (id: string) => void;
+    selected?: string | null;
+    onSelect: (id: string) => void;
+    onTapPoint?: (x: number, y: number) => void;
   }) =>
     React.createElement(
       "div",
-      { "data-testid": "protection-plan-gallery" },
-      onInspect
-        ? React.createElement(
-            React.Fragment,
-            null,
-            React.createElement(
-              "button",
-              {
-                type: "button",
-                "data-testid": "inspect-africapitalism",
-                onClick: () => onInspect("africapitalism"),
-              },
-              "Inspect Africapitalism",
-            ),
-            React.createElement(
-              "button",
-              {
-                type: "button",
-                "data-testid": "plan-card-buen_vivir",
-                onClick: () => onInspect("buen_vivir"),
-              },
-              "Inspect Buen Vivir",
-            ),
-          )
-        : null,
+      { "data-testid": "philosophy-coin-rail" },
+      ["africapitalism", "buen_vivir"].map((id) =>
+        React.createElement(
+          "button",
+          {
+            key: id,
+            type: "button",
+            "data-testid": `coin-${id}`,
+            onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              onTapPoint?.(r.left + r.width / 2, r.top + r.height / 2);
+              onSelect(id);
+            },
+          },
+          `Inspect ${id}`,
+        ),
+      ),
+    ),
+  FocusedPlanLine: ({ strategyId }: { strategyId: string | null }) =>
+    React.createElement(
+      "p",
+      { "data-testid": "focused-plan-line" },
+      strategyId ?? "none",
     ),
 }));
 
@@ -499,7 +532,8 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(document.body).toBeTruthy();
     // Rail 5: unconnected is a morph — the picker stays the object walletless
     // and the connect CTA attaches to it. No hero-card stack.
-    expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
+    // The picker IS the compact ring + coin rail walletless.
+    expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
     expect(screen.getByTestId("shield-unconnected-object")).toBeInTheDocument();
   });
 
@@ -510,8 +544,8 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     expect(screen.getByTestId("shield-picker")).toBeInTheDocument();
-    expect(screen.getByTestId("protection-plan-gallery")).toBeInTheDocument();
-    expect(screen.queryByTestId("shield-ring")).not.toBeInTheDocument();
+    expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
+    expect(screen.queryByTestId("protection-plan-gallery")).not.toBeInTheDocument();
     expect(screen.queryByTestId("yield-discovery")).not.toBeInTheDocument();
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
   });
@@ -524,13 +558,20 @@ describe("ProtectionTab — instrument shapes", () => {
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId("inspect-africapitalism"));
+    // First coin tap only previews — the details sheet opens on the
+    // second tap of the already-focused coin.
+    fireEvent.click(screen.getByTestId("coin-africapitalism"));
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(screen.getByTestId("picker-commit")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("coin-africapitalism"));
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("protection-calculator")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(within(sheet).getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Use this plan" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "Use this plan" }));
     expect(mockSetFinancialStrategy).toHaveBeenCalledWith("africapitalism");
   });
 
@@ -730,8 +771,8 @@ describe("ProtectionTab — instrument shapes", () => {
   });
 
   it("no meta-lectures: the pipeline footer and design-contract asides are gone (§3)", () => {
-    // Picker shape renders the real gallery (not the test stub) — the only
-    // way to assert its internal chrome is absent.
+    // Picker shape renders the compact ring + coin rail — the hole
+    // carries the "choose" copy; no meta-lecture asides.
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
@@ -739,7 +780,7 @@ describe("ProtectionTab — instrument shapes", () => {
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     expect(screen.queryByText(/matches your worldview/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Same JSX renders here/)).not.toBeInTheDocument();
-    expect(screen.getByText("Choose a protection philosophy")).toBeInTheDocument();
+    expect(screen.getByText("Choose a philosophy")).toBeInTheDocument();
   });
 
   it("freshness is the shell's DRY slot, rendered exactly once (§5 rail 6)", () => {
@@ -918,6 +959,9 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
     expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+    // The coin rail slides in under the compact ring — no card row.
+    expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
+    expect(screen.queryByTestId("protection-plan-gallery")).not.toBeInTheDocument();
     const statusLine = screen.getByTestId("shield-compare-status");
     expect(statusLine.textContent).toContain("Keep Africapitalism");
     // Exactly the escape — no other CTA in the status tier.
@@ -925,7 +969,7 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByRole("button", { name: "Set up Guardian" })).not.toBeInTheDocument();
   });
 
-  it("inspecting a card re-slices the ring preview and 'Use this plan' commits", () => {
+  it("a coin tap re-slices the ring in place and 'Use this plan' commits", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
@@ -935,19 +979,78 @@ describe("ProtectionTab — instrument shapes", () => {
 
     fireEvent.click(screen.getByTestId("ring-hole"));
     const hole = screen.getByTestId("ring-hole");
+    expect(hole).toHaveAccessibleName("Exit compare");
+    // Focus falls back to the current plan before a coin is tapped.
     expect(hole.textContent).toContain("Africapitalism");
-    // Committed plan scores 30 on this wallet.
-    expect(hole.textContent).toContain("30%");
+    expect(hole.textContent).toContain("Your plan");
 
-    fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+    // First tap previews only — name + compact delta in the hole, no sheet.
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     expect(hole.textContent).toContain("Buen Vivir");
-    expect(hole.textContent).toContain("under this plan");
-    // Buen Vivir (cREAL/COPm/cUSD) overlaps this wallet less — score differs.
-    expect(hole.textContent).toContain("10%");
+    expect(hole.textContent).toMatch(/[+−]\d+%/);
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "Use this plan" }));
+    fireEvent.click(screen.getByTestId("compare-commit"));
     expect(mockSetFinancialStrategy).toHaveBeenCalledWith("buen_vivir");
     expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+  });
+
+  it("a funded wallet in compare draws the previewed plan's legs, not its holdings", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    const ring = screen.getByTestId("protection-plan-ring");
+    expect(ring).toHaveAttribute("data-compact", "true");
+    expect(ring).toHaveAttribute("data-force-plan-legs", "true");
+
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    // Buen Vivir is a cREAL/COPm mix — this wallet holds KESm/cUSD/cEUR.
+    // The ring slices must follow the previewed plan, never the holdings.
+    const legs = JSON.parse(ring.getAttribute("data-legs") ?? "[]") as [string, number][];
+    const tokens = legs.map(([token]) => token);
+    expect(tokens).toContain("cREAL");
+    expect(tokens).not.toContain("KESm");
+    // The current plan's outline rides along for contrast.
+    const ghost = JSON.parse(ring.getAttribute("data-ghost-legs") ?? "[]") as [string, number][];
+    expect(ghost.map(([token]) => token)).toContain("KESm");
+  });
+
+  it("a second coin tap opens the philosophy details sheet", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByTestId("protection-calculator")).toBeInTheDocument();
+    // The delta moved to the ring hole — the sheet carries no plan-delta line.
+    expect(screen.queryByTestId("plan-delta")).not.toBeInTheDocument();
+  });
+
+  it("tapping the hole again exits compare without committing", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
   it("'Keep <Name>' exits compare mode without committing", () => {
@@ -959,7 +1062,7 @@ describe("ProtectionTab — instrument shapes", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
     fireEvent.click(screen.getByTestId("ring-hole"));
-    fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     fireEvent.click(screen.getByRole("button", { name: /Keep Africapitalism/ }));
     expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
@@ -1049,7 +1152,9 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
     expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
 
-    fireEvent.click(screen.getByTestId("plan-badge"));
+    // The badge lives in the header, hidden in compact mode — the hole
+    // tap is the way back out.
+    fireEvent.click(screen.getByTestId("ring-hole"));
     expect(screen.queryByTestId("shield-compare")).not.toBeInTheDocument();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
@@ -1314,7 +1419,7 @@ describe("ProtectionTab — instrument shapes", () => {
     );
   });
 
-  it("dial is hidden while comparing; delta + values + leg row in the inspector", () => {
+  it("dial is hidden while comparing; hole delta + values + leg row in the inspector", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
@@ -1325,10 +1430,12 @@ describe("ProtectionTab — instrument shapes", () => {
     fireEvent.click(screen.getByTestId("ring-hole"));
     expect(screen.queryByTestId("plan-floor-control")).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
-    expect(screen.getByTestId("plan-delta")).toHaveTextContent(
-      "Swaps KESm, cEUR → cREAL, COPm · dollar floor 25% → 20%",
-    );
+    // First tap previews (delta rides in the hole); a second tap opens
+    // the details sheet with the value chips.
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(screen.getByTestId("ring-hole")).toHaveTextContent("Buen Vivir");
+    expect(screen.getByTestId("ring-hole").textContent).toMatch(/[+−]\d+%/);
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     const values = screen.getByTestId("plan-values");
     expect(values).toHaveTextContent("Collective prosperity");
     expect(values.querySelectorAll("span").length).toBe(3);
@@ -1376,9 +1483,15 @@ describe("ProtectionTab — instrument shapes", () => {
       fireEvent.click(screen.getByTestId("ring-hole"));
       expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
       expect(screen.getByTestId("shield-compare-status")).toBeInTheDocument();
-      fireEvent.click(screen.getByTestId("plan-card-buen_vivir"));
+      fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+      expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("coin-buen_vivir"));
       expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("inspector-sheet")).getByRole("button", {
+          name: "Use this plan",
+        }),
+      ).toBeInTheDocument();
     } finally {
       reducedMotionState.on = false;
     }

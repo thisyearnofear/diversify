@@ -218,6 +218,108 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(await screen.findByText('pts over')).toBeInTheDocument();
   });
 
+  const fundedKesmWallet = {
+    ...DEMO_PORTFOLIO,
+    totalValue: 500,
+    chains: [
+      {
+        chainId: 42220,
+        chainName: 'Celo',
+        totalValue: 500,
+        tokenCount: 1,
+        balances: [
+          {
+            symbol: 'KESm',
+            value: 500,
+            balance: '500',
+            formattedBalance: '500',
+            name: 'KESm',
+            chainId: 42220,
+            chainName: 'Celo',
+          },
+        ],
+      },
+    ],
+  } as unknown as MultichainPortfolio;
+
+  it('forcePlanLegs draws the plan legs even when the wallet has holdings', () => {
+    const { unmount } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={fundedKesmWallet}
+        legs={legsForRisk(getArchetypeAllocations('buen_vivir'), 'Balanced')}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    // Without the flag, funded holdings shadow the previewed plan.
+    expect(
+      screen.queryByRole('group', { name: 'Allocation ring' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /BRLm — plan/ }),
+    ).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={fundedKesmWallet}
+        legs={legsForRisk(getArchetypeAllocations('buen_vivir'), 'Balanced')}
+        forcePlanLegs
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: /BRLm — plan/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /wallet holding/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('ghostLegs renders the current plan as a faint outer track', () => {
+    const ghost = legsForRisk(getArchetypeAllocations('africapitalism'), 'Balanced');
+    render(
+      <ProtectionPlanRing
+        strategyKey="buen_vivir"
+        portfolio={fundedKesmWallet}
+        legs={legsForRisk(getArchetypeAllocations('buen_vivir'), 'Balanced')}
+        forcePlanLegs
+        ghostLegs={ghost}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    const outline = screen.getByTestId('ghost-plan-outline');
+    expect(outline).toBeInTheDocument();
+    // The ghost draws the current plan's legs, not the preview — its
+    // track is decorative, so the wedges carry labels without a role.
+    expect(
+      within(outline).getByLabelText(/KESm — current plan/),
+    ).toBeInTheDocument();
+  });
+
+  it('compact hides the header, legend rows and controls but keeps the hole', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={fundedKesmWallet}
+        compact
+        holeOverride={{ label: 'Buen Vivir', hint: '+15% PAXG' }}
+        onHoleTap={() => {}}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.queryByText('Your shield plan')).not.toBeInTheDocument();
+    expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
+    const hole = screen.getByTestId('ring-hole');
+    expect(hole).toHaveTextContent('Buen Vivir');
+    expect(hole).toHaveTextContent('+15% PAXG');
+  });
+
   it('shows Add funds in the hole when the wallet is empty', () => {
     const empty = {
       ...DEMO_PORTFOLIO,

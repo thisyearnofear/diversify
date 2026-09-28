@@ -10,6 +10,7 @@ import {
   type Transition,
 } from "framer-motion";
 import { Coin } from "../shared/FloatingCoins";
+import { FlickScrollRow, useDidDrag } from "../shared/FlickScrollRow";
 
 export interface LensCoinDef {
   id: string;
@@ -200,6 +201,13 @@ interface LensCoinSelectorProps {
    *  returning from the detail view so coins burst back out of the old
    *  convergence point instead of just fading in. */
   emergeKey?: number;
+  /** Row presentation only: render inside a FlickScrollRow, start-aligned,
+   *  and scroll the selected coin into view. Off-row taps are drag-guarded
+   *  via `useDidDrag`, so a drag release is not a choice. */
+  scrollable?: boolean;
+  /** Called with the tapped coin's centre (client coords) so callers can
+   *  report a tap origin to an ambient layer. */
+  onTapPoint?: (clientX: number, clientY: number) => void;
 }
 
 /**
@@ -219,6 +227,8 @@ export function LensCoinSelector({
   presentation = "row",
   combineVariant = 0,
   emergeKey = 0,
+  scrollable = false,
+  onTapPoint,
 }: LensCoinSelectorProps) {
   const reduceMotion = useReducedMotion();
   const { coinSize, gapClass, pitch } = useLensCoinMetrics();
@@ -264,9 +274,22 @@ export function LensCoinSelector({
 
   const peekedLens = peekedIndex >= 0 ? lenses[peekedIndex] : null;
 
+  // Scrollable row: keep the selected coin visible after selection.
+  const scrollRowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!scrollable || selectedIndex < 0) return;
+    const selectedEl = scrollRowRef.current?.querySelector<HTMLElement>(
+      '[aria-checked="true"]',
+    );
+    if (selectedEl && typeof selectedEl.scrollIntoView === "function") {
+      selectedEl.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }, [scrollable, selectedIndex]);
+
   const row = (
     <div
-      className={`flex items-center justify-center ${gapClass}`}
+      ref={scrollable ? scrollRowRef : undefined}
+      className={`flex items-center ${scrollable ? "justify-start" : "justify-center"} ${gapClass}`}
       role="radiogroup"
       aria-label={ariaLabel}
       style={combining ? { pointerEvents: "none" } : undefined}
@@ -286,12 +309,20 @@ export function LensCoinSelector({
           lastSelected={lastSelectedRef.current}
           reduceMotion={reduceMotion ?? false}
           onTap={handleCoinTap}
+          onTapPoint={onTapPoint}
         />
       ))}
     </div>
   );
 
   if (presentation !== "stage") {
+    if (scrollable) {
+      return (
+        <div className="select-none">
+          <FlickScrollRow className="px-1 pb-1">{row}</FlickScrollRow>
+        </div>
+      );
+    }
     return <div className="flex items-center justify-center select-none">{row}</div>;
   }
 
@@ -357,6 +388,7 @@ interface LensCoinButtonProps {
   lastSelected: number;
   reduceMotion: boolean;
   onTap: (lens: LensCoinDef) => void;
+  onTapPoint?: (clientX: number, clientY: number) => void;
 }
 
 function LensCoinButton({
@@ -372,8 +404,12 @@ function LensCoinButton({
   lastSelected,
   reduceMotion,
   onTap,
+  onTapPoint,
 }: LensCoinButtonProps) {
   const isActive = index === selectedIndex;
+  // A click that ends a FlickScrollRow drag is not a choice. Outside a
+  // row the context defaults to never-dragged, so taps still work.
+  const didDragRef = useDidDrag();
   const breath = BREATH[index % BREATH.length];
   const shine = SHINE[index % SHINE.length];
   const shortLabel = lens.label.split(" ")[0];
@@ -460,7 +496,12 @@ function LensCoinButton({
       aria-checked={isActive || peeked}
       aria-label={lens.label}
       tabIndex={combining ? -1 : undefined}
-      onClick={() => onTap(lens)}
+      onClick={(e) => {
+        if (didDragRef.current) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        onTapPoint?.(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        onTap(lens);
+      }}
       whileTap={combining ? undefined : { scale: 0.92 }}
       whileHover={combining || isActive || peeked ? undefined : { scale: 1.1, y: -3 }}
       transition={{ type: "spring", stiffness: 320, damping: 22 }}

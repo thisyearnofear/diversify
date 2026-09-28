@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  compactPlanDelta,
   describePlanDelta,
   floorPercent,
   getPlanPreview,
@@ -149,5 +150,51 @@ describe('describePlanDelta', () => {
       { token: 'PAXG', region: 'Global', percent: 40, why: 'x' },
     ];
     expect(describePlanDelta(current, preview)).toBe('Adds PAXG');
+  });
+});
+
+describe('compactPlanDelta', () => {
+  it('signs the largest absolute changes first with canonical tickers', () => {
+    const current: PlanLeg[] = [
+      { token: 'KESm', region: 'Kenya', percent: 60, why: 'x' },
+      { token: 'cUSD', region: 'Global', percent: 40, why: 'x' },
+    ];
+    const preview: PlanLeg[] = [
+      { token: 'KESm', region: 'Kenya', percent: 45, why: 'x' },
+      { token: 'cUSD', region: 'Global', percent: 30, why: 'x' },
+      { token: 'PAXG', region: 'Global', percent: 25, why: 'x' },
+    ];
+    // +25 PAXG, −15 KESm, −10 USDm — the default max keeps the top two.
+    expect(compactPlanDelta(current, preview)).toBe('+25% PAXG · −15% KESm');
+  });
+
+  it('uses the canonical display ticker (cUSD → USDm)', () => {
+    const current: PlanLeg[] = [{ token: 'cUSD', region: 'Global', percent: 100, why: 'x' }];
+    const preview: PlanLeg[] = [
+      { token: 'cUSD', region: 'Global', percent: 80, why: 'x' },
+      { token: 'cEUR', region: 'Europe', percent: 20, why: 'x' },
+    ];
+    // Ties keep leg order — the existing leg speaks first.
+    expect(compactPlanDelta(current, preview)).toBe('−20% USDm · +20% EURm');
+  });
+
+  it('honours max', () => {
+    const current: PlanLeg[] = [
+      { token: 'KESm', region: 'Kenya', percent: 50, why: 'x' },
+      { token: 'cUSD', region: 'Global', percent: 50, why: 'x' },
+    ];
+    const preview: PlanLeg[] = [
+      { token: 'KESm', region: 'Kenya', percent: 20, why: 'x' },
+      { token: 'cUSD', region: 'Global', percent: 40, why: 'x' },
+      { token: 'PAXG', region: 'Global', percent: 40, why: 'x' },
+    ];
+    expect(compactPlanDelta(current, preview, 1)).toBe('+40% PAXG');
+    expect(compactPlanDelta(current, preview, 3)).toBe('+40% PAXG · −30% KESm · −10% USDm');
+  });
+
+  it('reports an identical mix', () => {
+    const legs: PlanLeg[] = [{ token: 'PAXG', region: 'Global', percent: 100, why: 'x' }];
+    expect(compactPlanDelta(legs, legs)).toBe('Same mix');
+    expect(compactPlanDelta([], [])).toBe('Same mix');
   });
 });
