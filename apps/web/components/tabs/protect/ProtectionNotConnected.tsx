@@ -42,6 +42,9 @@ import {
 } from "@/components/protection-cards/plan-preview";
 import { STRATEGIES } from "@/constants/strategies";
 import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
+import { useProofFeed } from "@/hooks/use-proof-feed";
+import { shieldBeats } from "@/lib/live-lines";
+import { LiveLine } from "@/components/shared/LiveLine";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
@@ -96,12 +99,16 @@ export function ProtectionNotConnected({
     savedRisk: profileConfig.riskTolerance,
     onCommit: setRiskTolerance,
   });
-  const ringLegs = ringArchetype
-    ? legsForRisk(
-        getArchetypeAllocations(ringArchetype),
-        profileConfig.riskTolerance,
-      )
-    : [];
+  const ringLegs = React.useMemo(
+    () =>
+      ringArchetype
+        ? legsForRisk(
+            getArchetypeAllocations(ringArchetype),
+            profileConfig.riskTolerance,
+          )
+        : [],
+    [ringArchetype, profileConfig.riskTolerance],
+  );
   const balanceLegs = ringArchetype
     ? legsForRisk(getArchetypeAllocations(ringArchetype), balance.risk)
     : [];
@@ -136,6 +143,17 @@ export function ProtectionNotConnected({
 
   const picking = !showRing;
   const ringCompact = comparing || picking;
+
+  // The live line under the full ring — same dated facts as connected
+  // Shield, walletless because the data is public. It vanishes under the
+  // compact compare/picker ring (the rail owns the attention there).
+  const { data: liveFeed } = useProofFeed();
+  const liveBeats = React.useMemo(
+    () => shieldBeats({ records: liveFeed?.recent, legs: ringLegs }),
+    [liveFeed, ringLegs],
+  );
+  const liveLineShowing =
+    !ringCompact && !sleeveOpen && !balance.isPreviewing && effectiveToken === null;
   const hole = (() => {
     if (!comparing && !picking) return undefined;
     if (!focusedPhilosophy) {
@@ -238,6 +256,14 @@ export function ProtectionNotConnected({
             ) : undefined
           }
         />
+        {liveLineShowing && (
+          <LiveLine
+            testId="shield-live-line"
+            beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
+            alive
+            className="mt-2 block text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+          />
+        )}
       </div>
 
       {(comparing || picking) && (

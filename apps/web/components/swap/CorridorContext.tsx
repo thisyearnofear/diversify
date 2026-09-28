@@ -33,6 +33,7 @@ import {
   riskTrailCheckedAt,
 } from '@/constants/currency-risk';
 import { FlickScrollRow, useDidDrag } from '../shared/FlickScrollRow';
+import { LiveLine, LIVE_LINE_DWELL_MS } from '../shared/LiveLine';
 import { TokenIcon } from '../shared/TokenIcon';
 import { springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
 
@@ -50,9 +51,6 @@ export const SIGNATURE_PAIRS: ReadonlyArray<readonly [string, string]> = [
   ['USDT', 'USDm'],
   ['USDC', 'USDm'],
 ];
-
-/** Dwell per beat while the corridor line breathes (§5 state rule). */
-const BEAT_DWELL_MS = 7000;
 
 const HORIZONS: { key: Horizon; label: string }[] = [
   { key: '1yr', label: '1y' },
@@ -133,7 +131,6 @@ export function CorridorLine({
     ...(fromBeat ? [fromBeat] : []),
     ...(toBeat ? [toBeat] : []),
   ];
-  const [beat, setBeat] = useState(0);
   // The time machine: the control appears only for pairs with something
   // honest to say at 5y, and the first tap pins the what-if — a chosen
   // view must not rotate away.
@@ -154,23 +151,6 @@ export function CorridorLine({
 
   const pinned = !decisionOpen && explored ? whatIf : null;
   const rotating = alive && !reduced && !pinned && !decisionOpen && beats.length > 1;
-  useEffect(() => {
-    if (!rotating) {
-      setBeat(0);
-      return;
-    }
-    const id = setInterval(() => {
-      // Cheap guard: a hidden tab doesn't cycle beats nobody can see.
-      if (document.visibilityState === 'visible') {
-        setBeat((i) => (i + 1) % beats.length);
-      }
-    }, BEAT_DWELL_MS);
-    return () => clearInterval(id);
-  }, [rotating, beats.length]);
-  // Clamp defensively: if the beats array shrinks mid-rotation (a signal
-  // expires), the stored index can transiently exceed it — wrap, never
-  // render an empty beat.
-  const shownBeat = beats.length > 0 ? beat % beats.length : 0;
   if (!story && !corridor) return null;
 
   const arrow = onInspect ? (
@@ -220,25 +200,23 @@ export function CorridorLine({
         <WhatIfStatement whatIf={pinned} />
       </motion.span>
     </AnimatePresence>
-  ) : rotating ? (
-    <AnimatePresence mode="popLayout" initial={false}>
-      <motion.span
-        key={shownBeat}
-        className="block text-xs font-semibold text-gray-700 dark:text-gray-300"
-        initial={{ opacity: 0, filter: 'blur(4px)' }}
-        animate={{ opacity: 1, filter: 'blur(0px)' }}
-        exit={{ opacity: 0, filter: 'blur(4px)' }}
-        transition={{ duration: 0.35 }}
-      >
-        {beats[shownBeat]} {!corridor && arrow}
-      </motion.span>
-    </AnimatePresence>
   ) : (
-    beats.length > 0 && (
-      <span className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
-        {beats[0]} {!corridor && arrow}
-      </span>
-    )
+    // Remount when the rotation state flips so a still line lands back on
+    // beat 0 — the same reset the inline rotation did, now inside LiveLine.
+    <LiveLine
+      key={rotating ? 'rotating' : 'still'}
+      beats={beats.map((text, i) => ({
+        key: `corridor-${i}`,
+        content: (
+          <>
+            {text} {!corridor && arrow}
+          </>
+        ),
+      }))}
+      alive={rotating}
+      dwellMs={LIVE_LINE_DWELL_MS}
+      className="block text-xs font-semibold text-gray-700 dark:text-gray-300"
+    />
   );
   // The "in N years" tail becomes the control when the pair has a
   // time machine — the corridor line stays the same sentence minus

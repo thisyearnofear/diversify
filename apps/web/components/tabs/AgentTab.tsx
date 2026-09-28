@@ -28,6 +28,11 @@ import { formatDuration } from "@/lib/format-duration";
 import { useGuardianInstrument } from "@/hooks/use-guardian-instrument";
 import { GRANT_ELIGIBLE_CHAIN_IDS } from "@/lib/erc7715-client-grant";
 import { GuardianObject } from "../agent/GuardianObject";
+import { useProofFeed } from "@/hooks/use-proof-feed";
+import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
+import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
+import { getArchetypeAllocations } from "@/components/protection-cards/plan-preview";
+import { strategyToArchetype } from "@/components/protection-cards/tokens";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
@@ -187,6 +192,24 @@ function ConnectedAgent({
     : null;
   const [sel, setSel] = useState<"journal" | "bounds" | "settings" | null>(null);
 
+  // The live line — only facts that already exist: a saved payment cycle
+  // the wallet already unlocked (usePurchaseCycles never signs here), a
+  // fresh macro beat on a plan currency, or the local leg's watch cadence.
+  const { data: liveFeed } = useProofFeed();
+  const { cycles: liveCycles } = usePurchaseCycles(address);
+  const liveBeats = React.useMemo(() => {
+    const archetype = shieldPlan ? strategyToArchetype(shieldPlan) : null;
+    const legs = archetype ? getArchetypeAllocations(archetype) : [];
+    return guardianBeats({
+      records: liveFeed?.recent,
+      cycles: liveCycles,
+      planTokens: legs.map((l) => l.token),
+      primaryLocalToken: primaryLocalToken(legs),
+    });
+  }, [liveFeed, liveCycles, shieldPlan]);
+  const liveAlive =
+    sel === null && !guardianContext && !g.showPermissionModal;
+
   const budgetShowing =
     g.hasValidPermission && g.sessionInfo != null && g.dailyLimit > 0;
 
@@ -239,6 +262,8 @@ function ConnectedAgent({
             onOpenJournal={() => setSel("journal")}
             onOpenBounds={() => setSel("bounds")}
             isAutonomous={g.isAutonomous}
+            liveBeats={liveBeats}
+            liveAlive={liveAlive}
           />
         )}
       </ErrorBoundary>

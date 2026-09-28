@@ -6,10 +6,17 @@ import type { NarrativeMoment } from '@/lib/narrative/currency-moment';
 import { momentFrameFor } from '@/lib/narrative/moment-framing';
 import type { Benchmark, Horizon } from '@/constants/currency-risk';
 
-const mocks = vi.hoisted(() => ({ reduced: false }));
+const mocks = vi.hoisted(() => ({
+  reduced: false,
+  feed: { data: null as { recent: unknown[] } | null },
+}));
 
 vi.mock('@/lib/haptics', () => ({
   haptics: { tap: vi.fn(), confirm: vi.fn(), selection: vi.fn() },
+}));
+
+vi.mock('@/hooks/use-proof-feed', () => ({
+  useProofFeed: () => ({ data: mocks.feed.data }),
 }));
 
 vi.mock('framer-motion', async (importOriginal) => {
@@ -205,6 +212,40 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     // One accent for the moment — state (the risk magnitude) changes the coin
     // SCALE, never the colour. The old red/amber/green is gone.
     expect(review?.getAttribute('style')).toBe(calm?.getAttribute('style'));
+  });
+});
+
+describe('CurrencyMomentCard — live line', () => {
+  it('renders a fresh macro beat directly under the consequence sentence', () => {
+    mocks.feed.data = {
+      recent: [
+        {
+          action: 'MACRO_SIGNAL:macro',
+          targetToken: 'GHSm',
+          reasoning: 'Bank of Ghana held the benchmark rate. Source: https://reuters.example/a',
+          timestamp: Math.floor(Date.now() / 1000) - 86400,
+        },
+      ],
+    };
+    render(<CurrencyMomentCard {...baseProps} />);
+    const consequence = screen.getByText(/now buys/).closest('p')!;
+    const line = screen.getByTestId('home-live-line');
+    expect(consequence.nextElementSibling).toBe(line);
+    expect(line).toHaveTextContent('🇬🇭: Bank of Ghana held the benchmark rate');
+  });
+
+  it('falls back to the currency watch cadence when no signal is fresh', () => {
+    mocks.feed.data = { recent: [] };
+    render(<CurrencyMomentCard {...baseProps} />);
+    const line = screen.getByTestId('home-live-line');
+    expect(line).toHaveTextContent('Watch 🇬🇭:');
+  });
+
+  it('renders nothing when a currency has no story data', () => {
+    mocks.feed.data = null;
+    const moment = { ...MOMENT, currencyCode: 'XYZ' };
+    render(<CurrencyMomentCard {...baseProps} moment={moment} />);
+    expect(screen.queryByTestId('home-live-line')).not.toBeInTheDocument();
   });
 });
 

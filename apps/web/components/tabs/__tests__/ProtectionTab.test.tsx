@@ -1986,3 +1986,51 @@ describe("ProtectionTab — business morph (shieldMorph: cycle)", () => {
     );
   });
 });
+
+describe("ProtectionTab — live line", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = "africapitalism";
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    mockSessionInfo.current = null;
+    mockVisibility.current = "quiet";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("resting Shield shows the line under the full ring", () => {
+    // Monitoring suppresses the gap CTA — the line owns the resting state.
+    mockGuardianState = "monitoring";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    const line = screen.getByTestId("shield-live-line");
+    // Directly under the full ring, inside the same object.
+    expect(screen.getByTestId("shield-ring").contains(line)).toBe(true);
+    // KESm is the plan's largest non-USD leg — its watch cadence carries.
+    expect(line.textContent).toContain("Watch 🇰🇪:");
+  });
+
+  it("the biggest-gap CTA hides the line — two lines never compete", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("shield-biggest-gap-cta")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-live-line")).not.toBeInTheDocument();
+  });
+
+  it("the line vanishes while comparing", () => {
+    // Monitoring removes the gap CTA so only `comparing` can hide it.
+    mockGuardianState = "monitoring";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-live-line")).not.toBeInTheDocument();
+  });
+});

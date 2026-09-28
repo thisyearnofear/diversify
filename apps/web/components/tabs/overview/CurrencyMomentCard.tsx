@@ -29,6 +29,9 @@ import { CountryOverrideSelect } from './CountryOverrideSelect';
 import { CurrencyVisitReview } from './CurrencyVisitReview';
 import type { MomentFrame } from '@/lib/narrative/moment-framing';
 import { useCurrencyVisit } from '@/hooks/use-currency-visit';
+import { useProofFeed } from '@/hooks/use-proof-feed';
+import { homeBeats } from '@/lib/live-lines';
+import { LiveLine } from '@/components/shared/LiveLine';
 import { reveal, springPop, springSoft } from '@/lib/motion-tokens';
 import { trackFunnelEvent } from '@/lib/analytics';
 
@@ -61,6 +64,9 @@ interface Props {
    *  stays unset — honest: nothing was detected or persisted. */
   countryIsDefault?: boolean;
   rememberVisit?: boolean;
+  /** False while the user is acting elsewhere on Home (inspector open,
+   *  a lens up, tab inactive) — the live line stills. */
+  liveAlive?: boolean;
   className?: string;
 }
 
@@ -119,6 +125,7 @@ export function CurrencyMomentCard({
   onClearSharedView,
   countryIsDefault = false,
   rememberVisit = true,
+  liveAlive = true,
 }: Props) {
   const reducedMotion = useReducedMotion();
   const comparison = useCurrencyVisit(moment, rememberVisit);
@@ -148,6 +155,20 @@ export function CurrencyMomentCard({
   // The local coin physically shrinks with retained purchasing power.
   const localScale = Math.max(0.45, 0.35 + 0.65 * moment.retainedRatio);
   const fmt = (n: number) => Math.round(n).toLocaleString();
+
+  // The live line — real, dated facts about the visitor's currency.
+  // While the story sheet is up the coin's back already shows the newest
+  // risk event, so that beat drops (the line never repeats visible copy).
+  const { data: liveFeed } = useProofFeed();
+  const liveTexts = React.useMemo(
+    () =>
+      homeBeats({
+        records: liveFeed?.recent,
+        currencyCode: moment.currencyCode,
+        includeRiskEvent: !currencySelected,
+      }),
+    [liveFeed, moment.currencyCode, currencySelected],
+  );
 
   return (
     <div className={`text-center ${className}`}>
@@ -341,6 +362,16 @@ export function CurrencyMomentCard({
                 <>holds its buying power.</>
               )}
             </p>
+
+            {/* One rotating, data-backed line — a fresh macro beat, the
+                currency's watch cadence, or a dated event — directly under
+                the consequence it explains. */}
+            <LiveLine
+              testId="home-live-line"
+              beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
+              alive={liveAlive && !currencySelected}
+              className="mt-1.5 block text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+            />
 
             {/* Goods framing — a percentage is abstract where people price risk in
                 goods. "≈ 51 fewer bags of rice" gives the number a body. Only

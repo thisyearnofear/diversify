@@ -407,6 +407,7 @@ export function HomeRiskTheater({
           viewingShared={viewingShared}
           onClearSharedView={onClearSharedView}
           rememberVisit={isActive && !isDemo && !viewingShared}
+          liveAlive={isActive && focusedRegion === null}
         />
         {guardianAway && (
           <button

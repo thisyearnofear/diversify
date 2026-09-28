@@ -78,6 +78,7 @@ export function NotConnectedState({
           onClearSharedView={clearSharedView}
           countryIsDefault={countryIsDefault}
           rememberVisit={isActive && !viewingShared && !countryIsDefault}
+          liveAlive={isActive}
         />
       ) : inflationMoment ? (
         <InflationMomentCard

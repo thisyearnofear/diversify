@@ -385,6 +385,15 @@ for (const [token, fiatCode] of Object.entries(TOKEN_TO_FIAT)) {
   FIAT_TO_TOKEN[fiatCode] ??= token;
 }
 
+/** The first-mapped token for a fiat code — the lookup non-pair surfaces
+ *  (Home's live line, the currency-story inspector) use to reach a
+ *  currency's provenance and corridor side. */
+export function corridorTokenForCurrency(
+  code: string | null | undefined,
+): string | null {
+  return code ? (FIAT_TO_TOKEN[code.toUpperCase()] ?? null) : null;
+}
+
 /** A dated macro beat — supersedes a side's standing watch cadence
  *  while fresh. The calendar produced a real event. */
 export interface CorridorSignal {

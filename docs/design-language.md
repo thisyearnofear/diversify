@@ -186,6 +186,29 @@ Rules for ambient life:
 - Reduced motion gets identical content, static: the shine is CSS-gated
   under `prefers-reduced-motion`, beat rotation is JS-gated.
 
+**Data motion is not decoration (2026-09-28 amendment).** Feedback said
+the surfaces read as static; calm had tipped into lifeless. Two
+additions, neither counted against the ambient budget:
+
+- **Numbers and shapes that change because the data changed always
+  animate from the old value to the new one** — balances, the Guardian
+  budget sentence, ring slices, hero values (`useCountUp`, the ring's
+  spring). Motion that carries a real change is information. Numbers that
+  never change after mount stay still.
+- **Every tab owns one live line** (`components/shared/LiveLine.tsx`): a
+  single L1 sentence that rotates dated, cited facts on the 7s dwell —
+  Exchange's corridor line (provenance, beats, cadences), Home (your
+  currency's fresh macro signal or watch cadence, then its newest dated
+  event), Guardian (what it is watching: your next saved payment, fresh
+  signals for your plan's currencies, the cadence to watch), Shield (fresh
+  signals and the cadence for your plan's legs). Beats come only from real
+  data — `corridorSignalsFor` (14-day freshness, echo check, rehearsal
+  filter), curated `riskEvents`, saved cycles — and a beat with no data is
+  omitted, never invented or forecast. The line freezes the moment the user
+  acts, stays on its first beat under reduced motion, never repeats a block
+  already on screen, and renders nothing when no beat resolves. It is one
+  line, never a feed.
+
 ### The density contract — depth layers, finite verbs, owned motifs
 
 Each new primitive is cheap; the risk is the sum. Three rules keep it:
@@ -270,7 +293,12 @@ A tab change that fails any of these is the old stack. Do not ship it.
    guards. Learn is retired — the calculator lives in Shield's
    empty-wallet inspector.
 2. **Selection rewrites the artefact.** If a tap only opens a paragraph,
-   it does not ship.
+   it does not ship. **Modes transform, never append:** entering a mode
+   (compare, picker, a lens) moves and morphs the elements already on
+   screen — shared-element `layout`/`layoutId` motion — and must not grow
+   the page with a new block below the object. Shield's compare is the
+   reference: the ring goes compact, the coin rail slides in, nothing
+   stacks underneath.
 3. **One CTA, on a tab that is in the dock.** `navigateToSwap` into a
    hidden Exchange tab is a bug. A hand-off to Guardian from Simple mode
    is a real request, not a bug — it switches the mode Simple → Full so

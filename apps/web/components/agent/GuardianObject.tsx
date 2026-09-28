@@ -6,6 +6,7 @@
  */
 
 import React from "react";
+import { motion } from "framer-motion";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import StatusBadge from "../shared/StatusBadge";
 import {
@@ -19,6 +20,9 @@ import {
 } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import type { GuardianSessionInfo } from "@/hooks/use-session-key";
 import type { GuardianProofEvent } from "./GuardianJournalTab";
+import { LiveLine } from "../shared/LiveLine";
+import { useCountUp } from "@/hooks/use-count-up";
+import type { LiveBeatText } from "@/lib/live-lines";
 import { timeAgo } from "@/lib/format-duration";
 
 const MOOD_BY_STATE: Record<GuardianTierState, "neutral" | "happy" | "thinking" | "protective"> = {
@@ -27,6 +31,32 @@ const MOOD_BY_STATE: Record<GuardianTierState, "neutral" | "happy" | "thinking" 
   funded: "happy",
   monitoring: "protective",
 };
+
+/** The budget sentence — the remaining figure tweens from its previous
+ *  value when the ledger moves (reduced motion lands instantly). */
+function BudgetButton({
+  remaining,
+  limit,
+  onOpenBounds,
+}: {
+  remaining: number;
+  limit: number;
+  onOpenBounds: () => void;
+}) {
+  const formatted = useCountUp(remaining, {
+    format: (n) => `$${n.toFixed(2)}`,
+  });
+  return (
+    <button
+      type="button"
+      data-testid="guardian-budget"
+      onClick={onOpenBounds}
+      className="mt-2 min-h-[44px] text-sm font-semibold text-gray-700 dark:text-gray-200"
+    >
+      <motion.span>{formatted}</motion.span> left of ${limit} today
+    </button>
+  );
+}
 
 export function GuardianObject({
   guardianState,
@@ -41,6 +71,8 @@ export function GuardianObject({
   onOpenJournal,
   onOpenBounds,
   isAutonomous = false,
+  liveBeats,
+  liveAlive,
 }: {
   guardianState: GuardianTierState;
   isAnalyzing: boolean;
@@ -55,6 +87,11 @@ export function GuardianObject({
   onOpenBounds: () => void;
   /** GUARDIAN-tier permission — Guardian may act without a per-move signature. */
   isAutonomous?: boolean;
+  /** The rotating live line under the latest decision — omitted entirely
+   *  when no beat resolves (empty/null → 0px, honest absence). */
+  liveBeats?: LiveBeatText[] | null;
+  /** False while any Guardian sheet is open — the line stills. */
+  liveAlive?: boolean;
 }) {
   const copy =
     guardianState === "monitoring" && isAutonomous
@@ -92,14 +129,11 @@ export function GuardianObject({
       </p>
 
       {showBudget && (
-        <button
-          type="button"
-          data-testid="guardian-budget"
-          onClick={onOpenBounds}
-          className="mt-2 min-h-[44px] text-sm font-semibold text-gray-700 dark:text-gray-200"
-        >
-          ${sessionInfo!.remainingTodayUSD.toFixed(2)} left of ${dailyLimit} today
-        </button>
+        <BudgetButton
+          remaining={sessionInfo!.remainingTodayUSD}
+          limit={dailyLimit}
+          onOpenBounds={onOpenBounds}
+        />
       )}
 
       {latestEvent ? (
@@ -121,6 +155,13 @@ export function GuardianObject({
           Latest call: {latestCall}
         </button>
       ) : null}
+
+      <LiveLine
+        testId="guardian-live-line"
+        beats={(liveBeats ?? []).map((b) => ({ key: b.key, content: b.text }))}
+        alive={liveAlive ?? false}
+        className="mt-1 block text-[11px] text-gray-500 dark:text-gray-400"
+      />
 
       {ctaLabel && (
         <button

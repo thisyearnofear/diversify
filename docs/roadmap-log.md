@@ -1545,3 +1545,31 @@ Four feedback items shipped in one commit (`4e7f1048`, 2,342 tests):
   `check-data-freshness` job opens `data-review` issues on >3pp drift,
   sign flips, or >90d-old trail/provenance asOf dates (currently flagging
   21 stale event trails for re-verification — intended).
+
+#### Live lines + number tweens on every tab (2026-09-28)
+
+Exchange's rotating corridor beats became a shared primitive, applied to
+the other three tabs:
+
+- **`LiveLine`** (`components/shared/LiveLine.tsx`): rotates data-backed
+  beats on the ~7s dwell while `alive`, skips while `document.hidden`,
+  clamps when beats shrink, stays on beat 0 under reduced motion, and
+  keeps `aria-live="polite"` only while still. `CorridorContext` now
+  consumes it with identical behaviour (popLayout blur-swap preserved —
+  `mode="wait"` would defer mount past the exit and break the fake-timer
+  tests).
+- **`lib/live-lines.ts`** pure builders: `homeBeats` (fresh macro signal,
+  else watch cadence, + newest dated riskEvent), `guardianBeats` (next
+  unlocked payment cycle → freshest plan-currency signal → local leg's
+  watch cadence), `shieldBeats` (≤2 freshest plan-leg signals + largest
+  non-USD leg's watch). Rehearsal/stale signals never render.
+- **Placement:** Home — under the moment's consequence sentence
+  (connected + walletless, one implementation in `CurrencyMomentCard`);
+  Guardian — under the latest-decision line; Shield — under the full
+  ring, hidden while comparing/previewing/focused or while the gap CTA
+  shows (connected + walletless).
+- **Numbers tween old → new:** Guardian's "$X left of $Y today" now
+  counts through `useCountUp` (extracted `BudgetButton`); regression
+  test proves the value tweens from the previous display, never re-zeros.
+  `useCountUp` already animated from its current MotionValue — no fix
+  needed.

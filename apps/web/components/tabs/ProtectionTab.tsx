@@ -74,6 +74,9 @@ import { rwaLegFor } from "./protect/rwa-assets";
 import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
 import { useRwaMarket } from "@/hooks/use-rwa-market";
+import { useProofFeed } from "@/hooks/use-proof-feed";
+import { shieldBeats } from "@/lib/live-lines";
+import { LiveLine } from "@/components/shared/LiveLine";
 import { useRouter } from "next/router";
 
 interface ProtectionTabProps {
@@ -537,6 +540,30 @@ export default function ProtectionTab({
     [alignment.legs, chainId],
   );
 
+  // The live line — dated macro beats on plan-leg currencies and the
+  // local leg's watch cadence. Resting states only: it vanishes while
+  // comparing, previewing, or when a slice/cycle or the gap CTA owns the
+  // attention (two competing lines never share the surface).
+  const { data: liveFeed } = useProofFeed();
+  const liveBeats = useMemo(
+    () => shieldBeats({ records: liveFeed?.recent, legs: allocations }),
+    [liveFeed, allocations],
+  );
+  const gapCtaShowing =
+    !comparing &&
+    !balance.isPreviewing &&
+    shape === "gap" &&
+    !focusedToken &&
+    biggestGap &&
+    address &&
+    guardianState !== "monitoring";
+  const liveLineShowing =
+    !comparing &&
+    !balance.isPreviewing &&
+    !focusedToken &&
+    !cycleOpen &&
+    !gapCtaShowing;
+
   useShieldIntent({
     address,
     isDemo,
@@ -753,6 +780,14 @@ export default function ProtectionTab({
               </div>
             ) : undefined}
           />
+          {liveLineShowing && (
+            <LiveLine
+              testId="shield-live-line"
+              beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
+              alive
+              className="mt-2 block text-center text-[11px] font-semibold text-gray-500 dark:text-gray-400"
+            />
+          )}
           {/* Compare transformation: the coin rail slides in under the
               compact ring — a tap previews, a second tap opens details,
               "Use this plan" commits. */}

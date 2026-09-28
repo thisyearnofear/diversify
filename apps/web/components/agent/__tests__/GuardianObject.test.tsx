@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GuardianObject } from "../GuardianObject";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -86,14 +86,17 @@ describe("GuardianObject — state copy", () => {
 });
 
 describe("GuardianObject — budget line", () => {
-  it("shows $X left of $Y today only with permission + session + limit, and opens bounds", () => {
+  it("shows $X left of $Y today only with permission + session + limit, and opens bounds", async () => {
     const props = renderObject({
       hasValidPermission: true,
       sessionInfo: sessionInfo(),
       dailyLimit: 25,
     });
     const budget = screen.getByTestId("guardian-budget");
-    expect(budget).toHaveTextContent("$20.00 left of $25 today");
+    // The figure counts up to the ledger value — assert the landing.
+    await waitFor(() =>
+      expect(budget).toHaveTextContent("$20.00 left of $25 today"),
+    );
     fireEvent.click(budget);
     expect(props.onOpenBounds).toHaveBeenCalledTimes(1);
   });
@@ -170,5 +173,23 @@ describe("GuardianObject — word budget", () => {
       .split(/\s+/)
       .filter(Boolean);
     expect(words.length).toBeLessThanOrEqual(45);
+  });
+});
+
+describe("GuardianObject — live line", () => {
+  it("shows a beat under the latest-decision line", () => {
+    renderObject({
+      liveAlive: true,
+      liveBeats: [
+        { key: "cycle-c1", text: "Watching your GHS → USD payment · 12 days" },
+      ],
+    });
+    const line = screen.getByTestId("guardian-live-line");
+    expect(line).toHaveTextContent("Watching your GHS → USD payment · 12 days");
+  });
+
+  it("renders nothing when no beat resolves", () => {
+    renderObject({ liveBeats: [], liveAlive: true });
+    expect(screen.queryByTestId("guardian-live-line")).not.toBeInTheDocument();
   });
 });
