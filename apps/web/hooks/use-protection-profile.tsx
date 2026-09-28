@@ -8,6 +8,8 @@
 import { useState, useCallback, useEffect, useMemo, createContext, useContext, type ReactNode } from 'react';
 import type { FinancialStrategy } from '@diversifi/shared';
 import type { MoneyPurpose } from '@/constants/money-purpose';
+import { registerCustomPlan, type CustomPlan } from '@/components/protection-cards/plan-preview';
+import { normalizeCustomPlan } from '@/lib/custom-plan';
 
 // ============================================================================
 // TYPES
@@ -35,6 +37,8 @@ export interface ProtectionConfig {
   moneyPurpose: MoneyPurpose | null;
   /** ISO code the user thinks in; unset → derived (payment cycle, holdings, USD). */
   anchorCurrency?: string | null;
+  /** The user's Custom plan (strategy `custom`). */
+  customPlan?: CustomPlan | null;
 }
 
 export type ProfileMode = 'editing' | 'viewing' | 'complete';
@@ -217,6 +221,7 @@ function loadConfig(): ProtectionConfig {
         philosophy: parsed.philosophy || null,
         moneyPurpose: parsed.moneyPurpose || null,
         anchorCurrency: parsed.anchorCurrency || null,
+        customPlan: normalizeCustomPlan(parsed.customPlan),
       });
     }
   } catch {
@@ -256,7 +261,13 @@ export function loadAnchorCurrency(): string | null {
   return loadConfig().anchorCurrency ?? null;
 }
 
+/** Saved Custom plan without React. */
+export function loadCustomPlan(): CustomPlan | null {
+  return loadConfig().customPlan ?? null;
+}
+
 function saveConfig(config: ProtectionConfig): void {
+  registerCustomPlan(config.customPlan);
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
   } catch {
@@ -490,6 +501,11 @@ function useProtectionProfileState() {
     setTimeHorizon: useCallback((time: TimeHorizon) => updateConfig('timeHorizon', time), [updateConfig]),
     setPhilosophy: useCallback(
       (philosophy: FinancialStrategy | null) => updateConfig('philosophy', philosophy),
+      [updateConfig],
+    ),
+
+    setCustomPlan: useCallback(
+      (plan: CustomPlan | null) => updateConfig('customPlan', plan),
       [updateConfig],
     ),
 
