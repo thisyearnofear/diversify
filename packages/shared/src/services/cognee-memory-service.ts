@@ -168,14 +168,14 @@ class CogneeMemoryServiceImpl {
   async recall(
     query: string,
     userId: string,
-    options: { sessionId?: string; limit?: number } = {}
+    options: { sessionId?: string; limit?: number; dataset?: string } = {}
   ): Promise<CogneeRecallResult> {
     if (!this.enabled) {
       return { memories: [] };
     }
 
     try {
-      const dataset = `user_${userId}`;
+      const dataset = options.dataset || `user_${userId}`;
       const payload = {
         query,
         datasets: [dataset],
@@ -212,13 +212,16 @@ class CogneeMemoryServiceImpl {
   /**
    * Forget all memories for a user (GDPR compliance / reset).
    */
-  async forget(userId: string): Promise<{ success: boolean }> {
+  async forget(
+    userId: string,
+    options: { dataset?: string } = {}
+  ): Promise<{ success: boolean }> {
     if (!this.enabled) {
       return { success: false };
     }
 
     try {
-      const dataset = `user_${userId}`;
+      const dataset = options.dataset || `user_${userId}`;
       const response = await fetch(`${this.apiUrl}/v1/datasets/${dataset}`, {
         method: 'DELETE',
         headers: this.authHeaders(),

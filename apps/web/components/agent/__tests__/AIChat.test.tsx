@@ -16,19 +16,34 @@ import '@testing-library/jest-dom/vitest';
 const mocks = vi.hoisted(() => {
   const chatState = { isChatting: false, thinkingStep: '', memoryEnabled: false };
   const wallet = { address: '0xabc0000000000000000000000000000000000001' as string | null };
-  const conversation = { isDrawerOpen: true, activeGuardianReview: null as unknown };
+  const conversation = {
+    isDrawerOpen: true,
+    activeGuardianReview: null as unknown,
+    messages: [] as Array<Record<string, unknown>>,
+  };
   const nav = { activeTab: 'overview' as string };
+  const memory = {
+    pref: { mode: 'off' as 'off' | 'device' | 'cloud', provider: undefined as string | undefined },
+    facts: [] as Array<{ id: string; text: string; createdAt: string }>,
+    providers: null as Array<{ id: string; location: string; available: boolean }> | null,
+    cloudNeedsAuth: false,
+    chooseMode: vi.fn(async () => true),
+    deleteFact: vi.fn(async () => {}),
+    forgetAll: vi.fn(async () => true),
+  };
   return {
     chatState,
     wallet,
     conversation,
     nav,
+    memory,
     navigateWithIntent: vi.fn(),
     setFocusedCycleId: vi.fn(),
     clearMessages: vi.fn(),
     sendChatMessage: vi.fn(),
     setMemoryEnabled: vi.fn(),
     addUserMessage: vi.fn(),
+    patchMessage: vi.fn(),
     setDrawerOpen: vi.fn(),
     setActiveGuardianReview: vi.fn(),
     snoozeGuardianUpdate: vi.fn(),
@@ -42,13 +57,35 @@ const mocks = vi.hoisted(() => {
   };
 });
 
+vi.mock('@/hooks/use-guardian-memory', () => ({
+  useGuardianMemory: () => ({
+    pref: mocks.memory.pref,
+    facts: mocks.memory.facts,
+    providers: mocks.memory.providers,
+    cloudNeedsAuth: mocks.memory.cloudNeedsAuth,
+    hydrated: true,
+    requestPayload: () =>
+      mocks.memory.pref.mode === 'device'
+        ? { mode: 'device', facts: mocks.memory.facts.map((f) => f.text) }
+        : mocks.memory.pref.mode === 'cloud'
+          ? { mode: 'cloud', provider: mocks.memory.pref.provider }
+          : { mode: 'off' },
+    chooseMode: mocks.memory.chooseMode,
+    loadProviders: vi.fn(async () => {}),
+    deleteFact: mocks.memory.deleteFact,
+    forgetAll: mocks.memory.forgetAll,
+    reloadFacts: vi.fn(async () => {}),
+  }),
+}));
+
 vi.mock('@/context/AIConversationContext', () => ({
   useAIConversation: () => ({
-    messages: [],
+    messages: mocks.conversation.messages,
     isDrawerOpen: mocks.conversation.isDrawerOpen,
     setDrawerOpen: mocks.setDrawerOpen,
     clearMessages: mocks.clearMessages,
     addUserMessage: mocks.addUserMessage,
+    patchMessage: mocks.patchMessage,
     activeGuardianReview: mocks.conversation.activeGuardianReview,
     setActiveGuardianReview: mocks.setActiveGuardianReview,
     snoozeGuardianUpdate: mocks.snoozeGuardianUpdate,
@@ -187,7 +224,12 @@ describe('AIChat — New conversation', () => {
     mocks.chatState.memoryEnabled = false;
     mocks.wallet.address = '0xabc0000000000000000000000000000000000001';
     mocks.conversation.isDrawerOpen = true;
+    mocks.conversation.messages = [];
     mocks.nav.activeTab = 'overview';
+    mocks.memory.pref = { mode: 'off', provider: undefined };
+    mocks.memory.facts = [];
+    mocks.memory.providers = null;
+    mocks.memory.cloudNeedsAuth = false;
     setViewport(false);
     mocks.fetch.mockResolvedValue({ ok: true, json: async () => DELETE_OK_BODY });
     vi.stubGlobal('fetch', mocks.fetch);
@@ -281,15 +323,9 @@ describe('AIChat — New conversation', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('shows the memory disclosure only when the last response reported memory enabled', () => {
-    mocks.chatState.memoryEnabled = true;
-    const { unmount } = render(<AIChat />);
-    expect(screen.getByText('Guardian remembers past conversations')).toBeInTheDocument();
-    unmount();
-
-    mocks.chatState.memoryEnabled = false;
+  it('shows the memory mode in the footer — Off by default', () => {
     render(<AIChat />);
-    expect(screen.queryByText('Guardian remembers past conversations')).not.toBeInTheDocument();
+    expect(screen.getByTestId('memory-status-line')).toHaveTextContent('Memory: Off');
   });
 });
 
@@ -300,7 +336,11 @@ describe('AIChat — desktop docked panel', () => {
     mocks.chatState.memoryEnabled = false;
     mocks.wallet.address = '0xabc0000000000000000000000000000000000001';
     mocks.conversation.isDrawerOpen = true;
+    mocks.conversation.messages = [];
     mocks.nav.activeTab = 'overview';
+    mocks.memory.pref = { mode: 'off', provider: undefined };
+    mocks.memory.facts = [];
+    mocks.memory.providers = null;
     vi.stubGlobal('fetch', mocks.fetch);
   });
 
@@ -409,6 +449,10 @@ describe('AIChat — action router', () => {
     mocks.conversation.isDrawerOpen = true;
     mocks.nav.activeTab = 'overview';
     mocks.conversation.activeGuardianReview = null;
+    mocks.conversation.messages = [];
+    mocks.memory.pref = { mode: 'off', provider: undefined };
+    mocks.memory.facts = [];
+    mocks.memory.providers = null;
     setViewport(true);
   });
 
@@ -430,5 +474,146 @@ describe('AIChat — action router', () => {
     });
     expect(mocks.setFocusedCycleId).toHaveBeenCalledWith('cycle-42');
     expect(mocks.setDrawerOpen).toHaveBeenCalledWith(false);
+  });
+});
+
+describe('AIChat — Guardian memory', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.chatState.isChatting = false;
+    mocks.wallet.address = '0xabc0000000000000000000000000000000000001';
+    mocks.conversation.isDrawerOpen = true;
+    mocks.conversation.messages = [];
+    mocks.nav.activeTab = 'overview';
+    mocks.memory.pref = { mode: 'off', provider: undefined };
+    mocks.memory.facts = [];
+    mocks.memory.providers = [
+      { id: 'tablestore', location: 'Alibaba Cloud — stored in mainland China', available: true },
+      { id: 'cognee', location: 'Cognee — stored in the USA (AWS)', available: false },
+    ];
+    mocks.memory.cloudNeedsAuth = false;
+    setViewport(true);
+    vi.stubGlobal('fetch', mocks.fetch);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('footer reflects the current mode', () => {
+    const { unmount } = render(<AIChat />);
+    expect(screen.getByTestId('memory-status-line')).toHaveTextContent('Memory: Off');
+    unmount();
+
+    mocks.memory.pref = { mode: 'device', provider: undefined };
+    const r2 = render(<AIChat />);
+    expect(screen.getByTestId('memory-status-line')).toHaveTextContent('Memory: this device');
+    r2.unmount();
+
+    mocks.memory.pref = { mode: 'cloud', provider: 'tablestore' };
+    render(<AIChat />);
+    expect(screen.getByTestId('memory-status-line')).toHaveTextContent(
+      'Memory: across devices · Alibaba Cloud',
+    );
+  });
+
+  it('Change opens the memory view with modes and providers — unavailable ones disabled', async () => {
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    expect(await screen.findByTestId('guardian-memory-view')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Off' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'This device' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Across devices' })).toBeInTheDocument();
+
+    // Select cloud → provider list appears; cognee is unavailable + labelled.
+    fireEvent.click(screen.getByRole('radio', { name: 'Across devices' }));
+    const cognee = screen.getByRole('radio', { name: /Cognee/ });
+    expect(cognee).toBeDisabled();
+    expect(screen.getByText('Not set up yet')).toBeInTheDocument();
+    const tablestore = screen.getByRole('radio', { name: /Alibaba Cloud/ });
+    expect(tablestore).toBeEnabled();
+    expect(screen.getByText('stored in mainland China')).toBeInTheDocument();
+  });
+
+  it('choosing a cloud provider signs and commits; declining stays on the old mode', async () => {
+    mocks.memory.chooseMode.mockResolvedValueOnce(false);
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    await screen.findByTestId('guardian-memory-view');
+    fireEvent.click(screen.getByRole('radio', { name: 'Across devices' }));
+    fireEvent.click(await screen.findByRole('radio', { name: /Alibaba Cloud/ }));
+    await waitFor(() =>
+      expect(mocks.memory.chooseMode).toHaveBeenCalledWith('cloud', 'tablestore'),
+    );
+    // Signature declined → radio returns to the previous mode.
+    await waitFor(() =>
+      expect(screen.getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true'),
+    );
+  });
+
+  it('a reply that stored facts shows "Remembered: … · Undo"; Undo removes it', async () => {
+    mocks.memory.pref = { mode: 'device', provider: undefined };
+    mocks.conversation.messages = [
+      {
+        id: 'a1',
+        role: 'assistant',
+        content: 'Noted.',
+        timestamp: new Date('2026-09-28T10:00:00Z'),
+        rememberedFacts: [{ id: 'gf-1', text: 'You pay a supplier in USD monthly' }],
+      },
+    ];
+    render(<AIChat />);
+    expect(screen.getByTestId('remembered-fact')).toHaveTextContent(
+      'Remembered: You pay a supplier in USD monthly · Undo',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }));
+    await waitFor(() =>
+      expect(mocks.memory.deleteFact).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'gf-1' }),
+      ),
+    );
+    expect(mocks.patchMessage).toHaveBeenCalled();
+  });
+
+  it('turning Off with facts asks inline — Delete or Keep', async () => {
+    mocks.memory.pref = { mode: 'device', provider: undefined };
+    mocks.memory.facts = [
+      { id: 'gf-1', text: 'You save in KES', createdAt: '2026-09-01T00:00:00.000Z' },
+    ];
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    await screen.findByTestId('guardian-memory-view');
+    fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
+    expect(await screen.findByText('Also delete what Guardian remembers?')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mocks.memory.forgetAll).toHaveBeenCalled());
+    await waitFor(() => expect(mocks.memory.chooseMode).toHaveBeenCalledWith('off'));
+  });
+
+  it('walletless users see no Across devices option', async () => {
+    mocks.wallet.address = null;
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Change' }));
+    await screen.findByTestId('guardian-memory-view');
+    expect(screen.getByRole('radio', { name: 'Off' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'This device' })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: 'Across devices' })).not.toBeInTheDocument();
+  });
+
+  it('every advisor request carries the memory field', () => {
+    mocks.memory.pref = { mode: 'device', provider: undefined };
+    mocks.memory.facts = [
+      { id: 'gf-1', text: 'You save in KES', createdAt: '2026-09-01T00:00:00.000Z' },
+    ];
+    render(<AIChat />);
+    fireEvent.change(screen.getByLabelText('Ask your Guardian a question'), {
+      target: { value: 'How is my KES doing?' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(mocks.sendChatMessage).toHaveBeenCalledWith(
+      'How is my KES doing?',
+      expect.objectContaining({ memory: { mode: 'device', facts: ['You save in KES'] } }),
+    );
   });
 });

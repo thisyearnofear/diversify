@@ -26,6 +26,9 @@ import { GuardianMascot } from "../shared/GuardianMascot";
 import { MaskedReveal } from "../shared/MaskedReveal";
 
 import { GuardianRecommendationCard } from "./GuardianRecommendationCard";
+import { GuardianMemoryView } from "./GuardianMemoryView";
+import { useGuardianMemory } from "@/hooks/use-guardian-memory";
+import { clearDeviceFacts } from "@/lib/guardian-memory";
 import { RwaActionWidget, HoldActionWidget } from "./ChatActionWidgets";
 import { ModelSettingsModal } from "./ModelSettingsModal";
 import {
@@ -69,6 +72,7 @@ export default function AIChat() {
     setDrawerOpen,
     clearMessages,
     addUserMessage,
+    patchMessage,
     activeGuardianReview,
     setActiveGuardianReview,
     snoozeGuardianUpdate,
@@ -76,7 +80,7 @@ export default function AIChat() {
   const { key: userGeminiKey, save: saveGeminiKey } = useUserGeminiKey();
   const { capabilities, autonomousStatus } = useAgentStatus();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
-  const { isChatting, thinkingStep, sendChatMessage, memoryEnabled, setMemoryEnabled } = useAgentChat({
+  const { isChatting, thinkingStep, sendChatMessage, setMemoryEnabled } = useAgentChat({
     apiBase: API_BASE,
     capabilities,
     useGlobalConversation: true,
@@ -85,6 +89,7 @@ export default function AIChat() {
   const { claimReward } = useCredits();
   const { activeTab, setActiveTab, navigateToSwap, navigateToNetting, navigateWithIntent, setFocusedCycleId } = useNavigation();
   const { address, signMessage } = useWalletContext();
+  const memory = useGuardianMemory(address, signMessage);
   const { showToast } = useToast();
   const portfolio = useSharedMultichainBalances(address);
   const walletView = buildWalletPortfolioView(portfolio);
@@ -96,7 +101,7 @@ export default function AIChat() {
   const [inputValue, setInputValue] = React.useState("");
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
   const [isForgetting, setIsForgetting] = React.useState(false);
-  const [currentView, setCurrentView] = useState<'chat' | 'history'>('chat');
+  const [currentView, setCurrentView] = useState<'chat' | 'history' | 'memory'>('chat');
   const [menuOpen, setMenuOpen] = useState(false);
   // One-shot mascot "nod" when a reply finishes streaming.
   const [nodKey, setNodKey] = useState(0);
@@ -139,14 +144,14 @@ export default function AIChat() {
   const submitPrompt = (prompt: string) => {
     if (!prompt.trim() || isChatting) return;
     addUserMessage(prompt);
-    sendChatMessage(prompt, { view: advisorView });
+    sendChatMessage(prompt, { view: advisorView, memory: memory.requestPayload() });
     setInputValue("");
   };
 
   const submitResearchConfirmation = () => {
     if (isChatting) return;
     addUserMessage("Confirm");
-    sendChatMessage("confirm", { view: advisorView });
+    sendChatMessage("confirm", { view: advisorView, memory: memory.requestPayload() });
     setInputValue("");
   };
 
@@ -319,6 +324,8 @@ export default function AIChat() {
         (data.available?.cognee === true && data.cognee === false) ||
         (data.available?.tablestore === true && data.tablestore === false)
       );
+      clearDeviceFacts(address);
+      void memory.reloadFacts();
       setMemoryEnabled(false);
       clearMessages();
       setShowClearConfirm(false);
@@ -951,7 +958,39 @@ export default function AIChat() {
                       )}
 
                       {/* SoSoValue Intelligence Card — disabled (legacy crypto-era, off-thesis) */}
-                      
+
+                      {/* Opt-in memory — quiet "Remembered: … · Undo" lines
+                          under the reply that produced them (max 2 facts
+                          per reply, enforced by the extractor). Undo removes
+                          the fact from whichever store the mode uses. */}
+                      {msg.role === 'assistant' && msg.rememberedFacts?.map((fact) => (
+                        <div
+                          key={fact.id}
+                          data-testid="remembered-fact"
+                          className="mt-1.5 text-[11px] text-gray-400"
+                        >
+                          Remembered: {fact.text}
+                          {' · '}
+                          <button
+                            type="button"
+                            className="underline underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+                            onClick={() => {
+                              void memory.deleteFact(fact);
+                              patchMessage(
+                                { id: msg.id, timestamp: msg.timestamp },
+                                {
+                                  rememberedFacts: (msg.rememberedFacts ?? []).filter(
+                                    (f) => f.id !== fact.id,
+                                  ),
+                                },
+                              );
+                            }}
+                          >
+                            Undo
+                          </button>
+                        </div>
+                      ))}
+
                       <div className={`flex items-center gap-2 mt-1.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
                         <span className={`text-[10px] opacity-40 ${msg.role === "user" ? "text-white" : "text-gray-500"}`}>
                           {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -995,6 +1034,26 @@ export default function AIChat() {
                     ))}
                   </div>
                 )}
+              </motion.div>
+            ) : currentView === 'memory' ? (
+              <motion.div
+                key="memory"
+                initial={reducedMotion ? false : { opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: 10 }}
+                className="flex-1 overflow-hidden flex flex-col"
+              >
+                <GuardianMemoryView
+                  pref={memory.pref}
+                  providers={memory.providers}
+                  facts={memory.facts}
+                  cloudNeedsAuth={memory.cloudNeedsAuth}
+                  walletConnected={!!address}
+                  onBack={() => setCurrentView('chat')}
+                  chooseMode={memory.chooseMode}
+                  deleteFact={memory.deleteFact}
+                  forgetAll={memory.forgetAll}
+                />
               </motion.div>
             ) : (
               <motion.div
@@ -1051,14 +1110,34 @@ export default function AIChat() {
                 </button>
               )}
             </form>
-            {/* Trust footnote (design-language §7): one quiet line, shown
-                only when the last advisor response reported long-term
-                memory active. Removed by "Also forget what it remembers". */}
-            {memoryEnabled && (
-              <p className="px-1 text-[11px] text-gray-400">
-                Guardian remembers past conversations
-              </p>
-            )}
+            {/* Memory mode footnote — one quiet line naming where Guardian
+                memory lives (or that it's off), with Change opening the
+                in-drawer memory view. */}
+            <p className="px-1 text-[11px] text-gray-400" data-testid="memory-status-line">
+              Memory:{' '}
+              {memory.pref.mode === 'off'
+                ? 'Off'
+                : memory.pref.mode === 'device'
+                  ? 'this device'
+                  : `across devices · ${
+                      memory.pref.provider === 'tablestore'
+                        ? 'Alibaba Cloud'
+                        : memory.pref.provider === 'cognee'
+                          ? 'Cognee'
+                          : 'choose provider'
+                    }`}
+              {' · '}
+              <button
+                type="button"
+                onClick={() => {
+                  void memory.loadProviders();
+                  setCurrentView('memory');
+                }}
+                className="underline underline-offset-2 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                Change
+              </button>
+            </p>
           </div>
         </div>
         </motion.div>
@@ -1083,7 +1162,7 @@ export default function AIChat() {
             setSoSoTradeProposal(null);
             const q = `I'm interested in ${proposal.suggestedAction} based on this news: ${proposal.newsItem.title}. What should I consider?`;
             addUserMessage(q);
-            sendChatMessage(q, { view: advisorView });
+            sendChatMessage(q, { view: advisorView, memory: memory.requestPayload() });
           }}
         />
       )}

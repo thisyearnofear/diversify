@@ -263,12 +263,22 @@ Each tab is an **instrument**, not a feed of cards:
 **Ask Guardian is a session thread, not a durable journal.** The visible
 chat lives only while the drawer is open: closing it or choosing "New
 conversation" clears the transcript so the next open is empty — matching
-the triad's reset-to-instrument feel. Server-side memory (Cognee /
-Tablestore) may still shape *advice* until the user explicitly forgets
-it; that is separate from the bubbles on screen. Do not reintroduce
-`localStorage` transcript persistence without a product decision to
-revert this stance. Empty state stays quiet (one line + starters) —
-trust footnotes belong behind recommendations, not in the first paint.
+the triad's reset-to-instrument feel. Long-term memory is **opt-in and
+off by default**: a footer line ("Memory: Off · Change") swaps the drawer
+to a memory view with three modes — Off (nothing stored), This device
+(facts in this browser only), or Across devices (facts server-side under
+the signature-verified wallet, at the provider the user picks — named
+with its location, e.g. "Alibaba Cloud — stored in mainland China" or
+"Cognee — stored in the USA (AWS)"). Memory holds **facts, not
+transcripts** — at most 12 short user-stated lines, expiring after 30
+days, listed under "What Guardian remembers" with per-fact delete and
+"Forget everything". After a reply that stores a fact, one quiet line
+appears beneath it: "Remembered: {fact} · Undo". Turning memory off with
+facts asks inline ("Also delete what Guardian remembers? Delete · Keep")
+— never a modal. Do not reintroduce transcript persistence or implicit
+memory writes without a product decision to revert this stance. Empty
+state stays quiet (one line + starters) — trust footnotes belong behind
+recommendations, not in the first paint.
 
 On desktop (≥lg) Ask Guardian docks as a right-side panel — 420px,
 `min(720px, 100dvh−2rem)`, no scrim, no blur, no scroll lock; the page

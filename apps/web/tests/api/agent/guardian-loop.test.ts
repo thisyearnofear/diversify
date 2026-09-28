@@ -419,6 +419,11 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     expect(firstCallArgs.targetToken).toBe('cUSD');
     expect(firstCallArgs.servingModel).toBe('guardian-loop-cycle');
     expect(firstCallArgs.reasoning).toMatch(/Auto-protected KES/);
+
+    // Guardian memory is opt-in: a successful execution must NOT write
+    // anything to memory. The ledger record above is the only record.
+    const { cogneeMemoryService } = await import('@diversifi/shared');
+    expect(cogneeMemoryService.persistInteraction).not.toHaveBeenCalled();
   });
 
   it('a protected cycle cannot execute twice across consecutive cron ticks', async () => {

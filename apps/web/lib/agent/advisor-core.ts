@@ -1,4 +1,5 @@
-import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, cogneeMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
+import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, guardianMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
+import { GUARDIAN_FACT_MAX, sanitizeFactText } from '@/lib/guardian-memory';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
 import { getLiveDepreciation } from '@diversifi/shared/src/services/fx-rate.service';
 import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS, NETWORK_TOKENS } from '@/config';
@@ -56,7 +57,67 @@ type ConversationRequest = {
    *  tab names are re-validated server-side; anything unrecognized is
    *  dropped rather than echoed into the prompt. */
   view?: { tab?: unknown; pair?: { from?: unknown; to?: unknown } };
+  /** Opt-in Guardian memory. 'device' carries the user's facts with the
+   *  request (browser-stored, sanitised here); 'cloud' recalls from the
+   *  chosen provider keyed by `verifiedAddress` — never the unauthenticated
+   *  body `address`. Absent/'off' means no recall and no writes. */
+  memory?: { mode?: string; provider?: string; facts?: unknown[] };
+  /** Wallet-signature-verified address, set by the API route via
+   *  requireWalletAuth. Cloud memory is keyed by this alone. */
+  verifiedAddress?: string;
 };
+
+/**
+ * The one place advisor memory is resolved. Returns the prompt section plus
+ * the effective disclosure state.
+ *   - device: facts arrive with the request and are sanitised server-side;
+ *   - cloud:  facts come from the user's chosen provider under the
+ *             signature-verified address — no signature, no recall;
+ *   - off/absent/unknown: nothing.
+ */
+async function resolveMemoryContext(input: ConversationRequest): Promise<{
+  context: string;
+  enabled: boolean;
+  status?: 'auth_required';
+}> {
+  const mode = input.memory?.mode;
+  if (mode === 'device') {
+    const facts = (input.memory?.facts ?? [])
+      .map(sanitizeFactText)
+      .filter(Boolean)
+      .slice(0, GUARDIAN_FACT_MAX);
+    if (facts.length === 0) return { context: '', enabled: false };
+    return {
+      context:
+        `\nFACTS THE USER ASKED GUARDIAN TO REMEMBER (user-provided, may be outdated):\n` +
+        facts.map((f) => `- ${f}`).join('\n') +
+        '\n',
+      enabled: true,
+    };
+  }
+  if (mode === 'cloud') {
+    if (!input.verifiedAddress) {
+      return { context: '', enabled: false, status: 'auth_required' };
+    }
+    const provider = guardianMemoryService.providerFor(input.memory?.provider);
+    if (!provider || !provider.isAvailable()) return { context: '', enabled: false };
+    try {
+      const stored = await provider.list(input.verifiedAddress);
+      const facts = stored.map((f) => sanitizeFactText(f.text)).filter(Boolean);
+      if (facts.length === 0) return { context: '', enabled: false };
+      return {
+        context:
+          `\nFACTS THE USER ASKED GUARDIAN TO REMEMBER (user-provided, may be outdated):\n` +
+          facts.map((f) => `- ${f}`).join('\n') +
+          '\n',
+        enabled: true,
+      };
+    } catch {
+      return { context: '', enabled: false };
+    }
+  }
+  return { context: '', enabled: false };
+}
 
 type AnalysisRequest = {
   inflationData?: Record<string, RegionalInflationData>;
@@ -883,13 +944,10 @@ export async function runAdvisorConversation(input: ConversationRequest) {
   const brightDataContext = extractBrightDataContext(input.macroData);
   const factsContext = await buildCurrencyFacts(message, input.pairContext);
 
-  // Cognee: recall relevant memories for this user (non-blocking, graceful fallback)
-  let memoryContext = '';
-  try {
-    if (address) {
-      memoryContext = await cogneeMemoryService.getAdvisorContext(address, message);
-    }
-  } catch { /* Cognee unavailable — proceed without memory */ }
+  // Opt-in memory: facts the user asked Guardian to remember (device or
+  // cloud provider), never implicit interaction history.
+  const memory = await resolveMemoryContext(input);
+  const memoryContext = memory.context;
 
   const contextPrompt =
     ADVISOR_SYSTEM_PROMPT +
@@ -966,26 +1024,12 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     contextSources.push({ label: 'Bright Data (live scrape)', tier: 'paid', url: '', cost: 0.002 });
   }
   if (memoryContext) {
-    contextSources.push({ label: 'Agent memory (Cognee)', tier: 'free', url: '', cost: 0 });
+    contextSources.push({ label: 'Guardian memory', tier: 'free', url: '', cost: 0 });
   }
 
   const researchSources = gatewaySourcesList.length > 0
     ? gatewaySourcesList
     : contextSources;
-
-  // Cognee: persist this interaction for future recall (fire-and-forget)
-  if (address) {
-    cogneeMemoryService.persistInteraction(
-      address,
-      message,
-      responseText,
-      {
-        action: action?.type,
-        sources: researchSources.map(s => s.label),
-        chainId,
-      }
-    ).catch(() => {});
-  }
 
   logAdvisorResponse({
     provider: result.provider ?? 'unknown',
@@ -1001,7 +1045,8 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     type: 'text',
     action,
     researchSources,
-    memoryEnabled: cogneeMemoryService.isAvailable(),
+    memoryEnabled: memory.enabled,
+    ...(memory.status ? { memoryStatus: memory.status } : {}),
     billing: evidence?.bundle ? {
       totalCost: evidence.bundle.paidSourceCount
         ? evidence.sources?.reduce((sum, s) => sum + (s.cost || 0), 0) || 0
@@ -1018,7 +1063,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
 
 export type AdvisorStreamEvent =
   | { type: 'chunk'; text: string }
-  | { type: 'done'; response: string; provider: string; model?: string; action: any; researchSources: any[]; memoryEnabled: boolean; billing?: any }
+  | { type: 'done'; response: string; provider: string; model?: string; action: any; researchSources: any[]; memoryEnabled: boolean; memoryStatus?: string; billing?: any }
   | { type: 'error'; message: string };
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -1033,8 +1078,6 @@ function parseActionsAndSources(
   financialStrategy: FinancialStrategy | undefined,
   brightDataContext: string,
   memoryContext: string,
-  address: string | undefined,
-  message: string,
 ): { responseText: string; action: any; researchSources: any[]; billing?: any } {
   const parsedMarkers = parseActionMarkers(fullText ?? '');
   const action = parsedMarkers.action;
@@ -1062,15 +1105,9 @@ function parseActionsAndSources(
   if (chainId) contextSources.push({ label: 'Chain context', tier: 'free', url: '', cost: 0 });
   if (financialStrategy) contextSources.push({ label: 'Strategy profile', tier: 'free', url: '', cost: 0 });
   if (brightDataContext) contextSources.push({ label: 'Bright Data (live scrape)', tier: 'paid', url: '', cost: 0.002 });
-  if (memoryContext) contextSources.push({ label: 'Agent memory (Cognee)', tier: 'free', url: '', cost: 0 });
+  if (memoryContext) contextSources.push({ label: 'Guardian memory', tier: 'free', url: '', cost: 0 });
 
   const researchSources = gatewaySourcesList.length > 0 ? gatewaySourcesList : contextSources;
-
-  // Cognee: persist (fire-and-forget)
-  if (address) {
-    cogneeMemoryService.persistInteraction(address, message, responseText,
-      { action: action?.type, sources: researchSources.map(s => s.label), chainId }).catch(() => {});
-  }
 
   return {
     responseText, action, researchSources,
@@ -1093,12 +1130,8 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
   const brightDataContext = extractBrightDataContext(input.macroData);
   const factsContext = await buildCurrencyFacts(message, input.pairContext);
 
-  let memoryContext = '';
-  try {
-    if (address) {
-      memoryContext = await cogneeMemoryService.getAdvisorContext(address, message);
-    }
-  } catch { /* Cognee unavailable */ }
+  const memory = await resolveMemoryContext(input);
+  const memoryContext = memory.context;
 
   const contextPrompt =
     ADVISOR_SYSTEM_PROMPT +
@@ -1149,9 +1182,9 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
   }
 
   // Parse actions + build research sources (shared with runAdvisorConversation)
-  const parsed = parseActionsAndSources(fullText, input, portfolio, chainId, financialStrategy, brightDataContext, memoryContext, address, message);
+  const parsed = parseActionsAndSources(fullText, input, portfolio, chainId, financialStrategy, brightDataContext, memoryContext);
   logAdvisorResponse({ provider, model, startedAt, hadAction: Boolean(parsed.action), chars: parsed.responseText.length });
-  yield { type: 'done', response: parsed.responseText, provider, model, action: parsed.action, researchSources: parsed.researchSources, memoryEnabled: cogneeMemoryService.isAvailable(), billing: parsed.billing };
+  yield { type: 'done', response: parsed.responseText, provider, model, action: parsed.action, researchSources: parsed.researchSources, memoryEnabled: memory.enabled, memoryStatus: memory.status, billing: parsed.billing };
 }
 
 export async function runAdvisorAnalysis(input: AnalysisRequest) {

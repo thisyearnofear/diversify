@@ -115,6 +115,39 @@ The Guardian is a server-side cron (`*/5 * * * *`) that auto-executes portfolio 
 | Tablestore Memory | `packages/shared/src/services/tablestore-memory-service.ts` | Alibaba Cloud Agent Memory (preferred when configured) |
 | Memory Consolidation | `packages/shared/src/services/memory-consolidation-service.ts` | Qwen long-context consolidation (FC delegation or local) |
 | FC Handler | `ops/alibaba-cloud/fc-memory-consolidation/index.js` | Alibaba Cloud Function Compute proof file |
+| Guardian Memory | `packages/shared/src/services/guardian-memory-service.ts` + `apps/web/pages/api/agent/memory.ts` | Opt-in user facts, user-chosen provider |
+| Guardian Memory Extraction | `packages/shared/src/services/guardian-memory-extract.ts` | Post-reply fact extraction + secret backstop |
+| Guardian Memory Smoke | `scripts/smoke-guardian-memory.ts` | Ephemeral-wallet add/list/delete/forget per provider |
+
+#### Guardian memory (opt-in)
+
+Guardian memory is consent-only: nothing is recalled or written unless the
+user picks a mode in Ask Guardian ("Memory: … · Change"). Modes:
+
+- **Off** (default) — no recall, no extraction, no writes. Structured app
+  context (plan, portfolio, pair facts) is unaffected — it is not "memory".
+- **This device** — up to 12 facts (≤140 chars, 30-day expiry, pruned on
+  read) in `localStorage` under `diversifi.guardian.memory.facts.<addr|anon>`;
+  the client sends them with each question and nothing is stored server-side.
+- **Across devices** — the same facts stored server-side under a
+  **wallet-signature-verified** address (`requireWalletAuth`), at the
+  provider the user picked. `GET /api/agent/memory?providers=1` reports each
+  provider's availability so the UI can disable ones that aren't set up.
+
+Providers are adapters over the existing services, kept in a dedicated
+namespace separate from any legacy interaction memory:
+
+| Provider | Storage | Namespace | Per-fact delete |
+|---|---|---|---|
+| `tablestore` | Alibaba Cloud — mainland China (`cn-hangzhou`) | `agentId: guardian_facts`, tenant = verified address | Native `deleteMemory` per unit |
+| `cognee` | Cognee Cloud — USA (AWS us-east-1) | Dataset `guardian_facts_<address>`; all facts in ONE marked JSON doc | Rewrites the document (delete dataset + re-add); `forget` deletes the dataset |
+
+Every call is timeout-bounded (~800 ms for `list` inside the chat path) and
+fails soft. `DELETE /api/agent/memory` without an id forgets the dedicated
+namespaces **and** the legacy scopes; with `?provider=&id=` it removes one
+fact. Extraction (`POST action=extract`) runs only after a reply lands and
+post-filters for secrets (seed phrases, private keys, account numbers)
+server-side regardless of model output.
 
 ### Security
 - `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only)

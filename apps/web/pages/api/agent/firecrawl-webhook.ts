@@ -23,7 +23,6 @@ import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import {
   assessMacroSignalWithTypeSafe,
-  cogneeMemoryService,
   constantTimeEqual,
   generateChatCompletion,
   recommendationLedgerService,
@@ -339,13 +338,8 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       });
     }
 
-    // Persist the signal to Cognee for long-term memory — except a
-    // rehearsal, which must never shape Guardian advice.
-    if (!isRehearsal) cogneeMemoryService.remember(
-      `Macro signal detected: ${parsed.oneLiner}. Source: ${url}. Signal type: ${parsed.signal}. Confidence: ${parsed.confidence}`,
-      'system_guardian',
-      { metadata: { type: 'macro_signal', url, signal: parsed.signal } }
-    ).catch(() => {});
+    // No memory write: Guardian memory is opt-in and user-scoped — a
+    // system signal has no business shaping anyone's advice.
 
     mark(isRehearsal ? 'rehearsal_propagated' : 'signal_propagated', {
       signal: parsed.signal,

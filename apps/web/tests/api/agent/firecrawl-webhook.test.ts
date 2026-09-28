@@ -256,7 +256,7 @@ describe('POST /api/agent/firecrawl-webhook rehearsal handling', () => {
     );
   });
 
-  it('a normal payload still enqueues, publishes, remembers and anchors under the model signal', async () => {
+  it('a normal payload still enqueues, publishes and anchors under the model signal — but never writes memory', async () => {
     arrangeEligibleUser();
     const res = await post(baseData);
 
@@ -266,7 +266,9 @@ describe('POST /api/agent/firecrawl-webhook rehearsal handling', () => {
       expect.objectContaining({ action: 'REBALANCE', targetToken: 'cEUR' }),
     );
     expect(guardianEventBus.publish).toHaveBeenCalled();
-    expect(mockRemember).toHaveBeenCalled();
+    // Guardian memory is opt-in and user-scoped — a system signal never
+    // feeds anyone's advice.
+    expect(mockRemember).not.toHaveBeenCalled();
     expect(mockRecordRecommendation).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'MACRO_SIGNAL:RATE_CUT' }),
     );

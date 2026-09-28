@@ -84,6 +84,10 @@ interface TablestoreRecallResult {
 
 interface RememberOptions {
   sessionId?: string;
+  /** Scope agentId — defaults to 'guardian' (legacy interaction memory).
+   *  The guardian-facts provider uses 'guardian_facts' to keep user-stated
+   *  facts in a separate namespace. */
+  agentId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -196,7 +200,7 @@ class TablestoreMemoryServiceImpl {
         scope: {
           appId: this.appId,
           tenantId: userId,
-          agentId: 'guardian',
+          agentId: options.agentId || 'guardian',
           runId: options.sessionId || 'default',
         },
         text,
@@ -400,6 +404,66 @@ class TablestoreMemoryServiceImpl {
     } catch (error) {
       console.warn('[Tablestore] forget error:', error);
       return { success: false };
+    }
+  }
+
+  /**
+   * List raw memory units for a user, optionally scoped to an agentId
+   * ('*' spans all scopes). Used by the guardian-facts provider to read
+   * back exactly what it wrote — no vector search, no relevance guessing.
+   */
+  async listMemories(
+    userId: string,
+    options: { agentId?: string; limit?: number } = {}
+  ): Promise<TablestoreMemory[]> {
+    if (!this.enabled) return [];
+    try {
+      const client = this.getClient();
+      const result = await client.listMemories({
+        memoryStoreName: this.memoryStoreName,
+        scope: {
+          appId: this.appId,
+          tenantId: userId,
+          agentId: options.agentId || '*',
+          runId: '*',
+        },
+        limit: options.limit ?? 1000,
+      });
+      return (result.memories || result.units || []).map((m: any) => ({
+        id: m.id || m.memoryId || '',
+        content: m.text || m.content || '',
+        score: 1,
+        metadata: m.metadata || {},
+      }));
+    } catch (error) {
+      console.warn('[Tablestore] listMemories error:', error);
+      return [];
+    }
+  }
+
+  /** Delete one memory unit by id within a user's scope. */
+  async deleteMemory(
+    memoryId: string,
+    userId: string,
+    agentId = '*'
+  ): Promise<boolean> {
+    if (!this.enabled || !memoryId) return false;
+    try {
+      const client = this.getClient();
+      await client.deleteMemory({
+        memoryStoreName: this.memoryStoreName,
+        memoryId,
+        scope: {
+          appId: this.appId,
+          tenantId: userId,
+          agentId,
+          runId: '*',
+        },
+      });
+      return true;
+    } catch (error) {
+      console.warn('[Tablestore] deleteMemory error:', error);
+      return false;
     }
   }
 

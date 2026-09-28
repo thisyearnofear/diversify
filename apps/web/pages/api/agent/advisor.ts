@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { runAdvisorAnalysis, runAdvisorConversation, runAdvisorConversationStream } from '@/lib/agent/advisor-core';
+import { requireWalletAuth } from '@/lib/require-wallet-auth';
 import { consumeQuestion, resolveSubject } from '../../../models/AgentUsage';
 
 // In-memory per-IP rate limiter. The advisor calls paid LLM providers, so an
@@ -66,8 +67,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
+    // Cloud Guardian memory is keyed by the signature-verified address only
+    // — the body's `address` is unauthenticated and never scopes memory.
+    const verifiedAddress = requireWalletAuth(req) ?? undefined;
+    const advisorInput = verifiedAddress
+      ? { ...req.body, verifiedAddress }
+      : req.body || {};
+
     if (mode === 'analysis') {
-      const result = await runAdvisorAnalysis(req.body || {});
+      const result = await runAdvisorAnalysis(advisorInput);
       return res.status(200).json(result);
     }
 
@@ -80,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       res.flushHeaders?.();
 
       try {
-        for await (const event of runAdvisorConversationStream(req.body)) {
+        for await (const event of runAdvisorConversationStream(advisorInput)) {
           res.write(`data: ${JSON.stringify(event)}\n\n`);
         }
       } catch (error: unknown) {
@@ -93,7 +101,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // ── Non-streaming path (backward compatible) ──────────────────────────
-    const result = await runAdvisorConversation(req.body);
+    const result = await runAdvisorConversation(advisorInput);
     return res.status(200).json(result);
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Guardian request failed';

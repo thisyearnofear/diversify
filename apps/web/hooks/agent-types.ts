@@ -278,6 +278,9 @@ export interface AIMessage {
     url: string;
     cost: number;
   }>;
+  /** Facts Guardian just stored for the user (opt-in memory) — rendered as
+   *  "Remembered: … · Undo" under this reply. */
+  rememberedFacts?: Array<{ id: string; text: string }>;
   /** Research bundle confidence/coverage, alongside researchSources */
   billing?: {
     totalCost: number;
@@ -435,6 +438,10 @@ export interface AgentChatActions {
       decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef;
       pair?: { from: string; to: string };
       view?: { tab?: string; pair?: { from: string; to: string } };
+      /** Opt-in Guardian memory context for this request — 'device' carries
+       *  the facts; 'cloud' names the provider (server keys it by the
+       *  verified wallet). 'off'/absent sends nothing. */
+      memory?: { mode: 'off' | 'device' | 'cloud'; provider?: string; facts?: string[] };
     },
   ) => Promise<void>;
   addMessage: (message: AIMessage) => void;

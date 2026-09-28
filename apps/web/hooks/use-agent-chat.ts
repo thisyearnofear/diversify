@@ -17,6 +17,8 @@ import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
 import { useResearchPaymentSettings } from "./use-research-account";
 import { trackFunnelEvent } from "../lib/analytics";
+import { addDeviceFacts } from "../lib/guardian-memory";
+import { getWalletAuthHeaders } from "../lib/wallet-auth";
 import { buildWalletPortfolioView } from "../lib/wallet-portfolio-view";
 import { useGuardianVisibilityOptional } from "../context/app/GuardianVisibilityContext";
 import {
@@ -171,6 +173,9 @@ export function useAgentChat({
          *  Rendered server-side as "User is viewing …" so answers can
          *  reference the surface in front of them. */
         view?: { tab?: string; pair?: { from: string; to: string } };
+        /** Opt-in Guardian memory for this request (device → facts;
+         *  cloud → provider, keyed server-side by the verified wallet). */
+        memory?: { mode: 'off' | 'device' | 'cloud'; provider?: string; facts?: string[] };
       },
     ) => {
       // Legibility preference flips are a fixed utterance class handled
@@ -677,6 +682,7 @@ export function useAgentChat({
                   ...(options.view.pair ? { pair: { from: options.view.pair.from, to: options.view.pair.to } } : {}),
                 }
               : undefined,
+            memory: options?.memory,
           }),
         });
 
@@ -790,6 +796,50 @@ export function useAgentChat({
             ...(result.action ? { action: String(result.action.type) } : {}),
           });
           pendingAssistant = null;
+
+          // Opt-in memory: after the reply lands, extract the durable facts
+          // the user stated. Never in the answer path — this fires after
+          // `done` and only when the user chose a memory mode. Cloud uses
+          // the cached wallet proof only (the signature prompt happened when
+          // they chose the mode; a reply must never pop one).
+          const memoryReq = options?.memory;
+          if (memoryReq && memoryReq.mode !== 'off' && result.response) {
+            void (async () => {
+              try {
+                const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+                if (memoryReq.mode === 'cloud') {
+                  if (!address) return;
+                  const auth = await getWalletAuthHeaders(address);
+                  if (!auth) return;
+                  Object.assign(headers, auth);
+                }
+                const res = await fetch(`${apiBase}/api/agent/memory`, {
+                  method: 'POST',
+                  headers,
+                  body: JSON.stringify({
+                    action: 'extract',
+                    message: effectiveContent,
+                    reply: result.response,
+                    mode: memoryReq.mode,
+                    provider: memoryReq.provider,
+                    existing: memoryReq.facts,
+                  }),
+                });
+                if (!res.ok) return;
+                const data = await res.json().catch(() => null);
+                if (!data) return;
+                let remembered: Array<{ id: string; text: string }> = [];
+                if (memoryReq.mode === 'device' && Array.isArray(data.candidates)) {
+                  remembered = addDeviceFacts(data.candidates, address);
+                } else if (memoryReq.mode === 'cloud' && Array.isArray(data.remembered)) {
+                  remembered = data.remembered;
+                }
+                if (remembered.length > 0) {
+                  patchMessage({ id: messageId, timestamp: messageTimestamp }, { rememberedFacts: remembered });
+                }
+              } catch { /* memory extraction must never surface as a chat error */ }
+            })();
+          }
 
           // The free answer is on screen — now offer the funded review as a
           // separate trailing message so its confirm_research action is the

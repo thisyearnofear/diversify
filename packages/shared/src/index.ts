@@ -177,6 +177,13 @@ export { getYieldRecommendations, yieldAdvisorService } from './services/ai/yiel
 export { BrightDataService } from './services/bright-data-service';
 export { cogneeMemoryService } from './services/cognee-memory-service';
 export { tablestoreMemoryService } from './services/tablestore-memory-service';
+export {
+  guardianMemoryService,
+  type GuardianMemoryProvider,
+  type GuardianMemoryProviderId,
+  type GuardianFact,
+} from './services/guardian-memory-service';
+export { extractGuardianFacts, sanitizeExtractedFacts, looksLikeSecret } from './services/guardian-memory-extract';
 export { memoryConsolidationService } from './services/memory-consolidation-service';
 export {
   requestGuardianAdvancedPermission,

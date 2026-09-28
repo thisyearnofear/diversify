@@ -828,17 +828,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             });
           }
 
-          // Persist to Cognee memory (fire-and-forget)
-          cogneeMemoryService.persistInteraction(
-            userAddress,
-            `Guardian auto-executed: ${recommendation.oneLiner}`,
-            `Swapped ~$${tradeAmountUSD} → ${targetToken}. Confidence: ${confidence}. Source: ${recommendation.source}. TX: ${txHash}`,
-            {
-              action: 'autonomous_rebalance',
-              sources: [recommendation.source || 'guardian-loop'],
-              chainId: perm.chainId,
-            }
-          ).catch(() => {});
+          // No implicit memory write: Guardian memory is opt-in — the
+          // execution anchor above is the record.
 
         } else {
           const failureReason = result.results?.[0]?.reason || 'Unknown execution failure';
