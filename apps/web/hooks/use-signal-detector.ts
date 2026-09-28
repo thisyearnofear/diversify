@@ -110,18 +110,6 @@ export interface HeroContent {
   ctaTab: string | null;
 }
 
-/**
- * What the shield tab focuses on for this persona.
- * Shield sections render in order; persona determines priority.
- */
-export type ShieldSection =
-  | "cycle-protection"  // Active cycle dashboard, payment countdown
-  | "fx-drag"           // FX drag decomposition card
-  | "scorecard"         // Protection scorecard (philosophy-aware)
-  | "yield"             // Yield vault recommendations
-  | "strategy"          // Strategy alignment bar
-  | "family";           // Family savings context (diaspora)
-
 /** Contextual banner shown at the top of the home tab. */
 export type ContextualBannerKind =
   | "fx-drag-warning"     // Importer: FX drag is eating margins
@@ -138,27 +126,25 @@ export type ContextualBannerKind =
 export interface ContentRouting {
   /** Hero content for the home tab */
   hero: HeroContent;
-  /** Tab display order — first tab is the primary surface */
-  tabOrder: string[];
-  /** Shield tab focus areas — which sections render first, in priority order */
-  shieldSections: ShieldSection[];
+  /**
+   * Shield morph — which surface Shield leads with for this persona.
+   * "cycle": business personas (importers, BPOs, payment-purpose users)
+   * get the payment-cycle entry in Shield's status rail in place of the
+   * RWA rail, connected and walletless. "plan": everyone else keeps the
+   * plan/RWA surface.
+   */
+  shieldMorph: "plan" | "cycle";
   /** Contextual banner for the home tab */
   contextualBanner: ContextualBannerKind;
-  /** Whether to show business FX surfaces (FX netting, corridors) */
-  showBusiness: boolean;
-  /** Whether yield engine is prominent for this persona */
-  showYield: boolean;
 }
 
 /**
- * Full adaptive config. Replaces the old flat showBusiness/showYield fields
- * with structured content routing.
+ * Full adaptive config. Structured content routing per persona —
+ * personas morph surfaces, they never reorder the dock.
  */
 export interface AdaptiveConfig {
   /** Which persona the system has detected */
   persona: AdaptivePersona;
-  /** Guardian mode: savings vs cycle-aware */
-  guardianMode: "savings" | "cycle" | "disabled";
   /** Tab label overrides by persona */
   tabLabels: Record<string, string>;
   /** Primary CTA for the current session */
@@ -287,30 +273,11 @@ function buildOnboardingOverrides(
 
   const overrides: Partial<ContentRouting> = {};
 
-  // Money purpose drives business surfaces and guardian mode
+  // Payment purpose is a business signal regardless of persona — Shield
+  // morphs to the payment-cycle entry.
   if (onboarding.moneyPurpose === "upcoming_payment") {
-    overrides.showBusiness = true;
+    overrides.shieldMorph = "cycle";
     overrides.contextualBanner = "fx-drag-warning" as ContextualBannerKind;
-  }
-
-  // Philosophy-driven overrides
-  if (onboarding.philosophy === "islamic") {
-    // Islamic Finance — emphasize Sharia-compliant yield options
-    // (handled downstream in individual components)
-  }
-
-  // User goal drives tab order and hero
-  if (onboarding.userGoal === "inflation_protection") {
-    // Protection-first ordering
-    if (!overrides.shieldSections) {
-      overrides.shieldSections = ["scorecard", "yield", "strategy"];
-    }
-  }
-  else if (onboarding.userGoal === "geographic_diversification") {
-    // Diversification-first
-    if (!overrides.shieldSections) {
-      overrides.shieldSections = ["scorecard", "strategy", "yield"];
-    }
   }
 
   return Object.keys(overrides).length > 0 ? overrides : null;
@@ -404,63 +371,44 @@ function buildContentRouting(
     case "ghanaian_importer":
       return {
         hero,
-        // Shield first for importers — cycle protection is the primary surface
-        tabOrder: ["protect", "overview", "exchange", "agent", "info"],
-        shieldSections: ["cycle-protection", "fx-drag", "yield", "strategy"],
+        // Cycle morph — the payment-cycle entry replaces the RWA rail.
+        shieldMorph: "cycle",
         contextualBanner: "fx-drag-warning",
-        showBusiness: true,
-        showYield: true,
       };
 
     case "ghanaian_saver":
       return {
         hero,
-        tabOrder: ["protect", "overview", "exchange", "agent", "info"],
-        shieldSections: ["scorecard", "yield", "strategy"],
+        shieldMorph: "plan",
         contextualBanner: null,
-        showBusiness: false,
-        showYield: true,
       };
 
     case "diaspora":
       return {
         hero,
-        // Home first for diaspora — risk moment then protection
-        tabOrder: ["overview", "protect", "exchange", "agent", "info"],
-        shieldSections: ["scorecard", "family", "strategy"],
+        shieldMorph: "plan",
         contextualBanner: "family-savings",
-        showBusiness: false,
-        showYield: true,
       };
 
     case "us_saver":
       return {
         hero,
-        tabOrder: ["overview", "protect", "exchange", "agent", "info"],
-        shieldSections: ["scorecard", "yield", "strategy"],
+        shieldMorph: "plan",
         contextualBanner: "currency-risk",
-        showBusiness: false,
-        showYield: true,
       };
 
     case "philippine_bpo":
       return {
         hero,
-        tabOrder: ["protect", "overview", "exchange", "agent", "info"],
-        shieldSections: ["cycle-protection", "fx-drag", "yield", "strategy"],
+        shieldMorph: "cycle",
         contextualBanner: "fx-drag-warning",
-        showBusiness: true,
-        showYield: true,
       };
 
     default:
       return {
         hero,
-        tabOrder: ["overview", "protect", "exchange", "agent", "info"],
-        shieldSections: ["scorecard", "yield", "strategy"],
+        shieldMorph: "plan",
         contextualBanner: null,
-        showBusiness: false,
-        showYield: true,
       };
   }
 }
@@ -491,7 +439,6 @@ function buildConfig(
     case "ghanaian_importer":
       return {
         persona,
-        guardianMode: "cycle",
         tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
         displayCurrency: "GHS",
@@ -502,7 +449,6 @@ function buildConfig(
     case "ghanaian_saver":
       return {
         persona,
-        guardianMode: "savings",
         tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "GHS",
@@ -513,7 +459,6 @@ function buildConfig(
     case "philippine_bpo":
       return {
         persona,
-        guardianMode: signals.history.hasCycles ? "cycle" : "savings",
         tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
         displayCurrency: "PHP",
@@ -524,7 +469,6 @@ function buildConfig(
     case "diaspora":
       return {
         persona,
-        guardianMode: "savings",
         tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "USD",
@@ -535,7 +479,6 @@ function buildConfig(
     case "us_saver":
       return {
         persona,
-        guardianMode: "savings",
         tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "USD",
@@ -546,7 +489,6 @@ function buildConfig(
     default:
       return {
         persona,
-        guardianMode: "savings",
         tabLabels: defaultLabels,
         primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
         displayCurrency: "USD",

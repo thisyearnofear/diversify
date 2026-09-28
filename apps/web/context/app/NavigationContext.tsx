@@ -133,13 +133,17 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
         ? new URLSearchParams(window.location.search).get('tab')
         : null;
     const savedTab = localStorage.getItem('activeTab');
+    // Retired ids resolve through the legacy map — ?tab=info (the
+    // deleted Learn tab) lands on Shield, not the saved tab.
+    const urlCandidate = urlTab && (LEGACY_TAB_MAP[urlTab] ?? urlTab);
+    const savedCandidate = savedTab && (LEGACY_TAB_MAP[savedTab] ?? savedTab);
     setState((prev) => ({
       ...prev,
       activeTab:
-        urlTab && isTabId(urlTab)
-          ? urlTab
-          : savedTab && isTabId(savedTab)
-            ? savedTab
+        urlCandidate && isTabId(urlCandidate)
+          ? urlCandidate
+          : savedCandidate && isTabId(savedCandidate)
+            ? savedCandidate
             : ('protect' satisfies TabId),
     }));
   }, []);
@@ -233,8 +237,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     const savedTab = localStorage.getItem('activeTab');
     if (!urlTab && !savedTab) return;
 
-    const migrated = savedTab ? LEGACY_TAB_MAP[savedTab] : undefined;
-    const candidate = urlTab ?? migrated ?? savedTab;
+    // Retired ids resolve through the legacy map in both slots —
+    // ?tab=info (the deleted Learn tab) lands on Shield.
+    const candidate = (urlTab && (LEGACY_TAB_MAP[urlTab] ?? urlTab))
+      ?? (savedTab && (LEGACY_TAB_MAP[savedTab] ?? savedTab));
 
     setState((prev) => ({
       ...prev,

@@ -42,7 +42,7 @@ readability wins and the decoration drops to quiet.
 
 **The shell owns the surface.** `InstrumentShell` renders the one card
 (`rounded-2xl border bg-white px-4 py-5 shadow-sm` + dark pair) for every
-tab and every connection morph — Shield, Home, Exchange, Guardian, Learn,
+tab and every connection morph — Shield, Home, Exchange, Guardian,
 connected or not. Objects render bare inside it: the moment card, the
 swap ticket, and the ring carry no card chrome of their own. A tab that
 wraps its object in its own card (or a shell that skips the card) is out
@@ -226,7 +226,7 @@ stays under a word budget — sediment fails CI, not review.
 Each tab is an **instrument**, not a feed of cards:
 
 1. **Object** — the thing you manipulate (risk moment, exposure dial,
-   plan ring, swap ticket, Guardian ledger, wealth-protection calculator).
+   plan ring, pair stage, Guardian mark).
    First viewport. This is the one object that gets the color (§2).
 2. **Inspector** — opens from a selection (`InspectorSheet`). Empty
    selection means the sheet is closed, not a stack of closed rows.
@@ -266,15 +266,22 @@ one CTA?* If not, it leaves the tab.
 
 A tab change that fails any of these is the old stack. Do not ship it.
 
-1. **One job per tab.** Home sees. Shield decides. Exchange acts. Learn is
-   not a peer tab in Simple mode.
+1. **One job per tab.** Home sees. Shield decides. Exchange acts. Guardian
+   guards. Learn is retired — the calculator lives in Shield's
+   empty-wallet inspector.
 2. **Selection rewrites the artefact.** If a tap only opens a paragraph,
    it does not ship.
 3. **One CTA, on a tab that is in the dock.** `navigateToSwap` into a
-   hidden Exchange tab is a bug.
+   hidden Exchange tab is a bug. A hand-off to Guardian from Simple mode
+   is a real request, not a bug — it promotes the dock (beginner →
+   intermediate) so Guardian appears instead of bouncing to the first
+   tab.
 4. **Persona morphs the object, it does not add a module.** Caribbean
    netting stays an Exchange shape. Yield annotates the quote. RWA is a
-   ring token. Payment cycle is a Shield inspector body. The morph is the
+   ring token. Payment cycle is a Shield inspector body — for business
+   personas (`shieldMorph: 'cycle'` or a payment money-purpose) it is
+   also Shield's status rail, replacing the RWA entry connected and
+   walletless. The morph is the
    object's *default* for its persona — connected or not — and every other
    persona reaches it through the status rail ("FX netting: match
    currencies directly →" ↔ "Swap ticket →"), never a new tab. A wallet
@@ -329,7 +336,7 @@ A tab change that fails any of these is the old stack. Do not ship it.
 8. **Status tier budget.** Trust + one transition + one rail, via
    `StatusTier` (`components/shared/StatusTier.tsx`). A new prompt
    competes for the transition slot by priority — it never stacks. All
-   five tabs route their connected status through it (walletless keeps
+   four tabs route their connected status through it (walletless keeps
    `UnconnectedStatusTier`); tests assert ≤3 slots on every tab.
 
 **Lenses.** A lens is a state of the tab's existing object — same
@@ -353,7 +360,11 @@ graduation prompt > concentration prompt > tip > compare. Payment-cycle
 and graduation both open Shield's payment-cycle inspector (`lens:
 'cycle'`, plan-independent and walletless; also `?tab=protect&cycle=1`)
 — the per-cycle FX drag report is the business morph's doorway, netting
-stays an Exchange shape. The graduation line comes only from the
+stays an Exchange shape. The inspector itself has two modes — **Next
+payment** (forward scenario) and **Last cycle** (the historical engine
+over a trailing 73-day window, `?cycle=last`) — and
+`/fx-drag-calculator` is a doorway into Last cycle, the same contract
+as `/rwa-vaults`. The graduation line comes only from the
 wallet's own behaviour (`useGraduationSignal`), is phrased as a
 question, never renders in demo, dismisses for good, and logs
 `graduation_prompt_viewed/clicked/dismissed`. Shield's: sleeve back > compare
@@ -364,8 +375,10 @@ lens logs `lens_offered` (once per session, only when the prompt is the
 rendered transition, never in demo) and `lens_open`, so open rates are
 honest.
 
-Simple + Intermediate dock: Shield / Home / Exchange (+ Guardian on intermediate). Learn is absorbed onto Shield’s
-picker (and optionally Home amount-inspect) — not a peer tab until Advanced.
+The dock is a fixed order — Shield / Home / Exchange / Guardian — clipped by mode:
+Simple shows the first three; Guardian joins when first requested (a hand-off promotes beginner →
+intermediate) and on intermediate+. Learn is retired — the calculator lives in Shield's
+empty-wallet inspector (and optionally Home amount-inspect), never a peer tab.
 Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
 the one expressive object; holdings are a quiet coin row beneath it — one `Coin` per region, sized by share — never
 a second `AllocationRing`; tapping a coin dims the others and opens the region `InspectorSheet`. Tapping the stage's

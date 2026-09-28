@@ -12,6 +12,7 @@ import type { MultichainPortfolio, TokenBalance } from "@/hooks/use-multichain-b
 import { useWalletContext } from "../wallet/WalletProvider";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import { useNavigation } from "@/context/app/NavigationContext";
+import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
@@ -93,6 +94,7 @@ export default function ProtectionTab({
   const { navigateToSwap, navigateToGuardian } = useNavigation();
   const { demoMode, enableDemoMode } = useDemoMode();
   const { experienceMode } = useExperience();
+  const { config: adaptiveConfig } = useAdaptiveContext();
   const { visibility } = useGuardianVisibility();
   const reducedMotion = useReducedMotion();
   const { askAdvisor } = useAdvisor();
@@ -124,7 +126,13 @@ export default function ProtectionTab({
   // Payment-cycle inspector — opened by the `cycle` intent (Home's
   // graduation / payment-cycle transition). Independent of any slice.
   const [cycleOpen, setCycleOpen] = useState(false);
-  const openCycle = useCallback(() => setCycleOpen(true), []);
+  // The inspector's two engines — the `cycle` intent and ?cycle=1 open the
+  // forward report; the /fx-drag-calculator doorway lands on 'last'.
+  const [cycleMode, setCycleMode] = useState<"next" | "last">("next");
+  const openCycle = useCallback((m: "next" | "last" = "next") => {
+    setCycleMode(m);
+    setCycleOpen(true);
+  }, []);
   useEffect(() => {
     if (focusedToken) setCycleOpen(false);
   }, [focusedToken]);
@@ -164,9 +172,10 @@ export default function ProtectionTab({
   useEffect(() => {
     if (!router.isReady) return;
     if (router.query.sleeve === "rwa") setFocusedToken(SLEEVE_ID);
-    // ?cycle=1 opens the payment-cycle inspector — the FX drag
-    // calculator's "Track this cycle" hand-off (draft pre-seeded).
-    if (router.query.cycle === "1") setCycleOpen(true);
+    // ?cycle=1 opens the payment-cycle inspector's forward report; the
+    // /fx-drag-calculator doorway lands on ?cycle=last (historical engine).
+    if (router.query.cycle === "1") openCycle("next");
+    if (router.query.cycle === "last") openCycle("last");
     if (router.query.serv === "1" || router.query.serv === "true") {
       setRwaServOn(true);
     }
@@ -484,6 +493,11 @@ export default function ProtectionTab({
   const selectedHeld = focusedToken ? heldPctByToken.get(focusedToken) ?? 0 : 0;
   const gapPct = selectedAlloc ? selectedAlloc.percent - selectedHeld : 0;
   const isPaymentCycle = config.moneyPurpose === "upcoming_payment";
+  // Business morph (§5 rail 4): Shield's status rail offers the
+  // payment-cycle entry instead of the RWA rail — connected and
+  // walletless. The cycle is plan-independent; it needs no ring.
+  const businessMorph =
+    adaptiveConfig.content.shieldMorph === "cycle" || isPaymentCycle;
   // The CTA offers a gap the user's network can actually fill when one
   // exists — it never disappears because a leg lives elsewhere.
   const biggestGap = useMemo(
@@ -783,6 +797,7 @@ export default function ProtectionTab({
       onSetUpGuardian={setUpGuardian}
       showToast={showToast}
       cycleOpen={cycleOpen && !balance.isPreviewing}
+      cycleMode={cycleMode}
       onCloseCycle={() => setCycleOpen(false)}
     />
   );
@@ -811,6 +826,9 @@ export default function ProtectionTab({
       navigateToGuardian={navigateToGuardian}
       setFocusedToken={setFocusedToken}
       onSetUpGuardian={setUpGuardian}
+      businessMorph={businessMorph}
+      cycleOpen={cycleOpen}
+      onOpenCycle={() => openCycle("next")}
     />
   );
 
@@ -826,6 +844,7 @@ export default function ProtectionTab({
         sleeveOpen={sleeveOpen}
         onOpenSleeve={() => setFocusedToken(SLEEVE_ID)}
         onCloseSleeve={() => setFocusedToken(null)}
+        onOpenCycle={businessMorph ? () => openCycle("next") : undefined}
       />
     );
   }

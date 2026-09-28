@@ -43,7 +43,7 @@ vi.mock("next/dynamic", () => ({
           ? "exchange-tab"
           : src.includes("AgentTab")
             ? "agent-tab"
-            : "info-tab";
+            : "unknown-tab";
     const C = (props: { isActive?: boolean }) =>
       React.createElement(
         "div",
@@ -58,16 +58,15 @@ vi.mock("next/dynamic", () => ({
   },
 }));
 
+const mockRouter = vi.hoisted(() => ({
+  query: {} as Record<string, string>,
+}));
 vi.mock("next/router", () => ({
-  useRouter: () => ({ isReady: true, query: {} }),
+  useRouter: () => ({ isReady: true, query: mockRouter.query }),
 }));
 
 vi.mock("@/context/app/AppShellContext", () => ({
   useAppShellContext: () => m.ctx.value,
-}));
-
-vi.mock("@/context/app/AdaptiveContext", () => ({
-  useAdaptiveContext: () => ({ config: null }),
 }));
 
 vi.mock("@/hooks/use-tab-discovery", () => ({
@@ -96,8 +95,10 @@ function makeContext(activeTab: string, extras: Record<string, unknown> = {}) {
   return {
     activeTab,
     setActiveTab: vi.fn(),
+    setExperienceMode: vi.fn(),
     trackTabChange: vi.fn(),
     experienceMode: "advanced",
+    hydrated: true,
     multichainPortfolio: null,
     isMultichainLoading: false,
     refresh: vi.fn(),
@@ -125,6 +126,7 @@ const REAL_NODE_ENV = env.NODE_ENV;
 beforeEach(() => {
   env.NODE_ENV = REAL_NODE_ENV;
   delete env.NEXT_PUBLIC_KEEP_MOUNTED_HOME;
+  mockRouter.query = {};
 });
 
 afterEach(() => {
@@ -192,23 +194,88 @@ describe("TabContentRouter — keep-mounted Home", () => {
     const { rerender } = render(<TabContentRouter />);
     expect(screen.getByTestId("overview-tab")).toBeInTheDocument();
 
-    m.ctx.value = makeContext("info");
+    m.ctx.value = makeContext("agent");
     rerender(<TabContentRouter />);
-    expect(screen.getByTestId("info-tab")).toBeInTheDocument();
+    expect(screen.getByTestId("agent-tab")).toBeInTheDocument();
     expect(screen.queryByTestId("overview-tab")).not.toBeInTheDocument();
   });
 });
 
-describe("TabContentRouter — Simple dock swipe order", () => {
-  it("clips swipe order and bounces a hidden Learn tab back onto the dock", () => {
+describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
+  it("beginner + requested Guardian promotes to intermediate — no bounce", () => {
+    const setActiveTab = vi.fn();
+    const setExperienceMode = vi.fn();
+    m.ctx.value = makeContext("agent", {
+      experienceMode: "beginner",
+      setActiveTab,
+      setExperienceMode,
+    });
+    render(<TabContentRouter />);
+    // The hand-off promotes the dock instead of bouncing to the first tab.
+    expect(setExperienceMode).toHaveBeenCalledWith("intermediate");
+    expect(setActiveTab).not.toHaveBeenCalled();
+  });
+
+  it("?tab=agent counts as a request even when beginner hides Guardian", () => {
+    mockRouter.query = { tab: "agent" };
+    const setActiveTab = vi.fn();
+    const setExperienceMode = vi.fn();
+    m.ctx.value = makeContext("overview", {
+      experienceMode: "beginner",
+      setActiveTab,
+      setExperienceMode,
+    });
+    render(<TabContentRouter />);
+    // The URL request lands the tab switch; the promotion itself is the
+    // hidden-tab effect (covered above once activeTab is agent).
+    expect(setActiveTab).toHaveBeenCalledWith("agent");
+  });
+
+  it("pre-hydration beginner mode neither promotes nor bounces — the saved mode may still be advanced", () => {
+    const setActiveTab = vi.fn();
+    const setExperienceMode = vi.fn();
+    m.ctx.value = makeContext("agent", {
+      experienceMode: "beginner",
+      hydrated: false,
+      setActiveTab,
+      setExperienceMode,
+    });
+    render(<TabContentRouter />);
+    expect(setExperienceMode).not.toHaveBeenCalled();
+    expect(setActiveTab).not.toHaveBeenCalled();
+  });
+
+  it("hydration landing on advanced keeps Guardian without any calls", () => {
+    const setActiveTab = vi.fn();
+    const setExperienceMode = vi.fn();
+    m.ctx.value = makeContext("agent", {
+      experienceMode: "beginner",
+      hydrated: false,
+      setActiveTab,
+      setExperienceMode,
+    });
+    const { rerender } = render(<TabContentRouter />);
+
+    // The saved mode hydrates as advanced — agent is visible, nothing fires.
+    m.ctx.value = makeContext("agent", {
+      experienceMode: "advanced",
+      setActiveTab,
+      setExperienceMode,
+    });
+    rerender(<TabContentRouter />);
+    expect(setExperienceMode).not.toHaveBeenCalled();
+    expect(setActiveTab).not.toHaveBeenCalled();
+    expect(screen.getByTestId("agent-tab")).toBeInTheDocument();
+  });
+
+  it("a non-agent hidden tab still falls back to the first dock tab", () => {
     const setActiveTab = vi.fn();
     m.ctx.value = makeContext("info", {
       experienceMode: "beginner",
       setActiveTab,
     });
     render(<TabContentRouter />);
-    expect(setActiveTab).toHaveBeenCalledWith("overview");
-    expect(screen.queryByTestId("info-tab")).not.toBeInTheDocument();
+    expect(setActiveTab).toHaveBeenCalledWith("protect");
     expect(screen.queryByTestId("agent-tab")).not.toBeInTheDocument();
   });
 
@@ -216,6 +283,6 @@ describe("TabContentRouter — Simple dock swipe order", () => {
     m.ctx.value = makeContext("exchange", { experienceMode: "beginner" });
     render(<TabContentRouter />);
     expect(screen.getByTestId("exchange-tab")).toBeInTheDocument();
-    expect(screen.queryByTestId("info-tab")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("agent-tab")).not.toBeInTheDocument();
   });
 });

@@ -251,10 +251,6 @@ vi.mock("@/components/rewards/StreakRewardsCard", () => ({
   StreakRewardsSection: () => null,
 }));
 
-vi.mock("@/components/ui/ExperienceModeNotification", () => ({
-  default: () => null,
-}));
-
 vi.mock("@/components/ui/MobileCollapsible", () => ({
   MobileCollapsible: ({ children }: { children: React.ReactNode }) => children,
 }));

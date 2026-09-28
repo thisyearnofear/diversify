@@ -314,9 +314,10 @@ export function RiskPhase({
                 <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
                   When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
                 </p>
-                {/* The business doorway that exists today: the public FX drag
-                    calculator — no wallet, real rates, then "Track your next
-                    payment" lands in Shield's cycle report. */}
+                {/* The business doorway: /fx-drag-calculator redirects into
+                    Shield's payment-cycle inspector ("Last cycle" mode) — no
+                    wallet, real rates, then "Track your next payment" flips
+                    to the forward report. */}
                 <a
                   href="/fx-drag-calculator"
                   onClick={() => trackFunnelEvent('business_hint_expanded', { action: 'calculator', ...(countryCode ? { country: countryCode } : {}) })}

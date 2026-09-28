@@ -4,22 +4,20 @@
  * Reads the shared AppShellContext (set up once by AppShell) — no prop
  * relay needed, and no second useAppShell() instance mounted.
  *
- * Reads adaptive config to determine tab order — importers see Shield
- * first, savers see Overview first. This is the foundation of the
- * adaptive experience: different personas see different information
- * architecture in the same shell.
+ * The dock order is fixed — TAB_IDS clipped to the tabs visible in the
+ * current experience mode. Personas never reorder the dock. A hidden
+ * Guardian request (hand-off or ?tab=agent) promotes beginner →
+ * intermediate so the tab appears instead of bouncing.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
-import type { TabId } from "@/constants/tabs";
-import { getVisibleTabIds } from "@/constants/tabs";
+import { getVisibleTabIds, isTabId } from "@/constants/tabs";
 
 import { useAppShellContext } from "@/context/app/AppShellContext";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { useShareLanding } from "@/hooks/use-share-landing";
-import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { TabSkeleton } from "@/components/ui/Skeleton";
@@ -44,11 +42,6 @@ const ExchangeTab = dynamic(() => import("@/components/tabs/ExchangeTab"), {
 const AgentTab = dynamic(() => import("@/components/tabs/AgentTab"), {
   ssr: false,
   loading: () => <TabSkeleton label="Opening Guardian" />,
-});
-
-const InfoTab = dynamic(() => import("@/components/tabs/InfoTab"), {
-  ssr: false,
-  loading: () => <TabSkeleton label="Opening Learn" />,
 });
 
 // ── TabPane + transition ──
@@ -152,8 +145,6 @@ function KeepMountedPane({
   );
 }
 
-const DEFAULT_TAB_ORDER: TabId[] = ["overview", "protect", "exchange", "agent", "info"];
-
 export default function TabContentRouter() {
   const {
     activeTab, setActiveTab, trackTabChange,
@@ -161,39 +152,31 @@ export default function TabContentRouter() {
     isRegionLoading, userRegion, setUserRegion, REGIONS,
     inflationData, currencyPerformanceData,
     walletChainId, isMiniPay, isFarcaster,
-    experienceMode,
+    experienceMode, setExperienceMode, hydrated,
   } = useAppShellContext();
   const { recordSwipe, recordTabVisit } = useTabDiscovery();
-  const { config: adaptiveConfig } = useAdaptiveContext();
 
-  // Determine Guardian mode — cycle-aware for importers, savings for savers
-  const guardianMode = adaptiveConfig?.guardianMode ?? "savings";
-  // Adaptive tab order — importers see Shield first, savers see Overview.
-  // Swipe order is then clipped to the tabs actually in this mode's dock
-  // so beginners cannot swipe onto Learn or Guardian.
-  const tabOrder = useMemo(() => {
-    const visible = new Set(getVisibleTabIds(experienceMode));
-    const rawOrder = adaptiveConfig?.content?.tabOrder ?? DEFAULT_TAB_ORDER;
-    const validIds = new Set(DEFAULT_TAB_ORDER);
-    return rawOrder
-      .map((id: string) => id as TabId)
-      .filter((id: TabId) => validIds.has(id) && visible.has(id));
-  }, [adaptiveConfig, experienceMode]);
+  // Fixed dock order — TAB_IDS clipped to this mode's visible tabs.
+  // Personas never reorder it; swipe order rides the same list.
+  const tabOrder = getVisibleTabIds(experienceMode);
 
   // URL hand-off: ?tab=<id> activates a tab directly — the contract
   // deep-link doorways like /rwa-vaults use to land inside the
   // instrument. One-shot once the router is ready; each tab's own
   // effects consume the rest of the query (e.g. ?sleeve=rwa&serv=1).
+  // ?tab=agent counts as a request even when beginner mode hides
+  // Guardian — the hidden-tab effect below promotes the dock.
   const router = useRouter();
   useEffect(() => {
     if (!router.isReady) return;
     const tab = router.query.tab;
     if (
       typeof tab === "string" &&
-      tabOrder.includes(tab as TabId) &&
+      isTabId(tab) &&
+      (tabOrder.includes(tab) || tab === "agent") &&
       tab !== activeTab
     ) {
-      setActiveTab(tab as TabId);
+      setActiveTab(tab);
     }
     // One-shot URL consumption — activeTab/tabOrder must not retrigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,9 +187,20 @@ export default function TabContentRouter() {
   useShareLanding();
 
   useEffect(() => {
+    // The saved mode hydrates in a mount effect — until it lands, the
+    // pre-hydration 'beginner' must not trigger a promote or a bounce
+    // (an advanced user reloading on Guardian would be downgraded).
+    if (!hydrated) return;
     if (tabOrder.length === 0 || tabOrder.includes(activeTab)) return;
+    // A Guardian request from beginner mode is a real request, not a
+    // bounce — promoting to intermediate grows the dock by one tab and
+    // Guardian opens with its pending context intact.
+    if (activeTab === "agent" && experienceMode === "beginner") {
+      setExperienceMode("intermediate");
+      return;
+    }
     setActiveTab(tabOrder[0]);
-  }, [activeTab, setActiveTab, tabOrder]);
+  }, [activeTab, setActiveTab, setExperienceMode, experienceMode, hydrated, tabOrder]);
 
   // Direction-aware transitions: content enters from the side you swiped
   // toward (or the side the new tab sits on in tab order). Maxima's carousel
@@ -349,20 +343,6 @@ export default function TabContentRouter() {
           </TabPane>
         )}
 
-        {activeTab === "info" && tabOrder.includes("info") && (
-          <TabPane key="info" id="info" direction={direction}>
-            <div className="px-4">
-              <ErrorBoundary>
-                <InfoTab
-                  userRegion={userRegion}
-                  isLoading={isMultichainLoading}
-                  setActiveTab={setActiveTab}
-                  refreshBalances={refresh}
-                />
-              </ErrorBoundary>
-            </div>
-          </TabPane>
-        )}
       </AnimatePresence>
     </motion.div>
   );

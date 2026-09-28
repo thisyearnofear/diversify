@@ -240,6 +240,19 @@ describe("NavigationContext — ?tab= doorway", () => {
     expect(seen!.activeTab).toBe("exchange");
   });
 
+  it("?tab=info (retired Learn) resolves to Shield even over a saved tab", () => {
+    window.localStorage.setItem("activeTab", "exchange");
+    window.history.replaceState({}, "", "/?tab=info");
+
+    render(
+      <NavigationProvider>
+        <Probe />
+      </NavigationProvider>,
+    );
+
+    expect(seen!.activeTab).toBe("protect");
+  });
+
   it("an unknown ?tab= falls back to the saved tab", () => {
     window.localStorage.setItem("activeTab", "exchange");
     window.history.replaceState({}, "", "/?tab=bogus");

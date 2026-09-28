@@ -35,6 +35,11 @@ vi.mock('../../wallet/WalletProvider', () => ({
   useWalletContext: () => ({ address: mockAddress }),
 }));
 
+const mockNavigateWithIntent = vi.fn();
+vi.mock('@/context/app/NavigationContext', () => ({
+  useNavigation: () => ({ navigateWithIntent: mockNavigateWithIntent }),
+}));
+
 // The mid-market line reads the live USD table — mock the provider so
 // tests never touch the network.
 vi.mock('@diversifi/shared/src/services/fx-netting/rate-adapter', () => ({
@@ -70,6 +75,17 @@ describe('FxNettingRail — smoke + phase flips', () => {
     const line = await screen.findByTestId('fx-mid-rate');
     expect(line).toHaveTextContent('1 JMD = 0.0421 BBD');
     expect(line).toHaveTextContent('2026-09-15');
+  });
+
+  it('the cycle footnote hands off to the payment-cycle inspector, not the old page', () => {
+    render(<FxNettingRail />);
+    fireEvent.click(
+      screen.getByRole('button', { name: /See what FX timing costs across a whole cycle/ }),
+    );
+    expect(mockNavigateWithIntent).toHaveBeenCalledWith('protect', {
+      source: 'exchange',
+      lens: 'cycle',
+    });
   });
 
   it('flips to the review phase and calls match when the CTA is enabled', () => {

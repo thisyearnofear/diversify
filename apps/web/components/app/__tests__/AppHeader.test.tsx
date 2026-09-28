@@ -117,8 +117,8 @@ describe('AppHeader — one connect affordance below sm', () => {
     }
   });
 
-  it('keeps the wallet button on tabs with no in-object connect CTA (Exchange, Info)', () => {
-    for (const activeTab of ['exchange', 'info'] as const) {
+  it('keeps the wallet button on tabs with no in-object connect CTA (Exchange)', () => {
+    for (const activeTab of ['exchange'] as const) {
       const { unmount } = render(
         <AppHeader {...baseProps} address={null} activeTab={activeTab} />,
       );

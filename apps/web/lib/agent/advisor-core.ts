@@ -819,7 +819,6 @@ const NAVIGATE_CAPTIONS: Record<TabId, string> = {
   protect: 'Here is Shield — your protection plan and Guardian controls live here.',
   overview: 'Here is Home — your savings picture at a glance.',
   agent: 'Here is Guardian — decisions and limits live here.',
-  info: 'Here is Learn — the background on how this works.',
 };
 
 function captionForAction(action: any): string | null {

@@ -1,5 +1,5 @@
 import React from "react";
-import Link from "next/link";
+import { useNavigation } from "@/context/app/NavigationContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useFxNetting, type FxSettlement } from "../../hooks/use-fx-netting";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -69,6 +69,7 @@ interface FxNettingRailProps {
 
 export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRailProps) {
   const { address, signMessage } = useWalletContext();
+  const { navigateWithIntent } = useNavigation();
   const {
     data, isLoading, error, match,
     settlements, refreshSettlements, settle, isSettling, settleError,
@@ -298,12 +299,13 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
 
           <p className="mt-3 text-[10px] text-teal-700/60 dark:text-teal-300/60 leading-snug">
             Weighing a future payment instead?{" "}
-            <Link
-              href="/fx-drag-calculator"
+            <button
+              type="button"
+              onClick={() => navigateWithIntent("protect", { source: "exchange", lens: "cycle" })}
               className="font-semibold underline underline-offset-2 hover:text-teal-900 dark:hover:text-teal-100"
             >
               See what FX timing costs across a whole cycle →
-            </Link>
+            </button>
           </p>
         </div>
       ) : (

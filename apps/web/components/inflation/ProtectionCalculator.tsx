@@ -1,5 +1,5 @@
 /**
- * ProtectionCalculator — Learn's one object.
+ * ProtectionCalculator — Shield's empty-wallet inspector body.
  *
  * Amount + year timeline + the preserved-purchasing-power number.
  * Year tap selects (parent opens the inspector). One CTA. Cash is quiet;

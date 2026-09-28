@@ -39,6 +39,12 @@ function saveDraft(draft: PaymentCycleDraft): void {
   }
 }
 
+/** Read the persisted draft (empty draft when unset) — lets doorways check
+ *  before seeding without duplicating the storage key. */
+export function readPaymentCycleDraft(): PaymentCycleDraft {
+  return loadDraft();
+}
+
 /**
  * Seed the draft from outside the app shell (the public FX drag calculator's
  * "Track this cycle" hand-off). Only the fields the visitor actually typed

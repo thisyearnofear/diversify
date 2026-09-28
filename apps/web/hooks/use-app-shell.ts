@@ -30,7 +30,7 @@ export function useAppShell() {
   const { trackTabChange } = useAnalytics();
 
   // ── Experience mode ──
-  const { experienceMode, setExperienceMode } = useExperience();
+  const { experienceMode, setExperienceMode, hydrated } = useExperience();
 
   // ── Wallet ──
   const {
@@ -90,6 +90,7 @@ export function useAppShell() {
     // Experience
     experienceMode,
     setExperienceMode,
+    hydrated,
 
     // Wallet
     address,

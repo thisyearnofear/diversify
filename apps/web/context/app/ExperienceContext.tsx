@@ -4,6 +4,7 @@ import type { UserActivity, UserExperienceMode } from './types';
 type ExperienceContextValue = {
   experienceMode: UserExperienceMode;
   userActivity: UserActivity;
+  hydrated: boolean;
   setExperienceMode: (mode: UserExperienceMode) => void;
   recordSwap: () => void;
   shouldShowAdvancedFeatures: () => boolean;
@@ -14,6 +15,7 @@ const ExperienceContext = createContext<ExperienceContextValue | undefined>(unde
 
 export function ExperienceProvider({ children }: { children: React.ReactNode }) {
   const [experienceMode, setExperienceModeState] = useState<UserExperienceMode>('beginner');
+  const [hydrated, setHydrated] = useState(false);
   const [userActivity, setUserActivity] = useState<UserActivity>({
     swapCount: 0,
     lastSwapDate: null,
@@ -51,6 +53,7 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
 
     setExperienceModeState(nextMode);
     setUserActivity(nextActivity);
+    setHydrated(true);
   }, []);
 
   const setExperienceMode = useCallback((mode: UserExperienceMode) => {
@@ -90,6 +93,7 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
     () => ({
       experienceMode,
       userActivity,
+      hydrated,
       setExperienceMode,
       recordSwap,
       shouldShowAdvancedFeatures,
@@ -98,6 +102,7 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
     [
       experienceMode,
       userActivity,
+      hydrated,
       setExperienceMode,
       recordSwap,
       shouldShowAdvancedFeatures,

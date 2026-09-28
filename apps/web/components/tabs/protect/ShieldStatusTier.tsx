@@ -2,7 +2,10 @@
  * ShieldStatusTier — the Shield tab's StatusTier element. Pure
  * presentation extracted from ProtectionTab: the previewing quiet tier,
  * the trust badge row, and the transition priority (sleeve back >
- * compare row > floor prompt > status row) with the RWA sleeve rail.
+ * compare row > floor prompt > status row). The rail slot is
+ * persona-morph aware: business personas (shieldMorph "cycle") get the
+ * payment-cycle entry in place of the RWA sleeve rail — the cycle is
+ * plan-independent, so it does not require a visible plan ring.
  */
 import React from "react";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -43,6 +46,12 @@ export interface ShieldStatusTierProps {
   setFocusedToken: (v: string | null) => void;
   /** Hands off to the Guardian tab — the one place a daily limit is set. */
   onSetUpGuardian: () => void;
+  /** Business morph: the rail offers the payment-cycle entry, not RWA. */
+  businessMorph: boolean;
+  /** The cycle inspector is open — the rail steps aside while it is. */
+  cycleOpen: boolean;
+  /** Opens the payment-cycle inspector in next-payment mode. */
+  onOpenCycle: () => void;
 }
 
 export function ShieldStatusTier({
@@ -68,6 +77,9 @@ export function ShieldStatusTier({
   navigateToGuardian,
   setFocusedToken,
   onSetUpGuardian,
+  businessMorph,
+  cycleOpen,
+  onOpenCycle,
 }: ShieldStatusTierProps) {
   // The compare/quiet/monitoring row is empty in the gap+biggestGap case
   // (the CTA beneath the ring names the job) — don't burn the slot on it.
@@ -186,14 +198,30 @@ export function ShieldStatusTier({
         )
       }
       rail={
-        // Tokenized-asset rail — the status/transition grammar (§5 rail 4).
-        // Offered to every persona so the lens is always one tap away; it
-        // names the plan's own RWA legs when there are any. Never while the
-        // lens is open — its exit lives in the transition slot.
+        // One rail slot, persona-morphed (§5 rail 4): business personas
+        // get the payment-cycle entry — plan-independent, so no
+        // planRingVisible gate. Everyone else keeps the tokenized-asset
+        // rail, which names the plan's own RWA legs when there are any.
+        // Never while a lens is open — its exit lives in the transition
+        // slot.
+        businessMorph &&
         !sleeveOpen &&
         !comparing &&
-        planRingVisible &&
-        !focusedToken ? (
+        !focusedToken &&
+        !cycleOpen ? (
+          <button
+            type="button"
+            data-testid="cycle-entry"
+            onClick={onOpenCycle}
+            className="text-xs font-semibold text-blue-600 dark:text-blue-400"
+          >
+            What FX timing costs your next payment →
+          </button>
+        ) : !businessMorph &&
+          !sleeveOpen &&
+          !comparing &&
+          planRingVisible &&
+          !focusedToken ? (
           <button
             type="button"
             data-testid="rwa-sleeve-entry"

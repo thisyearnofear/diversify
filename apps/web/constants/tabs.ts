@@ -4,25 +4,25 @@
 
 import type { UserExperienceMode } from '@/context/app/types';
 
-export const TAB_IDS = ["protect", "overview", "exchange", "agent", "info"] as const;
+export const TAB_IDS = ["protect", "overview", "exchange", "agent"] as const;
 export type TabId = (typeof TAB_IDS)[number];
 
-/** Persona-neutral display labels (adaptive overrides live in TabNavigation). */
+/** Display labels — one source, personas never rename or reorder tabs. */
 export const TAB_LABELS: Record<TabId, string> = {
   protect: "Shield",
   overview: "Home",
   exchange: "Exchange",
   agent: "Guardian",
-  info: "Learn",
 };
 
 /**
  * Which tabs appear in each experience mode.
  * Simple dock (design-language §5): beginner = Shield / Home / Exchange.
- * Learn is absorbed onto Shield's picker — do not put it back in Simple.
- * Intermediate now also loses the peer Learn tab — the calculator lives as
- * the Shield empty-wallet inspector + optional Home amount-inspect, not as a
- * standalone instrument competing for the dock.
+ * Guardian joins the dock on intermediate+ — or the first time it is
+ * requested, which promotes beginner → intermediate. There is no Learn
+ * tab: the calculator lives in Shield's empty-wallet inspector.
+ * Order is always TAB_IDS filtered by visibility — personas never
+ * reorder the dock.
  */
 export const TAB_VISIBILITY: Record<UserExperienceMode, readonly TabId[]> = {
   beginner: ['protect', 'overview', 'exchange'],
@@ -45,6 +45,7 @@ export const LEGACY_TAB_MAP: Record<string, TabId> = {
   rewards: "overview",
   oracle: "protect",
   guardian_setup: "protect",
+  info: "protect",
   swap: "exchange",
   trade: "exchange",
 };

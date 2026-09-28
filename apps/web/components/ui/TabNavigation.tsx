@@ -61,15 +61,6 @@ const TABS: TabItem[] = [
       </svg>
     ),
   },
-  {
-    id: "info",
-    label: TAB_LABELS.info,
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" className="size-6 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-  },
 ];
 
 export default function TabNavigation({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
@@ -106,29 +97,13 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     tabRefs.current[newIndex]?.focus();
   }, [visibleTabs, setActiveTab, recordTabVisit]);
 
-  // Read adaptive tab labels and order — persona-specific overrides.
-  // Importers see Shield first, savers see Overview first.
+  // Persona label overrides — personas never reorder the dock; the
+  // order is fixed TAB_IDS filtered by visibility.
   const { config: adaptiveConfig } = useAdaptiveContext();
   const tabLabels = useMemo(
     () => adaptiveConfig?.tabLabels ?? {},
     [adaptiveConfig],
   );
-
-  // Sort visible tabs according to adaptive order (e.g., ["protect","overview",...]
-  // for importers vs ["overview","protect",...] for savers).
-  const adaptiveOrder = useMemo(() => {
-    const order = adaptiveConfig?.content?.tabOrder;
-    if (!order || order.length === 0) return visibleTabs;
-    return [...visibleTabs].sort((a, b) => {
-      const ai = order.indexOf(a.id);
-      const bi = order.indexOf(b.id);
-      // Unlisted tabs go to the end
-      if (ai === -1 && bi === -1) return visibleTabs.indexOf(a) - visibleTabs.indexOf(b);
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
-  }, [adaptiveConfig?.content?.tabOrder, visibleTabs]);
 
   return (
     <>
@@ -140,7 +115,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
           className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-700 shadow-nav pb-safe"
         >
         <div className="max-w-md mx-auto flex">
-        {adaptiveOrder.map((tab, index) => {
+        {visibleTabs.map((tab, index) => {
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           const isActive = activeTab === tab.id;
@@ -206,7 +181,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
 
 /**
  * DesktopRail — the lg+ sibling of the bottom tab bar. Same tabs, same
- * adaptive visibility/order/labels, same badges — a vertical rail so the
+ * visibility/labels, same badges — a vertical rail so the
  * desktop shell is a two-pane layout (rail + content) instead of a phone
  * column in decorated margins. Solid surface per the design language.
  */
@@ -229,19 +204,6 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
   const railRef = useRef<HTMLElement | null>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  const adaptiveOrder = useMemo(() => {
-    const order = adaptiveConfig?.content?.tabOrder;
-    if (!order || order.length === 0) return visibleTabs;
-    return [...visibleTabs].sort((a, b) => {
-      const ai = order.indexOf(a.id);
-      const bi = order.indexOf(b.id);
-      if (ai === -1 && bi === -1) return visibleTabs.indexOf(a) - visibleTabs.indexOf(b);
-      if (ai === -1) return 1;
-      if (bi === -1) return -1;
-      return ai - bi;
-    });
-  }, [adaptiveConfig?.content?.tabOrder, visibleTabs]);
-
   return (
     <nav
       ref={railRef}
@@ -253,7 +215,7 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
       <div className="w-full flex justify-center pb-3 mb-2 border-b border-gray-100 dark:border-white/5">
         <StreakNavBadge variant="rail" />
       </div>
-      {adaptiveOrder.map((tab, index) => {
+      {visibleTabs.map((tab, index) => {
         const badgeCount = badges[tab.id];
         const hasBadge = badgeCount !== undefined && badgeCount > 0;
         const isActive = activeTab === tab.id;

@@ -30,7 +30,6 @@ import { usePortfolio, useSharedMultichainBalances } from "../../context/app/Por
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
-import ExperienceModeNotification from "../ui/ExperienceModeNotification";
 import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { useMobile } from "../../hooks/use-mobile";
 import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
@@ -672,8 +671,6 @@ export default function SwapTab({
           ticket
         ) : (
           <>
-            {showChrome && <ExperienceModeNotification />}
-
             {showChrome && showAiRecommendation && (
               <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
                 <p className="text-xs font-bold text-blue-800 dark:text-blue-200">

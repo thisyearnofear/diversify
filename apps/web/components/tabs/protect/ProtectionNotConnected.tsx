@@ -50,6 +50,9 @@ interface Props {
   sleeveOpen?: boolean;
   onOpenSleeve?: () => void;
   onCloseSleeve?: () => void;
+  /** Business morph: the status rail offers the payment-cycle entry
+   *  instead of the tokenized-assets link. */
+  onOpenCycle?: () => void;
 }
 
 export function ProtectionNotConnected({
@@ -59,6 +62,7 @@ export function ProtectionNotConnected({
   sleeveOpen = false,
   onOpenSleeve,
   onCloseSleeve,
+  onOpenCycle,
 }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const reducedMotion = useReducedMotion();
@@ -237,20 +241,43 @@ export function ProtectionNotConnected({
       )}
       {onEnableDemo && (
         <UnconnectedStatusTier onEnableDemo={onEnableDemo}>
-          {onOpenSleeve && onCloseSleeve && (
+          {sleeveOpen && onCloseSleeve ? (
             <button
               type="button"
-              data-testid={sleeveOpen ? "rwa-sleeve-back" : "rwa-sleeve-entry"}
+              data-testid="rwa-sleeve-back"
               onClick={() => {
-                if (sleeveOpen) onCloseSleeve();
-                else onOpenSleeve();
+                onCloseSleeve();
                 haptics.tap();
               }}
               className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
             >
-              {sleeveOpen ? "← Back to plan" : "Tokenized assets you can hold →"}
+              ← Back to plan
             </button>
-          )}
+          ) : onOpenCycle ? (
+            <button
+              type="button"
+              data-testid="cycle-entry"
+              onClick={() => {
+                onOpenCycle();
+                haptics.tap();
+              }}
+              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+            >
+              What FX timing costs your next payment →
+            </button>
+          ) : onOpenSleeve && onCloseSleeve ? (
+            <button
+              type="button"
+              data-testid="rwa-sleeve-entry"
+              onClick={() => {
+                onOpenSleeve();
+                haptics.tap();
+              }}
+              className="min-h-[44px] px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+            >
+              Tokenized assets you can hold →
+            </button>
+          ) : null}
         </UnconnectedStatusTier>
       )}
     </div>

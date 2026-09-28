@@ -353,6 +353,39 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
+  it("business morph: onOpenCycle renders the cycle entry instead of the tokenized link", () => {
+    const onOpenCycle = vi.fn();
+    render(
+      <ProtectionNotConnected
+        experienceMode="beginner"
+        onEnableDemo={vi.fn()}
+        onOpenCycle={onOpenCycle}
+        onOpenSleeve={vi.fn()}
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("cycle-entry"));
+    expect(onOpenCycle).toHaveBeenCalledTimes(1);
+  });
+
+  it("business morph: the sleeve back button still owns the open lens", () => {
+    render(
+      <ProtectionNotConnected
+        experienceMode="beginner"
+        onEnableDemo={vi.fn()}
+        onOpenCycle={vi.fn()}
+        sleeveOpen
+        onOpenSleeve={vi.fn()}
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
+    expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
+  });
+
   it("persona morphs the status tier: Caribbean philosophy shows the Caribbean banner", () => {
     mockState.financialStrategy = "pan_caribbean";
     mockState.userRegion = "caribbean";

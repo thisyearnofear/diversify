@@ -107,10 +107,6 @@ vi.mock("@/components/tabs/AgentTab", () => ({
   default: () => React.createElement("div", { "data-testid": "agent-tab" }),
 }));
 
-vi.mock("@/components/tabs/InfoTab", () => ({
-  default: () => React.createElement("div", { "data-testid": "info-tab" }),
-}));
-
 vi.mock("@/hooks/use-app-shell", () => ({
   useAppShell: vi.fn(),
 }));

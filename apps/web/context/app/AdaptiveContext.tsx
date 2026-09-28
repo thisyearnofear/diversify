@@ -3,13 +3,12 @@
  * entire app tree.
  *
  * This is the wiring point between signal detection (Phase 1: geo + wallet)
- * and app surfaces (content routing: hero, tab order, shield sections, banners).
+ * and app surfaces (content routing: hero, shield morph, banners).
  *
  * Usage:
  *   const { config } = useAdaptiveContext();
- *   if (config.content.showBusiness) { /* render business surfaces *\/ }
+ *   if (config.content.shieldMorph === "cycle") { /* business surfaces *\/ }
  *   const hero = config.content.hero;
- *   const tabOrder = config.content.tabOrder;
  *
  * The config is stable (useMemo in the provider) so consumers don't
  * trigger unnecessary re-renders when signals are unchanged.
@@ -50,7 +49,6 @@ export function useAdaptiveContext(): AdaptiveContextValue {
     const fallback: AdaptiveContextValue = {
       config: {
         persona: "generic_user",
-        guardianMode: "savings",
         tabLabels: defaultLabels,
         primaryCTA: null,
         displayCurrency: "USD",
@@ -64,11 +62,8 @@ export function useAdaptiveContext(): AdaptiveContextValue {
             ctaLabel: null,
             ctaTab: null,
           },
-          tabOrder: ["overview", "protect", "exchange", "agent", "info"],
-          shieldSections: ["scorecard", "yield", "strategy"],
+          shieldMorph: "plan",
           contextualBanner: null,
-          showBusiness: false,
-          showYield: true,
         },
       },
       isMobile: false,

@@ -308,6 +308,18 @@ vi.mock("@/context/app/ExperienceContext", () => ({
   useExperience: () => ({ experienceMode: "advanced" }),
 }));
 
+// Persona morph — flips Shield's status rail to the payment-cycle entry.
+const adaptiveState = vi.hoisted(() => ({
+  shieldMorph: "plan" as "plan" | "cycle",
+}));
+vi.mock("@/context/app/AdaptiveContext", () => ({
+  useAdaptiveContext: () => ({
+    config: { content: { shieldMorph: adaptiveState.shieldMorph } },
+    isMobile: false,
+    detectionMethod: "none",
+  }),
+}));
+
 const mockShowToast = vi.fn();
 vi.mock("@/components/ui/Toast", () => ({
   useToast: () => ({ showToast: mockShowToast }),
@@ -379,8 +391,11 @@ vi.mock("@/components/tabs/protect/ProtectionPlanGallery", () => ({
 }));
 
 vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({
-  PaymentCycleReport: () =>
-    React.createElement("div", { "data-testid": "payment-cycle-report" }),
+  PaymentCycleReport: ({ initialMode }: { initialMode?: string }) =>
+    React.createElement("div", {
+      "data-testid": "payment-cycle-report",
+      "data-mode": initialMode,
+    }),
 }));
 
 vi.mock("@/components/ui/EmptyState", () => ({
@@ -978,6 +993,26 @@ describe("ProtectionTab — instrument shapes", () => {
 
     expect(screen.getByTestId("payment-cycle-report")).toBeInTheDocument();
     expect(mockConsumeIntent).toHaveBeenCalled();
+  });
+
+  it("?cycle=1 opens the payment-cycle inspector in next mode", () => {
+    mockRouterQuery = { cycle: "1" };
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute("data-mode", "next");
+  });
+
+  it("?cycle=last opens the payment-cycle inspector in last mode (the /fx-drag-calculator doorway)", () => {
+    mockRouterQuery = { cycle: "last" };
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute("data-mode", "last");
   });
 
   it("consumes a compare-lens intent without entering compare when there is no plan", () => {
@@ -1761,5 +1796,76 @@ describe("ProtectionTab — shared plan card + provenance flip", () => {
     expect(
       screen.queryByRole("button", { name: "About WETH" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("ProtectionTab — business morph (shieldMorph: cycle)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = "africapitalism";
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    mockSessionInfo.current = null;
+    mockVisibility.current = "quiet";
+    adaptiveState.shieldMorph = "cycle";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+  });
+
+  afterEach(() => {
+    adaptiveState.shieldMorph = "plan";
+    cleanup();
+  });
+
+  it("connected: the status rail offers the cycle entry instead of the RWA rail", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("cycle-entry")).toBeInTheDocument();
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+  });
+
+  it("the cycle entry opens the payment-cycle inspector in next mode", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("cycle-entry"));
+    expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute(
+      "data-mode",
+      "next",
+    );
+    // While the inspector is open the rail steps aside.
+    expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
+  });
+
+  it("non-business personas keep the RWA rail", () => {
+    adaptiveState.shieldMorph = "plan";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("rwa-sleeve-entry")).toBeInTheDocument();
+    expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
+  });
+
+  it("payment purpose alone morphs the rail without an importer persona", () => {
+    adaptiveState.shieldMorph = "plan";
+    mockMoneyPurpose = "upcoming_payment";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("cycle-entry")).toBeInTheDocument();
+  });
+
+  it("walletless: the cycle entry replaces the tokenized-assets link", () => {
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: null,
+      chainId: null,
+    } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.getByTestId("cycle-entry")).toBeInTheDocument();
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("cycle-entry"));
+    expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute(
+      "data-mode",
+      "next",
+    );
   });
 });

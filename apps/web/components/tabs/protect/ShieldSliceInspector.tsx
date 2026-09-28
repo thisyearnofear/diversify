@@ -98,6 +98,9 @@ export interface ShieldSliceInspectorProps {
   onSetUpGuardian: () => void;
   /** Payment-cycle inspector open (Shield `cycle` intent) — replaces the slice body. */
   cycleOpen?: boolean;
+  /** Which payment-cycle engine the inspector opens on (`?cycle=last` from
+   *  the /fx-drag-calculator doorway; everything else is 'next'). */
+  cycleMode?: "next" | "last";
   onCloseCycle?: () => void;
   showToast: ReturnType<typeof useToast>["showToast"];
 }
@@ -194,6 +197,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     onSetUpGuardian,
     showToast,
     cycleOpen = false,
+    cycleMode = "next",
     onCloseCycle,
   } = props;
 
@@ -222,8 +226,10 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
         title="Payment cycle"
       >
         <PaymentCycleReport
+          key={cycleMode}
           defaultLocalCurrency={riskData?.code}
           onAskGuardian={(prompt) => askAdvisor(prompt)}
+          initialMode={cycleMode}
         />
       </InspectorSheet>
     );

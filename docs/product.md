@@ -184,7 +184,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 3. **Verifiable autonomy.** A server-side Guardian loop monitors markets 24/7 and auto-executes within user-signed permission bounds. Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings, Arbitrum for yield — with reasoning anchored to 0G Storage as tamper-proof evidence. LiveProofCard surfaces those receipts before wallet connect: proof-first, not splash-first. Each chain has an irreplaceable role — see [`rails.md`](./rails.md).
 
-4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Simple mode (default) shows Shield, Home, Exchange until the user opts into more (Guardian on intermediate, Learn on advanced).
+4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Simple mode (default) shows Shield, Home, Exchange until the user opts into more (Guardian joins on request and on intermediate; there is no Learn tab).
 
 5. **Currencies as stories — the engagement layer is the literacy layer.** Every token carries a curated provenance answering three questions — who controls it (origin, backing, keys), what has happened to it (dated geopolitical events), and what might happen next (the cadence and mechanism to watch, never a prediction). The memetic/cultural/political texture of money is surfaced at the moment of choice: the ticket's pair sentence, the coin-back flip in the picker, the pair inspector's event trail and watch lines. Facts are hand-sourced and dated (`packages/shared/src/constants/token-provenance.ts`), re-verified on a 90-day cycle — engagement built on understanding, never on tickers, leaderboards, or invented forecasts. The timeline teaches mechanism, not prediction.
 
@@ -204,7 +204,7 @@ Tripwire: `apps/web/lib/__tests__/vocabulary.test.ts`.
 | Pausing it | **Pause Guardian** | Revoke, stop Auto-Saver | `revokePermission` |
 | The allocation choice | **Protection plan** (Africapitalism, …, Custom plan) | Strategy | `FinancialStrategy`, `vault.strategy` |
 | Moving between currencies | **Move savings** | Rebalance, Re-protect, Execute | `rebalance` action type |
-| Tabs | **Shield · Home · Exchange · Guardian · Learn** | Protect, Overview, Agent, Info as tab names | `protect / overview / exchange / agent / info` |
+| Tabs | **Shield · Home · Exchange · Guardian** | Shield, Home, Exchange, Guardian as tab names | `protect / overview / exchange / agent` |
 | Prepaid review credit | **Protection Balance** (intended; deployment-dependent) | Agent Fuel | x402 |
 | Where money sits | **Your wallet** / **Savings** | Vault, deposit | `vault` |
 
@@ -255,11 +255,10 @@ tab or a noun. Tab labels have one source — `TAB_LABELS` in
 | **Home** | Risk Theater: your currency's moment + holdings coins |
 | **Exchange** | Move savings between currencies (pair stage → ticket → receipt) |
 | **Guardian** | The Guardian: daily limit, latest decision, journal and proof |
-| **Learn** | Wealth-protection calculator (cash vs your mix over time) |
 
-Tab IDs are `protect / overview / exchange / agent / info`; labels come only from `TAB_LABELS` (`apps/web/constants/tabs.ts`).
+Tab IDs are `protect / overview / exchange / agent`; labels come only from `TAB_LABELS` (`apps/web/constants/tabs.ts`). The dock order is fixed — personas never reorder it.
 
-**Simple mode** (beginner): Shield → Home → Exchange only. **Intermediate** adds Guardian. **Advanced** restores the full bar including Learn (the calculator also lives as the Shield empty-wallet inspector + optional Home amount-inspect). Exchange and Guardian remain reachable via the rail on other modes. See `design-language.md` §5.
+**Simple mode** (beginner): Shield → Home → Exchange only. Guardian joins the dock when first requested (a hand-off promotes beginner → intermediate) and on intermediate+. There is no Learn tab — the calculator lives as the Shield empty-wallet inspector + optional Home amount-inspect. See `design-language.md` §5.
 
 New users see Shield-first order. Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 2 tabs visited or first swipe gesture.
 
@@ -291,6 +290,6 @@ See [`roadmap.md`](./roadmap.md) for active priorities (the 14-day quality plan 
 
 ## Adaptive experience
 
-The same backend serves all personas; the frontend is a configuration. Signals (geo, wallet, history, device) resolve an `AdaptivePersona` → `AdaptiveConfig` that morphs tab labels, Guardian mode, and business surfaces — no forks, no separate products. Phase 0 (public FX drag calculator at `/fx-drag-calculator`, no wallet required) and Phase 1 (signal detection + adaptive tab labels) are live; behavioral graduation signals and multi-corridor learning are planned.
+The same backend serves all personas; the frontend is a configuration. Signals (geo, wallet, history, device) resolve an `AdaptivePersona` → `AdaptiveConfig` that morphs surfaces (`shieldMorph`: business personas get the payment-cycle entry on Shield) — never the dock order, no forks, no separate products. Phase 0 (FX drag calculator — now the payment-cycle inspector's "Last cycle" mode, with `/fx-drag-calculator` as a doorway; no wallet required) and Phase 1 (signal detection + adaptive tab labels) are live; behavioral graduation signals and multi-corridor learning are planned.
 
 Full design doc — signal schema, per-persona routing examples, implementation phases: [`internal/adaptive-experience.md`](./internal/adaptive-experience.md).

@@ -1,5 +1,8 @@
 /**
- * PaymentCycleReport — free FX drag scenario + cycle monitoring opt-in.
+ * PaymentCycleReport — the payment-cycle FX tool, two modes on one draft:
+ * "Next payment" (forward FX drag scenario + cycle monitoring opt-in) and
+ * "Last cycle" (the historical engine over a trailing 73-day window).
+ * /fx-drag-calculator is now a doorway into "Last cycle".
  */
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -23,10 +26,14 @@ import {
   renderFxDragReportMarkdown,
 } from '@diversifi/shared/src/services/fx-drag/fx-drag-report-renderer';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import { LastCycleDrag } from './LastCycleDrag';
 
 interface PaymentCycleReportProps {
   defaultLocalCurrency?: string;
   onAskGuardian?: (prompt: string) => void;
+  /** Which engine the inspector opens on — the URL/intent caller decides;
+   *  the segmented control owns it afterwards. */
+  initialMode?: 'next' | 'last';
 }
 
 function CyclePostEventCard({ cycle }: { cycle: PurchaseCycleRecord }) {
@@ -207,10 +214,70 @@ function PaymentDueConfirm({
   );
 }
 
+const CYCLE_MODES = ['next', 'last'] as const;
+type CycleMode = (typeof CYCLE_MODES)[number];
+const CYCLE_MODE_LABELS: Record<CycleMode, string> = {
+  next: 'Next payment',
+  last: 'Last cycle',
+};
+
+function CycleModeControl({ mode, onChange }: { mode: CycleMode; onChange: (m: CycleMode) => void }) {
+  const groupRef = useRef<HTMLDivElement>(null);
+  const choose = (index: number) => {
+    onChange(CYCLE_MODES[index]);
+    groupRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [index]?.focus();
+  };
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    const index = CYCLE_MODES.indexOf(mode);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      choose((index + 1) % CYCLE_MODES.length);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      choose((index + CYCLE_MODES.length - 1) % CYCLE_MODES.length);
+    }
+  };
+
+  return (
+    <div
+      ref={groupRef}
+      role="radiogroup"
+      aria-label="Cycle direction"
+      className="grid grid-cols-2 gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-1"
+      onKeyDown={onKeyDown}
+    >
+      {CYCLE_MODES.map((opt) => {
+        const isSelected = mode === opt;
+        return (
+          <button
+            key={opt}
+            type="button"
+            role="radio"
+            aria-checked={isSelected}
+            tabIndex={isSelected ? 0 : -1}
+            onClick={() => onChange(opt)}
+            className={`min-h-[44px] px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              isSelected
+                ? 'bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+            }`}
+          >
+            {CYCLE_MODE_LABELS[opt]}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PaymentCycleReport({
   defaultLocalCurrency,
   onAskGuardian,
+  initialMode = 'next',
 }: PaymentCycleReportProps) {
+  const [mode, setMode] = useState<CycleMode>(initialMode);
   const { address, signMessage } = useWalletContext();
   const { draft, updateDraft } = usePaymentCycleDraft(defaultLocalCurrency);
   const {
@@ -256,8 +323,6 @@ export function PaymentCycleReport({
     }, FOCUS_HIGHLIGHT_MS);
     return () => clearTimeout(handle);
   }, [focusedCycleId, savedCycleId, setFocusedCycleId]);
-
-  if (dismissed) return null;
 
   const canSubmit =
     draft.localCurrency.length === 3 &&
@@ -407,18 +472,26 @@ export function PaymentCycleReport({
           Payment readiness
         </p>
         <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">
-          Model currency drag before a supplier payment — then opt into cycle-aware Guardian monitoring.
+          What FX timing costs a supplier payment — your next one, or your last.
         </p>
-        {/* The other engine: what past cycles actually cost (historical
-            rates). One quiet link so the two reports feel like one tool. */}
-        <a
-          href="/fx-drag-calculator"
-          className="mt-1 inline-flex min-h-[44px] items-center text-xs font-semibold text-teal-800 dark:text-teal-200 hover:underline"
-        >
-          What did your last cycle cost? →
-        </a>
       </div>
 
+      <CycleModeControl mode={mode} onChange={setMode} />
+
+      {mode === 'last' ? (
+        <LastCycleDrag
+          currency={draft.localCurrency}
+          onCurrencyChange={(c) => updateDraft({ localCurrency: c })}
+          onTrackNext={({ currency, paymentUsd }) => {
+            updateDraft({
+              localCurrency: currency,
+              targetAmountUsd: String(Math.round(paymentUsd)),
+            });
+            setMode('next');
+          }}
+        />
+      ) : dismissed ? null : (
+      <>
       {!address && (
         <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
           Connect your wallet to save cycles and enable monitoring.
@@ -637,6 +710,8 @@ export function PaymentCycleReport({
             <CyclePostEventCard key={c.id} cycle={c} />
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );
