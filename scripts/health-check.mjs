@@ -18,7 +18,11 @@ const STATUS_URL = process.env.STATUS_URL || 'https://api.diversifi.famile.xyz/a
 const AGENT_STATUS_URL = process.env.AGENT_STATUS_URL || 'https://api.diversifi.famile.xyz/api/agent/status';
 const MACRO_FEED_URL = process.env.MACRO_FEED_URL || 'https://api.diversifi.famile.xyz/api/agent/zero-g-ledger?limit=10';
 
-/** Pure evaluator — exported for tests. */
+/**
+ * Pure evaluator — exported for tests. `macroFeed` is optional: undefined
+ * skips the macro silence check, null means the feed was unreachable.
+ * @param {{ status: any, agentStatus: any, routesOk: any, routesOutput: any, macroFeed?: any }} input
+ */
 export function evaluateHealth({ status, agentStatus, routesOk, routesOutput, macroFeed }) {
   const problems = [];
   const warnings = [];
