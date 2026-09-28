@@ -42,7 +42,7 @@ export default function IntelligenceHistory() {
       <div className="sticky top-0 z-10 -mx-1 bg-white/90 dark:bg-gray-900/90 backdrop-blur pb-2">
         <div className="grid grid-cols-3 gap-2 mb-3">
           <div className="rounded-xl border border-purple-100 dark:border-purple-800/40 bg-purple-50 dark:bg-purple-900/20 px-3 py-2">
-            <p className="text-3xs font-black uppercase tracking-wider text-purple-500">Funding wallet</p>
+            <p className="text-3xs font-black uppercase tracking-wider text-purple-500">USDC on Arc</p>
             <p className="text-xs font-black text-purple-800 dark:text-purple-200">
               ${Number.parseFloat(researchAccount.arcWalletBalance || "0").toFixed(3)}
             </p>

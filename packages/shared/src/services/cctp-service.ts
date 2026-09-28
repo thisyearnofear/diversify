@@ -36,6 +36,13 @@ export interface CctpChainConfig {
     explorerBase: string;
     /** Iris host: mainnet API vs sandbox API. */
     irisBase: string;
+    /**
+     * Whether this chain can SOURCE a Fast Transfer. Circle lists Fast as
+     * N/A for Arc: it is final in ~0.5s, so a Standard transfer is already
+     * fast — and Standard carries no protocol fee.
+     * https://developers.circle.com/cctp/concepts/supported-chains-and-domains
+     */
+    fastTransferSource: boolean;
 }
 
 const IRIS_MAINNET = 'https://iris-api.circle.com';
@@ -52,6 +59,7 @@ export const CCTP_CHAINS: Record<CctpChainKey, CctpChainConfig> = {
         rpcUrl: process.env.ARBITRUM_ONE_RPC_URL || 'https://arb1.arbitrum.io/rpc',
         explorerBase: 'https://arbiscan.io',
         irisBase: IRIS_MAINNET,
+        fastTransferSource: true,
     },
     arc: {
         key: 'arc',
@@ -63,6 +71,7 @@ export const CCTP_CHAINS: Record<CctpChainKey, CctpChainConfig> = {
         rpcUrl: process.env.ARC_MAINNET_RPC_URL || 'https://rpc.mainnet.arc.io',
         explorerBase: 'https://explorer.arc.io',
         irisBase: IRIS_MAINNET,
+        fastTransferSource: false,
     },
     'arbitrum-sepolia': {
         key: 'arbitrum-sepolia',
@@ -74,6 +83,7 @@ export const CCTP_CHAINS: Record<CctpChainKey, CctpChainConfig> = {
         rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc',
         explorerBase: 'https://sepolia.arbiscan.io',
         irisBase: IRIS_SANDBOX,
+        fastTransferSource: true,
     },
     'arc-testnet': {
         key: 'arc-testnet',
@@ -85,6 +95,7 @@ export const CCTP_CHAINS: Record<CctpChainKey, CctpChainConfig> = {
         rpcUrl: process.env.ARC_RPC_URL || 'https://rpc.testnet.arc.network',
         explorerBase: 'https://explorer.testnet.arc.io',
         irisBase: IRIS_SANDBOX,
+        fastTransferSource: false,
     },
 };
 
@@ -169,6 +180,27 @@ export function computeMaxFee(
     return protocolFee.add(forwardFee).mul(120).div(100);
 }
 
+/** The finality a burn from this source will actually request. */
+export function finalityFor(sourceChain: CctpChainKey, fast?: boolean): number {
+    const wantsFast = fast !== false && CCTP_CHAINS[sourceChain].fastTransferSource;
+    return wantsFast ? FAST_FINALITY_THRESHOLD : STANDARD_FINALITY_THRESHOLD;
+}
+
+/**
+ * The fee entry priced for exactly this finality. A Fast burn never borrows
+ * a Standard entry (its maxFee would be under-quoted and could strand the
+ * transfer); a Standard burn may fall back to the first entry.
+ */
+export function feeEntryFor(
+    fees: CctpFeeEntry[] | null | undefined,
+    finality: number,
+): CctpFeeEntry | null {
+    if (!fees || fees.length === 0) return null;
+    const exact = fees.find((f) => f.finalityThreshold === finality);
+    if (exact) return exact;
+    return finality === STANDARD_FINALITY_THRESHOLD ? fees[0] : null;
+}
+
 export function usdcToSubunits(amountUsdc: string): ethers.BigNumber {
     return ethers.utils.parseUnits(amountUsdc, 6);
 }
@@ -187,7 +219,11 @@ export interface BurnParams {
     destinationChain: CctpChainKey;
     recipient: string;
     amountUsdc: string;
-    /** Fast Transfer (minFinalityThreshold 1000) — default true. */
+    /**
+     * Fast Transfer (minFinalityThreshold 1000) — default true where the
+     * source supports it. Ignored (Standard is used) on sources that can't
+     * originate Fast, e.g. Arc.
+     */
     fast?: boolean;
     /** Forwarding Service — Circle submits the destination mint. */
     forward?: boolean;
@@ -208,11 +244,10 @@ export async function burn(params: BurnParams): Promise<BurnResult> {
     if (!src || !dst) throw new Error(`Unsupported CCTP route ${params.sourceChain}→${params.destinationChain}`);
 
     const forward = params.forward === true;
-    const fast = params.fast !== false;
-    const finality = fast ? FAST_FINALITY_THRESHOLD : STANDARD_FINALITY_THRESHOLD;
+    const finality = finalityFor(params.sourceChain, params.fast);
 
     const fees = params.feeEntries ?? (await quoteFee(params.sourceChain, params.destinationChain, forward));
-    const entry = fees?.find((f) => f.finalityThreshold === finality) ?? fees?.[0];
+    const entry = feeEntryFor(fees, finality);
 
     // Per https://developers.circle.com/cctp/concepts/fees, maxFee is charged at
     // mint/burn time — an under-quoted maxFee on a Fast or Forwarded transfer

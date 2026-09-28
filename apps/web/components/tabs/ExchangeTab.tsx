@@ -31,6 +31,8 @@ import { StatusTier } from "../shared/StatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { useCapitalHistory } from "@/hooks/use-capital-history";
 import { explorerTxUrl } from "@/lib/explorer-url";
+import { useArcArrival } from "@/hooks/use-arc-arrival";
+import { ArcArrivalBody, ArcArrivalPrompt } from "../swap/ArcArrival";
 import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
 
 /** What the inspector is bound to: a selected pair (route + corridor +
@@ -41,6 +43,7 @@ type InspectorSel =
   | { kind: "pair"; fromToken: string; toToken: string }
   | { kind: "netting" }
   | { kind: "journey" }
+  | { kind: "arc" }
   | null;
 
 function fmtAmount(v: string): string {
@@ -353,6 +356,14 @@ export default function ExchangeTab({
   // One fetch per address — the journey rail reads it and a settled
   // receipt triggers refresh(20000) because the indexer lags.
   const capitalHistory = useCapitalHistory(address ?? lookupAddress);
+  // Arc arrival: USDC on Arc → CCTP → the user's wallet on Arbitrum. Only
+  // offered when there's real USDC on Arc (or a transfer in flight).
+  const arcArrival = useArcArrival({
+    onArrived: () => {
+      void refreshBalances?.();
+      capitalHistory.refresh(20000);
+    },
+  });
 
   useEffect(() => {
     if (previousAddress.current !== address) {
@@ -496,6 +507,14 @@ export default function ExchangeTab({
     );
   }
 
+  // Arc arrival owns the transition slot while it's offered; whatever held
+  // it drops to the rail — one prompt, one rail, nothing stacks.
+  const arcPrompt = arcArrival.offered ? (
+    <ArcArrivalPrompt arrival={arcArrival} onOpen={() => setInspectorSel({ kind: "arc" })} />
+  ) : null;
+  const defaultTransition = hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton;
+  const defaultRail = hasFreshSignal && !decisionWindow ? nettingButton : undefined;
+
   const freshnessPortfolio = portfolio ?? sharedPortfolio;
   const freshness = freshnessPortfolio
     ? {
@@ -528,13 +547,42 @@ export default function ExchangeTab({
         </div>
       }
       inspector={
-        <PairInspector
-          selection={inspectorSel}
-          userRegion={userRegion}
-          onClose={() => setInspectorSel(null)}
-          lead={leadForStrategy(financialStrategy)}
-          journey={capitalHistory.data}
-        />
+        inspectorSel?.kind === "arc" ? (
+          <InspectorSheet
+            selectedId="arc"
+            onClose={() => setInspectorSel(null)}
+            title="Bring USDC from Arc"
+          >
+            <ArcArrivalBody
+              arrival={arcArrival}
+              onDone={() => {
+                arcArrival.dismiss();
+                setInspectorSel(null);
+              }}
+              onProtect={(amount) => {
+                // Arrived USDC → the ticket, prefilled on Arbitrum. The
+                // amount forces the ticket (stage never swallows a prefill).
+                setSwapPrefill({
+                  fromToken: "USDC",
+                  toToken: "PAXG",
+                  amount,
+                  fromChainId: 42161,
+                  toChainId: 42161,
+                });
+                arcArrival.dismiss();
+                setInspectorSel(null);
+              }}
+            />
+          </InspectorSheet>
+        ) : (
+          <PairInspector
+            selection={inspectorSel}
+            userRegion={userRegion}
+            onClose={() => setInspectorSel(null)}
+            lead={leadForStrategy(financialStrategy)}
+            journey={capitalHistory.data}
+          />
+        )
       }
       portfolio={freshness}
       onRefresh={refreshBalances}
@@ -545,10 +593,8 @@ export default function ExchangeTab({
       status={
         <StatusTier
           trust={<VerifiedEvidence />}
-          transition={
-            hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton
-          }
-          rail={hasFreshSignal && !decisionWindow ? nettingButton : undefined}
+          transition={arcPrompt ?? defaultTransition}
+          rail={arcPrompt ? defaultTransition : defaultRail}
         />
       }
     />

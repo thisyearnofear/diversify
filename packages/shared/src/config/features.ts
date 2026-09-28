@@ -57,18 +57,6 @@ export const AUTONOMOUS_FEATURES = {
    */
   AUTONOMOUS_MODE: process.env.ENABLE_AUTONOMOUS_MODE === 'true',
 
-  /** 
-   * Arc Network integration
-   * Status: Testnet only (chainId: 5042002)
-   */
-  ARC_NETWORK: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true',
-
-  /** 
-   * Premium data via x402 payments
-   * Status: Requires Arc Network
-   */
-  PREMIUM_DATA: process.env.NEXT_PUBLIC_ENABLE_ARC === 'true' &&
-    process.env.ENABLE_AUTONOMOUS_MODE === 'true',
 } as const;
 
 // UI/UX features

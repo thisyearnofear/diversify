@@ -35,6 +35,7 @@ import { getArchetypeAllocations } from "@/components/protection-cards/plan-prev
 import { strategyToArchetype } from "@/components/protection-cards/tokens";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
+import { ResearchFundingLine } from "../agent/ResearchFundingLine";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
 import { GuardianGrantModal } from "../agent/GuardianGrantModal";
 import { GuardianPlanSwitcher } from "../agent/GuardianPlanSwitcher";
@@ -388,6 +389,7 @@ function ConnectedAgent({
               onOpenGrantModal={() => g.setShowGrantConfirmModal(true)}
               onSwitchToGrantChain={() => void g.switchToChain(GRANT_ELIGIBLE_CHAIN_IDS[0])}
               onOpenSettings={() => setSel("settings")}
+              researchFunding={address ? <ResearchFundingLine /> : null}
             />
           )}
         </InspectorSheet>

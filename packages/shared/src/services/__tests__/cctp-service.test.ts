@@ -16,6 +16,8 @@ import {
     CCTP_DESTINATION_CALLER_ANY,
     FAST_FINALITY_THRESHOLD,
     STANDARD_FINALITY_THRESHOLD,
+    finalityFor,
+    feeEntryFor,
 } from '../cctp-service';
 import { CIRCLE_CONFIG } from '../../config';
 
@@ -100,5 +102,36 @@ describe('constants', () => {
     });
     it('usdcToSubunits parses 6 decimals', () => {
         expect(usdcToSubunits('5').toString()).toBe('5000000');
+    });
+});
+
+describe('finality by source', () => {
+    // Circle lists Fast Transfer as N/A when Arc is the source — Arc is final
+    // in ~0.5s, so Standard (no protocol fee) is the only valid request.
+    it('Arc sources always burn Standard, even when fast is requested', () => {
+        expect(finalityFor('arc')).toBe(STANDARD_FINALITY_THRESHOLD);
+        expect(finalityFor('arc', true)).toBe(STANDARD_FINALITY_THRESHOLD);
+        expect(finalityFor('arc-testnet')).toBe(STANDARD_FINALITY_THRESHOLD);
+    });
+    it('Arbitrum defaults to Fast and honours an explicit Standard', () => {
+        expect(finalityFor('arbitrum')).toBe(FAST_FINALITY_THRESHOLD);
+        expect(finalityFor('arbitrum', false)).toBe(STANDARD_FINALITY_THRESHOLD);
+    });
+});
+
+describe('feeEntryFor', () => {
+    const standard = { finalityThreshold: 2000, minimumFee: 0, forwardFee: { low: 1, med: 2, high: 3 } };
+    const fast = { finalityThreshold: 1000, minimumFee: 1.3 };
+    it('picks the entry priced for the requested finality', () => {
+        expect(feeEntryFor([fast, standard], 2000)).toBe(standard);
+        expect(feeEntryFor([fast, standard], 1000)).toBe(fast);
+    });
+    it('never lets a Fast burn borrow a Standard price', () => {
+        expect(feeEntryFor([standard], 1000)).toBeNull();
+    });
+    it('Standard may fall back to the only entry; empty quotes are null', () => {
+        expect(feeEntryFor([fast], 2000)).toBe(fast);
+        expect(feeEntryFor([], 2000)).toBeNull();
+        expect(feeEntryFor(null, 2000)).toBeNull();
     });
 });

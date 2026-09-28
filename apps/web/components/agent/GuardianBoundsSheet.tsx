@@ -45,6 +45,7 @@ export function GuardianBoundsSheet({
   onOpenGrantModal,
   onSwitchToGrantChain,
   onOpenSettings,
+  researchFunding,
 }: {
   hasValidPermission: boolean;
   /** GUARDIAN tier — Guardian may act without a per-move signature. */
@@ -79,6 +80,8 @@ export function GuardianBoundsSheet({
   onSwitchToGrantChain: () => void;
   /** Opens notifications & integrations — the non-limit preferences. */
   onOpenSettings: () => void;
+  /** Optional slot: how Guardian's research is funded (ResearchFundingLine). */
+  researchFunding?: React.ReactNode;
 }) {
   const planMismatch = Boolean(
     vault.vault?.strategy && shieldPlan && vault.vault.strategy !== shieldPlan,
@@ -256,6 +259,8 @@ export function GuardianBoundsSheet({
           )}
         </div>
       )}
+
+      {researchFunding}
 
       <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
         <button

@@ -61,7 +61,7 @@ CIDs those entries reference (current-state detail:
 | **Savings + Identity** | **Celo** | Regional Mento stablecoins (cUSD, cREAL, KESm, GHSm), SocialConnect ODIS, GoodDollar UBI | Agent execution (no EIP-7702), nanopayments |
 | **Execution + Yield** | **Arbitrum** | Deepest USDC + RWA liquidity (Uniswap V3, 1inch, Camelot, PAXG, USDY, SYRUPUSDC); EIP-7702-capable for true on-chain ERC-7710 enforcement | Regional stablecoins, nanopayments |
 | **Trust + Verifiability** | **0G** | Content-addressed Storage, TEE-verified Compute, DA | Payment settlement (gas-token friction), ledger of record |
-| **Commerce / settlement** | **Arc** | x402 mandate-first settlement, Circle Gateway funding, CCTP domain 26 — invisible to retail; not a savings or execution chain | Verifiable AI, regional stablecoins, deep DEX liquidity |
+| **Commerce / settlement** | **Arc** | x402 mandate-first settlement, Circle Gateway funding, CCTP domain 26 — invisible to retail; not a savings or execution chain. Its one user-facing job: a deposit rail — Arc USDC → CCTP → the user's wallet on **Arbitrum** (never Celo: not a CCTP domain) | Verifiable AI, regional stablecoins, deep DEX liquidity |
 
 ### Payment-rail migration phases
 
@@ -79,6 +79,7 @@ submits buyer authorizations and pays gas; it is not a user-funds vault.
 | **1 — Current code defaults** | Current | ZERO_G/testnet | `SETTLEMENT_NETWORK=ZERO_G`, `SETTLEMENT_ENV=testnet` |
 | **2 — Arc mainnet integration** | Implemented; production activation unconfirmed | Arc | EIP-3009 settlement, CCTP V2 and Gateway Nanopayments are integrated; validate deployment config and a real settlement before describing production as live |
 | **3 — Protection Balance product** | Planned; deployment not established here | — | A cross-chain prepaid balance is distinct from Gateway Nanopayments; do not infer production availability from the settlement integration |
+| **2b — Arc arrival (deposit rail)** | Built 2026-09-28; production off until a mainnet rehearsal | Arc → Arbitrum | Exchange offers "USDC on Arc — bring it here" only when the wallet holds it; one Standard, Circle-forwarded CCTP burn; arrival prefills USDC → PAXG on Arbitrum. Enable with `NEXT_PUBLIC_ARC_ARRIVAL=mainnet` after one real small transfer. Next: gasless first swap on arrival (USDC permit / intent route) so no Arbitrum ETH is needed. Celo leg (LiFi) only on demand. [`rails.md`](./rails.md) § Arc Rail |
 | **4 — StableFX business venue (under evaluation)** | Circle answers on platform model + delegate funding | Arc | Live on Arc mainnet since 2026-09-22. Fit: execution for KYB'd business users behind the payment-cycle report, plus a 24/7 route on Mento-overlapping pairs. Not a retail or EM-corridor venue. Plan + open questions: [`integrations.md`](./integrations.md) § StableFX (Circle) |
 
 Intended billing unit: a user funds a Protection Balance once and pays for

@@ -193,13 +193,16 @@ BUIDL copy, demo script, and checklist: see the go-live runbook above.
 
 ## Arc Rail — commerce & settlement (mainnet live 2026-09-16)
 
-**Arc's job is to be invisible to retail.** It is the money-movement and billing layer under the intelligence product — not a place users hold savings, and not a chain the consumer surface ever asks anyone to visit.
+**Arc's job is to be invisible to retail.** It is the money-movement and billing layer under the intelligence product — not a place users hold savings. Users visit it in exactly one case: to sign the burn that brings USDC they already hold on Arc into the app (the Arc arrival path below).
 
 What Arc does for us:
 
 - **x402 settlement for decision artifacts.** Buyer signs an EIP-3009 `transferWithAuthorization` mandate (no transaction, no gas, no chain switch); the merchant settles it on-chain. Raw-transfer proofs remain the fallback for external agents. The billing unit is the Protection Review artifact — per-source data prices are COGS bundled inside it (`docs/product.md` § The product object).
 - **Circle Gateway Nanopayments (integrated, activation unconfirmed).** The x402 gateway has an additive Circle Gateway batched-payment path on Arc. A Gateway settlement is reported as a settlement ID rather than an immediate on-chain transaction; buyer credit is added only after Circle reports settlement. Do not conflate this with a generally available, user-facing Protection Balance funded on any chain: that product flow remains a separate roadmap direction, and repository integration alone does not prove a deployed production balance.
-- **Treasury mobility.** Arc is CCTP domain 26. CCTP V2 configuration and transfer code are present for Arc↔Arbitrum mainnet and the Arc/Arbitrum testnet pair; this code-level integration is not proof of a production transfer or of CCTP support to Celo.
+- **Treasury mobility.** Arc is CCTP domain 26. CCTP V2 configuration and transfer code are present for Arc↔Arbitrum mainnet and the Arc/Arbitrum testnet pair; this code-level integration is not proof of a production transfer. Arc can only source **Standard** transfers (Circle lists Fast as N/A for Arc — it is already final in ~0.5 s), and Standard carries no protocol fee; `cctp-service` enforces this per chain (`fastTransferSource`).
+- **Deposit rail into the app (Arc arrival, 2026-09-28).** USDC held on Arc can be brought to the user's own wallet on **Arbitrum** from Exchange: a quiet transition-slot line appears only when the wallet holds ≥ 1 USDC on Arc, the inspector quotes Circle's live forwarding fee, the user signs one burn on Arc (USDC gas), and Circle's Forwarding Service mints on Arbitrum — no ETH needed to receive. The burn hash is persisted, so a reload resumes the delivery watch; if Circle attests but doesn't forward, the user can finish the mint themselves. On arrival the ticket is prefilled USDC → PAXG on Arbitrum (flagging missing Arbitrum ETH for that swap). Gated by `NEXT_PUBLIC_ARC_ARRIVAL` = `mainnet` | `testnet` | `off` — default `testnet` in development, **off in production** until a real mainnet rehearsal transfer has been made. Files: `lib/arc-arrival.ts`, `hooks/use-arc-arrival.ts`, `components/swap/ArcArrival.tsx`.
+
+**Why Arbitrum, not Celo, is where Arc money lands.** Celo is neither a CCTP domain nor a Circle Gateway domain (both lists checked 2026-09-28), so there is no native USDC path Arc → Celo, and USDC isn't in the app's Celo token lists (Mento routes Mento stables only). Reaching Celo would mean CCTP to Arbitrum plus a LiFi hop — two bridges, gas on two chains. Arbitrum is a CCTP domain, an executable chain, and already holds the protective assets (PAXG, USDY, syrupUSDC via 1inch / Uniswap V3 / LiFi). So "Arc → protected portfolio" means **Arc → Arbitrum**; the Celo leg is deliberately not built and would only be added (via LiFi) on real demand for regional stables. Celo stays the home of the retail savings product (MiniPay, GoodDollar, Mento).
 
 Why Arc (not Celo/Arb/0G):
 
@@ -212,7 +215,7 @@ What Arc does NOT do:
 
 - **No user savings.** Permissioned PoA validator set at launch — right-sized for billing tolls, not for custodying saver balances.
 - **No EM consumer stables.** Arc's fiat roster (EURC plus Circle Partner Stablecoins — AUD, BRL, CAD, CHF, EUR, GBP, JPY, KRW, MXN, SEK, TRY, ZAR per Circle's supported-currencies page, checked 2026-09-28) is institutional corridor coverage. It has no NGN, GHS, KES, XOF, COP or PHP — complementary to Mento, not a replacement.
-- **No user-facing chain surface.** Arc is excluded from wallet chain lists and swap-executable sets by design — settlement rail only. (The StableFX business pilot below would be the first exception, and only for KYB'd business users.)
+- **No swap surface.** Arc is excluded from the swap-executable set (`ChainDetectionService.isSupported`) by design. The wallet may switch to Arc for one purpose only — signing the Arc-arrival burn — and is parked back on Arbitrum right after. (The StableFX business pilot below would be the first trading exception, and only for KYB'd business users.)
 
 ### StableFX — business execution venue (under evaluation, 2026-09-28)
 
@@ -236,7 +239,7 @@ Where it does not fit:
 - **Retail savers** cannot be KYB'd takers, and DiversiFi trading for them from a shared wallet is both excluded by the omnibus rule and would make DiversiFi the regulated party. Mento stays the savings venue.
 - **Core EM corridors** (NGN, GHS, KES, XOF, COP, PHP) are not supported. PHPC appeared in Circle's launch post but is not in the current supported-currencies table.
 - **No forward protection.** The longest settlement window is 24 hours; a payment weeks away is still protected by converting early, never by a locked forward rate.
-- **Arc-only settlement.** Users' funds live mostly on Celo; CCTP code covers Arc↔Arbitrum, not Celo.
+- **Arc-only settlement.** Users' funds live mostly on Celo; CCTP covers Arc↔Arbitrum, and Celo is not a CCTP domain at all.
 
 Open questions for Circle (must be answered before any build): see [`integrations.md`](./integrations.md) § StableFX (Circle) — business pilot plan.
 

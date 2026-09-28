@@ -50,11 +50,10 @@ Prefer not to run anything? The deterministic engine is a pure-function library 
 
 Enable the autonomous research-payment loop where the Guardian negotiates paid premium data via x402 nanopayments on the configured settlement rail:
 
-1. Set `NEXT_PUBLIC_ENABLE_ARC=true` (legacy env name; the gate is rail-agnostic)
-2. Set `ENABLE_AUTONOMOUS_MODE=true`
-3. Configure `SETTLEMENT_NETWORK` (`ARBITRUM`, `ZERO_G`, or `ARC`) and `SETTLEMENT_ENV` (`testnet` or `mainnet`)
-4. Configure the rail's RPC, USDC address, merchant recipient, and server-side settlement signer. On Arc mainnet, buyer mandates provide the payment principal; the signer pays native USDC gas. Circle Gateway batching is a distinct method.
-5. Confirm the deployed gateway challenge advertises the intended rail and environment before enabling paid mainnet transactions.
+1. Set `ENABLE_AUTONOMOUS_MODE=true` (the old `NEXT_PUBLIC_ENABLE_ARC` flag was never read and is gone)
+2. Configure `SETTLEMENT_NETWORK` (`ARBITRUM`, `ZERO_G`, or `ARC`) and `SETTLEMENT_ENV` (`testnet` or `mainnet`)
+3. Configure the rail's RPC, USDC address, merchant recipient, and server-side settlement signer. On Arc mainnet, buyer mandates provide the payment principal; the signer pays native USDC gas. Circle Gateway batching is a distinct method.
+4. Confirm the deployed gateway challenge advertises the intended rail and environment before enabling paid mainnet transactions.
 
 > **Current status (2026-09-25):** Arc public mainnet is live (chain ID 5042),
 > and the x402 EIP-3009 settlement path is implemented. The repository defaults
