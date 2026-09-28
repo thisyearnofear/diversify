@@ -108,13 +108,17 @@ pnpm rehearse-macro-signal --send                 # terminal 2 — local target
 pnpm rehearse-macro-signal --verify-only --url https://api.diversifi.famile.xyz
 ```
 
-A rehearsal is a real signal: the webhook runs live model analysis, fans a
-rebalance intent to every relevant user, and anchors a permanent ledger record
-when the model judges it actionable (confidence ≥ 0.6). Remote targets are
-refused unless `--allow-remote` is passed, and the payload labels itself a
-rehearsal (marker URL + `[Rehearsal]` summary) so it is never mistaken for a
-market event. `--verify-only` reports per row whether the feed carries readable
-text or is hash-only.
+A rehearsal exercises the path without producing news or side effects: the
+webhook runs live model analysis and counts which users would be eligible
+(`usersWouldUpdate` in the response), but it queues no intents, publishes no
+events, and writes nothing to Cognee memory. When the model judges it
+actionable (confidence ≥ 0.6) it still anchors one permanent ledger record —
+typed `MACRO_SIGNAL:REHEARSAL` with a server-forced
+`[Rehearsal — not a market event]` echo, so beats, the macro pill, and the
+health check all filter it by action rather than text. That permanent ledger
+write is why remote targets are refused unless `--allow-remote` is passed.
+`--verify-only` reports each feed row as rehearsal or macro and whether it
+carries readable text or is hash-only.
 
 Records anchored before the reasoning echo shipped stay hash-only until
 recovered:

@@ -6,18 +6,19 @@
  * mirror cannot be demonstrated, or regression-tested, by waiting for the
  * ECB to publish. This script drives the same entry point Firecrawl uses:
  *
- *   signed POST → AI signal analysis → guardian fan-out → on-chain anchor
- *   → reasoning echo → proof-feed join (the read the corridor beat uses)
+ *   signed POST → AI signal analysis → eligibility count (no fan-out) →
+ *   on-chain anchor → reasoning echo → proof-feed join (the read the
+ *   corridor beat uses)
  *
  * It reports each hop, so a break is visible at the hop that broke.
  *
- * ⚠️  A rehearsal is a real signal on a real target: the webhook evaluates it
- * with the live model, enqueues a REBALANCE intent for every relevant user,
- * and (if actionable) writes a permanent on-chain record. That is the point —
- * but it means a remote run against production can move real money through
- * the Guardian loop. Remote targets therefore require --allow-remote, and the
- * payload labels itself a rehearsal (marker URL, "[Rehearsal]" summary) so no
- * one later mistakes it for a market event.
+ * ⚠️  A rehearsal exercises the path without producing news or side effects:
+ * the webhook evaluates it with the live model but queues no intents,
+ * publishes no events, and writes nothing to Guardian memory. It still
+ * anchors one permanent on-chain record — typed `MACRO_SIGNAL:REHEARSAL`
+ * with a server-forced "[Rehearsal]" echo so no reader mistakes it for a
+ * market event. That permanent ledger write is why remote targets still
+ * require --allow-remote.
  *
  * Usage:
  *   npx tsx scripts/send-test-macro-signal.ts                      # print payload, send nothing
@@ -87,7 +88,9 @@ interface FeedRow {
   timestamp?: number;
 }
 
-/** Show what the corridor beat would read: MACRO_SIGNAL rows with text or not. */
+/** Show what the corridor beat would read: MACRO_SIGNAL rows with text or
+ *  not. Rehearsal rows are reported separately — a `MACRO_SIGNAL:REHEARSAL`
+ *  row with an echo proves the path; real macro rows are the actual signal. */
 async function verifyFeed(chainId?: number): Promise<'echoed' | 'hash-only' | 'no-rows'> {
   const url = `${BASE_URL}/api/agent/zero-g-ledger?limit=10&t=${Date.now()}${
     chainId ? `&chainId=${chainId}` : ''
@@ -111,22 +114,26 @@ async function verifyFeed(chainId?: number): Promise<'echoed' | 'hash-only' | 'n
     console.log('  · no MACRO_SIGNAL rows in the feed yet (anchors may still be confirming)');
     return 'no-rows';
   }
-  let echoed = 0;
-  for (const row of rows) {
+  const printRow = (row: FeedRow, kind: 'rehearsal' | 'macro'): boolean => {
     const when = row.timestamp ? new Date(row.timestamp * 1000).toISOString() : 'unknown time';
     if (row.reasoning) {
-      echoed++;
-      console.log(`  ✓ #${row.id} [chain ${row.chainId}] ${row.targetToken} ${when}`);
+      console.log(`  ✓ #${row.id} [chain ${row.chainId}] ${row.targetToken} ${when}  (${kind})`);
       console.log(`      "${row.reasoning.slice(0, 140)}"`);
-    } else {
-      console.log(
-        `  ✗ #${row.id} [chain ${row.chainId}] ${row.targetToken} ${when} — hash-only (${String(
-          row.reasoningHash ?? '',
-        ).slice(0, 18)}…), the beat cannot render this`,
-      );
+      return true;
     }
-  }
-  return echoed > 0 ? 'echoed' : 'hash-only';
+    console.log(
+      `  ✗ #${row.id} [chain ${row.chainId}] ${row.targetToken} ${when}  (${kind}) — hash-only (${String(
+        row.reasoningHash ?? '',
+      ).slice(0, 18)}…), the beat cannot render this`,
+    );
+    return false;
+  };
+  const macroRows = rows.filter((r) => r.action !== 'MACRO_SIGNAL:REHEARSAL');
+  const rehearsalRows = rows.filter((r) => r.action === 'MACRO_SIGNAL:REHEARSAL');
+  for (const row of macroRows) printRow(row, 'macro');
+  let rehearsalEchoed = 0;
+  for (const row of rehearsalRows) if (printRow(row, 'rehearsal')) rehearsalEchoed++;
+  return rehearsalEchoed > 0 || macroRows.some((r) => r.reasoning) ? 'echoed' : 'hash-only';
 }
 
 async function main(): Promise<void> {
@@ -155,9 +162,10 @@ async function main(): Promise<void> {
     console.log(JSON.stringify(payload(), null, 2));
     console.log(
       '\nWhat --send would do: the webhook analyses this with the live model, and if it\n' +
-        'judges it actionable (confidence ≥ 0.6) it fans a REBALANCE intent into every\n' +
-        'relevant user\'s guardian-state and anchors a MACRO_SIGNAL record on-chain.\n' +
-        'Local targets are safe to repeat; a remote target moves real user state.',
+        'judges it actionable (confidence ≥ 0.6) it anchors a MACRO_SIGNAL:REHEARSAL\n' +
+        'record on-chain with a forced "[Rehearsal]" echo — no intents queued, no\n' +
+        'memory written. Local targets are safe to repeat; a remote target writes\n' +
+        'to the production ledger.',
     );
     return;
   }
@@ -165,10 +173,11 @@ async function main(): Promise<void> {
   if (!isLocalTarget(BASE_URL) && !ALLOW_REMOTE) {
     console.error(
       `\nRefusing to rehearse against ${BASE_URL}.\n` +
-        'A remote run enqueues a real rebalance intent for every relevant user and,\n' +
-        'if actionable, writes a permanent on-chain record — the Guardian loop can\n' +
-        'execute it within those users\' permissions. If that is genuinely what you\n' +
-        'want (demo window, permissions paused), re-run with --allow-remote.',
+        'A remote run queues no intents and writes no memory, but if the model\n' +
+        'judges it actionable it still anchors one permanent on-chain record\n' +
+        '(MACRO_SIGNAL:REHEARSAL with a forced "[Rehearsal]" echo). If that is\n' +
+        'genuinely what you want (demo window, feed verification), re-run with\n' +
+        '--allow-remote.',
     );
     process.exit(1);
   }
@@ -211,13 +220,19 @@ async function main(): Promise<void> {
     );
     return;
   }
-  if (body.action !== 'signal_propagated') {
+  if (body.action !== 'signal_propagated' && body.action !== 'rehearsal_propagated') {
     console.error(`   ✗ unexpected action. Response: ${JSON.stringify(body).slice(0, 400)}`);
     process.exit(1);
   }
 
   console.log(`2) analysis — signal=${body.signal} confidence=${body.confidence} target=${body.targetToken}`);
-  console.log(`3) fan-out  — ${body.usersUpdated} user(s) updated, ${body.usersSkipped} skipped`);
+  if (body.rehearsal) {
+    console.log(
+      `3) fan-out  — rehearsal: ${body.usersWouldUpdate ?? 0} user(s) would be updated, ${body.usersSkipped} skipped — nothing queued`,
+    );
+  } else {
+    console.log(`3) fan-out  — ${body.usersUpdated} user(s) updated, ${body.usersSkipped} skipped`);
+  }
 
   const anchor = body.anchor ?? {};
   console.log(`4) anchor   — status=${anchor.status}${anchor.id != null ? ` id=${anchor.id}` : ''}`);

@@ -76,7 +76,12 @@ export function evaluateHealth({ status, agentStatus, routesOk, routesOutput, ma
   if (macroFeed === null) {
     problems.push('zero-g-ledger feed unreachable or non-2xx (verification + corridor beats read it)');
   } else if (macroFeed !== undefined) {
-    const macroRows = (macroFeed.recent ?? []).filter((r) => String(r.action || '').startsWith('MACRO_SIGNAL'));
+    // Rehearsal rows are test anchors, not monitor evidence — a feed full of
+    // them still counts as silent.
+    const macroRows = (macroFeed.recent ?? []).filter((r) => {
+      const action = String(r.action || '');
+      return action.startsWith('MACRO_SIGNAL') && action !== 'MACRO_SIGNAL:REHEARSAL';
+    });
     if (macroRows.length === 0) {
       warnings.push('warn: feed holds no MACRO_SIGNAL rows — beats engine still has no data source');
     }

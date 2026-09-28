@@ -374,6 +374,24 @@ describe('corridorSignalsFor — fresh dated beats from the anchored ledger', ()
     expect(out.to?.dateLabel).toMatch(/^[A-Z][a-z]{2} \d{1,2}$/);
   });
 
+  it('skips MACRO_SIGNAL:REHEARSAL by action even when the text reads clean', () => {
+    const out = corridorSignalsFor(
+      [
+        signal(
+          'cEUR',
+          'Central bank cut benchmark rates by 50bps citing cooling inflation',
+          0,
+          'MACRO_SIGNAL:REHEARSAL',
+        ),
+      ],
+      'EURm',
+      'USDm',
+      NOW,
+    );
+    expect(out.from).toBeNull();
+    expect(out.to).toBeNull();
+  });
+
   it('never renders a rehearsal record as a market event, even when the label was dropped', () => {
     const rehearsal = {
       ...signal('cEUR', 'Central bank cut benchmark rates by 50bps citing cooling inflation', 0),

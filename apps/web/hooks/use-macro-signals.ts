@@ -32,6 +32,7 @@
 import { useMemo } from "react";
 import { useProofFeed } from "./use-proof-feed";
 import { isRehearsalSignal } from "@/lib/corridor-context";
+import { REHEARSAL_SIGNAL_ACTION } from "@/lib/macro-rehearsal";
 import type { IntelligenceItem } from "@/components/enterprise-fx/TradeIntelligence";
 
 /** Prefix the firecrawl-webhook uses when anchoring a macro signal to
@@ -96,6 +97,8 @@ export function useMacroSignals(): UseMacroSignalsResult {
       .filter(
         (rec) =>
           rec.action.startsWith(MACRO_SIGNAL_PREFIX) &&
+          // Rehearsals anchor under their own action — never a real signal.
+          rec.action !== REHEARSAL_SIGNAL_ACTION &&
           // The chain read path returns only `reasoningHash`; without an
           // off-chain echo there is no readable line for the pill — honest
           // absence beats rendering "undefined".

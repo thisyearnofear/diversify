@@ -106,6 +106,14 @@ describe('health-check evaluateHealth', () => {
     expect(res2.warnings.join('\n')).toContain('45d ago');
   });
 
+  it('rehearsal rows do not satisfy the macro silence check', () => {
+    const { warnings } = evaluateHealth({
+      status: okStatus, agentStatus: { ...okAgent, macroSignal: okMacro }, routesOk: true, routesOutput: '',
+      macroFeed: { recent: [{ action: 'MACRO_SIGNAL:REHEARSAL', reasoning: '[Rehearsal — not a market event] x', timestamp: 1 }] },
+    });
+    expect(warnings.join('\n')).toContain('no MACRO_SIGNAL rows');
+  });
+
   it('fails when the proof feed is unreachable; passes on a healthy macro block', () => {
     const bad = evaluateHealth({ status: okStatus, agentStatus: okAgent, routesOk: true, routesOutput: '', macroFeed: null });
     expect(bad.problems.join('\n')).toContain('zero-g-ledger feed unreachable');

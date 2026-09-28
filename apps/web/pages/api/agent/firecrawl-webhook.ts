@@ -33,6 +33,11 @@ import { loadGatewayEvaluate } from '@/lib/agent/load-gateway-evaluate';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
 import { recordMacroReceipt } from '@/lib/macro-signal-receipt';
+import {
+  isRehearsalPayload,
+  REHEARSAL_LABEL,
+  REHEARSAL_SIGNAL_ACTION,
+} from '@/lib/macro-rehearsal';
 import { GUARDIAN_AGENT_ADDRESS } from '../../../constants/guardian-identity';
 import { Permission } from '../../../models/Permission';
 import { Vault } from '../../../models/Vault';
@@ -85,6 +90,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const payload = req.body as FirecrawlWebhookPayload;
+  // A rehearsal declares itself (`metadata.rehearsal` or the marker URL host);
+  // the flag never comes from the model, which can drop a textual label.
+  const isRehearsal = isRehearsalPayload(payload.data);
 
   // One receipt per authenticated call, written at each terminal return —
   // "is the path being hit, and did the last hit succeed" is the signal the
@@ -238,6 +246,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     const targetTokenLc = targetToken.toLowerCase();
 
     let usersUpdated = 0;
+    let usersWouldUpdate = 0;
     const skipped: Array<{ userAddress: string; reason: string }> = [];
 
     for (const perm of activePermissions) {
@@ -259,6 +268,13 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       );
       if (!cusdAllocation || (cusdAllocation.valueUSD ?? 0) <= 0) {
         skipped.push({ userAddress: perm.userAddress, reason: 'no cUSD balance to rebalance' });
+        continue;
+      }
+
+      // A rehearsal walks the same eligibility path but fans out nothing —
+      // no queued intents, no event-bus publication, no memory writes.
+      if (isRehearsal) {
+        usersWouldUpdate++;
         continue;
       }
 
@@ -285,8 +301,15 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     // Anchor signal to 0G RecommendationLedger on-chain (verifiable evidence trail).
     // Awaited and surfaced in the response so the caller can see whether
     // the macro signal made it to the ledger.
-    const anchorAction = `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`;
-    const anchorReasoning = `${parsed.oneLiner}. Source: ${url}`;
+    // Rehearsals anchor under their own action so readers filter by action
+    // rather than whether the model kept the rehearsal label; the echo's
+    // readable line is forced server-side for the same reason.
+    const anchorAction = isRehearsal
+      ? REHEARSAL_SIGNAL_ACTION
+      : `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`;
+    const anchorReasoning = isRehearsal
+      ? `${REHEARSAL_LABEL} ${parsed.oneLiner}. Source: ${url}`
+      : `${parsed.oneLiner}. Source: ${url}`;
     const anchor = await recommendationLedgerService.recordRecommendation({
       // System-level signal — anchored under the Guardian's identity. The
       // contract reverts on address(0) (ZeroAddress guard), which is why
@@ -316,21 +339,27 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       });
     }
 
-    // Persist the signal to Cognee for long-term memory
-    cogneeMemoryService.remember(
+    // Persist the signal to Cognee for long-term memory — except a
+    // rehearsal, which must never shape Guardian advice.
+    if (!isRehearsal) cogneeMemoryService.remember(
       `Macro signal detected: ${parsed.oneLiner}. Source: ${url}. Signal type: ${parsed.signal}. Confidence: ${parsed.confidence}`,
       'system_guardian',
       { metadata: { type: 'macro_signal', url, signal: parsed.signal } }
     ).catch(() => {});
 
-    mark('signal_propagated', { signal: parsed.signal, anchorStatus: anchor.status });
+    mark(isRehearsal ? 'rehearsal_propagated' : 'signal_propagated', {
+      signal: parsed.signal,
+      anchorStatus: anchor.status,
+    });
     return res.status(200).json({
       acknowledged: true,
-      action: 'signal_propagated',
+      action: isRehearsal ? 'rehearsal_propagated' : 'signal_propagated',
+      ...(isRehearsal ? { rehearsal: true } : {}),
       signal: parsed.signal,
       confidence: parsed.confidence,
       targetToken,
       usersUpdated,
+      usersWouldUpdate,
       usersSkipped: skipped.length,
       signalLens: { status: 'shadow_started' },
       anchor: {

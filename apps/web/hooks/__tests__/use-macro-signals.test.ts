@@ -95,6 +95,32 @@ describe("useMacroSignals", () => {
     expect(result.current.macroSignals).toEqual([]);
   });
 
+  it("excludes MACRO_SIGNAL:REHEARSAL records even with clean text", () => {
+    mockUseProofFeed.mockReturnValue({
+      data: {
+        stats: { totalRecommendations: 2, contractAddress: "0x", chainId: 1, isDeployed: true },
+        recent: [
+          ledgerEntry({
+            id: 1,
+            action: "MACRO_SIGNAL:REHEARSAL",
+            reasoning: "Central bank cut benchmark rates by 50bps. Source: https://example.com",
+          }),
+          ledgerEntry({ id: 2, action: "MACRO_SIGNAL:RATE_CUT" }),
+        ],
+        capturedAt: new Date().toISOString(),
+        explorerBase: "https://explorer.example",
+        contractExplorer: "https://explorer.example/contract",
+      },
+      isLoading: false,
+      isStale: false,
+      error: null,
+      refresh: vi.fn(),
+    });
+    const { result } = renderHook(() => useMacroSignals());
+    expect(result.current.macroSignals).toHaveLength(1);
+    expect(result.current.macroSignals[0].id).toBe("2");
+  });
+
   it("maps MACRO_SIGNAL:RATE_HIKE to a negative alert", () => {
     mockUseProofFeed.mockReturnValue({
       data: {

@@ -11,6 +11,7 @@ import {
   CURRENCY_RISK_DATA_AS_OF,
   type CurrencyRiskEntry,
 } from '@/constants/currency-risk';
+import { REHEARSAL_SIGNAL_ACTION, REHEARSAL_SOURCE_HOST } from '@/lib/macro-rehearsal';
 
 /** Token symbol → ISO fiat code it mirrors. Crypto assets and UBI tokens
  *  have no fiat mirror — absent on purpose. */
@@ -418,11 +419,10 @@ export interface CorridorSignalRecord {
 }
 
 const MACRO_SIGNAL_PREFIX = 'MACRO_SIGNAL:';
-/** Marker source of `scripts/send-test-macro-signal.ts`. A rehearsal is a
- *  real on-chain record, but its text is synthetic — and the model may drop
- *  the "[Rehearsal]" label while summarising — so it must never render as a
- *  market event. */
-const REHEARSAL_SOURCE_HOST = 'rehearsal.local';
+// A rehearsal is a real on-chain record, but its text is synthetic — and
+// the model may drop the "[Rehearsal]" label while summarising — so it
+// must never render as a market event. The marker host and the action
+// constant live in lib/macro-rehearsal (one source for writer + readers).
 
 export function isRehearsalSignal(reasoning: string | undefined | null): boolean {
   return typeof reasoning === 'string' &&
@@ -478,6 +478,8 @@ export function corridorSignalsFor(
   const sorted = [...(records ?? [])].sort((a, b) => b.timestamp - a.timestamp);
   for (const rec of sorted) {
     if (!rec.action.startsWith(MACRO_SIGNAL_PREFIX)) continue;
+    // Rehearsals anchor under their own action — filter by action, not text.
+    if (rec.action === REHEARSAL_SIGNAL_ACTION) continue;
     const age = nowMs - rec.timestamp * 1000;
     if (age < 0 || age > SIGNAL_FRESH_MS) continue;
     const code = corridorSideFor(rec.targetToken)?.code;
