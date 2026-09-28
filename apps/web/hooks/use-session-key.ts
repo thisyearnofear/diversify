@@ -32,6 +32,7 @@ import {
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { getWalletAuthHeaders } from '@/lib/wallet-auth';
+import type { SwapPrefill } from '@/context/app/types';
 
 const service = new ERC7715Service();
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -102,6 +103,8 @@ export interface GuardianLoopResult {
     recommendations?: GuardianLoopRecommendation[];
     transactions?: GuardianLoopTransaction[];
     results?: GuardianLoopItemResult[];
+    /** Exchange ticket for a target Guardian can't execute on its rail. */
+    handoff?: SwapPrefill | null;
     error?: string;
 }
 
@@ -167,6 +170,7 @@ export interface GuardianSessionInfo {
         source: string;
         action?: string;
         targetToken?: string;
+        targetChainId?: number;
         oneLiner?: string;
         reasoning?: string;
         /** USD notional of the proposed move — feeds the one-tap prefill. */

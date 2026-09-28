@@ -3,6 +3,7 @@ import { GUARDIAN_FACT_MAX, sanitizeFactText } from '@/lib/guardian-memory';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
 import { getLiveDepreciation } from '@diversifi/shared/src/services/fx-rate.service';
 import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS, NETWORK_TOKENS } from '@/config';
+import { withValidatedTargetChain } from '@/lib/target-chain';
 import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tabs';
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
@@ -1398,11 +1399,14 @@ ${topOpportunities.length > 0
 TARGET ALLOCATION FOR ${goalLabels[userGoal]?.toUpperCase()}:
 ${targetAllocation.map((t) => `- ${t.symbol}: ${t.targetPercentage}% - ${t.reason}`).join('\n')}
 
+TARGET CHAIN: set "targetChainId" to the chain the targetToken is bought on — ${NETWORKS.CELO_MAINNET.chainId} (Celo: ${NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId].join(', ')}) or ${NETWORKS.ARBITRUM_ONE.chainId} (Arbitrum: ${NETWORK_TOKENS[NETWORKS.ARBITRUM_ONE.chainId].join(', ')}). A token on neither chain is not buyable in-app.
+
 REQUIRED OUTPUT (JSON):
 {
   "action": "SWAP|HOLD|BRIDGE|REBALANCE|BUY|SELL",
   "oneLiner": "Punchy 6-8 word summary",
   "targetToken": "primary recommended token",
+  "targetChainId": 42220,
   "targetAllocation": [{"symbol": "TOKEN", "percentage": 30, "reason": "..."}],
   "reasoning": "2-3 sentences explaining the data-driven recommendation",
   "confidence": 0.85,
@@ -1471,10 +1475,10 @@ REQUIRED OUTPUT (JSON):
   }
 
   return {
-    advice: {
+    advice: withValidatedTargetChain({
       ...parsed,
       researchEvidence: parsed.researchEvidence ?? buildResearchEvidenceSummary(macroData),
-    },
+    }),
     _meta: {
       modelUsed: result.model,
       provider: result.provider

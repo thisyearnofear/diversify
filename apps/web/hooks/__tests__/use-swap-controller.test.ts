@@ -404,3 +404,33 @@ describe("useSwapController — quote-driven routing", () => {
     expect(result.current.viaHub).toBeNull();
   });
 });
+
+describe("useSwapController — prefilled target on another chain", () => {
+  // A Guardian PAXG proposal lands on a Celo wallet. PAXG only lives on
+  // Arbitrum, so the ticket must be told the destination chain.
+  it("replaces a destination token the ticket's chain doesn't list", () => {
+    const { result } = renderController();
+
+    act(() => {
+      result.current.setFromToken("USDm");
+      result.current.setToToken("PAXG");
+    });
+
+    expect(result.current.toChainId).toBe(CELO_CHAIN_ID);
+    expect(result.current.toToken).not.toBe("PAXG");
+  });
+
+  it("keeps the prefilled token when the destination chain comes with it", () => {
+    const { result } = renderController();
+
+    act(() => {
+      result.current.setToChainId(42161);
+      result.current.setFromToken("USDm");
+      result.current.setToToken("PAXG");
+    });
+
+    expect(result.current.fromChainId).toBe(CELO_CHAIN_ID);
+    expect(result.current.toChainId).toBe(42161);
+    expect(result.current.toToken).toBe("PAXG");
+  });
+});

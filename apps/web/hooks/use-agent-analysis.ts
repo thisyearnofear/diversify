@@ -264,6 +264,8 @@ export function useAgentAnalysis({
                       source: "advisor-analysis",
                       action: result.advice.action,
                       targetToken: result.advice.targetToken || result.advice.token,
+                      targetChainId: result.advice.targetChainId,
+                      contract: result.advice.contract,
                       oneLiner: result.advice.oneLiner,
                       reasoning: result.advice.reasoning,
                       expectedSavings: result.advice.expectedSavings,

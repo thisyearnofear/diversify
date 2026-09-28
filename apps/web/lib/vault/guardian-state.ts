@@ -7,6 +7,8 @@ export interface GuardianRecommendationSnapshot {
   source: 'advisor-analysis' | 'proactive-yield' | 'cycle-monitor' | 'firecrawl-webhook';
   action?: string;
   targetToken?: string;
+  /** Executable chain the target token lives on (validated server-side). */
+  targetChainId?: number;
   oneLiner?: string;
   reasoning?: string;
   /** Purchase-cycle monitor — dedupe key when source is cycle-monitor */

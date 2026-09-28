@@ -47,6 +47,7 @@ import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerSe
 // identical wording on every surface (docs/internal/guardian-reasoning-service.md §5).
 import { decisionToLedgerParams, type GuardianDecisionArtifact } from '@diversifi/shared/src/services/guardian-reasoning';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
+import { celoExecutionTarget } from '@/lib/target-chain';
 import { runCycleMonitor } from '../../../lib/guardian/cycle-monitor-run';
 import { zeroGPersistenceService } from '@diversifi/shared-0g/src/services/persistence-service';
 import { recordGuardianRun } from '../../../lib/guardian-run-status';
@@ -196,6 +197,8 @@ function isAutoExecutableCandidate(
   if (recommendation.executionEligibility !== 'guardian_eligible') return false;
   if ((recommendation.confidence ?? 0) < CONFIDENCE_THRESHOLD) return false;
   if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) return false;
+  // The loop signs Celo swaps only; an off-rail target stays a one-tap proposal.
+  if (!celoExecutionTarget(recommendation.targetToken, recommendation.targetChainId)) return false;
   return isTokenAllowed(recommendation, allowedTokens);
 }
 

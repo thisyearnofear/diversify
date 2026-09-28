@@ -84,7 +84,8 @@ export function LoopResultSummary({
           )}
         </div>
       ))}
-      {(!loopResult.recommendations || loopResult.recommendations.length === 0) &&
+      {loopResult.reasonCode !== 'target_not_on_rail' &&
+        (!loopResult.recommendations || loopResult.recommendations.length === 0) &&
         (!loopResult.summary || loopResult.summary.total === 0) && (
         <div className="text-gray-500">No rebalance needed — portfolio looks healthy ✨</div>
       )}

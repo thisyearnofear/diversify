@@ -1,6 +1,7 @@
 import type { MultichainPortfolio } from "./use-multichain-balances";
 import type { RegionalInflationData } from "./use-inflation-data";
 import type { ResearchReceipt } from "@diversifi/shared";
+import type { GuardianRecommendationContract } from "@diversifi/shared/src/types/guardian-protection";
 
 export interface AgentActivity {
   id: string;
@@ -44,6 +45,10 @@ export interface AIAdvice {
   oneLiner: string; // Punchy, single-line summary for mobile/Farcaster
   targetToken?: string;
   token?: string; // Alias for targetToken (compatibility)
+  /** Executable chain for targetToken — validated server-side. */
+  targetChainId?: number;
+  /** Present as observation_only when the target isn't buyable in-app. */
+  contract?: GuardianRecommendationContract;
 
   // High-fidelity reasoning for humans
   reasoning: string;
