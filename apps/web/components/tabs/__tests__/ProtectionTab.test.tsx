@@ -1778,12 +1778,31 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
   });
 
-  it("a shilling-majority wallet anchors the floor in KES", () => {
+  it("a shilling-majority wallet keeps the dollar reserve — KES is only measured", () => {
     render(<ProtectionTab userRegion="USA" portfolio={underReserved} />);
-    expect(screen.getByTestId("shield-floor-prompt")).toHaveTextContent(
-      "Your wallet keeps 70% in KES — try a stronger floor",
-    );
-    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Shilling reserve · 60%");
+    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve · 25%");
+    expect(screen.getByTestId("plan-floor-control")).not.toHaveTextContent(/Shilling/);
+    // 30% dollars against a 25% dollar floor is under the 10-point surplus.
+    expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
+    cleanup();
+
+    const shillingMajorityDollarSurplus = {
+      ...underReserved,
+      chains: [
+        {
+          ...underReserved.chains[0],
+          balances: [
+            { symbol: "USDC", value: 2000, chainId: 42220 },
+            { symbol: "KESm", value: 3000, chainId: 42220 },
+          ],
+        },
+      ],
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={shillingMajorityDollarSurplus} />);
+    const prompt = screen.getByTestId("shield-floor-prompt");
+    expect(prompt).toHaveTextContent("Your wallet keeps 40% in dollars — try a stronger floor");
+    expect(prompt).not.toHaveTextContent(/KES/);
+    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve");
   });
 
   it("hides while comparing and while a slice is focused", () => {
