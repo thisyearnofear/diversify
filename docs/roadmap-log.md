@@ -46,6 +46,8 @@
 
 **Macro signal: diagnosed, not fixed.** `FIRECRAWL_API_KEY` is missing on the production server and locally. Only the webhook secret is set. There are zero Firecrawl lines in any PM2 log since 2026-07-31, so no monitor was ever registered and the webhook was never called. `--verify-only` against production shows 0 `MACRO_SIGNAL` rows. The key is not in `required-env.json`, so the drift check never flagged it. To fix: add the key, run `scripts/setup-firecrawl-monitors.ts`, then redeploy with `DEPLOY_SYNC_ENV=true`.
 
+**Resolved 2026-09-28.** Key set in `.env.local` and on the server (direct append — `DEPLOY_SYNC_ENV=true` was the wrong tool; it overwrites the server `.env` wholesale and would have dropped 17 server-only keys including `AGENTIC_ID_PRIVATE_KEY` and `PRIVY_APP_SECRET`). Both `FIRECRAWL_*` vars are now in `required-env.json` so the drift gate catches a recurrence. All 7 monitors registered (the plan rate-limits creates to ~3/min — the script now takes `MONITOR_ONLY` + paced creates). Deployed; webhook answers 401 to unsigned POSTs. First organic signal lands on monitor schedules; verify with `pnpm rehearse-macro-signal --verify-only`.
+
 **User testing.** A moderated script for 3–5 sessions on low-end Android (9 tasks) is kept locally at `docs/internal/user-testing-script.md`, which is gitignored like the rest of `docs/internal`.
 
 Verified: tsc, lint (0 errors), `pnpm build`, vitest 262 files / 2,392 tests, browser re-check at 390px.
