@@ -108,9 +108,15 @@ or Arbitrum). The philosophy stays the user's choice; Guardian works inside it.
 - Optional `anchorCurrency` on the existing profile (no storage migration).
 - Default: payment-cycle `localCurrency` → largest held local-currency
   stablecoin → USD. `userRegion` is continent-level, so it can't decide this.
+  Holdings only set a local anchor when that currency outweighs the wallet's
+  dollars (a dollar-majority wallet is a USD user).
   Editable in Home's "Settings & region" disclosure.
-- The risk-dial floor becomes the anchor exposure (replaces `FLOOR_TOKENS`);
-  unchanged for USD users.
+- Only a stable, low-inflation anchor (`STABLE_ANCHORS`: USD, EUR, GBP, CHF,
+  JPY, CAD, AUD) held by the plan as a liquid leg replaces the dollar as the
+  risk-dial floor (replaces `FLOOR_TOKENS`); every other anchor (KES, BRL, COP,
+  PHP, NGN, GHS, ZAR, XOF, MXN, …) keeps the dollar floor and is used only for
+  measurement (rate line, `amountAnchor`) — a soft home currency is what the
+  saver is protecting against, so it can't be their safety reserve.
 - Live FX for conversions; the fallback `EXCHANGE_RATES` table discloses
   itself when used.
 - Converting every displayed number to the anchor currency is out of scope.

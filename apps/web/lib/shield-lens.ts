@@ -7,6 +7,7 @@
 import {
   floorPercent,
   isFloorHolding,
+  type Exposure,
   type PlanLeg,
   type RiskTolerance,
 } from "@/components/protection-cards/plan-preview";
@@ -24,19 +25,21 @@ export function strongerFloorOffer({
   savedRisk,
   planLegs,
   heldPctByToken,
+  floor = "USD",
 }: {
   savedRisk: RiskTolerance | null;
   planLegs: PlanLeg[];
   /** Held % by token; every liquid dollar token (any issuer/chain) counts. */
   heldPctByToken: ReadonlyMap<string, number>;
+  floor?: Exposure;
 }): StrongerFloorOffer | null {
   const risk = savedRisk ?? "Balanced";
   if (risk === "Conservative") return null;
   let heldFloor = 0;
   for (const [symbol, pct] of heldPctByToken) {
-    if (isFloorHolding(symbol)) heldFloor += pct;
+    if (isFloorHolding(symbol, floor)) heldFloor += pct;
   }
-  const planFloor = floorPercent(planLegs);
+  const planFloor = floorPercent(planLegs, floor);
   if (heldFloor - planFloor < 10) return null;
   return {
     next: risk === "Aggressive" ? "Balanced" : "Conservative",

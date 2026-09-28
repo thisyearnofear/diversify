@@ -16,6 +16,7 @@ import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
+import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { AnimatePresence, useReducedMotion } from "framer-motion";
@@ -119,6 +120,7 @@ export default function ProtectionTab({
 
   const { totalValue, chains } = activePortfolio;
   const { config, currentGoalLabel, setRiskTolerance } = useProtectionProfile();
+  const { anchorCurrency } = useAnchorCurrency(activePortfolio);
   const { riskData } = useCurrencyRisk();
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const { showToast } = useToast();
@@ -231,12 +233,12 @@ export default function ProtectionTab({
   }, [strategyKey]);
 
   const allocations = useMemo(() => {
-    return resolvePlan({ strategy: strategyKey, riskTolerance: config.riskTolerance }).legs;
-  }, [strategyKey, config.riskTolerance]);
-  const planRules = resolvePlan({ strategy: strategyKey }).rules;
+    return resolvePlan({ strategy: strategyKey, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
+  }, [strategyKey, config.riskTolerance, anchorCurrency]);
+  const { rules: planRules, floor: planFloor } = resolvePlan({ strategy: strategyKey, anchorCurrency });
   const balanceAllocations = useMemo(() => {
-    return resolvePlan({ strategy: strategyKey, riskTolerance: balance.risk }).legs;
-  }, [strategyKey, balance.risk]);
+    return resolvePlan({ strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency }).legs;
+  }, [strategyKey, balance.risk, anchorCurrency]);
 
   const heldPctByToken = useMemo(() => {
     const map = new Map<string, number>();
@@ -255,8 +257,8 @@ export default function ProtectionTab({
   // committed strategy, else the onboarding philosophy (walletless ghost).
   const sleeveLegs = useMemo(() => {
     if (allocations.length > 0) return allocations;
-    return resolvePlan({ strategy: config.philosophy, riskTolerance: config.riskTolerance }).legs;
-  }, [allocations, config.philosophy, config.riskTolerance]);
+    return resolvePlan({ strategy: config.philosophy, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
+  }, [allocations, config.philosophy, config.riskTolerance, anchorCurrency]);
   const sleevePhilosophy = strategyKey ?? config.philosophy ?? null;
   const planPctBySymbol = useMemo(
     () => Object.fromEntries(sleeveLegs.map((l) => [l.token, l.percent])),
@@ -280,9 +282,9 @@ export default function ProtectionTab({
       ? focusedPhilosophy
       : strategyKey;
   const previewAllocations = useMemo(() => {
-    return resolvePlan({ strategy: previewKey, riskTolerance: config.riskTolerance }).legs;
-  }, [previewKey, config.riskTolerance]);
-  const previewRules = resolvePlan({ strategy: previewKey }).rules;
+    return resolvePlan({ strategy: previewKey, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
+  }, [previewKey, config.riskTolerance, anchorCurrency]);
+  const { rules: previewRules, floor: previewFloor } = resolvePlan({ strategy: previewKey, anchorCurrency });
   const previewAlignment = useMemo(
     () => scorePlanAlignment(previewAllocations, heldPctByToken, totalValue, previewRules),
     [previewAllocations, heldPctByToken, totalValue, previewRules],
@@ -498,8 +500,9 @@ export default function ProtectionTab({
         savedRisk: config.riskTolerance,
         planLegs: allocations,
         heldPctByToken,
+        floor: planFloor,
       }),
-    [config.riskTolerance, allocations, heldPctByToken],
+    [config.riskTolerance, allocations, heldPctByToken, planFloor],
   );
   const showFloorPrompt =
     floorOffer !== null &&
@@ -571,10 +574,10 @@ export default function ProtectionTab({
   });
 
   const learnMix = useMemo(() => {
-    const legs = resolvePlan({ strategy: focusedPhilosophy, riskTolerance: config.riskTolerance }).legs;
+    const legs = resolvePlan({ strategy: focusedPhilosophy, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
     if (legs.length > 0) return mixFromLegs(legs);
     return mixForPhilosophy(focusedPhilosophy);
-  }, [focusedPhilosophy, config.riskTolerance]);
+  }, [focusedPhilosophy, config.riskTolerance, anchorCurrency]);
   const learnMixLabel = mixLabelFor(
     focusedPhilosophy,
     learnMix,
@@ -690,6 +693,7 @@ export default function ProtectionTab({
             compact
             holeOverride={compareHole}
             sinceHint={alignmentSinceHint ?? undefined}
+            floor={previewFloor}
           />
           <PhilosophyCoinRail
             selected={focusedPhilosophy}
@@ -734,6 +738,7 @@ export default function ProtectionTab({
             }
             sleeveOpen={sleeveOpen}
             sinceHint={alignmentSinceHint ?? undefined}
+            floor={comparing ? previewFloor : planFloor}
             controls={!comparing ? (
               <div className="mt-3">
                 <PlanFloorControl
@@ -741,6 +746,7 @@ export default function ProtectionTab({
                   legs={balance.isPreviewing ? balanceAllocations : allocations}
                   savedLegs={allocations}
                   isPreviewing={balance.isPreviewing}
+                  floor={planFloor}
                   accent={(() => {
                     const id = strategyToArchetype(strategyKey);
                     return id ? ARCHETYPES[id].accent : undefined;
@@ -939,6 +945,7 @@ export default function ProtectionTab({
       biggestGap={biggestGap}
       alignmentScore={alignment.score}
       floorOffer={floorOffer}
+      floorExposure={planFloor}
       showFloorPrompt={showFloorPrompt}
       balanceSelect={balance.select}
       exitCompare={exitCompare}

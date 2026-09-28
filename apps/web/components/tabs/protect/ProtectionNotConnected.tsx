@@ -31,6 +31,7 @@ import { needsApacRailMessaging } from "@/constants/apac-rail";
 import { CaribbeanRailHonestyBanner } from "../../shared/CaribbeanRailHonestyBanner";
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { ProtectionPlanRing, SLEEVE_ID } from "./ProtectionPlanRing";
+import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { PlanFloorControl } from "./PlanFloorControl";
 import { PhilosophyCoinRail, FocusedPlanLine } from "./PhilosophyCoinRail";
 import { useAmbientOrigin } from "./ProtectionAmbient";
@@ -77,6 +78,7 @@ export function ProtectionNotConnected({
   // shared mutable const.
   const walletlessPortfolio = React.useMemo(() => createEmptyPortfolio(), []);
   const { config: profileConfig, setRiskTolerance } = useProtectionProfile();
+  const { anchorCurrency } = useAnchorCurrency();
   const { region: detectedRegion } = useUserRegion();
   // Identity travels with the morph: the moment a philosophy is chosen
   // (walletless commits work), the surface picks up its archetype tint.
@@ -100,10 +102,11 @@ export function ProtectionNotConnected({
   });
   const ringLegs = React.useMemo(
     () =>
-      resolvePlan({ strategy: ringArchetype, riskTolerance: profileConfig.riskTolerance }).legs,
-    [ringArchetype, profileConfig.riskTolerance],
+      resolvePlan({ strategy: ringArchetype, riskTolerance: profileConfig.riskTolerance, anchorCurrency }).legs,
+    [ringArchetype, profileConfig.riskTolerance, anchorCurrency],
   );
-  const balanceLegs = resolvePlan({ strategy: ringArchetype, riskTolerance: balance.risk }).legs;
+  const ringFloor = resolvePlan({ strategy: ringArchetype, anchorCurrency }).floor;
+  const balanceLegs = resolvePlan({ strategy: ringArchetype, riskTolerance: balance.risk, anchorCurrency }).legs;
   const [selectedToken, setSelectedToken] = React.useState<string | null>(null);
   React.useEffect(() => setSelectedToken(null), [ringKey]);
   const effectiveToken = ringLegs.some((leg) => leg.token === selectedToken)
@@ -127,7 +130,9 @@ export function ProtectionNotConnected({
   const focusedLegs = resolvePlan({
     strategy: focusedArchetype,
     riskTolerance: profileConfig.riskTolerance,
+    anchorCurrency,
   }).legs;
+  const focusedFloor = resolvePlan({ strategy: focusedArchetype, anchorCurrency }).floor;
   const focusedName =
     STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "";
 
@@ -206,6 +211,7 @@ export function ProtectionNotConnected({
           alignmentScore={null}
           empty
           walletless
+          floor={picking || (comparing && focusedPhilosophy) ? focusedFloor : ringFloor}
           onHoleTap={
             balance.isPreviewing || picking
               ? undefined
@@ -224,6 +230,7 @@ export function ProtectionNotConnected({
                   legs={balance.isPreviewing ? balanceLegs : ringLegs}
                   savedLegs={ringLegs}
                   isPreviewing={balance.isPreviewing}
+                  floor={ringFloor}
                   accent={ringArchetype ? ARCHETYPES[ringArchetype].accent : undefined}
                   onChange={(risk) => {
                     setSelectedToken(null);

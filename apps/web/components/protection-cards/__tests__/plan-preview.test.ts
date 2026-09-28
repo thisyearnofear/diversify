@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  floorExposure,
   compactPlanDelta,
   describePlanDelta,
   floorPercent,
@@ -8,6 +9,7 @@ import {
   instrumentForSlice,
   legsForRisk,
   resolvePlan,
+  STABLE_ANCHORS,
   STRATEGY_ALLOCATIONS,
   STRATEGY_PLANS,
   type PlanLeg,
@@ -246,5 +248,55 @@ describe('resolvePlan — exposure plans', () => {
 
   it('labels slices by exposure', () => {
     expect(STRATEGY_ALLOCATIONS.africapitalism.map((l) => l.label)).toEqual(['Shilling', 'Dollar', 'Euro']);
+  });
+});
+
+describe('anchor currency — the risk dial reserve', () => {
+  it('a USD anchor, or an anchor the plan does not hold, keeps the dollar floor', () => {
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, 'USD')).toBe('USD');
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, null)).toBe('USD');
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, 'BRL')).toBe('USD');
+    expect(
+      resolvePlan({ strategy: 'africapitalism', riskTolerance: 'Conservative', anchorCurrency: 'BRL' }),
+    ).toBe(resolvePlan({ strategy: 'africapitalism', riskTolerance: 'Conservative' }));
+  });
+
+  it('a KES anchor does not make the shilling leg the reserve — soft anchors keep the dollar floor', () => {
+    expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, 'KES')).toBe('USD');
+    const plan = resolvePlan({
+      strategy: 'africapitalism',
+      riskTolerance: 'Conservative',
+      anchorCurrency: 'KES',
+    });
+    expect(plan.floor).toBe('USD');
+    expect(plan).toBe(resolvePlan({ strategy: 'africapitalism', riskTolerance: 'Conservative' }));
+    expect(plan.legs).toBe(
+      resolvePlan({ strategy: 'africapitalism', riskTolerance: 'Conservative' }).legs,
+    );
+    expect(plan.legs.reduce((sum, l) => sum + l.percent, 0)).toBe(100);
+  });
+
+  it('a stable EUR anchor the plan holds becomes the reserve the dial shifts', () => {
+    const plan = resolvePlan({
+      strategy: 'africapitalism',
+      riskTolerance: 'Conservative',
+      anchorCurrency: 'EUR',
+    });
+    expect(plan.floor).toBe('EUR');
+    expect(plan.legs.reduce((sum, l) => sum + l.percent, 0)).toBe(100);
+  });
+
+  it('only stable anchors can replace the dollar floor', () => {
+    expect(STABLE_ANCHORS).toEqual(['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'CAD', 'AUD']);
+    for (const soft of ['KES', 'BRL', 'COP', 'PHP', 'NGN', 'GHS', 'ZAR', 'XOF', 'MXN'] as const) {
+      expect(floorExposure(STRATEGY_ALLOCATIONS.africapitalism, soft)).toBe('USD');
+      expect(floorExposure(STRATEGY_ALLOCATIONS.buen_vivir, soft)).toBe('USD');
+    }
+  });
+
+  it('describes a reserve shift in the anchor', () => {
+    const base = STRATEGY_ALLOCATIONS.africapitalism;
+    const conservative = legsForRisk(base, 'Conservative', 'KES');
+    expect(describePlanDelta(base, conservative, 'KES')).toBe('shilling floor 60% → 75%');
   });
 });

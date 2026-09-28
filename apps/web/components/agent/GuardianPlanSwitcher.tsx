@@ -13,6 +13,7 @@ import { strategyAccent } from "../shared/palette";
 import { STRATEGIES as CANONICAL_STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 import { displayToken } from "@/lib/plan-legs";
 
@@ -43,6 +44,7 @@ export function GuardianPlanSwitcher({
   const headingRef = useRef<HTMLHeadingElement>(null);
   const reducedMotion = useReducedMotion();
   const { config: profileConfig } = useProtectionProfile();
+  const { anchorCurrency } = useAnchorCurrency();
 
   useEffect(() => {
     const id = setTimeout(() => headingRef.current?.focus(), 50);
@@ -60,8 +62,8 @@ export function GuardianPlanSwitcher({
   const plan = PLANS.find((p) => p.id === selected) ?? PLANS[0];
   // Same risk-adjusted legs the Shield ring draws.
   const legs = useMemo(
-    () => resolvePlan({ strategy: plan.id, riskTolerance: profileConfig.riskTolerance }).legs,
-    [plan, profileConfig.riskTolerance],
+    () => resolvePlan({ strategy: plan.id, riskTolerance: profileConfig.riskTolerance, anchorCurrency }).legs,
+    [plan, profileConfig.riskTolerance, anchorCurrency],
   );
 
   const save = async () => {

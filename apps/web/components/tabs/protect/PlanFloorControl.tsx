@@ -11,6 +11,8 @@
 import React from "react";
 import {
   floorPercent,
+  reserveLabel,
+  type Exposure,
   type PlanLeg,
   type RiskTolerance,
 } from "@/components/protection-cards/plan-preview";
@@ -34,6 +36,8 @@ interface Props {
   onCancel: () => void;
   accent?: string;
   onChange: (risk: RiskTolerance) => void;
+  /** Reserve exposure (the anchor when the plan holds it); defaults to USD. */
+  floor?: Exposure;
 }
 
 export function PlanFloorControl({
@@ -45,6 +49,7 @@ export function PlanFloorControl({
   onCancel,
   accent,
   onChange,
+  floor: floorExposure = "USD",
 }: Props) {
   const selected = value ?? "Balanced";
   const groupRef = React.useRef<HTMLDivElement>(null);
@@ -56,11 +61,12 @@ export function PlanFloorControl({
       ?.querySelector<HTMLButtonElement>('[aria-checked="true"]')
       ?.focus();
   }, [isPreviewing, selected]);
-  const floor = floorPercent(legs);
-  const savedFloor = floorPercent(savedLegs);
+  const floor = floorPercent(legs, floorExposure);
+  const savedFloor = floorPercent(savedLegs, floorExposure);
+  const reserve = reserveLabel(floorExposure);
   const caption = isPreviewing
-    ? `Dollar reserve ${savedFloor}% → ${floor}%`
-    : `Dollar reserve · ${floor}% — dollar-pegged, not risk-free`;
+    ? `${reserve} reserve ${savedFloor}% → ${floor}%`
+    : `${reserve} reserve · ${floor}% — ${reserve.toLowerCase()}-pegged, not risk-free`;
 
   const focusOption = (index: number) => {
     groupRef.current
