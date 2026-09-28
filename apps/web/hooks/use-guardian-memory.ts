@@ -29,6 +29,8 @@ export interface GuardianMemoryProviderInfo {
   id: GuardianMemoryProviderId;
   location: string;
   available: boolean;
+  /** Why unavailable — 'not_configured' | 'unreachable'. */
+  reason?: 'not_configured' | 'unreachable';
 }
 
 export interface GuardianMemoryState {
@@ -95,18 +97,6 @@ export function useGuardianMemory(
     [address],
   );
 
-  useEffect(() => {
-    const p = loadMemoryPreference(address);
-    setPref(p);
-    void loadFacts(p);
-    setHydrated(true);
-  }, [address, loadFacts]);
-
-  const requestPayload = useCallback(
-    () => memoryRequestFor(prefRef.current, address),
-    [address],
-  );
-
   const loadProviders = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/agent/memory?providers=1`);
@@ -116,6 +106,21 @@ export function useGuardianMemory(
       setProviders([]);
     }
   }, []);
+
+  useEffect(() => {
+    const p = loadMemoryPreference(address);
+    setPref(p);
+    void loadFacts(p);
+    // A saved cloud preference needs provider health for the footer —
+    // "across devices · {provider} — unavailable" — even before the view opens.
+    if (p.mode === 'cloud') void loadProviders();
+    setHydrated(true);
+  }, [address, loadFacts, loadProviders]);
+
+  const requestPayload = useCallback(
+    () => memoryRequestFor(prefRef.current, address),
+    [address],
+  );
 
   const chooseMode = useCallback(
     async (mode: GuardianMemoryMode, provider?: GuardianMemoryProviderId) => {

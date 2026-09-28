@@ -3,11 +3,14 @@
  *
  * Tablestore: one memory unit per fact under the `guardian_facts` agent
  * scope; per-fact delete is a native deleteMemory call.
- * Cognee: no reliable per-memory delete — facts live as ONE marked JSON
- * document in dataset `guardian_facts_<address>`; add/remove rewrite it
- * (delete-dataset-then-add), forget deletes the dataset.
+ * Cognee: one data item per fact in dataset `guardian_facts_<address>`;
+ * per-fact delete is the native DELETE …/data/{data_id}; forget deletes
+ * the dataset. No cognify.
  *
- * Everything fails soft: timeouts and backend errors return [] / false.
+ * Honesty contracts tested here:
+ *   - add returns only facts whose write was CONFIRMED;
+ *   - available = configured && health-probe ok, with a `reason`;
+ *   - everything fails soft ([] / false) on timeout or backend error.
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
@@ -16,16 +19,22 @@ const tsRemember = vi.fn(async () => ({ success: true, id: 'ts-1' }));
 const tsList = vi.fn(async () => [] as any[]);
 const tsDelete = vi.fn(async () => true);
 const tsAvailable = vi.fn(() => true);
+const tsPing = vi.fn(async () => true);
 const tsForget = vi.fn(async () => ({ success: true }));
 
-const cgRemember = vi.fn(async () => ({ success: true }));
-const cgRecall = vi.fn(async () => ({ memories: [] as any[] }));
-const cgForget = vi.fn(async () => ({ success: true }));
 const cgAvailable = vi.fn(() => true);
+const cgPing = vi.fn(async () => true);
+const cgDatasetIdFor = vi.fn(async (_name: string, _create?: boolean) => null as string | null);
+const cgListDataItems = vi.fn(async (_id: string, _limit?: number) => [] as any[]);
+const cgDataItemText = vi.fn(async (_ds: string, _id: string) => null as string | null);
+const cgAddData = vi.fn(async (_ds: string, _texts: string[]) => ({ success: true, ids: [] as string[] }));
+const cgDeleteDataItem = vi.fn(async (_ds: string, _id: string) => true);
+const cgDeleteDataset = vi.fn(async (_id: string) => true);
 
 vi.mock('../tablestore-memory-service', () => ({
   tablestoreMemoryService: {
     isAvailable: () => tsAvailable(),
+    ping: (...a: any[]) => (tsPing as any)(...a),
     remember: (...a: any[]) => (tsRemember as any)(...a),
     listMemories: (...a: any[]) => (tsList as any)(...a),
     deleteMemory: (...a: any[]) => (tsDelete as any)(...a),
@@ -36,15 +45,29 @@ vi.mock('../tablestore-memory-service', () => ({
 vi.mock('../cognee-memory-service', () => ({
   cogneeMemoryService: {
     isAvailable: () => cgAvailable(),
-    remember: (...a: any[]) => (cgRemember as any)(...a),
-    recall: (...a: any[]) => (cgRecall as any)(...a),
-    forget: (...a: any[]) => (cgForget as any)(...a),
+    ping: (...a: any[]) => (cgPing as any)(...a),
+    datasetIdFor: (...a: any[]) => (cgDatasetIdFor as any)(...a),
+    listDataItems: (...a: any[]) => (cgListDataItems as any)(...a),
+    dataItemText: (...a: any[]) => (cgDataItemText as any)(...a),
+    addData: (...a: any[]) => (cgAddData as any)(...a),
+    deleteDataItem: (...a: any[]) => (cgDeleteDataItem as any)(...a),
+    deleteDataset: (...a: any[]) => (cgDeleteDataset as any)(...a),
   },
 }));
 
 import { guardianMemoryService } from '../guardian-memory-service';
 
+// Health probes cache in-process (10 min ok / 2 min fail) — clear between
+// tests so one test's probe can't leak into the next.
+function resetHealthCaches() {
+  for (const p of guardianMemoryService.providers) {
+    (p as any).healthCache = null;
+  }
+}
+
 const ADDR = '0xabc0000000000000000000000000000000000001';
+const ADDR_LOW = ADDR.toLowerCase();
+const DATASET = `guardian_facts_${ADDR_LOW}`;
 
 const tsUnit = (id: string, text: string, createdAt = new Date().toISOString()) => ({
   id,
@@ -53,19 +76,27 @@ const tsUnit = (id: string, text: string, createdAt = new Date().toISOString()) 
   metadata: { kind: 'guardian_fact', createdAt },
 });
 
-const cogneeDoc = (facts: Array<{ id: string; text: string; createdAt: string }>) => ({
-  id: 'doc-1',
-  content: `GUARDIAN_FACTS_V1\n${JSON.stringify({ facts })}`,
-  score: 1,
-  metadata: {},
+const cgItem = (id: string, text: string, createdAt = new Date().toISOString()) => ({
+  id,
+  text,
+  raw: { id, raw_data: text, metadata: { createdAt } },
 });
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetHealthCaches();
   tsAvailable.mockReturnValue(true);
   cgAvailable.mockReturnValue(true);
+  tsPing.mockResolvedValue(true);
+  cgPing.mockResolvedValue(true);
   tsList.mockResolvedValue([]);
-  cgRecall.mockResolvedValue({ memories: [] });
+  tsRemember.mockResolvedValue({ success: true, id: 'ts-1' });
+  tsDelete.mockResolvedValue(true);
+  cgDatasetIdFor.mockResolvedValue(null);
+  cgListDataItems.mockResolvedValue([]);
+  cgAddData.mockResolvedValue({ success: true, ids: [] });
+  cgDeleteDataItem.mockResolvedValue(true);
+  cgDeleteDataset.mockResolvedValue(true);
 });
 
 afterEach(() => {
@@ -73,8 +104,8 @@ afterEach(() => {
 });
 
 describe('provider registry', () => {
-  it('lists providers with their storage location and availability', () => {
-    const providers = guardianMemoryService.listAvailableProviders();
+  it('reports available = configured && healthy, with location', async () => {
+    const providers = await guardianMemoryService.listAvailableProviders();
     expect(providers).toContainEqual({
       id: 'tablestore',
       location: 'Alibaba Cloud — stored in mainland China',
@@ -87,6 +118,30 @@ describe('provider registry', () => {
     });
     expect(guardianMemoryService.providerFor('bogus')).toBeNull();
   });
+
+  it('reports not_configured when env is absent', async () => {
+    tsAvailable.mockReturnValue(false);
+    const providers = await guardianMemoryService.listAvailableProviders();
+    const ts = providers.find((p) => p.id === 'tablestore')!;
+    expect(ts).toMatchObject({ available: false, reason: 'not_configured' });
+    expect(tsPing).not.toHaveBeenCalled();
+  });
+
+  it('reports unreachable when the health probe fails', async () => {
+    cgPing.mockResolvedValue(false);
+    const providers = await guardianMemoryService.listAvailableProviders();
+    const cg = providers.find((p) => p.id === 'cognee')!;
+    expect(cg).toMatchObject({ available: false, reason: 'unreachable' });
+  });
+});
+
+describe('health caching', () => {
+  it('caches a healthy probe and an unhealthy one without re-probing', async () => {
+    const provider = guardianMemoryService.providerFor('tablestore')!;
+    expect(await provider.health()).toBe(true);
+    expect(await provider.health()).toBe(true);
+    expect(tsPing).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('tablestore provider', () => {
@@ -94,12 +149,6 @@ describe('tablestore provider', () => {
 
   it('lists facts from the dedicated guardian_facts scope, pruned and capped', async () => {
     const stale = new Date(Date.now() - 31 * 86_400_000).toISOString();
-    tsList.mockResolvedValue([
-      tsUnit('a', 'You save in USD'),
-      tsUnit('b', 'old fact', stale),
-      tsUnit('c', 'not ours', new Date().toISOString()),
-      // 'c' lacks kind metadata → filtered below
-    ]);
     tsList.mockResolvedValue([
       tsUnit('a', 'You save in USD'),
       { id: 'b', content: 'old', score: 1, metadata: { kind: 'guardian_fact', createdAt: stale } },
@@ -120,6 +169,15 @@ describe('tablestore provider', () => {
     });
   });
 
+  it('returns only confirmed writes — a failed remember contributes nothing', async () => {
+    tsRemember.mockResolvedValueOnce({ success: false } as any)
+      .mockResolvedValueOnce({ success: true, id: 'ts-9' });
+    const added = await provider.add(ADDR, ['first', 'second']);
+    expect(added).toHaveLength(1);
+    expect(added[0].text).toBe('second');
+    expect(added[0].id).toBe('ts-9');
+  });
+
   it('removes a fact by native per-memory delete', async () => {
     expect(await provider.remove(ADDR, 'ts-1')).toBe(true);
     expect(tsDelete).toHaveBeenCalledWith('ts-1', ADDR, 'guardian_facts');
@@ -135,60 +193,70 @@ describe('tablestore provider', () => {
 describe('cognee provider', () => {
   const provider = guardianMemoryService.providerFor('cognee')!;
 
-  it('lists facts from the marked JSON document', async () => {
-    cgRecall.mockResolvedValue({
-      memories: [cogneeDoc([{ id: 'f1', text: 'You save in USD', createdAt: new Date().toISOString() }])],
-    });
+  it('lists facts as data items in the dedicated dataset', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
+    cgListDataItems.mockResolvedValue([cgItem('d1', 'You save in USD')]);
     const facts = await provider.list(ADDR);
-    expect(cgRecall).toHaveBeenCalledWith('guardian remembered facts', ADDR, {
-      dataset: `guardian_facts_${ADDR}`,
-      limit: 5,
-    });
-    expect(facts.map((f) => f.id)).toEqual(['f1']);
+    expect(cgDatasetIdFor).toHaveBeenCalledWith(DATASET, false);
+    expect(cgListDataItems).toHaveBeenCalledWith('ds-1', 12);
+    expect(facts.map((f) => f.id)).toEqual(['d1']);
+    expect(facts[0].text).toBe('You save in USD');
   });
 
-  it('ignores documents without the marker', async () => {
-    cgRecall.mockResolvedValue({ memories: [{ id: 'x', content: '{"facts":[]}', score: 1, metadata: {} }] });
+  it('reads raw content when the list item carries no text', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
+    cgListDataItems.mockResolvedValue([{ id: 'd1', text: '', raw: { id: 'd1' } }]);
+    cgDataItemText.mockResolvedValue('You save in USD');
+    const facts = await provider.list(ADDR);
+    expect(cgDataItemText).toHaveBeenCalledWith('ds-1', 'd1');
+    expect(facts[0].text).toBe('You save in USD');
+  });
+
+  it('returns [] when the dataset does not exist yet', async () => {
+    cgDatasetIdFor.mockResolvedValue(null);
     expect(await provider.list(ADDR)).toEqual([]);
+    expect(cgListDataItems).not.toHaveBeenCalled();
   });
 
-  it('adds by rewriting the document (delete dataset, then add)', async () => {
-    cgRecall.mockResolvedValue({
-      memories: [cogneeDoc([{ id: 'f1', text: 'You save in USD', createdAt: new Date().toISOString() }])],
-    });
+  it('adds one data item per fact and returns only confirmed writes', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
+    cgAddData.mockResolvedValue({ success: true, ids: ['d1'] });
+    const added = await provider.add(ADDR, ['You pay in USD monthly']);
+    expect(cgDatasetIdFor).toHaveBeenCalledWith(DATASET, true);
+    expect(cgAddData).toHaveBeenCalledWith(DATASET, ['You pay in USD monthly']);
+    expect(added).toHaveLength(1);
+    expect(added[0]).toMatchObject({ id: 'd1', text: 'You pay in USD monthly' });
+  });
+
+  it('resolves ids by relisting when the add response lacks them', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
+    cgAddData.mockResolvedValue({ success: true, ids: [] });
+    // First list is the dedupe pre-check (empty); the second is the
+    // post-add relist that finds the new item.
+    cgListDataItems
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([cgItem('d9', 'You pay in USD monthly')]);
     const added = await provider.add(ADDR, ['You pay in USD monthly']);
     expect(added).toHaveLength(1);
-    expect(cgForget).toHaveBeenCalledWith(ADDR, { dataset: `guardian_facts_${ADDR}` });
-    const written = (cgRemember.mock.calls[0] as any[])[0] as string;
-    expect(written.startsWith('GUARDIAN_FACTS_V1')).toBe(true);
-    expect(JSON.parse(written.split('\n')[1]).facts).toHaveLength(2);
+    expect(added[0].id).toBe('d9');
   });
 
-  it('remove rewrites the document without the requested fact', async () => {
-    cgRecall.mockResolvedValue({
-      memories: [
-        cogneeDoc([
-          { id: 'f1', text: 'one', createdAt: new Date().toISOString() },
-          { id: 'f2', text: 'two', createdAt: new Date().toISOString() },
-        ]),
-      ],
-    });
-    expect(await provider.remove(ADDR, 'f1')).toBe(true);
-    const written = (cgRemember.mock.calls[0] as any[])[0] as string;
-    expect(JSON.parse(written.split('\n')[1]).facts.map((f: { id: string }) => f.id)).toEqual(['f2']);
+  it('a failed write reports nothing remembered', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
+    cgAddData.mockResolvedValue({ success: false, ids: [] });
+    expect(await provider.add(ADDR, ['You pay in USD monthly'])).toEqual([]);
   });
 
-  it('remove of an unknown id writes nothing', async () => {
-    cgRecall.mockResolvedValue({
-      memories: [cogneeDoc([{ id: 'f1', text: 'one', createdAt: new Date().toISOString() }])],
-    });
-    expect(await provider.remove(ADDR, 'nope')).toBe(false);
-    expect(cgRemember).not.toHaveBeenCalled();
+  it('removes a fact via the native data-item delete (fact id = data id)', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
+    expect(await provider.remove(ADDR, 'd1')).toBe(true);
+    expect(cgDeleteDataItem).toHaveBeenCalledWith('ds-1', 'd1');
   });
 
   it('forget deletes the dedicated dataset', async () => {
+    cgDatasetIdFor.mockResolvedValue('ds-1');
     expect(await provider.forget(ADDR)).toBe(true);
-    expect(cgForget).toHaveBeenCalledWith(ADDR, { dataset: `guardian_facts_${ADDR}` });
+    expect(cgDeleteDataset).toHaveBeenCalledWith('ds-1');
   });
 });
 

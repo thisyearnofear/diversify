@@ -43,8 +43,8 @@ const {
     mockGuardianService: {
       providers: [provider],
       providerFor: vi.fn((id: unknown) => (id === 'cognee' ? provider : null)),
-      listAvailableProviders: vi.fn(() => [
-        { id: 'tablestore', location: 'Alibaba Cloud — stored in mainland China', available: false },
+      listAvailableProviders: vi.fn(async () => [
+        { id: 'tablestore', location: 'Alibaba Cloud — stored in mainland China', available: false, reason: 'not_configured' },
         { id: 'cognee', location: 'Cognee — stored in the USA (AWS)', available: true },
       ]),
     },
@@ -136,7 +136,7 @@ describe('/api/agent/memory', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({
       providers: [
-        { id: 'tablestore', location: 'Alibaba Cloud — stored in mainland China', available: false },
+        { id: 'tablestore', location: 'Alibaba Cloud — stored in mainland China', available: false, reason: 'not_configured' },
         { id: 'cognee', location: 'Cognee — stored in the USA (AWS)', available: true },
       ],
     });
@@ -203,6 +203,20 @@ describe('/api/agent/memory', () => {
     expect(mockExtract).toHaveBeenCalledWith('m', 'r', [FACT.text]);
     expect(mockProvider.add).toHaveBeenCalledWith(WALLET, ['You pay a supplier in USD monthly']);
     expect(res.body).toEqual({ remembered: [FACT] });
+  });
+
+  it('POST extract in cloud mode reports nothing remembered when the write fails', async () => {
+    mockProvider.add.mockResolvedValue([]); // provider returned no confirmed writes
+    const res = makeRes();
+    await handler(
+      req({
+        method: 'POST',
+        body: { action: 'extract', message: 'm', reply: 'r', mode: 'cloud', provider: 'cognee' },
+      }),
+      res as never,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ remembered: [] });
   });
 
   it('POST extract in cloud mode requires auth — a body address is not enough', async () => {

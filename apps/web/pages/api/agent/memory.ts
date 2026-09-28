@@ -7,7 +7,9 @@
  * verified address — the body `address` is never trusted.
  *
  * Methods:
- *   GET    ?providers=1            → { providers: [{id, location, available}] }   (no auth)
+ *   GET    ?providers=1            → { providers: [{id, location, available, reason?}] }   (no auth)
+ *                                    available = configured && healthy; reason is
+ *                                    'not_configured' | 'unreachable' when false
  *   GET    ?provider=<id>          → { facts }                                     (auth)
  *   POST   { action: 'extract', message, reply, mode, provider?, existing? }
  *          device → { candidates } (stores nothing)
@@ -47,7 +49,7 @@ export default async function handler(
   // Unauthenticated capability probe — the drawer's memory view greys out
   // providers the server can't write to.
   if (req.method === 'GET' && req.query.providers === '1') {
-    return res.status(200).json({ providers: guardianMemoryService.listAvailableProviders() });
+    return res.status(200).json({ providers: await guardianMemoryService.listAvailableProviders() });
   }
 
   if (req.method === 'GET') {

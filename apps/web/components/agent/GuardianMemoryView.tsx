@@ -193,7 +193,11 @@ export function GuardianMemoryView({
             >
               <span className="font-bold">{p.location.split(' — ')[0]}</span>
               <span className="block text-[11px] text-gray-500 dark:text-gray-400">
-                {p.available ? p.location.split(' — ')[1] ?? p.location : 'Not set up yet'}
+                {p.available
+                  ? p.location.split(' — ')[1] ?? p.location
+                  : p.reason === 'unreachable'
+                    ? 'Unavailable right now'
+                    : 'Not set up yet'}
               </span>
             </button>
           ))}

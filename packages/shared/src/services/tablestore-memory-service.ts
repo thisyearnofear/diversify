@@ -441,6 +441,32 @@ class TablestoreMemoryServiceImpl {
     }
   }
 
+  /**
+   * Cheap authenticated liveness probe — one listMemories call against a
+   * fixed probe tenant. Distinguishes "configured but unreachable"
+   * (disabled RAM user, wrong endpoint) from isAvailable() config presence.
+   */
+  async ping(): Promise<boolean> {
+    if (!this.enabled) return false;
+    try {
+      await this.ensureMemoryStore();
+      const client = this.getClient();
+      await client.listMemories({
+        memoryStoreName: this.memoryStoreName,
+        scope: {
+          appId: this.appId,
+          tenantId: 'guardian_probe',
+          agentId: 'guardian_facts',
+          runId: '*',
+        },
+        limit: 1,
+      });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   /** Delete one memory unit by id within a user's scope. */
   async deleteMemory(
     memoryId: string,

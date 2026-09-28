@@ -73,13 +73,20 @@ async function main() {
     console.error(`FAIL  provider probe — HTTP ${providersRes.status} ${JSON.stringify(providersRes.body)}`);
     process.exit(1);
   }
-  const providers: Array<{ id: string; location: string; available: boolean }> =
+  const providers: Array<{ id: string; location: string; available: boolean; reason?: string }> =
     providersRes.body.providers;
   const available = providers.filter((p) => p.available);
-  console.log(`Providers: ${providers.map((p) => `${p.id}=${p.available ? 'up' : 'down'}`).join(', ')}`);
+  console.log(
+    `Providers: ${providers
+      .map((p) => `${p.id}=${p.available ? 'up' : `down${p.reason ? ` (${p.reason})` : ''}`}`)
+      .join(', ')}`,
+  );
+  // Unavailable providers are SKIPPED, not failed — availability is a
+  // server-config question, not a regression. But a run that smoked
+  // nothing is itself a failure signal.
   if (available.length === 0) {
-    console.log('No providers configured on this server — nothing to smoke.');
-    process.exit(0);
+    console.error('FAIL  no providers available to smoke — check server configuration.');
+    process.exit(1);
   }
 
   let failed = 0;

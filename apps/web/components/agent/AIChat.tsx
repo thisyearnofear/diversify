@@ -1125,6 +1125,11 @@ export default function AIChat() {
                         : memory.pref.provider === 'cognee'
                           ? 'Cognee'
                           : 'choose provider'
+                    }${
+                      memory.providers?.find((p) => p.id === memory.pref.provider)
+                        ?.available === false
+                        ? ' — unavailable'
+                        : ''
                     }`}
               {' · '}
               <button

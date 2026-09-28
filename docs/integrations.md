@@ -132,15 +132,26 @@ user picks a mode in Ask Guardian ("Memory: … · Change"). Modes:
 - **Across devices** — the same facts stored server-side under a
   **wallet-signature-verified** address (`requireWalletAuth`), at the
   provider the user picked. `GET /api/agent/memory?providers=1` reports each
-  provider's availability so the UI can disable ones that aren't set up.
+  provider's **health-aware** availability (`available` = configured AND a
+  ~2 s authenticated probe succeeded, cached 10 min on success / 2 min on
+  failure) plus a `reason` (`not_configured` | `unreachable`) so the UI can
+  label "Not set up yet" vs "Unavailable right now".
 
 Providers are adapters over the existing services, kept in a dedicated
 namespace separate from any legacy interaction memory:
 
 | Provider | Storage | Namespace | Per-fact delete |
 |---|---|---|---|
-| `tablestore` | Alibaba Cloud — mainland China (`cn-hangzhou`) | `agentId: guardian_facts`, tenant = verified address | Native `deleteMemory` per unit |
-| `cognee` | Cognee Cloud — USA (AWS us-east-1) | Dataset `guardian_facts_<address>`; all facts in ONE marked JSON doc | Rewrites the document (delete dataset + re-add); `forget` deletes the dataset |
+| `tablestore` | Alibaba Cloud — mainland China (`cn-beijing`) | `agentId: guardian_facts`, tenant = verified address | Native `deleteMemory` per unit |
+| `cognee` | Cognee Cloud — USA (AWS us-east-1) | Dataset `guardian_facts_<address>`; one data item per fact | Native `DELETE /api/v1/datasets/{id}/data/{data_id}`; `forget` deletes the dataset |
+
+Cognee Cloud requires a **per-tenant base URL** — `COGNEE_API_URL`
+(`https://<tenant>.aws.cognee.ai` from the dashboard) is required with no
+default; `COGNEE_API_KEY` is sent as `X-Api-Key` and `COGNEE_TENANT_ID`
+(optional) as `X-Tenant-Id`. Writes are `POST /api/v1/add` as multipart
+form (`datasetName` + repeated `raw_data` string fields); facts skip
+cognify entirely. `add` reports only confirmed writes — a failed write
+never shows as "Remembered".
 
 Every call is timeout-bounded (~800 ms for `list` inside the chat path) and
 fails soft. `DELETE /api/agent/memory` without an id forgets the dedicated

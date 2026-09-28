@@ -152,7 +152,10 @@ describe('Cognee memory sweep (hard forgetting)', () => {
     global.fetch = vi.fn(async (input: any) => {
       const url = typeof input === 'string' ? input : input.url;
       if (url.includes('/v1/search')) return searchResponse as any;
-      if (url.includes('/v1/memories/') && url.includes('stale-1')) return deleteResponse as any;
+      if (url.endsWith('/api/v1/datasets/')) {
+        return { ok: true, json: async () => [{ id: 'ds-1', name: 'user_user123' }] } as any;
+      }
+      if (url.includes('/api/v1/datasets/ds-1/data/stale-1')) return deleteResponse as any;
       return { ok: false } as any;
     }) as any;
 
