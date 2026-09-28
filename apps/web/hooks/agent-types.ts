@@ -2,6 +2,7 @@ import type { MultichainPortfolio } from "./use-multichain-balances";
 import type { RegionalInflationData } from "./use-inflation-data";
 import type { ResearchReceipt } from "@diversifi/shared";
 import type { GuardianRecommendationContract } from "@diversifi/shared/src/types/guardian-protection";
+import type { SwapPrefill } from "../context/app/types";
 
 export interface AgentActivity {
   id: string;
@@ -299,8 +300,10 @@ export interface AIMessage {
   };
   sosovalueData?: SoSoIntelligenceContent['data'];
   action?: {
-    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold" | "propose_sosovalue_trade" | "confirm_research";
+    type: "navigate" | "claim_ubi" | "verify_identity" | "execute_rwa" | "guardian_review" | "hold" | "propose_sosovalue_trade" | "confirm_research" | "review_in_exchange";
     tab?: string;
+    /** Exchange ticket for `review_in_exchange` — a target Guardian can't execute on its rail. */
+    prefill?: SwapPrefill;
     amount?: string;
     network?: string;
     targetAsset?: string;

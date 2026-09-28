@@ -40,6 +40,7 @@ import type {
   AIMessage,
 } from "./agent-types";
 import type { ResearchQuote } from "@diversifi/shared/src/types/research-billing";
+import type { SwapPrefill } from "../context/app/types";
 
 /**
  * Detect whether the user's input is a question (not a command).
@@ -383,11 +384,19 @@ export function useAgentChat({
             guardianReply = `${guardianReply}\n\nThis opportunity is not currently executable through Guardian.`;
           }
 
+          const exchangeHandoff =
+            response.ok && result.reasonCode === "target_not_on_rail" && result.handoff
+              ? (result.handoff as SwapPrefill)
+              : null;
+
           addMessage({
             role: "assistant",
             content: guardianReply,
             timestamp: new Date(),
             type: "text",
+            ...(exchangeHandoff
+              ? { action: { type: "review_in_exchange" as const, prefill: exchangeHandoff } }
+              : {}),
           });
         } catch (error) {
           console.error("[useAgentChat] Guardian handoff failed:", error);

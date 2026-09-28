@@ -906,6 +906,14 @@ export default function AIChat() {
                           🛡️ Verify Identity
                         </button>
                       )}
+                      {msg.action?.type === 'review_in_exchange' && msg.action.prefill && (
+                        <button
+                          onClick={() => { if (msg.action?.prefill) navigateToSwap(msg.action.prefill); }}
+                          className="mt-3 w-full px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-colors"
+                        >
+                          Review in Exchange
+                        </button>
+                      )}
                       {msg.action?.type === 'navigate' && msg.action.tab && (
                         <button
                           onClick={() => { const raw = msg.action?.tab || ''; const resolved = isTabId(raw) ? raw : LEGACY_TAB_MAP[raw]; if (resolved) setActiveTab(resolved); }}

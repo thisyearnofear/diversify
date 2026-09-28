@@ -38,6 +38,7 @@ const mocks = vi.hoisted(() => {
     nav,
     memory,
     navigateWithIntent: vi.fn(),
+    navigateToSwap: vi.fn(),
     setFocusedCycleId: vi.fn(),
     clearMessages: vi.fn(),
     sendChatMessage: vi.fn(),
@@ -96,7 +97,7 @@ vi.mock('@/context/app/NavigationContext', () => ({
   useNavigation: () => ({
     activeTab: mocks.nav.activeTab,
     setActiveTab: vi.fn(),
-    navigateToSwap: vi.fn(),
+    navigateToSwap: mocks.navigateToSwap,
     navigateToNetting: vi.fn(),
     navigateWithIntent: mocks.navigateWithIntent,
     setFocusedCycleId: mocks.setFocusedCycleId,
@@ -474,6 +475,25 @@ describe('AIChat — action router', () => {
     });
     expect(mocks.setFocusedCycleId).toHaveBeenCalledWith('cycle-42');
     expect(mocks.setDrawerOpen).toHaveBeenCalledWith(false);
+  });
+
+  it('review_in_exchange applies the off-rail handoff ticket via navigateToSwap', () => {
+    const prefill = { fromToken: 'USDC', toToken: 'PAXG', toChainId: 42161, origin: { source: 'guardian' } };
+    mocks.conversation.messages = [
+      {
+        id: 'm-1',
+        role: 'assistant',
+        content: 'Guardian executes on Celo only. Review PAXG on Arbitrum One in Exchange and sign it yourself.',
+        timestamp: new Date(),
+        type: 'text',
+        action: { type: 'review_in_exchange', prefill },
+      },
+    ];
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review in Exchange' }));
+    expect(mocks.navigateToSwap).toHaveBeenCalledWith(
+      expect.objectContaining({ toToken: 'PAXG', toChainId: 42161 }),
+    );
   });
 });
 

@@ -7,12 +7,15 @@
 
 import React from "react";
 import type { GuardianLoopResult } from "@/hooks/use-session-key";
+import { useNavigation } from "@/context/app/NavigationContext";
 
 export function LoopResultSummary({
   loopResult,
 }: {
   loopResult: GuardianLoopResult;
 }) {
+  const { navigateToSwap } = useNavigation();
+  const handoff = loopResult.handoff;
   return (
     <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800 rounded-xl text-xs space-y-1">
       <div className="font-bold text-gray-700 dark:text-gray-300">
@@ -84,6 +87,18 @@ export function LoopResultSummary({
           )}
         </div>
       ))}
+      {handoff && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            navigateToSwap(handoff);
+          }}
+          className="mt-1 w-full px-3 py-2 bg-blue-500 hover:bg-blue-600 text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors"
+        >
+          Review in Exchange
+        </button>
+      )}
       {loopResult.reasonCode !== 'target_not_on_rail' &&
         (!loopResult.recommendations || loopResult.recommendations.length === 0) &&
         (!loopResult.summary || loopResult.summary.total === 0) && (
