@@ -34,6 +34,7 @@ Navigation index for `docs/`. Start at the top, drill down by need.
 | — | [`internal/architecture-notes.md`](./internal/architecture-notes.md) | Exploratory engineering findings (Circle agent stack, dependency audit) — reference, not current architecture |
 | — | [`internal/adaptive-experience.md`](./internal/adaptive-experience.md) | Adaptive-experience design doc — signal schema, per-persona routing, phases (summary: `product.md` § Adaptive experience) |
 | — | [`internal/guardian-reasoning-service.md`](./internal/guardian-reasoning-service.md) | Design draft for the unified Guardian reasoning service (shipped — see `guardian.md`) |
+| — | [`exposure-plans.md`](./exposure-plans.md) | Design draft — exposure-based plans with bands, anchor currency, Guardian tilts validated by code, Custom plan editor (roadmap § Now) |
 | — | [`internal/mascot-raster-brief.md`](./internal/mascot-raster-brief.md) | **Superseded** mascot raster brief (authoritative spec: `design-language.md` §9) |
 | — | [`submission/`](./submission/) | Hackathon/grant artifacts — agentic workflow, demo scripts, logbook, [`submission/serv-edition-01.md`](./submission/serv-edition-01.md) (SERV Hackathon: X draft, form fields, video storyboard) |
 | — | **This file** | Navigation index |
