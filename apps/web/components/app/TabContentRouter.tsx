@@ -6,8 +6,8 @@
  *
  * The dock order is fixed — TAB_IDS clipped to the tabs visible in the
  * current experience mode. Personas never reorder the dock. A hidden
- * Guardian request (hand-off or ?tab=agent) promotes beginner →
- * intermediate so the tab appears instead of bouncing.
+ * Guardian request (hand-off or ?tab=agent) switches Simple → Full so
+ * the tab appears instead of bouncing.
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -164,7 +164,7 @@ export default function TabContentRouter() {
   // deep-link doorways like /rwa-vaults use to land inside the
   // instrument. One-shot once the router is ready; each tab's own
   // effects consume the rest of the query (e.g. ?sleeve=rwa&serv=1).
-  // ?tab=agent counts as a request even when beginner mode hides
+  // ?tab=agent counts as a request even when Simple mode hides
   // Guardian — the hidden-tab effect below promotes the dock.
   const router = useRouter();
   useEffect(() => {
@@ -188,15 +188,15 @@ export default function TabContentRouter() {
 
   useEffect(() => {
     // The saved mode hydrates in a mount effect — until it lands, the
-    // pre-hydration 'beginner' must not trigger a promote or a bounce
-    // (an advanced user reloading on Guardian would be downgraded).
+    // pre-hydration 'simple' must not trigger a promote or a bounce
+    // (a Full user reloading on Guardian would be downgraded).
     if (!hydrated) return;
     if (tabOrder.length === 0 || tabOrder.includes(activeTab)) return;
-    // A Guardian request from beginner mode is a real request, not a
-    // bounce — promoting to intermediate grows the dock by one tab and
+    // A Guardian request from Simple mode is a real request, not a
+    // bounce — switching to Full grows the dock by one tab and
     // Guardian opens with its pending context intact.
-    if (activeTab === "agent" && experienceMode === "beginner") {
-      setExperienceMode("intermediate");
+    if (activeTab === "agent" && experienceMode === "simple") {
+      setExperienceMode("full");
       return;
     }
     setActiveTab(tabOrder[0]);

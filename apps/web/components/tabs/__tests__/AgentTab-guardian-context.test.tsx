@@ -36,7 +36,7 @@ vi.mock("@/hooks/use-agent-config", () => ({
   useAgentConfig: () => ({ config: {}, updateConfig: vi.fn() }),
 }));
 vi.mock("@/context/app/ExperienceContext", () => ({
-  useExperience: () => ({ experienceMode: "advanced" }),
+  useExperience: () => ({ experienceMode: "full" }),
 }));
 vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAskAdvisor }),

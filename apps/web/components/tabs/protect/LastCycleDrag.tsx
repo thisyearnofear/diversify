@@ -6,7 +6,7 @@
  * the standalone /fx-drag-calculator page is now a doorway here.
  */
 
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { analyzeCycles, requiredDates, DEFAULT_OPTIONS, type CycleResult } from '@diversifi/shared/src/services/fx-drag/calc';
 import { buildServerlessRateProvider } from '@diversifi/shared/src/services/fx-drag/rates-serverless';
 import { LAST_CYCLE_DAYS, lastCycleWindow, representativeCycleInput } from '@diversifi/shared/src/services/fx-drag/representative-cycle';
@@ -43,7 +43,6 @@ interface DragResult {
     totalFeesLocal: number;
   };
   warnings: string[];
-  counterfactualLocalCost: number;
   window: { start: string; end: string };
 }
 
@@ -61,6 +60,12 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
   const [results, setResults] = useState<DragResult | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inputError, setInputError] = useState<string | null>(null);
+
+  // A new currency means a new cycle — the stale result would lie.
+  useEffect(() => {
+    setResults(null);
+  }, [currency]);
 
   const calculate = useCallback(async () => {
     const e = parseFloat(earningsLocal.replace(/,/g, ''));
@@ -68,7 +73,11 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
     const r = parseFloat(achievedRate.replace(/,/g, ''));
     const f = parseFloat(feesLocal.replace(/,/g, ''));
     const code = currency.toUpperCase();
-    if (code.length !== 3 || isNaN(e) || isNaN(p) || isNaN(r) || e <= 0 || p <= 0 || r <= 0) return;
+    if (code.length !== 3 || isNaN(e) || isNaN(p) || isNaN(r) || e <= 0 || p <= 0 || r <= 0) {
+      setInputError('Enter your earnings, the USD you paid and your bank rate — all above zero.');
+      return;
+    }
+    setInputError(null);
     setIsCalculating(true);
     setError(null);
     setResults(null);
@@ -108,7 +117,6 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
           totalFeesLocal: summary.totalFeesLocal,
         },
         warnings,
-        counterfactualLocalCost: summary.totalActualLocal - summary.totalDragLocal,
         window: { start, end },
       });
       trackFunnelEvent('fx_drag_calculated', { currency: code, source: 'inspector' });
@@ -190,6 +198,12 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
         {isCalculating ? 'Computing…' : 'See what it cost'}
       </button>
 
+      {inputError && (
+        <p role="alert" className="text-xs text-red-600 dark:text-red-400">
+          {inputError}
+        </p>
+      )}
+
       {error && (
         <div role="alert" className="space-y-2">
           <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
@@ -219,7 +233,7 @@ function LastCycleResult({
   data: DragResult;
   onTrackNext: LastCycleDragProps['onTrackNext'];
 }) {
-  const { currency, summary, cycles, warnings, counterfactualLocalCost, window: w } = data;
+  const { currency, summary, cycles, warnings, window: w } = data;
   const firstCycle = cycles[0];
   // Annualize per cycle, not per week: a cycle lasts its exposure window, so
   // a year holds ~365 / window cycles. Assumes each cycle looks like this
@@ -228,11 +242,10 @@ function LastCycleResult({
   const cyclesPerYear = Math.max(1, Math.round(365 / windowDays));
   const annualDrag = summary.totalDragLocal * cyclesPerYear;
   const cameOutAhead = summary.totalDragLocal < 0;
-  const saved = summary.totalActualLocal - counterfactualLocalCost;
 
   return (
     <div className="space-y-3 pt-1" data-testid="last-cycle-result">
-      {/* Hero number */}
+      {/* Hero number — the percentage rides the sub-line. */}
       <div className="text-center">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
           Paying <span className="text-gray-900 dark:text-white">${fmt(summary.totalUsdPaid)}</span> to suppliers
@@ -248,95 +261,57 @@ function LastCycleResult({
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
           {cameOutAhead
             ? 'Timing worked in your favour this cycle — waiting cost you less than converting on arrival.'
-            : 'went to FX timing, bank spread and fees before it reached your supplier.'}
+            : `${fmt(Math.abs(summary.totalDragPct), 1)}% of what you paid went to FX timing, bank spread and fees before it reached your supplier.`}
         </p>
         <p className="text-[11px] text-gray-400 mt-1">
           {fmtDate(w.start)} – {fmtDate(w.end)} · {LAST_CYCLE_DAYS} days · mid-market from the open currency dataset
         </p>
       </div>
 
-      {/* Decomposition */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="divide-y divide-gray-100 dark:divide-gray-700">
-          <div className="flex items-center justify-between px-3 py-2.5">
-            <div>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                {currency} movement while money sat exposed
-              </p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Depreciation during your {firstCycle?.exposureDays}-day window</p>
-            </div>
-            <span className={`text-xs font-bold ${summary.totalTimingLocal < 0 ? 'text-emerald-500' : 'text-amber-600 dark:text-amber-400'}`}>
-              {money(currency, summary.totalTimingLocal)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between px-3 py-2.5">
-            <div>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Bank rate vs real market rate</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">What your bank charged vs mid-market</p>
-            </div>
-            <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
-              {money(currency, summary.totalSpreadLocal)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between px-3 py-2.5">
-            <div>
-              <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Explicit fees</p>
-              <p className="text-[11px] text-gray-400 mt-0.5">Wire, conversion, service charges</p>
-            </div>
-            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
-              {money(currency, summary.totalFeesLocal)}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Counterfactual */}
-      <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3">
-        <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-2">
-          If you had converted proceeds on arrival:
-        </p>
-        <div className="flex justify-between text-xs mb-1">
-          <span className="text-emerald-700 dark:text-emerald-400">You would have paid</span>
-          <span className="font-bold text-emerald-900 dark:text-emerald-200">{money(currency, counterfactualLocalCost)}</span>
-        </div>
-        <div className="flex justify-between text-xs mb-2">
-          <span className="text-emerald-700 dark:text-emerald-400">Instead you paid</span>
-          <span className="font-bold text-emerald-900 dark:text-emerald-200">{money(currency, summary.totalActualLocal)}</span>
-        </div>
-        <div className="border-t border-emerald-200 dark:border-emerald-800 pt-2 flex justify-between">
-          <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
-            {saved > 0
-              ? `Converting on arrival would have kept ${money(currency, saved)} in your business.`
-              : 'Converting on arrival would not have helped this time.'}
-          </span>
-          <span className="text-xs font-bold text-emerald-900 dark:text-emerald-100">{fmt(summary.totalDragPct, 1)}%</span>
-        </div>
-      </div>
-
-      {/* Annual context */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-3">
-        <p className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1.5">
-          If every cycle looks like this (~{cyclesPerYear} a year)
-        </p>
-        <p className="text-sm font-bold text-gray-900 dark:text-white mb-1">
-          ~{money(currency, Math.abs(annualDrag))} {cameOutAhead ? 'in your favour' : 'a year'}
-        </p>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400">
-          Working capital that FX timing, spread and fees take before it reaches your supplier.
-        </p>
-      </div>
-
-      {/* Warnings / honesty */}
-      {warnings.length > 0 && (
-        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-1">
-          {warnings.map((wText, i) => (
-            <p key={i} className="text-[11px] text-amber-800 dark:text-amber-300 flex items-start gap-2">
-              <span className="flex-shrink-0 mt-0.5">⚠️</span>
-              <span>{wText}</span>
+      {/* Decomposition — plain rows, no card */}
+      <div className="space-y-2.5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+              {currency} movement while money sat exposed
             </p>
-          ))}
+            <p className="text-[11px] text-gray-400 mt-0.5">Depreciation during your {firstCycle?.exposureDays}-day window</p>
+          </div>
+          <span className={`text-xs font-bold ${summary.totalTimingLocal < 0 ? 'text-emerald-500' : 'text-amber-600 dark:text-amber-400'}`}>
+            {money(currency, summary.totalTimingLocal)}
+          </span>
         </div>
-      )}
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Bank rate vs real market rate</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">What your bank charged vs mid-market</p>
+          </div>
+          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+            {money(currency, summary.totalSpreadLocal)}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Explicit fees</p>
+            <p className="text-[11px] text-gray-400 mt-0.5">Wire, conversion, service charges</p>
+          </div>
+          <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+            {money(currency, summary.totalFeesLocal)}
+          </span>
+        </div>
+      </div>
+
+      {/* Annual context — one line */}
+      <p className="text-xs text-gray-600 dark:text-gray-400">
+        {cameOutAhead ? 'In your favour' : 'FX drag'} runs about ~{money(currency, Math.abs(annualDrag))} a year if every cycle looks like this (~{cyclesPerYear} a year).
+      </p>
+
+      {/* Warnings — plain amber text, no card */}
+      {warnings.map((wText, i) => (
+        <p key={i} className="text-[11px] text-amber-700 dark:text-amber-300">
+          {wText}
+        </p>
+      ))}
 
       {/* One CTA — carry this cycle into the forward report */}
       <button

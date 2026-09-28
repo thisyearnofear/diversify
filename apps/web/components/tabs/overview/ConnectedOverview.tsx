@@ -13,7 +13,6 @@ import { ContextualBanner } from "../../shared/ContextualBanner";
 import { ClaimRail } from "../../rewards/ClaimRail";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
-import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { HomeRiskTheater } from "./HomeRiskTheater";
 import { CurrencyStoryInspector } from "./CurrencyStoryInspector";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -80,7 +79,6 @@ export function ConnectedOverview({
   onDisableDemo,
   onEnableDemo,
 }: ConnectedOverviewProps) {
-  const { config: adaptiveConfig } = useAdaptiveContext();
   const { askAdvisor } = useAdvisor();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
   const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
@@ -304,20 +302,11 @@ export function ConnectedOverview({
     // No card here — InstrumentShell owns the one surface; the fallback
     // hero is bare content inside it.
     <div className="text-center" data-testid="home-fallback-hero">
-      <div
-        id="home-hero-title"
-        className="mb-3 inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-800 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400"
-      >
-        {home.isBeginner
-          ? "Home Overview"
-          : adaptiveConfig.content.hero.icon &&
-            `${adaptiveConfig.content.hero.icon} ` + adaptiveConfig.content.hero.type}
-      </div>
       {hasHoldings && (
         <>
           <HeroValue
-            value={home.isBeginner ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
-            label={home.isBeginner ? "Protection Score" : "Total Value"}
+            value={home.isSimple ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+            label={home.isSimple ? "Protection Score" : "Total Value"}
           />
           <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">
             {diversificationRating}
@@ -338,21 +327,13 @@ export function ConnectedOverview({
         />
       </div>
       {(() => {
-        const ctaLabel = home.isBeginner
-          ? philosophyName
-            ? `See your ${philosophyName} shield`
-            : "Set up your plan"
-          : adaptiveConfig.content.hero.ctaLabel;
-        const ctaTab = home.isBeginner
-          ? "protect"
-          : (adaptiveConfig.content.hero.ctaTab as TabId | null);
-        if (!ctaLabel) return null;
+        const ctaLabel = philosophyName
+          ? `See your ${philosophyName} shield`
+          : "Set up your plan";
         return (
           <div className="mt-5">
             <button
-              onClick={() =>
-                setActiveTab(ctaTab ?? "protect")
-              }
+              onClick={() => setActiveTab("protect")}
               className="min-h-[44px] px-5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
             >
               {ctaLabel}

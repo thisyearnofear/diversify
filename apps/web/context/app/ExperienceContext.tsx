@@ -7,14 +7,12 @@ type ExperienceContextValue = {
   hydrated: boolean;
   setExperienceMode: (mode: UserExperienceMode) => void;
   recordSwap: () => void;
-  shouldShowAdvancedFeatures: () => boolean;
-  shouldShowIntermediateFeatures: () => boolean;
 };
 
 const ExperienceContext = createContext<ExperienceContextValue | undefined>(undefined);
 
 export function ExperienceProvider({ children }: { children: React.ReactNode }) {
-  const [experienceMode, setExperienceModeState] = useState<UserExperienceMode>('beginner');
+  const [experienceMode, setExperienceModeState] = useState<UserExperienceMode>('simple');
   const [hydrated, setHydrated] = useState(false);
   const [userActivity, setUserActivity] = useState<UserActivity>({
     swapCount: 0,
@@ -24,10 +22,10 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
   });
 
   useEffect(() => {
-    const savedMode = localStorage.getItem('experienceMode') as UserExperienceMode | null;
+    const savedMode = localStorage.getItem('experienceMode');
     const savedActivity = localStorage.getItem('userActivity');
 
-    let nextMode: UserExperienceMode = 'beginner';
+    let nextMode: UserExperienceMode = 'simple';
     let nextActivity: UserActivity = {
       swapCount: 0,
       lastSwapDate: null,
@@ -35,8 +33,13 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
       hasViewedAnalytics: false,
     };
 
-    if (savedMode && ['beginner', 'intermediate', 'advanced'].includes(savedMode)) {
-      nextMode = savedMode;
+    // Migrate the saved mode: beginner → simple, intermediate/advanced →
+    // full (intermediate and advanced showed the same dock once Learn
+    // was retired). Rewrite storage in the new form.
+    if (savedMode === 'beginner' || savedMode === 'simple') {
+      nextMode = 'simple';
+    } else if (savedMode === 'intermediate' || savedMode === 'advanced' || savedMode === 'full') {
+      nextMode = 'full';
     }
 
     if (savedActivity) {
@@ -48,8 +51,10 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
     }
 
     // auto-upgrade
-    if (nextMode === 'beginner' && nextActivity.swapCount >= 3) nextMode = 'intermediate';
-    if (nextMode === 'intermediate' && nextActivity.swapCount >= 10) nextMode = 'advanced';
+    if (nextMode === 'simple' && nextActivity.swapCount >= 3) nextMode = 'full';
+    if (savedMode !== nextMode) {
+      localStorage.setItem('experienceMode', nextMode);
+    }
 
     setExperienceModeState(nextMode);
     setUserActivity(nextActivity);
@@ -70,8 +75,7 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
       };
 
       let nextMode = experienceMode;
-      if (nextMode === 'beginner' && nextActivity.swapCount >= 3) nextMode = 'intermediate';
-      else if (nextMode === 'intermediate' && nextActivity.swapCount >= 10) nextMode = 'advanced';
+      if (nextMode === 'simple' && nextActivity.swapCount >= 3) nextMode = 'full';
 
       localStorage.setItem('userActivity', JSON.stringify(nextActivity));
       if (nextMode !== experienceMode) {
@@ -83,12 +87,6 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
     });
   }, [experienceMode]);
 
-  const shouldShowAdvancedFeatures = useCallback(() => experienceMode === 'advanced', [experienceMode]);
-  const shouldShowIntermediateFeatures = useCallback(
-    () => experienceMode === 'intermediate' || experienceMode === 'advanced',
-    [experienceMode],
-  );
-
   const value = useMemo<ExperienceContextValue>(
     () => ({
       experienceMode,
@@ -96,8 +94,6 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
       hydrated,
       setExperienceMode,
       recordSwap,
-      shouldShowAdvancedFeatures,
-      shouldShowIntermediateFeatures,
     }),
     [
       experienceMode,
@@ -105,8 +101,6 @@ export function ExperienceProvider({ children }: { children: React.ReactNode }) 
       hydrated,
       setExperienceMode,
       recordSwap,
-      shouldShowAdvancedFeatures,
-      shouldShowIntermediateFeatures,
     ],
   );
 

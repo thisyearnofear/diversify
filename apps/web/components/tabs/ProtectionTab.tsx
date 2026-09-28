@@ -799,6 +799,7 @@ export default function ProtectionTab({
       cycleOpen={cycleOpen && !balance.isPreviewing}
       cycleMode={cycleMode}
       onCloseCycle={() => setCycleOpen(false)}
+      onOpenCycle={() => openCycle("next")}
     />
   );
 

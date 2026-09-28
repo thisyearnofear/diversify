@@ -85,4 +85,13 @@ describe("useSignalDetector — content.shieldMorph", () => {
     const { result } = renderHook(() => useSignalDetector());
     expect(result.current.config.content.shieldMorph).toBe("cycle");
   });
+
+  it("the config carries nothing but persona, contextualBanner and shieldMorph", () => {
+    const { result } = renderHook(() => useSignalDetector());
+    expect(Object.keys(result.current.config).sort()).toEqual(["content", "persona"]);
+    expect(Object.keys(result.current.config.content).sort()).toEqual([
+      "contextualBanner",
+      "shieldMorph",
+    ]);
+  });
 });

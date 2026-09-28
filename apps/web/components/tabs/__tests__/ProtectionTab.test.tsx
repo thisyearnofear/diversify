@@ -305,7 +305,7 @@ vi.mock("@/context/app/DemoModeContext", () => ({
 }));
 
 vi.mock("@/context/app/ExperienceContext", () => ({
-  useExperience: () => ({ experienceMode: "advanced" }),
+  useExperience: () => ({ experienceMode: "full" }),
 }));
 
 // Persona morph — flips Shield's status rail to the payment-cycle entry.
@@ -686,9 +686,13 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
-    expect(screen.getByText("Payment cycle")).toBeInTheDocument();
     // The design-contract aside is gone (§3): the badge alone names it.
     expect(screen.queryByText(/not a module/)).not.toBeInTheDocument();
+    // The slice inspector links out to the one cycle tool — it doesn't
+    // embed a second copy under the slice.
+    expect(screen.queryByTestId("payment-cycle-report")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("slice-cycle-entry"));
+    expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute("data-mode", "next");
   });
 
   it("is quiet when aligned and Guardian is monitoring", () => {

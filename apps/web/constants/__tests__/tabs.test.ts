@@ -2,15 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { getVisibleTabIds, isTabId, LEGACY_TAB_MAP, TAB_IDS, TAB_VISIBILITY } from '../tabs';
 
 describe('TAB_VISIBILITY', () => {
-  it('shows Shield, Home, and Exchange in beginner mode', () => {
-    expect(TAB_VISIBILITY.beginner).toEqual(['protect', 'overview', 'exchange']);
+  it('shows Shield, Home, and Exchange in simple mode', () => {
+    expect(TAB_VISIBILITY.simple).toEqual(['protect', 'overview', 'exchange']);
   });
 
-  it('shows intermediate and advanced with all four tabs in fixed order', () => {
+  it('shows all four tabs in fixed order in full mode', () => {
     const expected = ['protect', 'overview', 'exchange', 'agent'];
     expect(TAB_IDS).toEqual(expected);
-    expect(getVisibleTabIds('intermediate')).toEqual(expected);
-    expect(getVisibleTabIds('advanced')).toEqual(expected);
+    expect(getVisibleTabIds('full')).toEqual(expected);
   });
 
   it('retires Learn — info is not a tab id and migrates to Shield', () => {

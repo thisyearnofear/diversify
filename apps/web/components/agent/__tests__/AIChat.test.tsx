@@ -16,13 +16,15 @@ import '@testing-library/jest-dom/vitest';
 const mocks = vi.hoisted(() => {
   const chatState = { isChatting: false, thinkingStep: '', memoryEnabled: false };
   const wallet = { address: '0xabc0000000000000000000000000000000000001' as string | null };
-  const conversation = { isDrawerOpen: true };
+  const conversation = { isDrawerOpen: true, activeGuardianReview: null as unknown };
   const nav = { activeTab: 'overview' as string };
   return {
     chatState,
     wallet,
     conversation,
     nav,
+    navigateWithIntent: vi.fn(),
+    setFocusedCycleId: vi.fn(),
     clearMessages: vi.fn(),
     sendChatMessage: vi.fn(),
     setMemoryEnabled: vi.fn(),
@@ -47,7 +49,7 @@ vi.mock('@/context/AIConversationContext', () => ({
     setDrawerOpen: mocks.setDrawerOpen,
     clearMessages: mocks.clearMessages,
     addUserMessage: mocks.addUserMessage,
-    activeGuardianReview: null,
+    activeGuardianReview: mocks.conversation.activeGuardianReview,
     setActiveGuardianReview: mocks.setActiveGuardianReview,
     snoozeGuardianUpdate: mocks.snoozeGuardianUpdate,
   }),
@@ -59,7 +61,8 @@ vi.mock('@/context/app/NavigationContext', () => ({
     setActiveTab: vi.fn(),
     navigateToSwap: vi.fn(),
     navigateToNetting: vi.fn(),
-    setFocusedCycleId: vi.fn(),
+    navigateWithIntent: mocks.navigateWithIntent,
+    setFocusedCycleId: mocks.setFocusedCycleId,
   }),
 }));
 
@@ -117,7 +120,10 @@ vi.mock('@/components/agent/SoSoActionModal', () => ({ default: () => null }));
 vi.mock('@/components/agent/ResearchCheck', () => ({ ResearchCheck: () => null }));
 vi.mock('@/components/agent/ResearchReceipt', () => ({ ResearchReceipt: () => null }));
 vi.mock('@/components/agent/TrustFlow', () => ({ TrustFlow: () => null }));
-vi.mock('@/components/agent/GuardianRecommendationCard', () => ({ GuardianRecommendationCard: () => null }));
+vi.mock('@/components/agent/GuardianRecommendationCard', () => ({
+  GuardianRecommendationCard: ({ onReview }: { onReview?: () => void }) =>
+    onReview ? <button onClick={onReview}>Review</button> : null,
+}));
 vi.mock('@/components/shared/GuardianMascot', () => ({ GuardianMascot: () => null }));
 vi.mock('@/components/shared/Scrim', () => ({
   default: () => <div data-testid="scrim" />,
@@ -392,5 +398,37 @@ describe('AIChat — desktop docked panel', () => {
     const header = screen.getByText('Guardian').closest('div');
     expect(header!.compareDocumentPosition(freemium) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(freemium.compareDocumentPosition(input) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('AIChat — action router', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.chatState.isChatting = false;
+    mocks.wallet.address = '0xabc0000000000000000000000000000000000001';
+    mocks.conversation.isDrawerOpen = true;
+    mocks.nav.activeTab = 'overview';
+    mocks.conversation.activeGuardianReview = null;
+    setViewport(true);
+  });
+
+  it('open_cycle_review navigates to Shield with the cycle lens and focuses the cycle', () => {
+    mocks.conversation.activeGuardianReview = {
+      id: 'rev-1',
+      summary: 'Payment due soon',
+      contract: {
+        title: 'Cycle review',
+        proposal: 'Watch this cycle',
+        action: { type: 'open_cycle_review', cycleId: 'cycle-42' },
+      },
+    };
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Review' }));
+    expect(mocks.navigateWithIntent).toHaveBeenCalledWith('protect', {
+      source: 'guardian',
+      lens: 'cycle',
+    });
+    expect(mocks.setFocusedCycleId).toHaveBeenCalledWith('cycle-42');
+    expect(mocks.setDrawerOpen).toHaveBeenCalledWith(false);
   });
 });

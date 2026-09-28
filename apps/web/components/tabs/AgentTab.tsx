@@ -375,7 +375,7 @@ function ConnectedAgent({
           transition={
             // The budget line already opens the bounds sheet — one
             // destination, one entry point per state.
-            experienceMode !== "beginner" && !budgetShowing ? (
+            experienceMode !== "simple" && !budgetShowing ? (
               <button
                 type="button"
                 onClick={() => setSel("bounds")}

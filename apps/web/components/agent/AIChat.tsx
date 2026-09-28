@@ -83,7 +83,7 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { activeTab, setActiveTab, navigateToSwap, navigateToNetting, setFocusedCycleId } = useNavigation();
+  const { activeTab, setActiveTab, navigateToSwap, navigateToNetting, navigateWithIntent, setFocusedCycleId } = useNavigation();
   const { address, signMessage } = useWalletContext();
   const { showToast } = useToast();
   const portfolio = useSharedMultichainBalances(address);
@@ -624,7 +624,13 @@ export default function AIChat() {
                               closeReview();
                               return;
                             case 'open_cycle_review':
-                              setActiveTab('protect');
+                              // lens:'cycle' opens the payment-cycle inspector
+                              // (a bare setActiveTab leaves the report
+                              // unmounted and the focus is lost).
+                              navigateWithIntent('protect', {
+                                source: 'guardian',
+                                lens: 'cycle',
+                              });
                               setFocusedCycleId(a.cycleId);
                               closeReview();
                               return;

@@ -961,16 +961,16 @@ export const ConnectWalletPrompt = ({
   userRegion,
   inflationData,
   availableTokens,
-  experienceMode = "advanced",
+  experienceMode = "full",
 }: {
   message?: string;
   WalletButtonComponent: React.ReactNode;
   userRegion?: string;
   inflationData?: Record<string, { avgRate: number }>;
   availableTokens?: Array<{ symbol: string; name: string; region: string }>;
-  experienceMode?: "beginner" | "intermediate" | "advanced";
+  experienceMode?: "simple" | "full";
 }) => {
-  const isBeginner = experienceMode === "beginner";
+  const isBeginner = experienceMode === "simple";
   const homeInflation = inflationData?.[userRegion || "Global"]?.avgRate || 15.4;
 
   // Funnel: the wallet prompt is the last cold-start milestone before

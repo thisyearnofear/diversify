@@ -31,7 +31,7 @@ import type { HomeSections } from "@/hooks/use-home-sections";
 // Mutable mock state
 // ──────────────────────────────────────────────────────────────────────────
 
-let mockExperienceMode: "beginner" | "standard" | "advanced" = "standard";
+let mockExperienceMode: "simple" | "full" = "full";
 let mockProfileConfig: {
   userGoal: string | null;
   moneyPurpose: string | null;
@@ -168,10 +168,8 @@ vi.mock("@diversifi/shared/src/services/vault/guardian-tier-state", () => ({
 }));
 
 const defaultHomeSections: HomeSections = {
-  mode: "standard",
-  isBeginner: false,
-  isStandard: true,
-  isAdvanced: false,
+  mode: "full",
+  isSimple: false,
   banner: null,
   heroVariant: "detailed",
   showDial: true,
@@ -355,7 +353,7 @@ function renderOverview(props: Partial<React.ComponentProps<typeof ConnectedOver
 describe("ConnectedOverview — diversificationTips ordering regression", () => {
   afterEach(() => {
     cleanup();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
@@ -398,10 +396,10 @@ describe("ConnectedOverview — diversificationTips ordering regression", () => 
   });
 
   it("renders without throwing in beginner mode with a complete profile (takes the early-return branch, still declares diversificationTips first)", () => {
-    mockExperienceMode = "beginner";
+    mockExperienceMode = "simple";
     mockProfileComplete = true;
     mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: null };
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    mockHomeSections = { ...defaultHomeSections, isSimple: true, mode: "simple", showDial: false };
 
     expect(() => renderOverview()).not.toThrow();
   });
@@ -456,7 +454,7 @@ const GHANA_MOMENT: import("@/lib/narrative/currency-moment").NarrativeMoment = 
 describe("ConnectedOverview — currency-moment hero", () => {
   afterEach(() => {
     cleanup();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
@@ -507,8 +505,8 @@ describe("ConnectedOverview — currency-moment hero", () => {
   });
 
   it("shows Risk Theater for beginners with holdings — coin stage is universal", () => {
-    mockExperienceMode = "beginner";
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: true };
+    mockExperienceMode = "simple";
+    mockHomeSections = { ...defaultHomeSections, isSimple: true, mode: "simple", showDial: true };
     mockMoment = GHANA_MOMENT;
     renderOverview();
 
@@ -538,7 +536,7 @@ describe("ConnectedOverview — currency-moment hero", () => {
 describe("ConnectedOverview — geo-failure fallback and compare link", () => {
   afterEach(() => {
     cleanup();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
@@ -549,7 +547,7 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
 
   it("fallback shows the country picker — the same actionable affordance as the unconnected morph", () => {
     mockMoment = null;
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    mockHomeSections = { ...defaultHomeSections, isSimple: true, mode: "simple", showDial: false };
     renderOverview();
 
     expect(screen.getByTestId("home-fallback-hero")).toBeInTheDocument();
@@ -560,7 +558,7 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
   it("fallback CTA names the committed philosophy and goes to Shield — never Exchange", () => {
     mockMoment = null;
     mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    mockHomeSections = { ...defaultHomeSections, isSimple: true, mode: "simple", showDial: false };
     const setActiveTab = vi.fn();
     renderOverview({ setActiveTab });
 
@@ -573,7 +571,7 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
 
   it("fallback CTA says 'Set up your plan' when no philosophy is committed", () => {
     mockMoment = null;
-    mockHomeSections = { ...defaultHomeSections, isBeginner: true, mode: "beginner", showDial: false };
+    mockHomeSections = { ...defaultHomeSections, isSimple: true, mode: "simple", showDial: false };
     renderOverview();
 
     expect(screen.getByRole("button", { name: "Set up your plan" })).toBeInTheDocument();
@@ -672,7 +670,7 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
 describe("ConnectedOverview — status tier budget and region intent", () => {
   afterEach(() => {
     cleanup();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
@@ -744,7 +742,7 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
 describe("ConnectedOverview — currency story inspector", () => {
   afterEach(() => {
     cleanup();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
@@ -839,7 +837,7 @@ describe("ConnectedOverview — the settled-move seal", () => {
     cleanup();
     navState.lastSettlement = null;
     mockConsumeSettlement.mockClear();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
@@ -906,7 +904,7 @@ describe("ConnectedOverview — concentration lens", () => {
   afterEach(() => {
     cleanup();
     sessionStorage.clear();
-    mockExperienceMode = "standard";
+    mockExperienceMode = "full";
     mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;

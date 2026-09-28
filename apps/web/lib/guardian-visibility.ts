@@ -4,8 +4,8 @@ import type { UserExperienceMode } from '@/context/app/types';
  * Pure helpers for the Guardian visibility preference ("how much of the
  * Guardian's work the surfaces show"). Two axes decide what a user sees:
  *
- *  - the persona they already chose (ExperienceContext) sets the DEFAULT —
- *    beginner → quiet, intermediate/advanced → informed;
+ *  - the mode they already chose (ExperienceContext) sets the DEFAULT —
+ *    simple → quiet, full → informed;
  *  - an explicit override, stored per wallet, set by the user in
  *    AutomationSettings or by the agent from a natural-language request.
  *
@@ -30,7 +30,7 @@ export function guardianVisibilityStorageKey(address?: string | null): string {
 }
 
 export function defaultVisibilityForPersona(mode: UserExperienceMode): GuardianVisibility {
-  return mode === 'beginner' ? 'quiet' : 'informed';
+  return mode === 'simple' ? 'quiet' : 'informed';
 }
 
 function isStoredValue(value: unknown): value is StoredGuardianVisibility {

@@ -2,7 +2,7 @@
  * useHomeSections — Centralizes the "what should the home page look like" decision
  * for the Overview tab.
  *
- * Before this hook, `ConnectedOverview.tsx` had `isBeginner`/`isAdvanced` guards
+ * Before this hook, `ConnectedOverview.tsx` had mode guards
  * scattered through ~660 lines of JSX. That made it hard to reason about what
  * the user would see in each mode, and impossible to test the IA in isolation.
  *
@@ -29,7 +29,7 @@ import { needsApacRailMessaging } from "@/constants/apac-rail";
 import { needsCaribbeanRailMessaging } from "@/constants/caribbean-rail";
 import { useAdaptiveContext } from "../context/app/AdaptiveContext";
 
-export type HomeMode = "beginner" | "standard" | "advanced";
+export type HomeMode = "simple" | "full";
 
 export type ContextualBannerKind =
   | "cold-start"      // Connected, no holdings → fund or learn
@@ -87,9 +87,7 @@ export interface UseHomeSectionsInput {
 
 export interface HomeSections {
   mode: HomeMode;
-  isBeginner: boolean;
-  isStandard: boolean;
-  isAdvanced: boolean;
+  isSimple: boolean;
 
   /** The single contextual banner to render, if any. */
   banner: ContextualBannerKind;
@@ -160,16 +158,8 @@ export function useHomeSections({
   }, []);
 
   return useMemo<HomeSections>(() => {
-    const mode: HomeMode =
-      experienceMode === "beginner"
-        ? "beginner"
-        : experienceMode === "advanced"
-          ? "advanced"
-          : "standard";
-
-    const isBeginner = mode === "beginner";
-    const isAdvanced = mode === "advanced";
-    const isStandard = mode === "standard";
+    const mode: HomeMode = experienceMode;
+    const isSimple = mode === "simple";
 
     // ── 1. Resolve the single contextual banner by priority ──────────────
     // Higher priority wins. Multiple banners used to stack and compete for
@@ -259,7 +249,7 @@ export function useHomeSections({
 
     // Instrument layout: no section catalog. Persona morphs the object
     // (payment cycle → Exchange) or the inspector (zakat). Tips are one line.
-    const heroVariant: "compact" | "detailed" = isBeginner
+    const heroVariant: "compact" | "detailed" = isSimple
       ? "compact"
       : "detailed";
 
@@ -271,7 +261,7 @@ export function useHomeSections({
     if (hasHoldings && portfolio) {
       const gs = portfolio.goalScores;
 
-      if (isBeginner && profileComplete && profileConfig.userGoal) {
+      if (isSimple && profileComplete && profileConfig.userGoal) {
         primaryTip = getBeginnerPrimaryTip(
           profileConfig.userGoal as ProtectionUserGoal,
           gs,
@@ -305,9 +295,7 @@ export function useHomeSections({
 
     return {
       mode,
-      isBeginner,
-      isStandard,
-      isAdvanced,
+      isSimple,
       banner,
       heroVariant,
       showDial,

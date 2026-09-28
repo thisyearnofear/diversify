@@ -59,7 +59,7 @@ export interface ContextualBannerProps {
   onDismissFxCorridorHint?: () => void;
   /**
    * Primary CTA handler for persona banner variants.
-   * Navigates to the target tab defined in content.hero.ctaTab.
+   * Navigates to the target tab defined by the banner kind.
    */
   onHeroAction?: () => void;
   /**

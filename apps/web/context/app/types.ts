@@ -28,7 +28,7 @@ export interface GuidedTourState {
   highlightSection?: string;
 }
 
-export type UserExperienceMode = 'beginner' | 'intermediate' | 'advanced';
+export type UserExperienceMode = 'simple' | 'full';
 
 // Deep leaf re-export from shared package to ensure consistency — bypasses
 // the barrel so this type-only import doesn't pull the AI/swap/ethers stack

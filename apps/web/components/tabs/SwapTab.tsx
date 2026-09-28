@@ -102,7 +102,7 @@ export default function SwapTab({
   );
   const [searchQuery, setSearchQuery] = useState("");
 
-  const isBeginner = experienceMode === "beginner";
+  const isSimple = experienceMode === "simple";
   const isDemo = demoMode.isActive;
   const isMobile = useMobile();
 
@@ -506,7 +506,7 @@ export default function SwapTab({
   }, [chains, walletChainId]);
 
   // Add bottom padding on mobile beginner mode to account for sticky CTA
-  const containerPadding = !instrument && isMobile && isBeginner ? "pb-24" : "";
+  const containerPadding = !instrument && isMobile && isSimple ? "pb-24" : "";
   const showChrome = !instrument;
 
   // The swap ticket — the object in both connection states. Unconnected,
@@ -586,7 +586,7 @@ export default function SwapTab({
         )}
 
         {/* Hide complex header for beginners */}
-        {showChrome && !isBeginner && (
+        {showChrome && !isSimple && (
           <TabHeader
             title="Action Hub"
             chainId={walletChainId}
@@ -597,7 +597,7 @@ export default function SwapTab({
         )}
 
         {/* Beginner: Simple title + compact NetworkSwitcher (consistent with advanced mode) */}
-        {showChrome && isBeginner && (
+        {showChrome && isSimple && (
           <div className="mb-4 flex items-start justify-between gap-3">
             <div>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
@@ -618,7 +618,7 @@ export default function SwapTab({
         )}
 
         {/* Hide chain balances header for beginners */}
-        {showChrome && address && !isBeginner && (
+        {showChrome && address && !isSimple && (
           isMultichainLoading ? (
             <div className="flex gap-2 py-2">
               <Skeleton className="flex-1 h-16" variant="rect" />
@@ -636,7 +636,7 @@ export default function SwapTab({
         )}
 
         {/* Hide search for beginners */}
-        {showChrome && !isBeginner && (
+        {showChrome && !isSimple && (
           <div className="mb-4">
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

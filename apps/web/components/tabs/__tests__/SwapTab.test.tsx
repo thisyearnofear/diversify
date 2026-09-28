@@ -119,10 +119,8 @@ const mockRecordExperienceSwap = vi.fn();
 
 vi.mock("@/context/app/ExperienceContext", () => ({
   useExperience: () => ({
-    experienceMode: "advanced",
+    experienceMode: "full",
     recordSwap: mockRecordExperienceSwap,
-    shouldShowAdvancedFeatures: () => true,
-    shouldShowIntermediateFeatures: () => true,
   }),
 }));
 

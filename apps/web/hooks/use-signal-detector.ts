@@ -20,7 +20,6 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
-import { TAB_LABELS } from "../constants/tabs";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useUserRegion } from "./use-user-region";
 import { useCurrencyRisk } from "./use-currency-risk";
@@ -92,24 +91,6 @@ export type AdaptivePersona =
 
 // ─── Content routing types ─────────────────────────────────────
 
-/** What the home tab hero looks like for this persona. */
-export type HeroType = "cycle" | "protection" | "risk-moment" | "family" | "generic";
-
-/** Home tab hero content — persona-aware headline and subtitle. */
-export interface HeroContent {
-  type: HeroType;
-  /** Main headline shown in the home hero banner */
-  headline: string;
-  /** Subtitle with supporting context */
-  subtitle: string;
-  /** Emoji icon for the hero */
-  icon: string;
-  /** Primary CTA text — null means no action */
-  ctaLabel: string | null;
-  /** Where the CTA navigates (tab id) */
-  ctaTab: string | null;
-}
-
 /** Contextual banner shown at the top of the home tab. */
 export type ContextualBannerKind =
   | "fx-drag-warning"     // Importer: FX drag is eating margins
@@ -124,8 +105,6 @@ export type ContextualBannerKind =
  * different content, layouts, and priorities in the same shell.
  */
 export interface ContentRouting {
-  /** Hero content for the home tab */
-  hero: HeroContent;
   /**
    * Shield morph — which surface Shield leads with for this persona.
    * "cycle": business personas (importers, BPOs, payment-purpose users)
@@ -145,14 +124,6 @@ export interface ContentRouting {
 export interface AdaptiveConfig {
   /** Which persona the system has detected */
   persona: AdaptivePersona;
-  /** Tab label overrides by persona */
-  tabLabels: Record<string, string>;
-  /** Primary CTA for the current session */
-  primaryCTA: "calculate-drag" | "save-cycle" | "enable-guardian" | "connect-wallet" | null;
-  /** Currency code used for display formatting */
-  displayCurrency: string;
-  /** Currency flag emoji */
-  currencyFlag: string;
   /** Content routing — the adaptive part that makes surfaces different */
   content: ContentRouting;
 }
@@ -285,92 +256,10 @@ function buildOnboardingOverrides(
 
 // ─── Content routing builders ──────────────────────────────────
 
-function buildHeroContent(persona: AdaptivePersona, walletConnected: boolean): HeroContent {
+function buildContentRouting(persona: AdaptivePersona): ContentRouting {
   switch (persona) {
     case "ghanaian_importer":
       return {
-        type: "cycle",
-        headline: "Your next cycle",
-        subtitle: walletConnected
-          ? "FX drag is eating your margins — here's what this cycle costs"
-          : "See what your cedi is costing you in FX drag",
-        icon: "🔄",
-        ctaLabel: walletConnected ? "View cycle" : "Connect wallet",
-        ctaTab: walletConnected ? "protect" : null,
-      };
-
-    case "ghanaian_saver":
-      return {
-        type: "protection",
-        headline: "Protect your cedi savings",
-        subtitle: walletConnected
-          ? "Your GHS is losing ~20% annually to inflation"
-          : "See how your savings are depreciating against USD, EUR, and gold",
-        icon: "🛡️",
-        ctaLabel: "Protect savings",
-        ctaTab: "protect",
-      };
-
-    case "diaspora":
-      return {
-        type: "family",
-        headline: "Protect your family's savings",
-        subtitle: walletConnected
-          ? "Your home currency is depreciating — here's how to protect what matters"
-          : "Your family's savings in the home country are at risk — see the data",
-        icon: "🏠",
-        ctaLabel: walletConnected ? "View protection" : "Connect wallet",
-        ctaTab: walletConnected ? "protect" : null,
-      };
-
-    case "us_saver":
-      return {
-        type: "risk-moment",
-        headline: "Currency risk is universal",
-        subtitle: walletConnected
-          ? "Even strong currencies lose to inflation and concentration risk"
-          : "The USD, EUR, and GBP have all lost purchasing power to inflation over the last 5 years",
-        icon: "💱",
-        ctaLabel: walletConnected ? "View risk" : "Learn more",
-        ctaTab: walletConnected ? "protect" : null,
-      };
-
-    case "philippine_bpo":
-      return {
-        type: "cycle",
-        headline: "Your next payment",
-        subtitle: walletConnected
-          ? "PHP exposure is active — monitor FX drag this cycle"
-          : "See what the peso is costing you in FX drag",
-        icon: "🔄",
-        ctaLabel: walletConnected ? "View cycle" : "Connect wallet",
-        ctaTab: walletConnected ? "protect" : null,
-      };
-
-    default:
-      return {
-        type: "generic",
-        headline: "Your treasury",
-        subtitle: walletConnected
-          ? "Portfolio overview and protection status"
-          : "Understand your currency risk across 200+ currencies",
-        icon: "💰",
-        ctaLabel: walletConnected ? "Dashboard" : "Get started",
-        ctaTab: walletConnected ? "protect" : null,
-      };
-  }
-}
-
-function buildContentRouting(
-  persona: AdaptivePersona,
-  walletConnected: boolean,
-): ContentRouting {
-  const hero = buildHeroContent(persona, walletConnected);
-
-  switch (persona) {
-    case "ghanaian_importer":
-      return {
-        hero,
         // Cycle morph — the payment-cycle entry replaces the RWA rail.
         shieldMorph: "cycle",
         contextualBanner: "fx-drag-warning",
@@ -378,35 +267,30 @@ function buildContentRouting(
 
     case "ghanaian_saver":
       return {
-        hero,
         shieldMorph: "plan",
         contextualBanner: null,
       };
 
     case "diaspora":
       return {
-        hero,
         shieldMorph: "plan",
         contextualBanner: "family-savings",
       };
 
     case "us_saver":
       return {
-        hero,
         shieldMorph: "plan",
         contextualBanner: "currency-risk",
       };
 
     case "philippine_bpo":
       return {
-        hero,
         shieldMorph: "cycle",
         contextualBanner: "fx-drag-warning",
       };
 
     default:
       return {
-        hero,
         shieldMorph: "plan",
         contextualBanner: null,
       };
@@ -419,14 +303,8 @@ function buildConfig(
   signals: DetectedSignals,
   persona: AdaptivePersona,
 ): AdaptiveConfig {
-  const { currency, flag } = signals.geo;
-  const walletConnected = signals.wallet.connected;
-
-  // Tab labels have one source (constants/tabs.ts) — personas never rename tabs.
-  const defaultLabels: Record<string, string> = { ...TAB_LABELS };
-
   // Build persona-aware content routing
-  const content = buildContentRouting(persona, walletConnected);
+  const content = buildContentRouting(persona);
 
   // Merge onboarding overrides into content routing
   const onboardingOverrides = buildOnboardingOverrides(signals.onboarding);
@@ -435,67 +313,7 @@ function buildConfig(
     Object.assign(content, onboardingOverrides);
   }
 
-  switch (persona) {
-    case "ghanaian_importer":
-      return {
-        persona,
-        tabLabels: defaultLabels,
-        primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
-        displayCurrency: "GHS",
-        currencyFlag: flag || "🇬🇭",
-        content,
-      };
-
-    case "ghanaian_saver":
-      return {
-        persona,
-        tabLabels: defaultLabels,
-        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
-        displayCurrency: "GHS",
-        currencyFlag: flag || "🇬🇭",
-        content,
-      };
-
-    case "philippine_bpo":
-      return {
-        persona,
-        tabLabels: defaultLabels,
-        primaryCTA: walletConnected ? "save-cycle" : "connect-wallet",
-        displayCurrency: "PHP",
-        currencyFlag: flag || "🇵🇭",
-        content,
-      };
-
-    case "diaspora":
-      return {
-        persona,
-        tabLabels: defaultLabels,
-        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
-        displayCurrency: "USD",
-        currencyFlag: flag || "🇺🇸",
-        content,
-      };
-
-    case "us_saver":
-      return {
-        persona,
-        tabLabels: defaultLabels,
-        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
-        displayCurrency: "USD",
-        currencyFlag: flag || "🇺🇸",
-        content,
-      };
-
-    default:
-      return {
-        persona,
-        tabLabels: defaultLabels,
-        primaryCTA: walletConnected ? "enable-guardian" : "connect-wallet",
-        displayCurrency: "USD",
-        currencyFlag: flag || "💱",
-        content,
-      };
-  }
+  return { persona, content };
 }
 
 // ─── Hook ──────────────────────────────────────────────────────

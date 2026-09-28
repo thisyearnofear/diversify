@@ -3,12 +3,12 @@
  * entire app tree.
  *
  * This is the wiring point between signal detection (Phase 1: geo + wallet)
- * and app surfaces (content routing: hero, shield morph, banners).
+ * and app surfaces (content routing: shield morph, banners).
  *
  * Usage:
  *   const { config } = useAdaptiveContext();
  *   if (config.content.shieldMorph === "cycle") { /* business surfaces *\/ }
- *   const hero = config.content.hero;
+ *   const banner = config.content.contextualBanner;
  *
  * The config is stable (useMemo in the provider) so consumers don't
  * trigger unnecessary re-renders when signals are unchanged.
@@ -16,7 +16,6 @@
 
 import React, { createContext, useContext, type ReactNode, useMemo } from "react";
 import { useSignalDetector, type AdaptiveConfig } from "../../hooks/use-signal-detector";
-import { TAB_LABELS } from "../../constants/tabs";
 
 interface AdaptiveContextValue {
   /** Current session's adaptive configuration */
@@ -45,23 +44,10 @@ export function useAdaptiveContext(): AdaptiveContextValue {
   const ctx = useContext(AdaptiveContext);
   if (!ctx) {
     // Fallback for tests and contexts outside AdaptiveProvider
-    const defaultLabels: Record<string, string> = { ...TAB_LABELS };
     const fallback: AdaptiveContextValue = {
       config: {
         persona: "generic_user",
-        tabLabels: defaultLabels,
-        primaryCTA: null,
-        displayCurrency: "USD",
-        currencyFlag: "💱",
         content: {
-          hero: {
-            type: "generic",
-            headline: "Your treasury",
-            subtitle: "Connect your wallet to get started",
-            icon: "💰",
-            ctaLabel: null,
-            ctaTab: null,
-          },
           shieldMorph: "plan",
           contextualBanner: null,
         },

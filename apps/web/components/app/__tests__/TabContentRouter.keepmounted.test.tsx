@@ -97,7 +97,7 @@ function makeContext(activeTab: string, extras: Record<string, unknown> = {}) {
     setActiveTab: vi.fn(),
     setExperienceMode: vi.fn(),
     trackTabChange: vi.fn(),
-    experienceMode: "advanced",
+    experienceMode: "full",
     hydrated: true,
     multichainPortfolio: null,
     isMultichainLoading: false,
@@ -202,26 +202,26 @@ describe("TabContentRouter — keep-mounted Home", () => {
 });
 
 describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
-  it("beginner + requested Guardian promotes to intermediate — no bounce", () => {
+  it("simple + requested Guardian switches to full — no bounce", () => {
     const setActiveTab = vi.fn();
     const setExperienceMode = vi.fn();
     m.ctx.value = makeContext("agent", {
-      experienceMode: "beginner",
+      experienceMode: "simple",
       setActiveTab,
       setExperienceMode,
     });
     render(<TabContentRouter />);
     // The hand-off promotes the dock instead of bouncing to the first tab.
-    expect(setExperienceMode).toHaveBeenCalledWith("intermediate");
+    expect(setExperienceMode).toHaveBeenCalledWith("full");
     expect(setActiveTab).not.toHaveBeenCalled();
   });
 
-  it("?tab=agent counts as a request even when beginner hides Guardian", () => {
+  it("?tab=agent counts as a request even when simple hides Guardian", () => {
     mockRouter.query = { tab: "agent" };
     const setActiveTab = vi.fn();
     const setExperienceMode = vi.fn();
     m.ctx.value = makeContext("overview", {
-      experienceMode: "beginner",
+      experienceMode: "simple",
       setActiveTab,
       setExperienceMode,
     });
@@ -231,11 +231,11 @@ describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
     expect(setActiveTab).toHaveBeenCalledWith("agent");
   });
 
-  it("pre-hydration beginner mode neither promotes nor bounces — the saved mode may still be advanced", () => {
+  it("pre-hydration simple mode neither promotes nor bounces — the saved mode may still be full", () => {
     const setActiveTab = vi.fn();
     const setExperienceMode = vi.fn();
     m.ctx.value = makeContext("agent", {
-      experienceMode: "beginner",
+      experienceMode: "simple",
       hydrated: false,
       setActiveTab,
       setExperienceMode,
@@ -245,11 +245,11 @@ describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
     expect(setActiveTab).not.toHaveBeenCalled();
   });
 
-  it("hydration landing on advanced keeps Guardian without any calls", () => {
+  it("hydration landing on full keeps Guardian without any calls", () => {
     const setActiveTab = vi.fn();
     const setExperienceMode = vi.fn();
     m.ctx.value = makeContext("agent", {
-      experienceMode: "beginner",
+      experienceMode: "simple",
       hydrated: false,
       setActiveTab,
       setExperienceMode,
@@ -258,7 +258,7 @@ describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
 
     // The saved mode hydrates as advanced — agent is visible, nothing fires.
     m.ctx.value = makeContext("agent", {
-      experienceMode: "advanced",
+      experienceMode: "full",
       setActiveTab,
       setExperienceMode,
     });
@@ -271,7 +271,7 @@ describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
   it("a non-agent hidden tab still falls back to the first dock tab", () => {
     const setActiveTab = vi.fn();
     m.ctx.value = makeContext("info", {
-      experienceMode: "beginner",
+      experienceMode: "simple",
       setActiveTab,
     });
     render(<TabContentRouter />);
@@ -279,8 +279,8 @@ describe("TabContentRouter — fixed dock order + Guardian promotion", () => {
     expect(screen.queryByTestId("agent-tab")).not.toBeInTheDocument();
   });
 
-  it("still renders Exchange in beginner mode", () => {
-    m.ctx.value = makeContext("exchange", { experienceMode: "beginner" });
+  it("still renders Exchange in simple mode", () => {
+    m.ctx.value = makeContext("exchange", { experienceMode: "simple" });
     render(<TabContentRouter />);
     expect(screen.getByTestId("exchange-tab")).toBeInTheDocument();
     expect(screen.queryByTestId("agent-tab")).not.toBeInTheDocument();

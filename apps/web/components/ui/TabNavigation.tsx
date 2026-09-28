@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useMemo, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
 import { getVisibleTabIds, TAB_LABELS } from "@/constants/tabs";
@@ -6,7 +6,6 @@ import type { UserExperienceMode } from "@/context/app/types";
 import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { haptics } from "@/lib/haptics";
-import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { spring } from "@/lib/motion-tokens";
 import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
 
@@ -64,7 +63,7 @@ const TABS: TabItem[] = [
 ];
 
 export default function TabNavigation({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
-  const mode = experienceMode ?? 'intermediate';
+  const mode = experienceMode ?? 'full';
   const visibleTabIds = getVisibleTabIds(mode);
   const visibleTabs = TABS.filter((t) => visibleTabIds.includes(t.id));
 
@@ -97,13 +96,8 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
     tabRefs.current[newIndex]?.focus();
   }, [visibleTabs, setActiveTab, recordTabVisit]);
 
-  // Persona label overrides — personas never reorder the dock; the
-  // order is fixed TAB_IDS filtered by visibility.
-  const { config: adaptiveConfig } = useAdaptiveContext();
-  const tabLabels = useMemo(
-    () => adaptiveConfig?.tabLabels ?? {},
-    [adaptiveConfig],
-  );
+  // Fixed labels and order — personas never rename or reorder the dock;
+  // the order is fixed TAB_IDS filtered by visibility.
 
   return (
     <>
@@ -119,7 +113,7 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
           const badgeCount = badges[tab.id];
           const hasBadge = badgeCount !== undefined && badgeCount > 0;
           const isActive = activeTab === tab.id;
-          const label = tabLabels[tab.id] ?? tab.label;
+          const label = tab.label;
 
           return (
             <motion.button
@@ -186,14 +180,9 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
  * column in decorated margins. Solid surface per the design language.
  */
 export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMode }: TabNavigationProps) {
-  const mode = experienceMode ?? 'intermediate';
+  const mode = experienceMode ?? 'full';
   const visibleTabIds = getVisibleTabIds(mode);
   const visibleTabs = TABS.filter((t) => visibleTabIds.includes(t.id));
-  const { config: adaptiveConfig } = useAdaptiveContext();
-  const tabLabels = useMemo(
-    () => adaptiveConfig?.tabLabels ?? {},
-    [adaptiveConfig],
-  );
 
   // Sylva's dock: hover magnifies the tab under the pointer, neighbors lean
   // in proportionally, and a spring settles everything back on leave.
@@ -219,7 +208,7 @@ export function DesktopRail({ activeTab, setActiveTab, badges = {}, experienceMo
         const badgeCount = badges[tab.id];
         const hasBadge = badgeCount !== undefined && badgeCount > 0;
         const isActive = activeTab === tab.id;
-        const label = tabLabels[tab.id] ?? tab.label;
+        const label = tab.label;
 
         const hovering = hoverIndex === index;
         return (

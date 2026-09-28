@@ -40,7 +40,7 @@ vi.mock("@/hooks/use-agent-config", () => ({
 }));
 
 vi.mock("@/context/app/ExperienceContext", () => ({
-  useExperience: () => ({ experienceMode: "beginner" }),
+  useExperience: () => ({ experienceMode: "simple" }),
 }));
 
 vi.mock("@/hooks/use-advisor", () => ({

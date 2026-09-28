@@ -90,7 +90,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Clear the FX Corridor hint dismissal flag so each test starts fresh.
   window.localStorage.removeItem("diversifi.fx_corridor_hint_dismissed");
-  mockUseExperience.mockReturnValue({ experienceMode: "standard" });
+  mockUseExperience.mockReturnValue({ experienceMode: "full" });
   mockUseProtectionProfile.mockReturnValue({
     config: { userGoal: "exploring" },
     isComplete: false,
@@ -110,25 +110,18 @@ beforeEach(() => {
 
 describe("useHomeSections", () => {
   describe("mode resolution", () => {
-    it("returns beginner when experienceMode is beginner", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
+    it("returns simple when experienceMode is simple", () => {
+      mockUseExperience.mockReturnValue({ experienceMode: "simple" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.mode).toBe("beginner");
-      expect(result.current.isBeginner).toBe(true);
+      expect(result.current.mode).toBe("simple");
+      expect(result.current.isSimple).toBe(true);
     });
 
-    it("returns advanced when experienceMode is advanced", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "advanced" });
+    it("returns full when experienceMode is full", () => {
+      mockUseExperience.mockReturnValue({ experienceMode: "full" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.mode).toBe("advanced");
-      expect(result.current.isAdvanced).toBe(true);
-    });
-
-    it("defaults to standard for any other mode", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "intermediate" });
-      const { result } = renderHook(() => useHomeSections(baseArgs()));
-      expect(result.current.mode).toBe("standard");
-      expect(result.current.isStandard).toBe(true);
+      expect(result.current.mode).toBe("full");
+      expect(result.current.isSimple).toBe(false);
     });
   });
 
@@ -414,8 +407,8 @@ describe("useHomeSections", () => {
       expect(result.current.isPaymentCycle).toBe(true);
     });
 
-    it("shows the dial for beginners with holdings", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
+    it("shows the dial for simple mode with holdings", () => {
+      mockUseExperience.mockReturnValue({ experienceMode: "simple" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
       expect(result.current.showDial).toBe(true);
     });
@@ -461,13 +454,13 @@ describe("useHomeSections", () => {
   });
 
   describe("hero variant", () => {
-    it("is compact in beginner mode", () => {
-      mockUseExperience.mockReturnValue({ experienceMode: "beginner" });
+    it("is compact in simple mode", () => {
+      mockUseExperience.mockReturnValue({ experienceMode: "simple" });
       const { result } = renderHook(() => useHomeSections(baseArgs()));
       expect(result.current.heroVariant).toBe("compact");
     });
 
-    it("is detailed in standard mode", () => {
+    it("is detailed in full mode", () => {
       const { result } = renderHook(() => useHomeSections(baseArgs()));
       expect(result.current.heroVariant).toBe("detailed");
     });

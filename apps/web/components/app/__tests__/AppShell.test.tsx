@@ -151,7 +151,7 @@ const baseShellState = {
   activeTab: "overview",
   setActiveTab: vi.fn(),
   trackTabChange: vi.fn(),
-  experienceMode: "advanced",
+  experienceMode: "full",
   setExperienceMode: vi.fn(),
   address: null,
   isWhitelisted: false,
@@ -225,7 +225,7 @@ describe("AppShell AI Chat FAB", () => {
   });
 
   it("renders the Guardian FAB in beginner mode", () => {
-    mockUseAppShell.mockReturnValue({ ...baseShellState, experienceMode: "beginner" });
+    mockUseAppShell.mockReturnValue({ ...baseShellState, experienceMode: "simple" });
 
     renderShell();
 

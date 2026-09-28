@@ -102,6 +102,9 @@ export interface ShieldSliceInspectorProps {
    *  the /fx-drag-calculator doorway; everything else is 'next'). */
   cycleMode?: "next" | "last";
   onCloseCycle?: () => void;
+  /** Opens the payment-cycle inspector in 'next' mode — the one place the
+   *  tool lives (a slice inspector links out, it doesn't embed it). */
+  onOpenCycle?: () => void;
   showToast: ReturnType<typeof useToast>["showToast"];
 }
 
@@ -199,6 +202,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     cycleOpen = false,
     cycleMode = "next",
     onCloseCycle,
+    onOpenCycle,
   } = props;
 
   // The focused-token coin flips to its provenance back — reset when
@@ -621,16 +625,15 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
               Ask Guardian about this slice
             </button>
           )}
-          {isPaymentCycle && selectedAlloc && (
-            <div className="pt-3 mt-3 border-t border-purple-100 dark:border-purple-900/30">
-              <div className="flex items-center gap-1.5 mb-2">
-                <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300">Payment cycle</span>
-              </div>
-              <PaymentCycleReport
-                defaultLocalCurrency={riskData?.code}
-                onAskGuardian={(prompt) => askAdvisor(prompt)}
-              />
-            </div>
+          {isPaymentCycle && selectedAlloc && onOpenCycle && (
+            <button
+              type="button"
+              data-testid="slice-cycle-entry"
+              onClick={onOpenCycle}
+              className="min-h-[44px] text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+            >
+              What FX timing costs your next payment →
+            </button>
           )}
         </div>
       )}

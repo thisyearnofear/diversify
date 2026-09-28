@@ -69,11 +69,9 @@ import TabNavigation, { DesktopRail } from "../TabNavigation";
  *  used to reorder the dock; now they must not. */
 const BUSINESS_CONFIG = {
   persona: "ghanaian_importer",
-  tabLabels: {},
   content: {
     shieldMorph: "cycle",
     contextualBanner: "fx-drag-warning",
-    hero: { type: "cycle", headline: "", subtitle: "", icon: "", ctaLabel: null, ctaTab: null },
   },
 };
 
@@ -85,21 +83,21 @@ afterEach(() => {
 describe("TabNavigation — fixed dock order", () => {
   it("renders TAB_IDS order on the desktop rail regardless of adaptive config", () => {
     m.adaptiveConfig = BUSINESS_CONFIG;
-    render(<DesktopRail activeTab="protect" setActiveTab={vi.fn()} experienceMode="advanced" />);
+    render(<DesktopRail activeTab="protect" setActiveTab={vi.fn()} experienceMode="full" />);
     const labels = screen.getAllByRole("tab").map((t) => t.textContent);
     expect(labels).toEqual(["Shield", "Home", "Exchange", "Guardian"]);
   });
 
   it("renders TAB_IDS order on the mobile bar regardless of adaptive config", () => {
     m.adaptiveConfig = BUSINESS_CONFIG;
-    render(<TabNavigation activeTab="protect" setActiveTab={vi.fn()} experienceMode="advanced" />);
+    render(<TabNavigation activeTab="protect" setActiveTab={vi.fn()} experienceMode="full" />);
     const labels = screen.getAllByRole("tab").map((t) => t.textContent);
     expect(labels).toEqual(["Shield", "Home", "Exchange", "Guardian"]);
   });
 
-  it("beginner clips to three tabs in the same order", () => {
+  it("simple clips to three tabs in the same order", () => {
     m.adaptiveConfig = BUSINESS_CONFIG;
-    render(<TabNavigation activeTab="protect" setActiveTab={vi.fn()} experienceMode="beginner" />);
+    render(<TabNavigation activeTab="protect" setActiveTab={vi.fn()} experienceMode="simple" />);
     const labels = screen.getAllByRole("tab").map((t) => t.textContent);
     expect(labels).toEqual(["Shield", "Home", "Exchange"]);
   });

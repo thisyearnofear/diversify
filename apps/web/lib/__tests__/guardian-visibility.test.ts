@@ -8,10 +8,9 @@ import {
 } from '@/lib/guardian-visibility';
 
 describe('defaultVisibilityForPersona', () => {
-  it('keeps beginners quiet and lets experienced personas see the work', () => {
-    expect(defaultVisibilityForPersona('beginner')).toBe('quiet');
-    expect(defaultVisibilityForPersona('intermediate')).toBe('informed');
-    expect(defaultVisibilityForPersona('advanced')).toBe('informed');
+  it('keeps simple quiet and lets full see the work', () => {
+    expect(defaultVisibilityForPersona('simple')).toBe('quiet');
+    expect(defaultVisibilityForPersona('full')).toBe('informed');
   });
 });
 

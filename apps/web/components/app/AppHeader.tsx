@@ -2,7 +2,7 @@
  * AppHeader — The top header bar for the DiversiFi app.
  * Contains: logo, mode toggle, voice button, wallet button.
  */
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { UserExperienceMode } from "@/context/app/types";
 import type { TabId } from "@/constants/tabs";
 import VoiceButton from "@/components/ui/VoiceButton";
@@ -13,27 +13,10 @@ import { GuardianMascot } from "@/components/shared/GuardianMascot";
 import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
 import { useClaimFlowContext } from "@/hooks/claim-flow-context";
 
-const MODE_ICON: Record<UserExperienceMode, string> = {
-  beginner: "🌱",
-  intermediate: "🚀",
-  advanced: "⚡",
-};
-
+const MODES: readonly UserExperienceMode[] = ["simple", "full"];
 const MODE_LABEL: Record<UserExperienceMode, string> = {
-  beginner: "Simple",
-  intermediate: "Standard",
-  advanced: "Advanced",
-};
-
-function nextExperienceMode(mode: UserExperienceMode): UserExperienceMode {
-  if (mode === "beginner") return "intermediate";
-  if (mode === "intermediate") return "advanced";
-  return "beginner";
-}
-
-const MODE_TIP_BODY: Record<"intermediate" | "advanced", string> = {
-  intermediate: "Unlocks power analytics, voice shortcuts, batch ops",
-  advanced: "Hides advanced panels for a focused view",
+  simple: "Simple",
+  full: "Full",
 };
 
 interface AppHeaderProps {
@@ -48,8 +31,8 @@ interface AppHeaderProps {
 }
 
 // Tabs whose unconnected object already carries a connect CTA (§5: one
-// connect affordance per tab). Exchange's resting pair stage and Info
-// have none, so the header button stays there.
+// connect affordance per tab). Exchange's resting pair stage has none,
+// so the header button stays there.
 const TABS_WITH_OWN_CONNECT: ReadonlySet<TabId> = new Set([
   "overview",
   "protect",
@@ -59,34 +42,36 @@ const TABS_WITH_OWN_CONNECT: ReadonlySet<TabId> = new Set([
 export default function AppHeader({
   experienceMode, setExperienceMode, address, isWhitelisted, isFarcaster, isMiniPay = false, activeTab, handleTranscription,
 }: AppHeaderProps) {
-  const [activeHint, setActiveHint] = useState<"mode" | "voice" | null>(null);
-  const [showModeTip, setShowModeTip] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !localStorage.getItem("seenModeTip");
-  });
-  const dismissModeTip = useCallback(() => {
-    setShowModeTip(false);
-    if (typeof window !== "undefined") localStorage.setItem("seenModeTip", "1");
-  }, []);
-  const modeTipRef = useRef<HTMLDivElement>(null);
+  const [activeHint, setActiveHint] = useState<"voice" | null>(null);
+  const modeGroupRef = useRef<HTMLDivElement>(null);
 
-  // The first-visit tip is a temporary hello, not a resident banner:
-  // it auto-dismisses after 4s or on any outside pointerdown, and the
-  // dismissal persists (seenModeTip) so it never nags twice. Hovering
-  // the toggle still re-opens the tooltip via activeHint — that path is
-  // unaffected and stays available forever.
-  useEffect(() => {
-    if (!showModeTip) return;
-    const timer = window.setTimeout(dismissModeTip, 4000);
-    const onPointerDown = (e: PointerEvent) => {
-      if (!modeTipRef.current?.contains(e.target as Node)) dismissModeTip();
-    };
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      window.clearTimeout(timer);
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [showModeTip, dismissModeTip]);
+  // Mode control — the same segmented radiogroup the plan floor uses:
+  // a gray track, white selected pill, arrow keys wrap.
+  const focusModeOption = (index: number) => {
+    modeGroupRef.current
+      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [index]?.focus();
+  };
+  const chooseMode = (index: number) => {
+    setExperienceMode(MODES[index]);
+    focusModeOption(index);
+  };
+  const onModeKeyDown = (e: React.KeyboardEvent) => {
+    const index = MODES.indexOf(experienceMode);
+    if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      e.preventDefault();
+      chooseMode((index + 1) % MODES.length);
+    } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      e.preventDefault();
+      chooseMode((index + MODES.length - 1) % MODES.length);
+    } else if (e.key === "Home") {
+      e.preventDefault();
+      chooseMode(0);
+    } else if (e.key === "End") {
+      e.preventDefault();
+      chooseMode(MODES.length - 1);
+    }
+  };
 
   // The streak badge's claim affordance rides the shared claim flow —
   // "Claim ready" in the header is a working action, not just a signal.
@@ -98,7 +83,7 @@ export default function AppHeader({
     handleClaim = undefined;
   }
 
-  const isBeginner = experienceMode === "beginner";
+  const isFull = experienceMode === "full";
 
   return (
     <div className="flex items-center justify-between gap-3 mb-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
@@ -142,53 +127,37 @@ export default function AppHeader({
         <div className="min-[400px]:hidden">
           <StreakNavBadge variant="header" onClaim={handleClaim} />
         </div>
-        {!isBeginner && (
-        <>
-        {/* Mode toggle — one tooltip, calm affordance */}
+        {/* Mode toggle — Simple | Full radiogroup, both modes */}
         <div
-          className="relative hidden sm:block"
-          onMouseEnter={() => setActiveHint("mode")}
-          onMouseLeave={() => setActiveHint(null)}
+          ref={modeGroupRef}
+          role="radiogroup"
+          aria-label="Experience mode"
+          className="hidden sm:grid grid-cols-2 gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-1"
+          onKeyDown={onModeKeyDown}
         >
-          <button
-            onClick={() => {
-              setExperienceMode(nextExperienceMode(experienceMode));
-              setActiveHint(null);
-              dismissModeTip();
-            }}
-            className="flex flex-col items-center gap-0.5"
-            aria-label={`Switch to ${MODE_LABEL[nextExperienceMode(experienceMode)]} mode`}
-          >
-            <span className="w-10 h-8 text-sm rounded-xl flex items-center justify-center bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md">
-              {MODE_ICON[experienceMode]}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400 leading-none">
-              {MODE_LABEL[experienceMode]}
-            </span>
-          </button>
-          {(activeHint === "mode" || showModeTip) && (
-            <div ref={modeTipRef} className="absolute right-0 top-full mt-1.5 w-52 bg-gray-900 dark:bg-gray-700 text-white rounded-xl px-3 py-2.5 shadow-xl z-50">
+          {MODES.map((mode) => {
+            const isSelected = experienceMode === mode;
+            return (
               <button
-                onClick={() => { setActiveHint(null); dismissModeTip(); }}
-                className="absolute top-1.5 right-2 w-5 h-5 flex items-center justify-center rounded-full text-gray-400 hover:text-white hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors text-xs leading-none"
-                aria-label="Dismiss"
+                key={mode}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
+                tabIndex={isSelected ? 0 : -1}
+                onClick={() => setExperienceMode(mode)}
+                className={`min-h-[44px] px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                  isSelected
+                    ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
               >
-                ✕
+                {MODE_LABEL[mode]}
               </button>
-              <div className="text-xs font-bold text-white mb-0.5 pr-5">
-                Tap → {MODE_LABEL[nextExperienceMode(experienceMode)]} {MODE_ICON[nextExperienceMode(experienceMode)]}
-              </div>
-              <div className="text-xs text-gray-300 leading-relaxed">
-                {MODE_TIP_BODY[experienceMode]}
-              </div>
-              <div className="absolute -top-1.5 right-3 w-3 h-3 bg-gray-900 dark:bg-gray-700 rotate-45 rounded-sm" />
-            </div>
-          )}
+            );
+          })}
         </div>
-        </>
-        )}
 
-        {!isBeginner && (
+        {isFull && (
         <div className="hidden sm:block">
         <VoiceButton
           size="sm"
@@ -210,7 +179,7 @@ export default function AppHeader({
           // Below sm the tab's in-object CTA is the single connect
           // affordance — the header chip survives on desktop, when
           // connected (account menu), in MiniPay, and on tabs with no
-          // in-object connect (Exchange pair stage, Info).
+          // in-object connect (Exchange pair stage).
           <div
             className={
               !address && !isMiniPay && activeTab != null && TABS_WITH_OWN_CONNECT.has(activeTab)

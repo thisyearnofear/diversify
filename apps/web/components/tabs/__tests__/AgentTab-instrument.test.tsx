@@ -13,7 +13,7 @@ const mockAskAdvisor = vi.fn();
 const mockClearGuardianContext = vi.fn();
 const mockNavigateToFund = vi.fn();
 let mockGuardianContext: unknown = null;
-let mockExperienceMode = "advanced";
+let mockExperienceMode = "full";
 
 const mockSetShowPermissionModal = vi.fn();
 const mockRunPreview = vi.fn();
@@ -148,7 +148,7 @@ describe("AgentTab — instrument composition", () => {
     vi.clearAllMocks();
     cleanup();
     mockGuardianContext = null;
-    mockExperienceMode = "advanced";
+    mockExperienceMode = "full";
     instrument = makeInstrument();
   });
 
@@ -270,7 +270,7 @@ describe("AgentTab — instrument composition", () => {
     expect(screen.getByRole("button", { name: "Change limits" })).toBeInTheDocument();
     cleanup();
 
-    mockExperienceMode = "beginner";
+    mockExperienceMode = "simple";
     render(<AgentTab />);
     expect(screen.queryByRole("button", { name: "Change limits" })).not.toBeInTheDocument();
   });

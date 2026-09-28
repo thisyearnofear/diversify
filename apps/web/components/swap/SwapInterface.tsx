@@ -146,10 +146,11 @@ const SwapInterface = forwardRef<
   ref,
 ) {
   const { recordSettlement } = useNavigation();
-  const { experienceMode, shouldShowAdvancedFeatures, shouldShowIntermediateFeatures } = useExperience();
+  const { experienceMode } = useExperience();
   const { financialStrategy } = useStrategy();
   const { askAdvisor } = useAdvisor();
-  const isBeginner = experienceMode === "beginner";
+  const isFull = experienceMode === "full";
+  const isBeginner = !isFull;
   const isMobile = useMobile();
   const reducedMotion = useReducedMotion();
   const [switchRotated, setSwitchRotated] = useState(false);
@@ -463,7 +464,7 @@ const SwapInterface = forwardRef<
             <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 uppercase tracking-tight">
               {title}
             </h3>
-            {shouldShowIntermediateFeatures() && inflationDataSource === "api" && (
+            {isFull && inflationDataSource === "api" && (
               <span className="text-xs bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-1.5 py-0.5 rounded-full font-medium border border-green-200 dark:border-green-800">
                 Live Data
               </span>
@@ -571,7 +572,7 @@ const SwapInterface = forwardRef<
         {/* Cross-chain panel — only when a bridge route is active (not idle
             advanced chrome). Draws itself in when the route becomes
             cross-chain (§5: motion reveals the state change). */}
-        {enableCrossChain && shouldShowIntermediateFeatures() && isCrossChainRoute && (
+        {enableCrossChain && isFull && isCrossChainRoute && (
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
@@ -796,7 +797,7 @@ const SwapInterface = forwardRef<
           )}
 
           {/* Unified inflation differentiator — one line, one moment */}
-          {shouldShowIntermediateFeatures() && hasInflationBenefit && (
+          {isFull && hasInflationBenefit && (
             <InflationInsightRow
               fromToken={fromToken}
               toToken={toToken}
@@ -813,7 +814,7 @@ const SwapInterface = forwardRef<
           )}
 
           {/* Slippage — advanced only, compact */}
-          {shouldShowAdvancedFeatures() && (
+          {isFull && (
             <div className="flex items-center gap-2 px-1 py-1">
               <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0">Slippage</span>
               {[0.1, 0.5, 1.0, 2.0].map((tolerance) => (

@@ -77,6 +77,24 @@ describe('LastCycleDrag', () => {
     });
   });
 
+  it('invalid input shows an inline alert instead of silently no-oping', () => {
+    render(<LastCycleDrag currency="GHS" onCurrencyChange={() => {}} onTrackNext={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'See what it cost' }));
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Enter your earnings, the USD you paid and your bank rate — all above zero.',
+    );
+    expect(screen.queryByTestId('last-cycle-result')).not.toBeInTheDocument();
+  });
+
+  it('no separate "converting on arrival" counterfactual box remains', async () => {
+    render(<LastCycleDrag currency="GHS" onCurrencyChange={() => {}} onTrackNext={() => {}} />);
+    fillAndRun();
+    await screen.findByTestId('last-cycle-result');
+    expect(screen.queryByText(/converting on arrival/i)).not.toBeInTheDocument();
+    // The percentage rides the hero sub-line instead.
+    expect(screen.getByText(/% of what you paid went to FX timing/)).toBeInTheDocument();
+  });
+
   it('came-out-ahead copy renders when timing beats converting on arrival', async () => {
     // Achieved rate below mid → drag is negative... wait, spread is
     // (achieved - mid) * usd → negative spread is possible; set achieved 14.

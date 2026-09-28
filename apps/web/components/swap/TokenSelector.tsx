@@ -95,13 +95,13 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
   tokenBalances = {},
   currentChainId,
   tokenChainId,
-  experienceMode = "beginner",
+  experienceMode = "simple",
   financialStrategy,
   hasWallet = true,
   receiveAmount = null,
   coinLayoutId,
 }) => {
-  const isBeginnerMode = experienceMode === "beginner";
+  const isBeginnerMode = experienceMode === "simple";
   const reducedMotion = useReducedMotion();
   const [pickerOpen, setPickerOpen] = React.useState(false);
   const [showWhySwap, setShowWhySwap] = React.useState(false);

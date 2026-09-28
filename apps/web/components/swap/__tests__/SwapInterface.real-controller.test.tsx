@@ -52,9 +52,7 @@ vi.mock('../../../hooks/use-streak-rewards', () => ({
 
 vi.mock('@/context/app/ExperienceContext', () => ({
   useExperience: () => ({
-    experienceMode: 'advanced',
-    shouldShowAdvancedFeatures: () => false,
-    shouldShowIntermediateFeatures: () => true,
+    experienceMode: 'full',
   }),
 }));
 

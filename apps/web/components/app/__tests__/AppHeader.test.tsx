@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, within, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
 
@@ -31,7 +31,7 @@ vi.mock('@/components/shared/StreakNavBadge', () => ({
 }));
 
 const baseProps = {
-  experienceMode: 'intermediate' as const,
+  experienceMode: 'full' as const,
   setExperienceMode: vi.fn(),
   isWhitelisted: false,
   isFarcaster: false,
@@ -93,12 +93,12 @@ describe('AppHeader mobile layout', () => {
     expect(dot).toBeNull();
   });
 
-  it('hides mode toggle and voice button in beginner mode, but keeps chain pill', () => {
-    render(<AppHeader {...baseProps} experienceMode="beginner" address="0xabc" />);
+  it('shows the mode toggle in simple mode too, but keeps voice Full-only', () => {
+    render(<AppHeader {...baseProps} experienceMode="simple" address="0xabc" />);
 
     expect(screen.getByTestId('chain-pill')).toBeInTheDocument();
     expect(screen.queryByTestId('voice-button')).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/Switch to Standard mode/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: /experience mode/i })).toBeInTheDocument();
     expect(screen.getByTestId('wallet-button')).toBeInTheDocument();
   });
 });
@@ -144,70 +144,38 @@ describe('AppHeader — one connect affordance below sm', () => {
   });
 });
 
-describe('AppHeader — first-visit mode tip', () => {
-  const tipText = () => screen.queryByText(/Tap →/);
-  const modeToggle = () =>
-    screen.getByRole('button', { name: /Switch to .* mode/ });
+describe('AppHeader — Simple | Full mode control', () => {
+  const group = () => screen.getByRole('radiogroup', { name: /experience mode/i });
+  const radios = () => within(group()).getAllByRole('radio');
 
   beforeEach(() => {
     window.localStorage.clear();
   });
 
-  it('shows on first visit and auto-dismisses after 4s, persisting dismissal', () => {
-    vi.useFakeTimers();
-    try {
-      render(<AppHeader {...baseProps} address={null} activeTab="overview" />);
-      expect(tipText()).toBeInTheDocument();
-
-      act(() => vi.advanceTimersByTime(3999));
-      expect(tipText()).toBeInTheDocument();
-
-      act(() => vi.advanceTimersByTime(1));
-      expect(tipText()).not.toBeInTheDocument();
-      expect(window.localStorage.getItem('seenModeTip')).toBe('1');
-    } finally {
-      vi.useRealTimers();
-    }
+  it('shows Simple | Full in both modes and marks the current one', () => {
+    render(<AppHeader {...baseProps} experienceMode="simple" address={null} />);
+    expect(radios().map((r) => r.textContent)).toEqual(['Simple', 'Full']);
+    expect(radios()[0]).toHaveAttribute('aria-checked', 'true');
+    expect(radios()[1]).toHaveAttribute('aria-checked', 'false');
+    cleanup();
+    render(<AppHeader {...baseProps} experienceMode="full" address={null} />);
+    expect(radios()[1]).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('dismisses on an outside pointerdown; a click inside the tip survives', () => {
-    render(<AppHeader {...baseProps} address={null} activeTab="overview" />);
-    const tip = tipText()!.closest('div')!;
-
-    fireEvent.pointerDown(tip);
-    expect(tipText()).toBeInTheDocument();
-
-    fireEvent.pointerDown(document.body);
-    expect(tipText()).not.toBeInTheDocument();
-    expect(window.localStorage.getItem('seenModeTip')).toBe('1');
+  it('flips the mode on click', () => {
+    const setExperienceMode = vi.fn();
+    render(<AppHeader {...baseProps} experienceMode="simple" setExperienceMode={setExperienceMode} address={null} />);
+    fireEvent.click(radios()[1]);
+    expect(setExperienceMode).toHaveBeenCalledWith('full');
   });
 
-  it('never shows for a returning visitor, but hover still opens the tooltip', () => {
-    window.localStorage.setItem('seenModeTip', '1');
-    render(<AppHeader {...baseProps} address={null} activeTab="overview" />);
-    expect(tipText()).not.toBeInTheDocument();
-
-    fireEvent.mouseEnter(modeToggle().closest('div')!);
-    expect(tipText()).toBeInTheDocument();
-
-    fireEvent.mouseLeave(modeToggle().closest('div')!);
-    expect(tipText()).not.toBeInTheDocument();
-  });
-
-  it('cleans up the timer and listener on unmount', () => {
-    vi.useFakeTimers();
-    try {
-      const removeSpy = vi.spyOn(document, 'removeEventListener');
-      const { unmount } = render(
-        <AppHeader {...baseProps} address={null} activeTab="overview" />,
-      );
-      unmount();
-      expect(removeSpy).toHaveBeenCalledWith('pointerdown', expect.any(Function));
-      // The pending timeout must not fire post-unmount.
-      act(() => vi.advanceTimersByTime(5000));
-      removeSpy.mockRestore();
-    } finally {
-      vi.useRealTimers();
-    }
+  it('arrow keys wrap between the two options', () => {
+    const setExperienceMode = vi.fn();
+    render(<AppHeader {...baseProps} experienceMode="simple" setExperienceMode={setExperienceMode} address={null} />);
+    fireEvent.keyDown(group(), { key: 'ArrowRight' });
+    expect(setExperienceMode).toHaveBeenCalledWith('full');
+    setExperienceMode.mockClear();
+    fireEvent.keyDown(group(), { key: 'ArrowLeft' });
+    expect(setExperienceMode).toHaveBeenCalledWith('full'); // wraps from simple → full
   });
 });

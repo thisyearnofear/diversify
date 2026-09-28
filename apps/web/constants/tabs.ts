@@ -17,17 +17,16 @@ export const TAB_LABELS: Record<TabId, string> = {
 
 /**
  * Which tabs appear in each experience mode.
- * Simple dock (design-language §5): beginner = Shield / Home / Exchange.
- * Guardian joins the dock on intermediate+ — or the first time it is
- * requested, which promotes beginner → intermediate. There is no Learn
- * tab: the calculator lives in Shield's empty-wallet inspector.
+ * Simple dock (design-language §5): simple = Shield / Home / Exchange.
+ * Full shows all four — and Guardian joins the dock the first time it
+ * is requested, which switches Simple → Full. There is no Learn tab:
+ * the calculator lives in Shield's empty-wallet inspector.
  * Order is always TAB_IDS filtered by visibility — personas never
  * reorder the dock.
  */
 export const TAB_VISIBILITY: Record<UserExperienceMode, readonly TabId[]> = {
-  beginner: ['protect', 'overview', 'exchange'],
-  intermediate: ['protect', 'overview', 'exchange', 'agent'],
-  advanced: TAB_IDS,
+  simple: ['protect', 'overview', 'exchange'],
+  full: TAB_IDS,
 };
 
 export function getVisibleTabIds(mode: UserExperienceMode): readonly TabId[] {

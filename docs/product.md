@@ -57,15 +57,16 @@ or a yield farming dashboard.
 ## Current State vs. Vision
 
 **Delivered today:**
-- **Philosophy/values system** — live and deeply integrated. Strategy configs, AI prompts, asset filtering, compliance, and the Protection Scorecard all adapt to the user's chosen philosophy.
-- **Retail FX-risk awareness** — the country/currency risk moment, the curated depreciation dataset, the Protection Scorecard, and the counterfactual calculator are live in the app.
-- **Autonomous execution** — the Guardian loop auto-rebalances within user-signed permission bounds and records every decision on the chain-aware ledger + 0G evidence.
+- **Philosophy/values system** — live and deeply integrated. Strategy configs, AI prompts, asset filtering, compliance, and Shield's plan ring all adapt to the user's chosen philosophy.
+- **Retail FX-risk awareness** — the country/currency risk moment, the curated depreciation dataset, the gold counterfactual, and the wealth-protection calculator (Shield's empty-wallet inspector) are live in the app.
+- **SME FX-risk intelligence (consumer app)** — Shield's payment-cycle inspector is live, walletless: a per-cycle FX drag report for the next supplier payment ("Next payment") and a historical report for the last cycle ("Last cycle", trailing window, open-dataset mid-market rates). Connected users save purchase cycles and record payment outcomes; opting into monitoring lets the Guardian loop propose protection within 14 days of the payment date, and a separate consent allows supported execution (Celo local stable → USDm, within active Guardian limits).
+- **Retail → business graduation** — a behaviour-based prompt on Home (from the wallet's own swaps and saved cycles, phrased as a question, dismissible, instrumented) and a persona morph that gives business personas the payment-cycle entry on Shield.
+- **Guardian execution** — the Guardian loop proposes moves the user approves in one tap on Exchange; autonomous execution exists only through ERC-7715/7710 permissions enforced on-chain by the user's own smart account on supported chains. Every decision is recorded on the chain-aware ledger + 0G evidence.
 - **Best-yield engine** — vaults.fyi and GMX GM-pool deposits are integrated on Arbitrum.
 - **Enterprise audit** — the `x-api-key` enterprise gateway and audit export are implemented for B2B licensing.
 
 **North star / in progress:**
-- **SME FX-risk intelligence layer** — the importer/trader archetype, purchase-cycle model, per-cycle FX drag report, and cycle-aware Guardian execution are designed and sequenced in `docs/strategy.md` but not yet shipped in the consumer app. The concierge FX drag report (`scripts/fx-drag-report.ts`) is already validating the math with real traders.
-- **Retail → business graduation** — signal detection and a self-serve graduation CTA are planned; today the app only surfaces a small "How this can affect a business" hint in onboarding.
+- **SME FX-risk intelligence layer — remaining phases** — the importer/trader `FinancialStrategy` archetype, a GHS on/off-ramp partner, a rails design partner, and a measured graduation funnel ([`roadmap.md`](./roadmap.md), [`strategy.md`](./strategy.md)). The concierge FX drag report (`scripts/fx-drag-report.ts`) keeps validating the math with real traders.
 
 The retail app is the proof surface and top-of-funnel. The business intelligence layer is the real product we are building toward.
 
@@ -182,9 +183,9 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 2. **The philosophy/values system — a structural moat.** No other DeFi or fintech product builds cultural identity into the product. Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong — these are not risk-tolerance sliders; they are identity markers that drive retention and community. Protection plans target specific emerging-market inflation profiles, not generic "crypto yields." This is the reason someone stays when the yield is identical elsewhere.
 
-3. **Verifiable autonomy.** A server-side Guardian loop monitors markets 24/7 and auto-executes within user-signed permission bounds. Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings, Arbitrum for yield — with reasoning anchored to 0G Storage as tamper-proof evidence. LiveProofCard surfaces those receipts before wallet connect: proof-first, not splash-first. Each chain has an irreplaceable role — see [`rails.md`](./rails.md).
+3. **Verifiable autonomy.** A server-side Guardian loop monitors markets 24/7 and proposes moves the user approves in one tap; it executes on its own only within an ERC-7715/7710 permission the user's smart account enforces on-chain. Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings, Arbitrum for yield — with reasoning anchored to 0G Storage as tamper-proof evidence. LiveProofCard surfaces those receipts before wallet connect: proof-first, not splash-first. Each chain has an irreplaceable role — see [`rails.md`](./rails.md).
 
-4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Simple mode (default) shows Shield, Home, Exchange until the user opts into more (Guardian joins on request and on intermediate; there is no Learn tab).
+4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Two modes: Simple (default) shows Shield, Home, Exchange; Full adds Guardian and the swap ticket's extra detail. Asking for Guardian, three swaps, or the header's Simple | Full switch moves a user to Full.
 
 5. **Currencies as stories — the engagement layer is the literacy layer.** Every token carries a curated provenance answering three questions — who controls it (origin, backing, keys), what has happened to it (dated geopolitical events), and what might happen next (the cadence and mechanism to watch, never a prediction). The memetic/cultural/political texture of money is surfaced at the moment of choice: the ticket's pair sentence, the coin-back flip in the picker, the pair inspector's event trail and watch lines. Facts are hand-sourced and dated (`packages/shared/src/constants/token-provenance.ts`), re-verified on a 90-day cycle — engagement built on understanding, never on tickers, leaderboards, or invented forecasts. The timeline teaches mechanism, not prediction.
 
@@ -258,9 +259,9 @@ tab or a noun. Tab labels have one source — `TAB_LABELS` in
 
 Tab IDs are `protect / overview / exchange / agent`; labels come only from `TAB_LABELS` (`apps/web/constants/tabs.ts`). The dock order is fixed — personas never reorder it.
 
-**Simple mode** (beginner): Shield → Home → Exchange only. Guardian joins the dock when first requested (a hand-off promotes beginner → intermediate) and on intermediate+. There is no Learn tab — the calculator lives as the Shield empty-wallet inspector + optional Home amount-inspect. See `design-language.md` §5.
+**Simple mode**: Shield → Home → Exchange only. **Full mode** adds Guardian. Any hand-off to Guardian switches Simple → Full, as do three swaps or the header's Simple | Full switch (sm+). There is no Learn tab — the calculator lives as the Shield empty-wallet inspector + optional Home amount-inspect. See `design-language.md` §5.
 
-New users see Shield-first order. Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 2 tabs visited or first swipe gesture.
+New users land on Shield. Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 2 tabs visited or first swipe gesture.
 
 ## Fees
 
@@ -290,6 +291,6 @@ See [`roadmap.md`](./roadmap.md) for active priorities (the 14-day quality plan 
 
 ## Adaptive experience
 
-The same backend serves all personas; the frontend is a configuration. Signals (geo, wallet, history, device) resolve an `AdaptivePersona` → `AdaptiveConfig` that morphs surfaces (`shieldMorph`: business personas get the payment-cycle entry on Shield) — never the dock order, no forks, no separate products. Phase 0 (FX drag calculator — now the payment-cycle inspector's "Last cycle" mode, with `/fx-drag-calculator` as a doorway; no wallet required) and Phase 1 (signal detection + adaptive tab labels) are live; behavioral graduation signals and multi-corridor learning are planned.
+The same backend serves all personas; the frontend is a configuration. Signals (geo, wallet, history, device) resolve an `AdaptivePersona` → `AdaptiveConfig` that morphs surfaces (`shieldMorph`: business personas get the payment-cycle entry on Shield) — never the dock order, no forks, no separate products. Phase 0 (FX drag calculator — now the payment-cycle inspector's "Last cycle" mode, with `/fx-drag-calculator` as a doorway; no wallet required) and Phase 1 (signal detection + the Shield business morph) are live, as is the behaviour-based graduation prompt; multi-corridor learning is planned.
 
 Full design doc — signal schema, per-persona routing examples, implementation phases: [`internal/adaptive-experience.md`](./internal/adaptive-experience.md).

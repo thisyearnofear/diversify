@@ -297,7 +297,9 @@ export function PaymentCycleReport({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [cycleConsentSaving, setCycleConsentSaving] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  // In-sheet view swaps (the lens pattern): quiet link in, "←" out.
+  const [view, setView] = useState<'main' | 'options' | 'cycles'>('main');
+  const [editing, setEditing] = useState(false);
   const [highlightedCycleId, setHighlightedCycleId] = useState<string | null>(null);
   const cycleRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const targetCurrency = 'USD';
@@ -309,6 +311,13 @@ export function PaymentCycleReport({
   // synthetic id was used.
   useEffect(() => {
     if (!focusedCycleId) return;
+    // Focus lands in the cycles view — switch first so the row exists,
+    // then scroll and highlight on the next pass.
+    if (mode !== 'next' || view !== 'cycles') {
+      setMode('next');
+      setView('cycles');
+      return;
+    }
     const targetId = focusedCycleId === savedCycleId || focusedCycleId === 'draft'
       ? savedCycleId
       : focusedCycleId;
@@ -322,7 +331,7 @@ export function PaymentCycleReport({
       setFocusedCycleId(null);
     }, FOCUS_HIGHLIGHT_MS);
     return () => clearTimeout(handle);
-  }, [focusedCycleId, savedCycleId, setFocusedCycleId]);
+  }, [focusedCycleId, savedCycleId, mode, view, setFocusedCycleId]);
 
   const canSubmit =
     draft.localCurrency.length === 3 &&
@@ -352,6 +361,7 @@ export function PaymentCycleReport({
       }
       const fxReport = data as FxCycleReportResponse;
       setReport(fxReport);
+      setEditing(false);
       trackFunnelEvent('cycle_report_run', {
         currency: draft.localCurrency,
       });
@@ -465,18 +475,40 @@ export function PaymentCycleReport({
   const dueCycles = cycles.filter((c) => c.status === 'payment_due');
   const completedCycles = cycles.filter((c) => c.status === 'completed');
 
+  const showCyclesEntry =
+    mode === 'next' &&
+    view === 'main' &&
+    Boolean(address) &&
+    (needsUnlock || cycles.length > 0);
+  const cyclesEntryLabel = needsUnlock
+    ? 'Saved cycles are locked →'
+    : `Your cycles: ${upcomingCycles.length} active${
+        dueCycles.length ? ` · ${dueCycles.length} need an outcome` : ''
+      } →`;
+  const cyclesEntry = showCyclesEntry ? (
+    <button
+      type="button"
+      onClick={() => setView('cycles')}
+      className={`text-xs font-semibold transition-colors ${
+        dueCycles.length > 0
+          ? 'text-amber-700 dark:text-amber-300'
+          : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+      }`}
+    >
+      {cyclesEntryLabel}
+    </button>
+  ) : null;
+  const showForm = !report || editing;
+
   return (
-    <div className="rounded-2xl border border-teal-200 dark:border-teal-800/50 bg-gradient-to-br from-teal-50/80 to-cyan-50/50 dark:from-teal-950/20 dark:to-cyan-950/10 p-4 space-y-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-wider text-teal-800 dark:text-teal-200">
-          Payment readiness
-        </p>
-        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 leading-relaxed">
-          What FX timing costs a supplier payment — your next one, or your last.
-        </p>
-      </div>
+    <div className="space-y-4">
+      <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+        What FX timing costs a supplier payment — your next one, or your last.
+      </p>
 
       <CycleModeControl mode={mode} onChange={setMode} />
+
+      {mode === 'next' && view === 'main' && dueCycles.length > 0 && cyclesEntry}
 
       {mode === 'last' ? (
         <LastCycleDrag
@@ -488,32 +520,145 @@ export function PaymentCycleReport({
               targetAmountUsd: String(Math.round(paymentUsd)),
             });
             setMode('next');
+            setView('main');
           }}
         />
-      ) : dismissed ? null : (
-      <>
-      {!address && (
-        <p className="text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2">
-          Connect your wallet to save cycles and enable monitoring.
-        </p>
-      )}
-
-      {address && needsUnlock && (
-        <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-950/20 p-3 space-y-2">
-          <p className="text-xs text-blue-900 dark:text-blue-100 leading-relaxed">
-            Unlock saved cycles with a short wallet signature. DiversiFi derives your address from the signature — it never trusts a pasted wallet address.
-          </p>
+      ) : view === 'options' && report ? (
+        <div className="space-y-3">
           <button
             type="button"
-            onClick={() => unlockCycles()}
-            disabled={cyclesLoading}
-            className="min-h-11 px-3 rounded-lg bg-blue-600 text-white text-xs font-bold disabled:opacity-50"
+            onClick={() => setView('main')}
+            className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
           >
-            {cyclesLoading ? 'Unlocking…' : 'Unlock saved cycles'}
+            ← Report
           </button>
+          {reportContract && (
+            <GuardianRecommendationCard
+              contract={reportContract}
+              onAskWhy={() =>
+                onAskGuardian?.(
+                  `Explain this payment-cycle FX drag report for ${draft.localCurrency} → ${targetCurrency} on ${draft.paymentDate}.`,
+                )
+              }
+            />
+          )}
+          {savedCycleId && address && monitoringEnabled && (
+            <label className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/20 p-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={cycleAutoExecutionEnabled}
+                disabled={cycleConsentSaving}
+                onChange={(e) => toggleCycleAutoExecution(e.target.checked)}
+                className="mt-1"
+              />
+              <div>
+                <p className="text-xs font-bold text-gray-900 dark:text-white">
+                  Allow Guardian to execute supported cycle protection
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
+                  Separate consent: Guardian may make one verified Celo local-stable → cUSD trade for the full cycle amount, only within your active GUARDIAN limits. Unsupported currencies and insufficient balances stay advisory-only.
+                </p>
+              </div>
+            </label>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => exportReport('md')}
+              className="text-xs font-bold px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              Download Markdown
+            </button>
+            <button
+              type="button"
+              onClick={() => exportReport('csv')}
+              className="text-xs font-bold px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              Download CSV
+            </button>
+          </div>
+          <p className="text-[10px] text-gray-400 italic">{report.provenance.rateSourceNote}</p>
         </div>
-      )}
-
+      ) : view === 'cycles' ? (
+        <div className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setView('main')}
+            className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            ← Back
+          </button>
+          {needsUnlock && (
+            <div className="space-y-2">
+              <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                Unlock saved cycles with a short wallet signature. DiversiFi derives your address from the signature — it never trusts a pasted wallet address.
+              </p>
+              <button
+                type="button"
+                onClick={() => unlockCycles()}
+                disabled={cyclesLoading}
+                className="min-h-11 px-3 rounded-lg bg-blue-600 text-white text-xs font-bold disabled:opacity-50"
+              >
+                {cyclesLoading ? 'Unlocking…' : 'Unlock saved cycles'}
+              </button>
+            </div>
+          )}
+          {upcomingCycles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Active cycles</p>
+              {upcomingCycles.map((c) => {
+                const isHighlighted = highlightedCycleId === c.id;
+                return (
+                  <div
+                    key={c.id}
+                    ref={(node) => {
+                      cycleRefs.current[c.id] = node;
+                    }}
+                    className={`text-xs text-gray-600 dark:text-gray-400 rounded-lg px-2 py-1.5 transition-colors${
+                      isHighlighted
+                        ? ' bg-amber-50 dark:bg-amber-900/20 ring-2 ring-amber-300 dark:ring-amber-600'
+                        : ''
+                    }`}
+                  >
+                    {c.localCurrency} → {c.targetCurrency} ${c.targetAmountUsd.toLocaleString()} · {c.paymentDate}
+                    {c.monitoringEnabled ? ' · Monitoring on' : ''}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+          {dueCycles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
+                Payment date passed — confirm outcome
+              </p>
+              {dueCycles.map((cycle) => (
+                <PaymentDueConfirm
+                  key={cycle.id}
+                  cycle={cycle}
+                  onConfirm={async (paymentOutcome) => {
+                    await updateCycle(cycle.id, { status: 'completed', paymentOutcome });
+                  }}
+                  onCancel={async () => {
+                    await updateCycle(cycle.id, { status: 'cancelled' });
+                  }}
+                />
+              ))}
+            </div>
+          )}
+          {completedCycles.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Completed cycles</p>
+              {completedCycles.map((c) => (
+                <CyclePostEventCard key={c.id} cycle={c} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
+      {showForm ? (
+      <>
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-1 space-y-1">
           <span className="text-[10px] font-bold uppercase text-gray-500">Local currency</span>
@@ -567,15 +712,23 @@ export function PaymentCycleReport({
         {loading ? <InlineSpinner /> : null}
         {loading ? 'Computing…' : 'Run cycle report'}
       </button>
-
-      {error && (
-        <p className="text-xs text-red-600 dark:text-red-400" role="alert">
-          {error}
+      </>
+      ) : report ? (
+      <>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          {draft.localCurrency.toUpperCase()} → {targetCurrency}{' '}
+          {Number.parseFloat(draft.targetAmountUsd).toLocaleString()} · {draft.paymentDate} ·{' '}
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            Edit
+          </button>
         </p>
-      )}
 
-      {report && reportContract && (
-        <div className="space-y-3 pt-1">
+        {/* The result is the object — no card chrome. */}
+        <div className="space-y-1.5">
           <p className="text-sm font-bold text-gray-900 dark:text-white">
             {report.narrative.headline}
           </p>
@@ -588,129 +741,72 @@ export function PaymentCycleReport({
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
             {report.narrative.netBenefitDisclaimer}
           </p>
-          <GuardianRecommendationCard
-            contract={reportContract}
-            onAskWhy={() =>
+        </div>
+
+        {/* One CTA, chosen by state. */}
+        {address && savedCycleId && !monitoringEnabled && (
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={() => toggleMonitoring(true)}
+              className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors"
+            >
+              Let Guardian watch this payment
+            </button>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+              Guardian may propose protection as the date approaches — you approve each move. Watching never authorizes a trade.
+            </p>
+          </div>
+        )}
+        {address && savedCycleId && monitoringEnabled && (
+          <p className="text-xs text-gray-600 dark:text-gray-400">
+            Guardian is watching this payment ·{' '}
+            <button
+              type="button"
+              onClick={() => toggleMonitoring(false)}
+              className="font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Stop
+            </button>
+          </p>
+        )}
+
+        <div className="flex items-center gap-4 pt-1">
+          <button
+            type="button"
+            onClick={() => setView('options')}
+            className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            Details &amp; export →
+          </button>
+          <button
+            type="button"
+            onClick={() =>
               onAskGuardian?.(
                 `Explain this payment-cycle FX drag report for ${draft.localCurrency} → ${targetCurrency} on ${draft.paymentDate}.`,
               )
             }
-            onDismiss={() => setDismissed(true)}
-          />
-
-          {savedCycleId && address && (
-            <label className="flex items-start gap-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-white/70 dark:bg-gray-900/50 p-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={monitoringEnabled}
-                onChange={(e) => toggleMonitoring(e.target.checked)}
-                className="mt-1"
-              />
-              <div>
-                <p className="text-xs font-bold text-gray-900 dark:text-white">
-                  Let Guardian monitor this payment cycle
-                </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-                  Guardian may propose protection as the date approaches. Monitoring alone never authorizes a trade.
-                </p>
-              </div>
-            </label>
-          )}
-
-          {savedCycleId && address && monitoringEnabled && (
-            <label className="flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-950/20 p-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={cycleAutoExecutionEnabled}
-                disabled={cycleConsentSaving}
-                onChange={(e) => toggleCycleAutoExecution(e.target.checked)}
-                className="mt-1"
-              />
-              <div>
-                <p className="text-xs font-bold text-gray-900 dark:text-white">
-                  Allow Guardian to execute supported cycle protection
-                </p>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-relaxed">
-                  Separate consent: Guardian may make one verified Celo local-stable → cUSD trade for the full cycle amount, only within your active GUARDIAN limits. Unsupported currencies and insufficient balances stay advisory-only.
-                </p>
-              </div>
-            </label>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => exportReport('md')}
-              className="text-xs font-bold px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Download Markdown
-            </button>
-            <button
-              type="button"
-              onClick={() => exportReport('csv')}
-              className="text-xs font-bold px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-            >
-              Download CSV
-            </button>
-          </div>
-
-          <p className="text-[10px] text-gray-400 italic">{report.provenance.rateSourceNote}</p>
+            className="text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+          >
+            Ask Guardian why
+          </button>
         </div>
+      </>
+      ) : null}
+
+      {error && (
+        <p className="text-xs text-red-600 dark:text-red-400" role="alert">
+          {error}
+        </p>
       )}
 
-      {address && !cyclesLoading && upcomingCycles.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-teal-200/60 dark:border-teal-800/40">
-          <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Active cycles</p>
-          {upcomingCycles.map((c) => {
-            const isHighlighted = highlightedCycleId === c.id;
-            return (
-              <div
-                key={c.id}
-                ref={(node) => {
-                  cycleRefs.current[c.id] = node;
-                }}
-                className={`text-xs text-gray-600 dark:text-gray-400 rounded-lg px-2 py-1.5 transition-colors${
-                  isHighlighted
-                    ? ' bg-amber-50 dark:bg-amber-900/20 ring-2 ring-amber-300 dark:ring-amber-600'
-                    : ''
-                }`}
-              >
-                {c.localCurrency} → {c.targetCurrency} ${c.targetAmountUsd.toLocaleString()} · {c.paymentDate}
-                {c.monitoringEnabled ? ' · Monitoring on' : ''}
-              </div>
-            );
-          })}
-        </div>
+      {!address && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Connect your wallet to save cycles and let Guardian watch them.
+        </p>
       )}
 
-      {address && !cyclesLoading && dueCycles.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-amber-200/60 dark:border-amber-800/40">
-          <p className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300">
-            Payment date passed — confirm outcome
-          </p>
-          {dueCycles.map((cycle) => (
-            <PaymentDueConfirm
-              key={cycle.id}
-              cycle={cycle}
-              onConfirm={async (paymentOutcome) => {
-                await updateCycle(cycle.id, { status: 'completed', paymentOutcome });
-              }}
-              onCancel={async () => {
-                await updateCycle(cycle.id, { status: 'cancelled' });
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {completedCycles.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-[10px] font-black uppercase tracking-wider text-gray-500">Completed cycles</p>
-          {completedCycles.map((c) => (
-            <CyclePostEventCard key={c.id} cycle={c} />
-          ))}
-        </div>
-      )}
+      {dueCycles.length === 0 && cyclesEntry}
       </>
       )}
     </div>

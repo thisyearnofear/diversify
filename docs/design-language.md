@@ -273,9 +273,8 @@ A tab change that fails any of these is the old stack. Do not ship it.
    it does not ship.
 3. **One CTA, on a tab that is in the dock.** `navigateToSwap` into a
    hidden Exchange tab is a bug. A hand-off to Guardian from Simple mode
-   is a real request, not a bug — it promotes the dock (beginner →
-   intermediate) so Guardian appears instead of bouncing to the first
-   tab.
+   is a real request, not a bug — it switches the mode Simple → Full so
+   Guardian appears instead of bouncing to the first tab.
 4. **Persona morphs the object, it does not add a module.** Caribbean
    netting stays an Exchange shape. Yield annotates the quote. RWA is a
    ring token. Payment cycle is a Shield inspector body — for business
@@ -364,7 +363,10 @@ stays an Exchange shape. The inspector itself has two modes — **Next
 payment** (forward scenario) and **Last cycle** (the historical engine
 over a trailing 73-day window, `?cycle=last`) — and
 `/fx-drag-calculator` is a doorway into Last cycle, the same contract
-as `/rwa-vaults`. The graduation line comes only from the
+as `/rwa-vaults`. The report is one object with in-sheet view swaps —
+a main view (form → result + one CTA), an options view for Guardian
+details and export ("Details & export →" / "← Report"), and a saved-cycles
+view ("Your cycles…" / "← Back") — never accordions. The graduation line comes only from the
 wallet's own behaviour (`useGraduationSignal`), is phrased as a
 question, never renders in demo, dismisses for good, and logs
 `graduation_prompt_viewed/clicked/dismissed`. Shield's: sleeve back > compare
@@ -375,9 +377,9 @@ lens logs `lens_offered` (once per session, only when the prompt is the
 rendered transition, never in demo) and `lens_open`, so open rates are
 honest.
 
-The dock is a fixed order — Shield / Home / Exchange / Guardian — clipped by mode:
-Simple shows the first three; Guardian joins when first requested (a hand-off promotes beginner →
-intermediate) and on intermediate+. Learn is retired — the calculator lives in Shield's
+The dock is a fixed order — Shield / Home / Exchange / Guardian — clipped by the
+two experience modes: Simple shows the first three; Guardian joins when first
+requested (a hand-off switches Simple → Full) and in Full. Learn is retired — the calculator lives in Shield's
 empty-wallet inspector (and optionally Home amount-inspect), never a peer tab.
 Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
 the one expressive object; holdings are a quiet coin row beneath it — one `Coin` per region, sized by share — never
