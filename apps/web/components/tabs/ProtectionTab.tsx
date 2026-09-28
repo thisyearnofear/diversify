@@ -17,6 +17,8 @@ import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
 import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
+import { useLatestAdvice } from "@/hooks/use-agent-analysis";
+import { applyTilt, tiltLabel } from "@/lib/guardian-tilts";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { AnimatePresence, useReducedMotion } from "framer-motion";
@@ -236,6 +238,22 @@ export default function ProtectionTab({
     return resolvePlan({ strategy: strategyKey, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
   }, [strategyKey, config.riskTolerance, anchorCurrency]);
   const { rules: planRules, floor: planFloor } = resolvePlan({ strategy: strategyKey, anchorCurrency });
+  const latestAdvice = useLatestAdvice();
+  const guardianTilt = useMemo(() => {
+    const plan = latestAdvice?.guardianPlan;
+    if (!plan || plan.strategy !== strategyKey) return null;
+    const tilt = plan.tilts.find((t) => t.delta > 0 && t.instrument);
+    if (!tilt?.instrument) return null;
+    const move = plan.nextMove?.exposure === tilt.exposure ? plan.nextMove : null;
+    return {
+      tilt,
+      instrument: tilt.instrument,
+      amountUsd: move?.amountUsd,
+      legs: applyTilt(allocations, tilt.exposure, tilt.delta),
+    };
+  }, [latestAdvice, strategyKey, allocations]);
+  const [tiltPreview, setTiltPreview] = useState(false);
+  const tiltShowing = tiltPreview && guardianTilt !== null && !comparing && !balance.isPreviewing;
   const balanceAllocations = useMemo(() => {
     return resolvePlan({ strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency }).legs;
   }, [strategyKey, balance.risk, anchorCurrency]);
@@ -385,6 +403,20 @@ export default function ProtectionTab({
       fromChainId,
       toChainId,
       origin: { source: "shield", asset: targetToken, label: planName },
+    });
+  };
+
+  const reviewGuardianTilt = () => {
+    if (!guardianTilt) return;
+    const { instrument, tilt, amountUsd } = guardianTilt;
+    setTiltPreview(false);
+    navigateToSwap({
+      fromToken: getBestFromToken(instrument.symbol),
+      toToken: instrument.symbol,
+      toChainId: instrument.chainId,
+      amount: amountUsd ? String(amountUsd) : undefined,
+      reason: tilt.reason,
+      origin: { source: "guardian" },
     });
   };
 
@@ -719,11 +751,32 @@ export default function ProtectionTab({
         <div data-testid="shield-ring" data-comparing={comparing || undefined}>
           <ProtectionPlanRing
             strategyKey={previewKey}
-            legs={comparing ? previewAllocations : balance.isPreviewing ? balanceAllocations : allocations}
-            forcePlanLegs={comparing}
+            legs={
+              comparing
+                ? previewAllocations
+                : tiltShowing && guardianTilt
+                  ? guardianTilt.legs
+                  : balance.isPreviewing
+                    ? balanceAllocations
+                    : allocations
+            }
+            forcePlanLegs={comparing || tiltShowing}
             compact={comparing}
-            ghostLegs={comparing ? allocations : undefined}
-            holeOverride={comparing ? compareHole : undefined}
+            ghostLegs={
+              comparing || tiltShowing
+                ? allocations
+                : guardianTilt && !balance.isPreviewing
+                  ? guardianTilt.legs
+                  : undefined
+            }
+            ghostLabel={!comparing && !tiltShowing && guardianTilt ? "Guardian suggestion" : undefined}
+            holeOverride={
+              comparing
+                ? compareHole
+                : tiltShowing && guardianTilt
+                  ? { label: tiltLabel(guardianTilt.tilt), hint: "Guardian suggestion · not saved" }
+                  : undefined
+            }
             holeActionLabel={comparing ? "Exit compare" : undefined}
             balancePreview={balance.isPreviewing}
             savedLegs={allocations}
@@ -739,8 +792,41 @@ export default function ProtectionTab({
             sleeveOpen={sleeveOpen}
             sinceHint={alignmentSinceHint ?? undefined}
             floor={comparing ? previewFloor : planFloor}
-            controls={!comparing ? (
+            controls={!comparing && tiltShowing && guardianTilt ? (
+              <div className="mt-3 space-y-2" data-testid="guardian-tilt-preview">
+                <p className="text-center text-xs text-gray-600 dark:text-gray-300">
+                  {guardianTilt.tilt.reason}
+                </p>
+                <div className="flex justify-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="guardian-tilt-review"
+                    onClick={reviewGuardianTilt}
+                    className="min-h-tap px-5 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                  >
+                    Review in Exchange
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setTiltPreview(false); haptics.tap(); }}
+                    className="min-h-tap px-4 rounded-full text-sm font-semibold text-gray-600 dark:text-gray-300"
+                  >
+                    Not now
+                  </button>
+                </div>
+              </div>
+            ) : !comparing ? (
               <div className="mt-3">
+                {guardianTilt && !balance.isPreviewing && (
+                  <button
+                    type="button"
+                    data-testid="guardian-tilt-chip"
+                    onClick={() => { setFocusedToken(null); setTiltPreview(true); haptics.tap(); }}
+                    className="mx-auto mb-2 flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-teal-700 dark:text-teal-300"
+                  >
+                    Guardian suggests {tiltLabel(guardianTilt.tilt)} →
+                  </button>
+                )}
                 <PlanFloorControl
                   value={balance.risk}
                   legs={balance.isPreviewing ? balanceAllocations : allocations}

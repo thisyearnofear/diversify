@@ -1,3 +1,4 @@
+import type { ValidatedGuardianPlan } from "@/lib/guardian-tilts";
 import type { MultichainPortfolio } from "./use-multichain-balances";
 import type { RegionalInflationData } from "./use-inflation-data";
 import type { ResearchReceipt } from "@diversifi/shared";
@@ -49,6 +50,10 @@ export interface AIAdvice {
   targetChainId?: number;
   /** Present as observation_only when the target isn't buyable in-app. */
   contract?: GuardianRecommendationContract;
+  /** Server-validated tilts within the user's plan (see lib/guardian-tilts). */
+  guardianPlan?: ValidatedGuardianPlan & {
+    fx: { rate: number; source: "identity" | "live" | "fallback" } | null;
+  };
 
   // High-fidelity reasoning for humans
   reasoning: string;

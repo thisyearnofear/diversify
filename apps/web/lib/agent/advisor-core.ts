@@ -1,9 +1,18 @@
 import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, guardianMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
 import { GUARDIAN_FACT_MAX, sanitizeFactText } from '@/lib/guardian-memory';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
-import { getLiveDepreciation } from '@diversifi/shared/src/services/fx-rate.service';
+import { getLiveDepreciation, getLiveRate } from '@diversifi/shared/src/services/fx-rate.service';
 import { getPreferredNetworkForGoal, isTestnetChain, NETWORKS, NETWORK_TOKENS } from '@/config';
 import { withValidatedTargetChain } from '@/lib/target-chain';
+import {
+  describeRejection,
+  formatPlanContext,
+  sanitizePlanContext,
+  validateGuardianPlan,
+  type MarketSnapshot,
+} from '@/lib/guardian-tilts';
+import { fallbackUsdRate } from '@/lib/anchor-currency';
+import { appendDecisionLog } from '@/lib/vault/guardian-state';
 import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tabs';
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
@@ -139,6 +148,9 @@ type AnalysisRequest = {
   analysis?: PortfolioAnalysis;
   userRegion?: string;
   strategyPrompt?: string;
+  /** Resolved plan from the browser — re-checked by sanitizePlanContext. */
+  planContext?: unknown;
+  verifiedAddress?: string;
 };
 
 type ResearchEvidenceSourceSummary = {
@@ -1209,7 +1221,9 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
     analysis,
     userRegion,
     strategyPrompt,
+    verifiedAddress,
   } = input;
+  const planContext = sanitizePlanContext(input.planContext);
 
   let portfolioAnalysis: PortfolioAnalysis;
   const fallbackNetwork = getPreferredNetworkForGoal(config?.userGoal);
@@ -1309,6 +1323,34 @@ export async function runAdvisorAnalysis(input: AnalysisRequest) {
     treasuryYield != null && currentInflation != null
       ? treasuryYield - currentInflation
       : null;
+  const marketSnapshot: MarketSnapshot = {
+    ...(treasuryYield != null ? { treasuryYield } : {}),
+    ...(currentInflation != null ? { inflation: currentInflation } : {}),
+    ...(realYield != null ? { realYield } : {}),
+    ...(typeof networkActivity?.goldPriceChange24h === 'number'
+      ? { goldChange24h: networkActivity.goldPriceChange24h }
+      : {}),
+    ...(userRegion && inflationData[userRegion]
+      ? { homeInflation: inflationData[userRegion].avgRate }
+      : {}),
+  };
+  const signalLine = Object.entries(marketSnapshot)
+    .map(([k, v]) => `${k}=${v}`)
+    .join(' ');
+  const planSection = planContext
+    ? `
+PLAN CONTEXT (the user's chosen plan — Guardian tilts within it; code picks the token and chain):
+${formatPlanContext(planContext)}
+MARKET SIGNALS (cite exactly as evidence): ${signalLine || 'none available'}
+
+GUARDIAN PLAN: add "guardianPlan" to the JSON:
+{"tilts":[{"exposure":"XAU","delta":5,"reason":"one sentence","evidence":[{"signal":"goldChange24h","value":2.1}]}],"nextMove":{"exposure":"XAU","amountAnchor":50},"offPlan":null}
+- exposures only from PLAN CONTEXT; |delta| ≤ max_tilt; never name tickers or chains.
+- every tilt cites ≥1 MARKET SIGNAL with its exact value; no signal → no tilt.
+- amountAnchor is in ${planContext.anchor}. Use "offPlan": {"reason": "..."} only when the best move is outside this plan.
+- Calm markets need no tilt: return "tilts": [].
+`
+    : '';
   const systemInstruction = `
 You are DiversiFi Advisor in analysis mode. Deliver high-signal, data-backed recommendations only. No preamble, no hedging.
 
@@ -1399,6 +1441,7 @@ ${topOpportunities.length > 0
 TARGET ALLOCATION FOR ${goalLabels[userGoal]?.toUpperCase()}:
 ${targetAllocation.map((t) => `- ${t.symbol}: ${t.targetPercentage}% - ${t.reason}`).join('\n')}
 
+${planSection}
 TARGET CHAIN: set "targetChainId" to the chain the targetToken is bought on — ${NETWORKS.CELO_MAINNET.chainId} (Celo: ${NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId].join(', ')}) or ${NETWORKS.ARBITRUM_ONE.chainId} (Arbitrum: ${NETWORK_TOKENS[NETWORKS.ARBITRUM_ONE.chainId].join(', ')}). A token on neither chain is not buyable in-app.
 
 REQUIRED OUTPUT (JSON):
@@ -1474,9 +1517,38 @@ REQUIRED OUTPUT (JSON):
     });
   }
 
+  let guardianPlan;
+  if (planContext) {
+    let fx: { rate: number; source: 'identity' | 'live' | 'fallback' } | null = null;
+    if (planContext.anchor === 'USD') fx = { rate: 1, source: 'identity' };
+    else {
+      const live = await getLiveRate('USD', planContext.anchor).catch(() => null);
+      const fallback = fallbackUsdRate(planContext.anchor);
+      fx = live ? { rate: live.rate, source: 'live' } : fallback ? { rate: fallback, source: 'fallback' } : null;
+    }
+    const validated = validateGuardianPlan(parsed.guardianPlan, planContext, marketSnapshot, fx?.rate ?? NaN);
+    guardianPlan = { ...validated, fx };
+    if (verifiedAddress && validated.rejected.length > 0) {
+      const capturedAt = new Date().toISOString();
+      await Promise.all(
+        validated.rejected.map((r) =>
+          appendDecisionLog(verifiedAddress, {
+            capturedAt,
+            status: 'tilt_rejected',
+            reason: describeRejection(r),
+            source: 'advisor-analysis',
+            identityKey: `tilt:${r.kind}:${r.exposure}:${r.reason}`,
+          }).catch((err: unknown) =>
+            console.warn('[Advisor API] tilt journal write failed:', (err as Error).message),
+          ),
+        ),
+      );
+    }
+  }
   return {
     advice: withValidatedTargetChain({
       ...parsed,
+      guardianPlan,
       researchEvidence: parsed.researchEvidence ?? buildResearchEvidenceSummary(macroData),
     }),
     _meta: {

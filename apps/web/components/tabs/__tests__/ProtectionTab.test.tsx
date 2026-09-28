@@ -129,6 +129,11 @@ vi.mock("@diversifi/shared", () => ({
   },
 }));
 
+const mockLatestAdvice: { current: unknown } = { current: null };
+vi.mock("@/hooks/use-agent-analysis", () => ({
+  useLatestAdvice: () => mockLatestAdvice.current,
+}));
+
 vi.mock("@/hooks/use-agent-status", () => ({
   useAgentStatus: () => ({ isLoading: false }),
 }));
@@ -2044,5 +2049,62 @@ describe("ProtectionTab — live line", () => {
     fireEvent.click(screen.getByTestId("ring-hole"));
     expect(screen.getByTestId("shield-compare")).toBeInTheDocument();
     expect(screen.queryByTestId("shield-live-line")).not.toBeInTheDocument();
+  });
+});
+
+describe("ProtectionTab — Guardian tilt on the ring", () => {
+  const instrument = { symbol: "EURm", chainId: 42220 };
+  const advice = (strategy: string) => ({
+    guardianPlan: {
+      strategy,
+      anchor: "USD",
+      tilts: [{ exposure: "EUR", delta: 5, reason: "Euro steadier than the shilling", evidence: [], instrument }],
+      nextMove: { exposure: "EUR", amountAnchor: 40, amountUsd: 40, instrument },
+      rejected: [],
+      fx: { rate: 1, source: "identity" },
+    },
+  });
+  const connected = () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({ address: "0xabc", chainId: 42220 } as any);
+  };
+  afterEach(() => {
+    mockLatestAdvice.current = null;
+  });
+
+  it("shows the suggestion as a ghost arc, previews the reshaped ring, and hands off to Exchange", () => {
+    mockLatestAdvice.current = advice("africapitalism");
+    connected();
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    const ring = screen.getByTestId("protection-plan-ring");
+    const saved = ring.getAttribute("data-legs");
+    const chip = screen.getByTestId("guardian-tilt-chip");
+    expect(chip.textContent).toContain("Guardian suggests +5 Euro");
+    expect(ring.getAttribute("data-ghost-legs")).not.toBe("[]");
+
+    fireEvent.click(chip);
+    const previewRing = screen.getByTestId("protection-plan-ring");
+    expect(previewRing.getAttribute("data-legs")).not.toBe(saved);
+    expect(previewRing.getAttribute("data-ghost-legs")).toBe(saved);
+    expect(screen.getByText("Guardian suggestion · not saved")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("guardian-tilt-review"));
+    expect(mockNavigateToSwap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        toToken: "EURm",
+        toChainId: 42220,
+        amount: "40",
+        reason: "Euro steadier than the shilling",
+        origin: { source: "guardian" },
+      }),
+    );
+  });
+
+  it("stays silent when the suggestion was made for a different plan, or there is none", () => {
+    mockLatestAdvice.current = advice("pan_caribbean");
+    connected();
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.queryByTestId("guardian-tilt-chip")).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring").getAttribute("data-ghost-legs")).toBe("[]");
   });
 });

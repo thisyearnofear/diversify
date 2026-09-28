@@ -69,6 +69,8 @@ interface Props {
   /** Faint concentric outer track of the current plan's legs — the
    *  contrast baseline while a different plan previews in compare. */
   ghostLegs?: PlanLeg[];
+  /** Names the ghost track (default "current plan"; Guardian: "Guardian suggestion"). */
+  ghostLabel?: string;
   /** Hole copy override — compare/picker carries the focused plan name +
    *  compact delta instead of the computed alignment content. */
   holeOverride?: { label: React.ReactNode; hint?: string };
@@ -103,6 +105,7 @@ export function ProtectionPlanRing({
   forcePlanLegs = false,
   compact = false,
   ghostLegs,
+  ghostLabel = 'current plan',
   holeOverride,
   holeActionLabel,
   sleeveOpen = false,
@@ -283,7 +286,7 @@ export function ProtectionPlanRing({
   const ringThickness = compact ? 16 : 24;
   const ghostSlices: RingSlice[] = (ghostLegs ?? []).map((a, i) => ({
     id: a.token,
-    label: `${a.label ?? displayToken(a.token)} — current plan`,
+    label: `${a.label ?? displayToken(a.token)} — ${ghostLabel}`,
     percent: a.percent,
     color: TOKEN_COLORS[a.token] ?? (i === 0 ? archetype?.accent : i === 1 ? archetype?.accentSoft : undefined) ?? QUIET_GRAY,
   }));

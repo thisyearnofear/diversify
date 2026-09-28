@@ -9,6 +9,7 @@ import { scorePlanAlignment } from "@/lib/plan-alignment";
 import { canonicalToken } from "@/lib/plan-legs";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { resolveAnchorCurrency } from "@/lib/anchor-currency";
+import { buildPlanContext, type PlanContext } from "@/lib/guardian-tilts";
 import { loadAnchorCurrency } from "./use-protection-profile";
 import { readPaymentCycleDraft } from "./use-payment-cycle";
 
@@ -63,6 +64,19 @@ const updateState = (
   cachedState = { ...cachedState, ...partial };
   notify();
 };
+
+/** Latest advisor analysis, for surfaces that render it without running one. */
+export function useLatestAdvice(): AIAdvice | null {
+  const [advice, setAdvice] = useState<AIAdvice | null>(cachedState.advice);
+  useEffect(() => {
+    const listener = (state: AnalysisStoreState) => setAdvice(state.advice);
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }, []);
+  return advice;
+}
 
 export function useAgentAnalysis({
   apiBase,
@@ -125,6 +139,7 @@ export function useAgentAnalysis({
         updateState({ portfolioAnalysis: localAnalysis });
 
         const strategy = getPersistedStrategy();
+        let planContext: PlanContext | undefined;
         if (strategy) {
           // Same risk-adjusted legs the ring draws — drift feedback can't
           // disagree with what the user sees.
@@ -137,6 +152,20 @@ export function useAgentAnalysis({
             strategy,
             riskTolerance: config.riskTolerance,
             anchorCurrency,
+          });
+          planContext = buildPlanContext({
+            strategy,
+            legs,
+            rules,
+            risk: config.riskTolerance,
+            anchor: anchorCurrency,
+            holdings: (portfolio.chains ?? []).flatMap((c) =>
+              (c.balances ?? []).map((b) => ({
+                symbol: b.symbol,
+                chainId: b.chainId ?? c.chainId,
+                value: b.value,
+              })),
+            ),
           });
           const heldPctByToken = new Map<string, number>();
           if (portfolio.totalValue > 0) {
@@ -227,6 +256,7 @@ export function useAgentAnalysis({
               },
               userRegion: userRegion,
               strategyPrompt: strategyPrompt || getStrategyPrompt(),
+              planContext,
             }),
           },
           ADVISOR_ANALYSIS_TIMEOUT_MS,
