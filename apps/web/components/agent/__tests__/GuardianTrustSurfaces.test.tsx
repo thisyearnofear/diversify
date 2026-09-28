@@ -179,6 +179,18 @@ describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
     expect(onFollowShieldPlan).toHaveBeenCalledTimes(1);
   });
 
+  it("a local Custom plan never offers Follow — Guardian keeps its server plan", () => {
+    const onFollowShieldPlan = vi.fn();
+    boundsSheet({ shieldPlan: "custom", shieldPlanName: "Custom", onFollowShieldPlan });
+    expect(screen.getByTestId("guardian-plan-custom-local")).toHaveTextContent(
+      "Guardian keeps following Africapitalism — Custom plans live on this device.",
+    );
+    expect(screen.queryByRole("button", { name: /^Follow/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-plan-mismatch")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Change plan" })).toBeInTheDocument();
+    expect(onFollowShieldPlan).not.toHaveBeenCalled();
+  });
+
   it("no drift: no mismatch line, Change plan stays", () => {
     boundsSheet({ shieldPlan: "africapitalism", shieldPlanName: "Africapitalism" });
     expect(screen.queryByTestId("guardian-plan-mismatch")).not.toBeInTheDocument();

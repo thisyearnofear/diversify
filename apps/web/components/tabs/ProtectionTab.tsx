@@ -765,9 +765,8 @@ export default function ProtectionTab({
     setAddingSlice(false);
     setFocusedToken(null);
     haptics.confirm();
-    followOnGuardian("custom");
     showToast("Custom plan saved. Your holdings have not moved.", "success");
-  }, [customDraft, setCustomPlan, setFinancialStrategy, followOnGuardian, showToast]);
+  }, [customDraft, setCustomPlan, setFinancialStrategy, showToast]);
 
   if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) {
     return <ProtectionSkeleton />;

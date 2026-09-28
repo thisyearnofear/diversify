@@ -171,12 +171,21 @@ vi.mock("@/components/agent/AgentTierStatus", () => ({
   AgentTierStatus: () => null,
 }));
 
+const vaultState = vi.hoisted(() => ({
+  vault: null as { strategy: string } | null,
+  updateStrategy: (() => Promise.resolve()) as (...args: unknown[]) => Promise<void>,
+  cachedProof: null as { message: string; signature: string } | null,
+}));
 vi.mock("@/hooks/use-vault", () => ({
   useVault: () => ({
-    vault: null,
+    vault: vaultState.vault,
     refresh: vi.fn(),
-    updateStrategy: vi.fn(),
+    updateStrategy: vaultState.updateStrategy,
   }),
+}));
+vi.mock("@/lib/wallet-auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/wallet-auth")>()),
+  getCachedWalletAuth: () => vaultState.cachedProof,
 }));
 
 const mockSessionInfo = vi.hoisted(() => ({ current: null as unknown }));
@@ -2214,6 +2223,26 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
     });
     expect(mockSetFinancialStrategy).toHaveBeenCalledWith("custom");
     expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
+  });
+
+  it("saving a Custom plan never repoints the server Guardian, even with a cached proof", () => {
+    const updateStrategy = vi.fn(() => Promise.resolve());
+    vaultState.vault = { strategy: "africapitalism" };
+    vaultState.updateStrategy = updateStrategy;
+    vaultState.cachedProof = { message: "m", signature: "0xsig" };
+    try {
+      render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+      fireEvent.click(screen.getByTestId("custom-tweak"));
+      fireEvent.click(screen.getByTestId("ring-select-kesm"));
+      fireEvent.click(screen.getByTestId("custom-step-up"));
+      fireEvent.click(screen.getByTestId("custom-save"));
+      expect(mockSetFinancialStrategy).toHaveBeenCalledWith("custom");
+      expect(updateStrategy).not.toHaveBeenCalled();
+    } finally {
+      vaultState.vault = null;
+      vaultState.updateStrategy = () => Promise.resolve();
+      vaultState.cachedProof = null;
+    }
   });
 
   it("Cancel leaves the saved plan untouched", () => {

@@ -373,7 +373,7 @@ function ConnectedAgent({
               shieldPlan={shieldPlan}
               shieldPlanName={shieldPlanName}
               onFollowShieldPlan={
-                shieldPlan && address
+                shieldPlan && shieldPlan !== "custom" && address
                   ? () =>
                       void g.vault
                         .updateStrategy(address, shieldPlan)
