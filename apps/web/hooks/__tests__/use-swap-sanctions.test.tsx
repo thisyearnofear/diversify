@@ -68,19 +68,31 @@ vi.mock('@diversifi/shared/src/modules/wallet/core/chains', () => ({
 }));
 
 import { useSwap } from '../use-swap';
+import { _resetScreenCache } from '@/lib/compliance-screen';
 
 const SAVED_ENV = { ...process.env };
 const PARAMS = { fromToken: 'USDm', toToken: 'KESm', amount: '5' };
 
-function stubScreen(body: { status: string; reason?: string }, ok = true) {
+function stubScreen(
+  body: { status: string; reason?: string },
+  ok = true,
+  status = 200,
+  retryAfter?: number,
+) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({ ok, json: async () => body })),
+    vi.fn(async () => ({
+      ok,
+      status,
+      headers: new Headers(retryAfter ? { 'Retry-After': String(retryAfter) } : {}),
+      json: async () => body,
+    })),
   );
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  _resetScreenCache();
 });
 
 afterEach(() => {
@@ -131,5 +143,24 @@ describe('useSwap sanctions screen', () => {
 
     expect(executeSwap).not.toHaveBeenCalled();
     expect(swapResult!.error).toContain('compliance check');
+  });
+
+  it('a rate-limited screen fails closed with a retry-after message', async () => {
+    process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    stubScreen(
+      { status: 'unavailable', reason: 'rate_limited' },
+      false,
+      429,
+      17,
+    );
+    const { result } = renderHook(() => useSwap());
+
+    let swapResult;
+    await act(async () => {
+      swapResult = await result.current.swap(PARAMS);
+    });
+
+    expect(executeSwap).not.toHaveBeenCalled();
+    expect(swapResult!.error).toContain('17 seconds');
   });
 });

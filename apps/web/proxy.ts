@@ -62,7 +62,9 @@ export function proxy(request: NextRequest): NextResponse {
 }
 
 export const config = {
-  // Run on everything; path-level exemptions live in isExempt so the rules
-  // are readable in one place.
-  matcher: '/:path*',
+  // Skip static/framework assets at the edge — the Node proxy shouldn't run
+  // on every chunk and image. Path-level exemptions (legal pages, etc.)
+  // stay in isExempt as the belt; API routes still match.
+  matcher:
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|txt|xml|webmanifest|riv|woff|woff2|map)$).*)',
 };

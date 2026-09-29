@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, afterEach } from 'vitest';
 import { StrategyService } from '../strategy.service';
 import type { FinancialStrategy } from '../../../types/strategy';
 
@@ -122,4 +122,51 @@ describe('StrategyService.getAIPrompt — exhaustive non-empty', () => {
         expect(typeof prompt).toBe('string');
         expect(prompt.length).toBeGreaterThan(0);
     });
+});
+
+// ─── Compliance: retail perps gate ───────────────────────────────────────────
+// With NEXT_PUBLIC_FEATURE_PERPS off, Hyperliquid perp targets (GOLD/SILVER/
+// OIL/COPPER) are replaced by PAXG — spot, physically-backed gold — so the
+// Commodities band still has a routable asset. On, the lists are untouched.
+
+const PERPS = ['GOLD', 'SILVER', 'OIL', 'COPPER'];
+
+describe('StrategyService — perps compliance gate', () => {
+    const SAVED = process.env.NEXT_PUBLIC_FEATURE_PERPS;
+
+    afterEach(() => {
+        if (SAVED === undefined) delete process.env.NEXT_PUBLIC_FEATURE_PERPS;
+        else process.env.NEXT_PUBLIC_FEATURE_PERPS = SAVED;
+    });
+
+    it.each(['africapitalism', 'buen_vivir'] as const)(
+        'perps off: %s proposes PAXG in place of perp symbols, position preserved',
+        (strategy) => {
+            delete process.env.NEXT_PUBLIC_FEATURE_PERPS;
+            const assets = StrategyService.getConfig(strategy).prioritizeAssets!;
+            expect(assets).toContain('PAXG');
+            for (const s of PERPS) expect(assets).not.toContain(s);
+            // PAXG sits where the first perp symbol was — after the regional stables.
+            const firstPerpIdx = (strategy === 'africapitalism'
+                ? ['KESm', 'GHSm', 'ZARm', 'NGNm', 'XOFm', 'GOLD', 'OIL', 'COPPER']
+                : ['BRLm', 'COPm', 'MXNm', 'ARSm', 'SILVER', 'OIL', 'COPPER']
+            ).findIndex((a) => PERPS.includes(a));
+            expect(assets[firstPerpIdx]).toBe('PAXG');
+            // deduped — exactly one PAXG
+            expect(assets.filter((a) => a === 'PAXG')).toHaveLength(1);
+        },
+    );
+
+    it.each(['africapitalism', 'buen_vivir'] as const)(
+        'perps on: %s keeps the original commodity perp targets',
+        (strategy) => {
+            process.env.NEXT_PUBLIC_FEATURE_PERPS = 'true';
+            const assets = StrategyService.getConfig(strategy).prioritizeAssets!;
+            // Africapitalism lists GOLD; Buen Vivir lists SILVER — both keep
+            // their commodity perps and get no injected PAXG.
+            expect(assets).toContain(strategy === 'africapitalism' ? 'GOLD' : 'SILVER');
+            expect(assets.some((a) => PERPS.includes(a))).toBe(true);
+            expect(assets).not.toContain('PAXG');
+        },
+    );
 });

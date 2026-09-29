@@ -13,15 +13,29 @@ import type { AssetRegion } from '../../config';
 import { featureEnabled } from '../../config/jurisdictions';
 
 // Hyperliquid commodity perp symbols — compliance-gated (retail perps). While
-// NEXT_PUBLIC_FEATURE_PERPS is off these are dropped from prioritizeAssets so
-// plan surfaces never propose an unroutable target. PAXG (physical gold on
-// Arbitrum) is a spot RWA, not a perp, and stays.
+// NEXT_PUBLIC_FEATURE_PERPS is off, perp targets are replaced by a single
+// 'PAXG' (spot, physically-backed gold on Arbitrum — a Commodities-region
+// asset) so plans keep a routable commodity leg and never propose an
+// unroutable choice. When perps are on the list is unchanged.
 const PERP_SYMBOLS = new Set(['GOLD', 'SILVER', 'OIL', 'COPPER']);
+const SPOT_GOLD = 'PAXG';
 
-function withoutPerps(assets: string[]): string[] {
-    return featureEnabled('perps')
-        ? assets
-        : assets.filter((a) => !PERP_SYMBOLS.has(a));
+function commodityAssets(assets: string[]): string[] {
+    if (featureEnabled('perps')) return assets;
+    const out: string[] = [];
+    let substituted = false;
+    for (const a of assets) {
+        if (PERP_SYMBOLS.has(a)) {
+            if (!substituted) {
+                out.push(SPOT_GOLD);
+                substituted = true;
+            }
+            continue;
+        }
+        if (a === SPOT_GOLD) substituted = true; // already present — don't append twice
+        out.push(a);
+    }
+    return out;
 }
 
 export interface StrategyConfig {
@@ -70,10 +84,10 @@ export class StrategyService {
                     preferredRegions: ['Africa', 'Commodities'],
                     targetAllocations: [
                         { region: 'Africa', min: 30, ideal: 50, max: 80 },
-                        { region: 'Commodities', min: 10, ideal: 20, max: 35 }, // GOLD/SILVER/OIL/COPPER via Hyperliquid
+                        { region: 'Commodities', min: 10, ideal: 20, max: 35 }, // PAXG spot gold; Hyperliquid GOLD/OIL/COPPER only when perps are enabled
                     ],
-                    prioritizeAssets: withoutPerps(['KESm', 'GHSm', 'ZARm', 'NGNm', 'XOFm', 'GOLD', 'OIL', 'COPPER']),
-                    // Note: Hyperliquid perps allowed (commodity exposure aligns with resource-rich Africa thesis)
+                    prioritizeAssets: commodityAssets(['KESm', 'GHSm', 'ZARm', 'NGNm', 'XOFm', 'GOLD', 'OIL', 'COPPER']),
+                    // Note: Hyperliquid perps fit the resource-rich Africa thesis but are compliance-gated (commodityAssets)
                     scoringWeights: {
                         regionalConcentration: 0.7,
                         globalDiversification: 0.2,
@@ -91,10 +105,10 @@ export class StrategyService {
                     preferredRegions: ['LatAm', 'Commodities'],
                     targetAllocations: [
                         { region: 'LatAm', min: 25, ideal: 45, max: 65 },
-                        { region: 'Commodities', min: 10, ideal: 20, max: 35 }, // SILVER/OIL/COPPER via Hyperliquid
+                        { region: 'Commodities', min: 10, ideal: 20, max: 35 }, // PAXG spot gold; Hyperliquid SILVER/OIL/COPPER only when perps are enabled
                     ],
-                    prioritizeAssets: withoutPerps(['BRLm', 'COPm', 'MXNm', 'ARSm', 'SILVER', 'OIL', 'COPPER']),
-                    // Note: Hyperliquid perps allowed (commodity exposure aligns with LatAm resource economy)
+                    prioritizeAssets: commodityAssets(['BRLm', 'COPm', 'MXNm', 'ARSm', 'SILVER', 'OIL', 'COPPER']),
+                    // Note: Hyperliquid perps fit the LatAm resource economy but are compliance-gated (commodityAssets)
                     scoringWeights: {
                         regionalConcentration: 0.6,
                         globalDiversification: 0.3,

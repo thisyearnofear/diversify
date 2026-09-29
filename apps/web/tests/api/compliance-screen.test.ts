@@ -36,7 +36,11 @@ function res() {
       return r;
     },
   };
-  return r as unknown as NextApiResponse & { statusCode: number; body: any };
+  return r as unknown as NextApiResponse & {
+    statusCode: number;
+    body: any;
+    headers: Record<string, string>;
+  };
 }
 
 const ADDR = '0x000000000000000000000000000000000000dEaD';
@@ -48,7 +52,7 @@ beforeEach(() => {
 describe('GET /api/compliance/screen', () => {
   it('405s on non-GET', async () => {
     const r = res();
-    await handler({ method: 'POST', query: {} } as unknown as NextApiRequest, r);
+    await handler({ method: 'POST', query: {}, headers: {} } as unknown as NextApiRequest, r);
     expect(r.statusCode).toBe(405);
   });
 
@@ -56,7 +60,7 @@ describe('GET /api/compliance/screen', () => {
     screenAddress.mockResolvedValue({ status: 'clear' });
     const r = res();
     await handler(
-      { method: 'GET', query: { address: ADDR } } as unknown as NextApiRequest,
+      { method: 'GET', query: { address: ADDR }, headers: {} } as unknown as NextApiRequest,
       r,
     );
     expect(r.statusCode).toBe(200);
@@ -68,7 +72,7 @@ describe('GET /api/compliance/screen', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const r = res();
     await handler(
-      { method: 'GET', query: { address: ADDR } } as unknown as NextApiRequest,
+      { method: 'GET', query: { address: ADDR }, headers: {} } as unknown as NextApiRequest,
       r,
     );
     expect(r.body).toEqual({ status: 'blocked' });
@@ -78,12 +82,29 @@ describe('GET /api/compliance/screen', () => {
     warn.mockRestore();
   });
 
+  it('429s with Retry-After once the per-IP window is exhausted', async () => {
+    screenAddress.mockResolvedValue({ status: 'clear' });
+    const headers = { 'x-forwarded-for': '203.0.113.9' };
+    let last;
+    for (let i = 0; i < 21; i++) {
+      last = res();
+      await handler(
+        { method: 'GET', query: { address: ADDR }, headers } as unknown as NextApiRequest,
+        last,
+      );
+    }
+    expect(last!.statusCode).toBe(429);
+    expect(last!.headers['Retry-After']).toBeDefined();
+    expect(Number(last!.headers['Retry-After'])).toBeGreaterThan(0);
+    expect(last!.body).toEqual({ status: 'unavailable', reason: 'rate_limited' });
+  });
+
   it('does not log or fail when the service is unavailable', async () => {
     screenAddress.mockResolvedValue({ status: 'unavailable', reason: 'missing_api_key' });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const r = res();
     await handler(
-      { method: 'GET', query: { address: 'bad' } } as unknown as NextApiRequest,
+      { method: 'GET', query: { address: 'bad' }, headers: {} } as unknown as NextApiRequest,
       r,
     );
     expect(r.body.status).toBe('unavailable');

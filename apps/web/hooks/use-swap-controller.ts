@@ -14,6 +14,7 @@ import { SwapOrchestratorService } from "@diversifi/shared/src/services/swap/swa
 import { isMentoToken } from "@diversifi/shared/src/services/swap/mento-sdk.service";
 import type { SwapErrorClass } from "@diversifi/shared/src/services/swap/strategies/base-swap.strategy";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { screenWallet } from "@/lib/compliance-screen";
 import { DemoModeContext } from "@/context/app/DemoModeContext";
 
 // Hub the aggregator can't beat on Celo: USDm is the broker's routing
@@ -226,6 +227,14 @@ export function useSwapController({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Prescreen the connected wallet for sanctions so the swap tap later is
+  // a cache hit, not a round trip. Fire-and-forget, silent, skipped in demo
+  // mode (demo addresses are fixtures, not real wallets).
+  useEffect(() => {
+    if (!address || demoActive) return;
+    void screenWallet(address);
+  }, [address, demoActive]);
 
   // Late restore: if the token list wasn't ready at init, apply the
   // stored pair once it is — but only while the pair still sits on the

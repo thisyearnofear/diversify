@@ -1,7 +1,9 @@
 # Monetisation plan — compliance first, then fees, then the thesis layer
 
-> Status (2026-09-29): Phase 0 in progress. Nothing here replaces legal
-> advice — every phase that earns or promotes is gated on counsel sign-off.
+> Status (2026-09-29): Phase 0 code shipped (items 2–6 below); the exit
+> gate is still open — see "Phase 0 — remaining". Nothing here replaces
+> legal advice — every phase that earns or promotes is gated on counsel
+> sign-off.
 > Product positioning: [`product.md`](./product.md). Forward plan:
 > [`roadmap.md`](./roadmap.md). Design rules: [`design-language.md`](./design-language.md).
 
@@ -62,6 +64,28 @@ trust and funnel — amplified by the thesis layer.
 6. **Docs honesty** — no doc claims a fee that is not charged.
 
 Exit gate: counsel's written answers + all of the above live.
+
+### Phase 0 — remaining (as of 2026-09-29)
+
+Shipped in code: items 2–6, plus a 20 req/min per-IP limit on
+`/api/compliance/screen`, client prescreening (`lib/compliance-screen.ts`)
+so the swap tap never waits, a proxy matcher that skips static assets,
+and PAXG as the spot commodity leg while perps are off. Still open:
+
+- **`CHAINALYSIS_SANCTIONS_API_KEY` on Vercel and Hetzner** — until set,
+  Guardian autonomy declines every move (fails closed to one-tap
+  proposals); manual swaps proceed while fees are off.
+- **Counsel** — written answers to 1(a)–(d); fill the `[COUNSEL: …]`
+  placeholders; then flip `NEXT_PUBLIC_LEGAL_APPROVED`.
+- **Direct Hetzner access** — heavy routes (`/api/vault/*`,
+  `/api/streaks/*`, advisor, x402 gateway, status, deep-analyze) are
+  rewritten from Vercel to Hetzner; the Vercel proxy geo-blocks them, but
+  a direct call to the Hetzner host bypasses it. Close with an origin
+  allowlist (accept only Vercel) or GeoIP blocking at Hetzner's reverse
+  proxy.
+- **Rate-limit hardening before fees go live** — the screen limiter is
+  in-memory per lambda instance; move to a shared store if it must be a
+  hard cap once fees make "unavailable" fail closed.
 
 ## Phase 1 — Disclosed fee capture
 

@@ -24,6 +24,7 @@ import {
     toHexChainId,
 } from '@diversifi/shared/src/modules/wallet/core/chains';
 import { featureEnabled } from '@diversifi/shared/src/config/jurisdictions';
+import { screenWallet } from '../lib/compliance-screen';
 import { NETWORKS, TX_CONFIG } from '../config';
 
 interface HookSwapParams {
@@ -231,37 +232,25 @@ export function useSwap() {
             // Sanctions screen before anything asks the wallet to sign or
             // switch chains. A listed address stops here; an unreachable
             // screener is tolerated only while the fees feature is off —
-            // once fees are on we fail closed.
-            try {
-                const screenRes = await fetch(
-                    `/api/compliance/screen?address=${encodeURIComponent(userAddress)}`
+            // once fees are on we fail closed. screenWallet is memoised and
+            // prescreened when the address connects, so this is normally a
+            // cache hit — the tap never waits on a round trip.
+            const screening = await screenWallet(userAddress);
+            if (screening.status === 'blocked') {
+                const err: any = new Error(
+                    "This wallet address appears on a sanctions list, so DiversiFi can't process this swap."
                 );
-                const screening = screenRes.ok ? await screenRes.json() : { status: 'unavailable' };
-                if (screening.status === 'blocked') {
-                    const err: any = new Error(
-                        "This wallet address appears on a sanctions list, so DiversiFi can't process this swap."
-                    );
-                    err.errorClass = 'sanctioned';
-                    throw err;
-                }
-                if (screening.status === 'unavailable' && featureEnabled('fees')) {
-                    const err: any = new Error(
-                        "We couldn't complete a required compliance check. Please try again shortly."
-                    );
-                    err.errorClass = 'compliance-unavailable';
-                    throw err;
-                }
-            } catch (screenError: any) {
-                if (screenError?.errorClass) throw screenError;
-                // The route itself being down counts as unavailable — same
-                // fail-open/fail-closed rule as the service.
-                if (featureEnabled('fees')) {
-                    const err: any = new Error(
-                        "We couldn't complete a required compliance check. Please try again shortly."
-                    );
-                    err.errorClass = 'compliance-unavailable';
-                    throw err;
-                }
+                err.errorClass = 'sanctioned';
+                throw err;
+            }
+            if (screening.status === 'unavailable' && featureEnabled('fees')) {
+                const err: any = new Error(
+                    screening.reason === 'rate_limited'
+                        ? `Too many checks in a short time — please try again in ${screening.retryAfterSec ? `${screening.retryAfterSec} seconds` : 'a few seconds'}.`
+                        : "We couldn't complete a required compliance check. Please try again shortly."
+                );
+                err.errorClass = 'compliance-unavailable';
+                throw err;
             }
 
             onProgress?.('Finding best swap route...', 2, 4);

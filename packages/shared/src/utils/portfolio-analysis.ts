@@ -210,7 +210,7 @@ const GOAL_ALLOCATIONS = {
     Europe: 25, // Low inflation anchor
     USA: 20, // Reserve currency stability
     Global: 15, // USDC/global liquidity
-    Commodities: 25, // Gold/PAXG/GOLD perp hedge
+    Commodities: 25, // PAXG spot gold (Hyperliquid GOLD perp is compliance-gated)
     Asia: 10, // Growth exposure
     Africa: 5, // Emerging market exposure
     LatAm: 0, // Minimize high inflation
@@ -225,7 +225,7 @@ const GOAL_ALLOCATIONS = {
   },
   rwa_access: {
     Global: 30, // USDC/global liquidity
-    Commodities: 35, // PAXG + Hyperliquid GOLD/SILVER/OIL/COPPER
+    Commodities: 35, // PAXG spot default; Hyperliquid GOLD/SILVER/OIL/COPPER perps are compliance-gated
     Europe: 15,
     USA: 15,
     Asia: 5,

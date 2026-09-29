@@ -67,9 +67,36 @@ vi.mock("../use-streak-rewards", () => ({
   useStreakRewards: () => ({ recordSwap: vi.fn() }),
 }));
 
+// The controller prescreens the connected address fire-and-forget — mock the
+// module so tests can observe calls without a fetch.
+const mockScreenWallet = vi.hoisted(() =>
+  vi.fn((_address?: string) => Promise.resolve({ status: 'clear' })),
+);
+vi.mock("@/lib/compliance-screen", () => ({
+  screenWallet: (address: string) => mockScreenWallet(address),
+}));
+
+// DemoModeContext read as a real context; the demo flag is flippable so one
+// test can prove prescreen skips demo fixtures.
+const demoModeActive = vi.hoisted(() => ({ active: false }));
+vi.mock("@/context/app/DemoModeContext", async () => {
+  const { createContext } = await import("react");
+  return {
+    DemoModeContext: createContext({
+      get demoMode() {
+        return { isActive: demoModeActive.active };
+      },
+      setDemoMode: () => {},
+      enterDemoMode: () => {},
+      exitDemoMode: () => {},
+    }),
+  };
+});
+
 beforeEach(() => {
   mockSwapStep = "idle";
   mockSwapReset.mockClear();
+  mockScreenWallet.mockClear();
   mockQuote.expectedOutput = null;
   mockQuote.provider = null;
   mockQuote.noRoute = false;
@@ -432,5 +459,28 @@ describe("useSwapController — prefilled target on another chain", () => {
     expect(result.current.fromChainId).toBe(CELO_CHAIN_ID);
     expect(result.current.toChainId).toBe(42161);
     expect(result.current.toToken).toBe("PAXG");
+  });
+});
+
+describe("useSwapController — sanctions prescreen", () => {
+  it("prescreens the connected address once — the swap tap is a cache hit", () => {
+    renderController({ address: "0xabc0000000000000000000000000000000000001" });
+    expect(mockScreenWallet).toHaveBeenCalledTimes(1);
+    expect(mockScreenWallet).toHaveBeenCalledWith("0xabc0000000000000000000000000000000000001");
+  });
+
+  it("does not prescreen without an address", () => {
+    renderController({ address: null });
+    expect(mockScreenWallet).not.toHaveBeenCalled();
+  });
+
+  it("does not prescreen in demo mode — fixtures aren't real wallets", () => {
+    demoModeActive.active = true;
+    try {
+      renderController({ address: "0xabc0000000000000000000000000000000000001" });
+      expect(mockScreenWallet).not.toHaveBeenCalled();
+    } finally {
+      demoModeActive.active = false;
+    }
   });
 });
