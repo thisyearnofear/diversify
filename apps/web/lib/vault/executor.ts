@@ -32,6 +32,7 @@ import {
   setDelegationContextResolver,
 } from '@diversifi/shared/src/services/vault/providers/metamask-delegation-provider';
 import { ChainDetectionService } from '@diversifi/shared/src/services/swap/chain-detection.service';
+import { screenAddress } from '@diversifi/shared/src/services/compliance/sanctions-screening.service';
 import { NETWORKS } from '@/config';
 import dbConnect from '@/lib/mongodb';
 import { Permission } from '@/models/Permission';
@@ -293,6 +294,20 @@ export const smartAccountExecutor: VaultExecutor = {
 
     // The delegator smart account IS the user's own address — no custodial account.
     const userId = vault.userAddress;
+
+    // Sanctions screen the vault owner before any batch is built. Autonomy
+    // always fails closed: a listed wallet AND an unreachable screener both
+    // throw VaultExecutionUnavailableError, which callers journal as an
+    // "execution unavailable" decline — recorded, not hidden.
+    const screening = await screenAddress(userId);
+    if (screening.status !== 'clear') {
+      console.warn('[compliance] sanctions_block', {
+        address: userId.toLowerCase(),
+        surface: 'vault-autonomy',
+        status: screening.status,
+      });
+      throw new VaultExecutionUnavailableError();
+    }
     const tokenIn = resolveTokenAddress(tokenInAddress, chainId);
     const tokenOut = resolveTokenAddress(tokenOutAddress, chainId);
 

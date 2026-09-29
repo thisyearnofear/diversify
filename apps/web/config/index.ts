@@ -6,6 +6,8 @@
  * Keep these tables in sync when adding a chain both surfaces need.
  */
 
+import { featureEnabled } from '@diversifi/shared/src/config/jurisdictions';
+
 // Network Configuration
 export const NETWORKS = {
     CELO_MAINNET: {
@@ -360,8 +362,14 @@ export const NETWORK_TOKENS: Record<number, string[]> = {
     [NETWORKS.HYPERLIQUID.chainId]: ['GOLD', 'SILVER', 'OIL', 'COPPER'],
 };
 
-// Helper: Get full asset list with metadata for a specific chain
+// Helper: Get full asset list with metadata for a specific chain.
+// Hyperliquid perp targets (GOLD/SILVER/OIL/COPPER on the virtual chain) are
+// compliance-gated — hidden while NEXT_PUBLIC_FEATURE_PERPS is off so the UI
+// never offers an unroutable choice.
 export function getChainAssets(chainId: number) {
+    if (chainId === NETWORKS.HYPERLIQUID.chainId && !featureEnabled('perps')) {
+        return [];
+    }
     const symbols = NETWORK_TOKENS[chainId] || NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId];
     return symbols.map(symbol => ({
         symbol,

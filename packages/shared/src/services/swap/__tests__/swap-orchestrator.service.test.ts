@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 import type { SwapParams, SwapResult, SwapCallbacks } from '../strategies/base-swap.strategy';
 
 /**
@@ -111,7 +111,13 @@ vi.mock('../strategies/arc-testnet.strategy', () => ({
     ArcTestnetStrategy: makeStrategy('ArcTestnetStrategy'),
 }));
 vi.mock('../strategies/hyperliquid-perp.strategy', () => ({
-    HyperliquidPerpStrategy: makeStrategy('HyperliquidPerpStrategy'),
+    HyperliquidPerpStrategy: makeStrategy('HyperliquidPerp', {
+        // The only perp venue — supports commodity-perp targets and would
+        // succeed if ranked. The compliance gate, not this mock, decides
+        // whether it ever runs.
+        supports: (p) => p.toToken === 'GOLD',
+        execute: async () => ({ success: true, txHash: '0xperp' }),
+    }),
 }));
 vi.mock('../strategies/uniswap-v3.strategy', () => ({
     UniswapV3Strategy: makeStrategy('UniswapV3Strategy', {
@@ -231,6 +237,43 @@ describe('SwapOrchestratorService.getEstimate market-closed precedence', () => {
                 toToken: 'KESm',
             })
         ).rejects.toMatchObject({ errorClass: 'error' });
+    });
+});
+
+describe('SwapOrchestratorService perps compliance gate', () => {
+    const perpParams: SwapParams = {
+        ...params,
+        // cUSD keeps OneInch's USDm-source success mock out of the way —
+        // HyperliquidPerp is the only venue that can serve this pair.
+        fromToken: 'cUSD',
+        toToken: 'GOLD',
+        fromChainId: 998,
+        toChainId: 998,
+    };
+
+    afterEach(() => {
+        delete process.env.NEXT_PUBLIC_FEATURE_PERPS;
+    });
+
+    it('excludes HyperliquidPerp while NEXT_PUBLIC_FEATURE_PERPS is off', async () => {
+        executeCalls.length = 0;
+        delete process.env.NEXT_PUBLIC_FEATURE_PERPS;
+
+        const result = await SwapOrchestratorService.executeSwap(perpParams);
+
+        expect(executeCalls).not.toContain('HyperliquidPerp');
+        // Only the gated venue supports the pair — nothing to fall back to.
+        expect(result.success).toBe(false);
+    });
+
+    it('includes HyperliquidPerp when NEXT_PUBLIC_FEATURE_PERPS=true', async () => {
+        executeCalls.length = 0;
+        process.env.NEXT_PUBLIC_FEATURE_PERPS = 'true';
+
+        const result = await SwapOrchestratorService.executeSwap(perpParams);
+
+        expect(result.success).toBe(true);
+        expect(executeCalls).toContain('HyperliquidPerp');
     });
 });
 

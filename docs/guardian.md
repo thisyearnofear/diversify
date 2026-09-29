@@ -60,7 +60,8 @@ are actually enforced*.
   been removed.
 - **Fees are under review.** Management/performance fees presupposed a
   custodial vault; the fee engine and withdrawal settlement were removed.
-  The documented 0.10% swap spread is unchanged.
+  No fee is charged on swaps today; a disclosed tiered fee is planned and
+  goes live only after legal review (see `docs/product.md` → Fees).
 
 ## What this means (threat model)
 

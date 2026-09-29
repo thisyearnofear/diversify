@@ -11,7 +11,6 @@ import connectDB from '../../../lib/mongodb';
 import Streak from '../../../models/Streak';
 import { isTestnetChain, NETWORKS } from '../../../config';
 
-const MIN_SWAP_USD = 1.00; // Any $1+ swap counts toward the streak (claiming needs only GoodDollar verification)
 const GRACE_PERIODS_PER_WEEK = 1;
 
 // Validate Ethereum address
@@ -129,15 +128,16 @@ async function handlePost(address: string, req: NextApiRequest, res: NextApiResp
     const { amountUSD, source } = req.body;
 
     // Claims always qualify (G$ UBI is the entry point to the savings loop).
-    // Swaps must meet the minimum amount threshold.
+    // Real-money swaps must not earn streak credit — no gamified trading —
+    // so a non-claim source is rejected outright.
     const isClaim = source === 'claim';
-    if (!isClaim && (!amountUSD || amountUSD < MIN_SWAP_USD)) {
+    if (!isClaim) {
       return res.status(400).json({
-        error: `Minimum swap amount is $${MIN_SWAP_USD}`
+        error: 'Only G$ claims extend the streak — swaps do not earn streak credit'
       });
     }
 
-    const effectiveAmount = isClaim ? (amountUSD || 0) : amountUSD;
+    const effectiveAmount = amountUSD || 0;
 
     const today = Math.floor(Date.now() / 86400000);
 
@@ -312,9 +312,9 @@ async function handlePatch(address: string, req: NextApiRequest, res: NextApiRes
     const newAchievements: string[] = [];
     const hasAchievement = (id: string) => streak.achievements.includes(id);
 
-    // First Swap achievement
-    const totalSwaps = streak.crossChainActivity.testnet.totalSwaps + streak.crossChainActivity.mainnet.totalSwaps;
-    if (totalSwaps >= 1 && !hasAchievement('first-swap')) {
+    // First Swap achievement — testnet only. Practice swaps and simulations
+    // are learning; a mainnet (real-money) swap must never mint a badge.
+    if (streak.crossChainActivity.testnet.totalSwaps >= 1 && !hasAchievement('first-swap')) {
       streak.achievements.push('first-swap');
       newAchievements.push('first-swap');
     }

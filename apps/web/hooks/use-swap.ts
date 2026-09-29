@@ -23,6 +23,7 @@ import {
     getAddChainParameter,
     toHexChainId,
 } from '@diversifi/shared/src/modules/wallet/core/chains';
+import { featureEnabled } from '@diversifi/shared/src/config/jurisdictions';
 import { NETWORKS, TX_CONFIG } from '../config';
 
 interface HookSwapParams {
@@ -226,6 +227,42 @@ export function useSwap() {
             // Get user address
             const signer = await ProviderFactoryService.getSigner();
             const userAddress = await signer.getAddress();
+
+            // Sanctions screen before anything asks the wallet to sign or
+            // switch chains. A listed address stops here; an unreachable
+            // screener is tolerated only while the fees feature is off —
+            // once fees are on we fail closed.
+            try {
+                const screenRes = await fetch(
+                    `/api/compliance/screen?address=${encodeURIComponent(userAddress)}`
+                );
+                const screening = screenRes.ok ? await screenRes.json() : { status: 'unavailable' };
+                if (screening.status === 'blocked') {
+                    const err: any = new Error(
+                        "This wallet address appears on a sanctions list, so DiversiFi can't process this swap."
+                    );
+                    err.errorClass = 'sanctioned';
+                    throw err;
+                }
+                if (screening.status === 'unavailable' && featureEnabled('fees')) {
+                    const err: any = new Error(
+                        "We couldn't complete a required compliance check. Please try again shortly."
+                    );
+                    err.errorClass = 'compliance-unavailable';
+                    throw err;
+                }
+            } catch (screenError: any) {
+                if (screenError?.errorClass) throw screenError;
+                // The route itself being down counts as unavailable — same
+                // fail-open/fail-closed rule as the service.
+                if (featureEnabled('fees')) {
+                    const err: any = new Error(
+                        "We couldn't complete a required compliance check. Please try again shortly."
+                    );
+                    err.errorClass = 'compliance-unavailable';
+                    throw err;
+                }
+            }
 
             onProgress?.('Finding best swap route...', 2, 4);
 

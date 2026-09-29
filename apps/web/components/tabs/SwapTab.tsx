@@ -88,7 +88,6 @@ export default function SwapTab({
   const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
   const { demoMode } = useDemoMode();
   const {
-    recordSwap: recordStreakSwap,
     recordActivity,
     canClaim,
     estimatedReward,
@@ -405,18 +404,12 @@ export default function SwapTab({
     if (swapError) return;
 
     if (swapTxHash && hookSwapStep !== "completed") {
-      // Record swap completion for experience progression
+      // Record swap completion for experience progression (Simple→Full
+      // mode change — not a reward).
       recordExperienceSwap();
 
-      // Record streak activity for GoodDollar UBI if amount >= $1
-      if (lastSwap?.amount) {
-        const amountNum = parseFloat(lastSwap.amount);
-        if (amountNum >= 1) {
-          recordStreakSwap(amountNum);
-        }
-      }
-
-      // Record cross-chain activity for testnet tracking
+      // Real-money swaps never earn streak credit — no recordSwap here.
+      // Cross-chain stats still count below (totals only, no badges).
       if (walletChainId && lastSwap) {
         recordActivity({
           action: "swap",
@@ -435,7 +428,6 @@ export default function SwapTab({
     swapTxHash,
     refreshWithRetries,
     recordExperienceSwap,
-    recordStreakSwap,
     lastSwap,
     recordActivity,
     walletChainId,

@@ -5,7 +5,6 @@ import { useSwap } from "./use-swap";
 import { useExpectedAmountOut } from "./use-expected-amount-out";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
 import { useInflationData } from "./use-inflation-data";
-import { useStreakRewards } from "./use-streak-rewards";
 import { NETWORKS, NETWORK_TOKENS } from "../config";
 // Deep leaf imports — NOT the barrel — keeps the swap + cross-chain-tokens stacks out of first-load.
 import { isTokenAvailableOnChain, getTokensForChain } from "@diversifi/shared/src/utils/cross-chain-tokens";
@@ -324,8 +323,6 @@ export function useSwapController({
     getRegionForStablecoin,
     dataSource: inflationDataSource,
   } = useInflationData();
-  const { recordSwap } = useStreakRewards();
-
   // One funnel event per attempt — later emits for the same attempt
   // (delegated return + step-sync) dedupe on the attempt counter.
   const emitSwapOutcome = useCallback(
@@ -729,19 +726,9 @@ export function useSwapController({
         setPendingViaFinal(null);
       }
 
-      // Record streak activity for qualifying saves
-      const amountNum = parseFloat(amount);
-      if (amountNum >= 1) {
-        // $1 minimum for streak
-        recordSwap(amountNum);
-      }
-
-      // Track today's swap progress (for UI display)
-      if (typeof window !== 'undefined' && amountNum > 0) {
-        const todayKey = `diversifi_today_swaps_${Date.now().toString().slice(0, 8)}`;
-        const currentTotal = parseFloat(localStorage.getItem(todayKey) || '0');
-        localStorage.setItem(todayKey, (currentTotal + amountNum).toString());
-      }
+      // Real-money swaps never earn streak credit, badges or celebrations —
+      // the PairReceipt is the confirmation, not a reward. (Compliance: no
+      // gamified trading.)
     } else if (swapStep === "swapping" && status === "approving") {
       // onSwapSubmitted fires before confirmation — advance the ticket to
       // the in-flight state even when a provider (LiFi) never confirms an
@@ -754,7 +741,7 @@ export function useSwapController({
       setStatus("error");
     }
     if (swapTxHash && status !== "completed") setLocalTxHash(swapTxHash);
-  }, [swapStep, swapError, swapErrorClass, swapTxHash, refreshWithRetries, status, amount, recordSwap, pendingViaFinal, toToken, emitSwapOutcome]);
+  }, [swapStep, swapError, swapErrorClass, swapTxHash, refreshWithRetries, status, amount, pendingViaFinal, toToken, emitSwapOutcome]);
 
   // 6. Inflation Data Processing
   const {

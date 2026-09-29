@@ -15,6 +15,7 @@
  */
 
 import React from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Region } from "@/hooks/use-user-region";
 import type { UserExperienceMode } from "@/context/app/types";
@@ -324,6 +325,24 @@ export function MoreOptions({
                   ))}
                 </div>
               </div>
+
+              {/* Legal links render only once counsel has approved the pages
+                  (NEXT_PUBLIC_LEGAL_APPROVED) — until then the drafts stay
+                  reachable by URL but unlinked. */}
+              {process.env.NEXT_PUBLIC_LEGAL_APPROVED === 'true' && (
+                <nav
+                  aria-label="Legal"
+                  className="pt-3 flex items-center gap-3 text-2xs text-gray-500 dark:text-gray-400"
+                >
+                  <Link href="/terms" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Terms</Link>
+                  <span aria-hidden="true">·</span>
+                  <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Privacy</Link>
+                  <span aria-hidden="true">·</span>
+                  <Link href="/risk" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Risk</Link>
+                  <span aria-hidden="true">·</span>
+                  <Link href="/fees" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Fees</Link>
+                </nav>
+              )}
             </div>
           </motion.div>
         )}

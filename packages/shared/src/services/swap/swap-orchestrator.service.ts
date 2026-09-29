@@ -26,6 +26,7 @@ import { HyperliquidPerpStrategy } from './strategies/hyperliquid-perp.strategy'
 import { ethers } from 'ethers';
 import { ChainDetectionService } from './chain-detection.service';
 import { SWAP_CONFIG } from '../../config';
+import { featureEnabled } from '../../config/jurisdictions';
 
 interface StrategyPerformance {
     successRate: number;
@@ -35,6 +36,10 @@ interface StrategyPerformance {
 
 // Islamic Finance strategy names — Hyperliquid perps are excluded for these
 const ISLAMIC_FINANCE_EXCLUDED_STRATEGIES = new Set(['HyperliquidPerp']);
+
+// Retail perps are compliance-gated: Hyperliquid perp strategies stay out
+// of ranking until NEXT_PUBLIC_FEATURE_PERPS is on (counsel sign-off).
+const PERP_GATED_STRATEGIES = new Set(['HyperliquidPerp']);
 
 export class SwapOrchestratorService {
     private static strategies: BaseSwapStrategy[] = [
@@ -459,8 +464,10 @@ export class SwapOrchestratorService {
      */
     private static getRankedStrategies(params: SwapParams, islamicFinance = false): BaseSwapStrategy[] {
         // Filter supporting strategies, excluding Islamic Finance-incompatible ones if needed
+        const perpsEnabled = featureEnabled('perps');
         const supportingStrategies = this.strategies.filter(s => {
             if (!s.supports(params)) return false;
+            if (!perpsEnabled && PERP_GATED_STRATEGIES.has(s.getName())) return false;
             if (islamicFinance && ISLAMIC_FINANCE_EXCLUDED_STRATEGIES.has(s.getName())) return false;
             return true;
         });

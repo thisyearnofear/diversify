@@ -36,6 +36,13 @@ vi.mock('@diversifi/shared/src/services/vault/providers/metamask-delegation-prov
 }));
 
 vi.mock('@/lib/mongodb', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
+
+// Chain routing tests assume a clean screen — the blocked/unavailable
+// declines have their own file (executor-sanctions.test.ts).
+vi.mock(
+  '@diversifi/shared/src/services/compliance/sanctions-screening.service',
+  () => ({ screenAddress: vi.fn(async () => ({ status: 'clear' })) }),
+);
 vi.mock('@/models/Permission', () => ({ Permission: { findOne: vi.fn() } }));
 
 // The Celo path resolves routes and calldata through the Mento SDK service —

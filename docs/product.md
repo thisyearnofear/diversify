@@ -268,7 +268,7 @@ New users land on Shield. Swipe/tap discovery hint animates in above the tab bar
 | Fee | Amount | When |
 |-----|--------|------|
 | Management / performance | Under review — presupposed a custodial vault that no longer exists | — |
-| Swap spread | 0.10% | Per swap |
+| Swap fee | None charged today | A disclosed, tiered fee is planned and goes live only after legal review — see [monetisation-plan.md](./monetisation-plan.md) |
 
 ## Target Users
 
