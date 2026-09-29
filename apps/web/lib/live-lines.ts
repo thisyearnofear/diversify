@@ -15,13 +15,21 @@ import {
   type CorridorSignal,
   type CorridorSignalRecord,
 } from '@/lib/corridor-context';
-import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import {
+  comingStampsForFiat,
+  pastStampsForFiat,
+  watchStampForToken,
+} from '@/lib/stamps';
 import { daysUntilPaymentDate } from '@diversifi/shared/src/services/guardian/recommendation-contract';
 
 export interface LiveBeatText {
   key: string;
   text: string;
+  /** Present when the beat is a keepable fact — a stamp id that
+   *  resolveStamps accepts for the pair it flows beside. Fresh signal
+   *  beats never carry one: they expire in 14 days, postcards endure. */
+  stampId?: string;
 }
 
 /** A fresh ledger signal in the corridor line's dateline grammar:
@@ -45,16 +53,26 @@ export function macroSignalBeatForCode(
 }
 
 /** A token's standing watch cadence — "Watch 🇳🇬: CBN decisions · 8× a
- *  year". Null when the token has no curated watch entry. */
+ *  year". The beat IS the stamp: same builder, same sentence. */
 export function watchBeatForToken(
   token: string | null | undefined,
 ): LiveBeatText | null {
-  const p = provenanceFor(token);
-  if (!p?.watch) return null;
-  return {
-    key: `watch-${token}`,
-    text: `Watch ${p.origin.flag}: ${p.watch.event} · ${p.watch.cadence}`,
-  };
+  const stamp = token ? watchStampForToken(token) : null;
+  if (!stamp) return null;
+  return { key: stamp.id, text: stamp.sentence, stampId: stamp.id };
+}
+
+/** The nearest sourced scheduled event for a fiat within `withinDays`
+ *  (default 120 — the line looks a season ahead, never further). */
+export function comingBeatForCode(
+  code: string | null | undefined,
+  now: Date = new Date(),
+  withinDays = 120,
+): LiveBeatText | null {
+  if (!code) return null;
+  const stamp = comingStampsForFiat(code, now, withinDays)[0];
+  if (!stamp) return null;
+  return { key: stamp.id, text: stamp.sentence, stampId: stamp.id };
 }
 
 /** Watch cadence for a bare fiat code — looks up the token that carries
@@ -83,6 +101,10 @@ export function homeBeats(args: {
     watchBeatForCode(currencyCode);
   if (first) beats.push(first);
 
+  // The sourced calendar — informational on Home (no stamping UI here).
+  const coming = comingBeatForCode(currencyCode, new Date(nowMs));
+  if (coming) beats.push(coming);
+
   if (args.includeRiskEvent !== false) {
     const events = CURRENCY_BY_CODE[currencyCode ?? '']?.riskEvents ?? [];
     const newest = events.reduce<(typeof events)[number] | null>(
@@ -90,9 +112,13 @@ export function homeBeats(args: {
       null,
     );
     if (newest) {
+      const stamp = pastStampsForFiat(currencyCode ?? '').find(
+        (s) => s.id === `past-${currencyCode}-${newest.year}`,
+      );
       beats.push({
         key: `risk-${currencyCode}-${newest.year}`,
         text: `${newest.year}: ${newest.event}`,
+        stampId: stamp?.id,
       });
     }
   }

@@ -27,9 +27,10 @@ import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
 import { useNavigation } from '@/context/app/NavigationContext';
 import type { HandoffOrigin } from '@/context/app/types';
 import { stampsForPair } from '@/lib/stamps';
-import StampSheet from './StampSheet';
+import StampSheet, { type StampEntry, type StampMode } from './StampSheet';
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
+const STAMP_TEACH_KEY = 'diversifi.stamps.taught';
 
 /** What the ticket hands back to the pair on settlement — a snapshot of
  *  the swap as it was quoted, never the modal's invented numbers. */
@@ -56,6 +57,8 @@ function BeamCoin({
   flipped,
   onFlip,
   sealed = false,
+  onSealStamp,
+  teaching = false,
 }: {
   symbol: string;
   layoutId: string;
@@ -65,10 +68,46 @@ function BeamCoin({
   onFlip: () => void;
   /** Settlement seal — the mint-mark becomes a persistent emerald ✓. */
   sealed?: boolean;
+  /** When set, the ✓ is the stamp doorway — a button over the mark that
+   *  doesn't swallow the coin's flip. */
+  onSealStamp?: () => void;
+  /** One-shot teach: dashed rings bloom out around the ✓ once. */
+  teaching?: boolean;
 }) {
   const reduced = useReducedMotion();
   const provenance = provenanceFor(symbol);
   const flag = provenance?.origin.flag ?? corridorSideFor(symbol)?.flag;
+  // The mint-mark lives outside the coin's flip button so a ✓-as-button
+  // never nests inside it — same absolute spot, separate hit target.
+  const mark = sealed ? (
+    onSealStamp ? (
+      <button
+        type="button"
+        data-testid="stamp-your-why"
+        aria-label="Stamp your why — press cited facts onto this move"
+        onClick={(e) => {
+          e.stopPropagation();
+          haptics.tap();
+          onSealStamp();
+        }}
+        className="absolute -bottom-2 -right-2 z-10 flex size-tap items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      >
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-[13px] leading-none text-white ring-1 ring-emerald-600 dark:bg-emerald-600">
+          ✓
+        </span>
+      </button>
+    ) : (
+      <MintMark className="h-6 w-6 bg-emerald-500 text-[13px] leading-none text-white ring-emerald-600 dark:bg-emerald-600">
+        ✓
+      </MintMark>
+    )
+  ) : (
+    flag && (
+      <MintMark className="h-6 w-6 bg-white text-[13px] leading-none ring-gray-200 dark:bg-gray-900 dark:ring-gray-700">
+        {flag}
+      </MintMark>
+    )
+  );
   const coin = (
     <motion.span
       key={String(flipped)}
@@ -89,17 +128,7 @@ function BeamCoin({
             transition={{ duration: 0.8, ease: 'easeOut', delay: 1.25 }}
           />
         )}
-        {sealed ? (
-          <MintMark className="h-6 w-6 bg-emerald-500 text-[13px] leading-none text-white ring-emerald-600 dark:bg-emerald-600">
-            ✓
-          </MintMark>
-        ) : (
-          flag && (
-            <MintMark className="h-6 w-6 bg-white text-[13px] leading-none ring-gray-200 dark:bg-gray-900 dark:ring-gray-700">
-              {flag}
-            </MintMark>
-          )
-        )}
+        {!onSealStamp && mark}
       </span>
     </motion.span>
   );
@@ -109,6 +138,7 @@ function BeamCoin({
       initial={reduced ? false : { opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0, rotate: -tilt }}
       transition={{ ...springSoft, delay: reduced ? 0 : index * STAGGER_STEP_S }}
+      className="relative"
     >
       {provenance ? (
         <button
@@ -122,6 +152,33 @@ function BeamCoin({
         </button>
       ) : (
         coin
+      )}
+      {onSealStamp && mark}
+      {teaching &&
+        !reduced &&
+        [0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            aria-hidden
+            className="pointer-events-none absolute -bottom-1 -right-1 size-8 rounded-full border-2 border-dashed border-emerald-400"
+            initial={{ scale: 0.8, opacity: 0.7 }}
+            animate={{ scale: 1.6 + i * 0.35, opacity: 0 }}
+            transition={{ duration: 0.6, delay: i * 0.12, ease: 'easeOut' }}
+          />
+        ))}
+      {/* Teach caption — centred on the coin in the band between the
+          picker label and the receipt title; absolute, so it reserves
+          no space and nothing shifts when it fades. */}
+      {teaching && (
+        <motion.span
+          data-testid="stamp-teach-caption"
+          initial={reduced ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: reduced ? 0 : 0.4 }}
+          className="pointer-events-none absolute left-1/2 top-full z-10 mt-6 -translate-x-1/2 whitespace-nowrap text-2xs font-semibold text-emerald-600 dark:text-emerald-400"
+        >
+          stamp your why ✦
+        </motion.span>
       )}
     </motion.div>
   );
@@ -214,9 +271,33 @@ export function PairStage({
 
   const [flipped, setFlipped] = useState<'from' | 'to' | null>(null);
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);
-  // Stamps — the settled move can be sealed with curated facts (L2).
-  const [stampOpen, setStampOpen] = useState(false);
+  // Stamps — one sheet, three doors: the receipt's ✓ seal ('receipt'),
+  // a corridor-line beat's ✦ ('beat'), the pair inspector ('inspector').
+  const [stampSheet, setStampSheet] = useState<{
+    mode: StampMode;
+    entry: StampEntry;
+    ids?: string[];
+  } | null>(null);
   const stampable = stampsForPair(fromToken, toToken).length > 0;
+
+  // Teach the seal door once per device: after the travel + seal confirm,
+  // rings bloom around the ✓ and a caption fades in under the coin for
+  // ~4s. Reduced motion skips the bloom and the wait.
+  const [teaching, setTeaching] = useState(false);
+  useEffect(() => {
+    if (!receipt || !stampable || typeof window === 'undefined') return;
+    if (window.localStorage.getItem(STAMP_TEACH_KEY)) return;
+    let hide = 0;
+    const show = window.setTimeout(() => {
+      window.localStorage.setItem(STAMP_TEACH_KEY, '1');
+      setTeaching(true);
+      hide = window.setTimeout(() => setTeaching(false), 4000);
+    }, reduced ? 400 : 2200);
+    return () => {
+      window.clearTimeout(show);
+      window.clearTimeout(hide);
+    };
+  }, [receipt, stampable, reduced]);
   // A new pair is a new weighing — any flipped coin turns face up again.
   useEffect(() => setFlipped(null), [fromToken, toToken]);
   const landed = useRef(false);
@@ -339,6 +420,12 @@ export function PairStage({
             flipped={flipped === 'to'}
             onFlip={() => setFlipped(flipped === 'to' ? null : 'to')}
             sealed={Boolean(receipt)}
+            onSealStamp={
+              receipt && stampable
+                ? () => setStampSheet({ mode: 'moved', entry: 'receipt' })
+                : undefined
+            }
+            teaching={teaching}
           />
         </motion.div>
 
@@ -457,28 +544,6 @@ export function PairStage({
               Back to Guardian →
             </button>
           )}
-          {stampable && (
-            <button
-              type="button"
-              data-testid="stamp-your-why"
-              onClick={() => {
-                haptics.tap();
-                setStampOpen(true);
-              }}
-              className="mt-2 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
-            >
-              Stamp your why ✦
-            </button>
-          )}
-          {stampOpen && (
-            <StampSheet
-              fromToken={fromToken}
-              toToken={toToken}
-              mode="moved"
-              open
-              onClose={() => setStampOpen(false)}
-            />
-          )}
           <button
             type="button"
             data-testid="receipt-done"
@@ -513,6 +578,10 @@ export function PairStage({
             horizon={horizon}
             onHorizon={setHorizon}
             whatIf={whatIf}
+            onStamp={(stampId) => {
+              haptics.tap();
+              setStampSheet({ mode: 'watching', entry: 'beat', ids: [stampId] });
+            }}
           />
 
           <button
@@ -537,6 +606,17 @@ export function PairStage({
         selectedToken={pickerSide === 'to' ? toToken : fromToken}
         title={pickerSide === 'to' ? 'Select To token' : 'Select From token'}
       />
+      {stampSheet && (
+        <StampSheet
+          fromToken={fromToken}
+          toToken={toToken}
+          mode={stampSheet.mode}
+          entry={stampSheet.entry}
+          initialStampIds={stampSheet.ids}
+          open
+          onClose={() => setStampSheet(null)}
+        />
+      )}
     </div>
   );
 }

@@ -11,6 +11,7 @@
 import { canonicalPairSymbol } from './pair-card';
 import {
   corridorSideFor,
+  corridorTokenForCurrency,
   currencyRiskAsOfLabel,
   moneyNameFor,
   pairWhatIfFor,
@@ -29,6 +30,9 @@ export interface Stamp {
   value: string;
   /** One line of the fact. */
   line: string;
+  /** The same fact in the live-line dateline grammar — a beat with this
+   *  sentence flows on a tab's LiveLine and can be pressed as a stamp. */
+  sentence: string;
   /** Named source — rides the seal's rim text. */
   source: string;
   /** "Mon YYYY" or "Mon D, YYYY" — the fact's own date, never blank. */
@@ -58,6 +62,12 @@ const KIND_MAX: Record<StampKind, number> = {
 
 const CURATED_SOURCE = 'Curated currency-risk data';
 const PROVENANCE_SOURCE = 'Token provenance';
+
+/** The fiat's flag, looked up through the token that carries it — the
+ *  dateline grammar pairs every beat with its currency's flag. */
+function flagForFiat(fiat: string): string {
+  return corridorSideFor(corridorTokenForCurrency(fiat))?.flag ?? '';
+}
 
 // ── Date labels ──────────────────────────────────────────────────────
 
@@ -119,6 +129,7 @@ function comingStamp(
   held = false,
 ): Stamp {
   const days = daysUntil(e.date, now);
+  const flag = flagForFiat(e.fiat);
   return {
     id: `coming-${e.id}`,
     kind: 'coming',
@@ -127,6 +138,9 @@ function comingStamp(
     line: held
       ? `held ${dayYear(e.date)}`
       : `${e.event} · in ${days} day${days === 1 ? '' : 's'}`,
+    sentence: held
+      ? `${dayYear(e.date)} ${flag}: ${e.event} — held`
+      : `${shortDay(e.date)} ${flag}: ${e.event} · in ${days} day${days === 1 ? '' : 's'}`,
     source: e.source,
     dateLabel: monthYear(e.asOf),
     side,
@@ -142,24 +156,30 @@ function driftStamps(from: CorridorSide): Stamp[] {
   const usd = entry.depreciation.vsUSD[HORIZON];
   const xau = entry.depreciation.vsXAU[HORIZON];
   if (typeof usd === 'number' && usd !== 0) {
+    const line = `${name} vs dollar · 5 yrs`;
+    const value = signedPct(usd);
     out.push({
       id: 'drift-usd-5yr',
       kind: 'drift',
       glyph: '⚖',
-      value: signedPct(usd),
-      line: `${name} vs dollar · 5 yrs`,
+      value,
+      line,
+      sentence: `${line} — ${value}`,
       source: CURATED_SOURCE,
       dateLabel: currencyRiskAsOfLabel(),
       side: 'from',
     });
   }
   if (typeof xau === 'number' && xau !== 0) {
+    const line = `${name} vs gold · 5 yrs`;
+    const value = signedPct(xau);
     out.push({
       id: 'drift-xau-5yr',
       kind: 'drift',
       glyph: '⚖',
-      value: signedPct(xau),
-      line: `${name} vs gold · 5 yrs`,
+      value,
+      line,
+      sentence: `${line} — ${value}`,
       source: CURATED_SOURCE,
       dateLabel: currencyRiskAsOfLabel(),
       side: 'from',
@@ -175,14 +195,17 @@ function staplesStamp(from: string, to: string): Stamp | null {
   if (typeof goods.today !== 'number' || typeof goods.moved !== 'number') {
     return null;
   }
+  const line = shorten(
+    `${goods.unit}, if moved to ${whatIf.toName} in ${whatIf.startYear}`,
+  );
+  const value = `${goods.today} → ${goods.moved}`;
   return {
     id: 'staples',
     kind: 'staples',
     glyph: '🍚',
-    value: `${goods.today} → ${goods.moved}`,
-    line: shorten(
-      `${goods.unit}, if moved to ${whatIf.toName} in ${whatIf.startYear}`,
-    ),
+    value,
+    line,
+    sentence: `${value} ${line}`,
     source: CURATED_SOURCE,
     dateLabel: currencyRiskAsOfLabel(),
     side: 'from', // the goods anchor always prices in the from currency
@@ -206,6 +229,7 @@ function pastStamps(from: CorridorSide, to: CorridorSide): Stamp[] {
       glyph: '📜',
       value: String(ev.year),
       line: full.length <= LINE_MAX ? full : shorten(ev.event),
+      sentence: `${ev.year}: ${ev.event}`,
       source: CURATED_SOURCE,
       dateLabel: ev.asOf ? monthYear(ev.asOf) : currencyRiskAsOfLabel(),
       side: side as 'from' | 'to',
@@ -233,6 +257,8 @@ function watchStamp(symbol: string, side: 'from' | 'to'): Stamp | null {
     glyph: '👁',
     value: shortCadence(p.watch.cadence),
     line: shorten(p.watch.event),
+    // Identical to the live-line watch beat — the stamp IS the beat.
+    sentence: `Watch ${p.origin.flag}: ${p.watch.event} · ${p.watch.cadence}`,
     source: p.sources[0]?.label ?? PROVENANCE_SOURCE,
     dateLabel: monthYear(p.asOf),
     side,
@@ -248,6 +274,7 @@ function controlStamp(symbol: string): Stamp | null {
     glyph: '⚿',
     value: symbol,
     line: shorten(p.keys),
+    sentence: `${symbol} — ${p.keys}`,
     source: p.sources[0]?.label ?? PROVENANCE_SOURCE,
     dateLabel: monthYear(p.asOf),
     side: 'to',
@@ -301,6 +328,61 @@ function buildStamps(
   // Every stamp must carry a named source and a date — drop any that
   // couldn't rather than ship an uncited fact.
   return out.filter((s) => s.source.trim() !== '' && s.dateLabel.trim() !== '');
+}
+
+// ── Granular builders — the live lines compose these directly, so a
+// beat and a stamp are always the same fact. ─────────────────────────
+
+/** The corridor side a bare fiat code maps to, via its token. */
+function sideForFiat(fiat: string): CorridorSide | null {
+  const token = corridorTokenForCurrency(fiat);
+  return token ? corridorSideFor(token) : null;
+}
+
+/** Future scheduled events for one fiat, date order. `withinDays` caps
+ *  how far ahead the live line looks (held events never appear — they
+ *  belong to old postcards, not the line). */
+export function comingStampsForFiat(
+  fiat: string,
+  now: Date = new Date(),
+  withinDays?: number,
+): Stamp[] {
+  const side = sideForFiat(fiat);
+  if (!side) return [];
+  return SCHEDULED_EVENTS.filter((e) => e.fiat === side.code)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .filter((e) => {
+      const d = daysUntil(e.date, now);
+      return d >= 0 && (withinDays === undefined || d <= withinDays);
+    })
+    .map((e) => comingStamp(e, 'from', now));
+}
+
+/** The token's standing watch stamp — its sentence IS the watch beat. */
+export function watchStampForToken(token: string): Stamp | null {
+  return watchStamp(token, 'from');
+}
+
+/** The fiat's curated risk trail as past stamps, newest first. */
+export function pastStampsForFiat(fiat: string): Stamp[] {
+  const side = sideForFiat(fiat);
+  if (!side) return [];
+  // pastStamps(side, side) would emit each event twice — dedupe by id.
+  return pastStamps(side, side).filter(
+    (s, i, arr) => arr.findIndex((x) => x.id === s.id) === i,
+  );
+}
+
+/** The fiat's 5yr drift stamps vs dollar and gold. */
+export function driftStampsForFiat(fiat: string): Stamp[] {
+  const side = sideForFiat(fiat);
+  if (!side) return [];
+  return driftStamps(side);
+}
+
+/** Who controls or backs the token — the control stamp. */
+export function controlStampForToken(token: string): Stamp | null {
+  return controlStamp(token);
 }
 
 /** Tray-only caps. Coming picks the nearest from-side event, then the

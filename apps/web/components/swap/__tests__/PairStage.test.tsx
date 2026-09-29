@@ -397,4 +397,36 @@ describe('PairStage — settlement receipt', () => {
     renderReceipt({});
     expect(screen.queryByTestId('receipt-return')).not.toBeInTheDocument();
   });
+
+  describe('stamp door teaching', () => {
+    beforeEach(() => {
+      localStorage.removeItem('diversifi.stamps.taught');
+      vi.useFakeTimers();
+    });
+    afterEach(() => vi.useRealTimers());
+
+    it('shows the caption once, after the confirm, and hides it after ~4s', () => {
+      renderReceipt();
+      expect(
+        screen.queryByTestId('stamp-teach-caption'),
+      ).not.toBeInTheDocument();
+      act(() => vi.advanceTimersByTime(2200));
+      expect(screen.getByTestId('stamp-teach-caption')).toHaveTextContent(
+        'stamp your why ✦',
+      );
+      act(() => vi.advanceTimersByTime(4000));
+      expect(
+        screen.queryByTestId('stamp-teach-caption'),
+      ).not.toBeInTheDocument();
+    });
+
+    it('never reteaches once the key is set', () => {
+      localStorage.setItem('diversifi.stamps.taught', '1');
+      renderReceipt();
+      act(() => vi.advanceTimersByTime(8000));
+      expect(
+        screen.queryByTestId('stamp-teach-caption'),
+      ).not.toBeInTheDocument();
+    });
+  });
 });

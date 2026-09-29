@@ -275,10 +275,14 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
       const line = screen.getByTestId('corridor-line');
       expect(line).toHaveTextContent("From Nigeria's naira to Circle's");
       act(() => { vi.advanceTimersByTime(7000); });
+      // The sourced calendar leads after the story — each side's
+      // nearest coming event within 120 days.
+      expect(line).toHaveTextContent('Jan 16 🇳🇬: Nigeria presidential');
+      act(() => { vi.advanceTimersByTime(7000); });
+      expect(line).toHaveTextContent('Oct 27 🇺🇸: Fed rate decision');
+      act(() => { vi.advanceTimersByTime(7000); });
       expect(line).toHaveTextContent('Watch');
       expect(line).toHaveTextContent('CBN Monetary Policy Committee');
-      act(() => { vi.advanceTimersByTime(7000); });
-      expect(line).toHaveTextContent('Circle reserve attestations');
       act(() => { vi.advanceTimersByTime(7000); });
       expect(line).toHaveTextContent("From Nigeria's naira");
     } finally {
@@ -323,13 +327,12 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
         />,
       );
       const line = screen.getByTestId('corridor-line');
-      act(() => { vi.advanceTimersByTime(7000); });
+      // Story → each side's coming event → the live signal supersedes
+      // the NGN watch cadence.
+      act(() => { vi.advanceTimersByTime(21000); });
       // The dated event beat — dateline-led, not "Watch"-led.
       expect(line).toHaveTextContent('Sep 18 🇳🇬: CBN held the benchmark rate');
-      // The NGN watch cadence is superseded; the USDC one still rotates in.
       expect(line.textContent).not.toContain('CBN Monetary Policy Committee');
-      act(() => { vi.advanceTimersByTime(7000); });
-      expect(line).toHaveTextContent('Circle reserve attestations');
     } finally {
       vi.useRealTimers();
     }

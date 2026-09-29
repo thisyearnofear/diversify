@@ -487,11 +487,22 @@ anywhere** — zero moderation surface:
   and a date; a fact that can't cite both is omitted, not padded. Never
   a prediction or a direction — what already happened, plus sourced
   scheduled events.
-- L2 only: the affordance lives on `PairReceipt` ("Stamp your why ✦")
-  and inside the pair inspector ("Stamp what you're watching ✦") — both
-  open the same `StampSheet` inspector, mode `moved`/`watching`. Nothing
-  reaches L0/L1, and the affordance is absent when `stampsForPair` has
-  nothing honest to offer.
+- One fact primitive, two states: a fact flows on a tab's LiveLine as
+  a beat (L1) and can be pressed as a stamp (L2) — a stamp is a beat
+  you keep. `lib/stamps.ts` builders feed `lib/live-lines.ts`; a beat
+  carrying a `stampId` is keepable, a fresh signal beat never is (it
+  expires in 14 days; postcards must be durable). Coming (scheduled,
+  sourced) beats now appear on the Home and corridor live lines within
+  120 days.
+- L2 only — three doors, one sheet (`StampSheet`, mode
+  `moved`/`watching`, entry `receipt`/`beat`/`inspector`): the
+  receipt's ✓ seal (a button taught once per device — three dashed
+  rings bloom once and a "stamp your why ✦" caption shows ~4s), a
+  trailing ✦ on a stampable corridor-line beat (pressing it counts as
+  acting: the line stills, and the sheet opens with that stamp
+  pre-pressed), and "Stamp what you're watching ✦" in the pair
+  inspector. Nothing reaches L0/L1, and every affordance is absent
+  when `stampsForPair` has nothing honest to offer.
 - Stamps are pressed, never earned: no unlock, no reward, no streak —
   sharing is not gamified.
 - Motion: the seal flies tray → slot by `layoutId` inside a

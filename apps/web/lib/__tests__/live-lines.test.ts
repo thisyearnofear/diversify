@@ -79,7 +79,11 @@ describe('homeBeats', () => {
       nowMs: NOW,
     });
     expect(beats.every((b) => !b.key.startsWith('risk-'))).toBe(true);
-    expect(beats.length).toBe(1);
+    // Watch cadence + the sourced coming beat (INEC is ~110 days out).
+    expect(beats.map((b) => b.key)).toEqual([
+      'watch-NGNm',
+      'coming-ng-2027-presidential',
+    ]);
   });
 });
 

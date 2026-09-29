@@ -21,6 +21,7 @@ function open(mode: 'moved' | 'watching' = 'moved') {
       fromToken="NGNm"
       toToken="USDm"
       mode={mode}
+      entry="receipt"
       open
       onClose={() => {}}
     />,
@@ -71,6 +72,7 @@ describe('StampSheet', () => {
     open('watching');
     expect(trackFunnelEvent).toHaveBeenCalledWith('stamp_sheet_open', {
       mode: 'watching',
+      entry: 'receipt',
     });
   });
 });

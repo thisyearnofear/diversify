@@ -5,6 +5,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { stampsForPair, resolveStamps } from '../stamps';
+import { corridorBeatsFor } from '../../components/swap/CorridorContext';
+import { comingBeatForCode, homeBeats } from '../live-lines';
 import { NETWORK_TOKENS, NETWORKS } from '@/config';
 import { hasHype } from '../card-tone';
 
@@ -58,6 +60,58 @@ describe('stampsForPair', () => {
     // coming cap — a shared link carrying it must still render.
     const stamps = resolveStamps('NGNm', 'USDm', ['coming-us-2026-midterms'], NOW);
     expect(stamps.map((s) => s.id)).toEqual(['coming-us-2026-midterms']);
+  });
+
+  it('every corridor beat carrying a stampId resolves for its pair', () => {
+    for (const [from, to] of [
+      ['NGNm', 'USDm'],
+      ['KESm', 'USDm'],
+      ['BRLm', 'USDm'],
+    ] as const) {
+      for (const beat of corridorBeatsFor(from, to, null)) {
+        if (!beat.stampId) continue;
+        expect(
+          resolveStamps(from, to, [beat.stampId], NOW).length,
+          `${from}→${to} ${beat.stampId}`,
+        ).toBe(1);
+      }
+    }
+  });
+
+  it('coming beats appear only within 120 days, never past-dated', () => {
+    // NGN's INEC (2027-01-16) is 107d out at NOW — on the line.
+    expect(comingBeatForCode('NGN', NOW)?.stampId).toBe(
+      'coming-ng-2027-presidential',
+    );
+    // KES's general election (2027-08-10) is ~315d out — beyond the line.
+    expect(comingBeatForCode('KES', NOW)).toBeNull();
+    // Once the date has passed the beat is gone from the line — it only
+    // survives on old postcards.
+    expect(
+      comingBeatForCode('NGN', new Date('2027-02-01T00:00:00Z')),
+    ).toBeNull();
+  });
+
+  it('corridor beats place coming after the story and cap at 4', () => {
+    const beats = corridorBeatsFor('NGNm', 'USDm', null);
+    expect(beats.length).toBeLessThanOrEqual(4);
+    expect(beats[0].key).toBe('story');
+    const coming = beats.filter((b) => b.stampId?.startsWith('coming-'));
+    expect(coming.map((b) => b.stampId)).toEqual([
+      'coming-ng-2027-presidential',
+      'coming-us-fomc-2026-10',
+    ]);
+  });
+
+  it('home beats carry the coming beat between watch and risk event', () => {
+    const beats = homeBeats({
+      records: [],
+      currencyCode: 'NGN',
+      nowMs: NOW.getTime(),
+    });
+    const idx = beats.findIndex((b) => b.stampId === 'coming-ng-2027-presidential');
+    expect(idx).toBe(1); // after the watch beat, before the risk event
+    expect(beats[idx].text).toContain('Jan 16 🇳🇬: Nigeria presidential');
   });
 
   it('a same-fiat pair yields nothing', () => {

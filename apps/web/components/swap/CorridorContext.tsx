@@ -27,6 +27,7 @@ import {
   type PairWhatIf,
 } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
+import { comingBeatForCode, watchBeatForToken } from '@/lib/live-lines';
 import {
   CURRENCY_RISK_DATA_AS_OF,
   riskEventAge,
@@ -73,6 +74,57 @@ function WhatIfStatement({ whatIf }: { whatIf: PairWhatIf }) {
   );
 }
 
+/** One corridor beat — text plus the stamp id it can be kept as. The
+ *  beat and the stamp are the same fact (lib/stamps builders). */
+export interface CorridorBeat {
+  key: string;
+  text: string;
+  stampId?: string;
+}
+
+/** The corridor line's beat list — pure so tests can assert that every
+ *  stampable beat resolves through resolveStamps for the pair.
+ *  Order: the provenance story, each side's nearest coming event (≤120
+ *  days), then the signal-or-watch fallbacks. Capped at 4. */
+export function corridorBeatsFor(
+  fromToken: string,
+  toToken: string,
+  signals?: { from: CorridorSignal | null; to: CorridorSignal | null } | null,
+): CorridorBeat[] {
+  const a = provenanceFor(fromToken);
+  const b = provenanceFor(toToken);
+  const story =
+    a && b && a.symbol !== b.symbol
+      ? `From ${a.phrase} to ${b.phrase}`
+      : null;
+  const beats: CorridorBeat[] = [];
+  if (story) beats.push({ key: 'story', text: story });
+  for (const token of [fromToken, toToken]) {
+    const coming = comingBeatForCode(corridorSideFor(token)?.code);
+    if (coming) {
+      beats.push({ key: coming.key, text: coming.text, stampId: coming.stampId });
+    }
+  }
+  const liveBeat = (token: string, sig: CorridorSignal | null): string | null =>
+    sig ? `${sig.dateLabel} ${corridorSideFor(token)?.flag ?? ''}: ${sig.text}` : null;
+  const sides = [
+    { token: fromToken, sig: signals?.from ?? null },
+    { token: toToken, sig: signals?.to ?? null },
+  ];
+  for (const { token, sig } of sides) {
+    const live = liveBeat(token, sig);
+    if (live) {
+      // A fresh signal reads like a dateline; it carries no stampId —
+      // it expires in 14 days, postcards must be durable.
+      beats.push({ key: `signal-${token}`, text: live });
+      continue;
+    }
+    const watch = watchBeatForToken(token);
+    if (watch) beats.push({ key: watch.key, text: watch.text, stampId: watch.stampId });
+  }
+  return beats.slice(0, 4);
+}
+
 export function CorridorLine({
   fromToken,
   toToken,
@@ -84,6 +136,7 @@ export function CorridorLine({
   whatIf,
   decisionWindow = false,
   onExitDecisionWindow,
+  onStamp,
 }: {
   fromToken: string;
   toToken: string;
@@ -109,33 +162,24 @@ export function CorridorLine({
    *  Takes precedence over rotation and a pinned what-if. */
   decisionWindow?: boolean;
   onExitDecisionWindow?: () => void;
+  /** Keep a beat as a stamp — renders a trailing ✦ on beats that carry
+   *  a stampId. Only wired on the resting pair stage. */
+  onStamp?: (stampId: string) => void;
 }) {
   const corridor = corridorFor(fromToken, toToken, horizon);
   const a = provenanceFor(fromToken);
   const b = provenanceFor(toToken);
   const reduced = useReducedMotion();
   const story = a && b && a.symbol !== b.symbol ? `From ${a.phrase} to ${b.phrase}` : null;
-  // A live signal reads like a dateline ("Sep 18 🇳🇬: CBN held…"); the
-  // standing cadence reads "Watch 🇳🇬: …". Same slot, different tense —
-  // rotation only ever re-surfaces facts that already exist.
-  const liveBeat = (token: string, sig: CorridorSignal | null): string | null =>
-    sig ? `${sig.dateLabel} ${corridorSideFor(token)?.flag ?? ''}: ${sig.text}` : null;
-  const fromBeat =
-    liveBeat(fromToken, signals?.from ?? null) ??
-    (a?.watch ? `Watch ${a.origin.flag}: ${a.watch.event} · ${a.watch.cadence}` : null);
-  const toBeat =
-    liveBeat(toToken, signals?.to ?? null) ??
-    (b?.watch ? `Watch ${b.origin.flag}: ${b.watch.event} · ${b.watch.cadence}` : null);
-  const beats = [
-    ...(story ? [story] : []),
-    ...(fromBeat ? [fromBeat] : []),
-    ...(toBeat ? [toBeat] : []),
-  ];
+  const beats = corridorBeatsFor(fromToken, toToken, signals);
   // The time machine: the control appears only for pairs with something
   // honest to say at 5y, and the first tap pins the what-if — a chosen
   // view must not rotate away.
   const [explored, setExplored] = useState(false);
   useEffect(() => setExplored(false), [fromToken, toToken]);
+  // Pressing a beat's ✦ counts as acting — the line stills on it.
+  const [acted, setActed] = useState(false);
+  useEffect(() => setActed(false), [fromToken, toToken]);
   const showControl =
     onHorizon !== undefined &&
     pairWhatIfFor(fromToken, toToken, '5yr') !== null;
@@ -150,7 +194,7 @@ export function CorridorLine({
   const decisionOpen = decisionWindow && decisionSides.length > 0;
 
   const pinned = !decisionOpen && explored ? whatIf : null;
-  const rotating = alive && !reduced && !pinned && !decisionOpen && beats.length > 1;
+  const rotating = alive && !acted && !reduced && !pinned && !decisionOpen && beats.length > 1;
   if (!story && !corridor) return null;
 
   const arrow = onInspect ? (
@@ -205,11 +249,26 @@ export function CorridorLine({
     // beat 0 — the same reset the inline rotation did, now inside LiveLine.
     <LiveLine
       key={rotating ? 'rotating' : 'still'}
-      beats={beats.map((text, i) => ({
+      beats={beats.map((b, i) => ({
         key: `corridor-${i}`,
         content: (
           <>
-            {text} {!corridor && arrow}
+            {b.text} {!corridor && arrow}
+            {b.stampId && onStamp && (
+              <button
+                type="button"
+                data-testid={`stamp-beat-${b.stampId}`}
+                aria-label="Keep this fact as a stamp"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActed(true);
+                  onStamp(b.stampId!);
+                }}
+                className="-my-2 ml-1 inline-flex min-h-tap items-center px-1.5 align-middle text-2xs font-semibold text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:text-blue-400"
+              >
+                ✦
+              </button>
+            )}
           </>
         ),
       }))}
@@ -280,17 +339,20 @@ export function CorridorLine({
     </>
   );
 
-  if (!onInspect && !control) {
+  // A keepable beat renders a ✦ button — like the horizon control it
+  // can't nest inside the line's own button, so it takes the div path.
+  const stampButton = onStamp !== undefined && beats.some((b) => b.stampId);
+  if (!onInspect && !control && !stampButton) {
     return (
       <p data-testid="corridor-line" className="mt-1 text-2xs text-gray-500 dark:text-gray-400">
         {body}
       </p>
     );
   }
-  if (!onInspect || control || decisionOpen) {
-    // With the control or the decision window, interactive children
-    // can't nest inside a button — the wrapper is a div and the inspect
-    // tap lives on the corridor line itself.
+  if (!onInspect || control || decisionOpen || stampButton) {
+    // With the control, the decision window or a keepable beat,
+    // interactive children can't nest inside a button — the wrapper is
+    // a div and the inspect tap lives on the corridor line itself.
     return (
       <div
         data-testid="corridor-line"

@@ -508,6 +508,7 @@ export default function ExchangeTab({
               fromToken={inspectorSel.fromToken}
               toToken={inspectorSel.toToken}
               mode="watching"
+              entry="inspector"
               open
               onClose={() => setInspectorSel(null)}
             />
@@ -610,6 +611,7 @@ export default function ExchangeTab({
             fromToken={inspectorSel.fromToken}
             toToken={inspectorSel.toToken}
             mode="watching"
+            entry="inspector"
             open
             onClose={() => setInspectorSel(null)}
           />

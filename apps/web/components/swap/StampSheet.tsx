@@ -22,12 +22,16 @@ import { trackFunnelEvent } from '@/lib/analytics';
 import { useDemoMode } from '@/context/app/DemoModeContext';
 import {
   stampsForPair,
+  resolveStamps,
   STAMP_PRESS_MAX,
   type Stamp,
 } from '@/lib/stamps';
 import { corridorSideFor, moneyNameFor } from '@/lib/corridor-context';
 
 export type StampMode = 'moved' | 'watching';
+/** Where the sheet was opened from — the receipt's ✓ seal, a corridor
+ *  line beat's ✦, or the pair inspector's affordance. */
+export type StampEntry = 'receipt' | 'beat' | 'inspector';
 
 /** The postcard's share URL — symbols + ids only, never numbers. */
 export function stampPostcardUrl(
@@ -63,6 +67,7 @@ export function StampPostcard({
   stamps,
   interactive = false,
   reduced = false,
+  instantIds,
   onLift,
 }: {
   fromToken: string;
@@ -72,6 +77,8 @@ export function StampPostcard({
   interactive?: boolean;
   /** Reduced-motion path: no fly, no bloom — instant placement. */
   reduced?: boolean;
+  /** Stamps seeded on open land instantly — no fly, no bloom. */
+  instantIds?: ReadonlySet<string>;
   onLift?: (stamp: Stamp) => void;
 }) {
   const slots = [0, 1, 2];
@@ -104,6 +111,7 @@ export function StampPostcard({
           const color = tokenColor(
             stamp.side === 'from' ? fromToken : toToken,
           );
+          const instant = reduced || instantIds?.has(stamp.id);
           const face = (
             <StampSealFace stamp={stamp} color={color} size={56} />
           );
@@ -111,15 +119,15 @@ export function StampPostcard({
             <motion.button
               key={stamp.id}
               type="button"
-              layoutId={reduced ? undefined : `seal-${stamp.id}`}
+              layoutId={instant ? undefined : `seal-${stamp.id}`}
               aria-label={`Lift stamp: ${stamp.value} — ${stamp.line}. Source: ${stamp.source}, ${stamp.dateLabel}.`}
               onClick={() => onLift?.(stamp)}
-              initial={reduced ? false : { scale: 1.15, rotate: 0 }}
+              initial={instant ? false : { scale: 1.15, rotate: 0 }}
               animate={{ scale: 1, rotate: stampRotation(stamp.id) }}
-              transition={reduced ? { duration: 0 } : springPop}
+              transition={instant ? { duration: 0 } : springPop}
               className="relative rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
-              {!reduced && (
+              {!instant && (
                 <motion.span
                   aria-hidden
                   className="absolute inset-0 rounded-full border-2"
@@ -187,18 +195,30 @@ export function StampSheet({
   fromToken,
   toToken,
   mode,
+  entry,
+  initialStampIds,
   open,
   onClose,
 }: {
   fromToken: string;
   toToken: string;
   mode: StampMode;
+  entry: StampEntry;
+  /** Stamps carried in by the doorway (a kept beat) — validated through
+   *  resolveStamps, max 3, placed with no fly on open. */
+  initialStampIds?: string[];
   open: boolean;
   onClose(): void;
 }) {
   const reduced = useReducedMotion();
   const { demoMode } = useDemoMode();
-  const [pressed, setPressed] = useState<Stamp[]>([]);
+  const seededIds = useMemo(
+    () => new Set(initialStampIds ?? []),
+    [initialStampIds],
+  );
+  const [pressed, setPressed] = useState<Stamp[]>(() =>
+    resolveStamps(fromToken, toToken, initialStampIds ?? []),
+  );
   const [shake, setShake] = useState(0);
   const [copied, setCopied] = useState(false);
 
@@ -214,7 +234,7 @@ export function StampSheet({
   };
 
   useEffect(() => {
-    if (open) track('stamp_sheet_open', { mode });
+    if (open) track('stamp_sheet_open', { mode, entry });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -300,6 +320,7 @@ export function StampSheet({
             stamps={pressed}
             interactive
             reduced={Boolean(reduced)}
+            instantIds={seededIds}
             onLift={lift}
           />
         </motion.div>
