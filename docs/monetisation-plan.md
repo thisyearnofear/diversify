@@ -1,7 +1,9 @@
 # Monetisation plan — compliance first, then fees, then the thesis layer
 
 > Status (2026-09-29): Phase 0 code shipped (items 2–6 below); the exit
-> gate is still open — see "Phase 0 — remaining". Nothing here replaces
+> gate is still open — see "Phase 0 — remaining". Phase 5's first asset
+> shipped early the same day: stamps/postcards (see Phase 5). Nothing
+> here replaces
 > legal advice — every phase that earns or promotes is gated on counsel
 > sign-off.
 > Product positioning: [`product.md`](./product.md). Forward plan:
@@ -150,6 +152,14 @@ Depth layers apply: new facts enter at L2 inspector / L3 Ask Guardian.
 
 ## Phase 5 — Virality + engagement assets
 
+- ✅ **Stamps/postcards** (shipped 2026-09-29): curated dated facts as
+  circular seals pressed onto a move, one `StampSheet` behind three L2
+  doors (receipt seal, keepable live-line beat, pair inspector);
+  `/postcard/[from]/[to]` + `/api/og/postcard` resolve every number
+  from stamp IDs, never URL params. No user text, no feed, no rewards —
+  zero moderation surface. Ships to all users; the experiment's question
+  is whether people enjoy pressing and sharing (`stamp_sheet_open`,
+  `stamp_press`, `postcard_share`).
 - `/debt/[code]` public page + OG card, dataset-derived, no numeric params.
 - "Interest clock" share asset ("$1T/yr ≈ $31,700 every second"), derived
   from a cited annual figure and labelled derived; static on the card, not
