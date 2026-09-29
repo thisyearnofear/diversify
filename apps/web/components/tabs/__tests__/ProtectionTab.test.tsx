@@ -483,6 +483,7 @@ vi.mock("../../wallet/WalletProvider", () => ({
 }));
 
 import ProtectionTab from "../ProtectionTab";
+import { BalanceVisibilityProvider } from "@/context/app/BalanceVisibilityContext";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
 
 const EMPTY_PORTFOLIO = createEmptyPortfolio();
@@ -878,6 +879,28 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByText("Shilling position")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Review move to KESm/ })).toBeInTheDocument();
     expect(screen.queryByTestId("shield-biggest-gap-cta")).not.toBeInTheDocument();
+  });
+
+  it("gap CTA masks the $ amount when balances are hidden", () => {
+    localStorage.setItem("diversifi.balances.hidden", "1");
+    try {
+      mockFinancialStrategy = "africapitalism";
+      vi.mocked(useWalletContext).mockReturnValue({
+        address: "0xabc",
+        chainId: 42220,
+      } as any);
+      render(
+        <BalanceVisibilityProvider>
+          <ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />
+        </BalanceVisibilityProvider>,
+      );
+      const cta = screen.getByTestId("shield-biggest-gap-cta");
+      expect(cta.textContent).toContain("KESm");
+      expect(cta.textContent).toContain("••••");
+      expect(cta.textContent).not.toContain("$");
+    } finally {
+      localStorage.removeItem("diversifi.balances.hidden");
+    }
   });
 
   it("scores a live wallet's config ticker (USDm) against the cUSD leg", () => {

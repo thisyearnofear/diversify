@@ -7,6 +7,7 @@ import type { TabId } from "@/constants/tabs";
 import WalletButton from "@/components/wallet/WalletButton";
 import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
 import { GuardianMascot } from "@/components/shared/GuardianMascot";
+import { BalanceVisibilityToggle } from "@/components/shared/BalanceVisibilityToggle";
 import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
 import { useClaimFlowContext } from "@/hooks/claim-flow-context";
 
@@ -77,6 +78,9 @@ export default function AppHeader({
         <div className="min-[400px]:hidden">
           <StreakNavBadge variant="header" onClaim={handleClaim} />
         </div>
+
+        {/* Hide balances — app-wide privacy switch for the user's total. */}
+        <BalanceVisibilityToggle />
 
         {isFarcaster ? (
           <FarcasterWalletButton />

@@ -8,6 +8,13 @@
  *
  * Design language: the ring is the one object that gets color; everything
  * around it is quiet. Motion reveals the reallocation, never loops.
+ *
+ * The hole is ONE fact: the user's total by default ("your savings"),
+ * plan alignment on tap (flip), the plan badge above names the plan. A
+ * one-shot dwell swap replaces the same face; stillness after the first
+ * action. Every dollar figure honours the privacy switch (dots, never a
+ * fabricated zero). Idle memory (sinceHint) lives in ShieldStatusTier,
+ * not stacked in the hole.
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
@@ -16,12 +23,14 @@ import { TokenIcon } from '@/components/shared/TokenIcon';
 import { useCountUp } from '@/hooks/use-count-up';
 import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
+import { formatUsd, MONEY_MASK } from '@/lib/money-format';
 import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { floorPercent, reserveLabel, resolvePlan, type CustomPlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
-import { buildWalletPortfolioView, heldAsLine, heldAsSymbol } from '@/lib/wallet-portfolio-view';
+import { buildWalletPortfolioView, heldAsSymbol } from '@/lib/wallet-portfolio-view';
+import { useBalanceVisibility } from '@/context/app/BalanceVisibilityContext';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
 import { rwaLegFor } from './rwa-assets';
@@ -84,8 +93,6 @@ interface Props {
   sleeveOpen?: boolean;
   balancePreview?: boolean;
   savedLegs?: PlanLeg[];
-  /** Quiet memory — alignment change since the last visit; idle hole only. */
-  sinceHint?: string;
   controls?: React.ReactNode;
   /** Reserve exposure the hole names (the anchor when the plan holds it). */
   floor?: Exposure;
@@ -113,7 +120,6 @@ export function ProtectionPlanRing({
   sleeveOpen = false,
   balancePreview = false,
   savedLegs = [],
-  sinceHint,
   controls,
   floor = 'USD',
   customPlan = null,
@@ -183,6 +189,55 @@ export function ProtectionPlanRing({
   const gapFormatted = useCountUp(Math.abs(gapPts), {
     format: (n) => `${Math.round(n)}`,
   });
+  // Data motion (§6): the hole's total tweens old → new when balances move.
+  const moneyCount = useCountUp(totalValue, { format: formatUsd });
+
+  // Privacy switch: every dollar figure in this object (hole, legend,
+  // projections) goes through formatMoney — dots while hidden, never a
+  // fabricated zero.
+  const { formatMoney, hidden } = useBalanceVisibility();
+
+  // The hole states ONE fact (L0 + one word, §6). Default face: the
+  // user's total — the same number Home shows. Tap flips to plan
+  // alignment. Flip is a closed gesture verb, never a carousel; the
+  // one-shot dwell swap below replaces the same face (no second block,
+  // total stillness once the user acts) and is skipped for reduced
+  // motion.
+  const flipAvailable =
+    !balancePreview &&
+    !sleeveOpen &&
+    !isSleeveSelection(selectedToken) &&
+    !selectedToken &&
+    !empty &&
+    !walletless &&
+    !holeOverride &&
+    holeHintOverride === undefined &&
+    totalValue > 0 &&
+    alignmentScore != null;
+  const [idleFace, setIdleFace] = useState<'money' | 'align'>('money');
+  const [holeActed, setHoleActed] = useState(false);
+  const [previewDone, setPreviewDone] = useState(false);
+  // One-shot dwell preview: 8s idle → swap to the alignment face, hold ~3s,
+  // return to the total and never run again. Any action (tap, slice, legend
+  // row, badge) latches stillness; reduced motion never auto-swaps.
+  useEffect(() => {
+    if (!flipAvailable || reducedMotion || holeActed || previewDone || idleFace !== 'money') return;
+    const timer = setTimeout(() => setIdleFace('align'), 8000);
+    return () => clearTimeout(timer);
+  }, [flipAvailable, reducedMotion, holeActed, previewDone, idleFace]);
+  useEffect(() => {
+    if (previewDone || holeActed || idleFace !== 'align') return;
+    const timer = setTimeout(() => {
+      setIdleFace('money');
+      setPreviewDone(true);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [idleFace, holeActed, previewDone]);
+  const flipFace = () => {
+    haptics.tap();
+    setHoleActed(true);
+    setIdleFace((face) => (face === 'money' ? 'align' : 'money'));
+  };
 
   // Progressive disclosure: dust into Other. Keeps the object scannable
   // when a wallet holds 10+ tokens — the ring and legend never exceed
@@ -305,9 +360,16 @@ export function ProtectionPlanRing({
   const showProjections =
     !balancePreview && totalValue > 0 && (purchasingPowerLost > 0 || purchasingPowerPreserved > 0);
 
-  const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  // One formatter for every dollar figure in the object; dots while the
+  // user hides balances. Long totals step down one size so the face stays
+  // inside the hole.
+  const fmt = (n: number) => formatMoney(n);
+  const moneyText = fmt(totalValue);
+  const moneySizeClass = moneyText.length > 7 ? 'text-2xl' : 'text-3xl';
 
-  const hole = (() => {
+  // `size` rides on the face so the number's type size is decided once,
+  // here — never by which utility happens to win in the cascade.
+  const hole: { number: React.ReactNode; label: React.ReactNode; hint: string; size?: string } = (() => {
     if (holeOverride) {
       return {
         number: null as React.ReactNode,
@@ -398,16 +460,28 @@ export function ProtectionPlanRing({
         hint: `${selectedSymbol ? displayToken(selectedSymbol) : ''}${moneyHint(gapPts)}`,
       };
     }
+    // Funded with nothing to align against: the total is the only fact.
     if (alignmentScore === null) {
-      return {
-        number: '—' as React.ReactNode,
-        label: archetype.name,
-        hint: holeHintOverride ?? 'no holdings yet',
-      };
+      return totalValue > 0
+        ? { number: hidden ? MONEY_MASK : <motion.span>{moneyCount}</motion.span>, label: 'your savings', hint: '', size: moneySizeClass }
+        : { number: '—' as React.ReactNode, label: archetype.name, hint: holeHintOverride ?? 'no holdings yet' };
     }
+    // Idle, funded: money is the primary face, alignment one tap away.
+    if (flipAvailable) {
+      return idleFace === 'money'
+        ? { number: hidden ? MONEY_MASK : <motion.span>{moneyCount}</motion.span>, label: 'your savings', hint: '', size: moneySizeClass }
+        : {
+            number: <motion.span>{alignmentFormatted}</motion.span>,
+            label: 'aligned',
+            hint: '',
+            size: 'text-4xl',
+          };
+    }
+    // Compare and other non-flip states keep the alignment answer; the
+    // badge above already names the plan (§3 — no repeated name).
     return {
       number: <motion.span>{alignmentFormatted}</motion.span>,
-      label: archetype.name,
+      label: '',
       hint: holeHintOverride ?? 'of your money follows the plan',
     };
   })();
@@ -436,7 +510,6 @@ export function ProtectionPlanRing({
                     ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ring-2 ring-emerald-500/30"
                     : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
                 }`}
-                title="Preview an illustrative 30% macro currency shock"
               >
                 <span aria-hidden="true">{isStressTesting ? "🛡️" : "⚡"}</span>
                 <span>{isStressTesting ? "Previewing" : "Test defense"}</span>
@@ -457,7 +530,7 @@ export function ProtectionPlanRing({
             aria-label={
               holeHintOverride ? "Exit compare" : "Compare philosophies"
             }
-            onClick={onHoleTap}
+            onClick={() => { setHoleActed(true); onHoleTap?.(); }}
             className="text-3xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full inline-block min-h-[32px] min-w-tap hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             style={{ background: `${archetype.accent}18`, color: archetype.accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
@@ -526,6 +599,7 @@ export function ProtectionPlanRing({
             slices={displaySlices}
             selectedId={isSleeveSelection(selectedToken) ? null : selectedToken}
             onSelect={(id) => {
+              setHoleActed(true);
               if (id === "__other__") {
                 setShowDust(true);
                 return;
@@ -544,41 +618,62 @@ export function ProtectionPlanRing({
               const holeContent = (
                 <>
                   {hole.number != null && (
-                    <span className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">
+                    <span className={`${hole.size ?? 'text-2xl'} font-black text-gray-900 dark:text-white tabular-nums`}>
                       {hole.number}
                     </span>
                   )}
-                  <span className={`font-bold text-gray-900 dark:text-white max-w-[130px] text-center leading-tight ${hole.number == null ? "text-base" : "text-sm"}`}>
-                    {hole.label}
-                  </span>
-                  <span
-                    className="text-2xs text-gray-500 dark:text-gray-400"
-                    aria-live={isStressTesting ? "polite" : undefined}
-                  >
-                    {hole.hint}
-                  </span>
-                  {sinceHint &&
-                    !selectedToken &&
-                    !empty &&
-                    !balancePreview &&
-                    !sleeveOpen &&
-                    holeHintOverride === undefined && (
-                      <span
-                        data-testid="shield-since-last-visit"
-                        className="text-3xs text-gray-400 dark:text-gray-500"
-                      >
-                        {sinceHint}
-                      </span>
-                    )}
-                  {onHoleTap && !holeHintOverride && !holeOverride && (
+                  {hole.label ? (
+                    <span className={`font-bold text-gray-900 dark:text-white max-w-[140px] text-center leading-tight ${hole.number == null ? "text-base" : "text-sm"}`}>
+                      {hole.label}
+                    </span>
+                  ) : null}
+                  {hole.hint ? (
+                    <span
+                      className="text-2xs text-gray-500 dark:text-gray-400"
+                      aria-live={isStressTesting ? "polite" : undefined}
+                    >
+                      {hole.hint}
+                    </span>
+                  ) : null}
+                  {/* The hole is the compare entry only when it can't flip
+                      (unfunded / unscored) — then the kicker earns its
+                      3xs. With the flip, the badge above is compare. */}
+                  {onHoleTap && !holeHintOverride && !holeOverride && !flipAvailable && (
                     <span className="text-3xs uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       Compare plans ▾
+                    </span>
+                  )}
+                  {/* Face dots teach the flip — the lit dot tracks which
+                      face the hole is showing. */}
+                  {flipAvailable && (
+                    <span data-testid="hole-face-dots" aria-hidden="true" className="mt-1 flex items-center gap-1">
+                      {(['money', 'align'] as const).map((face) => {
+                        const active = idleFace === face;
+                        return (
+                          <motion.span
+                            key={face}
+                            className={`size-1 rounded-full ${active ? '' : 'bg-gray-300 dark:bg-white/20'}`}
+                            style={active ? { backgroundColor: archetype.accent } : undefined}
+                            animate={reducedMotion ? undefined : { scale: active ? 1 : 0.75, opacity: active ? 1 : 0.6 }}
+                          />
+                        );
+                      })}
                     </span>
                   )}
                 </>
               );
               const holeBody =
-                onHoleTap && !selectedToken ? (
+                flipAvailable ? (
+                  <button
+                    type="button"
+                    data-testid="ring-hole"
+                    aria-label={idleFace === 'money' ? 'Show plan alignment' : 'Show total savings'}
+                    onClick={flipFace}
+                    className="flex flex-col items-center min-h-tap min-w-tap p-2 pointer-events-auto"
+                  >
+                    {holeContent}
+                  </button>
+                ) : onHoleTap && !selectedToken ? (
                   <button
                     type="button"
                     data-testid="ring-hole"
@@ -593,10 +688,11 @@ export function ProtectionPlanRing({
                 );
               return (
                 <motion.div
-                  key={selectedToken ?? `idle-${strategyKey ?? "none"}-${alignmentScore ?? "na"}`}
-                  initial={reducedMotion ? false : { opacity: 0, filter: "blur(6px)", y: 4 }}
-                  animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
+                  key={selectedToken ?? `idle-${strategyKey ?? "none"}-${alignmentScore ?? "na"}-${flipAvailable ? idleFace : "x"}-${hidden ? "h" : "v"}`}
+                  initial={reducedMotion ? false : { opacity: 0, filter: "blur(6px)", y: 4, rotateX: -60 }}
+                  animate={{ opacity: 1, filter: "blur(0px)", y: 0, rotateX: 0 }}
                   transition={{ duration: 0.22, ease: "easeOut" }}
+                  style={{ transformPerspective: 700 }}
                   className="flex flex-col items-center"
                 >
                   {holeBody}
@@ -617,7 +713,7 @@ export function ProtectionPlanRing({
             <motion.button
               key={a.token}
               type="button"
-              onClick={() => onSelectToken(selectedToken === a.token ? null : a.token)}
+              onClick={() => { setHoleActed(true); onSelectToken(selectedToken === a.token ? null : a.token); }}
               aria-pressed={isSelected}
               initial={reducedMotion ? false : { opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
@@ -632,7 +728,7 @@ export function ProtectionPlanRing({
                   {a.label ?? displayToken(a.token)}
                 </span>
                 <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">
-                  {(!balancePreview && heldAsLine(holdingByToken.get(a.token), totalValue)) || a.region}
+                  {a.region}
                 </span>
               </span>
               <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">
@@ -668,7 +764,7 @@ export function ProtectionPlanRing({
             <span className="w-[22px] h-[22px] rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-3xs font-black text-gray-600 dark:text-gray-300 shrink-0">+{dust.length}</span>
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-gray-900 dark:text-white">Other</span>
-              <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions · {dust.length > 1 ? `${dustTotalPlan.toFixed(0)}% plan` : dust[0]?.alloc.region ?? ""}</span>
+              <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions</span>
             </span>
             <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{balancePreview ? `${dustTotalPlan.toFixed(0)}% preview` : `${fmt(dustTotalHeld)} held`}</span>
           </motion.button>
@@ -697,15 +793,14 @@ export function ProtectionPlanRing({
       )}
       {!compact && showProjections && (
         <p className="text-2xs text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
-          3-year path, projected: inflation takes{' '}
-          <strong className="text-gray-900 dark:text-white tabular-nums">
-            {fmt(purchasingPowerLost)}
-          </strong>{' '}
-          from the current mix; following the plan keeps{' '}
+          3-year path, projected · the plan keeps{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
             {fmt(purchasingPowerPreserved)}
           </strong>{' '}
-          of it.
+          the current mix loses{' '}
+          <strong className="text-gray-900 dark:text-white tabular-nums">
+            {fmt(purchasingPowerLost)}
+          </strong>
         </p>
       )}
     </div>  );

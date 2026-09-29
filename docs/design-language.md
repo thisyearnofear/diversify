@@ -483,6 +483,46 @@ illustration" but "Had 20% of NGN 15,000,000 followed gold: NGN
 FX, no percentages to convert. (`exampleSavingsFor` + `calculateCounterfactual`
 in `constants/currency-risk.ts` do the currency-local math.)
 
+### One number, one face — and a way to hide it
+
+The user's total is the most important number in an FX-risk app, and it
+must read the same way everywhere and be one tap from gone.
+
+- **One slot, one formatter.** Every dollar figure on Home and Shield
+  goes through `formatMoney` (`lib/money-format.ts` → whole dollars,
+  `$x.xxM` past a million). No per-surface `$${n.toFixed(0)}` variants:
+  a total that changes size, format, and location per tab reads as
+  "nowhere", which is the tester complaint that produced this rule.
+- **The hole states one fact.** Shield's ring centre is L0 + one word —
+  `$12,480` / "your savings" at `text-3xl` (`text-2xl` for six-figure
+  totals like `$123,456`, which would overflow the 152px hole). No label duplication (the plan badge above
+  already names the plan), no hint sentence ("of your money follows
+  the plan" restates the score), no `3xs` kicker. More type size, not
+  more words: cutting a layer *raises* the remaining type.
+- **Flip, never carousel.** The idle hole carries a second face — plan
+  alignment (`72%` / "aligned", `text-4xl`) — reached by the flip verb
+  (a closed gesture verb in this grammar, same as `ProvenanceCoinBack`),
+  with a rotateX+blur swap keyed on the face and two tiny face dots
+  under the label marking which face is showing. The total itself
+  tweens old → new when balances change (data motion, not decoration).
+  A one-shot dwell preview (swap to alignment after 8s idle, hold ~3s,
+  return to the total, never repeats) shows the second face once —
+  skipped under reduced motion, cancelled by any action: hole tap,
+  slice select, legend row, or the plan badge. Auto-rotating facts are
+  a feed — banned.
+- **Idle memory is not a hole layer.** The since-last-visit drift moved
+  out of the ring into `ShieldStatusTier`'s transition tier, under the
+  object where it reads as context rather than as part of the number.
+- **Privacy is dots.** `BalanceVisibilityProvider` (persisted,
+  default visible) + the header eye toggle mask every dollar figure
+  app-wide. The mask is `••••` with an honest `aria-label` — never a
+  fabricated `0.0000` (the honesty contract bans invented balances) and
+  never a blur, because `TrustFootnote` already claims blur as "a
+  stillness affordance, not a hide". Percentages, plans, and the
+  Guardian's decisions stay readable: privacy covers *how much you
+  have*, not what the product thinks. New money surfaces must call
+  `formatMoney`; that is the only sanctioned way to render an amount.
+
 ## 7. Honesty is styled as restraint
 
 Visibility of disclaimers is inversely proportional to how much they
@@ -617,6 +657,9 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `FlickScrollRow` | `apps/web/components/shared/FlickScrollRow.tsx` | the horizontal scroll row: drag + momentum + chevrons + edge fades |
 | `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link |
 | `StatusTier` | `apps/web/components/shared/StatusTier.tsx` | connected status tier budget: trust + one transition + one rail (§5 rail 8) |
+| `useBalanceVisibility`, `BalanceVisibilityProvider` | `apps/web/context/app/BalanceVisibilityContext.tsx` | app-wide privacy switch: `hidden` + `formatMoney` (dots while hidden). Every dollar figure goes through it |
+| `BalanceVisibilityToggle` | `apps/web/components/shared/BalanceVisibilityToggle.tsx` | the header eye control that flips the switch (`aria-pressed`) |
+| `formatUsd` / `MONEY_MASK` | `apps/web/lib/money-format.ts` | the one USD formatter + the dot mask |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts` | curated token logos w/ branded coin fallback on missing or failed logos; add verified assets to the registry, never leave broken images |
 | `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |

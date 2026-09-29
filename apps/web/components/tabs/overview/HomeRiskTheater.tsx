@@ -31,6 +31,7 @@ import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
 import { timeAgo } from "@/lib/format-duration";
 import { MintMark } from "@/components/swap/MintMark";
 import { concentrationOf } from "@/lib/home-lens";
+import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 
 interface RegionDatum {
   region: string;
@@ -276,7 +277,9 @@ export function HomeRiskTheater({
     return { line, summary: line, prompt };
   })();
 
-  const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  // One money formatter for Home, honouring the app-wide privacy switch
+  // (dots while hidden — never a fabricated zero).
+  const { formatMoney: fmt } = useBalanceVisibility();
 
   // Holdings strip is part of the same object — one coin per region,
   // sized by share, echoing the coin stage's motif. Selection dims the

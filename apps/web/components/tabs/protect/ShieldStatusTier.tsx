@@ -54,6 +54,9 @@ export interface ShieldStatusTierProps {
   cycleOpen: boolean;
   /** Opens the payment-cycle inspector in next-payment mode. */
   onOpenCycle: () => void;
+  /** Quiet memory — alignment drift since the last visit. Lived here
+   *  (transition tier) rather than stacked into the ring hole. */
+  sinceHint?: string;
 }
 
 export function ShieldStatusTier({
@@ -83,6 +86,7 @@ export function ShieldStatusTier({
   businessMorph,
   cycleOpen,
   onOpenCycle,
+  sinceHint,
 }: ShieldStatusTierProps) {
   // The compare/quiet/monitoring row is empty in the gap+biggestGap case
   // (the CTA beneath the ring names the job) — don't burn the slot on it.
@@ -136,7 +140,8 @@ export function ShieldStatusTier({
           >
             Your wallet keeps {floorOffer.heldFloor}% in {floorExposure === "USD" ? "dollars" : floorExposure} — try a stronger floor →
           </button>
-        ) : statusRowEmpty ? undefined : (
+        ) : statusRowEmpty && !sinceHint ? undefined : (
+          <>
           <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
           {comparing ? (
         <p data-testid="shield-compare-status">
@@ -198,6 +203,15 @@ export function ShieldStatusTier({
         </button>
       )}
           </div>
+            {sinceHint && !comparing && (
+              <p
+                data-testid="shield-since-last-visit"
+                className="mt-1 text-3xs font-medium text-gray-400 dark:text-gray-500 tabular-nums"
+              >
+                {sinceHint}
+              </p>
+            )}
+          </>
         )
       }
       rail={

@@ -10,6 +10,7 @@ import { DemoModeProvider } from './DemoModeContext';
 import { PortfolioProvider } from './PortfolioContext';
 import { AgentChatProvider } from './AgentChatContext';
 import { GuardianVisibilityProvider } from './GuardianVisibilityContext';
+import { BalanceVisibilityProvider } from './BalanceVisibilityContext';
 
 /**
  * AppProviders
@@ -47,7 +48,12 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                   <PortfolioProvider>
                     <AgentChatProvider>
                       <GuardianVisibilityProvider>
-                        <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                        {/* Privacy switch — no consumer dependencies, but it
+                            must sit above every surface that formats money
+                            (the header toggle included). */}
+                        <BalanceVisibilityProvider>
+                          <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                        </BalanceVisibilityProvider>
                       </GuardianVisibilityProvider>
                     </AgentChatProvider>
                   </PortfolioProvider>

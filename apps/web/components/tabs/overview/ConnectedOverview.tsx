@@ -37,6 +37,7 @@ import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-pro
 import { MoreOptions } from "../../shared/MoreOptions";
 import { useAnchorCurrency, useAnchorFx } from "@/hooks/use-anchor-currency";
 import { useExperience } from "@/context/app/ExperienceContext";
+import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 import { REGIONS as ALL_REGIONS } from "@/hooks/use-user-region";
 
 const HOME_LENS_KEY = "diversifi.home.lens";
@@ -260,7 +261,7 @@ export function ConnectedOverview({
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
 
   const chainErrors = activePortfolio.errors ?? [];
-  const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
+  const { formatMoney: fmt } = useBalanceVisibility();
   const handleRefresh = React.useCallback(async () => {
     await refreshBalances?.();
   }, [refreshBalances]);
@@ -314,7 +315,7 @@ export function ConnectedOverview({
       {hasHoldings && (
         <>
           <HeroValue
-            value={home.isSimple ? `${diversificationScore}%` : `$${totalValue.toFixed(0)}`}
+            value={home.isSimple ? `${diversificationScore}%` : fmt(totalValue)}
             label={home.isSimple ? "Protection Score" : "Total Value"}
           />
           <p className="mt-2 text-sm font-semibold text-gray-500 dark:text-gray-400">

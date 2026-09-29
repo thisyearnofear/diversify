@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { act, render, screen, cleanup, fireEvent, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { ProtectionPlanRing } from '../ProtectionPlanRing';
+import { BalanceVisibilityProvider } from '@/context/app/BalanceVisibilityContext';
 import { DEMO_PORTFOLIO } from '@/lib/demo-data';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import {
@@ -63,7 +64,7 @@ describe('ProtectionPlanRing — projections shape', () => {
   });
 
   it('shows a clearly labelled illustrative resilience preview, then resets', async () => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
     try {
       render(
         <ProtectionPlanRing
@@ -151,7 +152,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.getByTestId('ring-ghost')).toHaveAttribute('data-ghost-kind', 'trim');
   });
 
-  it('does not draw a ghost when idle', async () => {
+  it('does not draw a ghost when idle — the hole states the total, not the score', async () => {
     render(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -161,9 +162,10 @@ describe('ProtectionPlanRing — projections shape', () => {
         alignmentScore={72}
       />,
     );
-    expect(await screen.findByText('72%')).toBeInTheDocument();
+    expect(await screen.findByText('$1,000')).toBeInTheDocument();
+    expect(screen.getByText('your savings')).toBeInTheDocument();
+    expect(screen.queryByText('72%')).not.toBeInTheDocument();
     expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
-    expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
   });
 
   it('merges a USDm holding into the plan leg row — rendered under the Dollar exposure', () => {
@@ -456,8 +458,8 @@ describe('ProtectionPlanRing — tokenized-asset lens', () => {
   });
 });
 
-describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
-  it('renders the hole as a button only when onHoleTap is provided and nothing is selected', () => {
+describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
+  it('flips the face — total to alignment — and never opens compare', async () => {
     const onHoleTap = vi.fn();
     render(
       <ProtectionPlanRing
@@ -470,8 +472,13 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
       />,
     );
     const hole = screen.getByTestId('ring-hole');
+    expect(hole).toHaveAccessibleName('Show plan alignment');
     fireEvent.click(hole);
-    expect(onHoleTap).toHaveBeenCalledTimes(1);
+    expect(onHoleTap).not.toHaveBeenCalled();
+    expect(await screen.findByText('aligned')).toBeInTheDocument();
+    expect(await screen.findByText('72%')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('ring-hole'));
+    expect(await screen.findByText('your savings')).toBeInTheDocument();
   });
 
   it('the hole button opts back into pointer events despite the inert centre wrapper', () => {
@@ -552,16 +559,23 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
     expect(onHoleTap).toHaveBeenCalledTimes(1);
   });
 
-  it('keeps the hole non-interactive without onHoleTap', () => {
+  it('keeps the hole non-interactive for an unfunded ring with no compare entry', () => {
+    const empty = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 0,
+      tokens: [],
+      chains: [],
+    } as unknown as MultichainPortfolio;
     render(
       <ProtectionPlanRing
         strategyKey="africapitalism"
-        portfolio={portfolio}
+        portfolio={empty}
         selectedToken={null}
         onSelectToken={() => {}}
-        alignmentScore={72}
+        empty
       />,
     );
+    expect(screen.getByText('Add funds')).toBeInTheDocument();
     expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
   });
 
@@ -579,7 +593,13 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
     expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
   });
 
-  it('shows the "Compare plans" affordance only when the hole is tappable and not previewing', () => {
+  it('withholds the 3xs compare kicker while the hole flips — the badge is compare', () => {
+    const empty = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 0,
+      tokens: [],
+      chains: [],
+    } as unknown as MultichainPortfolio;
     const { rerender } = render(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -590,19 +610,21 @@ describe('ProtectionPlanRing — hole tap (compare mode entry)', () => {
         onHoleTap={() => {}}
       />,
     );
-    expect(screen.getByText('Compare plans ▾')).toBeInTheDocument();
+    expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
+    expect(screen.getByTestId('plan-badge')).toHaveAttribute('aria-label', 'Compare philosophies');
 
-    // No tap affordance → no hint.
+    // Unfunded: the hole can't flip, so the kicker earns its 3xs again.
     rerender(
       <ProtectionPlanRing
         strategyKey="africapitalism"
-        portfolio={portfolio}
+        portfolio={empty}
         selectedToken={null}
         onSelectToken={() => {}}
-        alignmentScore={72}
+        empty
+        onHoleTap={() => {}}
       />,
     );
-    expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
+    expect(screen.getByText('Compare plans ▾')).toBeInTheDocument();
 
     // Compare preview ("under this plan") → the affordance steps aside.
     rerender(
@@ -840,8 +862,8 @@ describe('ProtectionPlanRing — balance preview', () => {
   });
 });
 
-describe('ProtectionPlanRing — sinceHint (quiet memory in the hole)', () => {
-  it('shows the since-last-visit hint in the idle hole', () => {
+describe('ProtectionPlanRing — idle face: one fact, dwell swap, privacy', () => {
+  it('states one fact — the total — never the plan name, a hint sentence, or idle memory', async () => {
     render(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -849,30 +871,183 @@ describe('ProtectionPlanRing — sinceHint (quiet memory in the hole)', () => {
         selectedToken={null}
         onSelectToken={() => {}}
         alignmentScore={72}
-        sinceHint="up from 60% · 2d ago"
       />,
     );
-    expect(screen.getByTestId('shield-since-last-visit')).toHaveTextContent(
-      'up from 60% · 2d ago',
-    );
+    const hole = screen.getByTestId('ring-hole');
+    expect(await within(hole).findByText('your savings')).toBeInTheDocument();
+    expect(within(hole).queryByText('of your money follows the plan')).not.toBeInTheDocument();
+    expect(within(hole).queryByText('Africapitalism')).not.toBeInTheDocument();
+    // The since-last-visit drift moved to the status tier, not the hole.
+    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
   });
 
-  it('hides it when a token is selected', () => {
+  it('dwell previews the alignment face once — swap, hold, return, never repeats', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      render(
+        <ProtectionPlanRing
+          strategyKey="africapitalism"
+          portfolio={portfolio}
+          selectedToken={null}
+          onSelectToken={() => {}}
+          alignmentScore={72}
+        />,
+      );
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+      await act(async () => {
+        vi.advanceTimersByTime(8000);
+      });
+      expect(screen.getByText('aligned')).toBeInTheDocument();
+      // The preview holds ~3s, then hands the face back on its own.
+      await act(async () => {
+        vi.advanceTimersByTime(3000);
+      });
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+      // One-shot: idling again never re-runs the swap.
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+      expect(screen.queryByText('aligned')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a hole tap mid-preview takes the face back and latches stillness', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      render(
+        <ProtectionPlanRing
+          strategyKey="africapitalism"
+          portfolio={portfolio}
+          selectedToken={null}
+          onSelectToken={() => {}}
+          alignmentScore={72}
+        />,
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(8000);
+      });
+      expect(screen.getByText('aligned')).toBeInTheDocument();
+      // The user takes it back — the dwell never repeats afterwards.
+      fireEvent.click(screen.getByTestId('ring-hole'));
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the plan badge tap also latches stillness — the pending preview never fires', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      const onHoleTap = vi.fn();
+      render(
+        <ProtectionPlanRing
+          strategyKey="africapitalism"
+          portfolio={portfolio}
+          selectedToken={null}
+          onSelectToken={() => {}}
+          alignmentScore={72}
+          onHoleTap={onHoleTap}
+        />,
+      );
+      fireEvent.click(screen.getByTestId('plan-badge'));
+      expect(onHoleTap).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+      expect(screen.queryByText('aligned')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('steps the total down to text-2xl for six-figure savings', async () => {
+    const big = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 123456,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: 'Celo',
+          totalValue: 123456,
+          tokenCount: 1,
+          balances: [
+            {
+              symbol: 'KESm',
+              value: 123456,
+              balance: '123456',
+              formattedBalance: '123456',
+              name: 'KESm',
+              chainId: 42220,
+              chainName: 'Celo',
+            },
+          ],
+        },
+      ],
+    } as unknown as MultichainPortfolio;
+    const { unmount } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={big}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    const hole = screen.getByTestId('ring-hole');
+    // Assert the size class on the number's span — the count-up's final
+    // text is covered by use-count-up.test.tsx (fake-timer tests in this
+    // file can leave jsdom's animation frame loop stalled for later
+    // mounts, so the assertion keys on the class, not the landed value).
+    const number = within(hole).getByText(/^\$/);
+    expect(number.parentElement).toHaveClass('text-2xl');
+    unmount();
+
     render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    const smallHole = screen.getByTestId('ring-hole');
+    expect(within(smallHole).getByText(/^\$/).parentElement).toHaveClass('text-3xl');
+  });
+
+  it('renders face dots only while the hole can flip', () => {
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        alignmentScore={72}
+      />,
+    );
+    const hole = screen.getByTestId('ring-hole');
+    expect(within(hole).getByTestId('hole-face-dots')).toBeInTheDocument();
+
+    rerender(
       <ProtectionPlanRing
         strategyKey="africapitalism"
         portfolio={portfolio}
         selectedToken="cUSD"
         onSelectToken={() => {}}
         alignmentScore={72}
-        sinceHint="steady · 2d ago"
       />,
     );
-    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
-  });
+    expect(screen.queryByTestId('hole-face-dots')).not.toBeInTheDocument();
 
-  it('hides it while comparing (holeHintOverride set)', () => {
-    render(
+    rerender(
       <ProtectionPlanRing
         strategyKey="africapitalism"
         portfolio={portfolio}
@@ -880,24 +1055,58 @@ describe('ProtectionPlanRing — sinceHint (quiet memory in the hole)', () => {
         onSelectToken={() => {}}
         alignmentScore={72}
         holeHintOverride="under this plan"
-        sinceHint="steady · 2d ago"
       />,
     );
-    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('hole-face-dots')).not.toBeInTheDocument();
   });
 
-  it('hides it during a balance preview', () => {
-    render(
-      <ProtectionPlanRing
-        strategyKey="africapitalism"
-        portfolio={portfolio}
-        legs={legsForRisk(getArchetypeAllocations('africapitalism'), 'Conservative')}
-        balancePreview
-        selectedToken={null}
-        onSelectToken={() => {}}
-        sinceHint="steady · 2d ago"
-      />,
-    );
-    expect(screen.queryByTestId('shield-since-last-visit')).not.toBeInTheDocument();
+  it('reduced motion never auto-swaps the face', async () => {
+    reducedMotion.on = true;
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
+    try {
+      render(
+        <ProtectionPlanRing
+          strategyKey="africapitalism"
+          portfolio={portfolio}
+          selectedToken={null}
+          onSelectToken={() => {}}
+          alignmentScore={72}
+        />,
+      );
+      await act(async () => {
+        vi.advanceTimersByTime(30000);
+      });
+      expect(screen.getByText('your savings')).toBeInTheDocument();
+      expect(screen.queryByText('aligned')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('masks every dollar figure when balances are hidden — dots, never a zero', async () => {
+    localStorage.setItem('diversifi.balances.hidden', '1');
+    try {
+      render(
+        <BalanceVisibilityProvider>
+          <ProtectionPlanRing
+            strategyKey="africapitalism"
+            portfolio={portfolio}
+            selectedToken={null}
+            onSelectToken={() => {}}
+            alignmentScore={72}
+          />
+        </BalanceVisibilityProvider>,
+      );
+      const hole = screen.getByTestId('ring-hole');
+      expect(within(hole).getByText('••••')).toBeInTheDocument();
+      // The projections footer masks too — every dollar figure in the object.
+      expect(screen.getAllByText('••••').length).toBeGreaterThanOrEqual(3);
+      expect(screen.queryByText('$1,000')).not.toBeInTheDocument();
+      expect(screen.queryByText('$200')).not.toBeInTheDocument();
+      // Percentages stay readable — privacy covers how much, not what the plan thinks.
+      expect(screen.getAllByText(/^\d+% (plan|held)$/).length).toBeGreaterThan(0);
+    } finally {
+      localStorage.removeItem('diversifi.balances.hidden');
+    }
   });
 });

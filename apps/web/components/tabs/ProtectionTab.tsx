@@ -15,6 +15,7 @@ import { useNavigation } from "@/context/app/NavigationContext";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
+import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
 import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { useLatestAdvice } from "@/hooks/use-agent-analysis";
@@ -768,11 +769,13 @@ export default function ProtectionTab({
     showToast("Custom plan saved. Your holdings have not moved.", "success");
   }, [customDraft, setCustomPlan, setFinancialStrategy, showToast]);
 
+  // Privacy switch — every dollar figure (gap CTA, slice inspector) renders
+  // through formatMoney so the eye toggle masks it.
+  const { formatMoney: fmt } = useBalanceVisibility();
+
   if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) {
     return <ProtectionSkeleton />;
   }
-
-  const fmt = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
   // In compare the rail's checked coin falls back to the current plan, so
   // the hole names that plan even before the user picks another.
@@ -944,7 +947,6 @@ export default function ProtectionTab({
             empty
             compact
             holeOverride={compareHole}
-            sinceHint={alignmentSinceHint ?? undefined}
             floor={previewFloor}
           />
           <PhilosophyCoinRail
@@ -1012,7 +1014,6 @@ export default function ProtectionTab({
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
             sleeveOpen={sleeveOpen}
-            sinceHint={alignmentSinceHint ?? undefined}
             floor={comparing ? previewFloor : planFloor}
             controls={!comparing && tiltShowing && guardianTilt ? (
               <div className="mt-3 space-y-2" data-testid="guardian-tilt-preview">
@@ -1267,6 +1268,7 @@ export default function ProtectionTab({
       businessMorph={businessMorph}
       cycleOpen={cycleOpen}
       onOpenCycle={() => openCycle("next")}
+      sinceHint={alignmentSinceHint ?? undefined}
     />
   );
 

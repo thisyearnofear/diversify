@@ -18,6 +18,7 @@ import type { ServReceipt, VaultAllocation } from '@diversifi/shared/src/service
 import type { RwaMarket, RwaMarketFigure } from '@diversifi/shared/src/services/rwa-market-service';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
 import { TokenIcon } from '../../shared/TokenIcon';
+import { useBalanceVisibility } from '@/context/app/BalanceVisibilityContext';
 import { RWA_ASSETS, excludedByLens, type RwaAsset } from './rwa-assets';
 import { isSwapRoutable } from '@/constants/unroutable-swap-tokens';
 
@@ -88,9 +89,12 @@ function HoldableRow({
   onToggle: () => void;
 }) {
   const provenance = provenanceFor(asset.symbol);
+  // Held $ derives from the user's balance — honours the privacy mask.
+  // (The market figure in formatFigure stays unmasked: price, not balance.)
+  const { formatMoney } = useBalanceVisibility();
   const share =
     heldPct > 0
-      ? `${Math.round(heldPct)}% held${totalValue > 0 ? ` · $${Math.round((heldPct / 100) * totalValue).toLocaleString()}` : ''}`
+      ? `${Math.round(heldPct)}% held${totalValue > 0 ? ` · ${formatMoney((heldPct / 100) * totalValue)}` : ''}`
       : planPct > 0
         ? `${planPct}% of your plan`
         : 'not in your plan';
