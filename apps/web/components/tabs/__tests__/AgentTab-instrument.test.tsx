@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -120,7 +120,13 @@ vi.mock("@/hooks/use-guardian-instrument", () => ({
   useGuardianInstrument: () => instrument,
 }));
 vi.mock("@/components/agent/GuardianJournalSheet", () => ({
-  GuardianJournalSheet: () => <div data-testid="guardian-journal-sheet" />,
+  GuardianJournalSheet: (props: { hasValidPermission?: boolean; isLowOnFunds?: boolean }) => (
+    <div data-testid="guardian-journal-sheet">
+      {props.hasValidPermission && !props.isLowOnFunds ? (
+        <button type="button">Preview next move</button>
+      ) : null}
+    </div>
+  ),
 }));
 vi.mock("@/components/agent/GuardianBoundsSheet", () => ({
   GuardianBoundsSheet: () => <div data-testid="guardian-bounds-sheet" />,
@@ -255,6 +261,80 @@ describe("AgentTab — instrument composition", () => {
     expect(
       within(contextSheet as HTMLElement).queryByTestId("guardian-journal-sheet"),
     ).not.toBeInTheDocument();
+  });
+
+  it("an idle journal keeps the setup CTA — the sheet carries no replacement primary", () => {
+    instrument = makeInstrument({ guardianState: "idle", latestCall: "rotate to KESm" });
+    render(<AgentTab />);
+    fireEvent.click(screen.getByTestId("guardian-latest"));
+    expect(screen.getByTestId("inspector-sheet")).toHaveAttribute(
+      "data-selected-id",
+      "journal",
+    );
+    expect(
+      screen.getByRole("button", { name: GUARDIAN_USER_COPY.idle.cta }),
+    ).toBeInTheDocument();
+  });
+
+  it("a monitoring journal owns Preview — the duplicate resting CTA leaves", () => {
+    instrument = makeInstrument({
+      guardianState: "monitoring",
+      hasValidPermission: true,
+      latestCall: "rotate to KESm",
+    });
+    render(<AgentTab />);
+    fireEvent.click(screen.getByTestId("guardian-latest"));
+    expect(
+      screen.getAllByRole("button", { name: "Preview next move" }),
+    ).toHaveLength(1);
+    expect(
+      within(screen.getByTestId("inspector-sheet")).getByRole("button", { name: "Preview next move" }),
+    ).toBeInTheDocument();
+  });
+
+  it("a context surface always owns the action — and closing restores the resting CTA", () => {
+    instrument = makeInstrument({ guardianState: "idle" });
+    const { rerender } = render(<AgentTab />);
+    expect(
+      screen.getByRole("button", { name: GUARDIAN_USER_COPY.idle.cta }),
+    ).toBeInTheDocument();
+
+    mockGuardianContext = { summary: "Plan gap", prompt: "Guardian, fix it" };
+    rerender(<AgentTab />);
+    expect(
+      screen.queryByRole("button", { name: GUARDIAN_USER_COPY.idle.cta }),
+    ).not.toBeInTheDocument();
+
+    mockGuardianContext = null;
+    rerender(<AgentTab />);
+    expect(
+      screen.getByRole("button", { name: GUARDIAN_USER_COPY.idle.cta }),
+    ).toBeInTheDocument();
+  });
+
+  it("closing the inspector restores the resting CTA", async () => {
+    instrument = makeInstrument({
+      guardianState: "monitoring",
+      hasValidPermission: true,
+      latestCall: "rotate to KESm",
+    });
+    render(<AgentTab />);
+    fireEvent.click(screen.getByTestId("guardian-latest"));
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: "Preview next move" }),
+      ).toHaveLength(1),
+    );
+    expect(
+      within(screen.getByTestId("inspector-sheet")).getByRole("button", { name: "Preview next move" }),
+    ).toBeInTheDocument();
+
+    const sheet = screen.getByTestId("inspector-sheet");
+    fireEvent.click(screen.getByRole("button", { name: "Close inspector" }));
+    await waitFor(() => expect(sheet).toHaveStyle({ opacity: 0 }));
+    expect(
+      within(screen.getByTestId("guardian-object")).getByRole("button", { name: "Preview next move" }),
+    ).toBeInTheDocument();
   });
 
   it("Change limits hides while the budget line shows, and for beginners", () => {

@@ -47,7 +47,11 @@ interface SwapTabProps {
   isBalancesLoading?: boolean;
   /** Strip tab chrome so Exchange can own the instrument layout. */
   instrument?: boolean;
-  onInspectQuote?: (fromToken: string, toToken: string) => void;
+  onInspectQuote?: (
+    fromToken: string,
+    toToken: string,
+    view?: "story" | "route",
+  ) => void;
   quoteInspected?: boolean;
   /** The wallet's (or looked-up address's) on-chain capital history. */
   capitalHistory?: {

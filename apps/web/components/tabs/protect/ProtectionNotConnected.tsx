@@ -53,6 +53,7 @@ interface Props {
   onEnableDemo?: () => void;
   /** Selection-bound inspector (e.g. the RWA vault sleeve via ?sleeve=rwa). */
   inspector?: React.ReactNode;
+  inspectorOpen?: boolean;
   /** Tokenized-asset lens is open — the ghost ring restages to match. */
   sleeveOpen?: boolean;
   onOpenSleeve?: () => void;
@@ -66,6 +67,7 @@ export function ProtectionNotConnected({
   experienceMode: _experienceMode,
   onEnableDemo,
   inspector,
+  inspectorOpen = false,
   sleeveOpen = false,
   onOpenSleeve,
   onCloseSleeve,
@@ -149,6 +151,7 @@ export function ProtectionNotConnected({
     () => shieldBeats({ records: liveFeed?.recent, legs: ringLegs }),
     [liveFeed, ringLegs],
   );
+  const [acted, setActed] = React.useState(false);
   const liveLineShowing =
     !ringCompact && !sleeveOpen && !balance.isPreviewing && effectiveToken === null;
   const hole = (() => {
@@ -179,7 +182,12 @@ export function ProtectionNotConnected({
   };
 
   const object = (
-    <div className="space-y-4" data-testid="shield-unconnected-object">
+    <div
+      className="space-y-4"
+      data-testid="shield-unconnected-object"
+      onPointerDownCapture={() => setActed(true)}
+      onFocusCapture={() => setActed(true)}
+    >
       <div data-testid="shield-ring" data-walletless data-comparing={comparing || undefined}>
         <ProtectionPlanRing
           customPlan={customPlan}
@@ -211,6 +219,7 @@ export function ProtectionNotConnected({
             setSelectedToken(token === SLEEVE_ID ? null : token);
           }}
           sleeveOpen={sleeveOpen}
+          stilled={acted}
           alignmentScore={null}
           empty
           walletless
@@ -233,6 +242,7 @@ export function ProtectionNotConnected({
                   legs={balance.isPreviewing ? balanceLegs : ringLegs}
                   savedLegs={ringLegs}
                   isPreviewing={balance.isPreviewing}
+                  onInteraction={() => setActed(true)}
                   floor={ringFloor}
                   accent={ringArchetype ? ARCHETYPES[ringArchetype].accent : undefined}
                   onChange={(risk) => {
@@ -260,7 +270,7 @@ export function ProtectionNotConnected({
           <LiveLine
             testId="shield-live-line"
             beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
-            alive
+            alive={!acted && !inspectorOpen}
             className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
           />
         )}
@@ -305,7 +315,7 @@ export function ProtectionNotConnected({
 
       {/* The one CTA — attaches to the object, no card wrapper. While
           comparing, "Use this plan" is the one CTA instead. */}
-      {!comparing && !balance.isPreviewing && (
+      {!comparing && !balance.isPreviewing && !sleeveOpen && (
         <WalletButton variant="primary" className="w-full" connectLabel="Connect wallet" />
       )}
     </div>
@@ -363,5 +373,5 @@ export function ProtectionNotConnected({
     </div>
   );
 
-  return <InstrumentShell object={object} inspector={balance.isPreviewing ? undefined : inspector} status={status} pattern={pattern} />;
+  return <InstrumentShell object={object} inspector={balance.isPreviewing ? undefined : inspector} inspectorOpen={inspectorOpen && !balance.isPreviewing} status={status} pattern={pattern} />;
 }

@@ -612,11 +612,14 @@ export default function ProtectionTab({
     () => shieldBeats({ records: liveFeed?.recent, legs: allocations }),
     [liveFeed, allocations],
   );
+  const [acted, setActed] = useState(false);
+  useEffect(() => setActed(false), [address, strategyKey]);
   const gapCtaShowing =
     !comparing &&
     !balance.isPreviewing &&
     shape === "gap" &&
     !focusedToken &&
+    !cycleOpen &&
     biggestGap &&
     address &&
     guardianState !== "monitoring";
@@ -928,8 +931,13 @@ export default function ProtectionTab({
     </div>
   );
 
-  const object = customEditor || (
-    <>
+  const object = (
+    <div
+      onPointerDownCapture={() => setActed(true)}
+      onFocusCapture={() => setActed(true)}
+    >
+      {customEditor || (
+      <>
       {shape === "picker" && (
         <div data-testid="shield-picker">
           {/* The picker IS the compact ring + coin rail: a coin previews
@@ -955,7 +963,7 @@ export default function ProtectionTab({
             onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
           />
           <FocusedPlanLine strategyId={focusedPhilosophy} />
-          {focusedPhilosophy && (
+          {focusedPhilosophy && !philosophyDetailsOpen && (
             <div className="mt-1 flex justify-center gap-2">
               <button
                 type="button"
@@ -1014,6 +1022,7 @@ export default function ProtectionTab({
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
             sleeveOpen={sleeveOpen}
+            stilled={acted}
             floor={comparing ? previewFloor : planFloor}
             controls={!comparing && tiltShowing && guardianTilt ? (
               <div className="mt-3 space-y-2" data-testid="guardian-tilt-preview">
@@ -1055,6 +1064,7 @@ export default function ProtectionTab({
                   legs={balance.isPreviewing ? balanceAllocations : allocations}
                   savedLegs={allocations}
                   isPreviewing={balance.isPreviewing}
+                  onInteraction={() => setActed(true)}
                   floor={planFloor}
                   accent={(() => {
                     const id = strategyToArchetype(strategyKey);
@@ -1085,7 +1095,7 @@ export default function ProtectionTab({
             <LiveLine
               testId="shield-live-line"
               beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
-              alive
+              alive={!acted && !cycleOpen && !tiltShowing}
               className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
             />
           )}
@@ -1102,7 +1112,7 @@ export default function ProtectionTab({
                 />
                 <FocusedPlanLine strategyId={focusedPhilosophy ?? strategyKey} />
                 <div className="flex justify-center gap-2">
-                  {focusedPhilosophy && focusedPhilosophy !== strategyKey && (
+                  {focusedPhilosophy && focusedPhilosophy !== strategyKey && !philosophyDetailsOpen && !focusedToken && (
                     <button
                       type="button"
                       data-testid="compare-commit"
@@ -1117,7 +1127,7 @@ export default function ProtectionTab({
               </div>
             )}
           </AnimatePresence>
-          {!comparing && !balance.isPreviewing && shape === "gap" && !focusedToken &&
+          {!comparing && !balance.isPreviewing && shape === "gap" && !focusedToken && !cycleOpen &&
             biggestGap && address &&
             guardianState !== "monitoring" && (
             <div data-testid="shield-gap-cta" className="mt-3">
@@ -1132,7 +1142,8 @@ export default function ProtectionTab({
               </button>
             </div>
           )}
-          {shape === "fund" && !comparing && !balance.isPreviewing && (
+          {shape === "fund" && !comparing && !balance.isPreviewing &&
+            !focusedToken && !cycleOpen && (
             <div data-testid="shield-fund" className="mt-3 space-y-2">
               {isMiniPay ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -1159,7 +1170,9 @@ export default function ProtectionTab({
           )}
         </div>
       )}
-    </>
+      </>
+      )}
+    </div>
   );
 
   // The sleeve is shape-independent: a deep-link (?sleeve=rwa) or a vault
@@ -1281,6 +1294,7 @@ export default function ProtectionTab({
         experienceMode={experienceMode}
         onEnableDemo={enableDemoMode}
         inspector={sleeveOpen || cycleOpen ? inspector : undefined}
+        inspectorOpen={sleeveOpen || cycleOpen}
         sleeveOpen={sleeveOpen}
         onOpenSleeve={() => setFocusedToken(SLEEVE_ID)}
         onCloseSleeve={() => setFocusedToken(null)}
@@ -1292,7 +1306,7 @@ export default function ProtectionTab({
   return (
     <div className="relative">
       <InstrumentShell
-        layout={inspectorSel === null && !balance.isPreviewing ? "calibrated" : "natural"}
+        inspectorOpen={Boolean(inspectorSel) || (cycleOpen && !balance.isPreviewing)}
         pattern={pattern}
         object={object}
         inspector={inspector}

@@ -14,6 +14,8 @@ import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import '@testing-library/jest-dom/vitest';
 import PairStage, { type PairReceipt } from '../PairStage';
 import type { TokenPickerItem } from '../TokenPickerSheet';
+import { InstrumentShell } from '../../shared/InstrumentShell';
+import { LIVE_LINE_DWELL_MS } from '../../shared/LiveLine';
 
 // framer-motion reads prefers-reduced-motion once via a cached
 // matchMedia — drive it through useReducedMotion instead.
@@ -428,5 +430,104 @@ describe('PairStage — settlement receipt', () => {
         screen.queryByTestId('stamp-teach-caption'),
       ).not.toBeInTheDocument();
     });
+  });
+});
+
+describe('PairStage — stillness after interaction', () => {
+  const LINE_DWELL_MS = LIVE_LINE_DWELL_MS;
+  const SETTLE_MS = 1_000;
+
+  it('the corridor line keeps breathing while untouched, then stills once the user acts', () => {
+    vi.useFakeTimers();
+    try {
+      renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+      const first = screen.getByTestId('corridor-line').textContent;
+      act(() => {
+        vi.advanceTimersByTime(LINE_DWELL_MS + SETTLE_MS);
+      });
+      const rotated = screen.getByTestId('corridor-line').textContent;
+      expect(rotated).not.toBe(first);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Switch tokens' }));
+      const settled = screen.getByTestId('corridor-line').textContent;
+      act(() => {
+        vi.advanceTimersByTime(LINE_DWELL_MS);
+      });
+      expect(screen.getByTestId('corridor-line').textContent).toBe(settled);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a real pair change is the only reset for the acted latch', () => {
+    vi.useFakeTimers();
+    try {
+      const props = renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+      fireEvent.click(screen.getByRole('button', { name: 'Switch tokens' }));
+      const settled = screen.getByTestId('corridor-line').textContent;
+      act(() => {
+        vi.advanceTimersByTime(LINE_DWELL_MS);
+      });
+      expect(screen.getByTestId('corridor-line').textContent).toBe(settled);
+
+      props.rerender(<PairStage {...props} fromToken="KESm" toToken="USDm" />);
+      const first = screen.getByTestId('corridor-line').textContent;
+      act(() => {
+        vi.advanceTimersByTime(LINE_DWELL_MS + SETTLE_MS);
+      });
+      expect(screen.getByTestId('corridor-line').textContent).not.toBe(first);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('an open inspector stills the stage — the parent resolves alive=false', () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <InstrumentShell
+          inspectorOpen
+          inspector={<div data-testid="probe-inspector" />}
+          object={<PairStage
+            fromToken="NGNm"
+            toToken="USDm"
+            fromItems={ITEMS}
+            toItems={ITEMS}
+            onFromChange={vi.fn()}
+            onToChange={vi.fn()}
+            onSwitch={vi.fn()}
+            onWake={vi.fn()}
+            signals={null}
+            ctaLabel="Move savings"
+          />}
+        />,
+      );
+      const first = screen.getByTestId('corridor-line').textContent;
+      act(() => {
+        vi.advanceTimersByTime(LINE_DWELL_MS);
+      });
+      expect(screen.getByTestId('corridor-line').textContent).toBe(first);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('reduced motion renders the same first beat without rotation', () => {
+    vi.useFakeTimers();
+    try {
+      renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+      const normalFirst = screen.getByTestId('corridor-line').textContent;
+      cleanup();
+      reducedMotionState.on = true;
+      renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
+      expect(screen.getByTestId('corridor-line').textContent).toBe(normalFirst);
+      act(() => {
+        vi.advanceTimersByTime(LINE_DWELL_MS + SETTLE_MS);
+      });
+      expect(screen.getByTestId('corridor-line').textContent).toBe(normalFirst);
+    } finally {
+      reducedMotionState.on = false;
+      vi.useRealTimers();
+    }
   });
 });

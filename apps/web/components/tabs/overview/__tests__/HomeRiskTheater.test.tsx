@@ -78,14 +78,13 @@ function renderTheater(overrides: Partial<React.ComponentProps<typeof HomeRiskTh
 }
 
 describe("HomeRiskTheater — purchasing-power horizon", () => {
-  it("grounds a currency moment with its corridor reading", () => {
+  it("the currency moment needs no separate horizon baseplate — the reading already names pair and delta", async () => {
     renderTheater();
-    expect(screen.getByTestId("home-horizon-baseplate")).toHaveTextContent(
-      "JMD vs US Dollar · −8.4%",
-    );
+    expect(screen.queryByTestId("home-horizon-baseplate")).not.toBeInTheDocument();
+    expect(await screen.findByText(/buying power · .*vs US Dollar/)).toBeInTheDocument();
   });
 
-  it("uses the real inflation-moment fields", () => {
+  it("the inflation moment renders without a baseplate too", () => {
     const inflationMoment: InflationMoment = {
       kind: "inflation",
       countryName: "Jamaica",
@@ -99,9 +98,8 @@ describe("HomeRiskTheater — purchasing-power horizon", () => {
       isLive: true,
     };
     renderTheater({ moment: null, inflationMoment });
-    expect(screen.getByTestId("home-horizon-baseplate")).toHaveTextContent(
-      "Jamaica · 5.2% annual rate",
-    );
+    expect(screen.queryByTestId("home-horizon-baseplate")).not.toBeInTheDocument();
+    expect(screen.getByText("5.2%")).toBeInTheDocument();
   });
 });
 

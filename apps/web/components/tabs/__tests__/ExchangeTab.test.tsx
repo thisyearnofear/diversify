@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 
@@ -90,7 +90,7 @@ vi.mock("../SwapTab", () => ({
     onExitDecisionWindow,
   }: {
     instrument?: boolean;
-    onInspectQuote?: (from: string, to: string) => void;
+    onInspectQuote?: (from: string, to: string, view?: "story" | "route") => void;
     onInspectJourney?: () => void;
     lookupAddress?: string | null;
     onLookupAddress?: (a: string | null) => void;
@@ -107,7 +107,7 @@ vi.mock("../SwapTab", () => ({
         {
           type: "button",
           "data-testid": "quote-row",
-          onClick: () => onInspectQuote?.("cUSD", "USDC"),
+          onClick: () => onInspectQuote?.("cUSD", "USDC", "route"),
         },
         "quote",
       ),
@@ -116,7 +116,7 @@ vi.mock("../SwapTab", () => ({
         {
           type: "button",
           "data-testid": "pair-row",
-          onClick: () => onInspectQuote?.("NGNm", "USDm"),
+          onClick: () => onInspectQuote?.("NGNm", "USDm", "story"),
         },
         "pair",
       ),
@@ -275,14 +275,36 @@ describe("ExchangeTab — instrument", () => {
     expect(mockEnableDemo).toHaveBeenCalledTimes(1);
   });
 
-  it("opens the route inspector from the quote tap", () => {
+  it("opens the pair inspector on Story; Route carries only the schematic", () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("pair-row"));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.queryByTestId("route-schematic")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("fx-netting-rail")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Story" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Route" }));
+    expect(screen.getByTestId("route-schematic")).toHaveTextContent("NGNm-USDm");
+    expect(screen.queryByTestId("fx-netting-rail")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: /Share this pair/ }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("the quote affordance opens the inspector directly on Route", () => {
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
 
     fireEvent.click(screen.getByTestId("quote-row"));
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Route" })).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByTestId("route-schematic")).toHaveTextContent("cUSD-USDC");
+    expect(screen.queryByRole("button", { name: /Share this pair/ })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("fx-netting-rail")).not.toBeInTheDocument();
   });
 
   it("renders the journey inspector with settled legs and explorer links", () => {
@@ -437,6 +459,7 @@ describe("ExchangeTab — instrument", () => {
 
     // cUSD→USDC has no corridor, but USDC has curated provenance.
     fireEvent.click(screen.getByTestId("quote-row"));
+    fireEvent.click(screen.getByRole("button", { name: "Story" }));
     expect(
       await screen.findByRole("button", { name: "Ask Guardian about this pair →" }),
     ).toBeInTheDocument();
@@ -449,6 +472,7 @@ describe("ExchangeTab — instrument", () => {
 
     // cUSD→USDC both mirror USD — no corridor, no share affordance.
     fireEvent.click(screen.getByTestId("quote-row"));
+    fireEvent.click(screen.getByRole("button", { name: "Story" }));
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Share this pair ↗" }),
@@ -496,15 +520,47 @@ describe("ExchangeTab — instrument", () => {
     expect(screen.getByTestId("exchange-swap-object")).toBeInTheDocument();
   });
 
-  it("pair inspection shows route detail AND the netting rail prefilled from the pair's corridor", () => {
+  it("Match prefills the netting rail from the pair's corridor — nothing else mounts", () => {
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
 
     fireEvent.click(screen.getByTestId("quote-row"));
-    expect(screen.getByTestId("route-schematic")).toHaveTextContent("cUSD-USDC");
+    fireEvent.click(screen.getByRole("button", { name: "Match" }));
     // cUSD→USDC both mirror USD — corridorSideFor yields USD/USD.
     expect(screen.getByTestId("fx-netting-rail")).toHaveTextContent("USD-USD");
+    expect(screen.queryByTestId("route-schematic")).not.toBeInTheDocument();
+  });
+
+  it("a pair change resets the inspector view to Story", () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByTestId("quote-row"));
+    fireEvent.click(screen.getByRole("button", { name: "Route" }));
+    expect(screen.getByRole("button", { name: "Route" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByTestId("pair-row"));
+    const activeSheet = screen
+      .getAllByTestId("inspector-sheet")
+      .find((el) => el.getAttribute("data-selected-id") === "NGNm-USDm");
+    expect(activeSheet).toBeDefined();
+    const activeInspector = within(activeSheet as HTMLElement);
+    expect(activeInspector.getByRole("button", { name: "Story" })).toHaveAttribute("aria-pressed", "true");
+    expect(activeInspector.queryByTestId("route-schematic")).not.toBeInTheDocument();
+    expect(activeInspector.queryByTestId("fx-netting-rail")).not.toBeInTheDocument();
+  });
+
+  it("standalone netting selection renders only the rail", () => {
+    render(
+      <ExchangeTab userRegion="USA" inflationData={{}} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /FX netting/ }));
+    expect(screen.getByTestId("fx-netting-rail")).toBeInTheDocument();
+    expect(screen.queryByTestId("route-schematic")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Story" })).not.toBeInTheDocument();
   });
 
   it("a netting-lens intent (navigateToNetting) unfolds the rail on arrival and consumes", () => {

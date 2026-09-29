@@ -689,3 +689,126 @@ body {
     opacity: 0.02;
   }
 }
+
+@media (min-width: 1024px) {
+  .instrument-shell {
+    container-name: instrument;
+    container-type: inline-size;
+  }
+
+  .instrument-shell[data-inspector-open="false"] {
+    min-height: clamp(18rem, calc(100svh - 10rem), 28rem);
+  }
+
+  .instrument-workbench {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+    min-height: inherit;
+  }
+
+  .instrument-object {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    container-name: instrument-object;
+    container-type: inline-size;
+  }
+
+  .instrument-object > * {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .instrument-inspector {
+    width: 100%;
+    min-width: 0;
+    margin-top: 0;
+  }
+
+  .instrument-inspector > * {
+    margin-top: 0;
+  }
+
+  .instrument-status {
+    width: 100%;
+    min-width: 0;
+  }
+
+  @container instrument (min-width: 720px) {
+    .instrument-workbench[data-inspector-open="true"] {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+      gap: 1.5rem;
+    }
+
+    .instrument-workbench[data-inspector-open="true"] > .instrument-status {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .instrument-workbench[data-inspector-open="true"]
+    .instrument-object
+    .instrument-inspect-hidden {
+    display: none;
+  }
+
+  @container instrument-object (min-width: 560px) {
+    .instrument-composition {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: center;
+      column-gap: 1.5rem;
+    }
+
+    .instrument-composition > .instrument-artifact {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .instrument-composition > .instrument-reading {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .instrument-composition > .instrument-controls {
+      grid-column: 1 / -1;
+      grid-row: 2;
+    }
+
+    .instrument-composition > .instrument-artifact,
+    .instrument-composition > .instrument-reading,
+    .instrument-composition > .instrument-controls {
+      min-width: 0;
+    }
+
+    .instrument-reading [aria-label="Time horizon"] {
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .instrument-composition.pair-stage {
+      max-width: none;
+      width: 100%;
+      grid-template-columns: minmax(320px, 1.2fr) minmax(0, 1fr);
+    }
+
+    .pair-stage-detail {
+      grid-column: 1 / -1;
+      width: 100%;
+    }
+
+    .ticket-swap-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      column-gap: 0.5rem;
+    }
+  }
+}

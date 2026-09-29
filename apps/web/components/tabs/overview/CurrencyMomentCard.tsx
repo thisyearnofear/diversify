@@ -34,6 +34,7 @@ import { homeBeats } from '@/lib/live-lines';
 import { LiveLine } from '@/components/shared/LiveLine';
 import { reveal, springPop, springSoft } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from '@/lib/analytics';
+import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 
 interface Props {
   moment: NarrativeMoment;
@@ -145,9 +146,13 @@ export function CurrencyMomentCard({
     if (currencySelected) setHasFlipped(true);
   }, [currencySelected]);
   const showVisit = Boolean(changed) && view !== 'history';
+  const inspecting = useInstrumentInspection();
+  const [acted, setActed] = React.useState(false);
+  React.useEffect(() => setActed(false), [moment.currencyCode]);
+  const act = React.useCallback(() => setActed(true), []);
   // The stage leans toward the cursor — Sylva's pointer-responsive scene,
   // damped through a spring. Dead under reduced motion.
-  const tilt = usePointerTilt(!reducedMotion);
+  const tilt = usePointerTilt(!reducedMotion && !acted && !inspecting);
   // Philosophy-aware accent once a philosophy is chosen; neutral otherwise.
   const accent = frame?.accent ?? MOMENT_ACCENT;
   const reframe = frame?.reframe(moment.currencyCode) ?? null;
@@ -179,7 +184,7 @@ export function CurrencyMomentCard({
         {viewingShared && onClearSharedView && (
           <button
             type="button"
-            onClick={onClearSharedView}
+            onClick={() => { act(); onClearSharedView(); }}
             className="ml-2 min-h-tap align-middle font-semibold normal-case tracking-normal text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
           >
             ← Your currency
@@ -203,6 +208,7 @@ export function CurrencyMomentCard({
               aria-pressed={(showVisit && v === 'visit') || (!showVisit && v === 'history')}
               onClick={() => {
                 haptics.tap();
+                act();
                 setView(v);
                 trackFunnelEvent('marquee_select', { source: 'home_visit', view: v });
               }}
@@ -231,7 +237,8 @@ export function CurrencyMomentCard({
             accent={accent}
           />
         ) : (
-          <>
+          <div className="instrument-composition">
+            <div className="instrument-artifact">
             {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
             <motion.div
               className="flex items-center justify-center gap-5"
@@ -276,7 +283,7 @@ export function CurrencyMomentCard({
                           size={92}
                           symbol={moment.currencyCode}
                           color={accent}
-                          shine={reducedMotion || hasFlipped ? false : 'once'}
+                          shine={reducedMotion || hasFlipped || acted || inspecting ? false : 'once'}
                         />
                       )}
                     </motion.span>
@@ -286,6 +293,7 @@ export function CurrencyMomentCard({
                       type="button"
                       onClick={() => {
                         haptics.tap();
+                        act();
                         onInspectCurrency();
                       }}
                       aria-label={`Story of the ${moment.currencyCode}`}
@@ -310,7 +318,9 @@ export function CurrencyMomentCard({
                 <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
               </motion.div>
             </motion.div>
+            </div>
 
+            <div className="instrument-reading">
             {/* The number that carries the meaning */}
             <motion.div
               key={`${moment.benchmark}-${moment.horizon}`}
@@ -334,7 +344,8 @@ export function CurrencyMomentCard({
                   min={0}
                   value={moment.savingsAmount}
                   aria-label="Your savings amount"
-                  onChange={(e) => onAmountChange(Math.max(0, Number(e.target.value) || 0))}
+                  onFocus={act}
+                  onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
                   className="w-24 text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
                 />
               </label>{' '}
@@ -369,7 +380,7 @@ export function CurrencyMomentCard({
             <LiveLine
               testId="home-live-line"
               beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
-              alive={liveAlive && !currencySelected}
+              alive={liveAlive && !currencySelected && !acted && !inspecting}
               className="mt-1.5 block text-2xs font-semibold text-gray-500 dark:text-gray-400"
             />
 
@@ -383,7 +394,7 @@ export function CurrencyMomentCard({
             )}
 
             {/* Controls — the same segmented + coin motifs learned in onboarding */}
-            <div className="mt-4 flex items-center justify-center gap-2" role="group" aria-label="Time horizon">
+            <div className="instrument-inspect-hidden mt-4 flex items-center justify-center gap-2" role="group" aria-label="Time horizon">
               {horizons.map((h) => (
                 <button
                   key={h}
@@ -391,6 +402,7 @@ export function CurrencyMomentCard({
                   aria-pressed={moment.horizon === h}
                   onClick={() => {
                     haptics.tap();
+                    act();
                     onSelectHorizon(h);
                   }}
                   className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
@@ -415,6 +427,7 @@ export function CurrencyMomentCard({
                       aria-label={`Compare against ${BENCHMARKS[b].label}`}
                       onClick={() => {
                         haptics.tap();
+                        act();
                         onSelectBenchmark(b);
                       }}
                       className={`min-h-tap min-w-tap inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
@@ -427,7 +440,8 @@ export function CurrencyMomentCard({
                 })}
               </div>
             </div>
-          </>
+            </div>
+          </div>
         )}
       </motion.div>
 
@@ -466,7 +480,7 @@ export function CurrencyMomentCard({
           display-only default country the picker stays unset and names the
           default — nothing was detected, so nothing claims otherwise. */}
       {onChangeCountry && (
-        <>
+        <div className="instrument-inspect-hidden">
           {countryIsDefault && (
             <p className="mt-2 text-2xs text-gray-400 dark:text-gray-500">
               Country not detected — showing {moment.countryName} by default.
@@ -475,9 +489,9 @@ export function CurrencyMomentCard({
           <CountryOverrideSelect
             currentCountryCode={countryIsDefault ? '' : moment.iso2}
             currentCountryName={countryIsDefault ? '' : moment.countryName}
-            onChange={onChangeCountry}
+            onChange={(code) => { act(); onChangeCountry(code); }}
           />
-        </>
+        </div>
       )}
     </div>
   );

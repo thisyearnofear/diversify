@@ -126,7 +126,7 @@ function AppShellInner() {
         setActiveTab={setActiveTab}
         experienceMode={experienceMode}
       />
-      <div className="max-w-md mx-auto lg:max-w-2xl">
+      <div className="max-w-md mx-auto lg:max-w-5xl">
       <AppBackdrop accent={archetype.accent} />
       <FloatingControls
         openAdvisor={openAdvisor}

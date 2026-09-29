@@ -28,6 +28,7 @@ import { useNavigation } from '@/context/app/NavigationContext';
 import type { HandoffOrigin } from '@/context/app/types';
 import { stampsForPair } from '@/lib/stamps';
 import StampSheet, { type StampEntry, type StampMode } from './StampSheet';
+import { useInstrumentInspection } from '../shared/InstrumentShell';
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
 const STAMP_TEACH_KEY = 'diversifi.stamps.taught';
@@ -271,6 +272,8 @@ export function PairStage({
 
   const [flipped, setFlipped] = useState<'from' | 'to' | null>(null);
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);
+  const inspecting = useInstrumentInspection();
+  const [acted, setActed] = useState(false);
   // Stamps — one sheet, three doors: the receipt's ✓ seal ('receipt'),
   // a corridor-line beat's ✦ ('beat'), the pair inspector ('inspector').
   const [stampSheet, setStampSheet] = useState<{
@@ -300,6 +303,14 @@ export function PairStage({
   }, [receipt, stampable, reduced]);
   // A new pair is a new weighing — any flipped coin turns face up again.
   useEffect(() => setFlipped(null), [fromToken, toToken]);
+  useEffect(() => setActed(false), [fromToken, toToken]);
+  const alive =
+    !acted &&
+    !inspecting &&
+    !pickerSide &&
+    !stampSheet &&
+    !receipt &&
+    !decisionWindow;
   const landed = useRef(false);
   useEffect(() => {
     landed.current = true;
@@ -332,8 +343,9 @@ export function PairStage({
     : null;
 
   return (
-    <div data-testid="pair-stage" className="mx-auto w-full max-w-[340px]">
+    <div data-testid="pair-stage" className="instrument-composition pair-stage mx-auto w-full max-w-[340px]">
       {/* The scale */}
+      <div className="instrument-artifact">
       <div aria-label={corridor?.line ?? undefined}>
         <motion.div
           data-testid="pair-beam"
@@ -382,7 +394,7 @@ export function PairStage({
             tilt={tilt}
             index={0}
             flipped={flipped === 'from'}
-            onFlip={() => setFlipped(flipped === 'from' ? null : 'from')}
+            onFlip={() => { setActed(true); setFlipped(flipped === 'from' ? null : 'from'); }}
           />
           {/* The hub — the ⇅ coin AT the beam's center, counter-rotated
               so its glyph stays upright. Tap swaps the sides and the
@@ -402,13 +414,14 @@ export function PairStage({
                 layoutId={reduced ? undefined : 'pair-pivot'}
                 onClick={() => {
                   haptics.tap();
+                  setActed(true);
                   onSwitch();
                 }}
                 whileTap={reduced ? undefined : { scale: 0.9 }}
                 aria-label="Switch tokens"
                 className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
               >
-                <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine shineDuration={5.5} />
+                <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine={!reduced && alive} shineDuration={5.5} />
               </motion.button>
             </motion.div>
           </div>
@@ -418,11 +431,11 @@ export function PairStage({
             tilt={tilt}
             index={1}
             flipped={flipped === 'to'}
-            onFlip={() => setFlipped(flipped === 'to' ? null : 'to')}
+            onFlip={() => { setActed(true); setFlipped(flipped === 'to' ? null : 'to'); }}
             sealed={Boolean(receipt)}
             onSealStamp={
               receipt && stampable
-                ? () => setStampSheet({ mode: 'moved', entry: 'receipt' })
+                ? () => { setActed(true); setStampSheet({ mode: 'moved', entry: 'receipt' }); }
                 : undefined
             }
             teaching={teaching}
@@ -449,18 +462,20 @@ export function PairStage({
             symbol={fromToken}
             flipped={flipped === 'from'}
             provenance={fromProvenance}
-            onOpenPicker={() => setPickerSide('from')}
+            onOpenPicker={() => { setActed(true); setPickerSide('from'); }}
           />
           <div className="w-10 shrink-0" aria-hidden />
           <StageLabel
             symbol={toToken}
             flipped={flipped === 'to'}
             provenance={toProvenance}
-            onOpenPicker={() => setPickerSide('to')}
+            onOpenPicker={() => { setActed(true); setPickerSide('to'); }}
           />
         </div>
       </div>
+      </div>
 
+      <div className="instrument-reading">
       {receipt ? (
         // Settlement receipt — the pair's record of the swap. Nothing
         // rotates here; the travel + seal above were the confirm.
@@ -570,16 +585,17 @@ export function PairStage({
             key={`${fromToken}-${toToken}`}
             fromToken={fromToken}
             toToken={toToken}
-            alive
+            alive={alive}
             signals={signals}
             decisionWindow={decisionWindow}
             onExitDecisionWindow={onExitDecisionWindow}
-            onInspect={onInspect}
+            onInspect={onInspect ? () => { setActed(true); onInspect(); } : undefined}
             horizon={horizon}
-            onHorizon={setHorizon}
+            onHorizon={(h) => { setActed(true); setHorizon(h); }}
             whatIf={whatIf}
             onStamp={(stampId) => {
               haptics.tap();
+              setActed(true);
               setStampSheet({ mode: 'watching', entry: 'beat', ids: [stampId] });
             }}
           />
@@ -589,6 +605,7 @@ export function PairStage({
             data-testid="pair-stage-wake"
             onClick={() => {
               haptics.tap();
+              setActed(true);
               onWake();
             }}
             className="mt-3 w-full min-h-[48px] rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
@@ -597,6 +614,7 @@ export function PairStage({
           </button>
         </>
       )}
+      </div>
 
       <TokenPickerSheet
         isOpen={pickerSide !== null}
@@ -607,15 +625,17 @@ export function PairStage({
         title={pickerSide === 'to' ? 'Select To token' : 'Select From token'}
       />
       {stampSheet && (
-        <StampSheet
-          fromToken={fromToken}
-          toToken={toToken}
-          mode={stampSheet.mode}
-          entry={stampSheet.entry}
-          initialStampIds={stampSheet.ids}
-          open
-          onClose={() => setStampSheet(null)}
-        />
+        <div className="pair-stage-detail">
+          <StampSheet
+            fromToken={fromToken}
+            toToken={toToken}
+            mode={stampSheet.mode}
+            entry={stampSheet.entry}
+            initialStampIds={stampSheet.ids}
+            open
+            onClose={() => setStampSheet(null)}
+          />
+        </div>
       )}
     </div>
   );

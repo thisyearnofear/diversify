@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
 import Scrim from "../shared/Scrim";
@@ -138,7 +139,8 @@ export default function TokenPickerSheet({
     return num.toFixed(2);
   };
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <>
       {/* Scrim is a sibling, not a child: nested, its fixed z-[49]
           would paint above the panel (z-auto) and swallow its clicks. */}
@@ -369,6 +371,7 @@ export default function TokenPickerSheet({
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </>,
+    document.body,
   );
 }

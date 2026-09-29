@@ -91,8 +91,17 @@ itself persists the same way (`diversifi.exchange.pair`), so what a
 visitor explored survives into the connected tab; a prefill always
 beats the stored pair.
 
+The pair inspector is one workbench with three mutually exclusive views:
+**Story** carries the corridor's provenance/context, sharing, stamps and
+Ask Guardian; **Route** carries `RouteSchematic`; **Match** carries the
+pair-prefilled `FxNettingRail`. The segmented control swaps purposes in
+place — it never renders the story, route and matching rail as one long
+appendix. A corridor or story selection opens Story; a quote's route
+inspection opens Route; the standalone netting intent still opens the
+rail directly.
+
 The pair is public knowledge, so it's shareable — receipts and
-journeys never are (they're personal). The pair inspector carries one
+journeys never are (they're personal). The Story view carries one
 quiet "Share this pair ↗" that links `/pair/{from}/{to}`: a page whose
 meta and OG card are computed server-side from the two symbols alone —
 headline, what-if, beam tilt all come from the curated corridor
@@ -107,7 +116,7 @@ settle. The old `/share/[id]` page did the
 opposite — percentiles and ratings straight from query strings — and is
 retired to a redirect; its OG endpoint now ignores params entirely.
 
-The same inspector answers questions about the pair. "Ask Guardian
+The Story view answers questions about the pair. "Ask Guardian
 about this pair →" sits next to the share line (only where a corridor
 or provenance exists) and sends exactly two things: the question and
 the two symbols. No fact text travels from the client — the server
@@ -137,8 +146,9 @@ A pair change resets to the resting 5y view.
 Exchange's story is provenance: the pair teaches tokens as money
 with an origin. The corridor line leads with the provenance sentence
 ("from Kenya's floating shilling to allocated gold in a London vault")
-over the 5y corridor track, both tappable into the pair inspector where
-each token answers the same three questions — Origin (place + authority),
+over the 5y corridor track, both tappable into the pair inspector's
+Story view where each token answers the same three questions — Origin
+(place + authority),
 Backing (issuer + reserves), Keys (who can change the rules) — plus one
 dated moment and its sources. Copy comes from the curated
 `token-provenance.ts` registry; tokens without an entry render nothing,
@@ -150,7 +160,7 @@ everything else reads Origin first (`leadForStrategy`). The coin-back
 gesture teaches provenance at the moment of choice: in
 `TokenPickerSheet`, tapping a token's icon flips the row to its
 reverse — the same `ProvenanceCoinBack` the stage's coins show — while
-the row body still selects. The inspector tells the story in three
+the row body still selects. The Story view tells the story in three
 tenses: past (the dated `riskEvents` trail under each side, newest
 first), present (origin, backing, keys), future (`watch` — the cadence
 and mechanism that will decide what happens next, e.g. "CBN Monetary

@@ -100,6 +100,19 @@ export default function WalletButton({
     setDropUp(rect.bottom + 460 > window.innerHeight && rect.top > 460);
   }, [showDropdown]);
 
+  // Click outside to close dropdown
+  useEffect(() => {
+    if (!showDropdown) return;
+    const onPointerDown = (e: PointerEvent) => {
+      const target = e.target;
+      if (target instanceof Node && !wrapperRef.current?.contains(target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [showDropdown]);
+
   useEffect(() => {
     if (address && !prevAddressRef.current) {
       showToast("Wallet connected successfully", "success");
@@ -391,14 +404,6 @@ export default function WalletButton({
               </button>
             </div>
           </div>
-        )}
-
-        {/* Click outside to close dropdown */}
-        {showDropdown && (
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setShowDropdown(false)}
-          />
         )}
       </div>
     );

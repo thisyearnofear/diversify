@@ -36,6 +36,7 @@ interface Props {
   onCancel: () => void;
   accent?: string;
   onChange: (risk: RiskTolerance) => void;
+  onInteraction?: () => void;
   /** Reserve exposure (the anchor when the plan holds it); defaults to USD. */
   floor?: Exposure;
 }
@@ -49,6 +50,7 @@ export function PlanFloorControl({
   onCancel,
   accent,
   onChange,
+  onInteraction,
   floor: floorExposure = "USD",
 }: Props) {
   const selected = value ?? "Balanced";
@@ -74,6 +76,7 @@ export function PlanFloorControl({
       [index]?.focus();
   };
   const choose = (index: number) => {
+    onInteraction?.();
     onChange(OPTIONS[index]);
     focusOption(index);
   };
@@ -112,7 +115,8 @@ export function PlanFloorControl({
               role="radio"
               aria-checked={isSelected}
               tabIndex={isSelected ? 0 : -1}
-              onClick={() => onChange(opt)}
+              onClick={() => { onInteraction?.(); onChange(opt); }}
+              onFocus={() => onInteraction?.()}
               className={`min-h-tap px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected
                   ? `bg-white dark:bg-gray-900 shadow-sm ${accent ? "" : "text-gray-900 dark:text-white"}`

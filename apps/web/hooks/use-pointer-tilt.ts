@@ -11,7 +11,7 @@
  * <motion.div {...tilt.props} style={{ ...tilt.style, transformPerspective: 900 }}>
  */
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
   useMotionValue,
   useReducedMotion,
@@ -29,6 +29,13 @@ export function usePointerTilt(enabled: boolean) {
   const springConfig = { ...springSoft };
   const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [MAX_TILT_DEG, -MAX_TILT_DEG]), springConfig);
   const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-MAX_TILT_DEG, MAX_TILT_DEG]), springConfig);
+
+  useEffect(() => {
+    if (reducedMotion || !enabled) {
+      x.set(0);
+      y.set(0);
+    }
+  }, [reducedMotion, enabled, x, y]);
 
   const onPointerMove = useCallback(
     (e: React.PointerEvent<HTMLElement>) => {

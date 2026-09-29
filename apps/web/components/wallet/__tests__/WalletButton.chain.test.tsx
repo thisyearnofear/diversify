@@ -8,7 +8,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import WalletButton from "../WalletButton";
 import { useWalletContext } from "../WalletProvider";
@@ -65,5 +65,31 @@ describe("WalletButton — chain on the closed face", () => {
     mockWallet({ chainId: null });
     render(<WalletButton />);
     expect(screen.getByRole("button", { name: /On an unknown network/i })).toBeInTheDocument();
+  });
+});
+
+describe("WalletButton — dropdown dismissal", () => {
+  it("Copy Address inside the menu still works and closes the dropdown", async () => {
+    mockWallet();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<WalletButton />);
+    fireEvent.click(screen.getByRole("button", { name: /Wallet menu/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Copy wallet address" }));
+    expect(writeText).toHaveBeenCalledWith("0x1234567890abcdef1234567890abcdef12345678");
+    expect(
+      screen.queryByRole("button", { name: "Copy wallet address" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("a pointerdown outside the wrapper closes the dropdown", () => {
+    mockWallet();
+    render(<WalletButton />);
+    fireEvent.click(screen.getByRole("button", { name: /Wallet menu/i }));
+    expect(screen.getByRole("button", { name: "Copy wallet address" })).toBeInTheDocument();
+    fireEvent.pointerDown(document.body);
+    expect(
+      screen.queryByRole("button", { name: "Copy wallet address" }),
+    ).not.toBeInTheDocument();
   });
 });

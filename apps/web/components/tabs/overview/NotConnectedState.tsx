@@ -112,14 +112,24 @@ export function NotConnectedState({
       )}
       {/* The one CTA — attached to the object, no card wrapper. */}
       <WalletButton variant="primary" className="w-full" />
-      <CurrencyStoryInspector
-        code={inspectedCurrency}
-        onClose={() => setInspectedCurrency(null)}
-      />
     </div>
+  );
+
+  const inspector = (
+    <CurrencyStoryInspector
+      code={inspectedCurrency}
+      onClose={() => setInspectedCurrency(null)}
+    />
   );
 
   const status = <UnconnectedStatusTier onEnableDemo={onEnableDemo} />;
 
-  return <InstrumentShell object={object} status={status} />;
+  return (
+    <InstrumentShell
+      object={object}
+      inspector={inspector}
+      inspectorOpen={inspectedCurrency !== null}
+      status={status}
+    />
+  );
 }

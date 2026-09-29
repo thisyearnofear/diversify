@@ -17,6 +17,7 @@ import { Coin } from '@/components/shared/FloatingCoins';
 import { TrustFootnote } from '@/components/shared/TrustFootnote';
 import type { InflationMoment } from '@/lib/narrative/currency-moment';
 import { CountryOverrideSelect } from './CountryOverrideSelect';
+import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 
 interface Props {
   moment: InflationMoment;
@@ -41,6 +42,10 @@ export function InflationMomentCard({
   className = '',
 }: Props) {
   const reducedMotion = useReducedMotion();
+  const inspecting = useInstrumentInspection();
+  const [acted, setActed] = React.useState(false);
+  React.useEffect(() => setActed(false), [moment.countryCode]);
+  const act = React.useCallback(() => setActed(true), []);
   const fmt = (n: number) => Math.round(n).toLocaleString();
 
   return (
@@ -57,10 +62,14 @@ export function InflationMomentCard({
           everything else is quiet (grammar rule). Gold is the yardstick because
           it has outpaced every fiat — the honest claim I can make for a currency
           I don't have depreciation data on. */}
+      <div className="instrument-composition">
+        <div className="instrument-artifact">
       <div className="flex items-center justify-center">
-        <Coin size={84} symbol={GOLD.glyph} color={GOLD.color} shine />
+        <Coin size={84} symbol={GOLD.glyph} color={GOLD.color} shine={reducedMotion || acted || inspecting ? false : 'once'} />
       </div>
+        </div>
 
+        <div className="instrument-reading">
       {/* The number that carries the meaning — the region's average inflation */}
       <motion.div
         key={`${moment.region}-${moment.inflationRate.toFixed(1)}`}
@@ -86,7 +95,8 @@ export function InflationMomentCard({
             min={0}
             value={moment.savingsAmount}
             aria-label="Your savings amount"
-            onChange={(e) => onAmountChange(Math.max(0, Number(e.target.value) || 0))}
+            onFocus={act}
+            onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
             className="w-24 text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
           />
         </label>{' '}
@@ -96,6 +106,8 @@ export function InflationMomentCard({
         </strong>{' '}
         a year to inflation.
       </p>
+        </div>
+      </div>
 
       {onProtect && (
         <button
@@ -118,11 +130,13 @@ export function InflationMomentCard({
       {/* Whose savings — diaspora override. Detection is location, risk is
           personal; lets an expat re-point the moment at their home country. */}
       {onChangeCountry && (
-        <CountryOverrideSelect
-          currentCountryCode={moment.countryCode}
-          currentCountryName={moment.countryName}
-          onChange={onChangeCountry}
-        />
+        <div className="instrument-inspect-hidden">
+          <CountryOverrideSelect
+            currentCountryCode={moment.countryCode}
+            currentCountryName={moment.countryName}
+            onChange={(code) => { act(); onChangeCountry(code); }}
+          />
+        </div>
       )}
     </div>
   );

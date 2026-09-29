@@ -63,38 +63,19 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
   });
 
-  it('shows a clearly labelled illustrative resilience preview, then resets', async () => {
-    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval'] });
-    try {
-      render(
-        <ProtectionPlanRing
-          strategyKey="africapitalism"
-          portfolio={portfolio}
-          selectedToken={null}
-          onSelectToken={() => {}}
-        />,
-      );
-      const btn = screen.getByTestId('stress-test-btn');
-      expect(btn).toHaveAccessibleName('Preview illustrative 30 percent currency shock');
-      expect(btn).toHaveTextContent('Test defense');
-
-      fireEvent.click(btn);
-
-      expect(screen.getByText('Reserve ready')).toBeInTheDocument();
-      expect(screen.getByText('Illustrative 30% shock')).toBeInTheDocument();
-      expect(screen.getByText(/dollar reserve remains available/)).toBeInTheDocument();
-      expect(btn).toBeDisabled();
-
-      await act(async () => {
-        vi.advanceTimersByTime(2800);
-      });
-
-      expect(screen.queryByText('Reserve ready')).not.toBeInTheDocument();
-      expect(btn).toHaveTextContent('Test defense');
-      expect(btn).not.toBeDisabled();
-    } finally {
-      vi.useRealTimers();
-    }
+  it('renders no stress-test affordance — the ring carries no defense verdict', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('stress-test-btn')).not.toBeInTheDocument();
+    expect(screen.queryByText('Test defense')).not.toBeInTheDocument();
+    expect(screen.queryByText('Reserve ready')).not.toBeInTheDocument();
+    expect(screen.queryByText(/shock/i)).not.toBeInTheDocument();
   });
 
   it('does not crash when projections is missing entirely', () => {
@@ -1058,6 +1039,81 @@ describe('ProtectionPlanRing — idle face: one fact, dwell swap, privacy', () =
       />,
     );
     expect(screen.queryByTestId('hole-face-dots')).not.toBeInTheDocument();
+  });
+
+  it('Other replaces the legend with the remainder rows and returns', () => {
+    const manyWallet = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: 'Celo',
+          totalValue: 1000,
+          tokenCount: 7,
+          balances: [
+            { symbol: 'KESm', value: 300, balance: '300', formattedBalance: '300', name: 'KESm', chainId: 42220, chainName: 'Celo' },
+            { symbol: 'cUSD', value: 200, balance: '200', formattedBalance: '200', name: 'cUSD', chainId: 42220, chainName: 'Celo' },
+            { symbol: 'cEUR', value: 100, balance: '100', formattedBalance: '100', name: 'cEUR', chainId: 42220, chainName: 'Celo' },
+            { symbol: 'PAXG', value: 100, balance: '100', formattedBalance: '100', name: 'PAXG', chainId: 42220, chainName: 'Celo' },
+            { symbol: 'cREAL', value: 100, balance: '100', formattedBalance: '100', name: 'cREAL', chainId: 42220, chainName: 'Celo' },
+            { symbol: 'COPm', value: 100, balance: '100', formattedBalance: '100', name: 'COPm', chainId: 42220, chainName: 'Celo' },
+            { symbol: 'PHPm', value: 100, balance: '100', formattedBalance: '100', name: 'PHPm', chainId: 42220, chainName: 'Celo' },
+          ],
+        },
+      ],
+    } as unknown as MultichainPortfolio;
+    const onSelect = vi.fn();
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={manyWallet}
+        selectedToken={null}
+        onSelectToken={onSelect}
+      />,
+    );
+    const other = screen.getByTestId('shield-other');
+    expect(within(other).getByText('Other')).toBeInTheDocument();
+    expect(within(other).getByText('2 small positions')).toBeInTheDocument();
+    expect(screen.queryByTestId('shield-other-back')).not.toBeInTheDocument();
+
+    const ring = screen.getByRole('group', { name: 'Allocation ring' });
+    const sliceSum = (group: HTMLElement) =>
+      within(group)
+        .getAllByRole('button')
+        .map((b) => Number((b.getAttribute('aria-label') ?? '').match(/: ([\d.]+)%/)?.[1] ?? NaN))
+        .reduce((a, b) => a + b, 0);
+    const collapsedSum = sliceSum(ring);
+
+    fireEvent.click(other);
+    expect(screen.getByTestId('shield-other-back')).toBeInTheDocument();
+    expect(screen.queryByTestId('shield-other')).not.toBeInTheDocument();
+    expect(screen.getByText(/percentages stay of the whole wallet/)).toBeInTheDocument();
+
+    expect(Math.abs(sliceSum(ring) - collapsedSum)).toBeLessThan(0.001);
+    expect(within(ring).getByRole('button', { name: /COPm — wallet holding/ })).toBeInTheDocument();
+    expect(within(ring).getByRole('button', { name: /PHPm — wallet holding/ })).toBeInTheDocument();
+
+    const legend = screen.getByTestId('shield-legend');
+    expect(within(legend).getByText('COPm')).toBeInTheDocument();
+    expect(within(legend).getByText('PHPm')).toBeInTheDocument();
+    expect(within(legend).queryByText('Shilling')).not.toBeInTheDocument();
+
+    fireEvent.click(
+      within(ring).getByRole('button', { name: /KESm — wallet holding/ }),
+    );
+    expect(onSelect).toHaveBeenCalledWith('KESm');
+    expect(screen.getByTestId('shield-other')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('shield-other'));
+    fireEvent.click(
+      within(ring).getByRole('button', { name: /COPm — wallet holding/ }),
+    );
+    expect(onSelect).toHaveBeenCalledWith('COPm');
+
+    fireEvent.click(screen.getByTestId('shield-other-back'));
+    expect(screen.getByTestId('shield-other')).toBeInTheDocument();
+    expect(screen.queryByTestId('shield-other-back')).not.toBeInTheDocument();
   });
 
   it('reduced motion never auto-swaps the face', async () => {

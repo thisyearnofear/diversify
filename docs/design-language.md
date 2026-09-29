@@ -260,6 +260,21 @@ Each tab is an **instrument**, not a feed of cards:
    quiet). Persona retargets the object; it does not reorder a module
    list. Leftover jobs go to Ask Guardian, not a basement of features.
 
+**Desktop composes the workbench; it does not calibrate page height.**
+`InstrumentShell` owns the shared spatial grammar: a deliberate resting
+stage, the object, the selected inspector, and the status line. At `lg`
+the resting shell uses one viewport-aware stage budget across all four
+tabs; when the shell itself reaches 720px, an open inspector becomes the
+right-hand workbench column instead of pushing the object farther down.
+Below that width — and on mobile — the same inspector folds beneath the
+object. Objects that need a wider reading compose their existing
+`.instrument-artifact`, `.instrument-reading`, and `.instrument-controls`
+when their own 560px container allows it; `.instrument-inspect-hidden`
+marks secondary object content that yields while a selection is open.
+Status spans the whole workbench. Never reintroduce a per-tab height
+flag, shrink type, or add filler to make the tabs look the same length —
+equalise the orientation and depth of interaction, not the pixel count.
+
 **Ask Guardian is a session thread, not a durable journal.** The visible
 chat lives only while the drawer is open: closing it or choosing "New
 conversation" clears the transcript so the next open is empty — matching

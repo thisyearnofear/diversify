@@ -42,7 +42,7 @@ import type { CapitalHistory } from "@diversifi/shared/src/services/capital-hist
  *  rail alone when the user came to match currencies directly, or the
  *  wallet's capital journey (settled legs, read from the chain). */
 type InspectorSel =
-  | { kind: "pair"; fromToken: string; toToken: string }
+  | { kind: "pair"; fromToken: string; toToken: string; view?: "story" | "route" }
   | { kind: "netting" }
   | { kind: "journey" }
   | { kind: "arc" }
@@ -214,10 +214,9 @@ function PairAskLine({
   );
 }
 
-/** The pair inspector — route schematic plus the corridor context: what
- *  these two currencies are and how they've treated each other. The
- *  netting rail rides here too: counterparty matching is a settlement
- *  option of the selected pair, not a separate surface. */
+/** The pair inspector is a single workbench with mutually exclusive
+ *  Story, Route, and Match views. Journey and standalone netting remain
+ *  separate selections because they answer different questions. */
 function PairInspector({
   selection,
   userRegion,
@@ -243,6 +242,12 @@ function PairInspector({
   // rail on its own defaults.
   const sellCode = pair ? corridorSideFor(pair.fromToken)?.code : undefined;
   const buyCode = pair ? corridorSideFor(pair.toToken)?.code : undefined;
+  const [pairView, setPairView] = useState<"story" | "route" | "match">(
+    pair?.view ?? "story",
+  );
+  useEffect(() => {
+    setPairView(pair?.view ?? "story");
+  }, [pair?.fromToken, pair?.toToken, pair?.view]);
 
   return (
     <InspectorSheet
@@ -269,48 +274,70 @@ function PairInspector({
       ) : null}
       {pair ? (
         <>
-          <RouteSchematic
-            fromToken={pair.fromToken}
-            toToken={pair.toToken}
-            caption={userRegion}
-          />
-          <CorridorDetail
-            fromToken={pair.fromToken}
-            toToken={pair.toToken}
-            lead={lead}
-          />
-          <PairShareLine from={pair.fromToken} to={pair.toToken} />
-          {onStampWatch && stampsForPair(pair.fromToken, pair.toToken).length > 0 && (
-            // Stamps — seal what you're watching onto a postcard. Same
-            // quiet line grammar as Share/Ask; absent when the pair has
-            // no facts to stamp.
-            <button
-              type="button"
-              data-testid="stamp-watching"
-              onClick={() => onStampWatch(pair.fromToken, pair.toToken)}
-              className="mt-2 min-h-11 px-1 text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-            >
-              Stamp what you&rsquo;re watching ✦
-            </button>
+          <div
+            role="group"
+            aria-label="Pair detail"
+            className="mb-3 grid grid-cols-3 gap-1 rounded-full bg-gray-100 p-1 dark:bg-gray-800"
+          >
+            {(["story", "route", "match"] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={pairView === v}
+                onClick={() => setPairView(v)}
+                className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                  pairView === v
+                    ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                }`}
+              >
+                {v === "story" ? "Story" : v === "route" ? "Route" : "Match"}
+              </button>
+            ))}
+          </div>
+          {pairView === "story" ? (
+            <>
+              <CorridorDetail
+                fromToken={pair.fromToken}
+                toToken={pair.toToken}
+                lead={lead}
+              />
+              <PairShareLine from={pair.fromToken} to={pair.toToken} />
+              {onStampWatch && stampsForPair(pair.fromToken, pair.toToken).length > 0 && (
+                // Stamps — seal what you're watching onto a postcard. Same
+                // quiet line grammar as Share/Ask; absent when the pair has
+                // no facts to stamp.
+                <button
+                  type="button"
+                  data-testid="stamp-watching"
+                  onClick={() => onStampWatch(pair.fromToken, pair.toToken)}
+                  className="mt-2 min-h-11 px-1 text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  Stamp what you&rsquo;re watching ✦
+                </button>
+              )}
+              <PairAskLine
+                from={pair.fromToken}
+                to={pair.toToken}
+                onClose={onClose}
+              />
+            </>
+          ) : pairView === "route" ? (
+            <RouteSchematic
+              fromToken={pair.fromToken}
+              toToken={pair.toToken}
+              caption={userRegion}
+            />
+          ) : (
+            <FxNettingRail
+              initialSell={sellCode}
+              initialBuy={buyCode}
+              leadIn="This pair can also settle peer-to-peer — match a counterparty at mid-market instead of taking the DEX route."
+            />
           )}
-          <PairAskLine
-            from={pair.fromToken}
-            to={pair.toToken}
-            onClose={onClose}
-          />
         </>
       ) : null}
-      {!isJourney && (
-      <FxNettingRail
-        initialSell={sellCode}
-        initialBuy={buyCode}
-        leadIn={
-          pair
-            ? "This pair can also settle peer-to-peer — match a counterparty at mid-market instead of taking the DEX route."
-            : undefined
-        }
-      />
-      )}
+      {selection?.kind === "netting" && <FxNettingRail />}
     </InspectorSheet>
   );
 }
@@ -482,14 +509,15 @@ export default function ExchangeTab({
     // sits beside them (the rail works walletless in observer mode).
     return (
       <InstrumentShell
+        inspectorOpen={Boolean(inspectorSel)}
         object={
           <div data-testid="exchange-swap-object" className="w-full">
             <SwapTab
               userRegion={userRegion}
               inflationData={inflationData}
               instrument
-              onInspectQuote={(fromToken, toToken) =>
-                setInspectorSel({ kind: "pair", fromToken, toToken })
+              onInspectQuote={(fromToken, toToken, view) =>
+                setInspectorSel({ kind: "pair", fromToken, toToken, view })
               }
               quoteInspected={inspectorSel?.kind === "pair"}
               capitalHistory={capitalHistory}
@@ -557,6 +585,7 @@ export default function ExchangeTab({
 
   return (
     <InstrumentShell
+      inspectorOpen={Boolean(inspectorSel)}
       object={
         <div data-testid="exchange-swap-object" className="w-full">
           <SwapTab
@@ -566,8 +595,8 @@ export default function ExchangeTab({
             refreshChainId={refreshChainId}
             isBalancesLoading={isBalancesLoading}
             instrument
-            onInspectQuote={(fromToken, toToken) =>
-              setInspectorSel({ kind: "pair", fromToken, toToken })
+            onInspectQuote={(fromToken, toToken, view) =>
+              setInspectorSel({ kind: "pair", fromToken, toToken, view })
             }
             quoteInspected={inspectorSel?.kind === "pair"}
             capitalHistory={capitalHistory}

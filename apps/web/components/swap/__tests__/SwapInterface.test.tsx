@@ -9,7 +9,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup, fireEvent, act } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
 
@@ -231,6 +231,19 @@ describe('SwapInterface — pair stage at rest', () => {
     fireEvent.click(screen.getByTestId('pair-stage-wake'));
     // Still shows the corridor context as status…
     expect(screen.getByTestId('corridor-line')).toBeInTheDocument();
+  });
+
+  it('the swap row holds only From, the pivot, and To — quote, status, and action stay outside', () => {
+    renderSwap({ address: '0xabc' });
+    fireEvent.click(screen.getByTestId('pair-stage-wake'));
+    const row = document.querySelector('.ticket-swap-row') as HTMLElement;
+    expect(row).not.toBeNull();
+    expect(row.children).toHaveLength(3);
+    expect(within(row.children[0] as HTMLElement).getByLabelText('From amount')).toBeInTheDocument();
+    expect(within(row.children[1] as HTMLElement).getByRole('button', { name: 'Switch tokens' })).toBeInTheDocument();
+    expect(within(row.children[2] as HTMLElement).getByText('To')).toBeInTheDocument();
+    expect(row.contains(screen.getByTestId('corridor-line'))).toBe(false);
+    expect(row.contains(screen.getByRole('button', { name: 'Enter amount' }))).toBe(false);
   });
 });
 

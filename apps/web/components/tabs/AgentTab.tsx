@@ -91,8 +91,11 @@ export default function AgentTab({
     // empty state were the first two). One sentence states the object's job;
     // the connect CTA attaches; trust + demo live in the shared status tier.
     const object = (
-      <div data-testid="guardian-unconnected-object" className="flex flex-col items-center text-center py-2">
-        <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
+      <div data-testid="guardian-unconnected-object" className="instrument-composition text-center py-2">
+        <div className="instrument-artifact flex justify-center">
+          <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
+        </div>
+        <div className="instrument-reading flex flex-col items-center">
         <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
           Guardian
         </h2>
@@ -102,6 +105,7 @@ export default function AgentTab({
         </p>
         <div className="mt-4 w-full">
           <WalletButton variant="primary" className="w-full" />
+        </div>
         </div>
       </div>
     );
@@ -210,10 +214,23 @@ function ConnectedAgent({
     });
   }, [liveFeed, liveCycles, shieldPlan, customPlan]);
   const liveAlive =
-    sel === null && !guardianContext && !g.showPermissionModal;
+    sel === null &&
+    !guardianContext &&
+    !g.showPermissionModal &&
+    !g.isAnalyzing &&
+    !g.isRunningLoop &&
+    !g.showGrantConfirmModal &&
+    !g.showStrategySwitcher;
 
   const budgetShowing =
     g.hasValidPermission && g.sessionInfo != null && g.dailyLimit > 0;
+
+  const inspectorActive = Boolean(guardianContext) || sel !== null;
+  const ctaHidden =
+    Boolean(guardianContext) ||
+    (sel === "journal" &&
+      (g.guardianState === "monitoring" || Boolean(g.pendingMove))) ||
+    sel === "bounds";
 
   // One CTA per state — the setup/fund action belongs to the object, the
   // monitoring state's CTA opens the journal with a live dry-run.
@@ -259,7 +276,7 @@ function ConnectedAgent({
             dailyLimit={g.dailyLimit}
             latestEvent={g.guardianProofEvents[0] ?? null}
             latestCall={g.latestCall}
-            ctaLabel={cta.label}
+            ctaLabel={ctaHidden ? null : cta.label}
             onCta={cta.action}
             onOpenJournal={() => setSel("journal")}
             onOpenBounds={() => setSel("bounds")}
@@ -284,6 +301,7 @@ function ConnectedAgent({
     <>
     <InstrumentShell
       object={object}
+      inspectorOpen={inspectorActive}
       inspector={
         <InspectorSheet
           selectedId={guardianContext ? "context" : sel}

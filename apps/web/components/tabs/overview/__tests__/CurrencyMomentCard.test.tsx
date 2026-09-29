@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, within, act } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { CurrencyMomentCard } from '../CurrencyMomentCard';
 import type { NarrativeMoment } from '@/lib/narrative/currency-moment';
@@ -25,6 +25,8 @@ vi.mock('framer-motion', async (importOriginal) => {
 });
 
 import { haptics } from '@/lib/haptics';
+import { InstrumentShell } from '@/components/shared/InstrumentShell';
+import { LIVE_LINE_DWELL_MS } from '@/components/shared/LiveLine';
 
 const MOMENT: NarrativeMoment = {
   currencyCode: 'GHS',
@@ -246,6 +248,70 @@ describe('CurrencyMomentCard — live line', () => {
     const moment = { ...MOMENT, currencyCode: 'XYZ' };
     render(<CurrencyMomentCard {...baseProps} moment={moment} />);
     expect(screen.queryByTestId('home-live-line')).not.toBeInTheDocument();
+  });
+
+  const TWO_BEATS = {
+    recent: [
+      {
+        action: 'MACRO_SIGNAL:macro',
+        targetToken: 'GHSm',
+        reasoning: 'Bank of Ghana held the benchmark rate. Source: https://reuters.example/a',
+        timestamp: Math.floor(Date.now() / 1000) - 86400,
+      },
+      {
+        action: 'MACRO_SIGNAL:macro',
+        targetToken: 'GHSm',
+        reasoning: 'Cedi auction oversubscribed. Source: https://reuters.example/b',
+        timestamp: Math.floor(Date.now() / 1000) - 43200,
+      },
+    ],
+  };
+
+  it('rotates while resting, then stills once the visitor acts', () => {
+    vi.useFakeTimers();
+    try {
+      mocks.feed.data = TWO_BEATS;
+      render(<CurrencyMomentCard {...baseProps} liveAlive />);
+      const line = screen.getByTestId('home-live-line');
+      const first = line.textContent;
+      act(() => {
+        vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 1000);
+      });
+      expect(line.textContent).not.toBe(first);
+
+      fireEvent.click(screen.getByRole('button', { name: '3Y' }));
+      const settled = line.textContent;
+      act(() => {
+        vi.advanceTimersByTime(3 * LIVE_LINE_DWELL_MS);
+      });
+      expect(line.textContent).toBe(settled);
+    } finally {
+      vi.useRealTimers();
+      mocks.feed.data = null;
+    }
+  });
+
+  it('an open parent inspector stills the line even before the visitor acts', () => {
+    vi.useFakeTimers();
+    try {
+      mocks.feed.data = TWO_BEATS;
+      render(
+        <InstrumentShell
+          inspectorOpen
+          inspector={<div data-testid="probe-inspector" />}
+          object={<CurrencyMomentCard {...baseProps} liveAlive />}
+        />,
+      );
+      const line = screen.getByTestId('home-live-line');
+      const first = line.textContent;
+      act(() => {
+        vi.advanceTimersByTime(3 * LIVE_LINE_DWELL_MS);
+      });
+      expect(line.textContent).toBe(first);
+    } finally {
+      vi.useRealTimers();
+      mocks.feed.data = null;
+    }
   });
 });
 

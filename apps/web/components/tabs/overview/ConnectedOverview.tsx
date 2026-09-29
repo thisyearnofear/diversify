@@ -281,7 +281,7 @@ export function ConnectedOverview({
       onSelectBenchmark={handleMomentBenchmark}
       onSelectHorizon={handleMomentHorizon}
       onAmountChange={setSavingsAmount}
-      onProtect={() => setActiveTab("protect")}
+      onProtect={focusedRegion === null ? () => setActiveTab("protect") : undefined}
       protectLabel={philosophyName ? `See your ${philosophyName} shield` : undefined}
       onChangeCountry={onChangeCountry}
       frame={frame}
@@ -521,7 +521,7 @@ export function ConnectedOverview({
         </div>
       )}
       <InstrumentShell
-        layout={focusedRegion === null ? "calibrated" : "natural"}
+        inspectorOpen={focusedRegion !== null || inspectedCurrency !== null}
         object={object}
         inspector={inspector}
         status={status}

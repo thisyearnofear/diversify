@@ -16,7 +16,7 @@
  * fabricated zero). Idle memory (sinceHint) lives in ShieldStatusTier,
  * not stacked in the hole.
  */
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
 import { TokenIcon } from '@/components/shared/TokenIcon';
@@ -33,6 +33,7 @@ import { buildWalletPortfolioView, heldAsSymbol } from '@/lib/wallet-portfolio-v
 import { useBalanceVisibility } from '@/context/app/BalanceVisibilityContext';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
+import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 import { rwaLegFor } from './rwa-assets';
 
 /** Selection id the parent uses for the tokenized-asset (RWA) lens. */
@@ -91,6 +92,7 @@ interface Props {
    * quiet; a ring with no tokenized asset gets one labelled preview wedge.
    */
   sleeveOpen?: boolean;
+  stilled?: boolean;
   balancePreview?: boolean;
   savedLegs?: PlanLeg[];
   controls?: React.ReactNode;
@@ -118,6 +120,7 @@ export function ProtectionPlanRing({
   holeOverride,
   holeActionLabel,
   sleeveOpen = false,
+  stilled = false,
   balancePreview = false,
   savedLegs = [],
   controls,
@@ -182,7 +185,10 @@ export function ProtectionPlanRing({
   const gapPts = selected ? selected.percent - selectedHeld : 0;
 
   const reducedMotion = useReducedMotion();
-  const tilt = usePointerTilt(!reducedMotion);
+  const inspecting = useInstrumentInspection();
+  const [holeActed, setHoleActed] = useState(false);
+  const acted = holeActed || stilled || inspecting;
+  const tilt = usePointerTilt(!reducedMotion && !acted);
   const alignmentFormatted = useCountUp(alignmentScore ?? 0, {
     format: (n) => `${Math.round(n)}%`,
   });
@@ -215,24 +221,23 @@ export function ProtectionPlanRing({
     totalValue > 0 &&
     alignmentScore != null;
   const [idleFace, setIdleFace] = useState<'money' | 'align'>('money');
-  const [holeActed, setHoleActed] = useState(false);
   const [previewDone, setPreviewDone] = useState(false);
   // One-shot dwell preview: 8s idle → swap to the alignment face, hold ~3s,
   // return to the total and never run again. Any action (tap, slice, legend
   // row, badge) latches stillness; reduced motion never auto-swaps.
   useEffect(() => {
-    if (!flipAvailable || reducedMotion || holeActed || previewDone || idleFace !== 'money') return;
+    if (!flipAvailable || reducedMotion || acted || previewDone || idleFace !== 'money') return;
     const timer = setTimeout(() => setIdleFace('align'), 8000);
     return () => clearTimeout(timer);
-  }, [flipAvailable, reducedMotion, holeActed, previewDone, idleFace]);
+  }, [flipAvailable, reducedMotion, acted, previewDone, idleFace]);
   useEffect(() => {
-    if (previewDone || holeActed || idleFace !== 'align') return;
+    if (previewDone || acted || idleFace !== 'align') return;
     const timer = setTimeout(() => {
       setIdleFace('money');
       setPreviewDone(true);
     }, 3000);
     return () => clearTimeout(timer);
-  }, [idleFace, holeActed, previewDone]);
+  }, [idleFace, acted, previewDone]);
   const flipFace = () => {
     haptics.tap();
     setHoleActed(true);
@@ -243,20 +248,6 @@ export function ProtectionPlanRing({
   // when a wallet holds 10+ tokens — the ring and legend never exceed
   // 5 primary rows + one Other rewrites-artefact row (taps expand in place).
   const [showDust, setShowDust] = useState(false);
-  const [isStressTesting, setIsStressTesting] = useState(false);
-  const stressTestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => {
-    if (stressTestTimer.current) clearTimeout(stressTestTimer.current);
-  }, []);
-  const handleStressTest = () => {
-    if (isStressTesting) return;
-    setIsStressTesting(true);
-    haptics.confirm();
-    stressTestTimer.current = setTimeout(() => {
-      stressTestTimer.current = null;
-      setIsStressTesting(false);
-    }, 2800);
-  };
   const PRIMARY_ROWS = 5;
   const DUST_THRESHOLD_PCT = 2;
 
@@ -274,27 +265,31 @@ export function ProtectionPlanRing({
 
   const needsDisclosure = enriched.length > PRIMARY_ROWS + 1;
   const primary = useMemo(() => {
-    if (!needsDisclosure || showDust) return enriched;
+    if (!needsDisclosure) return enriched;
     // Keep large positions + any selected token (so selection never hides)
     const significant = enriched.filter((e) => e.rank >= DUST_THRESHOLD_PCT || e.slice.id === selectedToken);
     if (significant.length >= PRIMARY_ROWS) return significant.slice(0, PRIMARY_ROWS);
     // Not enough significant — fill to PRIMARY_ROWS from sorted order
     const pool = enriched.filter((e) => !significant.some((s) => s.slice.id === e.slice.id));
     return [...significant, ...pool.slice(0, PRIMARY_ROWS - significant.length)].sort((a, b) => b.rank - a.rank);
-  }, [enriched, needsDisclosure, showDust, selectedToken]);
+  }, [enriched, needsDisclosure, selectedToken]);
 
   const dust = useMemo(() => {
-    if (!needsDisclosure || showDust) return [];
+    if (!needsDisclosure) return [];
     const primaryIds = new Set(primary.map((p) => p.slice.id));
     return enriched.filter((e) => !primaryIds.has(e.slice.id));
-  }, [enriched, primary, needsDisclosure, showDust]);
+  }, [enriched, primary, needsDisclosure]);
 
   const dustTotalHeld = useMemo(() => dust.reduce((sum, d) => sum + d.held, 0), [dust]);
   const dustTotalPlan = useMemo(() => dust.reduce((sum, d) => sum + d.alloc.percent, 0), [dust]);
 
   // Ring slices shown: collapsed → primary + aggregated Other; expanded → all individually
   const ringSlicesForDisplay: RingSlice[] = useMemo(() => {
-    if (!needsDisclosure || showDust) return slices;
+    if (!needsDisclosure) return slices;
+    if (showDust) {
+      const dustIds = new Set(dust.map((d) => d.slice.id));
+      return slices.map((s) => dustIds.has(s.id) ? s : { ...s, color: QUIET_GRAY });
+    }
     if (dust.length === 0) return slices;
     const primaryIds = new Set(primary.map((p) => p.slice.id));
     const base = slices.filter((s) => primaryIds.has(s.id));
@@ -333,6 +328,10 @@ export function ProtectionPlanRing({
       },
     ];
   }, [sleeveOpen, ringSlicesForDisplay, rwaSlices.length, archetype]);
+
+  useEffect(() => {
+    if (showDust && (!needsDisclosure || dust.length === 0)) setShowDust(false);
+  }, [showDust, needsDisclosure, dust.length]);
 
   if (!archetype) return null;
   // A compact ring with a holeOverride still draws — the empty track +
@@ -375,23 +374,6 @@ export function ProtectionPlanRing({
         number: null as React.ReactNode,
         label: holeOverride.label,
         hint: holeOverride.hint ?? '',
-      };
-    }
-    if (isStressTesting) {
-      return {
-        number: (
-          <motion.span
-            key="stress-score"
-            initial={reducedMotion ? false : { scale: 0.8 }}
-            animate={reducedMotion ? {} : { scale: [0.8, 1.15, 1] }}
-            transition={{ duration: 0.4 }}
-            className="text-emerald-600 dark:text-emerald-400 font-black"
-          >
-            Reserve ready
-          </motion.span>
-        ),
-        label: "Illustrative 30% shock",
-        hint: `${floorPercent(allocations, floor)}% ${reserveLabel(floor).toLowerCase()} reserve remains available`,
       };
     }
     if (balancePreview) {
@@ -487,7 +469,11 @@ export function ProtectionPlanRing({
   })();
 
   return (
-    <div className="w-full">
+    <div
+      className="w-full"
+      onPointerDownCapture={() => setHoleActed(true)}
+      onFocusCapture={() => setHoleActed(true)}
+    >
       {compact ? null : (
       <div className="flex items-center justify-between gap-2 mb-3">
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -496,29 +482,6 @@ export function ProtectionPlanRing({
         {/* Armed-state seal — stamps once per mount (keyed to the plan),
             then holds. The §5 confirm artefact for committing a plan. */}
         <div className="flex items-center gap-2">
-          {!balancePreview && !empty && (
-            <>
-              <button
-                type="button"
-                data-testid="stress-test-btn"
-                aria-label="Preview illustrative 30 percent currency shock"
-                aria-describedby="stress-test-description"
-                onClick={handleStressTest}
-                disabled={isStressTesting}
-                className={`text-3xs font-bold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
-                  isStressTesting
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 ring-2 ring-emerald-500/30"
-                    : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
-                }`}
-              >
-                <span aria-hidden="true">{isStressTesting ? "🛡️" : "⚡"}</span>
-                <span>{isStressTesting ? "Previewing" : "Test defense"}</span>
-              </button>
-              <span id="stress-test-description" className="sr-only">
-                This is an illustrative resilience preview, not a forecast or settlement quote.
-              </span>
-            </>
-          )}
           {!balancePreview && (
             <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
           )}
@@ -556,18 +519,11 @@ export function ProtectionPlanRing({
       </div>
       )}
 
-      <div className="flex justify-center">
+      <div className={compact ? undefined : "instrument-composition"}>
+      <div className={compact ? "flex justify-center" : "instrument-artifact flex justify-center"}>
         <motion.div
           layout={reducedMotion ? undefined : true}
           className="relative"
-          animate={
-            isStressTesting && !reducedMotion
-              ? {
-                  scale: [1, 1.04, 0.97, 1.01, 1],
-                  rotate: [0, -1, 1, -0.5, 0],
-                }
-              : {}
-          }
           transition={{ duration: 0.6, ease: "easeInOut" }}
           style={{ ...tilt.style, transformPerspective: 900 }}
           {...tilt.props}
@@ -604,6 +560,7 @@ export function ProtectionPlanRing({
                 setShowDust(true);
                 return;
               }
+              if (showDust && primary.some(({ slice }) => slice.id === id)) setShowDust(false);
               onSelectToken(selectedToken === id ? null : id);
             }}
             ghost={
@@ -630,7 +587,6 @@ export function ProtectionPlanRing({
                   {hole.hint ? (
                     <span
                       className="text-2xs text-gray-500 dark:text-gray-400"
-                      aria-live={isStressTesting ? "polite" : undefined}
                     >
                       {hole.hint}
                     </span>
@@ -703,11 +659,23 @@ export function ProtectionPlanRing({
         </motion.div>
       </div>
 
-      {!compact && controls}
+      {!compact && (
+        <div className="instrument-controls instrument-inspect-hidden">
+          {controls}
+        </div>
+      )}
 
       {!compact && (
-      <div className="mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]">
-        {(showDust ? enriched : primary).map(({ slice, alloc: a, held }, idx) => {
+      <div
+        data-testid="shield-legend"
+        className="instrument-reading instrument-inspect-hidden mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]"
+      >
+        {showDust && (
+          <p className="pb-2 text-2xs font-semibold text-gray-500 dark:text-gray-400">
+            Other · {dust.length} small positions — percentages stay of the whole {balancePreview || empty || walletless || forcePlanLegs ? 'plan' : 'wallet'}
+          </p>
+        )}
+        {(showDust ? dust : primary).map(({ slice, alloc: a, held }, idx) => {
           const isSelected = selectedToken === a.token;
           return (
             <motion.button
@@ -750,7 +718,7 @@ export function ProtectionPlanRing({
             </motion.button>
           );
         })}
-        {dust.length > 0 && (
+        {!showDust && dust.length > 0 && (
           <motion.button
             key="__other__"
             type="button"
@@ -766,33 +734,25 @@ export function ProtectionPlanRing({
               <span className="block text-sm font-bold text-gray-900 dark:text-white">Other</span>
               <span className="block text-2xs text-gray-500 dark:text-gray-400 truncate">{dust.length} small positions</span>
             </span>
-            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{balancePreview ? `${dustTotalPlan.toFixed(0)}% preview` : `${fmt(dustTotalHeld)} held`}</span>
+            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 tabular-nums">{balancePreview ? `${dustTotalPlan.toFixed(0)}% preview` : `${dustTotalHeld.toFixed(0)}% held`}</span>
           </motion.button>
         )}
-        <AnimatePresence initial={false}>
-          {showDust && dust.length === 0 && needsDisclosure && (
-            <motion.div
-              key="collapse"
-              initial={reducedMotion ? false : { opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-              className="overflow-hidden"
-            >
-              <button
-                type="button"
-                onClick={() => { haptics.tap(); setShowDust(false); }}
-                className="w-full min-h-tap py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              >
-                Show less
-              </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {showDust && (
+          <button
+            type="button"
+            data-testid="shield-other-back"
+            onClick={() => { haptics.tap(); setShowDust(false); }}
+            className="w-full min-h-tap py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          >
+            ← Back to allocations
+          </button>
+        )}
       </div>
       )}
+      </div>
+
       {!compact && showProjections && (
-        <p className="text-2xs text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
+        <p className="instrument-inspect-hidden text-2xs text-gray-500 dark:text-gray-400 mt-3 border-t border-gray-100 dark:border-white/[0.06] pt-2">
           3-year path, projected · the plan keeps{' '}
           <strong className="text-gray-900 dark:text-white tabular-nums">
             {fmt(purchasingPowerPreserved)}

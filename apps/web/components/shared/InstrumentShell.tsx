@@ -18,8 +18,14 @@
  * positioned across tabs — no per-tab copy-paste of the same five props.
  */
 
-import React from "react";
+import React, { createContext, useContext } from "react";
 import { DataFreshnessIndicator } from "./DataFreshnessIndicator";
+
+const InstrumentInspectionContext = createContext(false);
+
+export function useInstrumentInspection(): boolean {
+  return useContext(InstrumentInspectionContext);
+}
 
 /** The one instrument surface — every tab, every morph, same card. */
 const SURFACE =
@@ -38,12 +44,11 @@ export interface FreshnessInfo {
 }
 
 interface InstrumentShellProps {
-  /** Desktop resting instruments use a calibrated vertical budget; all other states retain natural flow. */
-  layout?: "natural" | "calibrated";
   /** The manipulable object — ring, dial, ticket, picker. */
   object: React.ReactNode;
   /** Selection-bound inspector. Render `InspectorSheet`; closed when idle. */
   inspector?: React.ReactNode;
+  inspectorOpen?: boolean;
   /** Quiet status / trust / transition — one line, not a product. */
   status?: React.ReactNode;
   /** Portfolio — when present, the shared freshness indicator renders above status. */
@@ -60,49 +65,55 @@ interface InstrumentShellProps {
 
 export function InstrumentShell({
   object,
-  layout = "natural",
   inspector,
   status,
   portfolio,
   onRefresh,
   pattern = null,
+  inspectorOpen = false,
   className = "",
 }: InstrumentShellProps) {
   return (
-    <div
-      className={`relative ${SURFACE} ${
-        layout === "calibrated" ? "lg:min-h-[580px] lg:flex lg:flex-col" : ""
-      } ${className}`.trim()}
-    >
-      {pattern ? (
+    <InstrumentInspectionContext.Provider value={inspectorOpen}>
+      <div
+        className={`instrument-shell relative ${SURFACE} ${className}`.trim()}
+        data-inspector-open={inspectorOpen ? "true" : "false"}
+      >
+        {pattern ? (
+          <div
+            className={`shields-pattern-layer rounded-2xl ${pattern.className}`}
+            style={{ color: pattern.color }}
+            aria-hidden="true"
+          />
+        ) : null}
+        {/* Positioned so the content always paints above the pattern layer. */}
         <div
-          className={`shields-pattern-layer rounded-2xl ${pattern.className}`}
-          style={{ color: pattern.color }}
-          aria-hidden="true"
-        />
-      ) : null}
-      {/* Positioned so the content always paints above the pattern layer. */}
-      <div className={`relative ${layout === "calibrated" ? "lg:flex-1 lg:flex lg:flex-col lg:justify-between" : ""}`}>
-        <div className={`min-h-0 ${layout === "calibrated" ? "lg:flex-1 lg:flex lg:flex-col lg:justify-center" : ""}`}>{object}</div>
-        {inspector}
-        <div className="mt-auto">
-          {portfolio ? (
-            <div className="mt-3">
-              <DataFreshnessIndicator
-                lastUpdated={portfolio.lastUpdated}
-                isStale={portfolio.isStale}
-                hasEstimates={portfolio.hasEstimates}
-                isDemo={portfolio.isDemo}
-                isLoading={portfolio.isLoading}
-                error={portfolio.errors?.[0] ?? null}
-                onRefresh={onRefresh}
-              />
-            </div>
+          className="instrument-workbench relative"
+          data-inspector-open={inspectorOpen ? "true" : "false"}
+        >
+          <div className="instrument-object min-h-0">{object}</div>
+          {inspector ? (
+            <div className="instrument-inspector">{inspector}</div>
           ) : null}
-          {status ? <div className="mt-3">{status}</div> : null}
+          <div className="instrument-status mt-auto">
+            {portfolio ? (
+              <div className="mt-3">
+                <DataFreshnessIndicator
+                  lastUpdated={portfolio.lastUpdated}
+                  isStale={portfolio.isStale}
+                  hasEstimates={portfolio.hasEstimates}
+                  isDemo={portfolio.isDemo}
+                  isLoading={portfolio.isLoading}
+                  error={portfolio.errors?.[0] ?? null}
+                  onRefresh={onRefresh}
+                />
+              </div>
+            ) : null}
+            {status ? <div className="mt-3">{status}</div> : null}
+          </div>
         </div>
       </div>
-    </div>
+    </InstrumentInspectionContext.Provider>
   );
 }
 

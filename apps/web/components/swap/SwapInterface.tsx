@@ -64,7 +64,11 @@ interface SwapInterfaceProps {
   chainId?: number | null;
   enableCrossChain?: boolean;
   zapMode?: boolean;
-  onInspectQuote?: (fromToken: string, toToken: string) => void;
+  onInspectQuote?: (
+    fromToken: string,
+    toToken: string,
+    view?: "story" | "route",
+  ) => void;
   quoteInspected?: boolean;
   /** When set, hides ticket chrome so Exchange can own the instrument. */
   instrument?: boolean;
@@ -494,7 +498,7 @@ const SwapInterface = forwardRef<
               }}
               onWake={wakeTicket}
               onInspect={
-                onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+                onInspectQuote ? () => onInspectQuote(fromToken, toToken, "story") : undefined
               }
               signals={corridorSignals}
               decisionWindow={decisionWindow}
@@ -631,6 +635,7 @@ const SwapInterface = forwardRef<
         {/* Main form — the ticket. Fields stagger in on wake; the stage's
             coins morph into the pills via the shared layoutIds. */}
         <div className="space-y-1">
+        <div className="ticket-swap-row flex flex-col gap-1">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -715,6 +720,7 @@ const SwapInterface = forwardRef<
             receiveAmount={expectedOutput}
           />
           </motion.div>
+        </div>
 
           {/* Compact live quote row — hidden walletless: no wallet, no quote
               can ever arrive, so showing the shimmer would read as broken. */}
@@ -731,7 +737,9 @@ const SwapInterface = forwardRef<
               mounted={mounted}
               canFetchQuote={Boolean(address)}
               onInspect={
-                onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+                onInspectQuote
+                  ? () => onInspectQuote(fromToken, toToken, "route")
+                  : undefined
               }
               inspected={quoteInspected}
               yieldHint={resolvedYieldHint}
@@ -755,7 +763,7 @@ const SwapInterface = forwardRef<
             decisionWindow={decisionWindow}
             onExitDecisionWindow={onExitDecisionWindow}
             onInspect={
-              onInspectQuote ? () => onInspectQuote(fromToken, toToken) : undefined
+              onInspectQuote ? () => onInspectQuote(fromToken, toToken, "story") : undefined
             }
           />
 
@@ -809,7 +817,7 @@ const SwapInterface = forwardRef<
           )}
           {isCrossChainRoute && onInspectQuote && (
             <p className="mt-1 text-2xs text-gray-500 dark:text-gray-400">
-              Quote includes bridge fee · <button type="button" onClick={() => onInspectQuote(fromToken, toToken)} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">tap to see route</button>
+              Quote includes bridge fee · <button type="button" onClick={() => onInspectQuote(fromToken, toToken, "route")} className="font-semibold text-blue-600 dark:text-blue-400 hover:underline">tap to see route</button>
             </p>
           )}
 

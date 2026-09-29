@@ -2,8 +2,13 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
-import { InstrumentShell } from "../InstrumentShell";
+import { InstrumentShell, useInstrumentInspection } from "../InstrumentShell";
 import { InspectorSheet } from "../InspectorSheet";
+
+function InspectionProbe() {
+  const inspecting = useInstrumentInspection();
+  return <span data-testid="inspecting">{String(inspecting)}</span>;
+}
 
 describe("InstrumentShell", () => {
   it("renders the object and optional status, not a feature list", () => {
@@ -30,16 +35,54 @@ describe("InstrumentShell", () => {
     expect(shell.className).toContain("dark:bg-gray-900");
   });
 
-  it("uses the calibrated desktop budget only when requested", () => {
-    const { container, rerender } = render(
+  it("uses the shared workbench classes for every resting instrument", () => {
+    const { container } = render(
       <InstrumentShell object={<div data-testid="object">ring</div>} />,
     );
-    expect(container.firstElementChild).not.toHaveClass("lg:min-h-[580px]");
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell.className).toContain("instrument-shell");
+    const workbench = shell.querySelector(".instrument-workbench") as HTMLElement;
+    expect(workbench).not.toBeNull();
+    expect(workbench.getAttribute("data-inspector-open")).toBe("false");
+    expect(shell.querySelector(".instrument-object")).not.toBeNull();
+    expect(shell.querySelector(".instrument-status")).not.toBeNull();
+  });
+
+  it("reserves no inspector slot while closed — and opens the workbench state on inspection", () => {
+    const { container, rerender } = render(
+      <InstrumentShell
+        object={<div data-testid="object">ring</div>}
+        inspector={<InspectorSheet selectedId={null} onClose={() => {}} title="PAXG"><p>detail</p></InspectorSheet>}
+      />,
+    );
+    let shell = container.firstElementChild as HTMLElement;
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    expect(
+      (shell.querySelector(".instrument-workbench") as HTMLElement).getAttribute("data-inspector-open"),
+    ).toBe("false");
 
     rerender(
-      <InstrumentShell layout="calibrated" object={<div data-testid="object">ring</div>} />,
+      <InstrumentShell
+        inspectorOpen
+        object={<div data-testid="object">ring</div>}
+        inspector={<InspectorSheet selectedId="PAXG" onClose={() => {}} title="PAXG"><p>detail</p></InspectorSheet>}
+      />,
     );
-    expect(container.firstElementChild).toHaveClass("lg:min-h-[580px]");
+    shell = container.firstElementChild as HTMLElement;
+    expect(
+      (shell.querySelector(".instrument-workbench") as HTMLElement).getAttribute("data-inspector-open"),
+    ).toBe("true");
+    expect(shell.querySelector(".instrument-inspector")).not.toBeNull();
+  });
+
+  it("exposes the inspection state to nested object components via context", () => {
+    const { rerender } = render(
+      <InstrumentShell object={<InspectionProbe />} />,
+    );
+    expect(screen.getByTestId("inspecting")).toHaveTextContent("false");
+
+    rerender(<InstrumentShell inspectorOpen object={<InspectionProbe />} />);
+    expect(screen.getByTestId("inspecting")).toHaveTextContent("true");
   });
 
   it("tints the surface with the archetype pattern INSIDE the card, content above it (design-language §1/§4)", () => {

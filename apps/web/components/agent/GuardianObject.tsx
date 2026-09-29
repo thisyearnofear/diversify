@@ -102,8 +102,11 @@ export function GuardianObject({
     hasValidPermission && sessionInfo != null && dailyLimit > 0;
 
   return (
-    <div className="flex flex-col items-center text-center py-2">
-      <GuardianMascot size={96} mood={mood} className="mb-3" />
+    <div className="instrument-composition text-center py-2">
+      <div className="instrument-artifact flex justify-center">
+        <GuardianMascot size={96} mood={mood} className="mb-3" />
+      </div>
+      <div className="instrument-reading flex flex-col items-center">
       <div className="flex items-center justify-center gap-2 flex-wrap">
         <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
           {copy.headline}
@@ -172,6 +175,7 @@ export function GuardianObject({
           {ctaLabel}
         </button>
       )}
+      </div>
     </div>
   );
 }
