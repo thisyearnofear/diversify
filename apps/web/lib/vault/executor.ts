@@ -305,6 +305,7 @@ export const smartAccountExecutor: VaultExecutor = {
         address: userId.toLowerCase(),
         surface: 'vault-autonomy',
         status: screening.status,
+        source: screening.source,
       });
       throw new VaultExecutionUnavailableError();
     }

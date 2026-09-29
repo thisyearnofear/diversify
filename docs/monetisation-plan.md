@@ -72,9 +72,10 @@ Shipped in code: items 2–6, plus a 20 req/min per-IP limit on
 so the swap tap never waits, a proxy matcher that skips static assets,
 and PAXG as the spot commodity leg while perps are off. Still open:
 
-- **`CHAINALYSIS_SANCTIONS_API_KEY` on Vercel and Hetzner** — until set,
-  Guardian autonomy declines every move (fails closed to one-tap
-  proposals); manual swaps proceed while fees are off.
+- **Sanctions screening is keyless** — the Chainalysis on-chain oracle on
+  Celo (Arbitrum fallback) needs no API key, so Guardian autonomy is no
+  longer blocked on a missing key. `CHAINALYSIS_SANCTIONS_API_KEY` is
+  optional redundancy (HTTP API fallback when both oracle reads fail).
 - **Counsel** — written answers to 1(a)–(d); fill the `[COUNSEL: …]`
   placeholders; then flip `NEXT_PUBLIC_LEGAL_APPROVED`.
 - **Direct Hetzner access** — heavy routes (`/api/vault/*`,

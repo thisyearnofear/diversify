@@ -68,17 +68,18 @@ describe('GET /api/compliance/screen', () => {
   });
 
   it('logs [compliance] sanctions_block when blocked', async () => {
-    screenAddress.mockResolvedValue({ status: 'blocked' });
+    screenAddress.mockResolvedValue({ status: 'blocked', source: 'oracle-celo' });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const r = res();
     await handler(
       { method: 'GET', query: { address: ADDR }, headers: {} } as unknown as NextApiRequest,
       r,
     );
-    expect(r.body).toEqual({ status: 'blocked' });
-    expect(warn).toHaveBeenCalledWith('[compliance] sanctions_block', {
-      address: ADDR.toLowerCase(),
-    });
+    expect(r.body).toEqual({ status: 'blocked', source: 'oracle-celo' });
+    expect(warn).toHaveBeenCalledWith(
+      '[compliance] sanctions_block',
+      expect.objectContaining({ address: ADDR.toLowerCase(), source: 'oracle-celo' }),
+    );
     warn.mockRestore();
   });
 

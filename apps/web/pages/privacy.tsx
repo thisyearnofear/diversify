@@ -33,8 +33,12 @@ export default function Privacy() {
             sanctions restrictions. It is used in-flight only and not stored.
           </li>
           <li>
-            <strong>Wallet address for sanctions screening</strong> — sent to
-            Chainalysis before swaps so we can decline sanctioned wallets.
+            <strong>Wallet address for sanctions screening</strong> — checked
+            against a public on-chain sanctions list (the Chainalysis oracle)
+            before swaps, so we can decline sanctioned wallets. Your address
+            reaches our blockchain RPC provider as part of that read; it is
+            sent to Chainalysis directly only if the optional API check is
+            enabled.
           </li>
           <li>
             <strong>Chat content</strong> — messages you send to Guardian are
@@ -77,8 +81,8 @@ export default function Privacy() {
         </h2>
         <ul className="mt-2 list-disc space-y-1 pl-5">
           <li>AI providers (e.g. Venice, Gemini and failover providers) — your chat content.</li>
-          <li>Chainalysis — your wallet address, for sanctions screening.</li>
-          <li>Blockscout and public RPC endpoints — on-chain reads keyed by address.</li>
+          <li>Chainalysis — your wallet address, only if the optional API screening fallback is enabled.</li>
+          <li>Blockscout and public RPC endpoints — on-chain reads keyed by address, including the sanctions-oracle check.</li>
           <li>Privy — authentication, if you sign in through it.</li>
           <li>Tablestore or Cognee — agent memory, only when you opt in.</li>
         </ul>

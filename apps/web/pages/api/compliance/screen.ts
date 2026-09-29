@@ -35,7 +35,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const result = await screenAddress(address);
 
   if (result.status === 'blocked') {
-    console.warn('[compliance] sanctions_block', { address: address.toLowerCase() });
+    console.warn('[compliance] sanctions_block', {
+      address: address.toLowerCase(),
+      source: result.source,
+    });
   }
 
   return res.status(200).json(result);
