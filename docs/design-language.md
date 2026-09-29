@@ -493,7 +493,11 @@ anywhere** — zero moderation surface:
   carrying a `stampId` is keepable, a fresh signal beat never is (it
   expires in 14 days; postcards must be durable). Coming (scheduled,
   sourced) beats now appear on the Home and corridor live lines within
-  120 days.
+  120 days. On a return visit (per-pair `corridor:` snapshot,
+  `since-last-visit`), the corridor line may lead once with `Since
+  {elapsed} ·` on what's new — an event newly within 14 days, else a
+  new signal — before the normal rotation resumes; demo views never
+  read or write visit memory.
 - L2 only — three doors, one sheet (`StampSheet`, mode
   `moved`/`watching`, entry `receipt`/`beat`/`inspector`): the
   receipt's ✓ seal (a button taught once per device — three dashed
@@ -570,8 +574,12 @@ must read the same way everywhere and be one tap from gone.
   never a blur, because `TrustFootnote` already claims blur as "a
   stillness affordance, not a hide". Percentages, plans, and the
   Guardian's decisions stay readable: privacy covers *how much you
-  have*, not what the product thinks. New money surfaces must call
-  `formatMoney`; that is the only sanctioned way to render an amount.
+  have*, not what the product thinks. Someone who has hidden before
+  gets re-hidden on return after ≥60s away (`everHidden` +
+  `lastActiveAt`), applied before first paint — a stale visible
+  balance never renders; a user who never hid is never touched. New
+  money surfaces must call `formatMoney`; that is the only sanctioned
+  way to render an amount.
 
 ## 7. Honesty is styled as restraint
 

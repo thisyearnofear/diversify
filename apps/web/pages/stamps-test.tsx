@@ -13,6 +13,7 @@ type View =
   | 'receipt-teach'
   | 'receipt-taught'
   | 'rest-beats'
+  | 'rest-return'
   | 'beat-sheet';
 
 const VIEWS: View[] = [
@@ -20,6 +21,7 @@ const VIEWS: View[] = [
   'receipt-teach',
   'receipt-taught',
   'rest-beats',
+  'rest-return',
   'beat-sheet',
 ];
 
@@ -33,7 +35,24 @@ const RECEIPT: PairReceipt = {
   settledAt: Date.now(),
 };
 
-function Stage({ receipt }: { receipt?: PairReceipt | null }) {
+// A fresh dated beat for the return-visit view — the snapshot below was
+// taken before it existed, so the line leads with "Since 3d ago · …".
+const RETURN_SIGNAL = {
+  from: {
+    dateLabel: 'Sep 28',
+    text: 'CBN posted updated external reserves',
+    timestamp: Date.now() - 86_400_000,
+  },
+  to: null,
+};
+
+function Stage({
+  receipt,
+  signals = null,
+}: {
+  receipt?: PairReceipt | null;
+  signals?: { from: typeof RETURN_SIGNAL.from | null; to: null } | null;
+}) {
   return (
     <PairStage
       fromToken="NGNm"
@@ -44,7 +63,7 @@ function Stage({ receipt }: { receipt?: PairReceipt | null }) {
       onToChange={() => {}}
       onSwitch={() => {}}
       onWake={() => {}}
-      signals={null}
+      signals={signals}
       ctaLabel="Move savings"
       receipt={receipt ?? null}
     />
@@ -63,6 +82,24 @@ export default function StampsTest() {
       window.localStorage.removeItem('diversifi.stamps.taught');
     } else if (view === 'receipt-taught') {
       window.localStorage.setItem('diversifi.stamps.taught', '1');
+    } else if (view === 'rest-return') {
+      // A 3-day-old snapshot of this pair's beats — no signal key, no
+      // imminent events — so the fresh signal becomes the lead beat.
+      window.localStorage.setItem(
+        'diversifi:last-visit:corridor:NGNm-USDm',
+        JSON.stringify({
+          value: {
+            beatKeys: [
+              'story',
+              'coming-ng-2027-presidential',
+              'coming-us-fomc-2026-10',
+              'watch-NGNm',
+            ],
+            imminent: [],
+          },
+          at: Date.now() - 3 * 86_400_000,
+        }),
+      );
     }
   }
 
@@ -142,6 +179,7 @@ export default function StampsTest() {
             {view === 'receipt-teach' && <Stage receipt={RECEIPT} />}
             {view === 'receipt-taught' && <Stage receipt={RECEIPT} />}
             {view === 'rest-beats' && <Stage />}
+            {view === 'rest-return' && <Stage signals={RETURN_SIGNAL} />}
             {view === 'beat-sheet' && (
               <StampSheet
                 fromToken="NGNm"

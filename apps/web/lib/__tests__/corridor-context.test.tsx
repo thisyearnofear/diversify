@@ -14,7 +14,11 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, corridorSignalForCurrency, pairWhatIfFor, liveOneYearOverlay } from '../corridor-context';
-import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy } from '@/components/swap/CorridorContext';
+import { CorridorLine, CorridorDetail, StoryPairStrip, leadForStrategy, corridorReturnLead } from '@/components/swap/CorridorContext';
+import { resolveStamps } from '@/lib/stamps';
+import { DemoModeProvider, useDemoMode } from '@/context/app/DemoModeContext';
+import { NavigationProvider } from '@/context/app/NavigationContext';
+import { useEffect } from 'react';
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA_AS_OF, riskEventAge } from '@/constants/currency-risk';
 
 afterEach(() => cleanup());
@@ -829,5 +833,134 @@ describe('CorridorLine — decision window', () => {
     expect(
       screen.getByText(/NGN lost ~60% to USD in 5 years/),
     ).toBeInTheDocument();
+  });
+});
+
+describe('corridor return-visit lead', () => {
+  const KEY = 'diversifi:last-visit:corridor:NGNm-USDm';
+  const DAY = 86_400_000;
+
+  const seed = (ageMs: number, value: unknown) =>
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ value, at: Date.now() - ageMs }),
+    );
+
+  const readStored = () => JSON.parse(window.localStorage.getItem(KEY) ?? 'null');
+
+  afterEach(() => window.localStorage.removeItem(KEY));
+
+  it('a snapshot younger than 6h is not a return — no lead', () => {
+    seed(3 * 3_600_000, { beatKeys: ['story'], imminent: [] });
+    render(<CorridorLine fromToken="NGNm" toToken="USDm" />);
+    expect(screen.getByTestId('corridor-line').textContent).not.toContain('Since');
+  });
+
+  it('a coming event newly within 14 days leads with the prefix', () => {
+    // Pretend the snapshot predates the FOMC entering the 14-day window:
+    // as of "now" for this test we fake the clock to Oct 20 (7d out).
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-10-20T12:00:00Z'));
+      seed(3 * DAY, {
+        beatKeys: ['story', 'coming-ng-2027-presidential', 'coming-us-fomc-2026-10', 'watch-NGNm'],
+        imminent: [],
+      });
+      render(<CorridorLine fromToken="NGNm" toToken="USDm" onStamp={vi.fn()} />);
+      const line = screen.getByTestId('corridor-line');
+      expect(line).toHaveTextContent('Since 3d ago · Oct 27 🇺🇸: Fed rate decision');
+      // The keepable ✦ survives — the lead beat keeps its stampId.
+      expect(screen.getByRole('button', { name: 'Keep this fact as a stamp' })).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a new signal beat leads when nothing is newly imminent', () => {
+    seed(3 * DAY, {
+      beatKeys: ['story', 'coming-ng-2027-presidential', 'coming-us-fomc-2026-10', 'watch-NGNm'],
+      imminent: [],
+    });
+    render(
+      <CorridorLine
+        fromToken="NGNm"
+        toToken="USDm"
+        signals={{ from: { dateLabel: 'Sep 28', text: 'CBN posted updated external reserves', timestamp: Date.now() }, to: null }}
+      />,
+    );
+    expect(screen.getByTestId('corridor-line')).toHaveTextContent(
+      'Since 3d ago · Sep 28 🇳🇬: CBN posted updated external reserves',
+    );
+  });
+
+  it('prefers a newly-imminent event over a new signal', () => {
+    const beats = [
+      { key: 'coming-us-fomc-2026-10', text: 'Oct 27 🇺🇸: Fed rate decision (FOMC) · in 7 days', stampId: 'coming-us-fomc-2026-10' },
+      { key: 'signal-NGNm', text: 'Sep 18 🇳🇬: CBN held the benchmark rate' },
+    ];
+    const prev = {
+      value: { beatKeys: ['story', 'coming-us-fomc-2026-10'], imminent: [] },
+      at: Date.now() - 3 * DAY,
+    };
+    const lead = corridorReturnLead(beats, prev, new Date('2026-10-20T12:00:00Z'));
+    expect(lead?.stampId).toBe('coming-us-fomc-2026-10');
+    expect(lead?.text).toMatch(/^Since \d+d ago · /);
+    // The lead stamp id still resolves for the pair.
+    expect(resolveStamps('NGNm', 'USDm', [lead!.stampId!], new Date('2026-10-20T12:00:00Z'))).toHaveLength(1);
+  });
+
+  it('nothing new → no lead, unchanged order', () => {
+    const current = ['story', 'coming-ng-2027-presidential', 'coming-us-fomc-2026-10', 'watch-NGNm'];
+    seed(2 * DAY, { beatKeys: current, imminent: [] });
+    render(<CorridorLine fromToken="NGNm" toToken="USDm" />);
+    expect(screen.getByTestId('corridor-line').textContent).not.toContain('Since');
+    expect(screen.getByTestId('corridor-line')).toHaveTextContent("From Nigeria's naira");
+  });
+
+  it('the prefix appears only on the first shown beat, then rotation is plain', () => {
+    vi.useFakeTimers();
+    try {
+      seed(3 * DAY, { beatKeys: ['story'], imminent: [] });
+      render(
+        <CorridorLine
+          fromToken="NGNm"
+          toToken="USDm"
+          alive
+          signals={{ from: { dateLabel: 'Sep 28', text: 'CBN posted updated external reserves', timestamp: Date.now() }, to: null }}
+        />,
+      );
+      const line = screen.getByTestId('corridor-line');
+      expect(line).toHaveTextContent('Since 3d ago · Sep 28');
+      // One dwell, then the lead hands back to the plain rotation —
+      // the prefix appears once, never per cycle.
+      act(() => { vi.advanceTimersByTime(8000); });
+      expect(line.textContent).not.toContain('Since');
+      expect(line).toHaveTextContent("From Nigeria's naira");
+      // And the stored snapshot now knows this signal key.
+      expect(readStored().value.beatKeys).toContain('signal-NGNm');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('demo mode never reads or writes the corridor snapshot', () => {
+    function DemoOn() {
+      const { demoMode, enableDemoMode } = useDemoMode();
+      useEffect(() => enableDemoMode(), [enableDemoMode]);
+      if (!demoMode.isActive) return null;
+      return <CorridorLine fromToken="NGNm" toToken="USDm" />;
+    }
+    seed(3 * DAY, { beatKeys: ['story'], imminent: [] });
+    render(
+      <NavigationProvider>
+        <DemoModeProvider>
+          <DemoOn />
+        </DemoModeProvider>
+      </NavigationProvider>,
+    );
+    const line = screen.getByTestId('corridor-line');
+    expect(line.textContent).not.toContain('Since');
+    // The seeded snapshot is untouched — no write happened.
+    expect(readStored().value.beatKeys).toEqual(['story']);
   });
 });

@@ -10,7 +10,7 @@
  * Both render nothing when the pair has no story to tell — absence is
  * honest.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import {
   corridorFor,
@@ -28,6 +28,16 @@ import {
 } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
 import { comingBeatForCode, watchBeatForToken } from '@/lib/live-lines';
+import { canonicalPairSymbol } from '@/lib/pair-card';
+import { SCHEDULED_EVENTS } from '@/constants/scheduled-events';
+import {
+  formatElapsed,
+  MIN_SNAPSHOT_AGE_MS,
+  readSnapshot,
+  writeSnapshot,
+  type VisitSnapshot,
+} from '@/lib/since-last-visit';
+import { DemoModeContext } from '@/context/app/DemoModeContext';
 import {
   CURRENCY_RISK_DATA_AS_OF,
   riskEventAge,
@@ -125,6 +135,67 @@ export function corridorBeatsFor(
   return beats.slice(0, 4);
 }
 
+// ── Return-visit lead — the corridor line's quiet memory. Same rules
+// as Home's since-last-visit: one snapshot per pair on this device,
+// never read or written in demo. ─────────────────────────────────────
+
+export interface CorridorVisitValue {
+  /** Beat keys shown last visit, in order (signal keys included). */
+  beatKeys: string[];
+  /** stampIds of coming beats that were already within 14 days. */
+  imminent: string[];
+}
+
+/** A coming beat's days-to-go — its key IS the stamp id. */
+function comingDaysLeft(key: string, now: Date): number | null {
+  const ev = SCHEDULED_EVENTS.find((e) => `coming-${e.id}` === key);
+  if (!ev) return null;
+  return Math.ceil((Date.parse(ev.date) - now.getTime()) / 86_400_000);
+}
+
+export function corridorVisitValueFor(
+  beats: CorridorBeat[],
+  now: Date = new Date(),
+): CorridorVisitValue {
+  return {
+    beatKeys: beats.map((b) => b.key),
+    imminent: beats
+      .filter((b) => {
+        const d = b.stampId ? comingDaysLeft(b.stampId, now) : null;
+        return d !== null && d >= 0 && d <= 14;
+      })
+      .map((b) => b.stampId!),
+  };
+}
+
+/** The one "new since last visit" beat: an event newly within 14 days
+ *  (nearest first), else a signal the snapshot didn't know. Returns a
+ *  copy prefixed `Since {elapsed} · ` — the original beat keeps its
+ *  place and plain text in the rotation. */
+export function corridorReturnLead(
+  beats: CorridorBeat[],
+  prev: VisitSnapshot<CorridorVisitValue> | null,
+  now: Date = new Date(),
+): CorridorBeat | null {
+  if (!prev || now.getTime() - prev.at < MIN_SNAPSHOT_AGE_MS) return null;
+  const newlyImminent = beats
+    .map((b) => ({ b, d: b.stampId ? comingDaysLeft(b.stampId, now) : null }))
+    .filter(
+      (x): x is { b: CorridorBeat; d: number } =>
+        x.d !== null && x.d >= 0 && x.d <= 14 && !prev.value.imminent.includes(x.b.stampId!),
+    )
+    .sort((x, y) => x.d - y.d);
+  const lead =
+    newlyImminent[0]?.b ??
+    beats.find(
+      (b) => b.key.startsWith('signal-') && !prev.value.beatKeys.includes(b.key),
+    ) ??
+    null;
+  return lead
+    ? { ...lead, key: 'return-lead', text: `Since ${formatElapsed(prev.at, now.getTime())} · ${lead.text}` }
+    : null;
+}
+
 export function CorridorLine({
   fromToken,
   toToken,
@@ -171,7 +242,40 @@ export function CorridorLine({
   const b = provenanceFor(toToken);
   const reduced = useReducedMotion();
   const story = a && b && a.symbol !== b.symbol ? `From ${a.phrase} to ${b.phrase}` : null;
-  const beats = corridorBeatsFor(fromToken, toToken, signals);
+  const baseBeats = useMemo(
+    () => corridorBeatsFor(fromToken, toToken, signals),
+    [fromToken, toToken, signals],
+  );
+  // Return-visit lead: after mount, an old enough snapshot yields one
+  // prefixed lead beat inserted at the front; the write follows the read
+  // so `prev` always describes LAST visit. Demo views stay memoryless.
+  const demoCtx = useContext(DemoModeContext);
+  const isDemo = demoCtx?.demoMode.isActive ?? false;
+  const [leadBeat, setLeadBeat] = useState<CorridorBeat | null>(null);
+  const [leadShowing, setLeadShowing] = useState(false);
+  const f = canonicalPairSymbol(fromToken);
+  const t = canonicalPairSymbol(toToken);
+  const snapKey = f && t ? `corridor:${f}-${t}` : null;
+  const lastSnapKey = useRef<string | null>(null);
+  useEffect(() => {
+    if (lastSnapKey.current !== snapKey) {
+      lastSnapKey.current = snapKey;
+      setLeadBeat(null);
+      setLeadShowing(false);
+    }
+    if (!snapKey || isDemo) return;
+    const prev = readSnapshot<CorridorVisitValue>(snapKey);
+    // A snapshot younger than the minimum age is our own write this
+    // session (StrictMode replays effects) — it yields no lead, and an
+    // existing lead for THIS pair survives the re-run.
+    const lead = corridorReturnLead(baseBeats, prev);
+    if (lead) {
+      setLeadBeat(lead);
+      setLeadShowing(true);
+    }
+    writeSnapshot(snapKey, corridorVisitValueFor(baseBeats));
+  }, [snapKey, isDemo, baseBeats]);
+  const beats = baseBeats;
   // The time machine: the control appears only for pairs with something
   // honest to say at 5y, and the first tap pins the what-if — a chosen
   // view must not rotate away.
@@ -195,11 +299,42 @@ export function CorridorLine({
 
   const pinned = !decisionOpen && explored ? whatIf : null;
   const rotating = alive && !acted && !reduced && !pinned && !decisionOpen && beats.length > 1;
+  // The lead occupies the line for one dwell, then hands back to the
+  // normal rotation — the prefix appears once per view, never per cycle.
+  // A still line (acted / not alive) keeps the lead until it unmounts.
+  useEffect(() => {
+    if (!leadShowing || !rotating) return;
+    const id = window.setTimeout(
+      () => setLeadShowing(false),
+      LIVE_LINE_DWELL_MS,
+    );
+    return () => window.clearTimeout(id);
+  }, [leadShowing, rotating]);
   if (!story && !corridor) return null;
 
   const arrow = onInspect ? (
     <span className="font-semibold text-blue-600 dark:text-blue-400">→</span>
   ) : null;
+  const beatContent = (b: CorridorBeat) => (
+    <>
+      {b.text} {!corridor && arrow}
+      {b.stampId && onStamp && (
+        <button
+          type="button"
+          data-testid={`stamp-beat-${b.stampId}`}
+          aria-label="Keep this fact as a stamp"
+          onClick={(e) => {
+            e.stopPropagation();
+            setActed(true);
+            onStamp(b.stampId!);
+          }}
+          className="-my-2 ml-1 inline-flex min-h-tap items-center px-1.5 align-middle text-2xs font-semibold text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:text-blue-400"
+        >
+          ✦
+        </button>
+      )}
+    </>
+  );
   const topLine = decisionOpen ? (
     <span className="block" data-testid="decision-window">
       <span className="flex items-center justify-between gap-2">
@@ -244,6 +379,17 @@ export function CorridorLine({
         <WhatIfStatement whatIf={pinned} />
       </motion.span>
     </AnimatePresence>
+  ) : leadShowing && leadBeat ? (
+    // Return-visit lead — the new beat prefixed once, in the line's own
+    // slot, for one dwell before the rotation resumes.
+    <motion.span
+      className="block text-xs font-semibold text-gray-700 dark:text-gray-300"
+      initial={reduced ? false : { opacity: 0, filter: 'blur(4px)' }}
+      animate={{ opacity: 1, filter: 'blur(0px)' }}
+      transition={{ duration: 0.35 }}
+    >
+      {beatContent(leadBeat)}
+    </motion.span>
   ) : (
     // Remount when the rotation state flips so a still line lands back on
     // beat 0 — the same reset the inline rotation did, now inside LiveLine.
@@ -251,26 +397,7 @@ export function CorridorLine({
       key={rotating ? 'rotating' : 'still'}
       beats={beats.map((b, i) => ({
         key: `corridor-${i}`,
-        content: (
-          <>
-            {b.text} {!corridor && arrow}
-            {b.stampId && onStamp && (
-              <button
-                type="button"
-                data-testid={`stamp-beat-${b.stampId}`}
-                aria-label="Keep this fact as a stamp"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActed(true);
-                  onStamp(b.stampId!);
-                }}
-                className="-my-2 ml-1 inline-flex min-h-tap items-center px-1.5 align-middle text-2xs font-semibold text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 dark:text-blue-400"
-              >
-                ✦
-              </button>
-            )}
-          </>
-        ),
+        content: beatContent(b),
       }))}
       alive={rotating}
       dwellMs={LIVE_LINE_DWELL_MS}

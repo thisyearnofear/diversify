@@ -19,11 +19,18 @@ import React, {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { formatUsd, MONEY_MASK } from "@/lib/money-format";
 
 const STORAGE_KEY = "diversifi.balances.hidden";
+// Re-hide memory: everHidden marks "this person hides balances"; the
+// lastActiveAt stamp measures how long the app was away. Only people
+// who have hidden before get the auto re-hide — never a new setting.
+const EVER_HIDDEN_KEY = "diversifi.balances.everHidden";
+const LAST_ACTIVE_KEY = "diversifi.balances.lastActiveAt";
+const REHIDE_AFTER_MS = 60_000;
 
 type BalanceVisibilityValue = {
   /** True while dollar amounts are masked. */
@@ -65,15 +72,43 @@ export function BalanceVisibilityProvider({
   children: React.ReactNode;
 }) {
   const [hidden, setHiddenState] = useState(false);
+  const hiddenRef = useRef(false);
+
+  // Re-hide on return: only if this device has chosen hidden before AND
+  // was away ≥60s. Runs inside the layout-effect hydration so a stale
+  // visible balance never paints on a fresh mount.
+  const dueRehide = useCallback((): boolean => {
+    try {
+      if (localStorage.getItem(EVER_HIDDEN_KEY) !== "1") return false;
+      const last = Number(localStorage.getItem(LAST_ACTIVE_KEY));
+      return Number.isFinite(last) && Date.now() - last >= REHIDE_AFTER_MS;
+    } catch {
+      return false;
+    }
+  }, []);
 
   useIsoLayoutEffect(() => {
-    setHiddenState(readStored());
-  }, []);
+    if (!readStored() && dueRehide()) {
+      setHiddenState(true);
+      hiddenRef.current = true;
+      try {
+        localStorage.setItem(STORAGE_KEY, "1");
+      } catch {
+        // best-effort, as everywhere else
+      }
+      return;
+    }
+    const stored = readStored();
+    setHiddenState(stored);
+    hiddenRef.current = stored;
+  }, [dueRehide]);
 
   const setHidden = useCallback((next: boolean) => {
     setHiddenState(next);
+    hiddenRef.current = next;
     try {
       localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+      if (next) localStorage.setItem(EVER_HIDDEN_KEY, "1");
     } catch {
       // storage unavailable (private mode) — the switch still works for
       // the session; persistence is best-effort.
@@ -83,14 +118,43 @@ export function BalanceVisibilityProvider({
   const toggle = useCallback(() => {
     setHiddenState((prev) => {
       const next = !prev;
+      hiddenRef.current = next;
       try {
         localStorage.setItem(STORAGE_KEY, next ? "1" : "0");
+        if (next) localStorage.setItem(EVER_HIDDEN_KEY, "1");
       } catch {
         // best-effort, as above
       }
       return next;
     });
   }, []);
+
+  // Stamp last-active when the page hides/unloads; re-hide on return
+  // after ≥60s away (only for people who have hidden before).
+  useEffect(() => {
+    const markAway = () => {
+      try {
+        localStorage.setItem(LAST_ACTIVE_KEY, String(Date.now()));
+      } catch {
+        // best-effort
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        markAway();
+        return;
+      }
+      if (document.visibilityState === "visible" && !hiddenRef.current && dueRehide()) {
+        setHidden(true);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", markAway);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", markAway);
+    };
+  }, [dueRehide, setHidden]);
 
   const formatMoney = useCallback(
     (value: number) => (hidden ? MONEY_MASK : formatUsd(value)),

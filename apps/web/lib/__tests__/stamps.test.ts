@@ -146,11 +146,12 @@ describe('stampsForPair', () => {
 });
 
 describe('resolveStamps', () => {
-  it('renders a held coming stamp for old shared links', () => {
+  it('renders a past scheduled date as scheduled — never an outcome', () => {
     const later = new Date('2027-02-01T00:00:00Z');
     const stamps = resolveStamps('NGNm', 'USDm', ['coming-ng-2027-presidential'], later);
     expect(stamps).toHaveLength(1);
-    expect(stamps[0].line).toBe('held Jan 16, 2027');
+    expect(stamps[0].line).toBe('was scheduled for Jan 16, 2027');
+    expect(stamps[0].line).not.toContain('held');
   });
 
   it('drops invalid and foreign ids silently', () => {

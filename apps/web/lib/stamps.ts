@@ -136,10 +136,10 @@ function comingStamp(
     glyph: e.glyph,
     value: shortDay(e.date),
     line: held
-      ? `held ${dayYear(e.date)}`
+      ? `was scheduled for ${dayYear(e.date)}`
       : `${e.event} · in ${days} day${days === 1 ? '' : 's'}`,
     sentence: held
-      ? `${dayYear(e.date)} ${flag}: ${e.event} — held`
+      ? `${dayYear(e.date)} ${flag}: ${e.event} — was scheduled for ${dayYear(e.date)}`
       : `${shortDay(e.date)} ${flag}: ${e.event} · in ${days} day${days === 1 ? '' : 's'}`,
     source: e.source,
     dateLabel: monthYear(e.asOf),
@@ -295,9 +295,10 @@ function buildStamps(
 
   const out: Stamp[] = [];
 
-  // coming — scheduled, sourced dates for either side's fiat. Held
-  // events are only materialised for shared links (resolveStamps);
-  // the tray carries what's still ahead.
+  // coming — scheduled, sourced dates for either side's fiat. Past
+  // dates are only materialised for shared links (resolveStamps) as
+  // "was scheduled for …" — we can't verify the event actually
+  // happened; the tray carries what's still ahead.
   const events = SCHEDULED_EVENTS.filter((e) =>
     e.fiat === fromSide.code || e.fiat === toSide.code,
   ).sort((a, b) => a.date.localeCompare(b.date));
@@ -422,7 +423,7 @@ export function stampsForPair(from: string, to: string, now: Date = new Date()):
 
 /**
  * Resolve a shared postcard's stamp ids against the same builder —
- * expired "coming" stamps still render as "held …" for old links.
+ * expired "coming" stamps still render as "was scheduled for …" for old links.
  * Foreign ids drop silently; order is the caller's; max 3.
  */
 export function resolveStamps(
