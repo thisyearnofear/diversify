@@ -30,7 +30,7 @@ A lens is a state of a tab's existing object, entered through the transition slo
 
 - **Concentration (Home)** — shipped. One region ≥50% of the wallet restages the same region coins larger with the fact as headline.
 - **Stronger floor (Shield)** — shipped. Offered only when the wallet's dollar share sits ≥10 points above the plan floor; opens the existing balance preview, nothing auto-commits.
-- **Decision window (Exchange)** — shipped. Opens only on fresh dated macro beats from `corridorSignalsFor` (≤14 days, readable off-chain echo; never a forward calendar or predicted direction); the prompt owns the transition slot while netting drops to the rail, and the corridor line itself goes still — dated beat + "Decided at {event} · {cadence}" per side, ← Story returns.
+- **Decision window (Exchange)** — shipped. Opens only on fresh dated macro beats from `corridorSignalsFor` (≤14 days, readable off-chain echo; never a predicted direction — sourced scheduled dates are allowed as facts via `constants/scheduled-events.ts`); the prompt owns the transition slot while netting drops to the rail, and the corridor line itself goes still — dated beat + "Decided at {event} · {cadence}" per side, ← Story returns.
 - **Reality (Exchange)** — only if the ticket's staples rows prove insufficient.
 - **Scenario** — needs a curated dated `scenarios.ts` registry (asOf + 90d re-verify) before any UI.
 

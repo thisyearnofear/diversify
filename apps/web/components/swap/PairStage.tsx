@@ -26,6 +26,8 @@ import { goodsEquivalentFor } from '@/lib/corridor-context';
 import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
 import { useNavigation } from '@/context/app/NavigationContext';
 import type { HandoffOrigin } from '@/context/app/types';
+import { stampsForPair } from '@/lib/stamps';
+import StampSheet from './StampSheet';
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
 
@@ -212,6 +214,9 @@ export function PairStage({
 
   const [flipped, setFlipped] = useState<'from' | 'to' | null>(null);
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);
+  // Stamps — the settled move can be sealed with curated facts (L2).
+  const [stampOpen, setStampOpen] = useState(false);
+  const stampable = stampsForPair(fromToken, toToken).length > 0;
   // A new pair is a new weighing — any flipped coin turns face up again.
   useEffect(() => setFlipped(null), [fromToken, toToken]);
   const landed = useRef(false);
@@ -451,6 +456,28 @@ export function PairStage({
             >
               Back to Guardian →
             </button>
+          )}
+          {stampable && (
+            <button
+              type="button"
+              data-testid="stamp-your-why"
+              onClick={() => {
+                haptics.tap();
+                setStampOpen(true);
+              }}
+              className="mt-2 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+            >
+              Stamp your why ✦
+            </button>
+          )}
+          {stampOpen && (
+            <StampSheet
+              fromToken={fromToken}
+              toToken={toToken}
+              mode="moved"
+              open
+              onClose={() => setStampOpen(false)}
+            />
           )}
           <button
             type="button"

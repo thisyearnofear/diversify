@@ -389,8 +389,11 @@ sits ≥10 points above the plan floor — a stronger floor raises the
 dollar reserve, so it is never offered when the wallet is under-reserved
 (that's the gap CTA's job); **Decision window** (Exchange) opens only on
 a fresh dated macro beat — the ones `corridorSignalsFor` already returns
-(≤14 days, readable off-chain echo) — never a forward calendar, never a
-predicted direction. Its state is the corridor line itself: still, no
+(≤14 days, readable off-chain echo) — never a predicted direction.
+Sourced scheduled dates are allowed as facts elsewhere
+(`constants/scheduled-events.ts` feeds Stamps, re-verified every 90
+days); what stays forbidden is a forward calendar of our own making —
+predicted outcomes or directions. Its state is the corridor line itself: still, no
 rotation, no what-if pin — each fresh side's dated beat plus the
 standing mechanism that produced it ("Decided at {event} · {cadence}"),
 then ← Story returns. Shield's floor lens IS the existing balance
@@ -467,6 +470,42 @@ infinite pulse or bob. Primitive: `InstrumentWait`. Reduced-motion: a
 static coin and the same copy. Inline number placeholders (HeroValue's
 bar so "$0 loading" ≠ "$0 empty") stay as quiet bars — a coin there
 would compete with the object.
+
+### Stamps — facts users press onto a move
+
+A stamp is a circular seal for one curated, dated, cited fact: a round
+SVG carrying a glyph and a short value in the centre with `SOURCE · DATE`
+riding the rim on a `textPath`. Users press 1–3 onto a small postcard of
+their move (from coin → to coin + mode caption + empty dashed slots) and
+share it. The grammar is strict because there is **no free text
+anywhere** — zero moderation surface:
+
+- Only curated facts (`lib/stamps.ts`): scheduled sourced dates
+  (`constants/scheduled-events.ts`, hand-sourced with a url, re-verified
+  every 90 days), the corridor dataset's drift and risk-event trail, the
+  goods anchor, and token provenance. Every stamp carries a named source
+  and a date; a fact that can't cite both is omitted, not padded. Never
+  a prediction or a direction — what already happened, plus sourced
+  scheduled events.
+- L2 only: the affordance lives on `PairReceipt` ("Stamp your why ✦")
+  and inside the pair inspector ("Stamp what you're watching ✦") — both
+  open the same `StampSheet` inspector, mode `moved`/`watching`. Nothing
+  reaches L0/L1, and the affordance is absent when `stampsForPair` has
+  nothing honest to offer.
+- Stamps are pressed, never earned: no unlock, no reward, no streak —
+  sharing is not gamified.
+- Motion: the seal flies tray → slot by `layoutId` inside a
+  `LayoutGroup`, lands with a press (scale 1.15 → 1, a deterministic
+  −8°..8° tilt hashed from its id, and an ink-bloom ring that fades
+  once). `haptics.tap()` on press. A 4th press on a full postcard
+  gently shakes the slots and does nothing else. Reduced motion: no
+  fly, no bloom, instant placement, no shake — identical content. No
+  ambient loops.
+- Shared postcards (`/postcard/[from]/[to]` + `/api/og/postcard`)
+  derive everything from symbols + stamp ids — like pair cards, they
+  never read a number from the URL, and a seal links to its source or
+  back to the pair page. "Facts cited by DiversiFi · dated · not
+  advice."
 
 ## 6. Numbers carry their own meaning
 
@@ -660,6 +699,8 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `useBalanceVisibility`, `BalanceVisibilityProvider` | `apps/web/context/app/BalanceVisibilityContext.tsx` | app-wide privacy switch: `hidden` + `formatMoney` (dots while hidden). Every dollar figure goes through it |
 | `BalanceVisibilityToggle` | `apps/web/components/shared/BalanceVisibilityToggle.tsx` | the header eye control that flips the switch (`aria-pressed`) |
 | `formatUsd` / `MONEY_MASK` | `apps/web/lib/money-format.ts` | the one USD formatter + the dot mask |
+| `StampSeal`, `StampSealFace` | `apps/web/components/shared/StampSeal.tsx` | circular fact seal: rim `textPath` source·date, `aria-pressed` toggle |
+| `StampSheet`, `StampPostcard` | `apps/web/components/swap/StampSheet.tsx` | the L2 stamp inspector + postcard face (press/lift/share) |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts` | curated token logos w/ branded coin fallback on missing or failed logos; add verified assets to the registry, never leave broken images |
 | `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |

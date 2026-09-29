@@ -70,6 +70,12 @@ export const FUNNEL_EVENTS = [
   // addresses, or raw amounts).
   'swap_outcome',
   'claim_outcome',
+  // Stamps — does pressing curated facts onto a move delight? Coarse:
+  // sheet mode, stamp kind, share target + count. Never content or
+  // identity.
+  'stamp_sheet_open',
+  'stamp_press',
+  'postcard_share',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

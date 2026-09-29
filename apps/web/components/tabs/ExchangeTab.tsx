@@ -13,6 +13,8 @@ import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { FxNettingRail } from "@/components/business/FxNettingRail";
 import { corridorFor, corridorSideFor } from "@/lib/corridor-context";
 import { pairCardContent } from "@/lib/pair-card";
+import { stampsForPair } from "@/lib/stamps";
+import StampSheet from "../swap/StampSheet";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -44,6 +46,7 @@ type InspectorSel =
   | { kind: "netting" }
   | { kind: "journey" }
   | { kind: "arc" }
+  | { kind: "stamps"; fromToken: string; toToken: string }
   | null;
 
 function fmtAmount(v: string): string {
@@ -222,6 +225,7 @@ function PairInspector({
   lead,
   journey,
   journeyReadOnly = false,
+  onStampWatch,
 }: {
   selection: InspectorSel;
   userRegion: Region;
@@ -230,6 +234,7 @@ function PairInspector({
   journey: CapitalHistory | null;
   /** Walletless public-address lookup — labelled, never held-marked. */
   journeyReadOnly?: boolean;
+  onStampWatch?: (fromToken: string, toToken: string) => void;
 }) {
   const pair = selection?.kind === "pair" ? selection : null;
   const isJourney = selection?.kind === "journey";
@@ -275,6 +280,19 @@ function PairInspector({
             lead={lead}
           />
           <PairShareLine from={pair.fromToken} to={pair.toToken} />
+          {onStampWatch && stampsForPair(pair.fromToken, pair.toToken).length > 0 && (
+            // Stamps — seal what you're watching onto a postcard. Same
+            // quiet line grammar as Share/Ask; absent when the pair has
+            // no facts to stamp.
+            <button
+              type="button"
+              data-testid="stamp-watching"
+              onClick={() => onStampWatch(pair.fromToken, pair.toToken)}
+              className="mt-2 min-h-11 px-1 text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              Stamp what you&rsquo;re watching ✦
+            </button>
+          )}
           <PairAskLine
             from={pair.fromToken}
             to={pair.toToken}
@@ -485,14 +503,27 @@ export default function ExchangeTab({
           </div>
         }
         inspector={
-          <PairInspector
-            selection={inspectorSel}
-            userRegion={userRegion}
-            onClose={() => setInspectorSel(null)}
-            lead={leadForStrategy(financialStrategy)}
-            journey={capitalHistory.data}
-            journeyReadOnly={Boolean(lookupAddress)}
-          />
+          inspectorSel?.kind === "stamps" ? (
+            <StampSheet
+              fromToken={inspectorSel.fromToken}
+              toToken={inspectorSel.toToken}
+              mode="watching"
+              open
+              onClose={() => setInspectorSel(null)}
+            />
+          ) : (
+            <PairInspector
+              selection={inspectorSel}
+              userRegion={userRegion}
+              onClose={() => setInspectorSel(null)}
+              lead={leadForStrategy(financialStrategy)}
+              journey={capitalHistory.data}
+              journeyReadOnly={Boolean(lookupAddress)}
+              onStampWatch={(f, t) =>
+                setInspectorSel({ kind: "stamps", fromToken: f, toToken: t })
+              }
+            />
+          )
         }
         status={
           <UnconnectedStatusTier
@@ -574,6 +605,14 @@ export default function ExchangeTab({
               }}
             />
           </InspectorSheet>
+        ) : inspectorSel?.kind === "stamps" ? (
+          <StampSheet
+            fromToken={inspectorSel.fromToken}
+            toToken={inspectorSel.toToken}
+            mode="watching"
+            open
+            onClose={() => setInspectorSel(null)}
+          />
         ) : (
           <PairInspector
             selection={inspectorSel}
@@ -581,6 +620,9 @@ export default function ExchangeTab({
             onClose={() => setInspectorSel(null)}
             lead={leadForStrategy(financialStrategy)}
             journey={capitalHistory.data}
+            onStampWatch={(f, t) =>
+              setInspectorSel({ kind: "stamps", fromToken: f, toToken: t })
+            }
           />
         )
       }
