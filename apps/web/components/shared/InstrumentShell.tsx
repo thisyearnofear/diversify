@@ -18,13 +18,29 @@
  * positioned across tabs — no per-tab copy-paste of the same five props.
  */
 
-import React, { createContext, useContext } from "react";
+import React, {
+  createContext,
+  useContext,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { springSoft } from "@/lib/motion-tokens";
 import { DataFreshnessIndicator } from "./DataFreshnessIndicator";
 
 const InstrumentInspectionContext = createContext(false);
 
 export function useInstrumentInspection(): boolean {
   return useContext(InstrumentInspectionContext);
+}
+
+type InspectorPlacement = "side" | "fold";
+
+const InstrumentInspectorPlacementContext = createContext<InspectorPlacement>("fold");
+
+export function useInstrumentInspectorPlacement(): InspectorPlacement {
+  return useContext(InstrumentInspectorPlacementContext);
 }
 
 /** The one instrument surface — every tab, every morph, same card. */
@@ -73,46 +89,100 @@ export function InstrumentShell({
   inspectorOpen = false,
   className = "",
 }: InstrumentShellProps) {
+  const reducedMotion = useReducedMotion();
+  const layoutGroupId = React.useId();
+  const shellRef = useRef<HTMLDivElement>(null);
+  const [placement, setPlacement] = useState<InspectorPlacement>("fold");
+
+  useLayoutEffect(() => {
+    const el = shellRef.current;
+    if (typeof window === "undefined" || !el) return;
+    const mql =
+      typeof window.matchMedia === "function"
+        ? window.matchMedia("(min-width: 1024px)")
+        : null;
+    const measure = () => {
+      const cs = window.getComputedStyle(el);
+      const contentWidth = Math.max(
+        0,
+        el.getBoundingClientRect().width -
+          (parseFloat(cs.paddingLeft) || 0) -
+          (parseFloat(cs.paddingRight) || 0) -
+          (parseFloat(cs.borderLeftWidth) || 0) -
+          (parseFloat(cs.borderRightWidth) || 0),
+      );
+      const next: InspectorPlacement =
+        contentWidth >= 720 && (mql?.matches ?? false) ? "side" : "fold";
+      setPlacement((prev) => (prev === next ? prev : next));
+    };
+    measure();
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== "undefined") {
+      ro = new ResizeObserver(measure);
+      ro.observe(el);
+    } else {
+      window.addEventListener("resize", measure);
+    }
+    mql?.addEventListener?.("change", measure);
+    return () => {
+      ro?.disconnect();
+      window.removeEventListener("resize", measure);
+      mql?.removeEventListener?.("change", measure);
+    };
+  }, []);
+
+  const layoutProps = {
+    layout: reducedMotion ? false : ("position" as const),
+    transition: {
+      layout: reducedMotion ? { duration: 0 } : springSoft,
+    },
+  };
+
   return (
     <InstrumentInspectionContext.Provider value={inspectorOpen}>
-      <div
-        className={`instrument-shell relative ${SURFACE} ${className}`.trim()}
-        data-inspector-open={inspectorOpen ? "true" : "false"}
-      >
-        {pattern ? (
-          <div
-            className={`shields-pattern-layer rounded-2xl ${pattern.className}`}
-            style={{ color: pattern.color }}
-            aria-hidden="true"
-          />
-        ) : null}
-        {/* Positioned so the content always paints above the pattern layer. */}
+      <InstrumentInspectorPlacementContext.Provider value={placement}>
         <div
-          className="instrument-workbench relative"
+          ref={shellRef}
+          className={`instrument-shell relative ${SURFACE} ${className}`.trim()}
           data-inspector-open={inspectorOpen ? "true" : "false"}
         >
-          <div className="instrument-object min-h-0">{object}</div>
-          {inspector ? (
-            <div className="instrument-inspector">{inspector}</div>
+          {pattern ? (
+            <div
+              className={`shields-pattern-layer rounded-2xl ${pattern.className}`}
+              style={{ color: pattern.color }}
+              aria-hidden="true"
+            />
           ) : null}
-          <div className="instrument-status mt-auto">
-            {portfolio ? (
-              <div className="mt-3">
-                <DataFreshnessIndicator
-                  lastUpdated={portfolio.lastUpdated}
-                  isStale={portfolio.isStale}
-                  hasEstimates={portfolio.hasEstimates}
-                  isDemo={portfolio.isDemo}
-                  isLoading={portfolio.isLoading}
-                  error={portfolio.errors?.[0] ?? null}
-                  onRefresh={onRefresh}
-                />
-              </div>
-            ) : null}
-            {status ? <div className="mt-3">{status}</div> : null}
-          </div>
+          {/* Positioned so the content always paints above the pattern layer. */}
+          <LayoutGroup id={layoutGroupId}>
+            <div
+              className="instrument-workbench relative"
+              data-inspector-open={inspectorOpen ? "true" : "false"}
+            >
+              <motion.div {...layoutProps} className="instrument-object min-h-0">{object}</motion.div>
+              {inspector ? (
+                <motion.div {...layoutProps} className="instrument-inspector">{inspector}</motion.div>
+              ) : null}
+              <motion.div {...layoutProps} className="instrument-status mt-auto">
+                {portfolio ? (
+                  <div className="mt-3">
+                    <DataFreshnessIndicator
+                      lastUpdated={portfolio.lastUpdated}
+                      isStale={portfolio.isStale}
+                      hasEstimates={portfolio.hasEstimates}
+                      isDemo={portfolio.isDemo}
+                      isLoading={portfolio.isLoading}
+                      error={portfolio.errors?.[0] ?? null}
+                      onRefresh={onRefresh}
+                    />
+                  </div>
+                ) : null}
+                {status ? <div className="mt-3">{status}</div> : null}
+              </motion.div>
+            </div>
+          </LayoutGroup>
         </div>
-      </div>
+      </InstrumentInspectorPlacementContext.Provider>
     </InstrumentInspectionContext.Provider>
   );
 }

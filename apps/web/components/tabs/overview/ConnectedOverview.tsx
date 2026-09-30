@@ -29,7 +29,6 @@ import { InstrumentWait } from "../../shared/InstrumentWait";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
-import { GuardianCadenceLine } from "../../shared/LiveProofCard";
 import { StatusTier } from "../../shared/StatusTier";
 import { concentrationOf } from "@/lib/home-lens";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
@@ -39,6 +38,11 @@ import { useAnchorCurrency, useAnchorFx } from "@/hooks/use-anchor-currency";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 import { REGIONS as ALL_REGIONS } from "@/hooks/use-user-region";
+import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
+import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
+import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
+import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
+import { timeAgo } from "@/lib/format-duration";
 
 const HOME_LENS_KEY = "diversifi.home.lens";
 
@@ -90,7 +94,7 @@ export function ConnectedOverview({
   const { experienceMode, setExperienceMode } = useExperience();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
   const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
-  const { navigateToCompare, navigateWithIntent, lastSettlement, consumeSettlement } = useNavigation();
+  const { navigateToCompare, navigateWithIntent, navigateToGuardian, lastSettlement, consumeSettlement } = useNavigation();
   const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
   // The concentration lens is a state of the coin object — preview-only,
   // entered through the transition slot, left via the in-object ←.
@@ -244,6 +248,74 @@ export function ConnectedOverview({
     [navigateWithIntent],
   );
 
+  // "While you were away" — the Guardian's own weekly counters (server-side,
+  // so a capped in-memory log can't inflate them) rendered only in informed
+  // mode. Same-week deltas against the last visit's snapshot; across a week
+  // boundary the counters reset, so we quote "this week" instead. Missing
+  // activityStats (legacy session doc) → the line is omitted, never
+  // zero-filled, and decisionLog detail is always labeled "recent".
+  const { visibility } = useGuardianVisibility();
+  const sessionInfo = useGuardianSessionInfo(visibility === "informed" && !isDemo);
+  const activityStats = sessionInfo?.activityStats ?? null;
+  const previousActivity = useSinceLastVisit(
+    "guardian-activity",
+    activityStats
+      ? `${activityStats.week}|${activityStats.evaluated}|${activityStats.executed}|${activityStats.declined}`
+      : null,
+  );
+  const guardianAway = (() => {
+    if (visibility !== "informed" || !activityStats) return null;
+    const now = Date.now();
+    let prev: { week: string; evaluated: number; executed: number; declined: number } | null = null;
+    if (previousActivity) {
+      const [week, ev, ex, de] = previousActivity.value.split("|");
+      const parsed = { week: week ?? "", evaluated: Number(ev), executed: Number(ex), declined: Number(de) };
+      if ([parsed.evaluated, parsed.executed, parsed.declined].every(Number.isFinite)) {
+        prev = parsed;
+      }
+    }
+    const sameWeek = prev && prev.week === activityStats.week;
+    const elapsed = prev && previousActivity ? formatElapsed(previousActivity.at, now) : null;
+    // Same rule as the currency line: a snapshot younger than 6h is the
+    // same session, not a visit — no "while you were away" story to tell.
+    if (previousActivity && now - previousActivity.at < MIN_SNAPSHOT_AGE_MS) return null;
+    const counts = sameWeek
+      ? {
+          evaluated: Math.max(0, activityStats.evaluated - prev!.evaluated),
+          executed: Math.max(0, activityStats.executed - prev!.executed),
+          declined: Math.max(0, activityStats.declined - prev!.declined),
+        }
+      : {
+          evaluated: activityStats.evaluated,
+          executed: activityStats.executed,
+          declined: activityStats.declined,
+        };
+    if (!sameWeek && !elapsed && counts.evaluated === 0) return null;
+    if (sameWeek && counts.evaluated === 0 && counts.executed === 0 && counts.declined === 0) {
+      return null;
+    }
+    const lead = sameWeek
+      ? `Since your last visit (${elapsed ?? "recently"}):`
+      : "This week:";
+    const parts = [
+      `Guardian ran ${counts.evaluated} check${counts.evaluated === 1 ? "" : "s"}`,
+      counts.executed > 0 ? `${counts.executed} move${counts.executed === 1 ? "" : "s"}` : null,
+      counts.declined > 0 ? `${counts.declined} stand-down${counts.declined === 1 ? "" : "s"}` : null,
+      (sessionInfo?.decisionLog?.length ?? 0) > 0 ? "recent decisions in Ask Guardian" : null,
+    ].filter(Boolean);
+    const line = `${lead} ${parts.join(" · ")}`;
+    const recentDecisions = (sessionInfo?.decisionLog ?? [])
+      .slice(0, 3)
+      .map((d) => `- ${timeAgo(d.capturedAt)}: ${d.reason}`)
+      .join("\n");
+    const prompt =
+      `Guardian, ${lead.toLowerCase()} you ran ${counts.evaluated} checks, ` +
+      `${counts.executed} moves and ${counts.declined} stand-downs for me. ` +
+      `Walk me through what you did and why.` +
+      (recentDecisions ? `\nRecent decisions:\n${recentDecisions}` : "");
+    return { line, summary: line, prompt };
+  })();
+
   // Offered = the prompt is actually the chosen transition (banner,
   // payment-cycle and graduation outrank it) on a live, non-demo surface.
   const concentrationOffered = Boolean(
@@ -282,7 +354,7 @@ export function ConnectedOverview({
       onSelectHorizon={handleMomentHorizon}
       onAmountChange={setSavingsAmount}
       onProtect={focusedRegion === null ? () => setActiveTab("protect") : undefined}
-      protectLabel={philosophyName ? `See your ${philosophyName} shield` : undefined}
+      protectLabel={philosophyName ? "See your shield" : undefined}
       onChangeCountry={onChangeCountry}
       frame={frame}
       onInspectCurrency={
@@ -483,6 +555,17 @@ export function ConnectedOverview({
     >
       See your concentration →
     </button>
+  ) : guardianAway ? (
+    <button
+      type="button"
+      data-testid="home-guardian-activity-link"
+      onClick={() =>
+        navigateToGuardian({ summary: guardianAway.summary, prompt: guardianAway.prompt })
+      }
+      className="min-h-tap text-sm font-semibold text-blue-600 dark:text-blue-400"
+    >
+      Review Guardian activity →
+    </button>
   ) : home.primaryTip && hasHoldings ? (
     <p className="text-sm text-gray-600 dark:text-gray-300">{home.primaryTip}</p>
   ) : philosophyName ? (
@@ -501,9 +584,6 @@ export function ConnectedOverview({
       trust={
         <div className="flex flex-col items-end gap-1">
           <VerifiedEvidence />
-          {/* Informed mode only: the same measured cadence the compact proof
-              card carries, kept right under the trust line it quantifies. */}
-          <GuardianCadenceLine />
         </div>
       }
       transition={transition}

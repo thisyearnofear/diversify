@@ -414,7 +414,7 @@ standing mechanism that produced it ("Decided at {event} · {cadence}"),
 then ← Story returns. Shield's floor lens IS the existing balance
 preview — ring re-slice, "Dollar reserve A% → B%", Use/Keep — nothing
 auto-commits. Home's transition order: banner > payment-cycle >
-graduation prompt > concentration prompt > tip > compare. Payment-cycle
+graduation prompt > concentration prompt > Guardian activity > tip > compare. Payment-cycle
 and graduation both open Shield's payment-cycle inspector (`lens:
 'cycle'`, plan-independent and walletless; also `?tab=protect&cycle=1`)
 — the per-cycle FX drag report is the business morph's doorway, netting
@@ -453,6 +453,17 @@ lives in the ring hole (`sinceHint`), not the status tier. When a swap
 settles, the destination's region coin wears a seal on the next Home
 visit — derived from refreshed balances (never the receipt's word), one
 emerald pulse plus a persistent ✓; reduced motion shows the ✓ alone.
+The resting card is one comparison, one consequence, one live fact: when a
+country override exists the selector IS the heading (`Savings currency`, or
+`Example currency` + a `{country} ({code}) · example` placeholder when
+detection produced nothing — never a falsely selected country); the scenario
+input reads `Example amount` (it stays an example after editing); the single
+`home-consequence` line is sign-aware and, only for a negative comparison
+with a sourced, nonzero staple equivalent, alternates money ↔ goods via the `Consequence unit`
+segmented control (same element, resets to money on currency/benchmark/
+horizon change). Guardian activity left the resting surface — the transition
+slot carries only a "Review Guardian activity →" link, and the cadence line
+lives inside the selected journal/context inspector.
 
 Exchange's resting object is the PAIR (`PairStage`) — two coins on a
 balance beam tilted by the corridor's drift. The ticket is its acting

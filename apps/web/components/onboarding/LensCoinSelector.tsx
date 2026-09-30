@@ -11,7 +11,7 @@ import {
 } from "framer-motion";
 import { Coin } from "../shared/FloatingCoins";
 import { FlickScrollRow, useDidDrag } from "../shared/FlickScrollRow";
-import { spring, springPop, springPress } from "@/lib/motion-tokens";
+import { press, spring, springPop, springPress } from "@/lib/motion-tokens";
 
 export interface LensCoinDef {
   id: string;
@@ -209,6 +209,7 @@ interface LensCoinSelectorProps {
   /** Called with the tapped coin's centre (client coords) so callers can
    *  report a tap origin to an ambient layer. */
   onTapPoint?: (clientX: number, clientY: number) => void;
+  alive?: boolean;
 }
 
 /**
@@ -230,6 +231,7 @@ export function LensCoinSelector({
   emergeKey = 0,
   scrollable = false,
   onTapPoint,
+  alive = true,
 }: LensCoinSelectorProps) {
   const reduceMotion = useReducedMotion();
   const { coinSize, gapClass, pitch } = useLensCoinMetrics();
@@ -309,6 +311,7 @@ export function LensCoinSelector({
           coinSize={coinSize}
           lastSelected={lastSelectedRef.current}
           reduceMotion={reduceMotion ?? false}
+          alive={alive}
           onTap={handleCoinTap}
           onTapPoint={onTapPoint}
         />
@@ -388,6 +391,7 @@ interface LensCoinButtonProps {
   coinSize: number;
   lastSelected: number;
   reduceMotion: boolean;
+  alive: boolean;
   onTap: (lens: LensCoinDef) => void;
   onTapPoint?: (clientX: number, clientY: number) => void;
 }
@@ -404,6 +408,7 @@ function LensCoinButton({
   coinSize,
   lastSelected,
   reduceMotion,
+  alive,
   onTap,
   onTapPoint,
 }: LensCoinButtonProps) {
@@ -434,6 +439,17 @@ function LensCoinButton({
       animate = spec.animate;
       transition = spec.transition;
     }
+  } else if (!alive) {
+    animate = {
+      x: 0,
+      y: 0,
+      rotate: 0,
+      rotateY: 0,
+      scale: isActive ? 1.15 : peeked ? 1.08 : 0.92,
+      opacity: isActive || peeked ? 1 : 0.95,
+    };
+    transition = { duration: 0 };
+    initial = false;
   } else if (isActive) {
     // Active pick in a plain row — continuous turntable.
     animate = {
@@ -503,8 +519,8 @@ function LensCoinButton({
         onTapPoint?.(rect.left + rect.width / 2, rect.top + rect.height / 2);
         onTap(lens);
       }}
-      whileTap={combining ? undefined : { scale: 0.92 }}
-      whileHover={combining || isActive || peeked ? undefined : { scale: 1.1, y: -3 }}
+      whileTap={combining || reduceMotion ? undefined : press}
+      whileHover={combining || reduceMotion || !alive || isActive || peeked ? undefined : { scale: 1.1, y: -3 }}
       transition={springPress}
       // Fixed slot width == pitch: centres stay exactly pitch apart no
       // matter how wide the label, keeping the combine math honest.
@@ -524,7 +540,9 @@ function LensCoinButton({
       >
         <motion.span
           className={`block ${
-            isActive || peeked ? 'lens-coin-active lens-coin-pulse' : 'lens-coin-idle'
+            isActive || peeked
+              ? `lens-coin-active${alive ? ' lens-coin-pulse' : ''}`
+              : 'lens-coin-idle'
           }`}
           initial={initial}
           animate={animate}
@@ -536,7 +554,7 @@ function LensCoinButton({
             symbol={lens.glyph}
             color={lens.accent}
             variant="selection"
-            shine={!reduceMotion}
+            shine={!reduceMotion && alive}
             shineDuration={shine}
           />
         </motion.span>

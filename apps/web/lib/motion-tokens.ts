@@ -28,3 +28,7 @@ export const drawIn = { duration: 0.6, ease: "easeOut" } as const;
 
 /** Stagger interval for line/mask reveals (per index). */
 export const STAGGER_STEP_S = 0.05;
+
+export const press = { scale: 0.97 } as const;
+
+export const comparisonSettle = { duration: 0.6, ease: "easeOut" } as const;

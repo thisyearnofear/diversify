@@ -3,6 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { PlanFloorControl } from "../PlanFloorControl";
+
+vi.mock("@/lib/haptics", () => ({
+  haptics: { tap: vi.fn(), confirm: vi.fn(), selection: vi.fn() },
+}));
+import { haptics } from "@/lib/haptics";
 import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import {
   getArchetypeAllocations,
@@ -106,6 +111,43 @@ describe("PlanFloorControl — balance preview", () => {
     expect(screen.queryByRole("button", { name: "Use this balance" })).not.toBeInTheDocument();
     expect(screen.getByText("Sample preview only — nothing will be saved.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Keep current balance" })).toBeInTheDocument();
+  });
+
+  it("ticks exactly once on a real pointer change — before onChange, never on re-select or focus", () => {
+    vi.mocked(haptics.tap).mockClear();
+    const { onChange } = renderControl();
+    const aggressive = screen.getByRole("radio", { name: "More exposure" });
+    fireEvent.click(aggressive);
+    expect(haptics.tap).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(haptics.tap).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(onChange).mock.invocationCallOrder[0],
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "Balanced" }));
+    expect(haptics.tap).toHaveBeenCalledTimes(1);
+
+    fireEvent.focus(aggressive);
+    expect(haptics.tap).toHaveBeenCalledTimes(1);
+  });
+
+  it("ticks exactly once on a real keyboard change, before onChange", () => {
+    vi.mocked(haptics.tap).mockClear();
+    const { onChange } = renderControl();
+    const balanced = screen.getByRole("radio", { name: "Balanced" });
+    balanced.focus();
+    fireEvent.keyDown(balanced, { key: "ArrowRight" });
+    expect(haptics.tap).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(haptics.tap).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(onChange).mock.invocationCallOrder[0],
+    );
+  });
+
+  it("preview still persists nothing until apply", () => {
+    const onApply = vi.fn();
+    const { onChange } = renderControl({ isPreviewing: true, value: "Conservative", legs: CONSERVATIVE, onApply });
+    fireEvent.click(screen.getByRole("radio", { name: "More exposure" }));
+    expect(onChange).toHaveBeenCalledWith("Aggressive");
+    expect(onApply).not.toHaveBeenCalled();
   });
 
   function Harness() {

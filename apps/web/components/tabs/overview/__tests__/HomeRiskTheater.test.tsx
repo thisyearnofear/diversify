@@ -174,7 +174,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
       JSON.stringify({ value: { ...READING, delta: -8.4, dataAsOf: "2026-09-11" }, at: NOW - 3 * 24 * 3600 * 1000 }),
     );
     renderTheater();
-    expect(await screen.findByLabelText("Your savings amount")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Example amount")).toBeInTheDocument();
     expect(screen.queryByTestId("currency-visit-review")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Home view" })).not.toBeInTheDocument();
   });
@@ -183,7 +183,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     renderTheater();
     expect(screen.queryByTestId("currency-visit-review")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Home view" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Your savings amount")).toBeInTheDocument();
+    expect(screen.getByLabelText("Example amount")).toBeInTheDocument();
   });
 
   it("stays silent for same-session snapshots (younger than 6h)", () => {
@@ -279,94 +279,40 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
   });
 });
 
-describe("HomeRiskTheater — while you were away (Guardian activity)", () => {
+describe("HomeRiskTheater — Guardian activity moved off the resting surface", () => {
   const ACTIVITY_KEY = "diversifi:last-visit:guardian-activity";
-  const DAY = 24 * 3600 * 1000;
 
   beforeEach(() => {
     window.localStorage.clear();
-    mocks.visibility = "quiet";
-    mocks.sessionInfo = null;
+    mocks.visibility = "informed";
+    mocks.sessionInfo = {
+      activityStats: { week: "2026-W39", evaluated: 15, executed: 3, declined: 2 },
+      decisionLog: [],
+    };
     mocks.navigateToGuardian.mockReset();
   });
 
-  function informedSession(week: string, evaluated: number, executed: number, declined: number) {
-    mocks.visibility = "informed";
-    mocks.sessionInfo = {
-      activityStats: { week, evaluated, executed, declined },
-      decisionLog: [
-        { capturedAt: new Date(Date.now() - DAY).toISOString(), status: "declined", reason: "within bounds" },
-      ],
-    };
-  }
-
-  it("renders same-week deltas against the last visit's snapshot", async () => {
-    informedSession("2026-W39", 15, 3, 2);
-    window.localStorage.setItem(
-      ACTIVITY_KEY,
-      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
-    );
-    renderTheater();
-    const line = await screen.findByTestId("guardian-since-visit");
-    expect(line.textContent).toContain("Since your last visit (3d ago)");
-    expect(line.textContent).toContain("ran 5 checks");
-    expect(line.textContent).toContain("1 move");
-    expect(line.textContent).toContain("1 stand-down");
-  });
-
-  it("quotes 'this week' totals when the snapshot is from an earlier week", async () => {
-    informedSession("2026-W39", 15, 3, 2);
-    window.localStorage.setItem(
-      ACTIVITY_KEY,
-      JSON.stringify({ value: "2026-W38|10|2|1", at: Date.now() - 8 * DAY }),
-    );
-    renderTheater();
-    const line = await screen.findByTestId("guardian-since-visit");
-    expect(line.textContent).toContain("This week: Guardian ran 15 checks");
-    expect(line.textContent).not.toContain("Since your last visit");
-  });
-
-  it("stays silent in quiet mode", async () => {
-    informedSession("2026-W39", 15, 3, 2);
-    mocks.visibility = "quiet";
-    window.localStorage.setItem(
-      ACTIVITY_KEY,
-      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
-    );
+  it("renders no Guardian activity reporting at rest", async () => {
     renderTheater();
     await screen.findByTestId("holdings-strip");
     expect(screen.queryByTestId("guardian-since-visit")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Guardian ran/)).not.toBeInTheDocument();
   });
 
-  it("stays silent when the session doc predates activity counters", async () => {
-    mocks.visibility = "informed";
-    mocks.sessionInfo = { activityStats: null, decisionLog: [] };
-    renderTheater();
-    await screen.findByTestId("holdings-strip");
-    expect(screen.queryByTestId("guardian-since-visit")).not.toBeInTheDocument();
-  });
-
-  it("never fabricates a line — no snapshot, no counters, no zeros", async () => {
-    informedSession("2026-W39", 0, 0, 0);
-    renderTheater();
-    await screen.findByTestId("holdings-strip");
-    expect(screen.queryByTestId("guardian-since-visit")).not.toBeInTheDocument();
-  });
-
-  it("hands the line plus recent decisions to Ask Guardian on tap", async () => {
-    informedSession("2026-W39", 15, 3, 2);
-    window.localStorage.setItem(
-      ACTIVITY_KEY,
-      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
-    );
-    renderTheater();
-    const line = await screen.findByTestId("guardian-since-visit");
-    fireEvent.click(line);
-    await waitFor(() => expect(mocks.navigateToGuardian).toHaveBeenCalledTimes(1));
-    const payload = mocks.navigateToGuardian.mock.calls[0][0];
-    expect(payload.summary).toContain("Guardian ran 5 checks");
-    expect(payload.prompt).toContain("Recent decisions:");
-    expect(payload.prompt).toContain("within bounds");
+  it("never reads or writes the guardian-activity visit key", async () => {
+    const getItem = vi.spyOn(Storage.prototype, "getItem");
+    const setItem = vi.spyOn(Storage.prototype, "setItem");
+    try {
+      renderTheater();
+      await screen.findByTestId("holdings-strip");
+      const touched = (calls: unknown[][]) =>
+        calls.some(([k]) => String(k).includes(ACTIVITY_KEY));
+      expect(touched(getItem.mock.calls)).toBe(false);
+      expect(touched(setItem.mock.calls)).toBe(false);
+    } finally {
+      getItem.mockRestore();
+      setItem.mockRestore();
+    }
   });
 });
 

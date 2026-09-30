@@ -14,7 +14,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '../shared/FloatingCoins';
 import { TokenIcon } from '../shared/TokenIcon';
 import { QUIET_GRAY } from '../shared/palette';
-import { springPop, springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
+import { press, springPop, springPress, springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { haptics } from '@/lib/haptics';
 import { corridorFor, corridorSideFor, pairWhatIfFor, tiltForDrift, type CorridorSignal, type Horizon } from '@/lib/corridor-context';
 import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/constants/token-provenance';
@@ -142,15 +142,17 @@ function BeamCoin({
       className="relative"
     >
       {provenance ? (
-        <button
+        <motion.button
           type="button"
           onClick={onFlip}
           aria-label={`About ${symbol}`}
           aria-pressed={flipped}
+          whileTap={reduced ? undefined : press}
+          transition={springPress}
           className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
         >
           {coin}
-        </button>
+        </motion.button>
       ) : (
         coin
       )}
@@ -196,6 +198,7 @@ function StageLabel({
   provenance: TokenProvenance | null;
   onOpenPicker: () => void;
 }) {
+  const reduced = useReducedMotion();
   if (flipped && provenance) {
     return (
       <div className="w-[132px] text-center">
@@ -204,17 +207,19 @@ function StageLabel({
     );
   }
   return (
-    <button
+    <motion.button
       type="button"
       onClick={onOpenPicker}
       aria-label={`Change ${symbol}`}
+      whileTap={reduced ? undefined : press}
+      transition={springPress}
       className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
     >
       {symbol}
       <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
-    </button>
+    </motion.button>
   );
 }
 
@@ -417,7 +422,7 @@ export function PairStage({
                   setActed(true);
                   onSwitch();
                 }}
-                whileTap={reduced ? undefined : { scale: 0.9 }}
+                whileTap={reduced ? undefined : { ...press, transition: springPress }}
                 aria-label="Switch tokens"
                 className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
               >

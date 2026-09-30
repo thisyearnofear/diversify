@@ -10,6 +10,7 @@ import {
   type GuardianProofEvent,
 } from "./GuardianJournalTab";
 import { LoopResultSummary } from "./LoopResultSummary";
+import { GuardianCadenceLine } from "../shared/LiveProofCard";
 import type {
   GuardianLoopResult,
   GuardianSessionInfo,
@@ -85,6 +86,10 @@ export function GuardianJournalSheet({
           )}
         </div>
       )}
+
+      {/* Informed mode only: the same measured cadence the compact proof
+          card carries, kept right under the trust line it quantifies. */}
+      <GuardianCadenceLine />
 
       <GuardianJournalTab
         events={events}

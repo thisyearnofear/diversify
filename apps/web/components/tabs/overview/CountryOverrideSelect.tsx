@@ -21,6 +21,8 @@ interface Props {
   currentCountryCode: string;
   currentCountryName: string;
   onChange: (code: string) => void;
+  label?: string;
+  placeholder?: string;
   className?: string;
 }
 
@@ -34,6 +36,8 @@ export function CountryOverrideSelect({
   currentCountryCode,
   currentCountryName,
   onChange,
+  label = 'Whose savings?',
+  placeholder = 'Choose a country…',
   className = '',
 }: Props) {
   // No country yet (detection failed / pending): render the curated list
@@ -44,7 +48,7 @@ export function CountryOverrideSelect({
       <label
         className={`mt-3 flex items-center justify-center gap-1.5 text-2xs text-gray-400 dark:text-gray-500 ${className}`}
       >
-        <span className="font-semibold">Whose savings?</span>
+        <span className="font-semibold">{label}</span>
         <span aria-hidden="true">·</span>
         <select
           value=""
@@ -55,7 +59,7 @@ export function CountryOverrideSelect({
           className="max-w-[11rem] min-h-tap truncate rounded-full bg-transparent px-2 text-2xs font-bold text-gray-500 dark:text-gray-400 border border-transparent hover:border-gray-300 dark:hover:border-gray-600 focus:border-blue-500 outline-none transition-colors cursor-pointer"
         >
           <option value="" disabled>
-            Choose a country…
+            {placeholder}
           </option>
           {[...CURRENCY_RISK_DATA]
             .sort((a, b) => a.countryName.localeCompare(b.countryName))
@@ -95,7 +99,7 @@ export function CountryOverrideSelect({
     <label
       className={`mt-3 flex items-center justify-center gap-1.5 text-2xs text-gray-400 dark:text-gray-500 ${className}`}
     >
-      <span className="font-semibold">Whose savings?</span>
+      <span className="font-semibold">{label}</span>
       <span aria-hidden="true">·</span>
       <select
         value={currentCountryCode}

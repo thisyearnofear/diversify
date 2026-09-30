@@ -140,6 +140,9 @@ vi.mock("@/components/shared/GuardianMascot", () => ({
 vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
 }));
+vi.mock("@/components/shared/LiveProofCard", () => ({
+  GuardianCadenceLine: () => <div data-testid="guardian-cadence-line" />,
+}));
 
 import AgentTab from "../AgentTab";
 

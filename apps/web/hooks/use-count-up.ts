@@ -21,11 +21,11 @@ import {
 
 export function useCountUp(
   target: number,
-  options: { duration?: number; format?: (n: number) => string } = {},
+  options: { duration?: number; initialValue?: number; format?: (n: number) => string } = {},
 ): MotionValue<string> {
-  const { duration = 0.6, format = defaultFormat } = options;
+  const { duration = 0.6, initialValue, format = defaultFormat } = options;
   const reducedMotion = useReducedMotion();
-  const mv = useMotionValue(reducedMotion ? target : 0);
+  const mv = useMotionValue(reducedMotion ? target : (initialValue ?? 0));
 
   useEffect(() => {
     if (reducedMotion) {

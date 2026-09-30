@@ -123,6 +123,9 @@ vi.mock("@/components/shared/GuardianMascot", () => ({
 vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
 }));
+vi.mock("@/components/shared/LiveProofCard", () => ({
+  GuardianCadenceLine: () => <div data-testid="guardian-cadence-line" />,
+}));
 
 import AgentTab from "../AgentTab";
 
@@ -202,6 +205,20 @@ describe("AgentTab — Guardian context card drill-down", () => {
       { decisionRef: DECISION_REF },
     );
     expect(mockClearGuardianContext).toHaveBeenCalledTimes(1);
+  });
+
+  it("carries the cadence line behind the selected context, absent at rest", () => {
+    render(<AgentTab />);
+    expect(screen.queryByTestId("guardian-cadence-line")).not.toBeInTheDocument();
+
+    cleanup();
+    mockGuardianContext = {
+      summary: "Guardian stood down on KESm · 5m ago",
+      prompt: "Guardian, you stood down on my KESm position…",
+    };
+    render(<AgentTab />);
+    const inspector = screen.getByTestId("inspector-sheet");
+    expect(within(inspector).getByTestId("guardian-cadence-line")).toBeInTheDocument();
   });
 
   it("keeps the status tier within the 3-slot budget", () => {

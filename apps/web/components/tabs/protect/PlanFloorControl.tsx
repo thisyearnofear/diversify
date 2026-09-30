@@ -9,6 +9,9 @@
  */
 
 import React from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { press, springPress } from "@/lib/motion-tokens";
+import { haptics } from "@/lib/haptics";
 import {
   floorPercent,
   reserveLabel,
@@ -53,6 +56,7 @@ export function PlanFloorControl({
   onInteraction,
   floor: floorExposure = "USD",
 }: Props) {
+  const reducedMotion = useReducedMotion();
   const selected = value ?? "Balanced";
   const groupRef = React.useRef<HTMLDivElement>(null);
   const restoreFocus = React.useRef(false);
@@ -77,6 +81,7 @@ export function PlanFloorControl({
   };
   const choose = (index: number) => {
     onInteraction?.();
+    if (OPTIONS[index] !== selected) haptics.tap();
     onChange(OPTIONS[index]);
     focusOption(index);
   };
@@ -109,14 +114,20 @@ export function PlanFloorControl({
         {OPTIONS.map((opt) => {
           const isSelected = selected === opt;
           return (
-            <button
+            <motion.button
               key={opt}
               type="button"
               role="radio"
               aria-checked={isSelected}
               tabIndex={isSelected ? 0 : -1}
-              onClick={() => { onInteraction?.(); onChange(opt); }}
+              onClick={() => {
+                onInteraction?.();
+                if (opt !== selected) haptics.tap();
+                onChange(opt);
+              }}
               onFocus={() => onInteraction?.()}
+              whileTap={reducedMotion ? undefined : press}
+              transition={springPress}
               className={`min-h-tap px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected
                   ? `bg-white dark:bg-gray-900 shadow-sm ${accent ? "" : "text-gray-900 dark:text-white"}`
@@ -125,7 +136,7 @@ export function PlanFloorControl({
               style={isSelected && accent ? { color: accent } : undefined}
             >
               {LABELS[opt]}
-            </button>
+            </motion.button>
           );
         })}
       </div>
@@ -154,16 +165,18 @@ export function PlanFloorControl({
               Sample preview only — nothing will be saved.
             </p>
           )}
-          <button
+          <motion.button
             type="button"
             onClick={() => {
               restoreFocus.current = true;
               onCancel();
             }}
+            whileTap={reducedMotion ? undefined : press}
+            transition={springPress}
             className="min-h-tap w-full text-xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded-xl"
           >
             Keep current balance
-          </button>
+          </motion.button>
         </div>
       )}
     </div>

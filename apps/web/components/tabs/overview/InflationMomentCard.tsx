@@ -14,7 +14,6 @@ import React from 'react';
 import { BENCHMARK_COLORS } from "@/components/shared/palette";
 import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '@/components/shared/FloatingCoins';
-import { TrustFootnote } from '@/components/shared/TrustFootnote';
 import type { InflationMoment } from '@/lib/narrative/currency-moment';
 import { CountryOverrideSelect } from './CountryOverrideSelect';
 import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
@@ -50,13 +49,27 @@ export function InflationMomentCard({
 
   return (
     <div className={`text-center ${className}`}>
-      {/* Whose story this is — the visitor's own country */}
-      <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
-        {moment.flag && (
-          <span aria-hidden="true">{moment.flag} </span>
-        )}
-        {moment.countryName}
-      </p>
+      {/* Whose savings — diaspora override. Detection is location, risk is
+          personal; lets an expat re-point the moment at their home country. */}
+      {onChangeCountry ? (
+        <div className="mb-3">
+          <CountryOverrideSelect
+            currentCountryCode={moment.countryCode}
+            currentCountryName={moment.countryName}
+            onChange={(code) => { act(); onChangeCountry(code); }}
+            label="Savings currency"
+            className="mt-0"
+          />
+        </div>
+      ) : (
+        <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
+          {/* Whose story this is — the visitor's own country */}
+          {moment.flag && (
+            <span aria-hidden="true">{moment.flag} </span>
+          )}
+          {moment.countryName}
+        </p>
+      )}
 
       {/* The stage — a single quiet object: gold. One object gets the colour,
           everything else is quiet (grammar rule). Gold is the yardstick because
@@ -88,23 +101,26 @@ export function InflationMomentCard({
 
       {/* One personal consequence — the amount is theirs to change */}
       <p className="text-sm text-gray-700 dark:text-gray-300 mt-3">
-        <label className="inline-flex items-baseline gap-1">
-          <span className="text-gray-400 dark:text-gray-500 font-bold">{moment.flag ?? '💵'}</span>
+        <label className="inline-flex items-baseline gap-1.5">
+          <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">Example amount</span>
+          <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">local currency</span>
           <input
             type="number"
             min={0}
             value={moment.savingsAmount}
-            aria-label="Your savings amount"
+            aria-label="Example amount"
             onFocus={act}
             onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
             className="w-24 text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
           />
-        </label>{' '}
-        loses about{' '}
+        </label>
+      </p>
+      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+        ≈{' '}
         <strong className="tabular-nums" style={{ color: GOLD.color }}>
           {fmt(moment.annualImpact)}
         </strong>{' '}
-        a year to inflation.
+        less buying power a year.
       </p>
         </div>
       </div>
@@ -115,29 +131,17 @@ export function InflationMomentCard({
           onClick={onProtect}
           className="mt-4 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
         >
-          {protectLabel ?? "Protect this"}
+          {protectLabel ?? "See Shield"}
         </button>
       )}
 
       {/* Quiet provenance — data honesty stays, but it whispers. The
           progressive-blur TrustFootnote keeps the first clause readable and
           expands on hover/tap — never a hide. */}
-      <TrustFootnote className="mt-2">
-        {moment.isLive && <><span className="text-emerald-500 font-bold">●</span><span> live · </span></>}
+      <p className="mt-2 text-2xs text-gray-400 dark:text-gray-500">
+        {moment.isLive && <><span className="text-emerald-500 font-bold">●</span> live · </>}
         as of {moment.dataAsOf} · regional inflation, not advice
-      </TrustFootnote>
-
-      {/* Whose savings — diaspora override. Detection is location, risk is
-          personal; lets an expat re-point the moment at their home country. */}
-      {onChangeCountry && (
-        <div className="instrument-inspect-hidden">
-          <CountryOverrideSelect
-            currentCountryCode={moment.countryCode}
-            currentCountryName={moment.countryName}
-            onChange={(code) => { act(); onChangeCountry(code); }}
-          />
-        </div>
-      )}
+      </p>
     </div>
   );
 }

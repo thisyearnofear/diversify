@@ -17,8 +17,11 @@ vi.mock("framer-motion", async (importOriginal) => {
   return { ...mod, useReducedMotion: () => reduced.on };
 });
 
-function Probe({ target }: { target: number }) {
-  const v = useCountUp(target, { format: (n) => Math.round(n).toString() });
+function Probe({ target, initialValue }: { target: number; initialValue?: number }) {
+  const v = useCountUp(target, {
+    initialValue,
+    format: (n) => Math.round(n).toString(),
+  });
   return <motion.span data-testid="v">{v}</motion.span>;
 }
 
@@ -52,5 +55,36 @@ describe("useCountUp", () => {
     await waitFor(() => expect(screen.getByTestId("v")).toHaveTextContent("100"));
     rerender(<Probe target={200} />);
     await waitFor(() => expect(screen.getByTestId("v")).toHaveTextContent("200"));
+  });
+
+  it("starts at initialValue when provided — a mounted reading, never zero", () => {
+    render(<Probe target={-18} initialValue={-18} />);
+    expect(screen.getByTestId("v")).toHaveTextContent("-18");
+  });
+
+  it("keeps the legacy zero start when no initialValue is given", () => {
+    render(<Probe target={100} />);
+    const n = Number(screen.getByTestId("v").textContent);
+    expect(n).toBeLessThan(100);
+  });
+
+  it("an initialValue mount still tweens old → new on target change", async () => {
+    const { rerender } = render(<Probe target={-18} initialValue={-18} />);
+    expect(screen.getByTestId("v")).toHaveTextContent("-18");
+    rerender(<Probe target={4} initialValue={4} />);
+    const n = Number(screen.getByTestId("v").textContent);
+    expect(n).toBeGreaterThanOrEqual(-18);
+    expect(n).not.toBe(0);
+    await waitFor(() => expect(screen.getByTestId("v")).toHaveTextContent("4"));
+  });
+
+  it("a mid-flight retarget continues from the current value — never restarts at zero", async () => {
+    const { rerender } = render(<Probe target={-18} initialValue={-18} />);
+    rerender(<Probe target={4} initialValue={4} />);
+    rerender(<Probe target={-8} initialValue={-8} />);
+    const n = Number(screen.getByTestId("v").textContent);
+    expect(n).not.toBe(0);
+    expect(n).toBeLessThanOrEqual(4);
+    await waitFor(() => expect(screen.getByTestId("v")).toHaveTextContent("-8"));
   });
 });

@@ -28,9 +28,33 @@ describe('InflationMomentCard — honest fallback hero', () => {
     );
     expect(screen.getByText('2.8%')).toBeInTheDocument();
     expect(screen.getByText(/average inflation · Asia a year/)).toBeInTheDocument();
-    expect(screen.getByText('280')).toBeInTheDocument();
+    expect(screen.getByText(/less buying power a year/)).toHaveTextContent('≈ 280 less buying power a year');
+    expect(screen.getByText('local currency')).toBeInTheDocument();
     expect(screen.getByText(/as of 2025/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Protect this' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'See Shield' })).not.toBeInTheDocument();
+  });
+
+  it('the country picker is the heading — one select, fired on change', () => {
+    const onChangeCountry = vi.fn();
+    render(
+      <InflationMomentCard
+        moment={MOMENT}
+        onAmountChange={() => {}}
+        onChangeCountry={onChangeCountry}
+      />,
+    );
+    const select = screen.getByLabelText('Select the country where your savings live');
+    expect(select).toHaveValue('JP');
+    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    expect(screen.getByText('Savings currency')).toBeInTheDocument();
+    fireEvent.change(select, { target: { value: 'GH' } });
+    expect(onChangeCountry).toHaveBeenCalledWith('GH');
+  });
+
+  it('keeps the static country heading when no change handler exists', () => {
+    render(<InflationMomentCard moment={MOMENT} onAmountChange={() => {}} />);
+    expect(screen.getByText('Japan')).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
   it('lets the visitor change the amount and protects on the one CTA', () => {
@@ -44,12 +68,27 @@ describe('InflationMomentCard — honest fallback hero', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Your savings amount'), {
+    fireEvent.change(screen.getByLabelText('Example amount'), {
       target: { value: '25000' },
     });
     expect(onAmountChange).toHaveBeenCalledWith(25000);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Protect this' }));
+    fireEvent.click(screen.getByRole('button', { name: 'See Shield' }));
     expect(onProtect).toHaveBeenCalledTimes(1);
+  });
+
+  it('an explicit protectLabel wins over the default', () => {
+    render(
+      <InflationMomentCard
+        moment={MOMENT}
+        onAmountChange={() => {}}
+        onProtect={() => {}}
+        protectLabel="See your Buen Vivir shield"
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: 'See your Buen Vivir shield' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'See Shield' })).not.toBeInTheDocument();
   });
 });

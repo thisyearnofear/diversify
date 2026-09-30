@@ -8,7 +8,7 @@
  * Reduced-motion skips the fold; content is identical.
  */
 
-import React, { useRef } from "react";
+import React, { useEffect, useRef } from "react";
 import {
   AnimatePresence,
   motion,
@@ -16,8 +16,9 @@ import {
   useReducedMotion,
   type PanInfo,
 } from "framer-motion";
-import { spring } from "@/lib/motion-tokens";
+import { press, spring, springPress, springSoft } from "@/lib/motion-tokens";
 import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
+import { useInstrumentInspectorPlacement } from "./InstrumentShell";
 import { haptics } from "@/lib/haptics";
 
 interface InspectorSheetProps {
@@ -30,16 +31,41 @@ interface InspectorSheetProps {
 }
 
 const FOLD = {
-  initial: { rotateX: -88, opacity: 0, height: 0 },
-  animate: { rotateX: 0, opacity: 1, height: "auto" },
-  exit: { rotateX: -88, opacity: 0, height: 0 },
+  initial: { x: 0, rotateX: -88, opacity: 0, height: 0 },
+  animate: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  exit: { x: 0, rotateX: -88, opacity: 0, height: 0 },
+};
+
+const SIDE = {
+  initial: { x: 12, rotateX: 0, opacity: 0, height: "auto" },
+  animate: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  exit: { x: 12, rotateX: 0, opacity: 0, height: "auto" },
 };
 
 const INSTANT = {
-  initial: { opacity: 1, height: "auto" },
-  animate: { opacity: 1, height: "auto" },
-  exit: { opacity: 0, height: 0 },
+  initial: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  animate: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  exit: { x: 0, rotateX: 0, opacity: 0, height: 0 },
 };
+
+const SIDE_INSTANT = {
+  initial: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  animate: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  exit: { x: 0, rotateX: 0, opacity: 0, height: "auto" },
+};
+
+function isRestorable(el: HTMLElement | null): el is HTMLElement {
+  if (!el || !el.isConnected) return false;
+  if ("disabled" in el && el.disabled === true) return false;
+  if (el.getAttribute("aria-disabled") === "true") return false;
+  for (let node: HTMLElement | null = el; node; node = node.parentElement) {
+    if (node.inert || node.hidden) return false;
+    if (node.getAttribute("aria-hidden") === "true") return false;
+    const style = window.getComputedStyle(node);
+    if (style.display === "none" || style.visibility === "hidden") return false;
+  }
+  return true;
+}
 
 /** Dismiss when dragged this far down… */
 export const DISMISS_OFFSET_PX = 80;
@@ -81,17 +107,90 @@ export function InspectorSheet({
 }: InspectorSheetProps) {
   const reducedMotion = useReducedMotion();
   const dragControls = useDragControls();
+  const placement = useInstrumentInspectorPlacement();
   const open = Boolean(selectedId);
-  const variants = reducedMotion ? INSTANT : FOLD;
+  const variants = reducedMotion
+    ? placement === "side"
+      ? SIDE_INSTANT
+      : INSTANT
+    : placement === "side"
+      ? SIDE
+      : FOLD;
   const detent = useDismissDetent();
+
+  const triggerRef = useRef<HTMLElement | null>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+  const pendingRestoreRef = useRef<HTMLElement | null>(null);
+  const sheetElRef = useRef<HTMLElement | null>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
+  const selectedIdRef = useRef<string | null | undefined>(selectedId);
+
+  useEffect(() => {
+    if (open || typeof document === "undefined") return;
+    const seed = document.activeElement;
+    lastFocusedRef.current =
+      seed instanceof HTMLElement && seed !== document.body ? seed : null;
+    const onFocusIn = (e: Event) => {
+      const t = e.target;
+      if (t instanceof HTMLElement && t !== document.body) {
+        lastFocusedRef.current = t;
+      }
+    };
+    document.addEventListener("focusin", onFocusIn);
+    return () => document.removeEventListener("focusin", onFocusIn);
+  }, [open]);
+
+  useEffect(() => {
+    const prev = selectedIdRef.current;
+    selectedIdRef.current = selectedId;
+    if (open && prev == null) {
+      const el = document.activeElement;
+      triggerRef.current =
+        el instanceof HTMLElement && el !== document.body
+          ? el
+          : lastFocusedRef.current;
+      pendingRestoreRef.current = null;
+    } else if (!open && prev != null) {
+      const active = document.activeElement;
+      const trigger = triggerRef.current;
+      const insideSheet = sheetElRef.current?.contains(active) ?? false;
+      if (
+        active === document.body ||
+        insideSheet ||
+        (trigger != null && active === trigger)
+      ) {
+        pendingRestoreRef.current = trigger;
+      }
+    }
+  }, [open, selectedId]);
 
   useDismissibleLayer(open, onClose);
 
   return (
-    <AnimatePresence>
+    <AnimatePresence
+      onExitComplete={() => {
+        const target = pendingRestoreRef.current;
+        pendingRestoreRef.current = null;
+        const active = document.activeElement;
+        if (
+          target &&
+          !openRef.current &&
+          (active === document.body ||
+            active === target ||
+            !(active instanceof HTMLElement) ||
+            !active.isConnected ||
+            (sheetElRef.current?.contains(active) ?? false)) &&
+          isRestorable(target)
+        ) {
+          target.focus({ preventScroll: true });
+        }
+      }}
+    >
       {open && (
         <motion.section
           key={selectedId}
+          ref={sheetElRef}
           role="region"
           aria-label={title}
           data-testid="inspector-sheet"
@@ -101,7 +200,13 @@ export function InspectorSheet({
           initial={variants.initial}
           animate={variants.animate}
           exit={variants.exit}
-          transition={reducedMotion ? { duration: 0 } : spring}
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : placement === "side"
+                ? springSoft
+                : spring
+          }
           // Drag starts only from the handle (dragListener off) so content
           // stays scrollable/selectable. Down tracks the finger ~1:1, up
           // barely moves; release springs back unless it's a dismiss.
@@ -131,14 +236,16 @@ export function InspectorSheet({
             <h3 className="text-sm font-semibold text-ink">
               {title}
             </h3>
-            <button
+            <motion.button
               type="button"
               onClick={onClose}
+              whileTap={reducedMotion ? undefined : press}
+              transition={springPress}
               className="min-h-tap min-w-tap -mr-2 text-ink-subtle hover:text-gray-700 dark:hover:text-gray-200 text-lg font-bold transition-colors"
               aria-label="Close inspector"
             >
               ×
-            </button>
+            </motion.button>
           </div>
           <div className="px-4 pb-4">{children}</div>
         </motion.section>

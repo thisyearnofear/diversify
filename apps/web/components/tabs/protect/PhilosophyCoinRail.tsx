@@ -44,6 +44,7 @@ export function PhilosophyCoinRail({
         onSelect={onSelect}
         scrollable
         onTapPoint={onTapPoint}
+        alive={false}
       />
     </motion.div>
   );

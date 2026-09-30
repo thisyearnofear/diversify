@@ -24,7 +24,7 @@ import { useCountUp } from '@/hooks/use-count-up';
 import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { formatUsd, MONEY_MASK } from '@/lib/money-format';
-import { springPop, STAGGER_STEP_S } from '@/lib/motion-tokens';
+import { press, springPop, springPress, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { floorPercent, reserveLabel, resolvePlan, type CustomPlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
@@ -494,6 +494,7 @@ export function ProtectionPlanRing({
               holeHintOverride ? "Exit compare" : "Compare philosophies"
             }
             onClick={() => { setHoleActed(true); onHoleTap?.(); }}
+            whileTap={reducedMotion ? undefined : { ...press, transition: springPress }}
             className="text-3xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full inline-block min-h-[32px] min-w-tap hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
             style={{ background: `${archetype.accent}18`, color: archetype.accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
@@ -683,6 +684,7 @@ export function ProtectionPlanRing({
               type="button"
               onClick={() => { setHoleActed(true); onSelectToken(selectedToken === a.token ? null : a.token); }}
               aria-pressed={isSelected}
+              whileTap={reducedMotion ? undefined : { ...press, transition: springPress }}
               initial={reducedMotion ? false : { opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.22, delay: idx * STAGGER_STEP_S, ease: "easeOut" }}
@@ -723,6 +725,7 @@ export function ProtectionPlanRing({
             key="__other__"
             type="button"
             onClick={() => { haptics.tap(); setShowDust(true); }}
+            whileTap={reducedMotion ? undefined : { ...press, transition: springPress }}
             initial={reducedMotion ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.22, delay: primary.length * STAGGER_STEP_S }}
@@ -738,14 +741,16 @@ export function ProtectionPlanRing({
           </motion.button>
         )}
         {showDust && (
-          <button
+          <motion.button
             type="button"
             data-testid="shield-other-back"
             onClick={() => { haptics.tap(); setShowDust(false); }}
+            whileTap={reducedMotion ? undefined : press}
+            transition={springPress}
             className="w-full min-h-tap py-2.5 text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
           >
             ← Back to allocations
-          </button>
+          </motion.button>
         )}
       </div>
       )}

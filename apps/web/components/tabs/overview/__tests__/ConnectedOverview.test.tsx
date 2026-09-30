@@ -85,6 +85,7 @@ vi.mock("@/hooks/use-market-regime", () => ({
 const mockNavigateToCompare = vi.fn();
 const mockNavigateToNetting = vi.fn();
 const mockNavigateWithIntent = vi.fn();
+const mockNavigateToGuardian = vi.fn();
 const mockConsumeSettlement = vi.fn();
 const navState: {
   lastSettlement: { toToken: string; settledAt: number } | null;
@@ -95,6 +96,7 @@ vi.mock("@/context/app/NavigationContext", () => ({
     navigateToCompare: mockNavigateToCompare,
     navigateToNetting: mockNavigateToNetting,
     navigateWithIntent: mockNavigateWithIntent,
+    navigateToGuardian: mockNavigateToGuardian,
     lastSettlement: navState.lastSettlement,
     consumeSettlement: mockConsumeSettlement,
   }),
@@ -193,9 +195,14 @@ vi.mock("@/hooks/use-home-sections", () => ({
 vi.mock("@/components/wallet/WalletButton", () => ({ default: () => null }));
 // Guardian visibility surfaces ride these reads — default quiet so the
 // existing tier assertions see the classic layout.
+let mockGuardianVisibility: "quiet" | "informed" = "quiet";
+let mockSessionInfo: {
+  activityStats: { week: string; evaluated: number; executed: number; declined: number } | null;
+  decisionLog: Array<{ capturedAt: string; status: string; reason: string }>;
+} | null = null;
 vi.mock("@/context/app/GuardianVisibilityContext", () => ({
   useGuardianVisibility: () => ({
-    visibility: "quiet",
+    visibility: mockGuardianVisibility,
     origin: "persona",
     setVisibility: vi.fn(),
   }),
@@ -204,7 +211,10 @@ vi.mock("@/hooks/use-guardian-telemetry", () => ({
   useGuardianTelemetry: () => ({ data: null, isStale: false, refresh: vi.fn() }),
 }));
 vi.mock("@/hooks/use-guardian-session-info", () => ({
-  useGuardianSessionInfo: () => null,
+  useGuardianSessionInfo: (enabled: boolean) => (enabled ? mockSessionInfo : null),
+}));
+vi.mock("@/components/shared/LiveProofCard", () => ({
+  GuardianCadenceLine: () => <div data-testid="guardian-cadence-line" />,
 }));
 vi.mock("@/components/rewards/StreakRewardsCard", () => ({
   StreakRewardsCard: () => null,
@@ -1021,5 +1031,202 @@ describe("ConnectedOverview — concentration lens", () => {
       />,
     );
     expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
+  });
+});
+
+describe("ConnectedOverview — while you were away (Guardian activity)", () => {
+  const ACTIVITY_KEY = "diversifi:last-visit:guardian-activity";
+  const DAY = 24 * 3600 * 1000;
+
+  beforeEach(() => {
+    window.localStorage.clear();
+    mockMoment = GHANA_MOMENT;
+    mockGuardianVisibility = "quiet";
+    mockSessionInfo = null;
+    mockNavigateToGuardian.mockReset();
+  });
+
+  afterEach(() => {
+    cleanup();
+    window.localStorage.clear();
+    mockExperienceMode = "full";
+    mockProfileConfig = { userGoal: null, moneyPurpose: null, philosophy: null };
+    mockProfileComplete = false;
+    mockHomeSections = defaultHomeSections;
+    mockMoment = null;
+    mockGuardianVisibility = "quiet";
+    mockSessionInfo = null;
+  });
+
+  function informedSession(week: string, evaluated: number, executed: number, declined: number) {
+    mockGuardianVisibility = "informed";
+    mockSessionInfo = {
+      activityStats: { week, evaluated, executed, declined },
+      decisionLog: [
+        { capturedAt: new Date(Date.now() - DAY).toISOString(), status: "declined", reason: "within bounds" },
+      ],
+    };
+  }
+
+  it("renders the same-week delta as ONE quiet link — counters stay behind the tap", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
+    );
+    renderOverview();
+    const link = await screen.findByTestId("home-guardian-activity-link");
+    expect(link).toHaveTextContent("Review Guardian activity");
+    const slot = document.querySelector('[data-status-slot="transition"]')!;
+    expect(slot.textContent).not.toContain("ran 5 checks");
+    expect(screen.queryByText(/Guardian ran/)).not.toBeInTheDocument();
+
+    fireEvent.click(link);
+    expect(mockNavigateToGuardian).toHaveBeenCalledTimes(1);
+    const payload = mockNavigateToGuardian.mock.calls[0][0];
+    expect(payload.summary).toContain("Since your last visit (3d ago)");
+    expect(payload.summary).toContain("ran 5 checks");
+    expect(payload.summary).toContain("1 move");
+    expect(payload.summary).toContain("1 stand-down");
+    expect(payload.prompt).toContain("Recent decisions:");
+    expect(payload.prompt).toContain("within bounds");
+  });
+
+  it("quotes 'this week' totals when the snapshot is from an earlier week", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W38|10|2|1", at: Date.now() - 8 * DAY }),
+    );
+    renderOverview();
+    const link = await screen.findByTestId("home-guardian-activity-link");
+    fireEvent.click(link);
+    const payload = mockNavigateToGuardian.mock.calls[0][0];
+    expect(payload.summary).toContain("This week: Guardian ran 15 checks");
+    expect(payload.summary).not.toContain("Since your last visit");
+  });
+
+  it("stays silent in quiet mode", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    mockGuardianVisibility = "quiet";
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
+    );
+    renderOverview();
+    await screen.findByTestId("home-risk-theater");
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+  });
+
+  it("stays silent when the session doc predates activity counters", async () => {
+    mockGuardianVisibility = "informed";
+    mockSessionInfo = { activityStats: null, decisionLog: [] };
+    renderOverview();
+    await screen.findByTestId("home-risk-theater");
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+  });
+
+  it("never fabricates a line — no snapshot, no counters, no zeros", async () => {
+    informedSession("2026-W39", 0, 0, 0);
+    renderOverview();
+    await screen.findByTestId("home-risk-theater");
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+  });
+
+  it("stays silent for same-session snapshots (younger than 6h)", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 30 * 60 * 1000 }),
+    );
+    renderOverview();
+    await screen.findByTestId("home-risk-theater");
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+  });
+
+  it("fetches nothing in demo mode", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    renderOverview({ isDemo: true });
+    await screen.findByTestId("home-risk-theater");
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+  });
+
+  it("occupies the one transition slot — ahead of the tip and compare, behind concentration", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
+    );
+    mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
+    mockHomeSections = { ...defaultHomeSections, primaryTip: "Add BRLm for LatAm coverage." };
+    renderOverview();
+    await screen.findByTestId("home-guardian-activity-link");
+    const slots = document.querySelectorAll('[data-status-slot="transition"]');
+    expect(slots).toHaveLength(1);
+    expect(screen.queryByText("Add BRLm for LatAm coverage.")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
+    cleanup();
+
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
+    );
+    renderOverview({
+      portfolio: buildPortfolio({
+        regionData: [
+          { region: "Africa", value: 700, color: "#000", usdValue: 700 },
+          { region: "USA", value: 300, color: "#111", usdValue: 300 },
+        ] as any,
+        totalValue: 1000,
+      }),
+    });
+    expect(screen.getByTestId("home-concentration-link")).toBeInTheDocument();
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+  });
+
+  it("banner, payment-cycle, and graduation each outrank the activity link", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
+    );
+
+    mockHomeSections = { ...defaultHomeSections, banner: "currency-risk" };
+    renderOverview();
+    await screen.findByTestId("contextual-banner");
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+    cleanup();
+
+    mockHomeSections = { ...defaultHomeSections, banner: null, isPaymentCycle: true };
+    renderOverview();
+    await screen.findByRole("button", { name: /See what FX timing costs this payment/ });
+    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+    cleanup();
+
+    mockHomeSections = { ...defaultHomeSections, banner: null, isPaymentCycle: false };
+    graduationMock.data = {
+      shouldShow: true,
+      confidence: 0.35,
+      signals: { cyclical: false, corridor: true, largerBalance: false, hasSavedCycle: false },
+      promptHeadline: "Patterns in your recent activity.",
+    };
+    try {
+      renderOverview();
+      await screen.findByTestId("home-graduation");
+      expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+    } finally {
+      graduationMock.data = null;
+    }
+  });
+
+  it("the Home trust line carries no Guardian cadence, even informed", async () => {
+    informedSession("2026-W39", 15, 3, 2);
+    window.localStorage.setItem(
+      ACTIVITY_KEY,
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
+    );
+    renderOverview();
+    await screen.findByTestId("home-guardian-activity-link");
+    expect(screen.queryByTestId("guardian-cadence-line")).not.toBeInTheDocument();
   });
 });

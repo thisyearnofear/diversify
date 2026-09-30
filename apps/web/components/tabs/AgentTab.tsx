@@ -33,6 +33,7 @@ import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
+import { GuardianCadenceLine } from "../shared/LiveProofCard";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
 import { ResearchFundingLine } from "../agent/ResearchFundingLine";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
@@ -343,6 +344,7 @@ function ConnectedAgent({
                   </div>
                 );
               })()}
+              <GuardianCadenceLine />
               <button
                 type="button"
                 onClick={() => {

@@ -6,7 +6,8 @@
  */
 
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { press, springPress } from "@/lib/motion-tokens";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import StatusBadge from "../shared/StatusBadge";
 import {
@@ -43,18 +44,21 @@ function BudgetButton({
   limit: number;
   onOpenBounds: () => void;
 }) {
+  const reducedMotion = useReducedMotion();
   const formatted = useCountUp(remaining, {
     format: (n) => `$${n.toFixed(2)}`,
   });
   return (
-    <button
+    <motion.button
       type="button"
       data-testid="guardian-budget"
       onClick={onOpenBounds}
+      whileTap={reducedMotion ? undefined : press}
+      transition={springPress}
       className="mt-2 min-h-tap text-sm font-semibold text-gray-700 dark:text-gray-200"
     >
       <motion.span>{formatted}</motion.span> left of ${limit} today
-    </button>
+    </motion.button>
   );
 }
 
@@ -93,6 +97,7 @@ export function GuardianObject({
   /** False while any Guardian sheet is open — the line stills. */
   liveAlive?: boolean;
 }) {
+  const reducedMotion = useReducedMotion();
   const copy =
     guardianState === "monitoring" && isAutonomous
       ? GUARDIAN_AUTONOMOUS_COPY
@@ -140,23 +145,27 @@ export function GuardianObject({
       )}
 
       {latestEvent ? (
-        <button
+        <motion.button
           type="button"
           data-testid="guardian-latest"
           onClick={onOpenJournal}
+          whileTap={reducedMotion ? undefined : press}
+          transition={springPress}
           className="mt-1 min-h-tap text-xs text-gray-500 dark:text-gray-400"
         >
           {latestEvent.title} · {latestEvent.subtitle} · {timeAgo(latestEvent.timestamp)}
-        </button>
+        </motion.button>
       ) : latestCall ? (
-        <button
+        <motion.button
           type="button"
           data-testid="guardian-latest"
           onClick={onOpenJournal}
+          whileTap={reducedMotion ? undefined : press}
+          transition={springPress}
           className="mt-1 min-h-tap text-xs text-gray-500 dark:text-gray-400"
         >
           Latest call: {latestCall}
-        </button>
+        </motion.button>
       ) : null}
 
       <LiveLine
