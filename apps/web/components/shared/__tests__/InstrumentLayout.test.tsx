@@ -795,6 +795,64 @@ describe("InstrumentShell — motion choreography props", () => {
     expect(p.transition).toEqual({ duration: 0 });
   });
 
+  it("stage presentation fades in place — no surface, handle, drag, or fold", () => {
+    mockViewport({ desktop: true, width: 900 });
+    render(
+      <InstrumentShell
+        object={<span />}
+        inspectorOpen
+        inspector={
+          <InspectorSheet
+            selectedId="PAXG"
+            onClose={() => {}}
+            title="PAXG"
+            presentation="stage"
+          >
+            <p>detail</p>
+          </InspectorSheet>
+        }
+      />,
+    );
+    const p = sectionProps();
+    expect(p).toBeTruthy();
+    expect(p!.initial).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
+    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.exit).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
+    expect(p!.drag).toBe(false);
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(sheet.className).not.toContain("bg-surface");
+    expect(sheet.className).not.toContain("rounded-2xl");
+    expect(screen.queryByTestId("inspector-sheet-handle")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Close inspector")).toHaveTextContent("← Back");
+    expect(sheet.style.perspective).toBe("");
+  });
+
+  it("stage presentation stays normalized under reduced motion", () => {
+    motionMock.reduced = true;
+    mockViewport({ desktop: false, width: 400 });
+    render(
+      <InstrumentShell
+        object={<span />}
+        inspectorOpen
+        inspector={
+          <InspectorSheet
+            selectedId="PAXG"
+            onClose={() => {}}
+            title="PAXG"
+            presentation="stage"
+          >
+            <p>detail</p>
+          </InspectorSheet>
+        }
+      />,
+    );
+    const p = sectionProps();
+    expect(p!.initial).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
+    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.exit).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
+    expect(p!.transition).toEqual({ duration: 0 });
+  });
+
   it("pins reduced-motion side states to zeroed transforms with instant duration", () => {
     motionMock.reduced = true;
     mockViewport({ desktop: true, width: 900 });
@@ -814,5 +872,84 @@ describe("InstrumentShell — motion choreography props", () => {
     expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
     expect(p!.exit).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
     expect(p!.transition).toEqual({ duration: 0 });
+  });
+});
+
+describe("InspectorSheet — stage presentation lifecycle", () => {
+  afterEach(() => {
+    motionMock.reduced = false;
+  });
+
+  function StageHarness() {
+    const [sel, setSel] = React.useState<string | null>(null);
+    return (
+      <>
+        <button data-testid="trigger" onClick={() => setSel("KES")}>Open</button>
+        <button data-testid="elsewhere">Elsewhere</button>
+        <InspectorSheet
+          selectedId={sel}
+          onClose={() => setSel(null)}
+          title="KES"
+          presentation="stage"
+        >
+          <p>detail</p>
+        </InspectorSheet>
+      </>
+    );
+  }
+
+  it("restores focus to the initiating control after Escape", async () => {
+    motionMock.reduced = true;
+    render(<StageHarness />);
+    const trigger = screen.getByTestId("trigger");
+    trigger.focus();
+    fireEvent.click(trigger);
+    const close = await screen.findByLabelText("Close inspector");
+    close.focus();
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await waitFor(
+      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      { timeout: 3000 },
+    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+  });
+
+  it("restores focus after the ← Back control", async () => {
+    motionMock.reduced = true;
+    render(<StageHarness />);
+    const trigger = screen.getByTestId("trigger");
+    trigger.focus();
+    fireEvent.click(trigger);
+    const close = await screen.findByLabelText("Close inspector");
+    close.focus();
+    fireEvent.click(close);
+    await waitFor(
+      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      { timeout: 3000 },
+    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+  });
+
+  it("the exiting stage is inert, hidden, and out of the layout flow", async () => {
+    render(<StageHarness />);
+    const trigger = screen.getByTestId("trigger");
+    trigger.focus();
+    fireEvent.click(trigger);
+    await screen.findByTestId("inspector-sheet");
+
+    fireEvent.click(screen.getByLabelText("Close inspector"));
+    const exiting = screen.queryByTestId("inspector-sheet");
+    if (exiting) {
+      expect(exiting).toHaveAttribute("aria-hidden", "true");
+      expect(exiting.hasAttribute("inert")).toBe(true);
+      expect(exiting.style.pointerEvents).toBe("none");
+      expect(exiting.style.position).toBe("absolute");
+      expect(screen.queryByRole("region", { name: "KES" })).toBeNull();
+    }
+    await waitFor(
+      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      { timeout: 3000 },
+    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
   });
 });

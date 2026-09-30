@@ -135,3 +135,53 @@ describe('ClaimRail', () => {
     expect(edge).toBeEmptyDOMElement();
   });
 });
+
+describe('ClaimRail — entry mode', () => {
+  const unverified = () => {
+    streakState = { canClaim: false, isEligible: true, isWhitelisted: false, isLoading: false };
+    flowState = { ...baseFlow };
+  };
+
+  it('names the feature quietly and never starts identity until opened', () => {
+    unverified();
+    render(<ClaimRail setupMode="entry" />);
+    const rail = screen.getByTestId('claim-rail');
+    expect(rail).toHaveTextContent('GoodDollar daily income');
+    expect(rail).not.toHaveTextContent('Verify');
+    fireEvent.click(rail);
+    expect(mockHandleVerify).not.toHaveBeenCalled();
+  });
+
+  it('only the inner confirm invokes handleVerify; Back returns to the entry', () => {
+    unverified();
+    render(<ClaimRail setupMode="entry" />);
+    fireEvent.click(screen.getByTestId('claim-rail'));
+    expect(screen.getByText(/one-time identity check/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+    expect(mockHandleVerify).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('claim-rail'));
+    fireEvent.click(screen.getByRole('button', { name: 'Verify identity with GoodDollar' }));
+    expect(mockHandleVerify).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaiting verification names GoodDollar identity; claimable/claimed/error are unchanged', () => {
+    unverified();
+    flowState = { ...baseFlow, verifyStatus: 'awaiting' };
+    render(<ClaimRail setupMode="entry" />);
+    expect(screen.getByTestId('claim-rail')).toHaveTextContent('GoodDollar identity verification in progress');
+    cleanup();
+
+    streakState = { canClaim: true, isEligible: true, isWhitelisted: true, estimatedReward: '1.23 G$', isLoading: false };
+    flowState = { ...baseFlow };
+    render(<ClaimRail setupMode="entry" />);
+    const rail = screen.getByTestId('claim-rail');
+    expect(rail).toHaveTextContent('Claim Daily G$');
+    fireEvent.click(rail);
+    expect(mockHandleClaim).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    streakState = { canClaim: false, isEligible: true, isWhitelisted: true, alreadyClaimedOnChain: true, isLoading: false };
+    render(<ClaimRail setupMode="entry" />);
+    expect(screen.getByTestId('claim-rail')).toHaveTextContent("Today's G$ claimed");
+  });
+});

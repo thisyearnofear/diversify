@@ -28,6 +28,7 @@ interface UnconnectedStatusTierProps {
    *  Rendered between the trust line and the demo link — keep them text-links,
    *  the tier stays quiet by contract. */
   children?: React.ReactNode;
+  trust?: React.ReactNode;
 }
 
 export function UnconnectedStatusTier({
@@ -36,10 +37,11 @@ export function UnconnectedStatusTier({
   onDisableDemo,
   className = "",
   children,
+  trust = <VerifiedEvidence />,
 }: UnconnectedStatusTierProps) {
   return (
     <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 ${className}`.trim()}>
-      <VerifiedEvidence />
+      {trust}
       {children}
       {demoActive && onDisableDemo ? (
         <button

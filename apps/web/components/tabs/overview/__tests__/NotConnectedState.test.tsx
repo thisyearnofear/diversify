@@ -36,17 +36,57 @@ vi.mock("@/components/tabs/overview/CurrencyMomentCard", () => ({
   CurrencyMomentCard: ({
     rememberVisit,
     countryIsDefault,
+    onInspectCurrency,
+    currencySelected,
   }: {
     rememberVisit?: boolean;
     countryIsDefault?: boolean;
+    onInspectCurrency?: () => void;
+    currencySelected?: boolean;
   }) => (
     <div
       data-testid="moment-card"
       data-remember-visit={String(rememberVisit)}
       data-country-is-default={String(countryIsDefault)}
-    />
+    >
+      {onInspectCurrency ? (
+        <button
+          type="button"
+          aria-label="Story of the currency"
+          aria-pressed={currencySelected}
+          onClick={onInspectCurrency}
+        >
+          Story
+        </button>
+      ) : null}
+    </div>
   ),
 }));
+vi.mock("@/components/tabs/overview/CurrencyStoryInspector", async () => {
+  const { InspectorSheet } = await vi.importActual<typeof import("@/components/shared/InspectorSheet")>(
+    "@/components/shared/InspectorSheet",
+  );
+  return {
+    CurrencyStoryInspector: ({
+      code,
+      onClose,
+      presentation,
+    }: {
+      code: string | null;
+      onClose: () => void;
+      presentation?: "sheet" | "stage";
+    }) => (
+      <InspectorSheet
+        selectedId={code}
+        onClose={onClose}
+        title={code ?? "Currency"}
+        presentation={presentation}
+      >
+        <p data-testid="story-body">story for {code}</p>
+      </InspectorSheet>
+    ),
+  };
+});
 vi.mock("@/components/tabs/overview/InflationMomentCard", () => ({
   InflationMomentCard: () => <div data-testid="inflation-card" />,
 }));
@@ -91,12 +131,11 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("keeps trust + demo as quiet status-tier lines", () => {
+  it("keeps demo as a quiet status-tier line — no generic Verified on Home", () => {
     const onEnableDemo = vi.fn();
     render(<NotConnectedState onEnableDemo={onEnableDemo} />);
 
-    // §7 trust: one quiet line, not a proof card.
-    expect(screen.getByText("Verified")).toBeInTheDocument();
+    expect(screen.queryByText(/Verified|Evidence mirrored/i)).not.toBeInTheDocument();
     // Demo entry is a text link, not a competing button strip.
     fireEvent.click(
       screen.getByRole("button", { name: "Explore a sample plan" }),
@@ -170,6 +209,50 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     );
     fireEvent.change(select, { target: { value: "JM" } });
     expect(hookState.onChangeCountry).toHaveBeenCalledWith("JM");
+  });
+
+  it("opens the currency story as an inline stage — comparison stays mounted but unreachable and the wallet CTA is not a rival", async () => {
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    const comparison = screen.getByTestId("home-comparison");
+    const storyButton = screen.getByRole("button", { name: "Story of the currency" });
+    storyButton.focus();
+    fireEvent.click(storyButton);
+
+    const sheet = await screen.findByTestId("inspector-sheet");
+    expect(sheet).toHaveAttribute("data-selected-id", "NGN");
+    expect(comparison).toHaveAttribute("hidden");
+    expect(
+      screen.queryByRole("button", { name: "Connect wallet" }),
+    ).not.toBeInTheDocument();
+    expect(document.querySelector(".instrument-inspector")).toBeNull();
+    expect(
+      sheet.closest(".instrument-shell")?.querySelector(".instrument-object")
+        ?.contains(sheet),
+    ).toBe(true);
+  });
+
+  it("closing the stage restores the same mounted comparison and the single CTA", async () => {
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    const comparison = screen.getByTestId("home-comparison");
+    const storyButton = screen.getByRole("button", { name: "Story of the currency" });
+    storyButton.focus();
+    fireEvent.click(storyButton);
+    await screen.findByTestId("inspector-sheet");
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await vi.waitFor(() =>
+      expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("home-comparison")).toBe(comparison);
+    expect(comparison).not.toHaveAttribute("hidden");
+    expect(
+      screen.getByRole("button", { name: "Connect wallet" }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("moment-card")).toHaveAttribute(
+      "data-remember-visit",
+      "true",
+    );
+    await vi.waitFor(() => expect(document.activeElement).toBe(storyButton));
   });
 });
 

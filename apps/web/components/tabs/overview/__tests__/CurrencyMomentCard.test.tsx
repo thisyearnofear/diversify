@@ -74,6 +74,40 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.getByText(/as of 2025-07-01/)).toBeInTheDocument();
   });
 
+  it('renders one centred stage — no split composition, context below a bounded row', async () => {
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(document.querySelector('.instrument-composition')).toBeNull();
+    const row = document.querySelector(
+      '[class*="grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"]',
+    );
+    expect(row).not.toBeNull();
+    expect(row!.className).toContain('max-w-[360px]');
+    expect(row!.className).toContain('mx-auto');
+    const context = await screen.findByText(/buying power · 1Y vs US Dollar/);
+    expect(row!.contains(context)).toBe(false);
+    expect(
+      row!.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it('keeps horizon and benchmark controls as two wrapping groups', async () => {
+    render(<CurrencyMomentCard {...baseProps} />);
+    const horizonGroup = await screen.findByRole('group', { name: 'Time horizon' });
+    const benchmarkGroup = screen.getByRole('group', { name: 'Benchmark' });
+    expect(horizonGroup.className).toContain('inline-flex');
+    expect(benchmarkGroup.className).toContain('inline-flex');
+    const wrap = horizonGroup.parentElement!;
+    expect(wrap.className).toContain('flex-wrap');
+    expect(wrap.contains(horizonGroup)).toBe(true);
+    expect(wrap.contains(benchmarkGroup)).toBe(true);
+    const divider = [...wrap.children].find(
+      (el) => el.tagName === 'SPAN',
+    ) as HTMLElement | undefined;
+    expect(divider?.className).toContain('hidden');
+    expect(divider?.className).toContain('sm:block');
+    expect(horizonGroup.contains(benchmarkGroup)).toBe(false);
+  });
+
   it('scrubs the horizon and selects benchmarks with a haptic tick', () => {
     const onSelectHorizon = vi.fn();
     const onSelectBenchmark = vi.fn();

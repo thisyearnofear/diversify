@@ -396,9 +396,7 @@ A tab change that fails any of these is the old stack. Do not ship it.
 
 **Lenses.** A lens is a state of the tab's existing object — same
 primitives, no new card — entered only through the transition slot and
-left via an in-object "←", always preview-only. Three are shipped:
-**Concentration** (Home) opens when one region carries ≥50% of the
-wallet — the same `RegionCoin`s staged larger, the fact as headline;
+left via an in-object "←", always preview-only. Two are shipped:
 **Stronger floor** (Shield) opens only when the wallet's dollar share
 sits ≥10 points above the plan floor — a stronger floor raises the
 dollar reserve, so it is never offered when the wallet is under-reserved
@@ -414,7 +412,8 @@ standing mechanism that produced it ("Decided at {event} · {cadence}"),
 then ← Story returns. Shield's floor lens IS the existing balance
 preview — ring re-slice, "Dollar reserve A% → B%", Use/Keep — nothing
 auto-commits. Home's transition order: banner > payment-cycle >
-graduation prompt > concentration prompt > Guardian activity > tip > compare. Payment-cycle
+graduation prompt > Guardian activity > tip > compare — and every prompt
+hides while an inline inspection is open. Payment-cycle
 and graduation both open Shield's payment-cycle inspector (`lens:
 'cycle'`, plan-independent and walletless; also `?tab=protect&cycle=1`)
 — the per-cycle FX drag report is the business morph's doorway, netting
@@ -441,10 +440,22 @@ two experience modes: Simple shows the first three; Guardian joins when first
 requested (a hand-off switches Simple → Full) and in Full. Learn is retired — the calculator lives in Shield's
 empty-wallet inspector (and optionally Home amount-inspect), never a peer tab.
 Home is always the Risk Theater — the coin stage (`CurrencyMomentCard`/`InflationMomentCard`) is
-the one expressive object; holdings are a quiet coin row beneath it — one `Coin` per region, sized by share — never
-a second `AllocationRing`; tapping a coin dims the others and opens the region `InspectorSheet`. Tapping the stage's
-local coin flips it to its back (flag + newest dated event) and opens the currency story inspector (the dated
-`riskEvents` trail, "Share this currency's story ↗", Ask Guardian); a `?currency=` shared card lands view-only —
+the one expressive object, centred on one stage rather than an artefact/reading split (coin — delta — benchmark
+across the row, context beneath); holdings are a quiet coin row beneath it — one `Coin` per region, sized by share,
+centred when it fits and scrolling from the start when it overflows (`flex-none` items, auto `margin-inline` on the
+ends — never `justify-center` on an overflowing track) — never
+a second `AllocationRing`. Home selection replaces the stage inline (`InspectorSheet` `presentation="stage"`:
+borderless, opacity-only, `← Back`, same focus/dismiss lifecycle) — the comparison stays mounted but `hidden`,
+holdings stay, and the status transition slot is suppressed until close. Tapping a coin dims the others and stages
+that region: the headline `N%`, `Region · value of total`, one exposure meaning, `Review in Shield` primary plus a
+quiet Ask Guardian — optional Zakat sits behind an explicit Exposure/Zakat selection, never stacked. Tapping the stage's
+local coin flips it to its back (flag + newest dated event) and opens the currency story — a centred coin, a labelled
+`12-month path vs USD` chart (feed series, timestamp-spaced, validated before draw — malformed/missing series render
+`Historical path unavailable`), then a bounded `FlickScrollRow` of dated events whose selected caption carries
+year/event/impact (`Latest` only when a live anchored signal exists); "Share this currency's story ↗" stays secondary
+to the Ask Guardian primary. Home carries its own provenance (moment source/date, wallet freshness) — the status
+tier's generic trust line stays empty on Home, and the GoodDollar claim rides a named `GoodDollar daily income`
+entry that opens to the one-time identity explanation rather than a bare verify prompt; a `?currency=` shared card lands view-only —
 no country override, no visit memory — with an in-object "← Your currency" to leave. Shield's focused-token
 coin flips the same way when a curated provenance entry exists (`ProvenanceCoinBack`, reset on selection change). Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
@@ -617,7 +628,7 @@ numbers to fill a gap (per AGENTS.md Wave 8 — expired cache before a
 fake `+0.0%`); apply the same rule to copy: no claim you're not making
 truthfully somewhere verifiable.
 
-**Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The UI stays chain-agnostic by default: one quiet line — `Verified · Evidence mirrored` with a `✓` — in the trust tier (`TrustFootnote` / `InstrumentShell status`), not the object. No chain names, no hex in the first viewport. Detail is progressive disclosure: tapping `Verified` rewrites the artefact in place to the 5 dots + shared address + `Guardian #1` + explorer `0G/Celoscan/Arbiscan` links and the `/api/agent/zero-g-ledger?verify=<hash>` check (`LiveProofCard` lazy `✓`). Beginners never see a hex until they care; reviewers get the exact vision sentence in one tap. Header `GuardianMascot` tooltip reads `Portable Guardian · portable across wallets`, not `ERC-721`.
+**Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The UI stays chain-agnostic by default: one quiet line — `Verified · Evidence mirrored` with a `✓` — in the trust tier (`TrustFootnote` / `InstrumentShell status`), not the object. No chain names, no hex in the first viewport. Detail is progressive disclosure: tapping `Verified` rewrites the artefact in place to the 5 dots + shared address + `Guardian #1` + explorer `0G/Celoscan/Arbiscan` links and the `/api/agent/zero-g-ledger?verify=<hash>` check (`LiveProofCard` lazy `✓`). Beginners never see a hex until they care; reviewers get the exact vision sentence in one tap. Header `GuardianMascot` tooltip reads `Portable Guardian · portable across wallets`, not `ERC-721`. Home is the exception — the moment and story already carry their own source/date provenance, so Home's status tier leaves the generic trust slot empty rather than mirroring a second Verified line.
 
 ## 8. PR checklist for any new surface
 

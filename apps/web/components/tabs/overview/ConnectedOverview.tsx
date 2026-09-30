@@ -14,23 +14,22 @@ import { ClaimRail } from "../../rewards/ClaimRail";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { HomeRiskTheater } from "./HomeRiskTheater";
+import { regionGlyph } from "@/lib/home-lens";
 import { CurrencyStoryInspector } from "./CurrencyStoryInspector";
 import { trackFunnelEvent } from "@/lib/analytics";
-import { useLensOffered } from "@/hooks/use-lens-offered";
 import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { CountryOverrideSelect } from "./CountryOverrideSelect";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
+import { Coin } from "../../shared/FloatingCoins";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { InspectorSheet } from "../../shared/InspectorSheet";
 import { InstrumentWait } from "../../shared/InstrumentWait";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
-import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import { StatusTier } from "../../shared/StatusTier";
-import { concentrationOf } from "@/lib/home-lens";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
 import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-prompt";
 import { MoreOptions } from "../../shared/MoreOptions";
@@ -43,8 +42,6 @@ import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import { timeAgo } from "@/lib/format-duration";
-
-const HOME_LENS_KEY = "diversifi.home.lens";
 
 interface ConnectedOverviewProps {
   isActive?: boolean;
@@ -98,8 +95,6 @@ export function ConnectedOverview({
   const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
   // The concentration lens is a state of the coin object — preview-only,
   // entered through the transition slot, left via the in-object ←.
-  const [lens, setLens] = React.useState<"moment" | "concentration">("moment");
-
   const handleDialSelect = useCallback((region: string | null) => {
     // One selection at a time — a region pick closes the currency sheet.
     setInspectedCurrency(null);
@@ -179,39 +174,11 @@ export function ConnectedOverview({
   } = activePortfolio;
   const walletView = buildWalletPortfolioView(portfolio);
   const liveTotalValue = isDemo ? totalValue : walletView.totalUsd;
-  const concentration = React.useMemo(
-    () => concentrationOf(regionData, totalValue),
-    [regionData, totalValue],
-  );
 
   // Session memory: restore the lens only while the trigger still holds —
   // never resurrect a lens the balances no longer support. Demo never
   // touches storage.
-  React.useEffect(() => {
-    if (isDemo) return;
-    if (
-      sessionStorage.getItem(HOME_LENS_KEY) === "concentration" &&
-      concentration
-    ) {
-      setLens("concentration");
-    }
-    // Mount-only restore.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  React.useEffect(() => {
-    if (lens === "concentration" && !concentration) setLens("moment");
-  }, [lens, concentration]);
-
-  React.useEffect(() => {
-    if (isDemo) return;
-    if (lens === "concentration") {
-      sessionStorage.setItem(HOME_LENS_KEY, "concentration");
-    } else {
-      sessionStorage.removeItem(HOME_LENS_KEY);
-    }
-  }, [lens, isDemo]);
-
+  // Mount-only restore.
   const home = useHomeSections({
     portfolio,
     isDemo,
@@ -318,25 +285,54 @@ export function ConnectedOverview({
 
   // Offered = the prompt is actually the chosen transition (banner,
   // payment-cycle and graduation outrank it) on a live, non-demo surface.
-  const concentrationOffered = Boolean(
-    !home.banner &&
-      !home.isPaymentCycle &&
-      !graduationLine &&
-      concentration &&
-      lens === "moment" &&
-      isActive &&
-      !isDemo,
-  );
-  useLensOffered("home", "concentration", concentrationOffered);
   const selected = regionData.find((r) => r.region === focusedRegion) ?? null;
   const selectedPct =
     selected && totalValue > 0 ? (selected.value / totalValue) * 100 : 0;
+  const inspectingSelection = focusedRegion !== null || inspectedCurrency !== null;
 
   const chainErrors = activePortfolio.errors ?? [];
   const { formatMoney: fmt } = useBalanceVisibility();
   const handleRefresh = React.useCallback(async () => {
     await refreshBalances?.();
   }, [refreshBalances]);
+
+  const inspection = (
+    <>
+      <InspectorSheet
+        selectedId={focusedRegion}
+        onClose={() => setFocusedRegion(null)}
+        title={focusedRegion ?? "Region"}
+        presentation="stage"
+      >
+        {selected && (
+          <RegionStageBody
+            region={selected.region}
+            color={selected.color}
+            value={selected.value}
+            pct={selectedPct}
+            totalValue={totalValue}
+            showZakat={home.showZakat}
+            onReviewInShield={() =>
+              navigateWithIntent("protect", {
+                source: "home",
+                region: selected.region,
+              })
+            }
+            onAskGuardian={() =>
+              askAdvisor(
+                `How exposed am I to ${selected.region}? Review my ${selected.region} holdings and tell me whether that concentration fits my goal.`,
+              )
+            }
+          />
+        )}
+      </InspectorSheet>
+      <CurrencyStoryInspector
+        code={inspectedCurrency}
+        onClose={() => setInspectedCurrency(null)}
+        presentation="stage"
+      />
+    </>
+  );
 
   // The coin stage is always the hero. Holdings never swap it out — they
   // add a quiet strip beneath it. One object, one color, one CTA.
@@ -377,8 +373,7 @@ export function ConnectedOverview({
       isDemo={isDemo}
       isActive={isActive}
       sealedRegion={sealedRegion}
-      lens={lens}
-      onLensBack={() => setLens("moment")}
+      inspection={inspection}
     />
   ) : (
     // No card here — InstrumentShell owns the one surface; the fallback
@@ -424,69 +419,6 @@ export function ConnectedOverview({
         );
       })()}
     </div>
-  );
-
-  const inspector = (
-    <>
-      <InspectorSheet
-        selectedId={focusedRegion}
-      onClose={() => setFocusedRegion(null)}
-      title={focusedRegion ?? "Region"}
-    >
-      {selected && (
-        <div className="space-y-3 text-left">
-          <p className="text-sm text-gray-700 dark:text-gray-200">
-            {selectedPct >= 50 ? (
-              <>
-                More than half your savings sit in <strong>{selected.region}</strong>{" "}
-                ({fmt(selected.value)}) — one region&apos;s currency risk carries
-                most of your plan.
-              </>
-            ) : selectedPct >= 30 ? (
-              <>
-                <strong>{Math.round(selectedPct)}%</strong> of your savings sit in{" "}
-                <strong>{selected.region}</strong> — meaningful exposure worth
-                watching.
-              </>
-            ) : (
-              <>
-                A light <strong>{Math.round(selectedPct)}%</strong> of your savings
-                sit in <strong>{selected.region}</strong>.
-              </>
-            )}
-          </p>
-          <button
-            type="button"
-            onClick={() =>
-              navigateWithIntent("protect", {
-                source: "home",
-                region: selected.region,
-              })
-            }
-            className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
-          >
-            Strengthen {selected.region} coverage in Shield
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              askAdvisor(
-                `How exposed am I to ${selected.region}? Review my ${selected.region} holdings and tell me whether that concentration fits my goal.`,
-              )
-            }
-            className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-          >
-            Ask Guardian about this region
-          </button>
-          {home.showZakat && <ZakatCalculator totalPortfolioValue={totalValue} />}
-        </div>
-      )}
-      </InspectorSheet>
-      <CurrencyStoryInspector
-        code={inspectedCurrency}
-        onClose={() => setInspectedCurrency(null)}
-      />
-    </>
   );
 
   const transition = home.banner ? (
@@ -541,20 +473,6 @@ export function ConnectedOverview({
         ×
       </button>
     </div>
-  ) : concentration && lens === "moment" ? (
-    <button
-      type="button"
-      data-testid="home-concentration-link"
-      onClick={() => {
-        setLens("concentration");
-        if (!isDemo) {
-          trackFunnelEvent("lens_open", { tab: "home", lens: "concentration" });
-        }
-      }}
-      className="min-h-tap text-sm font-semibold text-blue-600 dark:text-blue-400"
-    >
-      See your concentration →
-    </button>
   ) : guardianAway ? (
     <button
       type="button"
@@ -581,13 +499,9 @@ export function ConnectedOverview({
 
   const status = (
     <StatusTier
-      trust={
-        <div className="flex flex-col items-end gap-1">
-          <VerifiedEvidence />
-        </div>
-      }
-      transition={transition}
-      rail={<ClaimRail />}
+      trust={null}
+      transition={inspectingSelection ? undefined : transition}
+      rail={<ClaimRail setupMode="entry" />}
     />
   );
 
@@ -603,7 +517,6 @@ export function ConnectedOverview({
       <InstrumentShell
         inspectorOpen={focusedRegion !== null || inspectedCurrency !== null}
         object={object}
-        inspector={inspector}
         status={status}
         portfolio={{
           lastUpdated: portfolio.lastUpdated,
@@ -629,6 +542,92 @@ export function ConnectedOverview({
           onAnchorChange={anchor.setAnchorCurrency}
         />
       </div>
+    </div>
+  );
+}
+
+function RegionStageBody({
+  region,
+  color,
+  value,
+  pct,
+  totalValue,
+  showZakat,
+  onReviewInShield,
+  onAskGuardian,
+}: {
+  region: string;
+  color: string;
+  value: number;
+  pct: number;
+  totalValue: number;
+  showZakat: boolean;
+  onReviewInShield: () => void;
+  onAskGuardian: () => void;
+}) {
+  const { formatMoney: fmt } = useBalanceVisibility();
+  const [pane, setPane] = React.useState<"exposure" | "zakat">("exposure");
+  const meaning =
+    pct >= 50
+      ? "One region's currency risk carries most of your plan."
+      : pct >= 30
+        ? "Meaningful exposure worth watching."
+        : "A light share of your savings.";
+  return (
+    <div className="text-center">
+      {showZakat && (
+        <div
+          role="group"
+          aria-label="Region detail"
+          className="mb-3 inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-0.5"
+        >
+          {(["exposure", "zakat"] as const).map((p) => (
+            <button
+              key={p}
+              type="button"
+              aria-pressed={pane === p}
+              onClick={() => setPane(p)}
+              className={`min-h-tap px-3 rounded-full text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                pane === p
+                  ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+              }`}
+            >
+              {p === "exposure" ? "Exposure" : "Zakat"}
+            </button>
+          ))}
+        </div>
+      )}
+      {pane === "zakat" && showZakat ? (
+        <ZakatCalculator totalPortfolioValue={totalValue} />
+      ) : (
+        <>
+          <div className="flex justify-center">
+            <Coin variant="asset" size={64} symbol={regionGlyph(region)} color={color} />
+          </div>
+          <p className="mt-2 text-4xl font-black tabular-nums text-gray-900 dark:text-white">
+            {Math.round(pct)}%
+          </p>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 tabular-nums">
+            {region} · {fmt(value)} of {fmt(totalValue)}
+          </p>
+          <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{meaning}</p>
+          <button
+            type="button"
+            onClick={onReviewInShield}
+            className="mt-3 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
+          >
+            Review in Shield
+          </button>
+          <button
+            type="button"
+            onClick={onAskGuardian}
+            className="mt-1 min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+          >
+            Ask Guardian about this region
+          </button>
+        </>
+      )}
     </div>
   );
 }

@@ -22,7 +22,12 @@ import { useStreakRewards } from "@/hooks/use-streak-rewards";
 import { useClaimFlowContext } from "@/hooks/claim-flow-context";
 import { STREAK_CONFIG } from "@diversifi/shared/src/modules/rewards/streak/types";
 
-export function ClaimRail() {
+export function ClaimRail({
+  setupMode = "inline",
+}: {
+  setupMode?: "inline" | "entry";
+}) {
+  const [entryOpen, setEntryOpen] = React.useState(false);
   let streak: ReturnType<typeof useStreakRewards> | null = null;
   let flow: ReturnType<typeof useClaimFlowContext> | null = null;
   try {
@@ -78,8 +83,50 @@ export function ClaimRail() {
     if (flow.verifyStatus === "awaiting") {
       return (
         <p data-testid="claim-rail" className="text-xs text-gray-500 dark:text-gray-400">
-          Verification in progress — we check automatically when you return.
+          {setupMode === "entry"
+            ? "GoodDollar identity verification in progress — we check automatically when you return."
+            : "Verification in progress — we check automatically when you return."}
         </p>
+      );
+    }
+    if (setupMode === "entry") {
+      if (!entryOpen) {
+        return (
+          <button
+            type="button"
+            data-testid="claim-rail"
+            onClick={() => setEntryOpen(true)}
+            className="min-h-tap text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
+          >
+            GoodDollar daily income →
+          </button>
+        );
+      }
+      return (
+        <div data-testid="claim-rail" className="text-xs">
+          <p className="text-gray-500 dark:text-gray-400">
+            GoodDollar uses a one-time identity check before daily G$ claims.
+          </p>
+          <div className="mt-1 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void flow.handleVerify()}
+              disabled={flow.verifyStatus === "opening"}
+              className="min-h-tap text-left font-semibold text-blue-600 dark:text-blue-400 hover:underline disabled:opacity-60"
+            >
+              {flow.verifyStatus === "opening"
+                ? "Opening verification…"
+                : "Verify identity with GoodDollar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEntryOpen(false)}
+              className="min-h-tap font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              Back
+            </button>
+          </div>
+        </div>
       );
     }
     return (

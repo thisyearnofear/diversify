@@ -741,14 +741,14 @@ body {
   }
 
   @container instrument (min-width: 720px) {
-    .instrument-workbench[data-inspector-open="true"] {
+    .instrument-workbench[data-inspector-open="true"]:has(> .instrument-inspector) {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       align-items: start;
       gap: 1.5rem;
     }
 
-    .instrument-workbench[data-inspector-open="true"] > .instrument-status {
+    .instrument-workbench[data-inspector-open="true"]:has(> .instrument-inspector) > .instrument-status {
       grid-column: 1 / -1;
     }
   }

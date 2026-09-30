@@ -317,18 +317,17 @@ export function CurrencyMomentCard({
             accent={accent}
           />
         ) : (
-          <div className="instrument-composition">
-            <div className="instrument-artifact">
+          <div>
             {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
             <motion.div
-              className="flex items-center justify-center gap-5"
+              className="mx-auto grid max-w-[360px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-5"
               style={{ ...tilt.style, transformPerspective: 900 }}
               {...tilt.props}
             >
               <motion.div
                 animate={{ scale: reducedMotion ? 1 : localScale }}
                 transition={comparisonSettle}
-                className="shrink-0"
+                className="w-full max-w-16 justify-self-end text-right sm:max-w-[92px] [&_svg]:max-w-full [&_svg]:h-auto"
               >
                 {/* The local coin is a door: tap flips it to its back —
                     flag + the newest dated event — and opens the story
@@ -352,7 +351,7 @@ export function CurrencyMomentCard({
                       transition={springPop}
                     >
                       {currencySelected && newest ? (
-                        <span className="flex h-[92px] w-[92px] flex-col items-center justify-center rounded-full border-2 border-gray-200 bg-white px-1 text-center dark:border-gray-700 dark:bg-gray-900">
+                        <span className="flex aspect-square w-full flex-col items-center justify-center rounded-full border-2 border-gray-200 bg-white px-1 text-center dark:border-gray-700 dark:bg-gray-900">
                           <span aria-hidden="true" className="text-xl leading-none">{moment.flag}</span>
                           <span className="mt-1 line-clamp-3 text-3xs font-semibold leading-tight text-gray-500 dark:text-gray-400">
                             {newest.year} · {newest.event}
@@ -389,172 +388,167 @@ export function CurrencyMomentCard({
                   );
                 })()}
               </motion.div>
-              <div className="text-gray-300 dark:text-gray-600 text-lg font-bold select-none" aria-hidden="true">
-                →
-              </div>
+              {/* The number that carries the meaning */}
               <motion.div
-                className="shrink-0"
+                key={comparisonKey}
+                initial={reducedMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={reducedMotion ? { duration: 0 } : reveal}
+                className="min-w-0"
+              >
+                <DeltaNumber delta={moment.delta} accent={accent} />
+              </motion.div>
+              <motion.div
+                className="w-full max-w-16 justify-self-start sm:max-w-[72px] [&_svg]:max-w-full [&_svg]:h-auto"
                 animate={{ opacity: currencySelected ? 0.35 : 1 }}
                 transition={reducedMotion ? { duration: 0 } : springSoft}
               >
                 <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
               </motion.div>
             </motion.div>
+            <div className="mt-1 text-2xs font-semibold text-gray-400 dark:text-gray-500">
+              buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
             </div>
 
-            <div className="instrument-reading">
-            {/* The number that carries the meaning */}
-            <motion.div
-              key={comparisonKey}
+          {/* One personal consequence — the amount is theirs to change */}
+          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+            <p className="text-sm text-gray-700 dark:text-gray-300">
+              <label className="inline-flex items-baseline gap-1.5">
+                <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">Example amount</span>
+                <span className="font-bold">{moment.currencyCode}</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={moment.savingsAmount}
+                  aria-label="Example amount"
+                  onFocus={act}
+                  onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
+                  className="w-24 min-w-[4rem] max-w-[8rem] text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
+                />
+              </label>
+            </p>
+            {/* Goods framing — a percentage is abstract where people price risk in
+                goods. "≈ 51 fewer bags of rice" gives the number a body. Only
+                shown when the currency has a verified staple (honest by omission). */}
+            {goodsEligible && (
+              <div
+                role="group"
+                aria-label="Consequence unit"
+                className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-0.5"
+              >
+                {(['money', 'goods'] as const).map((u) => (
+                  <motion.button
+                    key={u}
+                    type="button"
+                    aria-pressed={effectiveUnit === u}
+                    onClick={() => { haptics.tap(); act(); setUnit(u); }}
+                    whileTap={reducedMotion ? undefined : press}
+                    transition={springPress}
+                    className={`min-h-tap px-3 rounded-full text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                      effectiveUnit === u
+                        ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                    }`}
+                  >
+                    {u === 'money' ? 'Money' : 'Goods'}
+                  </motion.button>
+                ))}
+              </div>
+            )}
+          </div>
+          {/* Consequence is sign-aware: a depreciating currency buys less, an
+              appreciating one buys more, a flat one holds its value. The
+              philosophy reframe only applies to a loss (a gain has no risk). */}
+          <p
+            data-testid="home-consequence"
+            aria-live="polite"
+            aria-atomic="true"
+            className="text-sm text-gray-700 dark:text-gray-300 mt-1"
+          >
+            <motion.span
+              key={`${comparisonKey}:${effectiveUnit}`}
               initial={reducedMotion ? false : { opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={reducedMotion ? { duration: 0 } : reveal}
-              className="mt-3"
+              transition={reducedMotion ? { duration: 0 } : springSoft}
             >
-              <DeltaNumber delta={moment.delta} accent={accent} />
-              <div className="text-2xs font-semibold text-gray-400 dark:text-gray-500 mt-1">
-                buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
-              </div>
-            </motion.div>
-
-            {/* One personal consequence — the amount is theirs to change */}
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                <label className="inline-flex items-baseline gap-1.5">
-                  <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">Example amount</span>
-                  <span className="font-bold">{moment.currencyCode}</span>
-                  <input
-                    type="number"
-                    min={0}
-                    value={moment.savingsAmount}
-                    aria-label="Example amount"
-                    onFocus={act}
-                    onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
-                    className="w-24 min-w-[4rem] max-w-[8rem] text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
-                  />
-                </label>
-              </p>
-              {/* Goods framing — a percentage is abstract where people price risk in
-                  goods. "≈ 51 fewer bags of rice" gives the number a body. Only
-                  shown when the currency has a verified staple (honest by omission). */}
-              {goodsEligible && (
-                <div
-                  role="group"
-                  aria-label="Consequence unit"
-                  className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-0.5"
-                >
-                  {(['money', 'goods'] as const).map((u) => (
-                    <motion.button
-                      key={u}
-                      type="button"
-                      aria-pressed={effectiveUnit === u}
-                      onClick={() => { haptics.tap(); act(); setUnit(u); }}
-                      whileTap={reducedMotion ? undefined : press}
-                      transition={springPress}
-                      className={`min-h-tap px-3 rounded-full text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                        effectiveUnit === u
-                          ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
-                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                      }`}
-                    >
-                      {u === 'money' ? 'Money' : 'Goods'}
-                    </motion.button>
-                  ))}
-                </div>
+              {effectiveUnit === 'goods' && moment.goods ? (
+                <strong className="tabular-nums" style={{ color: accent }}>
+                  ≈ {fmt(moment.goods.count)} fewer {moment.goods.unit}
+                </strong>
+              ) : (
+                <MoneyConsequence
+                  currencyCode={moment.currencyCode}
+                  delta={moment.delta}
+                  personalImpact={moment.personalImpact}
+                  accent={accent}
+                />
               )}
-            </div>
-            {/* Consequence is sign-aware: a depreciating currency buys less, an
-                appreciating one buys more, a flat one holds its value. The
-                philosophy reframe only applies to a loss (a gain has no risk). */}
-            <p
-              data-testid="home-consequence"
-              aria-live="polite"
-              aria-atomic="true"
-              className="text-sm text-gray-700 dark:text-gray-300 mt-1"
-            >
-              <motion.span
-                key={`${comparisonKey}:${effectiveUnit}`}
-                initial={reducedMotion ? false : { opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={reducedMotion ? { duration: 0 } : springSoft}
+            </motion.span>
+          </p>
+
+          {/* One rotating, data-backed line — a fresh macro beat, the
+              currency's watch cadence, or a dated event — directly under
+              the consequence it explains. */}
+          <LiveLine
+            testId="home-live-line"
+            beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
+            alive={liveAlive && !currencySelected && !acted && !inspecting}
+            className="mt-1.5 block text-2xs font-semibold text-gray-500 dark:text-gray-400"
+          />
+
+          {/* Controls — the same segmented + coin motifs learned in onboarding */}
+          <div className="instrument-inspect-hidden mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+            <div className="inline-flex items-center gap-2" role="group" aria-label="Time horizon">
+            {horizons.map((h) => (
+              <motion.button
+                key={h}
+                type="button"
+                aria-pressed={moment.horizon === h}
+                onClick={() => {
+                  haptics.tap();
+                  act();
+                  onSelectHorizon(h);
+                }}
+                whileTap={reducedMotion ? undefined : press}
+                transition={springPress}
+                className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                  moment.horizon === h
+                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
+                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
               >
-                {effectiveUnit === 'goods' && moment.goods ? (
-                  <strong className="tabular-nums" style={{ color: accent }}>
-                    ≈ {fmt(moment.goods.count)} fewer {moment.goods.unit}
-                  </strong>
-                ) : (
-                  <MoneyConsequence
-                    currencyCode={moment.currencyCode}
-                    delta={moment.delta}
-                    personalImpact={moment.personalImpact}
-                    accent={accent}
-                  />
-                )}
-              </motion.span>
-            </p>
-
-            {/* One rotating, data-backed line — a fresh macro beat, the
-                currency's watch cadence, or a dated event — directly under
-                the consequence it explains. */}
-            <LiveLine
-              testId="home-live-line"
-              beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
-              alive={liveAlive && !currencySelected && !acted && !inspecting}
-              className="mt-1.5 block text-2xs font-semibold text-gray-500 dark:text-gray-400"
-            />
-
-            {/* Controls — the same segmented + coin motifs learned in onboarding */}
-            <div className="instrument-inspect-hidden mt-4 flex items-center justify-center gap-2" role="group" aria-label="Time horizon">
-              {horizons.map((h) => (
-                <motion.button
-                  key={h}
-                  type="button"
-                  aria-pressed={moment.horizon === h}
-                  onClick={() => {
-                    haptics.tap();
-                    act();
-                    onSelectHorizon(h);
-                  }}
-                  whileTap={reducedMotion ? undefined : press}
-                  transition={springPress}
-                  className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                    moment.horizon === h
-                      ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {HORIZONS[h].short}
-                </motion.button>
-              ))}
-              <span className="w-px h-5 bg-gray-200 dark:bg-gray-700 mx-1" aria-hidden="true" />
-              <div role="group" aria-label="Benchmark" className="flex items-center gap-1.5">
-                {benchmarks.map((b) => {
-                  const c = BENCHMARK_COIN[b];
-                  const selected = moment.benchmark === b;
-                  return (
-                    <motion.button
-                      key={b}
-                      type="button"
-                      aria-pressed={selected}
-                      aria-label={`Compare against ${BENCHMARKS[b].label}`}
-                      onClick={() => {
-                        haptics.tap();
-                        act();
-                        onSelectBenchmark(b);
-                      }}
-                      whileTap={reducedMotion ? undefined : press}
-                      transition={springPress}
-                      className={`min-h-tap min-w-tap inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                        selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
-                      }`}
-                    >
-                      <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
-                    </motion.button>
-                  );
-                })}
-              </div>
+                {HORIZONS[h].short}
+              </motion.button>
+            ))}
             </div>
+            <span className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
+            <div role="group" aria-label="Benchmark" className="inline-flex items-center gap-1.5">
+              {benchmarks.map((b) => {
+                const c = BENCHMARK_COIN[b];
+                const selected = moment.benchmark === b;
+                return (
+                  <motion.button
+                    key={b}
+                    type="button"
+                    aria-pressed={selected}
+                    aria-label={`Compare against ${BENCHMARKS[b].label}`}
+                    onClick={() => {
+                      haptics.tap();
+                      act();
+                      onSelectBenchmark(b);
+                    }}
+                    whileTap={reducedMotion ? undefined : press}
+                    transition={springPress}
+                    className={`min-h-tap min-w-tap inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                      selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
+                    }`}
+                  >
+                    <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
+                  </motion.button>
+                );
+              })}
             </div>
+          </div>
           </div>
         )}
       </motion.div>

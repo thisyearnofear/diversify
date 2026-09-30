@@ -24,3 +24,13 @@ export function concentrationOf(
   if (pct < 50) return null;
   return { region: top.region, pct, value: top.value };
 }
+
+export function regionGlyph(region: string): string {
+  const r = region.toLowerCase();
+  if (r === "usa" || r === "us" || r === "united states") return "$";
+  if (r === "europe" || r === "eu") return "€";
+  if (r === "commodities" || r === "gold") return "Au";
+  if (r === "uk") return "£";
+  if (r === "japan") return "¥";
+  return region.slice(0, 3).toUpperCase();
+}

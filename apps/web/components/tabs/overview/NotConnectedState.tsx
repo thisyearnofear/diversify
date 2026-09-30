@@ -56,79 +56,79 @@ export function NotConnectedState({
     trackFunnelEvent("marquee_select", { horizon: h, source: "home_moment" });
   };
 
+  const storySelected = inspectedCurrency !== null;
   const object = (
-    <div className="space-y-3">
-      {moment ? (
-        <CurrencyMomentCard
-          moment={moment}
-          benchmarks={benchmarks}
-          horizons={horizons}
-          onSelectBenchmark={selectBenchmark}
-          onSelectHorizon={selectHorizon}
-          onAmountChange={setSavingsAmount}
-          onChangeCountry={onChangeCountry}
-          frame={frame}
-          onInspectCurrency={() =>
-            setInspectedCurrency((prev) =>
-              prev === moment.currencyCode ? null : moment.currencyCode,
-            )
-          }
-          currencySelected={inspectedCurrency === moment.currencyCode}
-          viewingShared={viewingShared}
-          onClearSharedView={clearSharedView}
-          countryIsDefault={countryIsDefault}
-          rememberVisit={isActive && !viewingShared && !countryIsDefault}
-          liveAlive={isActive}
-        />
-      ) : inflationMoment ? (
-        <InflationMomentCard
-          moment={inflationMoment}
-          onAmountChange={setSavingsAmount}
-          onChangeCountry={onChangeCountry}
-        />
-      ) : isLoading ? (
-        <div className="text-center py-2">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Detecting your region…
-          </p>
-        </div>
-      ) : (
-        // Detection failed (geo blocked, VPN, offline) — the honest fallback
-        // is an ACTIONABLE one: the same "whose savings?" control the moment
-        // cards use, so the instruction and the affordance always travel
-        // together (§5: selection rewrites the artefact). No card chrome —
-        // InstrumentShell owns the surface.
-        <div className="text-center space-y-3">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            We could not detect your country — choose where your savings live
-            to see your specific currency risk.
-          </p>
-          <CountryOverrideSelect
-            currentCountryCode={countryCode ?? ''}
-            currentCountryName=''
-            onChange={onChangeCountry}
+    <div className="relative space-y-3">
+      <div hidden={storySelected} data-testid="home-comparison">
+        {moment ? (
+          <CurrencyMomentCard
+            moment={moment}
+            benchmarks={benchmarks}
+            horizons={horizons}
+            onSelectBenchmark={selectBenchmark}
+            onSelectHorizon={selectHorizon}
+            onAmountChange={setSavingsAmount}
+            onChangeCountry={onChangeCountry}
+            frame={frame}
+            onInspectCurrency={() =>
+              setInspectedCurrency((prev) =>
+                prev === moment.currencyCode ? null : moment.currencyCode,
+              )
+            }
+            currencySelected={inspectedCurrency === moment.currencyCode}
+            viewingShared={viewingShared}
+            onClearSharedView={clearSharedView}
+            countryIsDefault={countryIsDefault}
+            rememberVisit={isActive && !viewingShared && !countryIsDefault}
+            liveAlive={isActive}
           />
-        </div>
-      )}
-      {/* The one CTA — attached to the object, no card wrapper. */}
-      <WalletButton variant="primary" className="w-full" />
+        ) : inflationMoment ? (
+          <InflationMomentCard
+            moment={inflationMoment}
+            onAmountChange={setSavingsAmount}
+            onChangeCountry={onChangeCountry}
+          />
+        ) : isLoading ? (
+          <div className="text-center py-2">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Detecting your region…
+            </p>
+          </div>
+        ) : (
+          // Detection failed (geo blocked, VPN, offline) — the honest fallback
+          // is an ACTIONABLE one: the same "whose savings?" control the moment
+          // cards use, so the instruction and the affordance always travel
+          // together (§5: selection rewrites the artefact). No card chrome —
+          // InstrumentShell owns the surface.
+          <div className="text-center space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              We could not detect your country — choose where your savings live
+              to see your specific currency risk.
+            </p>
+            <CountryOverrideSelect
+              currentCountryCode={countryCode ?? ''}
+              currentCountryName=''
+              onChange={onChangeCountry}
+            />
+          </div>
+        )}
+        {/* The one CTA — attached to the object, no card wrapper. */}
+        <WalletButton variant="primary" className="w-full" />
+      </div>
+      <CurrencyStoryInspector
+        code={inspectedCurrency}
+        onClose={() => setInspectedCurrency(null)}
+        presentation="stage"
+      />
     </div>
   );
 
-  const inspector = (
-    <CurrencyStoryInspector
-      code={inspectedCurrency}
-      onClose={() => setInspectedCurrency(null)}
-    />
-  );
-
-  const status = <UnconnectedStatusTier onEnableDemo={onEnableDemo} />;
+  const status = <UnconnectedStatusTier onEnableDemo={onEnableDemo} trust={null} />;
 
   return (
     <InstrumentShell
       object={object}
-      inspector={inspector}
-      inspectorOpen={inspectedCurrency !== null}
+      inspectorOpen={storySelected}
       status={status}
     />
   );

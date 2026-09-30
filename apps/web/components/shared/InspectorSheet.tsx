@@ -13,6 +13,7 @@ import {
   AnimatePresence,
   motion,
   useDragControls,
+  useIsPresent,
   useReducedMotion,
   type PanInfo,
 } from "framer-motion";
@@ -28,6 +29,7 @@ interface InspectorSheetProps {
   title: string;
   children: React.ReactNode;
   className?: string;
+  presentation?: "sheet" | "stage";
 }
 
 const FOLD = {
@@ -53,6 +55,37 @@ const SIDE_INSTANT = {
   animate: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
   exit: { x: 0, rotateX: 0, opacity: 0, height: "auto" },
 };
+
+const STAGE = {
+  initial: { x: 0, rotateX: 0, opacity: 0, height: "auto" },
+  animate: { x: 0, rotateX: 0, opacity: 1, height: "auto" },
+  exit: { x: 0, rotateX: 0, opacity: 0, height: "auto" },
+};
+
+type InspectorSectionProps = React.ComponentProps<typeof motion.section> & {
+  stage?: boolean;
+};
+
+const InspectorSection = React.forwardRef<HTMLElement, InspectorSectionProps>(
+  function InspectorSection({ stage = false, style, ...rest }, ref) {
+    const present = useIsPresent();
+    return (
+      <motion.section
+        ref={ref}
+        inert={present ? undefined : true}
+        aria-hidden={present ? undefined : true}
+        style={{
+          ...style,
+          ...(stage && !present
+            ? { position: "absolute", insetInline: 0, top: 0 }
+            : null),
+          ...(present ? null : { pointerEvents: "none" }),
+        }}
+        {...rest}
+      />
+    );
+  },
+);
 
 function isRestorable(el: HTMLElement | null): el is HTMLElement {
   if (!el || !el.isConnected) return false;
@@ -104,18 +137,22 @@ export function InspectorSheet({
   title,
   children,
   className = "",
+  presentation = "sheet",
 }: InspectorSheetProps) {
   const reducedMotion = useReducedMotion();
   const dragControls = useDragControls();
   const placement = useInstrumentInspectorPlacement();
   const open = Boolean(selectedId);
-  const variants = reducedMotion
-    ? placement === "side"
-      ? SIDE_INSTANT
-      : INSTANT
-    : placement === "side"
-      ? SIDE
-      : FOLD;
+  const stage = presentation === "stage";
+  const variants = stage
+    ? STAGE
+    : reducedMotion
+      ? placement === "side"
+        ? SIDE_INSTANT
+        : INSTANT
+      : placement === "side"
+        ? SIDE
+        : FOLD;
   const detent = useDismissDetent();
 
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -188,67 +225,94 @@ export function InspectorSheet({
       }}
     >
       {open && (
-        <motion.section
+        <InspectorSection
           key={selectedId}
+          stage={stage}
           ref={sheetElRef}
           role="region"
           aria-label={title}
           data-testid="inspector-sheet"
           data-selected-id={selectedId}
-          className={`mt-3 overflow-hidden rounded-2xl bg-surface border border-gray-200/70 dark:border-white/[0.06] origin-top ${className}`.trim()}
-          style={{ perspective: 800 }}
+          className={
+            stage
+              ? `mt-3 ${className}`.trim()
+              : `mt-3 overflow-hidden rounded-2xl bg-surface border border-gray-200/70 dark:border-white/[0.06] origin-top ${className}`.trim()
+          }
+          style={stage ? undefined : { perspective: 800 }}
           initial={variants.initial}
           animate={variants.animate}
           exit={variants.exit}
           transition={
             reducedMotion
               ? { duration: 0 }
-              : placement === "side"
+              : stage || placement === "side"
                 ? springSoft
                 : spring
           }
           // Drag starts only from the handle (dragListener off) so content
           // stays scrollable/selectable. Down tracks the finger ~1:1, up
           // barely moves; release springs back unless it's a dismiss.
-          drag="y"
+          drag={stage ? false : "y"}
           dragControls={dragControls}
           dragListener={false}
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={{ top: 0.05, bottom: 0.9 }}
-          onDragStart={detent.onDragStart}
-          onDrag={detent.onDrag}
-          onDragEnd={(_e, info) => {
-            if (shouldDismissDrag(info)) onClose();
-          }}
+          dragConstraints={stage ? undefined : { top: 0, bottom: 0 }}
+          dragElastic={stage ? undefined : { top: 0.05, bottom: 0.9 }}
+          onDragStart={stage ? undefined : detent.onDragStart}
+          onDrag={stage ? undefined : detent.onDrag}
+          onDragEnd={
+            stage
+              ? undefined
+              : (_e, info) => {
+                  if (shouldDismissDrag(info)) onClose();
+                }
+          }
         >
-          <div
-            className="w-full flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
-            style={{ touchAction: "none" }}
-            data-testid="inspector-sheet-handle"
-            onPointerDown={(e) => dragControls.start(e)}
-          >
-            <span
-              aria-hidden="true"
-              className="block w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600"
-            />
-          </div>
-          <div className="flex items-start justify-between gap-3 px-4 pt-1 pb-1">
-            <h3 className="text-sm font-semibold text-ink">
-              {title}
-            </h3>
-            <motion.button
-              type="button"
-              onClick={onClose}
-              whileTap={reducedMotion ? undefined : press}
-              transition={springPress}
-              className="min-h-tap min-w-tap -mr-2 text-ink-subtle hover:text-gray-700 dark:hover:text-gray-200 text-lg font-bold transition-colors"
-              aria-label="Close inspector"
+          {!stage && (
+            <div
+              className="w-full flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
+              style={{ touchAction: "none" }}
+              data-testid="inspector-sheet-handle"
+              onPointerDown={(e) => dragControls.start(e)}
             >
-              ×
-            </motion.button>
-          </div>
-          <div className="px-4 pb-4">{children}</div>
-        </motion.section>
+              <span
+                aria-hidden="true"
+                className="block w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600"
+              />
+            </div>
+          )}
+          {stage ? (
+            <div className="flex items-start justify-between gap-3">
+              <motion.button
+                type="button"
+                onClick={onClose}
+                whileTap={reducedMotion ? undefined : press}
+                transition={springPress}
+                className="min-h-tap text-xs font-semibold text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+                aria-label="Close inspector"
+              >
+                ← Back
+              </motion.button>
+              <h3 className="sr-only">{title}</h3>
+            </div>
+          ) : (
+            <div className="flex items-start justify-between gap-3 px-4 pt-1 pb-1">
+              <h3 className="text-sm font-semibold text-ink">
+                {title}
+              </h3>
+              <motion.button
+                type="button"
+                onClick={onClose}
+                whileTap={reducedMotion ? undefined : press}
+                transition={springPress}
+                className="min-h-tap min-w-tap -mr-2 text-ink-subtle hover:text-gray-700 dark:hover:text-gray-200 text-lg font-bold transition-colors"
+                aria-label="Close inspector"
+              >
+                ×
+              </motion.button>
+            </div>
+          )}
+          <div className={stage ? "" : "px-4 pb-4"}>{children}</div>
+        </InspectorSection>
       )}
     </AnimatePresence>
   );

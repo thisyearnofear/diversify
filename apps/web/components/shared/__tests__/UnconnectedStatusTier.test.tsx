@@ -25,3 +25,16 @@ describe("UnconnectedStatusTier", () => {
     expect(onDisableDemo).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("UnconnectedStatusTier — trust override", () => {
+  it("keeps VerifiedEvidence as the default trust line", () => {
+    render(<UnconnectedStatusTier onEnableDemo={vi.fn()} />);
+    expect(screen.getByText("Verified")).toBeInTheDocument();
+  });
+
+  it("renders nothing in the trust slot when trust is null", () => {
+    render(<UnconnectedStatusTier onEnableDemo={vi.fn()} trust={null} />);
+    expect(screen.queryByText("Verified")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Explore a sample plan" })).toBeInTheDocument();
+  });
+});

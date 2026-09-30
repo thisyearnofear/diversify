@@ -257,7 +257,9 @@ vi.mock("@/components/shared/HomeSection", () => ({
 vi.mock("@/components/shared/HomeNav", () => ({ HomeNav: () => null }));
 vi.mock("@/components/shared/MoreOptions", () => ({ MoreOptions: () => null }));
 vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({ PaymentCycleReport: () => null }));
-vi.mock("@/components/portfolio/ZakatCalculator", () => ({ default: () => null }));
+vi.mock("@/components/portfolio/ZakatCalculator", () => ({
+  default: () => <div data-testid="zakat-calculator" />,
+}));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
 vi.mock("../CountryOverrideSelect", () => ({
   CountryOverrideSelect: () => <select data-testid="country-override-select" />,
@@ -278,13 +280,13 @@ vi.mock("../HomeExposureDial", () => ({
   ),
 }));
 vi.mock("../HomeRiskTheater", () => ({
-  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion, lens, onLensBack, onInspectCurrency }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null; lens?: string; onLensBack?: () => void; onInspectCurrency?: () => void }) => {
+  HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion, inspection, onInspectCurrency }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null; inspection?: React.ReactNode; onInspectCurrency?: () => void }) => {
     if (moment) {
       return (
-        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)} data-sealed={sealedRegion ?? "none"} data-lens={lens ?? "moment"}>
-          <button type="button" data-testid="home-lens-back" onClick={() => onLensBack?.()} />
+        <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"} data-holdings={Array.isArray(regionData) ? regionData.length : 0} data-active={String(isActive)} data-sealed={sealedRegion ?? "none"}>
           <div data-testid="currency-moment-card" />
           <button type="button" data-testid="inspect-currency" onClick={() => onInspectCurrency?.()} />
+          {inspection}
           {Array.isArray(regionData) && regionData.length > 0 && (
             <div data-testid="holdings-strip" />
           )}
@@ -296,6 +298,7 @@ vi.mock("../HomeRiskTheater", () => ({
       return (
         <div data-testid="home-risk-theater" data-focused={focusedRegion ?? "none"}>
           <div data-testid="inflation-moment-card" />
+          {inspection}
         </div>
       );
     }
@@ -732,7 +735,7 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
     mockHomeSections = { ...defaultHomeSections, banner: "currency-risk", isPaymentCycle: true };
     renderOverview();
     expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
-    expect(document.querySelector('[data-status-slot="trust"]')).not.toBeNull();
+    expect(document.querySelector('[data-status-slot="trust"]')).toBeNull();
   });
 
   it("the region inspector CTA hands the region to Shield via navigateWithIntent", () => {
@@ -740,7 +743,7 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
     renderOverview();
 
     fireEvent.click(screen.getByTestId("select-region"));
-    const cta = screen.getByRole("button", { name: /Strengthen Africa coverage in Shield/ });
+    const cta = screen.getByRole("button", { name: "Review in Shield" });
     fireEvent.click(cta);
     expect(mockNavigateWithIntent).toHaveBeenCalledWith("protect", {
       source: "home",
@@ -779,7 +782,7 @@ describe("ConnectedOverview — currency story inspector", () => {
     // the one not collapsed to 0 height (or the last mounted).
     const openSheet = () => {
       const sheets = screen.getAllByTestId("inspector-sheet");
-      return sheets.find((s) => s.style.height !== "0px") ?? sheets.at(-1);
+      return sheets.find((s) => s.style.opacity !== "0") ?? sheets.at(-1);
     };
 
     fireEvent.click(screen.getByTestId("select-region"));
@@ -799,7 +802,7 @@ describe("ConnectedOverview — currency story inspector", () => {
         screen
           .getAllByTestId("inspector-sheet")
           .filter((s) => s.getAttribute("aria-label") === "🇬🇭 Ghana — GHS")
-          .every((s) => s.style.height === "0px" || s.style.opacity === "0"),
+          .every((s) => s.style.opacity === "0"),
       ).toBe(true);
     });
   });
@@ -812,7 +815,6 @@ describe("ConnectedOverview — currency story inspector", () => {
     fireEvent.click(screen.getByTestId("inspect-currency"));
     const sheet = screen.queryByTestId("inspector-sheet");
     if (sheet) {
-      expect(sheet.style.height).toBe("0px");
       expect(sheet.style.opacity).toBe("0");
     }
   });
@@ -822,10 +824,8 @@ describe("ConnectedOverview — currency story inspector", () => {
     renderOverview();
     fireEvent.click(screen.getByTestId("inspect-currency"));
     fireEvent.click(screen.getByLabelText("Close inspector"));
-    // Mid-exit fold the sheet may still be mounted, collapsed to nothing.
     const sheet = screen.queryByTestId("inspector-sheet");
     if (sheet) {
-      expect(sheet.style.height).toBe("0px");
       expect(sheet.style.opacity).toBe("0");
     }
   });
@@ -886,21 +886,12 @@ describe("ConnectedOverview — the settled-move seal", () => {
   });
 });
 
-describe("ConnectedOverview — concentration lens", () => {
+describe("ConnectedOverview — inline inspection", () => {
   const concentrated = () =>
     buildPortfolio({
       regionData: [
         { region: "Africa", value: 700, color: "#000", usdValue: 700 },
         { region: "USA", value: 300, color: "#111", usdValue: 300 },
-      ] as any,
-      totalValue: 1000,
-    });
-  const spread = () =>
-    buildPortfolio({
-      regionData: [
-        { region: "Africa", value: 400, color: "#000", usdValue: 400 },
-        { region: "USA", value: 350, color: "#111", usdValue: 350 },
-        { region: "Europe", value: 250, color: "#222", usdValue: 250 },
       ] as any,
       totalValue: 1000,
     });
@@ -919,120 +910,104 @@ describe("ConnectedOverview — concentration lens", () => {
     mockProfileComplete = false;
     mockHomeSections = defaultHomeSections;
     mockMoment = null;
+    mockGuardianVisibility = "quiet";
+    mockSessionInfo = null;
+    window.localStorage.clear();
   });
 
-  it("prompt appears only at ≥50% concentration, above the tip", () => {
-    mockHomeSections = { ...defaultHomeSections, primaryTip: "Add BRLm for LatAm coverage." };
-    renderOverview({ portfolio: concentrated() });
-    const slots = document.querySelectorAll('[data-status-slot="transition"]');
-    expect(slots).toHaveLength(1);
-    expect(slots[0].querySelector('[data-testid="home-concentration-link"]')).not.toBeNull();
-    cleanup();
-
-    renderOverview({ portfolio: spread() });
-    expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
-  });
-
-  it("banner and payment-cycle still outrank the prompt", () => {
-    mockHomeSections = { ...defaultHomeSections, banner: "currency-risk", isPaymentCycle: true };
-    renderOverview({ portfolio: concentrated() });
-    expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
-    expect(screen.getByTestId("contextual-banner")).toBeInTheDocument();
-  });
-
-  it("click opens the lens and fires lens_open; ← returns to the moment", () => {
-    renderOverview({ portfolio: concentrated() });
-    fireEvent.click(screen.getByTestId("home-concentration-link"));
-    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("lens_open", {
-      tab: "home",
-      lens: "concentration",
-    });
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "concentration");
-    expect(sessionStorage.getItem("diversifi.home.lens")).toBe("concentration");
-
-    fireEvent.click(screen.getByTestId("home-lens-back"));
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
-    expect(sessionStorage.getItem("diversifi.home.lens")).toBeNull();
-  });
-
-  it("restores the lens from sessionStorage only while the trigger holds", () => {
+  it("renders no concentration prompt even at ≥50%, and a legacy session key stays inert", () => {
     sessionStorage.setItem("diversifi.home.lens", "concentration");
     renderOverview({ portfolio: concentrated() });
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "concentration");
+    expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("home-lens-back")).not.toBeInTheDocument();
+    expect(screen.getByTestId("home-risk-theater")).not.toHaveAttribute("data-lens");
+  });
+
+  it("carries no Verified / Evidence mirrored line anywhere on Home", () => {
+    renderOverview();
+    expect(screen.queryByText(/Verified|Evidence mirrored/i)).not.toBeInTheDocument();
     cleanup();
-
-    renderOverview({ portfolio: spread() });
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
-  });
-
-  it("demo never touches sessionStorage", () => {
-    sessionStorage.setItem("diversifi.home.lens", "concentration");
-    renderOverview({ portfolio: concentrated(), isDemo: true });
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
-    expect(sessionStorage.getItem("diversifi.home.lens")).toBe("concentration");
-  });
-
-  it("fires lens_offered when the prompt renders — never in demo", () => {
     renderOverview({ portfolio: concentrated() });
-    expect(mockTrackFunnelEvent).toHaveBeenCalledWith("lens_offered", {
-      tab: "home",
-      lens: "concentration",
-    });
-    cleanup();
-    mockTrackFunnelEvent.mockClear();
-    sessionStorage.clear();
+    expect(screen.queryByText(/Verified|Evidence mirrored/i)).not.toBeInTheDocument();
+  });
 
-    renderOverview({ portfolio: concentrated(), isDemo: true });
-    expect(screen.getByTestId("home-concentration-link")).toBeInTheDocument();
-    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
-      "lens_offered",
-      expect.anything(),
+  it("region selection opens a stage inspector — headline, one meaning, one Shield hand-off", () => {
+    renderOverview({ portfolio: concentrated() });
+    fireEvent.click(screen.getByTestId("select-region"));
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(sheet).toHaveAttribute("aria-label", "Africa");
+    expect(sheet.className).not.toContain("bg-surface");
+    expect(screen.queryByTestId("inspector-sheet-handle")).not.toBeInTheDocument();
+    expect(sheet.textContent).toContain("70%");
+    expect(sheet.textContent).toContain("Africa");
+    expect(sheet.textContent).toMatch(/One region's currency risk carries most of your plan/);
+    const cta = screen.getByRole("button", { name: "Review in Shield" });
+    fireEvent.click(cta);
+    expect(mockNavigateWithIntent).toHaveBeenCalledWith("protect", {
+      source: "home",
+      region: "Africa",
+    });
+    expect(
+      screen.getByRole("button", { name: /Ask Guardian about this region/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("suppresses transition prompts while inspecting and restores them on close", async () => {
+    mockGuardianVisibility = "informed";
+    mockSessionInfo = {
+      activityStats: { week: "2026-W39", evaluated: 15, executed: 3, declined: 2 },
+      decisionLog: [],
+    };
+    window.localStorage.setItem(
+      "diversifi:last-visit:guardian-activity",
+      JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * 24 * 3600 * 1000 }),
     );
-    // …and a demo click doesn't fire lens_open either.
-    fireEvent.click(screen.getByTestId("home-concentration-link"));
-    expect(mockTrackFunnelEvent).not.toHaveBeenCalledWith(
-      "lens_open",
-      expect.anything(),
+    renderOverview({ portfolio: concentrated() });
+    await screen.findByTestId("home-guardian-activity-link");
+    fireEvent.click(screen.getByTestId("select-region"));
+    await vi.waitFor(() =>
+      expect(
+        screen.queryByTestId("home-guardian-activity-link"),
+      ).not.toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByLabelText("Close inspector"));
+    await vi.waitFor(() =>
+      expect(
+        screen.getByTestId("home-guardian-activity-link"),
+      ).toBeInTheDocument(),
     );
   });
 
-  it("the lens closes itself when the trigger drops", () => {
-    const { rerender } = render(
-      <ConnectedOverview
-        portfolio={concentrated()}
-        activePortfolio={concentrated()}
-        address="0xtest"
-        chainId={42220}
-        isDemo={false}
-        userRegion="USA"
-        setUserRegion={vi.fn()}
-        REGIONS={["USA", "Africa", "Europe"] as any}
-        setActiveTab={vi.fn()}
-        onDisableDemo={vi.fn()}
-        onEnableDemo={vi.fn()}
-      />,
-    );
-    fireEvent.click(screen.getByTestId("home-concentration-link"));
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "concentration");
+  it("Zakat selection replaces the exposure body rather than stacking it", () => {
+    mockHomeSections = { ...defaultHomeSections, showZakat: true };
+    renderOverview({ portfolio: concentrated() });
+    fireEvent.click(screen.getByTestId("select-region"));
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(sheet.textContent).toContain("Review in Shield");
+    fireEvent.click(screen.getByRole("button", { name: "Zakat" }));
+    expect(screen.getByTestId("zakat-calculator")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Review in Shield" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Exposure" }));
+    expect(screen.getByRole("button", { name: "Review in Shield" })).toBeInTheDocument();
+    expect(screen.queryByTestId("zakat-calculator")).not.toBeInTheDocument();
+  });
 
-    rerender(
-      <ConnectedOverview
-        portfolio={spread()}
-        activePortfolio={spread()}
-        address="0xtest"
-        chainId={42220}
-        isDemo={false}
-        userRegion="USA"
-        setUserRegion={vi.fn()}
-        REGIONS={["USA", "Africa", "Europe"] as any}
-        setActiveTab={vi.fn()}
-        onDisableDemo={vi.fn()}
-        onEnableDemo={vi.fn()}
-      />,
-    );
-    expect(screen.getByTestId("home-risk-theater")).toHaveAttribute("data-lens", "moment");
+  it("never mounts the shell's side inspector slot for Home's stages", () => {
+    renderOverview({ portfolio: concentrated() });
+    fireEvent.click(screen.getByTestId("select-region"));
+    expect(document.querySelector(".instrument-inspector")).toBeNull();
+    const sheet = screen.getByTestId("inspector-sheet");
+    expect(
+      sheet.closest(".instrument-workbench")?.querySelector(".instrument-inspector"),
+    ).toBeNull();
+    expect(
+      document
+        .querySelector(".instrument-object")
+        ?.contains(sheet),
+    ).toBe(true);
   });
 });
+
 
 describe("ConnectedOverview — while you were away (Guardian activity)", () => {
   const ACTIVITY_KEY = "diversifi:last-visit:guardian-activity";
@@ -1151,7 +1126,7 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
     expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
   });
 
-  it("occupies the one transition slot — ahead of the tip and compare, behind concentration", async () => {
+  it("occupies the one transition slot — ahead of the tip and compare", async () => {
     informedSession("2026-W39", 15, 3, 2);
     window.localStorage.setItem(
       ACTIVITY_KEY,
@@ -1180,8 +1155,8 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
         totalValue: 1000,
       }),
     });
-    expect(screen.getByTestId("home-concentration-link")).toBeInTheDocument();
-    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+    expect(await screen.findByTestId("home-guardian-activity-link")).toBeInTheDocument();
+    expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
   });
 
   it("banner, payment-cycle, and graduation each outrank the activity link", async () => {

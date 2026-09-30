@@ -347,68 +347,122 @@ const CONCENTRATED = [
   { region: "LatAm", value: 300, color: "#22c55e" },
 ];
 
-describe("HomeRiskTheater — concentration lens", () => {
-  it("renders the headline, staged coins, and the ← back", () => {
-    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
-    const theater = screen.getByTestId("home-risk-theater");
-    expect(theater).toHaveAttribute("data-lens", "concentration");
-    expect(
-      screen.getByText("70% of your savings sit in Africa"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("$700 of $1,000")).toBeInTheDocument();
-    expect(screen.getByTestId("home-lens-back")).toBeInTheDocument();
-    // Coins keep their per-region identity.
-    expect(screen.getByRole("button", { name: /Africa 70%/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /LatAm 30%/ })).toBeInTheDocument();
-  });
-
-  it("hides the moment card, holdings strip, and baseplate", () => {
-    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
-    expect(screen.queryByTestId("holdings-strip")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("home-horizon-baseplate")).not.toBeInTheDocument();
-    expect(screen.queryByTestId("guardian-since-visit")).not.toBeInTheDocument();
-  });
-
-  it("the ← returns to the moment", () => {
-    const onLensBack = vi.fn();
-    renderTheater({ regionData: CONCENTRATED, lens: "concentration", onLensBack });
-    fireEvent.click(screen.getByTestId("home-lens-back"));
-    expect(onLensBack).toHaveBeenCalledTimes(1);
-  });
-
-  it("coin taps still select the region", () => {
-    const onSelectRegion = vi.fn();
-    renderTheater({
-      regionData: CONCENTRATED,
-      lens: "concentration",
-      onSelectRegion,
-    });
-    fireEvent.click(screen.getByRole("button", { name: /Africa 70%/ }));
-    expect(onSelectRegion).toHaveBeenCalledWith("Africa");
-  });
-
-  it("stage coins are larger than strip coins for the same share", () => {
+describe("HomeRiskTheater — inline inspection replaces the stage", () => {
+  it("has no concentration lens branch", () => {
     renderTheater({ regionData: CONCENTRATED });
-    const stripSvg = screen
-      .getByRole("button", { name: /Africa 70%/ })
-      .querySelector("svg");
-    const stripSize = Number(stripSvg?.getAttribute("width"));
-    cleanup();
-    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
-    const stageSvg = screen
-      .getByRole("button", { name: /Africa 70%/ })
-      .querySelector("svg");
-    const stageSize = Number(stageSvg?.getAttribute("width"));
-    expect(stageSize).toBeGreaterThan(stripSize);
+    const theater = screen.getByTestId("home-risk-theater");
+    expect(theater).not.toHaveAttribute("data-lens");
+    expect(screen.queryByTestId("home-lens-back")).not.toBeInTheDocument();
   });
 
-  it("stays under a 40-word visible budget", () => {
-    renderTheater({ regionData: CONCENTRATED, lens: "concentration" });
-    const words = (
-      screen.getByTestId("home-risk-theater").textContent ?? ""
-    )
-      .split(/\s+/)
-      .filter(Boolean);
-    expect(words.length).toBeLessThanOrEqual(40);
+  it("keeps the comparison mounted but hidden and unreachable while a region is selected", () => {
+    renderTheater({ focusedRegion: "Africa" });
+    const comparison = screen.getByTestId("home-comparison");
+    expect(comparison).not.toBeVisible();
+    expect(comparison).toHaveAttribute("hidden");
+    expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /See Shield/ })).not.toBeInTheDocument();
+    expect(screen.getByTestId("holdings-strip")).toBeVisible();
+  });
+
+  it("hides the comparison while the currency story is selected too", () => {
+    renderTheater({ currencySelected: true });
+    expect(screen.getByTestId("home-comparison")).not.toBeVisible();
+  });
+
+  it("restores the same mounted comparison and settings on close", () => {
+    const { rerender } = render(
+      <HomeRiskTheater
+        moment={MOMENT}
+        inflationMoment={null}
+        benchmarks={BENCHMARK_KEYS}
+        horizons={HORIZON_KEYS}
+        onSelectBenchmark={() => {}}
+        onSelectHorizon={() => {}}
+        onAmountChange={() => {}}
+        onProtect={() => {}}
+        frame={null}
+        regionData={REGIONS}
+        totalValue={1000}
+        focusedRegion="Africa"
+        onSelectRegion={() => {}}
+        inspection={<p data-testid="region-detail">Africa detail</p>}
+      />,
+    );
+    const comparison = screen.getByTestId("home-comparison");
+    expect(comparison).not.toBeVisible();
+    expect(screen.getByTestId("region-detail")).toBeInTheDocument();
+    rerender(
+      <HomeRiskTheater
+        moment={MOMENT}
+        inflationMoment={null}
+        benchmarks={BENCHMARK_KEYS}
+        horizons={HORIZON_KEYS}
+        onSelectBenchmark={() => {}}
+        onSelectHorizon={() => {}}
+        onAmountChange={() => {}}
+        onProtect={() => {}}
+        frame={null}
+        regionData={REGIONS}
+        totalValue={1000}
+        focusedRegion={null}
+        onSelectRegion={() => {}}
+        inspection={<p data-testid="region-detail">Africa detail</p>}
+      />,
+    );
+    expect(screen.getByTestId("home-comparison")).toBe(comparison);
+    expect(screen.getByTestId("home-comparison")).toBeVisible();
+    expect(screen.getByLabelText("Example amount")).toBeInTheDocument();
+  });
+
+  it("centres the holdings strip when it fits and anchors the ends for overflow", () => {
+    renderTheater();
+    const first = screen.getByRole("button", { name: "Africa 60%" });
+    const last = screen.getByRole("button", { name: "LatAm 40%" });
+    expect(first.className).toContain("ms-auto");
+    expect(first.className).toContain("flex-none");
+    expect(last.className).toContain("me-auto");
+    expect(last.className).toContain("flex-none");
+  });
+
+  it("centres a single holding coin with both end margins", () => {
+    renderTheater({
+      regionData: [{ region: "Africa", value: 1000, color: "#0ea5e9" }],
+      totalValue: 1000,
+    });
+    const only = screen.getByRole("button", { name: "Africa 100%" });
+    expect(only.className).toContain("ms-auto");
+    expect(only.className).toContain("me-auto");
+  });
+
+  it("keeps the comparison's Money/Goods setting across an open/close cycle", () => {
+    const goodsMoment: NarrativeMoment = {
+      ...MOMENT,
+      goods: { unit: "bags of rice", count: 12 },
+    };
+    const shared = {
+      moment: goodsMoment,
+      inflationMoment: null,
+      benchmarks: BENCHMARK_KEYS,
+      horizons: HORIZON_KEYS,
+      onSelectBenchmark: () => {},
+      onSelectHorizon: () => {},
+      onAmountChange: () => {},
+      onProtect: () => {},
+      frame: null,
+      regionData: REGIONS,
+      totalValue: 1000,
+      onSelectRegion: () => {},
+    };
+    const { rerender } = render(<HomeRiskTheater {...shared} focusedRegion={null} />);
+    fireEvent.click(screen.getByRole("button", { name: "Goods" }));
+    expect(screen.getByRole("button", { name: "Goods" })).toHaveAttribute("aria-pressed", "true");
+
+    rerender(<HomeRiskTheater {...shared} focusedRegion="Africa" />);
+    expect(screen.getByTestId("home-comparison")).toHaveAttribute("hidden");
+
+    rerender(<HomeRiskTheater {...shared} focusedRegion={null} />);
+    expect(screen.getByTestId("home-comparison")).not.toHaveAttribute("hidden");
+    expect(screen.getByRole("button", { name: "Goods" })).toHaveAttribute("aria-pressed", "true");
   });
 });
