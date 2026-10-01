@@ -646,6 +646,8 @@ truthfully somewhere verifiable.
 
 **Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The UI stays chain-agnostic by default: one quiet line — `Verified · Evidence mirrored` with a `✓` — in the trust tier (`TrustFootnote` / `InstrumentShell status`), not the object. No chain names, no hex in the first viewport. Detail is progressive disclosure: tapping `Verified` rewrites the artefact in place to the 5 dots + shared address + `Guardian #1` + explorer `0G/Celoscan/Arbiscan` links and the `/api/agent/zero-g-ledger?verify=<hash>` check (`LiveProofCard` lazy `✓`). Beginners never see a hex until they care; reviewers get the exact vision sentence in one tap. Header `GuardianMascot` tooltip reads `Portable Guardian · portable across wallets`, not `ERC-721`. Home is the exception — the moment and story already carry their own source/date provenance, so Home's status tier leaves the generic trust slot empty rather than mirroring a second Verified line.
 
+**Colour carries meaning, so there is one action hue.** Every primary CTA and every product hand-off link wears `--action` (`bg-action` in Tailwind; numerically blue-600 so legacy call sites still match, but `action` is the sanctioned spelling). Green and teal are reserved for verified / ready / settled state (`StatusBadge` `ready`) — spending them on an upsell makes a pitch read as a confirmation, which is exactly the confusion this section exists to prevent. Status-tier text links follow one grammar: `.link-handoff` is a real next step (carries a verb, wears the action hue, the heaviest thing in the row); `.link-quiet` is supporting or exploratory (gray, never the action hue). The demo entry is quiet by contract — it is illustrative, not the way forward, so it never wears blue. Arrows suffix interactive hand-offs only; a static sentence never ends in `→`.
+
 ## 8. PR checklist for any new surface
 
 - [ ] One sentence states the screen's job; if it needs "and", split it.
@@ -662,6 +664,7 @@ truthfully somewhere verifiable.
       inspector / L3 Guardian); an L1 addition evicts, never stacks.
 - [ ] Reduced-motion path verified.
 - [ ] Disclaimers/honesty copy appear exactly once, in plain words.
+- [ ] New CTAs use `bg-action`; new status-tier links use `.link-handoff` (next step) or `.link-quiet` (supporting) — never a new hue, never green/teal for a pitch, no arrow on static text.
 - [ ] No email form or input interrupting an emotional beat.
 - [ ] Parse budget: count words. If a "moment" screen exceeds ~80
       visible words, something can be folded, merged, or cut.
@@ -774,8 +777,9 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `MaskedReveal` | `apps/web/components/shared/MaskedReveal.tsx` | masked hero-line reveal (greeting headlines) |
 | `FlickScrollRow` | `apps/web/components/shared/FlickScrollRow.tsx` | the horizontal scroll row: drag + momentum + chevrons + edge fades |
-| `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link |
+| `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link (demo is `.link-quiet` — gray, never blue) |
 | `StatusTier` | `apps/web/components/shared/StatusTier.tsx` | connected status tier budget: trust + one transition + one rail (§5 rail 8) |
+| `--action` / `bg-action`, `.link-handoff` / `.link-quiet` | `apps/web/styles/tokens.css`, `globals.css`, `tailwind.config.js` | the ONE action hue for CTAs + hand-off links; green/teal reserved for verified/ready (§7); quiet register for supporting links |
 | `useBalanceVisibility`, `BalanceVisibilityProvider` | `apps/web/context/app/BalanceVisibilityContext.tsx` | app-wide privacy switch: `hidden` + `formatMoney` (dots while hidden). Every dollar figure goes through it |
 | `BalanceVisibilityToggle` | `apps/web/components/shared/BalanceVisibilityToggle.tsx` | the header eye control that flips the switch (`aria-pressed`) |
 | `formatUsd` / `MONEY_MASK` | `apps/web/lib/money-format.ts` | the one USD formatter + the dot mask |

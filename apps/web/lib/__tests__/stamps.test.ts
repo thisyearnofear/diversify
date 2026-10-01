@@ -42,7 +42,7 @@ describe('stampsForPair', () => {
     )!;
     expect(staples.value).toBe('10 → 25');
     expect(staples.line).toBe(
-      'bags of rice, if moved to the dollar in 2020',
+      'bags of rice, if moved to the dollar in 2021',
     );
   });
 

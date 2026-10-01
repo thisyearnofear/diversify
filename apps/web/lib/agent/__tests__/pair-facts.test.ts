@@ -69,7 +69,7 @@ describe("formatPairFacts", () => {
 
   it("carries the as-of label on the what-if", () => {
     const block = formatPairFacts({ from: "NGNm", to: "USDm" });
-    expect(block).toContain("What if (data to Jul 2025):");
+    expect(block).toContain("What if (data to Sep 2026):");
   });
 
   it("returns '' for unknown symbols, non-strings, and over-long strings", () => {

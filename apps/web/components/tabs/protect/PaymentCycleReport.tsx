@@ -197,7 +197,7 @@ function PaymentDueConfirm({
           type="button"
           disabled={saving}
           onClick={submit}
-          className="min-h-11 px-3 rounded-lg bg-teal-600 text-white text-xs font-bold disabled:opacity-50"
+          className="min-h-11 px-3 rounded-lg bg-action text-white text-xs font-bold disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Confirm paid'}
         </button>
@@ -707,7 +707,7 @@ export function PaymentCycleReport({
         type="button"
         onClick={runReport}
         disabled={!canSubmit || loading}
-        className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+        className="w-full py-2.5 rounded-xl bg-action hover:bg-action-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
       >
         {loading ? <InlineSpinner /> : null}
         {loading ? 'Computing…' : 'Run cycle report'}
@@ -749,7 +749,7 @@ export function PaymentCycleReport({
             <button
               type="button"
               onClick={() => toggleMonitoring(true)}
-              className="w-full py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold transition-colors"
+              className="w-full py-2.5 rounded-xl bg-action hover:bg-action-hover text-white text-sm font-bold transition-colors"
             >
               Let Guardian watch this payment
             </button>

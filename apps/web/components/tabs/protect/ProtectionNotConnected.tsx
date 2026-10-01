@@ -311,7 +311,7 @@ export function ProtectionNotConnected({
                 type="button"
                 data-testid="walletless-commit"
                 onClick={commitFocusedPlan}
-                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
               >
                 Use this plan
               </button>
@@ -370,9 +370,10 @@ export function ProtectionNotConnected({
                 onOpenSleeve();
                 haptics.tap();
               }}
-              className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              className="link-handoff shrink-0"
             >
-              Tokenized assets you can hold →
+              Tokenized assets you can hold
+              <span aria-hidden="true" className="ml-1">→</span>
             </button>
           ) : null}
         </UnconnectedStatusTier>

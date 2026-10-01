@@ -475,9 +475,10 @@ export default function ExchangeTab({
     <button
       type="button"
       onClick={() => setInspectorSel({ kind: "netting" })}
-      className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+      className="link-handoff shrink-0"
     >
-      FX netting: match currencies directly →
+      FX netting: match currencies directly
+      <span aria-hidden="true" className="ml-1">→</span>
     </button>
   );
 
@@ -497,7 +498,7 @@ export default function ExchangeTab({
           });
         }
       }}
-      className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+      className="min-h-11 px-3 py-1.5 -my-1.5 rounded-full text-xs font-bold text-action dark:text-action hover:bg-action/8 dark:hover:bg-action/15 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60"
     >
       New on this pair · {freshSignal.dateLabel} — open the decision window →
     </button>

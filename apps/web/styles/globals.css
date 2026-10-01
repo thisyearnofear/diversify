@@ -25,9 +25,22 @@
    not a competing page background; content should always own the hierarchy. */
 .surface-vault {
   background:
-    radial-gradient(80% 55% at 50% -10%, var(--surface-protection) 0%, transparent 70%),
-    radial-gradient(65% 45% at 85% 100%, var(--surface-value) 0%, transparent 72%),
-    linear-gradient(160deg, var(--surface-vault-start) 0%, var(--surface-vault-mid) 48%, var(--surface-vault-end) 100%);
+    radial-gradient(
+      80% 55% at 50% -10%,
+      var(--surface-protection) 0%,
+      transparent 70%
+    ),
+    radial-gradient(
+      65% 45% at 85% 100%,
+      var(--surface-value) 0%,
+      transparent 72%
+    ),
+    linear-gradient(
+      160deg,
+      var(--surface-vault-start) 0%,
+      var(--surface-vault-mid) 48%,
+      var(--surface-vault-end) 100%
+    );
 }
 
 .surface-glass {
@@ -42,7 +55,11 @@
 }
 
 .surface-context-wash {
-  background: radial-gradient(ellipse at 50% 20%, var(--surface-protection) 0%, transparent 65%);
+  background: radial-gradient(
+    ellipse at 50% 20%,
+    var(--surface-protection) 0%,
+    transparent 65%
+  );
 }
 
 /* ── Scrim / Overlay utilities ─────────────────────────────────────────── */
@@ -121,6 +138,75 @@
   min-width: 44px;
 }
 
+/* ---------------------------------------------------------------------------
+ * The link grammar (design-language §1 — "every text block names one job").
+ *
+ * Status tiers were growing their own link styles per tab: a teal
+ * `font-bold` pill on Exchange, a blue `font-semibold` on Shield, a blue
+ * `font-semibold` demo link on all three. Three weights, two hues, no
+ * priority order — so trust, product hand-offs and the demo entry all read as
+ * peers in one row.
+ *
+ * Two registers only:
+ *   .link-handoff — a real next step. Carries a verb, wears the action hue,
+ *                   and is the heaviest thing in a status row.
+ *   .link-quiet   — supporting or exploratory. Gray, never the action hue.
+ *                   Blue/teal/green here would claim "this is the way
+ *                   forward" for something that isn't.
+ *
+ * Green and teal are reserved for verified/ready state (StatusBadge `ready`)
+ * and are deliberately NOT available as a link colour — a cross-border FX
+ * netting pitch rendered in green reads as a success confirmation, which is
+ * exactly the confusion the honesty contract exists to prevent.
+ * ------------------------------------------------------------------------- */
+.link-handoff {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: 0.25rem 0.5rem;
+  margin: -0.25rem -0.5rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 600;
+  color: rgb(var(--action));
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+.link-handoff:hover {
+  background-color: rgb(var(--action) / 0.08);
+}
+.link-handoff:focus-visible {
+  outline: 2px solid rgb(var(--action) / 0.6);
+  outline-offset: 2px;
+}
+.dark .link-handoff {
+  color: rgb(var(--action) / 0.75);
+}
+.dark .link-handoff:hover {
+  background-color: rgb(var(--action) / 0.14);
+}
+
+.link-quiet {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap-min);
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  color: rgb(var(--ink-subtle));
+  transition: color 150ms ease;
+}
+.link-quiet:hover {
+  color: rgb(var(--ink));
+}
+.link-quiet:focus-visible {
+  outline: 2px solid rgb(var(--ink) / 0.4);
+  outline-offset: 2px;
+}
+
 /* Mobile-only visibility */
 .mobile-only {
   display: block;
@@ -147,7 +233,7 @@
     -webkit-tap-highlight-color: transparent;
     scroll-behavior: smooth;
   }
-  
+
   body {
     @apply antialiased;
     overscroll-behavior-y: none; /* Prevent rubber-banding on pull-to-refresh */
@@ -169,7 +255,9 @@
 }
 
 html {
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 body {
@@ -178,14 +266,18 @@ body {
 }
 
 /* Smooth transitions for all dark mode elements */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   transition-property: background-color, border-color, color, fill, stroke;
   transition-timing-function: ease;
   transition-duration: 0s;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     transition-duration: 150ms;
   }
 }
@@ -331,17 +423,28 @@ body {
 
 /* ── Coin motif ambience (FloatingCoins, onboarding backdrops) ─────── */
 @keyframes coin-drift {
-  0%, 100% { transform: translateY(0) rotate(-7deg); }
-  50% { transform: translateY(-16px) rotate(7deg); }
+  0%,
+  100% {
+    transform: translateY(0) rotate(-7deg);
+  }
+  50% {
+    transform: translateY(-16px) rotate(7deg);
+  }
 }
 .coin-float {
-  animation: coin-drift var(--coin-duration, 9s) ease-in-out var(--coin-delay, 0s) infinite;
+  animation: coin-drift var(--coin-duration, 9s) ease-in-out
+    var(--coin-delay, 0s) infinite;
   will-change: transform;
 }
 
 @keyframes aurora-drift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(4%, -4%, 0) scale(1.1); }
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(4%, -4%, 0) scale(1.1);
+  }
 }
 .aurora-drift {
   animation: aurora-drift 18s ease-in-out infinite;
@@ -384,8 +487,12 @@ body {
   /* Start well off the left edge, sweep across, end off the right. The
      0% and 100% offsets both put the band outside the coin's viewBox so
      the loop seams are invisible. */
-  0%   { transform: rotate(20deg) translateX(0); }
-  100% { transform: rotate(20deg) translateX(120px); }
+  0% {
+    transform: rotate(20deg) translateX(0);
+  }
+  100% {
+    transform: rotate(20deg) translateX(120px);
+  }
 }
 
 /* ── Lens coin motif (Phase 3 value-lens selector) ─────────────────
@@ -395,37 +502,37 @@ body {
    underglow and adds a slow pulse. */
 .lens-coin-idle {
   filter: drop-shadow(0 0 4px var(--lens-accent, #10b981))
-          drop-shadow(0 0 10px var(--lens-accent-soft, rgba(16,185,129,0.3)));
+    drop-shadow(0 0 10px var(--lens-accent-soft, rgba(16, 185, 129, 0.3)));
   transition: filter 0.2s ease-out;
 }
 .lens-coin-idle:hover {
   filter: drop-shadow(0 0 6px var(--lens-accent, #10b981))
-          drop-shadow(0 0 16px var(--lens-accent-soft, rgba(16,185,129,0.5)));
+    drop-shadow(0 0 16px var(--lens-accent-soft, rgba(16, 185, 129, 0.5)));
 }
 .lens-coin-active {
   filter: drop-shadow(0 0 8px var(--lens-accent, #10b981))
-          drop-shadow(0 0 18px var(--lens-accent-soft, rgba(16,185,129,0.55)));
+    drop-shadow(0 0 18px var(--lens-accent-soft, rgba(16, 185, 129, 0.55)));
 }
 .lens-coin-pulse {
   animation: lens-coin-pulse 2.6s ease-in-out infinite;
   will-change: filter, transform;
 }
 @keyframes lens-coin-pulse {
-  0%, 100% {
+  0%,
+  100% {
     filter: drop-shadow(0 0 8px var(--lens-accent, #10b981))
-            drop-shadow(0 0 18px var(--lens-accent-soft, rgba(16,185,129,0.55)));
+      drop-shadow(0 0 18px var(--lens-accent-soft, rgba(16, 185, 129, 0.55)));
     transform: scale(1);
   }
   50% {
     filter: drop-shadow(0 0 12px var(--lens-accent, #10b981))
-            drop-shadow(0 0 26px var(--lens-accent-soft, rgba(16,185,129,0.7)));
+      drop-shadow(0 0 26px var(--lens-accent-soft, rgba(16, 185, 129, 0.7)));
     transform: scale(1.04);
   }
 }
 
 /* REMOVED: Wallet button was intentionally hidden during onboarding causing UX friction */
 /* Users should be to connect wallet anytime, not just after completing onboarding */
-
 
 /* ── Phase 2: Geometric background patterns ─────────────────────────
    Each archetype gets a subtle CSS-generated pattern at ~3% opacity.
@@ -536,14 +643,13 @@ body {
    shell motifs. The arcs suggest water ripples — fitting for
    "weather every storm" — without literal wave imagery. */
 .shields-pattern--pan_caribbean {
-  background-image:
-    repeating-radial-gradient(
-      circle at 50% 50%,
-      transparent,
-      transparent 20px,
-      currentColor 20px,
-      currentColor 21px
-    );
+  background-image: repeating-radial-gradient(
+    circle at 50% 50%,
+    transparent,
+    transparent 20px,
+    currentColor 20px,
+    currentColor 21px
+  );
   background-size: 40px 40px;
 }
 
@@ -694,24 +800,51 @@ body {
   .instrument-shell {
     container-name: instrument;
     container-type: inline-size;
+
+    /* One shared stage height for every tab, in both inspector states.
+       Previously this lived on `.instrument-shell[data-inspector-open="false"]`
+       and was capped at 28rem, which produced two defects at once: a short
+       tab got a 448px floor and left ~315px of empty page below it, and
+       because it only applied when the inspector was CLOSED the card grew or
+       shrank as you opened a sheet. The result was a ragged bottom edge that
+       jumped on every tab change.
+
+       This is a floor on the stage, not filler — `.instrument-object` is
+       already `justify-content: center`, so a short tab centres its object in
+       a defined stage instead of clustering it at the top of a short card.
+       The 13rem reserve covers the header, the dock's `pb-20` and the card's
+       own vertical padding; 46rem is the ceiling before a tall monitor starts
+       to look sparse. No per-tab flag — every tab agrees, by contract. */
+    min-height: clamp(26rem, calc(100svh - 13rem), 46rem);
+    display: flex;
+    flex-direction: column;
   }
 
-  .instrument-shell[data-inspector-open="false"] {
-    min-height: clamp(18rem, calc(100svh - 10rem), 28rem);
-  }
+  /* The workbench centres its CONTENT GROUP, and the object shrink-wraps.
 
+     The first version of the shared stage height kept `flex: 1` on the
+     object, so the object absorbed all the slack and centred itself while
+     the status tier was pushed to the very bottom edge of the taller card —
+     on Shield the CTA sat ~180px above "Verified / Tokenized assets / Explore
+     a sample plan", which read as three orphaned links rather than a footer
+     for the object above. The stage is for the object; the status row
+     belongs to it and travels with it.
+
+     Safe when content exceeds the min-height: the card's height is
+     auto, so it grows and there is simply no slack to distribute. */
   .instrument-workbench {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     min-width: 0;
-    min-height: inherit;
+    flex: 1;
   }
 
   .instrument-object {
     width: 100%;
     min-width: 0;
-    flex: 1;
+    flex: 0 1 auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -741,14 +874,19 @@ body {
   }
 
   @container instrument (min-width: 720px) {
-    .instrument-workbench[data-inspector-open="true"]:has(> .instrument-inspector) {
+    .instrument-workbench[data-inspector-open="true"]:has(
+        > .instrument-inspector
+      ) {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       align-items: start;
       gap: 1.5rem;
     }
 
-    .instrument-workbench[data-inspector-open="true"]:has(> .instrument-inspector) > .instrument-status {
+    .instrument-workbench[data-inspector-open="true"]:has(
+        > .instrument-inspector
+      )
+      > .instrument-status {
       grid-column: 1 / -1;
     }
   }

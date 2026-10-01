@@ -75,7 +75,7 @@ describe('/api/og/pair-card — symbols are the only input', () => {
     const text = textOf(calls[0].children);
     expect(text).toContain('The naira lost ~60% to the dollar in 5 years');
     expect(text).toContain('What if ·');
-    expect(text).toContain('Curated data to Jul 2025 · Not live FX');
+    expect(text).toContain('Curated data to Sep 2026 · Not live FX');
   });
 
   it('extra numeric params cannot smuggle a number onto the card', async () => {

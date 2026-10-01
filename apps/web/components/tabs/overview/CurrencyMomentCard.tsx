@@ -9,31 +9,40 @@
  * Grammar: one object gets the colour (the local coin + delta); everything
  * else is quiet. Motion reveals selection, never loops.
  */
-import React from 'react';
+import React from "react";
 import { BENCHMARK_COLORS } from "@/components/shared/palette";
-import { motion, useReducedMotion } from 'framer-motion';
-import { Coin } from '@/components/shared/FloatingCoins';
-import { useCountUp } from '@/hooks/use-count-up';
-import { usePointerTilt } from '@/hooks/use-pointer-tilt';
-import { haptics } from '@/lib/haptics';
+import { motion, useReducedMotion } from "framer-motion";
+import { Coin } from "@/components/shared/FloatingCoins";
+import { useCountUp } from "@/hooks/use-count-up";
+import { usePointerTilt } from "@/hooks/use-pointer-tilt";
+import { haptics } from "@/lib/haptics";
 import {
   BENCHMARKS,
   CURRENCY_BY_CODE,
+  CURRENCY_RISK_REVIEW_WINDOW_DAYS,
   HORIZONS,
+  isCurrencyRiskDatasetStale,
   type Benchmark,
   type Horizon,
-} from '@/constants/currency-risk';
-import type { NarrativeMoment } from '@/lib/narrative/currency-moment';
-import { CountryOverrideSelect } from './CountryOverrideSelect';
-import { CurrencyVisitReview } from './CurrencyVisitReview';
-import type { MomentFrame } from '@/lib/narrative/moment-framing';
-import { useCurrencyVisit } from '@/hooks/use-currency-visit';
-import { useProofFeed } from '@/hooks/use-proof-feed';
-import { homeBeats } from '@/lib/live-lines';
-import { LiveLine } from '@/components/shared/LiveLine';
-import { comparisonSettle, press, reveal, springPop, springPress, springSoft } from "@/lib/motion-tokens";
-import { trackFunnelEvent } from '@/lib/analytics';
-import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
+} from "@/constants/currency-risk";
+import type { NarrativeMoment } from "@/lib/narrative/currency-moment";
+import { CountryOverrideSelect } from "./CountryOverrideSelect";
+import { CurrencyVisitReview } from "./CurrencyVisitReview";
+import type { MomentFrame } from "@/lib/narrative/moment-framing";
+import { useCurrencyVisit } from "@/hooks/use-currency-visit";
+import { useProofFeed } from "@/hooks/use-proof-feed";
+import { homeBeats } from "@/lib/live-lines";
+import { LiveLine } from "@/components/shared/LiveLine";
+import {
+  comparisonSettle,
+  press,
+  reveal,
+  springPop,
+  springPress,
+  springSoft,
+} from "@/lib/motion-tokens";
+import { trackFunnelEvent } from "@/lib/analytics";
+import { useInstrumentInspection } from "@/components/shared/InstrumentShell";
 
 interface Props {
   moment: NarrativeMoment;
@@ -71,15 +80,15 @@ interface Props {
 }
 
 const BENCHMARK_COIN: Record<Benchmark, { glyph: string; color: string }> = {
-  USD: { glyph: '$', color: BENCHMARK_COLORS.USD },
-  EUR: { glyph: '€', color: BENCHMARK_COLORS.EUR },
-  XAU: { glyph: 'Au', color: BENCHMARK_COLORS.XAU },
+  USD: { glyph: "$", color: BENCHMARK_COLORS.USD },
+  EUR: { glyph: "€", color: BENCHMARK_COLORS.EUR },
+  XAU: { glyph: "Au", color: BENCHMARK_COLORS.XAU },
 };
 
 const BENCHMARK_SHORT: Record<Benchmark, string> = {
-  USD: 'USD',
-  EUR: 'EUR',
-  XAU: 'Gold',
+  USD: "USD",
+  EUR: "EUR",
+  XAU: "Gold",
 };
 
 /**
@@ -98,12 +107,22 @@ const MOMENT_ACCENT = BENCHMARK_COLORS.USD;
  * One decimal when |delta| < 1: a live −0.4% must never render as "−0%"
  * (rounding to a signed zero reads as broken data, not as a small move).
  */
-function DeltaNumber({ delta, accent }: { delta: number; accent: string }) {
+function DeltaNumber({
+  delta,
+  accent,
+  horizonLabel,
+}: {
+  delta: number;
+  accent: string;
+  horizonLabel: string;
+}) {
   const formatDelta = (n: number) => {
     const abs = Math.abs(n);
     if (abs < 0.05) return "0%"; // dead flat — never a signed zero
     const sign = n > 0 ? "+" : "−";
-    return abs >= 0.95 ? `${sign}${Math.round(abs)}%` : `${sign}${abs.toFixed(1)}%`;
+    return abs >= 0.95
+      ? `${sign}${Math.round(abs)}%`
+      : `${sign}${abs.toFixed(1)}%`;
   };
   const value = useCountUp(delta, {
     initialValue: delta,
@@ -111,8 +130,24 @@ function DeltaNumber({ delta, accent }: { delta: number; accent: string }) {
     format: formatDelta,
   });
   return (
-    <div className="text-5xl sm:text-6xl tracking-tight font-black tabular-nums" style={{ color: accent }}>
-      <motion.span>{value}</motion.span>
+    /* The horizon rides ON the number, not two lines below it in smaller grey
+       type. `−60%` sitting between two coins reads as a spot FX rate — it is
+       a 5-year change in purchasing power, and that distinction is the whole
+       claim. "numbers carry their own meaning" means the number is never
+       legible without its own window. */
+    <div className="flex items-baseline justify-center gap-1.5">
+      <div
+        className="text-5xl sm:text-6xl tracking-tight font-black tabular-nums"
+        style={{ color: accent }}
+      >
+        <motion.span>{value}</motion.span>
+      </div>
+      <span
+        className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500"
+        aria-hidden="true"
+      >
+        {horizonLabel}
+      </span>
     </div>
   );
 }
@@ -142,7 +177,11 @@ function MoneyConsequence({
   });
   return (
     <>
-      <motion.span aria-hidden={true} className="tabular-nums" style={{ color: accent }}>
+      <motion.span
+        aria-hidden={true}
+        className="tabular-nums"
+        style={{ color: accent }}
+      >
         {value}
       </motion.span>
       <span className="sr-only">{format(target)}</span>
@@ -159,7 +198,7 @@ export function CurrencyMomentCard({
   onAmountChange,
   onProtect,
   protectLabel,
-  className = '',
+  className = "",
   onChangeCountry,
   frame,
   onInspectCurrency,
@@ -174,8 +213,12 @@ export function CurrencyMomentCard({
   const comparison = useCurrencyVisit(moment, rememberVisit);
   // The Last visit view exists only when the reading moved — same-date or
   // unchanged data renders exactly like a first visit.
-  const changed = comparison && (comparison.kind === 'updated' || comparison.kind === 'revised') ? comparison : null;
-  const [view, setView] = React.useState<'visit' | 'history' | null>(null);
+  const changed =
+    comparison &&
+    (comparison.kind === "updated" || comparison.kind === "revised")
+      ? comparison
+      : null;
+  const [view, setView] = React.useState<"visit" | "history" | null>(null);
   // The coin's flip animation exists only for a face CHANGE — first mount
   // renders still (one occurrence, then stillness; §5), and once the coin
   // has ever flipped its shine doesn't replay on the remount.
@@ -187,7 +230,7 @@ export function CurrencyMomentCard({
   React.useEffect(() => {
     if (currencySelected) setHasFlipped(true);
   }, [currencySelected]);
-  const showVisit = Boolean(changed) && view !== 'history';
+  const showVisit = Boolean(changed) && view !== "history";
   const inspecting = useInstrumentInspection();
   const [acted, setActed] = React.useState(false);
   React.useEffect(() => setActed(false), [moment.currencyCode]);
@@ -200,6 +243,20 @@ export function CurrencyMomentCard({
   const benchmarkCoin = BENCHMARK_COIN[moment.benchmark];
   // The local coin physically shrinks with retained purchasing power.
   const localScale = Math.max(0.45, 0.35 + 0.65 * moment.retainedRatio);
+  // Both coins share one base size. They used to declare different max-widths
+  // (local 112px vs benchmark 72px), which almost exactly cancelled the scale
+  // transform: at -60% the two coins rendered ~68px vs ~72px — visually
+  // identical, so the geometry encoded nothing. Worse, the crossover sat at
+  // delta ~= -34%, so for every mild-to-moderate depreciation (-8% EUR) the
+  // local coin rendered ~47% LARGER than the dollar it had lost ground to.
+  // One base size, one scale channel, no inversion.
+  const COIN_BASE_PX = 104;
+  const COIN_MIN_SCALE = 0.62;
+  // Never smaller than the benchmark coin, so the direction of the change is
+  // always readable; magnitude is carried by the number, not by a coin that
+  // can shrink to a dot.
+  const localCoinScale = Math.max(COIN_MIN_SCALE, Math.min(1, localScale));
+  const curatedStale = !moment.isLive && isCurrencyRiskDatasetStale();
   const fmt = (n: number) => Math.round(n).toLocaleString();
 
   // The live line — real, dated facts about the visitor's currency.
@@ -216,32 +273,36 @@ export function CurrencyMomentCard({
     [liveFeed, moment.currencyCode, currencySelected],
   );
 
-  const sharedReturn = viewingShared && onClearSharedView ? (
-    <button
-      type="button"
-      onClick={() => { act(); onClearSharedView(); }}
-      className="ml-2 min-h-tap align-middle font-semibold normal-case tracking-normal text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
-    >
-      ← Your currency
-    </button>
-  ) : null;
+  const sharedReturn =
+    viewingShared && onClearSharedView ? (
+      <button
+        type="button"
+        onClick={() => {
+          act();
+          onClearSharedView();
+        }}
+        className="ml-2 min-h-tap align-middle font-semibold normal-case tracking-normal text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
+      >
+        ← Your currency
+      </button>
+    ) : null;
 
-  const [unit, setUnit] = React.useState<'money' | 'goods'>('money');
+  const [unit, setUnit] = React.useState<"money" | "goods">("money");
   React.useEffect(
-    () => setUnit('money'),
+    () => setUnit("money"),
     [moment.currencyCode, moment.benchmark, moment.horizon],
   );
   const goodsEligible = Boolean(
     moment.goods && moment.delta < 0 && moment.goods.count > 0,
   );
-  const effectiveUnit = goodsEligible ? unit : 'money';
+  const effectiveUnit = goodsEligible ? unit : "money";
   const comparisonKey = [
     moment.iso2,
     moment.currencyCode,
     moment.benchmark,
     moment.horizon,
-    moment.isLive ? 'feed' : 'curated',
-  ].join(':');
+    moment.isLive ? "feed" : "curated",
+  ].join(":");
 
   return (
     <div className={`text-center ${className}`}>
@@ -255,23 +316,37 @@ export function CurrencyMomentCard({
       {onChangeCountry ? (
         <div className="mb-3">
           <CountryOverrideSelect
-            currentCountryCode={countryIsDefault ? '' : moment.iso2}
-            currentCountryName={countryIsDefault ? '' : moment.countryName}
-            onChange={(code) => { act(); onChangeCountry(code); }}
-            label={countryIsDefault ? 'Example currency' : 'Savings currency'}
-            placeholder={`${moment.countryName} (${moment.currencyCode}) · example`}
+            currentCountryCode={countryIsDefault ? "" : moment.iso2}
+            currentCountryName={countryIsDefault ? "" : moment.countryName}
+            onChange={(code) => {
+              act();
+              onChangeCountry(code);
+            }}
+            label="Currency"
+            placeholder={`${moment.countryName} (${moment.currencyCode})`}
             className="mt-0"
           />
           {countryIsDefault && (
-            <p className="mt-2 text-2xs text-gray-400 dark:text-gray-500">
+            /* The ONE disclosure that this is not the visitor's data yet. This
+               block used to say the same thing three times — an "Example
+               currency" label, a "· example" suffix on the placeholder, a
+               "Country not detected" paragraph, and an "Example amount"
+               label — stacked as four grey lines across the top third of the
+               object. Two distinct facts exist (we guessed the country, the
+               amount is illustrative); they are stated once, here. `text-xs`
+               in gray-500 because gray-400 on white is ~2.6:1 and this is a
+               trust disclosure, not decoration. */
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Country not detected — showing {moment.countryName} by default.
+              Sample figures until you connect.
             </p>
           )}
           {sharedReturn}
         </div>
       ) : (
         <p className="text-xs font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-3">
-          <span aria-hidden="true">{moment.flag}</span> {moment.countryName} · {moment.currencyCode}
+          <span aria-hidden="true">{moment.flag}</span> {moment.countryName} ·{" "}
+          {moment.currencyCode}
           {sharedReturn}
         </p>
       )}
@@ -285,33 +360,38 @@ export function CurrencyMomentCard({
           animate={{ opacity: 1 }}
           transition={reducedMotion ? { duration: 0 } : springSoft}
         >
-          {(['visit', 'history'] as const).map((v) => (
+          {(["visit", "history"] as const).map((v) => (
             <motion.button
               key={v}
               type="button"
-              aria-pressed={(showVisit && v === 'visit') || (!showVisit && v === 'history')}
+              aria-pressed={
+                (showVisit && v === "visit") || (!showVisit && v === "history")
+              }
               onClick={() => {
                 haptics.tap();
                 act();
                 setView(v);
-                trackFunnelEvent('marquee_select', { source: 'home_visit', view: v });
+                trackFunnelEvent("marquee_select", {
+                  source: "home_visit",
+                  view: v,
+                });
               }}
               whileTap={reducedMotion ? undefined : press}
               transition={springPress}
               className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                (showVisit && v === 'visit') || (!showVisit && v === 'history')
-                  ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                (showVisit && v === "visit") || (!showVisit && v === "history")
+                  ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
             >
-              {v === 'visit' ? 'Last visit' : 'Longer view'}
+              {v === "visit" ? "Last visit" : "Longer view"}
             </motion.button>
           ))}
         </motion.div>
       )}
 
       <motion.div
-        key={showVisit ? 'visit' : 'history'}
+        key={showVisit ? "visit" : "history"}
         initial={reducedMotion ? false : { opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reducedMotion ? { duration: 0 } : reveal}
@@ -331,17 +411,21 @@ export function CurrencyMomentCard({
               {...tilt.props}
             >
               <motion.div
-                animate={{ scale: reducedMotion ? 1 : localScale }}
+                data-testid="moment-local-coin"
+                animate={{ scale: reducedMotion ? 1 : localCoinScale }}
                 transition={comparisonSettle}
-                className="w-full max-w-[72px] justify-self-end text-right sm:max-w-[112px] [&_svg]:max-w-full [&_svg]:h-auto"
+                className="w-full justify-self-end text-right [&_svg]:max-w-full [&_svg]:h-auto"
+                style={{ maxWidth: COIN_BASE_PX }}
               >
                 {/* The local coin is a door: tap flips it to its back —
                     flag + the newest dated event — and opens the story
                     inspector. Same flip verb as the pair stage's coins. */}
                 {(() => {
-                  const events = CURRENCY_BY_CODE[moment.currencyCode]?.riskEvents ?? [];
+                  const events =
+                    CURRENCY_BY_CODE[moment.currencyCode]?.riskEvents ?? [];
                   const newest = events.reduce<(typeof events)[number] | null>(
-                    (acc, ev) => (acc === null || ev.year >= acc.year ? ev : acc),
+                    (acc, ev) =>
+                      acc === null || ev.year >= acc.year ? ev : acc,
                     null,
                   );
                   const face = (
@@ -358,7 +442,12 @@ export function CurrencyMomentCard({
                     >
                       {currencySelected && newest ? (
                         <span className="flex aspect-square w-full flex-col items-center justify-center rounded-full border-2 border-gray-200 bg-white px-1 text-center dark:border-gray-700 dark:bg-gray-900">
-                          <span aria-hidden="true" className="text-xl leading-none">{moment.flag}</span>
+                          <span
+                            aria-hidden="true"
+                            className="text-xl leading-none"
+                          >
+                            {moment.flag}
+                          </span>
                           <span className="mt-1 line-clamp-3 text-3xs font-semibold leading-tight text-gray-500 dark:text-gray-400">
                             {newest.year} · {newest.event}
                           </span>
@@ -368,7 +457,11 @@ export function CurrencyMomentCard({
                           size={112}
                           symbol={moment.currencyCode}
                           color={accent}
-                          shine={reducedMotion || hasFlipped || acted || inspecting ? false : 'once'}
+                          shine={
+                            reducedMotion || hasFlipped || acted || inspecting
+                              ? false
+                              : "once"
+                          }
                         />
                       )}
                     </motion.span>
@@ -403,17 +496,30 @@ export function CurrencyMomentCard({
                 transition={reducedMotion ? { duration: 0 } : reveal}
                 className="min-w-0"
               >
-                <DeltaNumber delta={moment.delta} accent={accent} />
+                <DeltaNumber
+                  delta={moment.delta}
+                  accent={accent}
+                  horizonLabel={HORIZONS[moment.horizon].label}
+                />
               </motion.div>
               <motion.div
-                className="w-full max-w-16 justify-self-start sm:max-w-[72px] [&_svg]:max-w-full [&_svg]:h-auto"
+                data-testid="moment-benchmark-coin"
+                className="w-full justify-self-start [&_svg]:max-w-full [&_svg]:h-auto"
+                style={{ maxWidth: COIN_BASE_PX }}
                 animate={{ opacity: currencySelected ? 0.35 : 1 }}
                 transition={reducedMotion ? { duration: 0 } : springSoft}
               >
-                <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
+                <Coin
+                  size={72}
+                  symbol={benchmarkCoin.glyph}
+                  color={benchmarkCoin.color}
+                />
               </motion.div>
             </motion.div>
-            <h2 data-testid="home-reading" className="mt-2 text-xl sm:text-2xl font-bold text-ink">
+            <h2
+              data-testid="home-reading"
+              className="mt-2 text-xl sm:text-2xl font-bold text-ink"
+            >
               {Math.abs(moment.delta) < 0.05
                 ? `${moment.currencyCode} buying power held steady`
                 : moment.delta < 0
@@ -421,153 +527,196 @@ export function CurrencyMomentCard({
                   : `${moment.currencyCode} buying power rose`}
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Over {HORIZONS[moment.horizon].label} against {moment.benchmarkLabel}
+              Over {HORIZONS[moment.horizon].label} against{" "}
+              {moment.benchmarkLabel}
             </p>
 
-          {/* One personal consequence — the amount is theirs to change */}
-          <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              <label className="inline-flex items-baseline gap-1.5">
-                <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Example amount</span>
-                <span className="font-bold">{moment.currencyCode}</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={moment.savingsAmount}
-                  aria-label="Example amount"
-                  onFocus={act}
-                  onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
-                  className="w-24 min-w-[4rem] max-w-[8rem] text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
-                />
-              </label>
-            </p>
-            {/* Goods framing — a percentage is abstract where people price risk in
+            {/* One personal consequence — the amount is theirs to change */}
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <label className="inline-flex items-baseline gap-1.5">
+                  <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                    Amount
+                  </span>
+                  <span className="font-bold">{moment.currencyCode}</span>
+                  <input
+                    type="number"
+                    min={0}
+                    value={moment.savingsAmount}
+                    aria-label="Illustrative amount"
+                    title="An illustrative figure — change it to read your own savings"
+                    onFocus={act}
+                    onChange={(e) => {
+                      act();
+                      onAmountChange(Math.max(0, Number(e.target.value) || 0));
+                    }}
+                    className="w-24 min-w-[4rem] max-w-[8rem] text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"
+                  />
+                </label>
+              </p>
+              {/* Goods framing — a percentage is abstract where people price risk in
                 goods. "≈ 51 fewer bags of rice" gives the number a body. Only
                 shown when the currency has a verified staple (honest by omission). */}
-            {goodsEligible && (
-              <div
-                role="group"
-                aria-label="Consequence unit"
-                className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-0.5"
-              >
-                {(['money', 'goods'] as const).map((u) => (
-                  <motion.button
-                    key={u}
-                    type="button"
-                    aria-pressed={effectiveUnit === u}
-                    onClick={() => { haptics.tap(); act(); setUnit(u); }}
-                    whileTap={reducedMotion ? undefined : press}
-                    transition={springPress}
-                    className={`min-h-tap px-3 rounded-full text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                      effectiveUnit === u
-                        ? 'bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm'
-                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
-                    }`}
+              {goodsEligible && (
+                <div className="inline-flex items-center gap-1.5">
+                  {/* A visible "in" so the control reads as a fragment of the
+                    sentence above it — "… in Money / in Goods". It had only an
+                    aria-label, so on screen it was two floating words centred
+                    under a left-aligned input, belonging to neither, and
+                    nothing said that flipping it changes what the number
+                    means. */}
+                  <span
+                    aria-hidden="true"
+                    className="text-sm text-gray-500 dark:text-gray-400"
                   >
-                    {u === 'money' ? 'Money' : 'Goods'}
-                  </motion.button>
-                ))}
-              </div>
-            )}
-          </div>
-          {/* Consequence is sign-aware: a depreciating currency buys less, an
+                    in
+                  </span>
+                  <div
+                    role="group"
+                    aria-label="Show the consequence in money or in goods"
+                    className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-0.5"
+                  >
+                    {(["money", "goods"] as const).map((u) => (
+                      <motion.button
+                        key={u}
+                        type="button"
+                        aria-pressed={effectiveUnit === u}
+                        onClick={() => {
+                          haptics.tap();
+                          act();
+                          setUnit(u);
+                        }}
+                        whileTap={reducedMotion ? undefined : press}
+                        transition={springPress}
+                        className={`min-h-tap px-3 rounded-full text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                          effectiveUnit === u
+                            ? "bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        }`}
+                      >
+                        {u === "money" ? "Money" : "Goods"}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            {/* Consequence is sign-aware: a depreciating currency buys less, an
               appreciating one buys more, a flat one holds its value. The
               philosophy reframe only applies to a loss (a gain has no risk). */}
-          <p
-            data-testid="home-consequence"
-            aria-live="polite"
-            aria-atomic="true"
-            className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 mt-1"
-          >
-            <motion.span
-              key={`${comparisonKey}:${effectiveUnit}`}
-              initial={reducedMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={reducedMotion ? { duration: 0 } : springSoft}
+            <p
+              data-testid="home-consequence"
+              aria-live="polite"
+              aria-atomic="true"
+              className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 mt-1"
             >
-              {effectiveUnit === 'goods' && moment.goods ? (
-                <strong className="tabular-nums" style={{ color: accent }}>
-                  ≈ {fmt(moment.goods.count)} fewer {moment.goods.unit}
-                </strong>
-              ) : (
-                <MoneyConsequence
-                  currencyCode={moment.currencyCode}
-                  delta={moment.delta}
-                  personalImpact={moment.personalImpact}
-                  accent={accent}
-                />
-              )}
-            </motion.span>
-          </p>
+              <motion.span
+                key={`${comparisonKey}:${effectiveUnit}`}
+                initial={reducedMotion ? false : { opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={reducedMotion ? { duration: 0 } : springSoft}
+              >
+                {effectiveUnit === "goods" && moment.goods ? (
+                  <strong className="tabular-nums" style={{ color: accent }}>
+                    ≈ {fmt(moment.goods.count)} fewer {moment.goods.unit}
+                  </strong>
+                ) : (
+                  <MoneyConsequence
+                    currencyCode={moment.currencyCode}
+                    delta={moment.delta}
+                    personalImpact={moment.personalImpact}
+                    accent={accent}
+                  />
+                )}
+              </motion.span>
+            </p>
 
-          {/* One rotating, data-backed line — a fresh macro beat, the
+            {/* One rotating, data-backed line — a fresh macro beat, the
               currency's watch cadence, or a dated event — directly under
               the consequence it explains. */}
-          <LiveLine
-            testId="home-live-line"
-            beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
-            alive={liveAlive && !currencySelected && !acted && !inspecting}
-            className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
-          />
+            <LiveLine
+              testId="home-live-line"
+              beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
+              alive={liveAlive && !currencySelected && !acted && !inspecting}
+              className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
+            />
 
-          {/* Controls — the same segmented + coin motifs learned in onboarding */}
-          <div className="instrument-inspect-hidden mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-            <div className="inline-flex items-center gap-2" role="group" aria-label="Time horizon">
-            {horizons.map((h) => (
-              <motion.button
-                key={h}
-                type="button"
-                aria-pressed={moment.horizon === h}
-                onClick={() => {
-                  haptics.tap();
-                  act();
-                  onSelectHorizon(h);
-                }}
-                whileTap={reducedMotion ? undefined : press}
-                transition={springPress}
-                className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                  moment.horizon === h
-                    ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                }`}
+            {/* Controls — the same segmented + coin motifs learned in onboarding */}
+            <div className="instrument-inspect-hidden mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+              <div
+                className="inline-flex items-center gap-2"
+                role="group"
+                aria-label="Time horizon"
               >
-                {HORIZONS[h].short}
-              </motion.button>
-            ))}
-            </div>
-            <span className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700" aria-hidden="true" />
-            <div role="group" aria-label="Benchmark" className="inline-flex items-center gap-1.5">
-              {benchmarks.map((b) => {
-                const c = BENCHMARK_COIN[b];
-                const selected = moment.benchmark === b;
-                return (
+                {horizons.map((h) => (
                   <motion.button
-                    key={b}
+                    key={h}
                     type="button"
-                    aria-pressed={selected}
-                    aria-label={`Compare against ${BENCHMARKS[b].label}`}
+                    aria-pressed={moment.horizon === h}
                     onClick={() => {
                       haptics.tap();
                       act();
-                      onSelectBenchmark(b);
+                      onSelectHorizon(h);
                     }}
                     whileTap={reducedMotion ? undefined : press}
                     transition={springPress}
-                    className={`min-h-tap min-w-tap inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                      selected
-                        ? 'bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-900 dark:ring-white'
-                        : 'ring-1 ring-transparent hover:bg-gray-50 dark:hover:bg-gray-800/60'
+                    className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                      moment.horizon === h
+                        ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
                     }`}
                   >
-                    <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
-                    <span className={`text-2xs font-bold ${selected ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
-                      {BENCHMARK_SHORT[b]}
-                    </span>
+                    {HORIZONS[h].short}
                   </motion.button>
-                );
-              })}
+                ))}
+              </div>
+              <span
+                className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700"
+                aria-hidden="true"
+              />
+              <div
+                role="group"
+                aria-label="Benchmark"
+                className="inline-flex items-center gap-1.5"
+              >
+                {benchmarks.map((b) => {
+                  const c = BENCHMARK_COIN[b];
+                  const selected = moment.benchmark === b;
+                  return (
+                    <motion.button
+                      key={b}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={`Compare against ${BENCHMARKS[b].label}`}
+                      onClick={() => {
+                        haptics.tap();
+                        act();
+                        onSelectBenchmark(b);
+                      }}
+                      whileTap={reducedMotion ? undefined : press}
+                      transition={springPress}
+                      className={`min-h-tap min-w-tap inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                        selected
+                          ? "bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-900 dark:ring-white"
+                          : "ring-1 ring-transparent hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                      }`}
+                    >
+                      <Coin
+                        size={34}
+                        symbol={c.glyph}
+                        color={c.color}
+                        variant="asset"
+                      />
+                      <span
+                        className={`text-2xs font-bold ${selected ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}`}
+                      >
+                        {BENCHMARK_SHORT[b]}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
           </div>
         )}
       </motion.div>
@@ -585,18 +734,44 @@ export function CurrencyMomentCard({
 
       {/* Quiet provenance — data honesty stays, but it whispers. The
           progressive-blur TrustFootnote keeps the first clause readable and
-          expands on hover/tap — never a hide. */}
-      <p className="mt-2 text-2xs text-gray-400 dark:text-gray-500">
+          expands on hover/tap — never a hide.
+
+          Two fixes live here. The line is `text-xs` in gray-500, not
+          `text-2xs` in gray-400: gray-400 on white is ~2.6:1 and this is the
+          methodology disclosure the whole honesty contract rests on, so it
+          has to clear WCAG AA (4.5:1), not just be small. And a curated
+          reading past its re-verification window now says so instead of
+          sitting quietly under a `-60%` for fifteen months. */}
+      <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
         {showVisit && changed ? (
           <>
-            Readings as of {changed.previous.value.dataAsOf} and {changed.current.dataAsOf} · {changed.current.source === 'feed' ? 'FX feed' : 'curated history'} · trailing comparison, not your return
+            Readings as of {changed.previous.value.dataAsOf} and{" "}
+            {changed.current.dataAsOf} ·{" "}
+            {changed.current.source === "feed" ? "FX feed" : "curated history"}{" "}
+            · trailing comparison, not your return
           </>
         ) : (
           <>
             {moment.isLive ? (
-              <><span className="text-emerald-500 font-bold">●</span> live 1Y · </>
+              <>
+                <span className="text-emerald-500 font-bold">●</span> live 1Y
+                ·{" "}
+              </>
             ) : null}
-            as of {moment.dataAsOf} · {moment.isLive ? 'FX feed' : 'curated FX'}, not advice
+            {curatedStale ? (
+              <>
+                <span className="font-semibold text-amber-600 dark:text-amber-500">
+                  Curated reading past its {CURRENCY_RISK_REVIEW_WINDOW_DAYS}
+                  -day review window
+                </span>{" "}
+                · last reviewed {moment.dataAsOf} · not advice
+              </>
+            ) : (
+              <>
+                as of {moment.dataAsOf} ·{" "}
+                {moment.isLive ? "FX feed" : "curated FX"}, not advice
+              </>
+            )}
           </>
         )}
       </p>

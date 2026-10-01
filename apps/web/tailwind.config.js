@@ -113,6 +113,12 @@ module.exports = {
           subtle: "rgb(var(--ink-subtle) / <alpha-value>)",
         },
         line: "rgb(var(--line) / <alpha-value>)",
+      /** The ONE action hue for primary CTAs and handoff links. Backed by
+       *  `--action` so light and dark agree. `bg-blue-600` is numerically
+       *  identical, so legacy call sites still match — but `action` is the
+       *  sanctioned spelling and the only one that tracks the token. */
+      action: "rgb(var(--action) / <alpha-value>)",
+      "action-hover": "rgb(var(--action-hover) / <alpha-value>)",
       },
       // Micro text in rem so it scales with browser zoom / root font size.
       // Replaces text-[11px] / text-[10px]; nothing smaller should ship.

@@ -211,12 +211,13 @@ function StageLabel({
       type="button"
       onClick={onOpenPicker}
       aria-label={`Change ${symbol}`}
+      title={`Change ${symbol}`}
       whileTap={reduced ? undefined : press}
       transition={springPress}
       className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
     >
       {symbol}
-      <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <svg aria-hidden="true" className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
       </svg>
     </motion.button>
@@ -424,6 +425,7 @@ export function PairStage({
                 }}
                 whileTap={reduced ? undefined : { ...press, transition: springPress }}
                 aria-label="Switch tokens"
+                title="Switch tokens"
                 className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
               >
                 <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine={!reduced && alive} shineDuration={5.5} />

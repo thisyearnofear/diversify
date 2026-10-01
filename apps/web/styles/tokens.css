@@ -118,6 +118,19 @@
   --ink-subtle:      156 163 175;  /* gray-400 — tertiary, captions */
   --line:            229 231 235;  /* gray-200 — hairlines */
 
+  /* ── Action hue (RGB channels). ONE hue for every primary CTA and every
+        handoff link, so Shield's teal, Exchange's blue and the header's blue
+        can't drift into three different "the way forward" colours again.
+        Deliberately blue-600: it is also Tailwind's `text-blue-600`, so the
+        remaining legacy call sites and these tokens agree.
+
+        Green and teal are NOT action hues here. In this product they mean
+        verified / ready / settled (StatusBadge `ready`), and spending them on
+        a cross-border FX-netting upsell made a pitch read as a confirmation.
+        ─────────────────────────────────────────────────────────────────── */
+  --action:          37 99 235;    /* blue-600 */
+  --action-hover:    29 78 216;    /* blue-700 */
+
   /* ── Touch target — 44px (Apple HIG) floor for anything tappable ── */
   --tap-min: 2.75rem;
 }
@@ -147,4 +160,6 @@
   --ink-muted:       156 163 175;  /* gray-400 */
   --ink-subtle:      107 114 128;  /* gray-500 */
   --line:            31 41 55;     /* gray-800 */
+  --action:          96 165 250;   /* blue-400 — legible on gray-900 */
+  --action-hover:    147 197 253;  /* blue-300 */
 }

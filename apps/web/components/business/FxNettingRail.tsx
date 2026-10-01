@@ -171,7 +171,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
   };
 
   const currencyInputClass =
-    "mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-surface border text-sm font-bold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60";
+    "mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-surface border text-sm font-bold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-action/60";
 
   const currencyField = (
     side: "sell" | "buy",
@@ -231,9 +231,9 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             type="button"
             aria-pressed={supportingView === v}
             onClick={() => setSupportingView(v)}
-            className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400 ${
+            className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
               supportingView === v
-                ? "bg-teal-600 text-white shadow-sm"
+                ? "bg-action text-white shadow-sm"
                 : "text-ink-muted hover:text-ink"
             }`}
           >
@@ -256,7 +256,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
                   setMatched(false);
                   setSupportingView("need");
                 }}
-                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-line text-2xs font-bold text-ink hover:bg-surface-sunken transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-line text-2xs font-bold text-ink hover:bg-surface-sunken transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60"
               >
                 {p.label}
               </button>
@@ -389,7 +389,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
               onChange={(e) => setSellAmount(e.target.value)}
               placeholder="e.g. 500000"
               aria-label="Amount to convert"
-              className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-surface border border-line text-lg font-bold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60"
+              className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-surface border border-line text-lg font-bold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-action/60"
             />
           </label>
 
@@ -418,7 +418,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             type="button"
             onClick={handleSubmit}
             disabled={!canMatch || isLoading}
-            className="mt-4 w-full min-h-11 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+            className="mt-4 w-full min-h-11 px-4 py-2 rounded-xl bg-action hover:bg-action-hover active:scale-[0.98] text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
           >
             {isLoading ? "Matching…" : "Find a match"}
           </button>
@@ -448,7 +448,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
               <button
                 type="button"
                 onClick={editYourNeed}
-                className="mt-2 min-h-tap text-sm font-bold text-teal-700 dark:text-teal-300 underline underline-offset-2"
+                className="mt-2 min-h-tap text-sm font-bold text-action dark:text-action underline underline-offset-2"
               >
                 Edit your need
               </button>
@@ -616,7 +616,7 @@ function SettlementSection({
             type="button"
             onClick={() => onSettle(s)}
             disabled={isSettling}
-            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-action hover:bg-action-hover active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
           >
             {isSettling ? "Sending…" : `Send ${s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${s.settlementCurrency}`}
           </button>

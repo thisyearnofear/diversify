@@ -184,9 +184,9 @@ describe('PairStage — the pair time machine', () => {
     expect(after).toBeLessThan(0);
     expect(String(after)).not.toBe(before);
     const whatIf = screen.getByTestId('pair-whatif');
-    expect(whatIf).toHaveTextContent('in 2022');
+    expect(whatIf).toHaveTextContent('in 2023');
     expect(whatIf).toHaveTextContent('bags of rice');
-    expect(whatIf).toHaveTextContent('What if · data to Jul 2025');
+    expect(whatIf).toHaveTextContent('What if · data to Sep 2026');
   });
 
   it('the pinned what-if does not rotate away once explored', () => {
@@ -210,7 +210,7 @@ describe('PairStage — the pair time machine', () => {
   it('a pair change resets the horizon and the pin', () => {
     const props = renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
     fireEvent.click(screen.getByRole('radio', { name: '3y' }));
-    expect(screen.getByTestId('pair-whatif')).toHaveTextContent('in 2022');
+    expect(screen.getByTestId('pair-whatif')).toHaveTextContent('in 2023');
     props.rerender(
       <PairStage {...props} fromToken="KESm" toToken="USDm" />,
     );
@@ -233,7 +233,7 @@ describe('PairStage — the pair time machine', () => {
     reducedMotionState.on = true;
     renderStage({ fromToken: 'NGNm', toToken: 'USDm' });
     fireEvent.click(screen.getByRole('radio', { name: '3y' }));
-    expect(screen.getByTestId('pair-whatif')).toHaveTextContent('in 2022');
+    expect(screen.getByTestId('pair-whatif')).toHaveTextContent('in 2023');
     reducedMotionState.on = false;
   });
 

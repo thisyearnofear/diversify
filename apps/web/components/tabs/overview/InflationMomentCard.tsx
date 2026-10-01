@@ -57,7 +57,7 @@ export function InflationMomentCard({
             currentCountryCode={moment.countryCode}
             currentCountryName={moment.countryName}
             onChange={(code) => { act(); onChangeCountry(code); }}
-            label="Savings currency"
+            label="Currency"
             className="mt-0"
           />
         </div>
@@ -102,13 +102,13 @@ export function InflationMomentCard({
       {/* One personal consequence — the amount is theirs to change */}
       <p className="text-sm text-gray-700 dark:text-gray-300 mt-3">
         <label className="inline-flex items-baseline gap-1.5">
-          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Example amount</span>
+          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Amount</span>
           <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">local currency</span>
           <input
             type="number"
             min={0}
             value={moment.savingsAmount}
-            aria-label="Example amount"
+            aria-label="Illustrative amount"
             onFocus={act}
             onChange={(e) => { act(); onAmountChange(Math.max(0, Number(e.target.value) || 0)); }}
             className="w-24 text-center font-black text-gray-900 dark:text-white bg-transparent border-b border-gray-300 dark:border-gray-600 focus:border-blue-500 outline-none tabular-nums"

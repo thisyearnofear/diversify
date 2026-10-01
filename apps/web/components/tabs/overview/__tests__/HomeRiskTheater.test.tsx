@@ -174,7 +174,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
       JSON.stringify({ value: { ...READING, delta: -8.4, dataAsOf: "2026-09-11" }, at: NOW - 3 * 24 * 3600 * 1000 }),
     );
     renderTheater();
-    expect(await screen.findByLabelText("Example amount")).toBeInTheDocument();
+    expect(await screen.findByLabelText("Illustrative amount")).toBeInTheDocument();
     expect(screen.queryByTestId("currency-visit-review")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Home view" })).not.toBeInTheDocument();
   });
@@ -183,7 +183,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     renderTheater();
     expect(screen.queryByTestId("currency-visit-review")).not.toBeInTheDocument();
     expect(screen.queryByRole("group", { name: "Home view" })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Example amount")).toBeInTheDocument();
+    expect(screen.getByLabelText("Illustrative amount")).toBeInTheDocument();
   });
 
   it("stays silent for same-session snapshots (younger than 6h)", () => {
@@ -412,7 +412,7 @@ describe("HomeRiskTheater — inline inspection replaces the stage", () => {
     );
     expect(screen.getByTestId("home-comparison")).toBe(comparison);
     expect(screen.getByTestId("home-comparison")).toBeVisible();
-    expect(screen.getByLabelText("Example amount")).toBeInTheDocument();
+    expect(screen.getByLabelText("Illustrative amount")).toBeInTheDocument();
   });
 
   it("centres the holdings strip when it fits and anchors the ends for overflow", () => {

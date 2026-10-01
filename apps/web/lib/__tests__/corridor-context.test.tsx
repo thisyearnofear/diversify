@@ -207,10 +207,12 @@ describe('pairWhatIfFor — the pair time machine (ratios only, no FX)', () => {
   });
 
   it('dates each horizon from the dataset as-of', () => {
-    expect(pairWhatIfFor('NGNm', 'USDm', '1yr')!.startYear).toBe(2024);
-    expect(pairWhatIfFor('NGNm', 'USDm', '3yr')!.startYear).toBe(2022);
-    expect(pairWhatIfFor('NGNm', 'USDm', '5yr')!.startYear).toBe(2020);
-    expect(pairWhatIfFor('NGNm', 'USDm', '5yr')!.dataAsOfLabel).toBe('Jul 2025');
+    // startYear is derived from the dataset's review year (2026), not
+    // hardcoded — the horizon window has to move with the data.
+    expect(pairWhatIfFor('NGNm', 'USDm', '1yr')!.startYear).toBe(2025);
+    expect(pairWhatIfFor('NGNm', 'USDm', '3yr')!.startYear).toBe(2023);
+    expect(pairWhatIfFor('NGNm', 'USDm', '5yr')!.startYear).toBe(2021);
+    expect(pairWhatIfFor('NGNm', 'USDm', '5yr')!.dataAsOfLabel).toBe('Sep 2026');
   });
 
   it('returns null where there is nothing honest to say', () => {
@@ -595,7 +597,7 @@ describe('CorridorDetail', () => {
     // reports the dataset-level review date, not a check it never got.
     render(<CorridorDetail fromToken="GHSm" toToken="USDC" />);
     expect(screen.getByTestId('corridor-detail')).toHaveTextContent(
-      'Checked 2025-07-01 · curated, not a feed',
+      'Checked 2026-09-26 · curated, not a feed',
     );
   });
 

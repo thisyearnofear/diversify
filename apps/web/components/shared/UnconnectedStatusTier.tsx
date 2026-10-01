@@ -47,15 +47,25 @@ export function UnconnectedStatusTier({
         <button
           type="button"
           onClick={onDisableDemo}
-          className="min-h-tap px-2 text-xs font-semibold text-gray-500 dark:text-gray-400 shrink-0"
+          className="link-quiet shrink-0"
         >
           Sample data on · Exit
         </button>
       ) : (
+        /* Deliberately NOT blue, and deliberately not `font-semibold`.
+           This is an exploratory affordance into sample data, not a next step
+           — but it rendered as the same blue text link as the product
+           hand-offs sitting beside it in `children`, on every tab, at the same
+           weight. Two identical blue links plus a trust line read as one noisy
+           row, and blue says "this is the way forward" for something that
+           isn't real money. Gray + medium weight keeps it one tap away while
+           putting it below the real hand-offs, so the row has a priority
+           order instead of three peers. */
         <button
           type="button"
           onClick={onEnableDemo}
-          className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+          title="Explore the app with illustrative sample figures — no real funds move"
+          className="link-quiet shrink-0"
         >
           Explore a sample plan
         </button>

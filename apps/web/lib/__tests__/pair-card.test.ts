@@ -42,8 +42,8 @@ describe('pairCardContent', () => {
 
   it('carries the goods what-if when the source side has a staple', () => {
     const c = pairCardContent('NGNm', 'USDm');
-    expect(c!.whatIf).toMatch(/^Moved to the dollar in 2020, savings that buy 10 bags of rice/);
-    expect(c!.asOf).toBe('Jul 2025');
+    expect(c!.whatIf).toMatch(/^Moved to the dollar in 2021, savings that buy 10 bags of rice/);
+    expect(c!.asOf).toBe('Sep 2026');
   });
 
   it('renders the held-level headline when the pair has no drift', () => {

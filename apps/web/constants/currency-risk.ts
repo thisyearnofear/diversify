@@ -31,8 +31,44 @@
  * trail's checked date falls back to CURRENCY_RISK_DATA_AS_OF.
  */
 
-/** When this curated dataset was last reviewed — show in UX for transparency. */
-export const CURRENCY_RISK_DATA_AS_OF = '2025-07-01';
+/**
+ * When this curated dataset was last reviewed — show in UX for transparency.
+ *
+ * This must equal the newest per-event `asOf` in this file. It previously
+ * read '2025-07-01' while the trails beneath it had been re-verified through
+ * '2026-09-26', so the app published a 15-month-old date next to a freshly
+ * sourced `-60%`. The date is a trust claim: if the trails are newer, the
+ * dataset date is newer. `scripts/check-data-freshness.mjs` fails the build
+ * when they diverge.
+ */
+export const CURRENCY_RISK_DATA_AS_OF = "2026-09-26";
+
+/**
+ * Re-verification window for the curated dataset, in days. Mirrors
+ * `STALE_AFTER_DAYS` in scripts/check-data-freshness.mjs — the CI alarm and
+ * the runtime disclosure must agree on when a claim has gone cold.
+ */
+export const CURRENCY_RISK_REVIEW_WINDOW_DAYS = 90;
+
+/** Whole days since the curated dataset was last reviewed. */
+export function currencyRiskDatasetAgeDays(now: Date = new Date()): number {
+  const reviewed = Date.parse(`${CURRENCY_RISK_DATA_AS_OF}T00:00:00Z`);
+  if (Number.isNaN(reviewed)) return Number.POSITIVE_INFINITY;
+  return Math.floor((now.getTime() - reviewed) / 86_400_000);
+}
+
+/**
+ * True once the curated dataset is older than the re-verification window.
+ *
+ * The UI uses this to disclose that a reading is past its window rather than
+ * letting it sit unqualified forever — an un-disclosed stale claim is the
+ * exact failure the honesty contract forbids. Runtime disclosure, not a
+ * replacement for the CI alarm: this only *reports* staleness, it never
+ * decides the dataset is fine.
+ */
+export function isCurrencyRiskDatasetStale(now: Date = new Date()): boolean {
+  return currencyRiskDatasetAgeDays(now) > CURRENCY_RISK_REVIEW_WINDOW_DAYS;
+}
 
 /**
  * Data source note for consumers: 1yr depreciation is enriched with live
@@ -45,7 +81,7 @@ export const CURRENCY_RISK_DATA_AS_OF = '2025-07-01';
  * periodically. They are not live numbers.
  */
 export const CURRENCY_RISK_DATA_DISCLAIMER =
-  'Directionally accurate curated historical data. Not live FX. Not investment advice.';
+  "Directionally accurate curated historical data. Not live FX. Not investment advice.";
 
 export interface RiskEvent {
   year: number;
@@ -76,8 +112,8 @@ export function riskTrailCheckedAt(entry: CurrencyRiskEntry): string {
  */
 export function riskEventAge(year: number, now: Date = new Date()): string {
   const age = now.getFullYear() - year;
-  if (age <= 0) return 'this year';
-  if (age === 1) return '1y ago';
+  if (age <= 0) return "this year";
+  if (age === 1) return "1y ago";
   return `${age}y ago`;
 }
 
@@ -106,9 +142,9 @@ export interface CurrencyRiskEntry {
   flag: string;
   /** Depreciation % vs benchmark over the period. Negative = currency weakened. */
   depreciation: {
-    vsUSD: { '1yr': number; '3yr': number; '5yr': number };
-    vsEUR: { '1yr': number; '3yr': number; '5yr': number };
-    vsXAU: { '1yr': number; '3yr': number; '5yr': number };
+    vsUSD: { "1yr": number; "3yr": number; "5yr": number };
+    vsEUR: { "1yr": number; "3yr": number; "5yr": number };
+    vsXAU: { "1yr": number; "3yr": number; "5yr": number };
   };
   /** Optional staple for goods-based risk framing. Omit to keep the moment
       currency-only (no fabricated staple). */
@@ -128,390 +164,627 @@ export interface CurrencyRiskEntry {
  */
 export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
   {
-    code: 'ARS',
-    countryName: 'Argentina',
-    iso2: 'AR',
-    iso3: 'ARG',
-    flag: '🇦🇷',
+    code: "ARS",
+    countryName: "Argentina",
+    iso2: "AR",
+    iso3: "ARG",
+    flag: "🇦🇷",
     depreciation: {
-      vsUSD: { '1yr': -12, '3yr': -65, '5yr': -78 },
-      vsEUR: { '1yr': -25, '3yr': -62, '5yr': -76 },
-      vsXAU: { '1yr': -40, '3yr': -75, '5yr': -85 },
+      vsUSD: { "1yr": -12, "3yr": -65, "5yr": -78 },
+      vsEUR: { "1yr": -25, "3yr": -62, "5yr": -76 },
+      vsXAU: { "1yr": -40, "3yr": -75, "5yr": -85 },
     },
     riskEvents: [
-      { year: 2023, event: 'Emergency devaluation', impact: 'ARS dropped 54% in a single week after central bank relaxed controls' },
-      { year: 2024, event: 'Milei shock therapy', impact: 'Peso devalued 50% on day one of new administration' },
+      {
+        year: 2023,
+        event: "Emergency devaluation",
+        impact:
+          "ARS dropped 54% in a single week after central bank relaxed controls",
+      },
+      {
+        year: 2024,
+        event: "Milei shock therapy",
+        impact: "Peso devalued 50% on day one of new administration",
+      },
     ],
   },
   {
-    code: 'TRY',
-    countryName: 'Turkey',
-    iso2: 'TR',
-    iso3: 'TUR',
-    flag: '🇹🇷',
+    code: "TRY",
+    countryName: "Turkey",
+    iso2: "TR",
+    iso3: "TUR",
+    flag: "🇹🇷",
     depreciation: {
-      vsUSD: { '1yr': -15, '3yr': -55, '5yr': -80 },
-      vsEUR: { '1yr': -15, '3yr': -52, '5yr': -78 },
-      vsXAU: { '1yr': -32, '3yr': -67, '5yr': -86 },
+      vsUSD: { "1yr": -15, "3yr": -55, "5yr": -80 },
+      vsEUR: { "1yr": -15, "3yr": -52, "5yr": -78 },
+      vsXAU: { "1yr": -32, "3yr": -67, "5yr": -86 },
     },
     riskEvents: [
-      { year: 2021, event: 'Erdogan rate cuts', impact: 'TRY lost 44% in a month after unorthodox rate cuts during inflation' },
-      { year: 2023, event: 'Post-election volatility', impact: 'TRY hit record lows after Erdogan retained power' },
+      {
+        year: 2021,
+        event: "Erdogan rate cuts",
+        impact:
+          "TRY lost 44% in a month after unorthodox rate cuts during inflation",
+      },
+      {
+        year: 2023,
+        event: "Post-election volatility",
+        impact: "TRY hit record lows after Erdogan retained power",
+      },
     ],
   },
   {
-    code: 'UAH',
-    countryName: 'Ukraine',
-    iso2: 'UA',
-    iso3: 'UKR',
-    flag: '🇺🇦',
+    code: "UAH",
+    countryName: "Ukraine",
+    iso2: "UA",
+    iso3: "UKR",
+    flag: "🇺🇦",
     depreciation: {
-      vsUSD: { '1yr': -7, '3yr': -22, '5yr': -35 },
-      vsEUR: { '1yr': -2, '3yr': -20, '5yr': -33 },
-      vsXAU: { '1yr': -15, '3yr': -38, '5yr': -50 },
+      vsUSD: { "1yr": -7, "3yr": -22, "5yr": -35 },
+      vsEUR: { "1yr": -2, "3yr": -20, "5yr": -33 },
+      vsXAU: { "1yr": -15, "3yr": -38, "5yr": -50 },
     },
     riskEvents: [
-      { year: 2022, event: 'Full-scale invasion', impact: 'UAH dropped 30% on day one of the Russian invasion before capital controls were imposed' },
-      { year: 2024, event: 'War economy pressure', impact: 'Continued FX strain as defense spending consumes 30%+ of GDP; Hryvnia managed float under pressure' },
+      {
+        year: 2022,
+        event: "Full-scale invasion",
+        impact:
+          "UAH dropped 30% on day one of the Russian invasion before capital controls were imposed",
+      },
+      {
+        year: 2024,
+        event: "War economy pressure",
+        impact:
+          "Continued FX strain as defense spending consumes 30%+ of GDP; Hryvnia managed float under pressure",
+      },
     ],
   },
   {
-    code: 'EGP',
-    countryName: 'Egypt',
-    iso2: 'EG',
-    iso3: 'EGY',
-    flag: '🇪🇬',
+    code: "EGP",
+    countryName: "Egypt",
+    iso2: "EG",
+    iso3: "EGY",
+    flag: "🇪🇬",
     depreciation: {
-      vsUSD: { '1yr': -7, '3yr': -50, '5yr': -68 },
-      vsEUR: { '1yr': -8, '3yr': -47, '5yr': -66 },
-      vsXAU: { '1yr': -25, '3yr': -63, '5yr': -78 },
+      vsUSD: { "1yr": -7, "3yr": -50, "5yr": -68 },
+      vsEUR: { "1yr": -8, "3yr": -47, "5yr": -66 },
+      vsXAU: { "1yr": -25, "3yr": -63, "5yr": -78 },
     },
     riskEvents: [
-      { year: 2022, event: 'IMF devaluation', impact: 'EGP devalued 15% overnight as part of IMF rescue package' },
-      { year: 2024, event: 'Second devaluation', impact: 'Pound fell another 40% as FX reserves depleted' },
+      {
+        year: 2022,
+        event: "IMF devaluation",
+        impact: "EGP devalued 15% overnight as part of IMF rescue package",
+      },
+      {
+        year: 2024,
+        event: "Second devaluation",
+        impact: "Pound fell another 40% as FX reserves depleted",
+      },
     ],
   },
   {
-    code: 'NGN',
-    countryName: 'Nigeria',
-    iso2: 'NG',
-    iso3: 'NGA',
-    flag: '🇳🇬',
+    code: "NGN",
+    countryName: "Nigeria",
+    iso2: "NG",
+    iso3: "NGA",
+    flag: "🇳🇬",
     depreciation: {
       // 1yr vsUSD is live-derived like every entry (see dataset header);
       // note the sign: the naira GAINED ~13% vs USD over the trailing year.
-      vsUSD: { '1yr': 13, '3yr': -55, '5yr': -60 },
-      vsEUR: { '1yr': -38, '3yr': -53, '5yr': -58 },
-      vsXAU: { '1yr': -50, '3yr': -65, '5yr': -72 },
+      vsUSD: { "1yr": 13, "3yr": -55, "5yr": -60 },
+      vsEUR: { "1yr": -38, "3yr": -53, "5yr": -58 },
+      vsXAU: { "1yr": -50, "3yr": -65, "5yr": -72 },
     },
-    goodsAnchor: { name: 'rice', unit: 'bags of rice', price: 80_000 },
+    goodsAnchor: { name: "rice", unit: "bags of rice", price: 80_000 },
     riskEvents: [
-      { year: 2023, event: 'Tinubu unification', impact: 'Naira devalued 40% as new president floated the currency', asOf: '2026-09-26' },
-      { year: 2024, event: 'Multiple FX windows', impact: 'Continued gap between official and parallel market rates', asOf: '2026-09-26' },
-      { year: 2025, event: 'First annual gain in 13 years', impact: 'Naira appreciated 7.4% to ₦1,429/$ as CBN reforms narrowed the official–parallel gap below 5%', asOf: '2026-09-26' },
-      { year: 2026, event: 'Rate-cut test', impact: 'Held ~₦1,330/$ with reserves above $54B even as the CBN cut rates 350bps in September', asOf: '2026-09-26' },
+      {
+        year: 2023,
+        event: "Tinubu unification",
+        impact: "Naira devalued 40% as new president floated the currency",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2024,
+        event: "Multiple FX windows",
+        impact: "Continued gap between official and parallel market rates",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "First annual gain in 13 years",
+        impact:
+          "Naira appreciated 7.4% to ₦1,429/$ as CBN reforms narrowed the official–parallel gap below 5%",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2026,
+        event: "Rate-cut test",
+        impact:
+          "Held ~₦1,330/$ with reserves above $54B even as the CBN cut rates 350bps in September",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'GHS',
-    countryName: 'Ghana',
-    iso2: 'GH',
-    iso3: 'GHA',
-    flag: '🇬🇭',
+    code: "GHS",
+    countryName: "Ghana",
+    iso2: "GH",
+    iso3: "GHA",
+    flag: "🇬🇭",
     depreciation: {
-      vsUSD: { '1yr': 7, '3yr': -45, '5yr': -63 },
-      vsEUR: { '1yr': -3, '3yr': -42, '5yr': -61 },
-      vsXAU: { '1yr': -20, '3yr': -58, '5yr': -73 },
+      vsUSD: { "1yr": 7, "3yr": -45, "5yr": -63 },
+      vsEUR: { "1yr": -3, "3yr": -42, "5yr": -61 },
+      vsXAU: { "1yr": -20, "3yr": -58, "5yr": -73 },
     },
-    goodsAnchor: { name: 'rice', unit: 'bags of rice', price: 350 },
+    goodsAnchor: { name: "rice", unit: "bags of rice", price: 350 },
     riskEvents: [
-      { year: 2022, event: 'Cedi crisis', impact: 'GHS lost 50% vs USD as inflation hit 54% — worst performer globally' },
-      { year: 2022, event: 'Domestic debt exchange', impact: 'Debt restructuring wiped out bondholders while cedi continued sliding' },
+      {
+        year: 2022,
+        event: "Cedi crisis",
+        impact:
+          "GHS lost 50% vs USD as inflation hit 54% — worst performer globally",
+      },
+      {
+        year: 2022,
+        event: "Domestic debt exchange",
+        impact:
+          "Debt restructuring wiped out bondholders while cedi continued sliding",
+      },
     ],
   },
   {
-    code: 'PKR',
-    countryName: 'Pakistan',
-    iso2: 'PK',
-    iso3: 'PAK',
-    flag: '🇵🇰',
+    code: "PKR",
+    countryName: "Pakistan",
+    iso2: "PK",
+    iso3: "PAK",
+    flag: "🇵🇰",
     depreciation: {
-      vsUSD: { '1yr': 2, '3yr': -35, '5yr': -46 },
-      vsEUR: { '1yr': -1, '3yr': -32, '5yr': -44 },
-      vsXAU: { '1yr': -18, '3yr': -50, '5yr': -60 },
+      vsUSD: { "1yr": 2, "3yr": -35, "5yr": -46 },
+      vsEUR: { "1yr": -1, "3yr": -32, "5yr": -44 },
+      vsXAU: { "1yr": -18, "3yr": -50, "5yr": -60 },
     },
     riskEvents: [
-      { year: 2022, event: 'Political crisis + IMF', impact: 'Rupee hit record lows as government struggled to secure IMF bailout' },
-      { year: 2023, event: 'IMF bailout conditions', impact: 'Currency floated under IMF pressure, losing 20% in weeks' },
+      {
+        year: 2022,
+        event: "Political crisis + IMF",
+        impact:
+          "Rupee hit record lows as government struggled to secure IMF bailout",
+      },
+      {
+        year: 2023,
+        event: "IMF bailout conditions",
+        impact: "Currency floated under IMF pressure, losing 20% in weeks",
+      },
     ],
   },
   {
-    code: 'LKR',
-    countryName: 'Sri Lanka',
-    iso2: 'LK',
-    iso3: 'LKA',
-    flag: '🇱🇰',
+    code: "LKR",
+    countryName: "Sri Lanka",
+    iso2: "LK",
+    iso3: "LKA",
+    flag: "🇱🇰",
     depreciation: {
-      vsUSD: { '1yr': -8, '3yr': -40, '5yr': -45 },
-      vsEUR: { '1yr': -3, '3yr': -37, '5yr': -43 },
-      vsXAU: { '1yr': -20, '3yr': -55, '5yr': -60 },
+      vsUSD: { "1yr": -8, "3yr": -40, "5yr": -45 },
+      vsEUR: { "1yr": -3, "3yr": -37, "5yr": -43 },
+      vsXAU: { "1yr": -20, "3yr": -55, "5yr": -60 },
     },
     riskEvents: [
-      { year: 2022, event: 'Sovereign default', impact: 'Sri Lanka defaulted on external debt; LKR collapsed 80% before stabilizing' },
-      { year: 2022, event: 'Political collapse', impact: 'President fled the country as economy imploded' },
+      {
+        year: 2022,
+        event: "Sovereign default",
+        impact:
+          "Sri Lanka defaulted on external debt; LKR collapsed 80% before stabilizing",
+      },
+      {
+        year: 2022,
+        event: "Political collapse",
+        impact: "President fled the country as economy imploded",
+      },
     ],
   },
   {
-    code: 'KES',
-    countryName: 'Kenya',
-    iso2: 'KE',
-    iso3: 'KEN',
-    flag: '🇰🇪',
+    code: "KES",
+    countryName: "Kenya",
+    iso2: "KE",
+    iso3: "KEN",
+    flag: "🇰🇪",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': -22, '5yr': -28 },
-      vsEUR: { '1yr': -6, '3yr': -20, '5yr': -25 },
-      vsXAU: { '1yr': -22, '3yr': -42, '5yr': -50 },
+      vsUSD: { "1yr": 0, "3yr": -22, "5yr": -28 },
+      vsEUR: { "1yr": -6, "3yr": -20, "5yr": -25 },
+      vsXAU: { "1yr": -22, "3yr": -42, "5yr": -50 },
     },
-    goodsAnchor: { name: 'maize flour', unit: '2kg bags of maize flour', price: 220 },
+    goodsAnchor: {
+      name: "maize flour",
+      unit: "2kg bags of maize flour",
+      price: 220,
+    },
     riskEvents: [
-      { year: 2022, event: 'General Election', impact: 'KES dropped 6.8% in the 3 months around the election cycle', asOf: '2026-09-26' },
-      { year: 2023, event: 'Eurobond maturity pressure', impact: 'KES hit record low as $2B Eurobond repayment loomed', asOf: '2026-09-26' },
-      { year: 2024, event: 'Anti-government protests', impact: 'Currency volatility spiked during Gen Z protests over finance bill', asOf: '2026-09-26' },
-      { year: 2025, event: 'Record stability', impact: 'Pinned near KSh129/$ for 16 straight months — IMF questioned whether CBK dollar-buying muted policy transmission', asOf: '2026-09-26' },
+      {
+        year: 2022,
+        event: "General Election",
+        impact: "KES dropped 6.8% in the 3 months around the election cycle",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2023,
+        event: "Eurobond maturity pressure",
+        impact: "KES hit record low as $2B Eurobond repayment loomed",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2024,
+        event: "Anti-government protests",
+        impact:
+          "Currency volatility spiked during Gen Z protests over finance bill",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Record stability",
+        impact:
+          "Pinned near KSh129/$ for 16 straight months — IMF questioned whether CBK dollar-buying muted policy transmission",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'ZAR',
-    countryName: 'South Africa',
-    iso2: 'ZA',
-    iso3: 'ZAF',
-    flag: '🇿🇦',
+    code: "ZAR",
+    countryName: "South Africa",
+    iso2: "ZA",
+    iso3: "ZAF",
+    flag: "🇿🇦",
     depreciation: {
-      vsUSD: { '1yr': 7, '3yr': -15, '5yr': -22 },
-      vsEUR: { '1yr': -2, '3yr': -13, '5yr': -20 },
-      vsXAU: { '1yr': -18, '3yr': -35, '5yr': -45 },
+      vsUSD: { "1yr": 7, "3yr": -15, "5yr": -22 },
+      vsEUR: { "1yr": -2, "3yr": -13, "5yr": -20 },
+      vsXAU: { "1yr": -18, "3yr": -35, "5yr": -45 },
     },
     riskEvents: [
-      { year: 2023, event: 'Load-shedding crisis', impact: 'Record power cuts dragged ZAR to weakest level as GDP contracted', asOf: '2026-09-26' },
-      { year: 2024, event: 'Election uncertainty', impact: 'ANC lost majority for first time, coalition talks weakened rand', asOf: '2026-09-26' },
-      { year: 2025, event: 'Best year since 2009', impact: 'Rand gained ~13% vs USD — first annual rise since 2019 — despite April’s 31% tariff shock hitting R19/$', asOf: '2026-09-26' },
+      {
+        year: 2023,
+        event: "Load-shedding crisis",
+        impact:
+          "Record power cuts dragged ZAR to weakest level as GDP contracted",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2024,
+        event: "Election uncertainty",
+        impact:
+          "ANC lost majority for first time, coalition talks weakened rand",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Best year since 2009",
+        impact:
+          "Rand gained ~13% vs USD — first annual rise since 2019 — despite April’s 31% tariff shock hitting R19/$",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'HTG',
-    countryName: 'Haiti',
-    iso2: 'HT',
-    iso3: 'HTI',
-    flag: '🇭🇹',
+    code: "HTG",
+    countryName: "Haiti",
+    iso2: "HT",
+    iso3: "HTI",
+    flag: "🇭🇹",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': -18, '5yr': -22 },
-      vsEUR: { '1yr': -3, '3yr': -16, '5yr': -20 },
-      vsXAU: { '1yr': -20, '3yr': -38, '5yr': -45 },
+      vsUSD: { "1yr": 0, "3yr": -18, "5yr": -22 },
+      vsEUR: { "1yr": -3, "3yr": -16, "5yr": -20 },
+      vsXAU: { "1yr": -20, "3yr": -38, "5yr": -45 },
     },
     riskEvents: [
-      { year: 2021, event: 'Presidential assassination', impact: 'President Jovenel Moïse killed; political collapse triggered economic freefall' },
-      { year: 2024, event: 'Gang crisis + state of emergency', impact: 'Armed groups controlled most of Port-au-Prince; gourde plunged as institutions collapsed' },
+      {
+        year: 2021,
+        event: "Presidential assassination",
+        impact:
+          "President Jovenel Moïse killed; political collapse triggered economic freefall",
+      },
+      {
+        year: 2024,
+        event: "Gang crisis + state of emergency",
+        impact:
+          "Armed groups controlled most of Port-au-Prince; gourde plunged as institutions collapsed",
+      },
     ],
   },
   {
-    code: 'RUB',
-    countryName: 'Russia',
-    iso2: 'RU',
-    iso3: 'RUS',
-    flag: '🇷🇺',
+    code: "RUB",
+    countryName: "Russia",
+    iso2: "RU",
+    iso3: "RUS",
+    flag: "🇷🇺",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': -25, '5yr': -28 },
-      vsEUR: { '1yr': -3, '3yr': -22, '5yr': -25 },
-      vsXAU: { '1yr': -19, '3yr': -40, '5yr': -48 },
+      vsUSD: { "1yr": 0, "3yr": -25, "5yr": -28 },
+      vsEUR: { "1yr": -3, "3yr": -22, "5yr": -25 },
+      vsXAU: { "1yr": -19, "3yr": -40, "5yr": -48 },
     },
     riskEvents: [
-      { year: 2022, event: 'Sanctions invasion', impact: 'RUB crashed 40% overnight after Ukraine invasion; capital controls imposed' },
-      { year: 2023, event: 'Oil price cap', impact: 'Continued pressure as G7 oil price cap reduced FX inflows' },
+      {
+        year: 2022,
+        event: "Sanctions invasion",
+        impact:
+          "RUB crashed 40% overnight after Ukraine invasion; capital controls imposed",
+      },
+      {
+        year: 2023,
+        event: "Oil price cap",
+        impact: "Continued pressure as G7 oil price cap reduced FX inflows",
+      },
     ],
   },
   {
-    code: 'BRL',
-    countryName: 'Brazil',
-    iso2: 'BR',
-    iso3: 'BRA',
-    flag: '🇧🇷',
+    code: "BRL",
+    countryName: "Brazil",
+    iso2: "BR",
+    iso3: "BRA",
+    flag: "🇧🇷",
     depreciation: {
-      vsUSD: { '1yr': 4, '3yr': -18, '5yr': -27 },
-      vsEUR: { '1yr': -5, '3yr': -15, '5yr': -24 },
-      vsXAU: { '1yr': -21, '3yr': -35, '5yr': -49 },
+      vsUSD: { "1yr": 4, "3yr": -18, "5yr": -27 },
+      vsEUR: { "1yr": -5, "3yr": -15, "5yr": -24 },
+      vsXAU: { "1yr": -21, "3yr": -35, "5yr": -49 },
     },
     riskEvents: [
-      { year: 2022, event: 'Lula vs Bolsonaro election', impact: 'BRL volatility spiked during polarized presidential race', asOf: '2026-09-26' },
-      { year: 2023, event: 'Fiscal concerns', impact: "Real weakened as new government's spending plans spooked markets", asOf: '2026-09-26' },
-      { year: 2025, event: 'Carry rally', impact: 'Real gained ~14% vs USD to ~R$5.32/$ as the 15% Selic drew carry inflows amid global dollar weakness', asOf: '2026-09-26' },
+      {
+        year: 2022,
+        event: "Lula vs Bolsonaro election",
+        impact: "BRL volatility spiked during polarized presidential race",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2023,
+        event: "Fiscal concerns",
+        impact:
+          "Real weakened as new government's spending plans spooked markets",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Carry rally",
+        impact:
+          "Real gained ~14% vs USD to ~R$5.32/$ as the 15% Selic drew carry inflows amid global dollar weakness",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'COP',
-    countryName: 'Colombia',
-    iso2: 'CO',
-    iso3: 'COL',
-    flag: '🇨🇴',
+    code: "COP",
+    countryName: "Colombia",
+    iso2: "CO",
+    iso3: "COL",
+    flag: "🇨🇴",
     depreciation: {
-      vsUSD: { '1yr': 16, '3yr': -15, '5yr': -17 },
-      vsEUR: { '1yr': 0, '3yr': -12, '5yr': -14 },
-      vsXAU: { '1yr': -16, '3yr': -33, '5yr': -41 },
+      vsUSD: { "1yr": 16, "3yr": -15, "5yr": -17 },
+      vsEUR: { "1yr": 0, "3yr": -12, "5yr": -14 },
+      vsXAU: { "1yr": -16, "3yr": -33, "5yr": -41 },
     },
     riskEvents: [
-      { year: 2022, event: 'Petro election', impact: 'COP fell 10% as first leftist president promised tax reform' },
+      {
+        year: 2022,
+        event: "Petro election",
+        impact: "COP fell 10% as first leftist president promised tax reform",
+      },
     ],
   },
   {
-    code: 'THB',
-    countryName: 'Thailand',
-    iso2: 'TH',
-    iso3: 'THA',
-    flag: '🇹🇭',
+    code: "THB",
+    countryName: "Thailand",
+    iso2: "TH",
+    iso3: "THA",
+    flag: "🇹🇭",
     depreciation: {
-      vsUSD: { '1yr': -3, '3yr': -12, '5yr': -17 },
-      vsEUR: { '1yr': -2, '3yr': -10, '5yr': -14 },
-      vsXAU: { '1yr': -18, '3yr': -30, '5yr': -41 },
+      vsUSD: { "1yr": -3, "3yr": -12, "5yr": -17 },
+      vsEUR: { "1yr": -2, "3yr": -10, "5yr": -14 },
+      vsXAU: { "1yr": -18, "3yr": -30, "5yr": -41 },
     },
     riskEvents: [
-      { year: 2023, event: 'Government formation deadlock', impact: 'THB weakened during months of political deadlock after election' },
+      {
+        year: 2023,
+        event: "Government formation deadlock",
+        impact:
+          "THB weakened during months of political deadlock after election",
+      },
     ],
   },
   {
-    code: 'INR',
-    countryName: 'India',
-    iso2: 'IN',
-    iso3: 'IND',
-    flag: '🇮🇳',
+    code: "INR",
+    countryName: "India",
+    iso2: "IN",
+    iso3: "IND",
+    flag: "🇮🇳",
     depreciation: {
-      vsUSD: { '1yr': -7, '3yr': -7, '5yr': -14 },
-      vsEUR: { '1yr': 1, '3yr': -5, '5yr': -11 },
-      vsXAU: { '1yr': -15, '3yr': -26, '5yr': -38 },
+      vsUSD: { "1yr": -7, "3yr": -7, "5yr": -14 },
+      vsEUR: { "1yr": 1, "3yr": -5, "5yr": -11 },
+      vsXAU: { "1yr": -15, "3yr": -26, "5yr": -38 },
     },
     riskEvents: [
-      { year: 2022, event: 'Crude oil spike', impact: 'INR hit record low as energy import bill surged during Russia-Ukraine war' },
+      {
+        year: 2022,
+        event: "Crude oil spike",
+        impact:
+          "INR hit record low as energy import bill surged during Russia-Ukraine war",
+      },
     ],
   },
   {
-    code: 'IDR',
-    countryName: 'Indonesia',
-    iso2: 'ID',
-    iso3: 'IDN',
-    flag: '🇮🇩',
+    code: "IDR",
+    countryName: "Indonesia",
+    iso2: "ID",
+    iso3: "IDN",
+    flag: "🇮🇩",
     depreciation: {
-      vsUSD: { '1yr': -6, '3yr': -8, '5yr': -12 },
-      vsEUR: { '1yr': 0, '3yr': -6, '5yr': -9 },
-      vsXAU: { '1yr': -16, '3yr': -27, '5yr': -36 },
+      vsUSD: { "1yr": -6, "3yr": -8, "5yr": -12 },
+      vsEUR: { "1yr": 0, "3yr": -6, "5yr": -9 },
+      vsXAU: { "1yr": -16, "3yr": -27, "5yr": -36 },
     },
     riskEvents: [
-      { year: 2023, event: 'Rate hikes', impact: 'BI raised rates to defend IDR as global dollar strength pressured EM currencies' },
+      {
+        year: 2023,
+        event: "Rate hikes",
+        impact:
+          "BI raised rates to defend IDR as global dollar strength pressured EM currencies",
+      },
     ],
   },
   {
-    code: 'PHP',
-    countryName: 'Philippines',
-    iso2: 'PH',
-    iso3: 'PHL',
-    flag: '🇵🇭',
+    code: "PHP",
+    countryName: "Philippines",
+    iso2: "PH",
+    iso3: "PHL",
+    flag: "🇵🇭",
     depreciation: {
-      vsUSD: { '1yr': -6, '3yr': -8, '5yr': -11 },
-      vsEUR: { '1yr': 0, '3yr': -6, '5yr': -8 },
-      vsXAU: { '1yr': -16, '3yr': -26, '5yr': -35 },
+      vsUSD: { "1yr": -6, "3yr": -8, "5yr": -11 },
+      vsEUR: { "1yr": 0, "3yr": -6, "5yr": -8 },
+      vsXAU: { "1yr": -16, "3yr": -26, "5yr": -35 },
     },
     riskEvents: [
-      { year: 2022, event: 'Trade deficit widening', impact: 'PHP hit record low as imports outpaced exports and remittances slowed' },
+      {
+        year: 2022,
+        event: "Trade deficit widening",
+        impact:
+          "PHP hit record low as imports outpaced exports and remittances slowed",
+      },
     ],
   },
   {
-    code: 'TZS',
-    countryName: 'Tanzania',
-    iso2: 'TZ',
-    iso3: 'TZA',
-    flag: '🇹🇿',
+    code: "TZS",
+    countryName: "Tanzania",
+    iso2: "TZ",
+    iso3: "TZA",
+    flag: "🇹🇿",
     depreciation: {
-      vsUSD: { '1yr': -7, '3yr': -9, '5yr': -12 },
-      vsEUR: { '1yr': -1, '3yr': -7, '5yr': -9 },
-      vsXAU: { '1yr': -17, '3yr': -28, '5yr': -36 },
+      vsUSD: { "1yr": -7, "3yr": -9, "5yr": -12 },
+      vsEUR: { "1yr": -1, "3yr": -7, "5yr": -9 },
+      vsXAU: { "1yr": -17, "3yr": -28, "5yr": -36 },
     },
     riskEvents: [
-      { year: 2023, event: 'IMF program review', impact: 'Tanzanian shilling under pressure as IMF reviewed program targets' },
+      {
+        year: 2023,
+        event: "IMF program review",
+        impact:
+          "Tanzanian shilling under pressure as IMF reviewed program targets",
+      },
     ],
   },
   {
-    code: 'JMD',
-    countryName: 'Jamaica',
-    iso2: 'JM',
-    iso3: 'JAM',
-    flag: '🇯🇲',
+    code: "JMD",
+    countryName: "Jamaica",
+    iso2: "JM",
+    iso3: "JAM",
+    flag: "🇯🇲",
     depreciation: {
-      vsUSD: { '1yr': 2, '3yr': -7, '5yr': -10 },
-      vsEUR: { '1yr': 0, '3yr': -5, '5yr': -8 },
-      vsXAU: { '1yr': -17, '3yr': -28, '5yr': -36 },
+      vsUSD: { "1yr": 2, "3yr": -7, "5yr": -10 },
+      vsEUR: { "1yr": 0, "3yr": -5, "5yr": -8 },
+      vsXAU: { "1yr": -17, "3yr": -28, "5yr": -36 },
     },
     riskEvents: [
-      { year: 2022, event: 'Food inflation surge', impact: 'Jamaica food inflation hit 11% as import dependence (43% from US) and commodity prices squeezed households' },
-      { year: 2024, event: 'Hurricane Beryl', impact: 'Category 4 storm devastated southern Jamaica; infrastructure and agriculture losses compounded FX pressure' },
+      {
+        year: 2022,
+        event: "Food inflation surge",
+        impact:
+          "Jamaica food inflation hit 11% as import dependence (43% from US) and commodity prices squeezed households",
+      },
+      {
+        year: 2024,
+        event: "Hurricane Beryl",
+        impact:
+          "Category 4 storm devastated southern Jamaica; infrastructure and agriculture losses compounded FX pressure",
+      },
     ],
   },
   {
-    code: 'VND',
-    countryName: 'Vietnam',
-    iso2: 'VN',
-    iso3: 'VNM',
-    flag: '🇻🇳',
+    code: "VND",
+    countryName: "Vietnam",
+    iso2: "VN",
+    iso3: "VNM",
+    flag: "🇻🇳",
     depreciation: {
-      vsUSD: { '1yr': 2, '3yr': -5, '5yr': -8 },
-      vsEUR: { '1yr': 0, '3yr': -3, '5yr': -5 },
-      vsXAU: { '1yr': -16, '3yr': -23, '5yr': -32 },
+      vsUSD: { "1yr": 2, "3yr": -5, "5yr": -8 },
+      vsEUR: { "1yr": 0, "3yr": -3, "5yr": -5 },
+      vsXAU: { "1yr": -16, "3yr": -23, "5yr": -32 },
     },
     riskEvents: [
-      { year: 2022, event: 'SBV rate hikes', impact: 'State Bank of Vietnam raised rates 100bps to defend dong against USD strength' },
+      {
+        year: 2022,
+        event: "SBV rate hikes",
+        impact:
+          "State Bank of Vietnam raised rates 100bps to defend dong against USD strength",
+      },
     ],
   },
   {
-    code: 'MXN',
-    countryName: 'Mexico',
-    iso2: 'MX',
-    iso3: 'MEX',
-    flag: '🇲🇽',
+    code: "MXN",
+    countryName: "Mexico",
+    iso2: "MX",
+    iso3: "MEX",
+    flag: "🇲🇽",
     depreciation: {
-      vsUSD: { '1yr': 4, '3yr': -5, '5yr': -5 },
-      vsEUR: { '1yr': 4, '3yr': -3, '5yr': -2 },
-      vsXAU: { '1yr': -12, '3yr': -22, '5yr': -30 },
+      vsUSD: { "1yr": 4, "3yr": -5, "5yr": -5 },
+      vsEUR: { "1yr": 4, "3yr": -3, "5yr": -2 },
+      vsXAU: { "1yr": -12, "3yr": -22, "5yr": -30 },
     },
     riskEvents: [
-      { year: 2024, event: 'Sheinbaum election', impact: 'MXN weakened 7% on election day as markets assessed nearshoring continuity', asOf: '2026-09-26' },
-      { year: 2025, event: 'Strongest year in decades', impact: 'Peso gained ~14% to ~18/$ — best since the 1990s — despite February’s tariff spike to 21.3/$', asOf: '2026-09-26' },
+      {
+        year: 2024,
+        event: "Sheinbaum election",
+        impact:
+          "MXN weakened 7% on election day as markets assessed nearshoring continuity",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Strongest year in decades",
+        impact:
+          "Peso gained ~14% to ~18/$ — best since the 1990s — despite February’s tariff spike to 21.3/$",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'TTD',
-    countryName: 'Trinidad & Tobago',
-    iso2: 'TT',
-    iso3: 'TTO',
-    flag: '🇹🇹',
+    code: "TTD",
+    countryName: "Trinidad & Tobago",
+    iso2: "TT",
+    iso3: "TTO",
+    flag: "🇹🇹",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': -2, '5yr': -3 },
-      vsEUR: { '1yr': 2, '3yr': 0, '5yr': -1 },
-      vsXAU: { '1yr': -15, '3yr': -24, '5yr': -31 },
+      vsUSD: { "1yr": 0, "3yr": -2, "5yr": -3 },
+      vsEUR: { "1yr": 2, "3yr": 0, "5yr": -1 },
+      vsXAU: { "1yr": -15, "3yr": -24, "5yr": -31 },
     },
     riskEvents: [
-      { year: 2020, event: 'Oil price crash', impact: 'Energy exporter revenue collapsed as oil went negative; TTD pressured despite managed float' },
-      { year: 2023, event: 'Foreign exchange scarcity', impact: 'Central bank rationed USD as reserves tightened; businesses faced queues for hard currency' },
+      {
+        year: 2020,
+        event: "Oil price crash",
+        impact:
+          "Energy exporter revenue collapsed as oil went negative; TTD pressured despite managed float",
+      },
+      {
+        year: 2023,
+        event: "Foreign exchange scarcity",
+        impact:
+          "Central bank rationed USD as reserves tightened; businesses faced queues for hard currency",
+      },
     ],
   },
   {
-    code: 'UGX',
-    countryName: 'Uganda',
-    iso2: 'UG',
-    iso3: 'UGA',
-    flag: '🇺🇬',
+    code: "UGX",
+    countryName: "Uganda",
+    iso2: "UG",
+    iso3: "UGA",
+    flag: "🇺🇬",
     depreciation: {
-      vsUSD: { '1yr': -11, '3yr': -4, '5yr': -3 },
-      vsEUR: { '1yr': 1, '3yr': -2, '5yr': 0 },
-      vsXAU: { '1yr': -15, '3yr': -21, '5yr': -28 },
+      vsUSD: { "1yr": -11, "3yr": -4, "5yr": -3 },
+      vsEUR: { "1yr": 1, "3yr": -2, "5yr": 0 },
+      vsXAU: { "1yr": -15, "3yr": -21, "5yr": -28 },
     },
     riskEvents: [
-      { year: 2023, event: 'Coffee export decline', impact: "UGX pressured as Uganda's largest export earner fell on global price dip" },
+      {
+        year: 2023,
+        event: "Coffee export decline",
+        impact:
+          "UGX pressured as Uganda's largest export earner fell on global price dip",
+      },
     ],
   },
   // ── Caribbean USD-pegged currencies ──────────────────────────────
@@ -519,35 +792,55 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
   // but gold depreciation, imported inflation, and hurricane/disaster
   // risk are real — the "aha" is that "stable" is not "safe."
   {
-    code: 'BBD',
-    countryName: 'Barbados',
-    iso2: 'BB',
-    iso3: 'BRB',
-    flag: '🇧🇧',
+    code: "BBD",
+    countryName: "Barbados",
+    iso2: "BB",
+    iso3: "BRB",
+    flag: "🇧🇧",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': 0, '5yr': 0 },
-      vsEUR: { '1yr': 3, '3yr': 10, '5yr': 8 },
-      vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
+      vsUSD: { "1yr": 0, "3yr": 0, "5yr": 0 },
+      vsEUR: { "1yr": 3, "3yr": 10, "5yr": 8 },
+      vsXAU: { "1yr": -15, "3yr": -28, "5yr": -37 },
     },
     riskEvents: [
-      { year: 2018, event: 'Sovereign debt default + restructuring', impact: 'Barbados defaulted on external debt; historic restructuring wiped out bondholders' },
-      { year: 2024, event: 'Hurricane Beryl', impact: 'First Category 4 hurricane to hit Barbados in decades; coral reefs and fishing industry devastated' },
+      {
+        year: 2018,
+        event: "Sovereign debt default + restructuring",
+        impact:
+          "Barbados defaulted on external debt; historic restructuring wiped out bondholders",
+      },
+      {
+        year: 2024,
+        event: "Hurricane Beryl",
+        impact:
+          "First Category 4 hurricane to hit Barbados in decades; coral reefs and fishing industry devastated",
+      },
     ],
   },
   {
-    code: 'XCD',
-    countryName: 'Eastern Caribbean',
-    iso2: 'LC',
-    iso3: 'LCA',
-    flag: '🇱🇨',
+    code: "XCD",
+    countryName: "Eastern Caribbean",
+    iso2: "LC",
+    iso3: "LCA",
+    flag: "🇱🇨",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': 0, '5yr': 0 },
-      vsEUR: { '1yr': 3, '3yr': 10, '5yr': 8 },
-      vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
+      vsUSD: { "1yr": 0, "3yr": 0, "5yr": 0 },
+      vsEUR: { "1yr": 3, "3yr": 10, "5yr": 8 },
+      vsXAU: { "1yr": -15, "3yr": -28, "5yr": -37 },
     },
     riskEvents: [
-      { year: 2020, event: 'Tourism collapse', impact: 'Eastern Caribbean economies lost 60%+ of GDP from tourism as pandemic halted travel' },
-      { year: 2024, event: 'Hurricane Beryl', impact: 'St. Vincent and the Grenadines devastated; storm surge destroyed infrastructure across the Windwards' },
+      {
+        year: 2020,
+        event: "Tourism collapse",
+        impact:
+          "Eastern Caribbean economies lost 60%+ of GDP from tourism as pandemic halted travel",
+      },
+      {
+        year: 2024,
+        event: "Hurricane Beryl",
+        impact:
+          "St. Vincent and the Grenadines devastated; storm surge destroyed infrastructure across the Windwards",
+      },
     ],
   },
   // ── Benchmark currencies ──────────────────────────────────────────
@@ -556,74 +849,137 @@ export const CURRENCY_RISK_DATA: CurrencyRiskEntry[] = [
   // risk exists everywhere. These entries ensure US/EU/UK visitors also
   // get a risk "aha" moment — the risk is just a different shape.
   {
-    code: 'GBP',
-    countryName: 'United Kingdom',
-    iso2: 'GB',
-    iso3: 'GBR',
-    flag: '🇬🇧',
+    code: "GBP",
+    countryName: "United Kingdom",
+    iso2: "GB",
+    iso3: "GBR",
+    flag: "🇬🇧",
     depreciation: {
-      vsUSD: { '1yr': -1, '3yr': -8, '5yr': -12 },
-      vsEUR: { '1yr': 0, '3yr': -6, '5yr': -10 },
-      vsXAU: { '1yr': -17, '3yr': -30, '5yr': -41 },
+      vsUSD: { "1yr": -1, "3yr": -8, "5yr": -12 },
+      vsEUR: { "1yr": 0, "3yr": -6, "5yr": -10 },
+      vsXAU: { "1yr": -17, "3yr": -30, "5yr": -41 },
     },
     riskEvents: [
-      { year: 2022, event: 'Mini-budget crisis', impact: 'GBP crashed to parity with USD after unfunded tax cuts; Bank of England intervened', asOf: '2026-09-26' },
-      { year: 2024, event: 'Election + fiscal uncertainty', impact: "Pound volatility as new government's spending plans drew scrutiny", asOf: '2026-09-26' },
-      { year: 2025, event: 'Budget jitters', impact: 'Sterling gained ~5% for the year but November budget hedging costs hit multi-month highs after repeated gilt selloffs', asOf: '2026-09-26' },
+      {
+        year: 2022,
+        event: "Mini-budget crisis",
+        impact:
+          "GBP crashed to parity with USD after unfunded tax cuts; Bank of England intervened",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2024,
+        event: "Election + fiscal uncertainty",
+        impact:
+          "Pound volatility as new government's spending plans drew scrutiny",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Budget jitters",
+        impact:
+          "Sterling gained ~5% for the year but November budget hedging costs hit multi-month highs after repeated gilt selloffs",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'EUR',
-    countryName: 'Eurozone',
-    iso2: 'DE',
-    iso3: 'DEU',
-    flag: '🇪🇺',
+    code: "EUR",
+    countryName: "Eurozone",
+    iso2: "DE",
+    iso3: "DEU",
+    flag: "🇪🇺",
     depreciation: {
-      vsUSD: { '1yr': -2, '3yr': -10, '5yr': -8 },
-      vsEUR: { '1yr': 0, '3yr': 0, '5yr': 0 },
-      vsXAU: { '1yr': -18, '3yr': -32, '5yr': -38 },
+      vsUSD: { "1yr": -2, "3yr": -10, "5yr": -8 },
+      vsEUR: { "1yr": 0, "3yr": 0, "5yr": 0 },
+      vsXAU: { "1yr": -18, "3yr": -32, "5yr": -38 },
     },
     riskEvents: [
-      { year: 2022, event: 'Energy crisis', impact: 'EUR dropped to parity with USD as energy import costs surged after Russia-Ukraine war', asOf: '2026-09-26' },
-      { year: 2023, event: 'Inflation peak 9.2%', impact: 'Eurozone inflation hit record highs, eroding purchasing power across the bloc', asOf: '2026-09-26' },
-      { year: 2025, event: 'Euro breakout', impact: 'Top G10 performer in 2025, +13% vs USD to ~1.18 — highest since 2021 — on dollar weakness and German fiscal stimulus', asOf: '2026-09-26' },
+      {
+        year: 2022,
+        event: "Energy crisis",
+        impact:
+          "EUR dropped to parity with USD as energy import costs surged after Russia-Ukraine war",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2023,
+        event: "Inflation peak 9.2%",
+        impact:
+          "Eurozone inflation hit record highs, eroding purchasing power across the bloc",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Euro breakout",
+        impact:
+          "Top G10 performer in 2025, +13% vs USD to ~1.18 — highest since 2021 — on dollar weakness and German fiscal stimulus",
+        asOf: "2026-09-26",
+      },
     ],
   },
   {
-    code: 'USD',
-    countryName: 'United States',
-    iso2: 'US',
-    iso3: 'USA',
-    flag: '🇺🇸',
+    code: "USD",
+    countryName: "United States",
+    iso2: "US",
+    iso3: "USA",
+    flag: "🇺🇸",
     depreciation: {
-      vsUSD: { '1yr': 0, '3yr': 0, '5yr': 0 },
-      vsEUR: { '1yr': 3, '3yr': 10, '5yr': 8 },
-      vsXAU: { '1yr': -15, '3yr': -28, '5yr': -37 },
+      vsUSD: { "1yr": 0, "3yr": 0, "5yr": 0 },
+      vsEUR: { "1yr": 3, "3yr": 10, "5yr": 8 },
+      vsXAU: { "1yr": -15, "3yr": -28, "5yr": -37 },
     },
     riskEvents: [
-      { year: 2022, event: 'Inflation crisis', impact: 'USD inflation hit 8% — the highest in 40 years. Purchasing power eroded significantly', asOf: '2026-09-26' },
-      { year: 2023, event: 'Debt ceiling standoff', impact: 'US nearly defaulted on sovereign debt; credit rating downgraded by Fitch', asOf: '2026-09-26' },
-      { year: 2024, event: 'Election volatility', impact: 'Political polarization drove uncertainty about dollar stability and fiscal policy', asOf: '2026-09-26' },
-      { year: 2025, event: 'Worst first half since 1973', impact: 'DXY fell 10.8% in H1 2025 on tariff policy and Fed-independence worries; Moody’s stripped the AAA rating in May', asOf: '2026-09-26' },
-      { year: 2026, event: 'Winner-takes-all rebound', impact: 'USD was the best-performing major currency in H1 2026 (+3%) on Fed hike bets and demand for US assets', asOf: '2026-09-26' },
+      {
+        year: 2022,
+        event: "Inflation crisis",
+        impact:
+          "USD inflation hit 8% — the highest in 40 years. Purchasing power eroded significantly",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2023,
+        event: "Debt ceiling standoff",
+        impact:
+          "US nearly defaulted on sovereign debt; credit rating downgraded by Fitch",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2024,
+        event: "Election volatility",
+        impact:
+          "Political polarization drove uncertainty about dollar stability and fiscal policy",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2025,
+        event: "Worst first half since 1973",
+        impact:
+          "DXY fell 10.8% in H1 2025 on tariff policy and Fed-independence worries; Moody’s stripped the AAA rating in May",
+        asOf: "2026-09-26",
+      },
+      {
+        year: 2026,
+        event: "Winner-takes-all rebound",
+        impact:
+          "USD was the best-performing major currency in H1 2026 (+3%) on Fed hike bets and demand for US assets",
+        asOf: "2026-09-26",
+      },
     ],
   },
 ];
 
 /** Lookup by ISO2 country code (most common — from IP geolocation). */
-export const CURRENCY_BY_ISO2: Record<string, CurrencyRiskEntry> = Object.fromEntries(
-  CURRENCY_RISK_DATA.map((c) => [c.iso2, c]),
-);
+export const CURRENCY_BY_ISO2: Record<string, CurrencyRiskEntry> =
+  Object.fromEntries(CURRENCY_RISK_DATA.map((c) => [c.iso2, c]));
 
 /** Lookup by ISO3 country code (used in existing inflation constants). */
-export const CURRENCY_BY_ISO3: Record<string, CurrencyRiskEntry> = Object.fromEntries(
-  CURRENCY_RISK_DATA.map((c) => [c.iso3, c]),
-);
+export const CURRENCY_BY_ISO3: Record<string, CurrencyRiskEntry> =
+  Object.fromEntries(CURRENCY_RISK_DATA.map((c) => [c.iso3, c]));
 
 /** Lookup by currency code (e.g., 'KES'). */
-export const CURRENCY_BY_CODE: Record<string, CurrencyRiskEntry> = Object.fromEntries(
-  CURRENCY_RISK_DATA.map((c) => [c.code, c]),
-);
+export const CURRENCY_BY_CODE: Record<string, CurrencyRiskEntry> =
+  Object.fromEntries(CURRENCY_RISK_DATA.map((c) => [c.code, c]));
 
 /**
  * Get currency risk data for a country.
@@ -645,9 +1001,9 @@ export function getCurrencyRisk(countryCode: string): CurrencyRiskEntry | null {
 
 /** Benchmark labels for display. */
 export const BENCHMARKS = {
-  USD: { code: 'USD', label: 'US Dollar', symbol: '$', flag: '🇺🇸' },
-  EUR: { code: 'EUR', label: 'Euro', symbol: '€', flag: '🇪🇺' },
-  XAU: { code: 'XAU', label: 'Gold', symbol: '🥇', flag: '🏅' },
+  USD: { code: "USD", label: "US Dollar", symbol: "$", flag: "🇺🇸" },
+  EUR: { code: "EUR", label: "Euro", symbol: "€", flag: "🇪🇺" },
+  XAU: { code: "XAU", label: "Gold", symbol: "🥇", flag: "🏅" },
 } as const;
 
 export type Benchmark = keyof typeof BENCHMARKS;
@@ -655,9 +1011,9 @@ export const BENCHMARK_KEYS = Object.keys(BENCHMARKS) as Benchmark[];
 
 /** Time horizon labels for display. */
 export const HORIZONS = {
-  '1yr': { label: '1 year', short: '1Y' },
-  '3yr': { label: '3 years', short: '3Y' },
-  '5yr': { label: '5 years', short: '5Y' },
+  "1yr": { label: "1 year", short: "1Y" },
+  "3yr": { label: "3 years", short: "3Y" },
+  "5yr": { label: "5 years", short: "5Y" },
 } as const;
 
 export type Horizon = keyof typeof HORIZONS;
@@ -741,11 +1097,11 @@ export function exampleSavingsFor(code: string): number {
  */
 export function getRiskLevel(
   entry: CurrencyRiskEntry,
-  horizon: Horizon = '5yr',
-): 'critical' | 'high' | 'moderate' | 'low' {
+  horizon: Horizon = "5yr",
+): "critical" | "high" | "moderate" | "low" {
   const dep = Math.abs(entry.depreciation.vsUSD[horizon]);
-  if (dep >= 50) return 'critical';
-  if (dep >= 25) return 'high';
-  if (dep >= 10) return 'moderate';
-  return 'low';
+  if (dep >= 50) return "critical";
+  if (dep >= 25) return "high";
+  if (dep >= 10) return "moderate";
+  return "low";
 }

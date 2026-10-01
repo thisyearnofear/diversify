@@ -55,6 +55,44 @@ describe('check-data-freshness evaluateFreshness', () => {
     expect(flags.join('\n')).not.toContain('NGN');
     expect(flags.join('\n')).not.toContain('KESm');
   });
+
+  it('flags a dataset review date older than the trails it covers', () => {
+    // Regression guard: the app published "as of 2025-07-01" beneath trails
+    // that had been re-verified through 2026-09-26, so a 15-month-old date
+    // sat under a freshly sourced -60%. The dataset date is a trust claim and
+    // must never understate the freshness of its own trails.
+    const { flags } = evaluateFreshness({
+      currencies: [],
+      trails: [{ code: 'NGN', checkedAt: '2026-09-26' }],
+      provenance: [],
+      nowMs: NOW,
+      datasetAsOf: '2025-07-01',
+    });
+    expect(flags.join('\n')).toContain('CURRENCY_RISK_DATA_AS_OF');
+    expect(flags.join('\n')).toContain('is older than the newest risk trail');
+  });
+
+  it('accepts a dataset date that matches its newest trail', () => {
+    const { flags } = evaluateFreshness({
+      currencies: [],
+      trails: [{ code: 'NGN', checkedAt: '2026-09-26' }],
+      provenance: [],
+      nowMs: NOW,
+      datasetAsOf: '2026-09-26',
+    });
+    expect(flags.join('\n')).not.toContain('CURRENCY_RISK_DATA_AS_OF');
+  });
+
+  it('flags the dataset itself once it passes the re-verify window', () => {
+    const { flags } = evaluateFreshness({
+      currencies: [],
+      trails: [{ code: 'NGN', checkedAt: '2026-09-26' }],
+      provenance: [],
+      nowMs: NOW,
+      datasetAsOf: daysAgo(STALE_AFTER_DAYS + 1),
+    });
+    expect(flags.join('\n')).toContain('dataset itself is stale');
+  });
 });
 
 describe('check-data-freshness parseCurrencyRisk', () => {

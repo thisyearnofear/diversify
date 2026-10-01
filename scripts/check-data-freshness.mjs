@@ -61,9 +61,36 @@ export function parseProvenance(src) {
 }
 
 /** Pure evaluator — exported for tests. */
-export function evaluateFreshness({ currencies, trails, provenance, nowMs }) {
+/**
+ * @param {{ currencies?: any[], trails?: any[], provenance?: any[],
+ *           nowMs: number, datasetAsOf?: string | null }} input
+ * @returns {{ flags: string[], warnings: string[] }}
+ */
+export function evaluateFreshness({ currencies, trails, provenance, nowMs, datasetAsOf = null }) {
   const flags = [];
   const warnings = [];
+
+  // The dataset-level review date is a published trust claim. If any trail
+  // beneath it was re-verified more recently, the dataset date understates
+  // how fresh the data actually is — which is how the app shipped a
+  // 2025-07-01 stamp over trails checked through 2026-09-26.
+  if (datasetAsOf) {
+    const newestTrail = (trails ?? []).reduce(
+      (latest, t) => (t.checkedAt > latest ? t.checkedAt : latest),
+      datasetAsOf,
+    );
+    if (newestTrail > datasetAsOf) {
+      flags.push(
+        `CURRENCY_RISK_DATA_AS_OF ${datasetAsOf} is older than the newest risk trail ` +
+          `${newestTrail} — bump the dataset date to match its trails`,
+      );
+    }
+    if (Date.parse(`${datasetAsOf}T00:00:00Z`) < nowMs - STALE_AFTER_DAYS * 86_400_000) {
+      flags.push(
+        `CURRENCY_RISK_DATA_AS_OF ${datasetAsOf} — dataset itself is stale (> ${STALE_AFTER_DAYS}d)`,
+      );
+    }
+  }
 
   for (const c of currencies ?? []) {
     if (!Number.isFinite(c.curated1yr)) {
@@ -125,7 +152,7 @@ async function main() {
     'utf8',
   );
 
-  const { entries } = parseCurrencyRisk(riskSrc);
+  const { datasetAsOf, entries } = parseCurrencyRisk(riskSrc);
   const provenance = parseProvenance(provSrc);
   const live = await Promise.all(entries.map((e) => fetchLive1yr(e.code)));
 
@@ -138,6 +165,7 @@ async function main() {
     trails: entries.map((e) => ({ code: e.code, checkedAt: e.checkedAt })),
     provenance,
     nowMs: Date.now(),
+    datasetAsOf,
   });
 
   console.log('dataFreshness');

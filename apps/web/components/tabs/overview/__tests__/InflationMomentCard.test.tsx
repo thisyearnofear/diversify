@@ -46,7 +46,7 @@ describe('InflationMomentCard — honest fallback hero', () => {
     const select = screen.getByLabelText('Select the country where your savings live');
     expect(select).toHaveValue('JP');
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
-    expect(screen.getByText('Savings currency')).toBeInTheDocument();
+    expect(screen.getByText('Currency')).toBeInTheDocument();
     fireEvent.change(select, { target: { value: 'GH' } });
     expect(onChangeCountry).toHaveBeenCalledWith('GH');
   });
@@ -68,7 +68,7 @@ describe('InflationMomentCard — honest fallback hero', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Example amount'), {
+    fireEvent.change(screen.getByLabelText('Illustrative amount'), {
       target: { value: '25000' },
     });
     expect(onAmountChange).toHaveBeenCalledWith(25000);

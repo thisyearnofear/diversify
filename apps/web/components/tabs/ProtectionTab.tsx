@@ -817,13 +817,16 @@ export default function ProtectionTab({
         customDraft.from ? STRATEGIES.find((s) => s.id === customDraft.from)?.name ?? "a plan" : "your wallet"
       }`
     : "";
+  // "Tweak this plan" is subordinate to the commit CTA it sits beside, so it
+  // wears the quiet link register rather than a third CTA hue (it was violet,
+  // against teal commit buttons on this tab and blue everywhere else).
   const tweakButton = (from: string | null, testId: string) =>
     from && !isDemo ? (
       <button
         type="button"
         data-testid={testId}
         onClick={() => startTweak(from)}
-        className="min-h-tap px-4 rounded-full text-sm font-semibold text-violet-700 dark:text-violet-300"
+        className="link-quiet shrink-0"
       >
         {from === "custom" ? "Edit custom plan" : "Tweak this plan"}
       </button>
@@ -901,7 +904,7 @@ export default function ProtectionTab({
                 type="button"
                 data-testid="custom-add"
                 onClick={() => { setAddingSlice(true); haptics.tap(); }}
-                className="mx-auto flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-violet-700 dark:text-violet-300"
+                className="mx-auto flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-action dark:text-action hover:bg-action/8 dark:hover:bg-action/15 transition-colors"
               >
                 + Add
               </button>
@@ -912,7 +915,7 @@ export default function ProtectionTab({
                 data-testid="custom-save"
                 onClick={saveCustom}
                 disabled={isDemo}
-                className="min-h-tap px-5 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors disabled:opacity-50"
+                className="min-h-tap px-5 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors disabled:opacity-50"
               >
                 Save plan
               </button>
@@ -969,7 +972,7 @@ export default function ProtectionTab({
                 type="button"
                 data-testid="picker-commit"
                 onClick={commitFocusedPlan}
-                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
               >
                 Use this plan
               </button>
@@ -1034,7 +1037,7 @@ export default function ProtectionTab({
                     type="button"
                     data-testid="guardian-tilt-review"
                     onClick={reviewGuardianTilt}
-                    className="min-h-tap px-5 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                    className="min-h-tap px-5 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
                   >
                     Review in Exchange
                   </button>
@@ -1054,7 +1057,7 @@ export default function ProtectionTab({
                     type="button"
                     data-testid="guardian-tilt-chip"
                     onClick={() => { setFocusedToken(null); setTiltPreview(true); haptics.tap(); }}
-                    className="mx-auto mb-2 flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-teal-700 dark:text-teal-300"
+                    className="mx-auto mb-2 flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-action dark:text-action"
                   >
                     Guardian suggests {tiltLabel(guardianTilt.tilt)} →
                   </button>
@@ -1154,7 +1157,7 @@ export default function ProtectionTab({
                       type="button"
                       data-testid="compare-commit"
                       onClick={commitFocusedPlan}
-                      className="min-h-tap px-6 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-500 active:bg-teal-700 transition-colors"
+                      className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
                     >
                       Use this plan
                     </button>

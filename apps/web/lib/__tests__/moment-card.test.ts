@@ -13,7 +13,7 @@ describe('momentCardContent', () => {
       'The naira bought 60% less than the dollar in 5 years',
     );
     expect(c!.event).toBe('2026 · Rate-cut test');
-    expect(c!.asOf).toBe('Jul 2025');
+    expect(c!.asOf).toBe('Sep 2026');
   });
 
   it('benchmark currencies read gold, not themselves', () => {

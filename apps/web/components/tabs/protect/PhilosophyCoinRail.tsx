@@ -80,8 +80,19 @@ export function FocusedPlanLine({ strategyId }: { strategyId: string | null }) {
               </span>
             </>
           ) : (
-            <span className="block text-xl sm:text-2xl font-bold text-ink">
-              Choose a protection philosophy
+            /* Not an instruction. The ring's hole already says "Choose a
+               philosophy" — it is the picker's documented object
+               (ProtectionPlanRing.tsx:338) and the strongest position in the
+               frame. This line used to repeat it as a `text-2xl font-bold`
+               heading ~40px below, so one act was stated twice and the
+               loudest element on the picker screen was an empty-state
+               instruction rather than a coin.
+
+               Now it names the row's job — what these controls ARE — as a
+               quiet caption. A label is not a duplicate instruction, and it
+               survives the empty state without reappearing on focus. */
+            <span className="block text-xs font-semibold uppercase tracking-widest text-ink-subtle">
+              Philosophy
             </span>
           )}
         </motion.p>

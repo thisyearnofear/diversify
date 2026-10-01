@@ -8,12 +8,19 @@ import type { Benchmark, Horizon } from '@/constants/currency-risk';
 
 const mocks = vi.hoisted(() => ({
   reduced: false,
+  /** Curated-dataset staleness is time-dependent; tests declare the branch. */
+  stale: false,
   feed: { data: null as { recent: unknown[] } | null },
 }));
 
 vi.mock('@/lib/haptics', () => ({
   haptics: { tap: vi.fn(), confirm: vi.fn(), selection: vi.fn() },
 }));
+
+vi.mock('@/constants/currency-risk', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@/constants/currency-risk')>();
+  return { ...mod, isCurrencyRiskDatasetStale: () => mocks.stale };
+});
 
 vi.mock('@/hooks/use-proof-feed', () => ({
   useProofFeed: () => ({ data: mocks.feed.data }),
@@ -63,6 +70,7 @@ afterEach(() => {
   vi.clearAllMocks();
   window.localStorage.clear();
   mocks.reduced = false;
+  mocks.stale = false;
 });
 
 describe('CurrencyMomentCard — Home opening artifact', () => {
@@ -147,7 +155,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       />,
     );
 
-    fireEvent.change(screen.getByLabelText('Example amount'), {
+    fireEvent.change(screen.getByLabelText('Illustrative amount'), {
       target: { value: '25000' },
     });
     expect(onAmountChange).toHaveBeenCalledWith(25000);
@@ -171,7 +179,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(select).toBeInTheDocument();
     expect(select).toHaveValue('GH');
     expect(screen.getAllByRole('combobox')).toHaveLength(1);
-    expect(screen.getByText('Savings currency')).toBeInTheDocument();
+    expect(screen.getByText('Currency')).toBeInTheDocument();
     expect(screen.queryByText('Whose savings?')).not.toBeInTheDocument();
     expect(screen.queryByText(/Ghana · GHS/)).not.toBeInTheDocument();
     fireEvent.change(select, { target: { value: 'KE' } });
@@ -184,7 +192,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('a display-only default stays blank and names the example — no detection claim', () => {
+  it('a display-only default stays blank and discloses itself once — no detection claim', () => {
     render(
       <CurrencyMomentCard
         {...baseProps}
@@ -194,13 +202,28 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     );
     const select = screen.getByLabelText('Select the country where your savings live');
     expect(select).toHaveValue('');
-    expect(screen.getByText('Example currency')).toBeInTheDocument();
-    expect(
-      screen.getByText(/Ghana \(GHS\) · example/),
-    ).toBeInTheDocument();
+    expect(screen.getByText('Currency')).toBeInTheDocument();
+    expect(screen.getByText('Ghana (GHS)')).toBeInTheDocument();
     expect(
       screen.getByText(/Country not detected — showing Ghana by default/),
     ).toBeInTheDocument();
+
+    // Regression guard: this block said the same thing four times across the
+    // top third of the object — an "Example currency" label, a "· example"
+    // suffix, a "Country not detected" paragraph and an "Example amount"
+    // label. Two facts exist (we guessed the country; the amount is
+    // illustrative) and they are now stated once, in one line.
+    const disclosures = [
+      /Country not detected/,
+      /Sample figures until you connect/,
+    ];
+    for (const re of disclosures) expect(screen.getByText(re)).toBeInTheDocument();
+    expect(screen.queryByText(/· example/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Example currency')).not.toBeInTheDocument();
+    expect(screen.queryByText('Example amount')).not.toBeInTheDocument();
+    // The amount control survives — it is a real affordance — it just no
+    // longer shouts "example" a third time.
+    expect(screen.getByLabelText('Illustrative amount')).toBeInTheDocument();
   });
 
   it('a philosophy frame applies its accent without a reframe sentence', async () => {
@@ -252,7 +275,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(consequence).toHaveAttribute('aria-live', 'polite');
 
     const goods = screen.getByRole('button', { name: 'Goods' });
-    expect(screen.getByRole('group', { name: 'Consequence unit' })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Show the consequence in money or in goods' })).toBeInTheDocument();
     fireEvent.click(goods);
     expect(haptics.tap).toHaveBeenCalled();
     expect(screen.getByTestId('home-consequence')).toBe(consequence);
@@ -276,7 +299,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       <CurrencyMomentCard {...baseProps} moment={{ ...MOMENT, ...over }} />,
     );
     expect(
-      screen.queryByRole('group', { name: 'Consequence unit' }),
+      screen.queryByRole('group', { name: 'Show the consequence in money or in goods' }),
     ).not.toBeInTheDocument();
     expect(screen.getByTestId('home-consequence')).toBeInTheDocument();
   });
@@ -352,7 +375,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       <CurrencyMomentCard {...baseProps} moment={{ ...goodsMoment, ...over }} />,
     );
     expect(
-      screen.queryByRole('group', { name: 'Consequence unit' }),
+      screen.queryByRole('group', { name: 'Show the consequence in money or in goods' }),
     ).not.toBeInTheDocument();
     expect(screen.getAllByTestId('home-consequence')).toHaveLength(1);
     expect(screen.getByTestId('home-consequence')).not.toHaveTextContent('bags of rice');
@@ -395,6 +418,39 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.getByText(/as of 2025-07-01 · curated FX, not advice/)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /details/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /footnote|provenance|source/i })).not.toBeInTheDocument();
+  });
+
+  it('provenance clears WCAG AA — the honesty line is not the smallest text on screen', () => {
+    render(<CurrencyMomentCard {...baseProps} />);
+    const provenance = screen.getByText(/as of 2025-07-01 · curated FX, not advice/);
+    expect(provenance.className).toContain('text-xs');
+    expect(provenance.className).not.toContain('text-2xs');
+    expect(provenance.className).not.toContain('text-3xs');
+    // gray-400 on white is ~2.6:1 — too low for a methodology disclosure.
+    expect(provenance.className).toContain('text-gray-500');
+  });
+
+  it('discloses a curated reading that is past its review window instead of sitting quiet', () => {
+    mocks.stale = true;
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(
+      screen.getByText(/Curated reading past its 90-day review window/),
+    ).toBeInTheDocument();
+    // The unqualified "as of" claim must not survive alongside the warning.
+    expect(screen.queryByText(/curated FX, not advice/)).not.toBeInTheDocument();
+  });
+
+  it('the coin encoding never inverts — both coins share one base size', () => {
+    // Regression guard. An earlier build gave the local coin a 112px box and
+    // the benchmark a 72px one, which almost exactly cancelled the scale
+    // transform: the two rendered the same size at -60% (so the geometry
+    // encoded nothing) and the local coin rendered ~47% BIGGER for mild
+    // depreciation (-8% EUR). One shared base size is what prevents it.
+    render(<CurrencyMomentCard {...baseProps} />);
+    const local = screen.getByTestId('moment-local-coin');
+    const benchmark = screen.getByTestId('moment-benchmark-coin');
+    expect(local.style.maxWidth).toBe(benchmark.style.maxWidth);
+    expect(local.style.maxWidth).toBe('104px');
   });
 
   it('an explicit protectLabel wins over the default', () => {
@@ -742,7 +798,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     expect(document.querySelector('[data-testid="inspector-sheet"]')).toBeNull();
     expect(screen.getByText(/trailing comparison, not your return/)).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Review protection plan' })).toHaveLength(1);
-    expect(screen.queryByLabelText('Example amount')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Illustrative amount')).not.toBeInTheDocument();
   });
 
   it('defaults to the visit view and toggles to history and back', async () => {
@@ -754,7 +810,7 @@ describe('CurrencyMomentCard — returning visit', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Longer view' }));
     expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Example amount')).toBeInTheDocument();
+    expect(screen.getByLabelText('Illustrative amount')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '3Y' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Last visit' }));
@@ -770,7 +826,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     expect(await screen.findByText('−18%')).toBeInTheDocument();
     expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Last visit' })).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Example amount')).toBeInTheDocument();
+    expect(screen.getByLabelText('Illustrative amount')).toBeInTheDocument();
   });
 
   it('a same-date reading renders the longer view, no toggle', async () => {
@@ -803,7 +859,7 @@ describe('CurrencyMomentCard — returning visit', () => {
   it('fabricates nothing on the first visit, a legacy scalar, or a different source/context', async () => {
     const first = render(<CurrencyMomentCard {...baseProps} />);
     expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Example amount')).toBeInTheDocument();
+    expect(screen.getByLabelText('Illustrative amount')).toBeInTheDocument();
     first.unmount();
 
     window.localStorage.setItem(KEY, JSON.stringify({ value: -19, at: Date.now() - 3 * 24 * 3600 * 1000 }));
