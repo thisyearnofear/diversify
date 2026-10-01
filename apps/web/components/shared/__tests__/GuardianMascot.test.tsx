@@ -29,6 +29,13 @@ import {
   SHIELD_D,
 } from '../guardian-mark';
 
+const reduced = { on: false };
+vi.mock('framer-motion', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('framer-motion')>();
+  return { ...mod, useReducedMotion: () => reduced.on };
+});
+afterEach(() => { reduced.on = false; });
+
 function eyeCount(container: HTMLElement) {
   // digital eyes are the only rects in the mark
   return container.querySelectorAll('rect').length;
@@ -88,6 +95,15 @@ describe('GuardianMascot', () => {
     expect(compactDots).toHaveLength(0);
   });
 
+  it('thinking is a static pose with no repeating eye or dot animation', () => {
+    const thinking = EYE_POSE.thinking as { x: number; transition?: { x?: { repeat?: number } } };
+    expect(thinking.x).toBe(1);
+    expect(thinking.transition?.x?.repeat).toBeUndefined();
+    const { container } = render(<GuardianMascot size={120} mood="thinking" />);
+    expect(container.querySelectorAll('g > circle[cx="70"], g > circle[cx="77"]')).toHaveLength(2);
+    expect(container.querySelectorAll('g > circle[cx="70"][style], g > circle[cx="77"][style]')).toHaveLength(0);
+  });
+
   it('renders no ambient glow or bob layers — the silhouette carries it', () => {
     const { container } = render(<GuardianMascot size={120} mood="happy" />);
     // old design had blur-glow + shadow divs outside the SVG; none remain
@@ -113,6 +129,18 @@ describe('GuardianMascot', () => {
     render(<GuardianMascot size={32} mood="neutral" gaze="pointer" />);
     expect(compactSpy.mock.calls.filter(([type]) => type === 'pointermove')).toHaveLength(0);
     compactSpy.mockRestore();
+  });
+
+  it('keeps the mood shape but disables gaze and animation in reduced motion', () => {
+    reduced.on = true;
+    const addSpy = vi.spyOn(window, 'addEventListener');
+    const { container } = render(<GuardianMascot size={120} mood="protective" gaze="pointer" />);
+    expect(addSpy.mock.calls.filter(([type]) => type === 'pointermove')).toHaveLength(0);
+    expect(container.querySelector('svg')).toHaveAttribute('aria-label', 'DiversiFi Guardian mascot, protective');
+    const eyes = container.querySelectorAll('rect');
+    expect(eyes).toHaveLength(2);
+    expect(eyes[0].getAttribute('style')).toContain('scaleY(0.35)');
+    addSpy.mockRestore();
   });
 
   it('accepts a fixed gaze target without crashing', () => {

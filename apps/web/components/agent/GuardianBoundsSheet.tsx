@@ -17,6 +17,7 @@ import type {
 import type { useVault } from "@/hooks/use-vault";
 import { MIN_AUTO_SAVER_FUNDS_USD } from "@/constants/guardian-limits";
 import { STRATEGIES } from "@/hooks/useFinancialStrategies";
+import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 
 export function GuardianBoundsSheet({
   hasValidPermission,
@@ -84,6 +85,7 @@ export function GuardianBoundsSheet({
   /** Optional slot: how Guardian's research is funded (ResearchFundingLine). */
   researchFunding?: React.ReactNode;
 }) {
+  const { formatMoney } = useBalanceVisibility();
   const planMismatch = Boolean(
     vault.vault?.strategy && shieldPlan && vault.vault.strategy !== shieldPlan,
   );
@@ -106,17 +108,17 @@ export function GuardianBoundsSheet({
           </p>
           <div className="flex justify-between items-center text-sm">
             <span className="text-gray-500">Daily limit</span>
-            <span className="font-bold">${dailyLimit}/day</span>
+            <span className="font-bold">{formatMoney(dailyLimit)}/day</span>
           </div>
           {sessionInfo && (
             <>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Used today</span>
-                <span className="font-bold tabular-nums">${sessionInfo.spentTodayUSD.toFixed(2)}</span>
+                <span className="font-bold tabular-nums">{formatMoney(sessionInfo.spentTodayUSD)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Left today</span>
-                <span className="font-bold tabular-nums">${sessionInfo.remainingTodayUSD.toFixed(2)}</span>
+                <span className="font-bold tabular-nums">{formatMoney(sessionInfo.remainingTodayUSD)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <span className="text-gray-500">Moves so far</span>
@@ -234,7 +236,7 @@ export function GuardianBoundsSheet({
             Optional · Let Guardian act for you
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Skip the per-move signature: Guardian may move up to ${dailyLimit}/day on its own, and MetaMask enforces that cap on-chain — not just us.
+            Skip the per-move signature: Guardian may move up to {formatMoney(dailyLimit)}/day on its own, and MetaMask enforces that cap on-chain — not just us.
           </p>
           {!grantAvailable ? (
             <p className="text-xs text-gray-400 dark:text-gray-500">

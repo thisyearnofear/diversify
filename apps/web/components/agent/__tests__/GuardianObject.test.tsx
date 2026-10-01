@@ -11,10 +11,11 @@ import {
   PROTECTION_STATE_LABELS,
 } from "@diversifi/shared/src/types/guardian-protection";
 import type { GuardianSessionInfo } from "@/hooks/use-session-key";
+import { BalanceVisibilityProvider, useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 
 vi.mock("@/components/shared/GuardianMascot", () => ({
-  GuardianMascot: (props: { mood?: string }) => (
-    <div data-testid="guardian-mascot" data-mood={props.mood} />
+  GuardianMascot: (props: { mood?: string; gaze?: string }) => (
+    <div data-testid="guardian-mascot" data-mood={props.mood} data-gaze={props.gaze} />
   ),
 }));
 
@@ -70,9 +71,32 @@ describe("GuardianObject — state copy", () => {
     },
   );
 
+  it("an authorized but idle Guardian does not pretend to be thinking", () => {
+    renderObject({ guardianState: "authorized" });
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "neutral");
+  });
+
+  it("a waiting proposal lifts the mark to alert; real analysis still wins", () => {
+    renderObject({ proposalPending: true });
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "alert");
+    cleanup();
+    renderObject({ proposalPending: true, isAnalyzing: true });
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "thinking");
+  });
+
   it("analyzing swaps the mascot mood to thinking", () => {
     renderObject({ isAnalyzing: true });
     expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "thinking");
+  });
+
+  it("follows attention only at rest, never while analyzing", () => {
+    renderObject({ attention: true });
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-gaze", "pointer");
+    fireEvent.pointerDown(screen.getByTestId("guardian-mascot"));
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-gaze", "off");
+    cleanup();
+    renderObject({ attention: true, isAnalyzing: true });
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-gaze", "off");
   });
 
   it("renders no ring — the budget is a sentence, not a dial", () => {
@@ -95,10 +119,68 @@ describe("GuardianObject — budget line", () => {
     const budget = screen.getByTestId("guardian-budget");
     // The figure counts up to the ledger value — assert the landing.
     await waitFor(() =>
-      expect(budget).toHaveTextContent("$20.00 left of $25 today"),
+      expect(budget).toHaveTextContent("$20 left of $25 today"),
     );
     fireEvent.click(budget);
     expect(props.onOpenBounds).toHaveBeenCalledTimes(1);
+  });
+
+  it("masks both dollar figures when balances are hidden, but keeps the bounds action", () => {
+    localStorage.setItem("diversifi.balances.hidden", "1");
+    const onOpenBounds = vi.fn();
+    render(
+      <BalanceVisibilityProvider>
+        <GuardianObject
+          guardianState="monitoring"
+          isAnalyzing={false}
+          sessionInfo={sessionInfo()}
+          hasValidPermission
+          dailyLimit={25}
+          latestEvent={null}
+          latestCall={null}
+          ctaLabel={null}
+          onOpenJournal={vi.fn()}
+          onOpenBounds={onOpenBounds}
+        />
+      </BalanceVisibilityProvider>,
+    );
+    const budget = screen.getByTestId("guardian-budget");
+    expect(budget).toHaveTextContent("•••• left of •••• today");
+    expect(budget).not.toHaveTextContent(/\$20|\$25/);
+    fireEvent.click(budget);
+    expect(onOpenBounds).toHaveBeenCalledTimes(1);
+    localStorage.removeItem("diversifi.balances.hidden");
+  });
+
+  it("re-masks and reveals both amounts with the shared visibility toggle", async () => {
+    function Toggle() {
+      const { toggle } = useBalanceVisibility();
+      return <button type="button" onClick={toggle}>Toggle balances</button>;
+    }
+    render(
+      <BalanceVisibilityProvider>
+        <Toggle />
+        <GuardianObject
+          guardianState="monitoring"
+          isAnalyzing={false}
+          sessionInfo={sessionInfo()}
+          hasValidPermission
+          dailyLimit={25}
+          latestEvent={null}
+          latestCall={null}
+          ctaLabel={null}
+          onOpenJournal={vi.fn()}
+          onOpenBounds={vi.fn()}
+        />
+      </BalanceVisibilityProvider>,
+    );
+    const budget = screen.getByTestId("guardian-budget");
+    await waitFor(() => expect(budget).toHaveTextContent("$20 left of $25 today"));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle balances" }));
+    expect(budget).toHaveTextContent("•••• left of •••• today");
+    expect(budget).not.toHaveTextContent(/\$20|\$25/);
+    fireEvent.click(screen.getByRole("button", { name: "Toggle balances" }));
+    await waitFor(() => expect(budget).toHaveTextContent("$20 left of $25 today"));
   });
 
   it.each([

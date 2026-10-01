@@ -19,6 +19,7 @@ import { GuardianGrantModal } from "../GuardianGrantModal";
 import { GuardianBoundsSheet } from "../GuardianBoundsSheet";
 import { DAILY_LIMIT_PRESETS } from "@/constants/guardian-limits";
 import type { GuardianSessionInfo } from "@/hooks/use-session-key";
+import { BalanceVisibilityProvider } from "@/context/app/BalanceVisibilityContext";
 
 vi.mock("@/lib/haptics", () => ({ haptic: vi.fn() }));
 vi.mock("../../shared/Scrim", () => ({ default: () => null }));
@@ -147,6 +148,46 @@ describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
     expect(props.onOpenSettings).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByRole("button", { name: "Pause Guardian" }));
     expect(props.onRevoke).toHaveBeenCalledTimes(1);
+  });
+
+  it("masks the account-specific budget throughout bounds without changing the grant confirmation", () => {
+    localStorage.setItem("diversifi.balances.hidden", "1");
+    const props = {
+      hasValidPermission: true,
+      dailyLimit: 25,
+      sessionInfo: {
+        active: true,
+        dailyLimitUSD: 25,
+        spentTodayUSD: 5,
+        remainingTodayUSD: 20,
+        executionCount: 2,
+        recentExecutions: [],
+      } as GuardianSessionInfo,
+      permissionExpiry: "10/4/2026",
+      isRunningLoop: false,
+      onRunNow: vi.fn(),
+      loopResult: null,
+      sessionKeyError: null,
+      isRevoking: false,
+      onRevoke: vi.fn(),
+      onSetLimit: vi.fn(),
+      vault: { vault: { strategy: "africapitalism" } } as never,
+      onChangeStrategy: vi.fn(),
+      walletStableBalanceUSD: 40,
+      isOnGrantEligibleChain: true,
+      grantAvailable: true,
+      grantStatus: "idle" as const,
+      grantError: null,
+      onOpenGrantModal: vi.fn(),
+      onSwitchToGrantChain: vi.fn(),
+      onOpenSettings: vi.fn(),
+    };
+    render(<BalanceVisibilityProvider><GuardianBoundsSheet {...props} /></BalanceVisibilityProvider>);
+    expect(screen.getByText("••••/day")).toBeInTheDocument();
+    expect(screen.getAllByText("••••")).toHaveLength(2);
+    expect(screen.getByText(/may move up to ••••\/day/)).toBeInTheDocument();
+    expect(screen.queryByText(/\$25\/day/)).not.toBeInTheDocument();
+    localStorage.removeItem("diversifi.balances.hidden");
   });
 
   it("proposal-only copy by default; autonomy copy only for a GUARDIAN-tier permission", () => {

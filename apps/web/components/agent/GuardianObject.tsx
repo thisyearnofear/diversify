@@ -5,7 +5,7 @@
  * no projected savings (never rendered as realized money).
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { press, springPress } from "@/lib/motion-tokens";
 import { GuardianMascot } from "../shared/GuardianMascot";
@@ -23,12 +23,14 @@ import type { GuardianSessionInfo } from "@/hooks/use-session-key";
 import type { GuardianProofEvent } from "./GuardianJournalTab";
 import { LiveLine } from "../shared/LiveLine";
 import { useCountUp } from "@/hooks/use-count-up";
+import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
+import { formatUsd } from "@/lib/money-format";
 import type { LiveBeatText } from "@/lib/live-lines";
 import { timeAgo } from "@/lib/format-duration";
 
 const MOOD_BY_STATE: Record<GuardianTierState, "neutral" | "happy" | "thinking" | "protective"> = {
   idle: "neutral",
-  authorized: "thinking",
+  authorized: "neutral",
   funded: "happy",
   monitoring: "protective",
 };
@@ -45,9 +47,8 @@ function BudgetButton({
   onOpenBounds: () => void;
 }) {
   const reducedMotion = useReducedMotion();
-  const formatted = useCountUp(remaining, {
-    format: (n) => `$${n.toFixed(2)}`,
-  });
+  const { hidden, formatMoney } = useBalanceVisibility();
+  const formatted = useCountUp(remaining, { format: formatUsd, initialValue: remaining });
   return (
     <motion.button
       type="button"
@@ -57,7 +58,7 @@ function BudgetButton({
       transition={springPress}
       className="mt-2 min-h-tap text-sm font-semibold text-gray-700 dark:text-gray-200"
     >
-      <motion.span>{formatted}</motion.span> left of ${limit} today
+      {hidden ? formatMoney(remaining) : <motion.span>{formatted}</motion.span>} left of {formatMoney(limit)} today
     </motion.button>
   );
 }
@@ -77,6 +78,8 @@ export function GuardianObject({
   isAutonomous = false,
   liveBeats,
   liveAlive,
+  attention = false,
+  proposalPending = false,
 }: {
   guardianState: GuardianTierState;
   isAnalyzing: boolean;
@@ -96,20 +99,33 @@ export function GuardianObject({
   liveBeats?: LiveBeatText[] | null;
   /** False while any Guardian sheet is open — the line stills. */
   liveAlive?: boolean;
+  /** Pointer attention only while the connected instrument is at rest. */
+  attention?: boolean;
+  /** A real proposal is waiting for the user's signature. */
+  proposalPending?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
+  const [acted, setActed] = useState(false);
   const copy =
     guardianState === "monitoring" && isAutonomous
       ? GUARDIAN_AUTONOMOUS_COPY
       : GUARDIAN_USER_COPY[guardianState];
-  const mood = isAnalyzing ? "thinking" : MOOD_BY_STATE[guardianState];
+  const mood = isAnalyzing
+    ? "thinking"
+    : proposalPending
+      ? "alert"
+      : MOOD_BY_STATE[guardianState];
   const showBudget =
     hasValidPermission && sessionInfo != null && dailyLimit > 0;
 
   return (
-    <div className="instrument-composition text-center py-2">
+    <div
+      className="instrument-composition text-center py-2"
+      onPointerDownCapture={() => setActed(true)}
+      onFocusCapture={() => setActed(true)}
+    >
       <div className="instrument-artifact flex justify-center">
-        <GuardianMascot size={96} mood={mood} className="mb-3" />
+        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : "off"} className="mb-3" />
       </div>
       <div className="instrument-reading flex flex-col items-center">
       <div className="flex items-center justify-center gap-2 flex-wrap">

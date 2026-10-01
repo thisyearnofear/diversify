@@ -73,8 +73,7 @@ export const EYE_POSE: Variants = {
     ...NEUTRAL_EYE,
     scaleY: 0.8,
     y: -1,
-    x: [0, 2, -2, 0],
-    transition: { x: { repeat: Infinity, duration: 2.4, ease: 'easeInOut' } },
+    x: 1,
   },
   protective: { ...NEUTRAL_EYE, scaleY: 0.35, y: 2 },
   alert: { ...NEUTRAL_EYE, scaleX: 1.25, scaleY: 1.25, y: -0.5 },
@@ -248,30 +247,19 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
               rx={eye.rx}
               fill={P.eye}
               style={{ transformBox: 'fill-box', transformOrigin: '50% 50%' }}
-              animate={staticMode ? 'neutral' : eyeTarget}
+              initial={staticMode ? false : undefined}
+              animate={eyeTarget}
               variants={EYE_POSE}
-              transition={blinking ? BLINK_CLOSE_TWEEN : MOOD_SPRING}
+              transition={staticMode ? { duration: 0 } : blinking ? BLINK_CLOSE_TWEEN : MOOD_SPRING}
             />
           ))}
         </motion.g>
 
-        {/* Thinking signal — state-tied (only while thinking), never ambient. */}
+        {/* Thinking signal stays visible while work is real, without a loop. */}
         {mood === 'thinking' && !compact && !staticMode && (
           <g fill={P.eye}>
-            <motion.circle
-              cx={70}
-              cy={8}
-              r={2}
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ repeat: Infinity, duration: 1.6, ease: 'easeInOut' }}
-            />
-            <motion.circle
-              cx={77}
-              cy={5}
-              r={1.6}
-              animate={{ opacity: [0, 1, 0] }}
-              transition={{ repeat: Infinity, duration: 1.6, delay: 0.25, ease: 'easeInOut' }}
-            />
+            <circle cx={70} cy={8} r={2} />
+            <circle cx={77} cy={5} r={1.6} />
           </g>
         )}
 

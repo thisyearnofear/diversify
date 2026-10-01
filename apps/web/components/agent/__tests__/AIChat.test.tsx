@@ -13,6 +13,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
+const motionPreference = vi.hoisted(() => ({ reduced: false }));
+vi.mock('framer-motion', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('framer-motion')>();
+  return { ...mod, useReducedMotion: () => motionPreference.reduced };
+});
+afterEach(() => { motionPreference.reduced = false; });
+
 const mocks = vi.hoisted(() => {
   const chatState = { isChatting: false, thinkingStep: '', memoryEnabled: false };
   const wallet = { address: '0xabc0000000000000000000000000000000000001' as string | null };
@@ -162,7 +169,11 @@ vi.mock('@/components/agent/GuardianRecommendationCard', () => ({
   GuardianRecommendationCard: ({ onReview }: { onReview?: () => void }) =>
     onReview ? <button onClick={onReview}>Review</button> : null,
 }));
-vi.mock('@/components/shared/GuardianMascot', () => ({ GuardianMascot: () => null }));
+vi.mock('@/components/shared/GuardianMascot', () => ({
+  GuardianMascot: ({ mood, size }: { mood: string; size: number }) => (
+    <span data-testid="chat-mascot" data-mood={mood} data-size={size} />
+  ),
+}));
 vi.mock('@/components/shared/Scrim', () => ({
   default: () => <div data-testid="scrim" />,
 }));
@@ -393,6 +404,39 @@ describe('AIChat — desktop docked panel', () => {
     fireEvent.keyDown(input, { key: 'k', metaKey: true });
     expect(mocks.setDrawerOpen).not.toHaveBeenCalled();
     input.remove();
+  });
+
+  it('uses the thinking mood only during a reply, then settles the header once', () => {
+    setViewport(true);
+    const { rerender } = render(<AIChat />);
+    const headerMascot = () => screen.getAllByTestId('chat-mascot')[0];
+    expect(headerMascot()).toHaveAttribute('data-mood', 'neutral');
+    const beforeReply = headerMascot().parentElement;
+    mocks.chatState.isChatting = true;
+    rerender(<AIChat />);
+    expect(headerMascot()).toHaveAttribute('data-mood', 'thinking');
+    mocks.chatState.isChatting = false;
+    rerender(<AIChat />);
+    expect(headerMascot()).toHaveAttribute('data-mood', 'neutral');
+    const completionKey = headerMascot().parentElement;
+    expect(completionKey).not.toBe(beforeReply);
+    rerender(<AIChat />);
+    expect(headerMascot().parentElement).toBe(completionKey);
+  });
+
+  it('keeps the mood readable without a completion remount in reduced motion', () => {
+    motionPreference.reduced = true;
+    setViewport(true);
+    const { rerender } = render(<AIChat />);
+    const headerMascot = () => screen.getAllByTestId('chat-mascot')[0];
+    const initialHeader = headerMascot().parentElement;
+    mocks.chatState.isChatting = true;
+    rerender(<AIChat />);
+    expect(headerMascot()).toHaveAttribute('data-mood', 'thinking');
+    mocks.chatState.isChatting = false;
+    rerender(<AIChat />);
+    expect(headerMascot()).toHaveAttribute('data-mood', 'neutral');
+    expect(headerMascot().parentElement).toBe(initialHeader);
   });
 
   it('shows the active tab in the context line', () => {

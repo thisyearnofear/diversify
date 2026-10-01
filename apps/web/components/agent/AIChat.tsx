@@ -233,11 +233,11 @@ export default function AIChat() {
 
   // Mascot beat: one 300ms nod when a reply completes — never a loop.
   useEffect(() => {
-    if (wasChattingRef.current && !isChatting) {
+    if (wasChattingRef.current && !isChatting && !reducedMotion) {
       setNodKey((k) => k + 1);
     }
     wasChattingRef.current = isChatting;
-  }, [isChatting]);
+  }, [isChatting, reducedMotion]);
 
   // Keyboard affordances: ⌘K / Ctrl+K and "/" open the drawer (unless the
   // user is typing in a field), Esc closes. Focus lands in the input only on
