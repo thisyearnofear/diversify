@@ -60,6 +60,9 @@ describe("PlanFloorControl — balance preview", () => {
     const { onChange, onApply } = renderControl({ onApply: vi.fn(), isPreviewing: true, legs: CONSERVATIVE, value: "Conservative" });
     const group = screen.getByRole("radiogroup", { name: "Plan balance" });
     expect(group).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "More reserve" })).toHaveTextContent("Reserve");
+    expect(screen.getByRole("radio", { name: "Balanced" })).toHaveTextContent("Balanced");
+    expect(screen.getByRole("radio", { name: "More exposure" })).toHaveTextContent("Exposure");
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(onChange).toHaveBeenCalledWith("Conservative");
     expect(onApply).not.toHaveBeenCalled();

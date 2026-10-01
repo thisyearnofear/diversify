@@ -20,7 +20,7 @@ should split it.
 Everything else sorts into two permitted tiers:
 
 - **Trust** — why the numbers are credible (data source, freshness,
-  method). Must be *quiet*.
+  method). Must be *subordinate and readable*.
 - **Transition** — what happens next. Must be *one line*.
 
 Anything that's neither the job, trust, nor transition gets cut or
@@ -53,17 +53,19 @@ card, above its solid background, below the content. Painting it as a
 sibling under the opaque card makes it invisible; painting it over the
 content fights the text.
 
-## 2. One object gets the color
+## 2. Expressive clarity — one dominant story
 
-Expressiveness is a budget, spent in one place. The dark slate risk card
-owns the phase: amber hero number, gold accents, glow. Everything else on
-that phase drops to quiet gray. A gallery wall is white so the painting
-hits harder — the rework didn't tone down the design language, it
-*concentrated* it.
+DiversiFi should feel alive, culturally recognizable, and empowering, not muted by default. The emotional goal is curiosity, recognition, and agency: the user understands their money and sees their values change the instrument.
 
-Don't let secondary elements compete: no amber-box next to blue-box next
-to badge-chip-strip. When you find two accents fighting, one of them is
-wrong, and it's usually the new one.
+**One dominant story per screen.** Color, typography, material, and motion may extend across the object, its meaningful reading, selected controls, and primary action. They must reinforce the same decision. Unrelated content remains subordinate, never illegible. Expressiveness belongs in the instrument, not extra cards or competing decoration.
+
+**Quiet means lower priority, not low readability.** Financial meaning, selectable labels, and next actions must remain readable at a glance. De-emphasize through placement, spacing, and weight before reducing contrast or type size. Never truncate philosophy names or shrink important language to accommodate decoration. Make the main reading stronger before making the background busier.
+
+**Every tab has an emotional job.** Home makes the stakes land; Shield makes the plan feel like yours; Exchange makes the choice tangible; Guardian makes the agent present and accountable. Each retains its owned motif and a recognizable silhouette. Shared structure must not produce identical expression.
+
+**Every interactive object advertises its verb.** Inspection, selection, preview, and commitment have distinct visible treatments. Motion reinforces an affordance; it never substitutes for one. First-use teaching stays local to the relevant object, disappears after use, and never covers a different control.
+
+**Celebrate understanding and ownership, not moving more money.** Honest historical/live/projected/sample labels, explicit consent, one primary action per state, readable evidence, and reduced-motion support are unchanged. No fabricated activity, artificial urgency, transaction rewards, or celebrations encouraging real-money trading.
 
 ## 3. Every text block says something no other block says
 
@@ -90,7 +92,7 @@ the repetition wasn't. Each statement now appears exactly once.
 
 The design system owns a coin primitive (`Coin` in
 `components/shared/FloatingCoins.tsx`), coin steps, tilt, flip springs,
-and `FloatingCoins`. Rule: **the coins do work**.
+and `FloatingCoins`. Rule: **the coins do work**. Readable labels and visible selection are part of the control, not optional decoration.
 
 - Phase 3 lens selection used to be five text cards. It's now
   `LensCoinSelector` — five flickable coins, each with a per-lens accent;
@@ -106,9 +108,7 @@ already paid for once.
 
 ## 5. Motion does work; tabs are instruments
 
-Animation budget goes to motion that *reveals, selects, or confirms* —
-plus one ambient behaviour while the user is browsing (see the state
-rule below). What it never goes to is decoration during an action.
+Discovery invites, exploration responds, commitment settles. Motion reveals, selects, or confirms; while browsing, one focal choreography may express material, attention, or verified state. Reduced motion preserves the same meaning and visual character without movement. No competing loops or pulsing transaction CTAs.
 
 Working motion (all framer-motion, **no GSAP** — one runtime, already in
 the bundle):
@@ -180,7 +180,7 @@ acting mode is still by construction, not by a flag the user tripped.
 
 Rules for ambient life:
 
-- One ambient behaviour per object, long dwell (≥5s), never a pulsing CTA.
+- One focal choreography per object, long dwell (≥5s), no competing loops or pulsing CTAs. Coordinated material motion and the existing dated live line may support the same story; unrelated motion stops on user action.
 - Ambient motion may only re-surface existing facts (a shine, a beat
   rotation) — never introduce a new text block or a decorative loop.
 - Reduced motion gets identical content, static: the shine is CSS-gated
@@ -250,14 +250,14 @@ Each tab is an **instrument**, not a feed of cards:
 
 1. **Object** — the thing you manipulate (risk moment, exposure dial,
    plan ring, pair stage, Guardian mark).
-   First viewport. This is the one object that gets the color (§2).
+   First viewport. Its reading, selected controls, and primary action reinforce one dominant story (§2).
 2. **Inspector** — opens from a selection (`InspectorSheet`). Empty
    selection means the sheet is closed, not a stack of closed rows.
 3. **One CTA** — attached to the inspector or the object's current
    shape. A second button with the same destination is a bug.
 4. **Morph** — the same screen changes shape with user state and
    persona (no plan → picker; empty → fund; gap → rebalance; aligned →
-   quiet). Persona retargets the object; it does not reorder a module
+   assured). Persona retargets the object; it does not reorder a module
    list. Leftover jobs go to Ask Guardian, not a basement of features.
 
 **Desktop composes the workbench; it does not calibrate page height.**
@@ -635,14 +635,13 @@ truthfully somewhere verifiable.
 - [ ] One sentence states the screen's job; if it needs "and", split it.
 - [ ] CTA in or near first viewport on mobile (~600px content above it).
 - [ ] Each text block names a job that no other block names.
-- [ ] One expressive object; everything else quiet.
+- [ ] One dominant story across object, reading, selection, and action; supporting information stays readable.
+- [ ] Each tab earns its emotional job and every interactive object advertises its verb.
 - [ ] Controls reuse an existing motif (coin, segmented control, ring).
 - [ ] Name the object, what selection opens, the one CTA, and which
       persona morphs the object. A new `*Card` or `DisclosureSection`
       as a tab sibling is out of contract.
-- [ ] Motion reveals/selects/confirms, or is the object's ONE ambient
-      browsing behaviour (shine loop, beat rotation) — total stillness
-      once the user acts.
+- [ ] Discovery invites, exploration responds, commitment settles; one focal choreography, no competing loops, and unrelated motion stops on user action.
 - [ ] New facts name their depth layer (L0 object / L1 line / L2
       inspector / L3 Guardian); an L1 addition evicts, never stacks.
 - [ ] Reduced-motion path verified.

@@ -28,6 +28,12 @@ const LABELS: Record<RiskTolerance, string> = {
   Aggressive: "More exposure",
 };
 
+const VISIBLE_LABELS: Record<RiskTolerance, string> = {
+  Conservative: "Reserve",
+  Balanced: "Balanced",
+  Aggressive: "Exposure",
+};
+
 interface Props {
   /** Current tolerance; null behaves as Balanced. */
   value: RiskTolerance | null;
@@ -119,6 +125,7 @@ export function PlanFloorControl({
               type="button"
               role="radio"
               aria-checked={isSelected}
+              aria-label={LABELS[opt]}
               tabIndex={isSelected ? 0 : -1}
               onClick={() => {
                 onInteraction?.();
@@ -128,14 +135,14 @@ export function PlanFloorControl({
               onFocus={() => onInteraction?.()}
               whileTap={reducedMotion ? undefined : press}
               transition={springPress}
-              className={`min-h-tap px-2 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+              className={`min-h-tap px-2 whitespace-nowrap rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
                 isSelected
-                  ? `bg-white dark:bg-gray-900 shadow-sm ${accent ? "" : "text-gray-900 dark:text-white"}`
+                  ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white"
                   : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
               }`}
-              style={isSelected && accent ? { color: accent } : undefined}
+              style={isSelected && accent ? { boxShadow: `inset 0 0 0 1.5px ${accent}` } : undefined}
             >
-              {LABELS[opt]}
+              {VISIBLE_LABELS[opt]}
             </motion.button>
           );
         })}
@@ -143,7 +150,7 @@ export function PlanFloorControl({
       <p
         data-testid="balance-consequence"
         aria-live="polite"
-        className="mt-2 text-xs text-gray-600 dark:text-gray-300"
+        className="mt-2 text-sm text-gray-600 dark:text-gray-300"
       >
         {caption}
       </p>

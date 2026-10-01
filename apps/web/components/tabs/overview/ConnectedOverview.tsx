@@ -350,7 +350,7 @@ export function ConnectedOverview({
       onSelectHorizon={handleMomentHorizon}
       onAmountChange={setSavingsAmount}
       onProtect={focusedRegion === null ? () => setActiveTab("protect") : undefined}
-      protectLabel={philosophyName ? "See your shield" : undefined}
+      protectLabel={philosophyName ? "Review protection plan" : undefined}
       onChangeCountry={onChangeCountry}
       frame={frame}
       onInspectCurrency={

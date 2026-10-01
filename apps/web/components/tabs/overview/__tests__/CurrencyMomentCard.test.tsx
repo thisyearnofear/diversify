@@ -69,7 +69,8 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
   it('shows the delta as the headline and the personal consequence underneath', async () => {
     render(<CurrencyMomentCard {...baseProps} />);
     expect(await screen.findByText('−18%')).toBeInTheDocument();
-    expect(screen.getByText(/buying power · 1Y vs US Dollar/)).toBeInTheDocument();
+    expect(screen.getByTestId('home-reading')).toHaveTextContent('GHS buying power fell');
+    expect(screen.getByText(/Over 1 year against US Dollar/)).toBeInTheDocument();
     expect(screen.getByTestId('home-consequence')).toHaveTextContent('≈ GHS 1,800 less buying power');
     expect(screen.getByText(/as of 2025-07-01/)).toBeInTheDocument();
   });
@@ -81,9 +82,9 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       '[class*="grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"]',
     );
     expect(row).not.toBeNull();
-    expect(row!.className).toContain('max-w-[360px]');
+    expect(row!.className).toContain('max-w-[440px]');
     expect(row!.className).toContain('mx-auto');
-    const context = await screen.findByText(/buying power · 1Y vs US Dollar/);
+    const context = await screen.findByText(/Over 1 year against US Dollar/);
     expect(row!.contains(context)).toBe(false);
     expect(
       row!.compareDocumentPosition(context) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -151,13 +152,13 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     });
     expect(onAmountChange).toHaveBeenCalledWith(25000);
 
-    fireEvent.click(screen.getByRole('button', { name: 'See Shield' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review protection plan' }));
     expect(onProtect).toHaveBeenCalledTimes(1);
   });
 
   it('renders no CTA and flags live data when told so', () => {
     const { rerender } = render(<CurrencyMomentCard {...baseProps} />);
-    expect(screen.queryByRole('button', { name: 'See Shield' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review protection plan' })).not.toBeInTheDocument();
 
     rerender(<CurrencyMomentCard {...baseProps} moment={{ ...MOMENT, isLive: true }} />);
     expect(screen.getByText(/live 1Y/)).toBeInTheDocument();
@@ -407,7 +408,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(
       screen.getByRole('button', { name: 'See your Buen Vivir shield' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'See Shield' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review protection plan' })).not.toBeInTheDocument();
   });
 
   it('never renders a signed zero — sub-1% deltas keep one decimal', async () => {
@@ -433,6 +434,51 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(container.textContent).toContain('0%');
     expect(container.textContent).not.toContain('+0%');
     expect(container.textContent).not.toContain('−0%');
+  });
+
+  it.each([
+    ['a loss', -18, 'GHS buying power fell'],
+    ['a gain', 2, 'GHS buying power rose'],
+    ['a flat reading', 0, 'GHS buying power held steady'],
+    ['a tiny negative inside the dead-flat band', -0.01, 'GHS buying power held steady'],
+    ['a sub-1% loss', -0.4, 'GHS buying power fell'],
+  ])('the reading sentence names %s', (_l, delta, text) => {
+    render(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, delta, personalImpact: delta === 0 ? 0 : 200 }}
+      />,
+    );
+    expect(screen.getByTestId('home-reading')).toHaveTextContent(text);
+  });
+
+  it('the qualifier follows the horizon and benchmark selections', () => {
+    const { rerender } = render(<CurrencyMomentCard {...baseProps} />);
+    expect(screen.getByText(/Over 1 year against US Dollar/)).toBeInTheDocument();
+    rerender(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, horizon: '3yr', benchmark: 'XAU', benchmarkLabel: 'Gold' }}
+      />,
+    );
+    expect(screen.getByText(/Over 3 years against Gold/)).toBeInTheDocument();
+    rerender(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, horizon: '5yr' }}
+      />,
+    );
+    expect(screen.getByText(/Over 5 years against US Dollar/)).toBeInTheDocument();
+  });
+
+  it('each benchmark coin carries its short visible name and marks the active one', () => {
+    render(<CurrencyMomentCard {...baseProps} />);
+    for (const name of ['USD', 'EUR', 'Gold']) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
+    const active = screen.getByRole('button', { name: /Compare against US Dollar/ });
+    expect(active).toHaveAttribute('aria-pressed', 'true');
+    expect(active).toHaveTextContent('USD');
   });
 
   it('applies a single neutral accent instead of a traffic-light', () => {
@@ -695,7 +741,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     expect(screen.getAllByTestId('currency-visit-review')).toHaveLength(1);
     expect(document.querySelector('[data-testid="inspector-sheet"]')).toBeNull();
     expect(screen.getByText(/trailing comparison, not your return/)).toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: 'See Shield' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Review protection plan' })).toHaveLength(1);
     expect(screen.queryByLabelText('Example amount')).not.toBeInTheDocument();
   });
 
@@ -819,7 +865,7 @@ describe('CurrencyMomentCard — comparison choreography', () => {
       />,
     );
     expect(screen.getByText('−8%')).toBeInTheDocument();
-    expect(screen.getByText(/buying power · 1Y vs Euro/)).toBeInTheDocument();
+    expect(screen.getByText(/Over 1 year against Euro/)).toBeInTheDocument();
     expect(screen.queryByText('−18%')).not.toBeInTheDocument();
     expect(screen.queryByText('0%')).not.toBeInTheDocument();
   });

@@ -81,7 +81,7 @@ describe("HomeRiskTheater — purchasing-power horizon", () => {
   it("the currency moment needs no separate horizon baseplate — the reading already names pair and delta", async () => {
     renderTheater();
     expect(screen.queryByTestId("home-horizon-baseplate")).not.toBeInTheDocument();
-    expect(await screen.findByText(/buying power · .*vs US Dollar/)).toBeInTheDocument();
+    expect(await screen.findByText(/Over 1 year against US Dollar/)).toBeInTheDocument();
   });
 
   it("the inflation moment renders without a baseplate too", () => {
@@ -361,7 +361,7 @@ describe("HomeRiskTheater — inline inspection replaces the stage", () => {
     expect(comparison).not.toBeVisible();
     expect(comparison).toHaveAttribute("hidden");
     expect(screen.queryByRole("spinbutton")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /See Shield/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Review protection plan/ })).not.toBeInTheDocument();
     expect(screen.getByTestId("holdings-strip")).toBeVisible();
   });
 

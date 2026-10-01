@@ -210,6 +210,7 @@ interface LensCoinSelectorProps {
    *  report a tap origin to an ambient layer. */
   onTapPoint?: (clientX: number, clientY: number) => void;
   alive?: boolean;
+  labelMode?: "compact" | "full";
 }
 
 /**
@@ -232,6 +233,7 @@ export function LensCoinSelector({
   scrollable = false,
   onTapPoint,
   alive = true,
+  labelMode = "compact",
 }: LensCoinSelectorProps) {
   const reduceMotion = useReducedMotion();
   const { coinSize, gapClass, pitch } = useLensCoinMetrics();
@@ -277,6 +279,8 @@ export function LensCoinSelector({
 
   const peekedLens = peekedIndex >= 0 ? lenses[peekedIndex] : null;
 
+  const effectiveLabelMode = presentation === "row" ? labelMode : "compact";
+
   // Scrollable row: keep the selected coin visible after selection.
   const scrollRowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -311,7 +315,8 @@ export function LensCoinSelector({
           coinSize={coinSize}
           lastSelected={lastSelectedRef.current}
           reduceMotion={reduceMotion ?? false}
-          alive={alive}
+          alive={effectiveLabelMode === "full" ? false : alive}
+          labelMode={effectiveLabelMode}
           onTap={handleCoinTap}
           onTapPoint={onTapPoint}
         />
@@ -392,6 +397,7 @@ interface LensCoinButtonProps {
   lastSelected: number;
   reduceMotion: boolean;
   alive: boolean;
+  labelMode: "compact" | "full";
   onTap: (lens: LensCoinDef) => void;
   onTapPoint?: (clientX: number, clientY: number) => void;
 }
@@ -409,6 +415,7 @@ function LensCoinButton({
   lastSelected,
   reduceMotion,
   alive,
+  labelMode,
   onTap,
   onTapPoint,
 }: LensCoinButtonProps) {
@@ -452,9 +459,10 @@ function LensCoinButton({
     initial = false;
   } else if (isActive) {
     // Active pick in a plain row — continuous turntable.
+    const spin = labelMode === "full" ? 0 : reduceMotion ? 0 : [0, 360];
     animate = {
       x: 0,
-      rotateY: reduceMotion ? 0 : [0, 360],
+      rotateY: spin,
       scale: 1.15,
       opacity: 1,
     };
@@ -524,24 +532,36 @@ function LensCoinButton({
       transition={springPress}
       // Fixed slot width == pitch: centres stay exactly pitch apart no
       // matter how wide the label, keeping the combine math honest.
-      style={{ width: pitch }}
-      className="min-h-11 flex flex-col items-center justify-start rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70"
+      style={labelMode === "full" ? { width: 144 } : { width: pitch }}
+      className={`min-h-11 ${labelMode === "full" ? "shrink-0" : ""} flex flex-col items-center justify-start rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70`}
     >
       <span
-        className="flex items-center justify-center min-w-11 min-h-11 rounded-full"
+        className="relative flex items-center justify-center min-w-11 min-h-11 rounded-full"
         style={
           {
             ['--lens-accent' as string]: lens.accent,
             ['--lens-accent-soft' as string]: isActive
               ? `${lens.accent}80`
               : `${lens.accent}55`,
+            ...(labelMode === "full" && isActive
+              ? { boxShadow: `0 0 0 2px ${lens.accent}` }
+              : {}),
           } as React.CSSProperties
         }
       >
+        {labelMode === "full" && isActive && (
+          <span
+            aria-hidden="true"
+            className="absolute -top-1 -right-1 z-10 flex size-5 items-center justify-center rounded-full text-2xs font-black text-white"
+            style={{ background: lens.accent }}
+          >
+            ✓
+          </span>
+        )}
         <motion.span
           className={`block ${
             isActive || peeked
-              ? `lens-coin-active${alive ? ' lens-coin-pulse' : ''}`
+              ? `lens-coin-active${alive && labelMode !== 'full' ? ' lens-coin-pulse' : ''}`
               : 'lens-coin-idle'
           }`}
           initial={initial}
@@ -550,7 +570,7 @@ function LensCoinButton({
           style={{ transformPerspective: 400 }}
         >
           <Coin
-            size={coinSize}
+            size={labelMode === "full" ? 64 : coinSize}
             symbol={lens.glyph}
             color={lens.accent}
             variant="selection"
@@ -561,17 +581,27 @@ function LensCoinButton({
       </span>
       {/* Label row: one-word practical label (always) + one-line
           translation of the philosophy's practical meaning. */}
-      <div
-        className={`mt-1 text-center leading-tight truncate max-w-full ${
-          isActive || peeked ? '' : 'text-gray-500 dark:text-slate-500'
-        }`}
-        style={isActive || peeked ? { color: lens.accent } : undefined}
-      >
-        <span className="text-3xs font-bold block truncate">{shortLabel}</span>
-        <span className="text-[9px] block truncate opacity-80">
-          {lens.description ? truncate(lens.description, 60) : ''}
-        </span>
-      </div>
+      {labelMode === "full" ? (
+        <div className="mt-1.5 text-center leading-tight">
+          <span
+            className="text-sm font-bold block whitespace-normal text-gray-900 dark:text-white"
+          >
+            {lens.label}
+          </span>
+        </div>
+      ) : (
+        <div
+          className={`mt-1 text-center leading-tight truncate max-w-full ${
+            isActive || peeked ? '' : 'text-gray-500 dark:text-slate-500'
+          }`}
+          style={isActive || peeked ? { color: lens.accent } : undefined}
+        >
+          <span className="text-3xs font-bold block truncate">{shortLabel}</span>
+          <span className="text-[9px] block truncate opacity-80">
+            {lens.description ? truncate(lens.description, 60) : ''}
+          </span>
+        </div>
+      )}
     </motion.button>
   );
 }

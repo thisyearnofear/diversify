@@ -5,8 +5,7 @@ description: DiversiFi's motion techniques — count-up numbers, pointer tilt, m
 
 # DiversiFi motion techniques
 
-Contract: **framer-motion only** (design-language §5 bans GSAP). Motion reveals,
-selects, confirms — it never loops. Reduced motion is a first-class mode: gate
+Contract: **framer-motion only** (design-language §5 bans GSAP). Discovery invites, exploration responds, commitment settles. One focal browsing choreography may express material or verified state; no competing loops, no pulsing transaction CTAs, unrelated motion stops on action. Reduced motion is a first-class mode: gate
 with `useReducedMotion()` for JSX effects; `MotionConfig reducedMotion="user"`
 in AppProviders is the global backstop, not a substitute.
 
@@ -108,7 +107,7 @@ never owns screen transitions; text stays in the DOM.
 
 ## Reduced-motion checklist for any new animation
 
-1. Does it loop? Delete it or gate it behind a completed state.
+1. Does it loop? Allow only the focal browsing choreography; stop on user action and gate reduced motion. Never loop transaction CTAs.
 2. JSX transforms → gate `initial`/`transition` with `useReducedMotion()`.
 3. `whileHover` → `reducedMotion ? undefined : { ... }`.
 4. CSS keyframes → wrap in `@media (prefers-reduced-motion: no-preference)`

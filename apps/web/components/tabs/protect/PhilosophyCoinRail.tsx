@@ -45,6 +45,7 @@ export function PhilosophyCoinRail({
         scrollable
         onTapPoint={onTapPoint}
         alive={false}
+        labelMode="full"
       />
     </motion.div>
   );
@@ -62,22 +63,24 @@ export function FocusedPlanLine({ strategyId }: { strategyId: string | null }) {
       <AnimatePresence mode="wait" initial={false}>
         <motion.p
           key={strategyId ?? "none"}
-          initial={reducedMotion ? false : { opacity: 0, filter: "blur(4px)" }}
-          animate={{ opacity: 1, filter: "blur(0px)" }}
-          exit={reducedMotion ? undefined : { opacity: 0, filter: "blur(4px)" }}
+          initial={reducedMotion ? false : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={reducedMotion ? undefined : { opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="text-sm font-bold text-gray-900 dark:text-white"
           data-testid="focused-plan-line"
         >
           {strategy ? (
             <>
-              {strategy.name}
-              <span className="font-medium text-gray-500 dark:text-gray-400">
-                {" "}— {strategy.tagline}
+              <span className="block text-xl sm:text-2xl text-ink">
+                {strategy.name}
+              </span>
+              <span className="block text-sm font-medium text-ink-muted whitespace-normal">
+                {strategy.tagline}
               </span>
             </>
           ) : (
-            <span className="font-medium text-gray-500 dark:text-gray-400">
+            <span className="block text-xl sm:text-2xl font-bold text-ink">
               Choose a protection philosophy
             </span>
           )}

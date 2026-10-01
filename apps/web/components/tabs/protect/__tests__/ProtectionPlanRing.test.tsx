@@ -59,8 +59,68 @@ describe('ProtectionPlanRing — projections shape', () => {
         />,
       ),
     ).not.toThrow();
-    expect(screen.getByText('Your shield plan')).toBeInTheDocument();
+    expect(screen.getByText('Your holdings')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
+  });
+
+  it('the heading names the slice source: holdings, targets, or preview', () => {
+    const empty = {
+      ...DEMO_PORTFOLIO,
+      totalValue: 0,
+      tokens: [],
+      chains: [],
+    } as unknown as MultichainPortfolio;
+    const draftLegs = legsForRisk(getArchetypeAllocations('africapitalism'), 'Conservative');
+    const savedLegs = legsForRisk(getArchetypeAllocations('africapitalism'), 'Balanced');
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Your holdings' })).toBeInTheDocument();
+
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={empty}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        empty
+      />,
+    );
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Your plan targets' })).toBeInTheDocument();
+
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        legs={draftLegs}
+        savedLegs={savedLegs}
+        balancePreview
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Preview allocation' })).toBeInTheDocument();
+
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={fundedKesmWallet}
+        legs={savedLegs}
+        forcePlanLegs
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.getAllByRole('heading')).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: 'Your plan targets' })).toBeInTheDocument();
   });
 
   it('renders no stress-test affordance — the ring carries no defense verdict', () => {
@@ -296,7 +356,9 @@ describe('ProtectionPlanRing — projections shape', () => {
         onSelectToken={() => {}}
       />,
     );
-    expect(screen.queryByText('Your shield plan')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Your holdings|Your plan targets|Preview allocation/),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
     const hole = screen.getByTestId('ring-hole');
     expect(hole).toHaveTextContent('Buen Vivir');
@@ -503,7 +565,7 @@ describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
     const badge = screen.getByTestId('plan-badge');
     fireEvent.click(badge);
     expect(onHoleTap).toHaveBeenCalledTimes(1);
-    expect(badge.textContent).toContain('▾');
+    expect(badge.textContent).toContain('Compare');
 
     rerender(
       <ProtectionPlanRing
@@ -535,7 +597,8 @@ describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
     );
     const badge = screen.getByTestId('plan-badge');
     expect(badge).toHaveAttribute('aria-label', 'Exit compare');
-    expect(badge.textContent).not.toContain('▾');
+    expect(badge.textContent).toContain('Back');
+    expect(badge.textContent).not.toContain('Compare');
     fireEvent.click(badge);
     expect(onHoleTap).toHaveBeenCalledTimes(1);
   });
@@ -683,7 +746,7 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.getByRole('button', { name: /Dollar — preview target: 40%/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Euro — preview target: 12%/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /wallet holding/ })).not.toBeInTheDocument();
-    expect(screen.getByText('Your shield plan')).toBeInTheDocument();
+    expect(screen.getByText('Preview allocation')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Protection armed' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();

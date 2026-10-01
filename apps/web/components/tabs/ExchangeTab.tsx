@@ -332,7 +332,7 @@ function PairInspector({
             <FxNettingRail
               initialSell={sellCode}
               initialBuy={buyCode}
-              leadIn="This pair can also settle peer-to-peer — match a counterparty at mid-market instead of taking the DEX route."
+              leadIn="Match this pair directly with another currency need."
             />
           )}
         </>

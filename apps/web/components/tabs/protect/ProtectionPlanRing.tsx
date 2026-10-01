@@ -475,9 +475,13 @@ export function ProtectionPlanRing({
       onFocusCapture={() => setHoleActed(true)}
     >
       {compact ? null : (
-      <div className="flex items-center justify-between gap-2 mb-3">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          Your shield plan
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
+          {balancePreview
+            ? 'Preview allocation'
+            : !forcePlanLegs && walletView.holdings.length > 0
+              ? 'Your holdings'
+              : 'Your plan targets'}
         </h3>
         {/* Armed-state seal — stamps once per mount (keyed to the plan),
             then holds. The §5 confirm artefact for committing a plan. */}
@@ -495,20 +499,22 @@ export function ProtectionPlanRing({
             }
             onClick={() => { setHoleActed(true); onHoleTap?.(); }}
             whileTap={reducedMotion ? undefined : { ...press, transition: springPress }}
-            className="text-3xs font-bold uppercase tracking-wide px-2.5 py-1 rounded-full inline-block min-h-[32px] min-w-tap hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-            style={{ background: `${archetype.accent}18`, color: archetype.accent }}
+            className="text-sm font-semibold normal-case px-3 py-1 rounded-full border inline-flex items-center gap-1.5 min-h-tap min-w-tap text-ink hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+            style={{ background: `${archetype.accent}18`, borderColor: archetype.accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={springPop}
           >
             {archetype.name}
-            {!holeHintOverride && " ▾"}
+            <span className="text-ink-muted font-semibold">
+              {holeHintOverride ? " · Back" : " · Compare"}
+            </span>
           </motion.button>
         ) : (
           <motion.span
             key={archetype.id}
-            className="text-3xs font-bold uppercase tracking-wide px-2 py-0.5 rounded-full inline-block"
-            style={{ background: `${archetype.accent}18`, color: archetype.accent }}
+            className="text-sm font-semibold normal-case px-3 py-1 rounded-full border inline-block text-ink"
+            style={{ background: `${archetype.accent}18`, borderColor: archetype.accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={springPop}

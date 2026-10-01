@@ -80,6 +80,9 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
   const [sellAmount, setSellAmount] = React.useState("");
   const [buyCurrency, setBuyCurrency] = React.useState(initialBuy ?? "BBD");
   const [matched, setMatched] = React.useState(false);
+  const [supportingView, setSupportingView] = React.useState<"need" | "details">(
+    "need",
+  );
 
   // Auth timing: settlements and the credit file are wallet-authed reads —
   // fetching them on mount would pop a signature request for what is, to
@@ -168,7 +171,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
   };
 
   const currencyInputClass =
-    "mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border text-sm font-bold text-teal-900 dark:text-teal-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60";
+    "mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-surface border text-sm font-bold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60";
 
   const currencyField = (
     side: "sell" | "buy",
@@ -177,8 +180,8 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
   ) => {
     const known = isKnownCurrency(value);
     return (
-      <label className="flex-1 min-w-0">
-        <span className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+      <label className="min-w-0">
+        <span className="text-sm font-semibold text-ink">
           {side === "sell" ? "You have" : "You want"}
         </span>
         <input
@@ -191,51 +194,204 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
           className={`${currencyInputClass} ${
             value && !known
               ? "border-amber-400 dark:border-amber-600"
-              : "border-teal-200 dark:border-teal-800"
+              : "border-line"
           }`}
         />
       </label>
     );
   };
 
+  const editYourNeed = () => {
+    setMatched(false);
+    setSupportingView("need");
+  };
+
   return (
-    <div data-testid="fx-netting-rail" className="mt-4 border-t border-teal-100 dark:border-teal-900/60 pt-4">
+    <div data-testid="fx-netting-rail" className="mt-4 border-t border-line pt-4">
       <datalist id="fx-currency-codes">
         {KNOWN_CURRENCIES.map((c) => (
           <option key={c} value={c} />
         ))}
       </datalist>
       <div className="mb-3">
-        <p className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
-          Counterparty match
-        </p>
-        <p className="text-xs text-teal-700/90 dark:text-teal-300/90 mt-1 leading-relaxed">
-          {leadIn ??
-            "Match a currency need directly with a counterparty — netted at mid-market, settled on-chain, no USD bridge."}
+        <h4 className="text-xl font-bold text-ink">Match a currency need</h4>
+        <p className="text-sm text-ink-muted mt-1 leading-relaxed">
+          {leadIn ?? "Find someone exchanging in the opposite direction."}
         </p>
       </div>
 
-      {!matched ? (
+      <div
+        role="group"
+        aria-label="Matching views"
+        className="mb-4 grid grid-cols-2 gap-1 rounded-full border border-line bg-surface p-1"
+      >
+        {(["need", "details"] as const).map((v) => (
+          <button
+            key={v}
+            type="button"
+            aria-pressed={supportingView === v}
+            onClick={() => setSupportingView(v)}
+            className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-400 ${
+              supportingView === v
+                ? "bg-teal-600 text-white shadow-sm"
+                : "text-ink-muted hover:text-ink"
+            }`}
+          >
+            {v === "need" ? "Your need" : "Details"}
+          </button>
+        ))}
+      </div>
+
+      {supportingView === "details" ? (
+        <div data-testid="fx-details">
+          <p className="text-sm font-semibold text-ink">Try another pair</p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {CORRIDOR_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                onClick={() => {
+                  setSellCurrency(p.sell);
+                  setBuyCurrency(p.buy);
+                  setMatched(false);
+                  setSupportingView("need");
+                }}
+                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-line text-2xs font-bold text-ink hover:bg-surface-sunken transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setSellCurrency(initialSell ?? "JMD");
+              setBuyCurrency(initialBuy ?? "BBD");
+              setSellAmount("");
+              setMatched(false);
+              setSupportingView("need");
+            }}
+            className="mt-3 min-h-11 px-3 py-2 rounded-xl text-xs font-bold text-ink hover:bg-surface-sunken transition-colors"
+          >
+            Reset your need
+          </button>
+
+          <p className="mt-3 text-xs text-ink-muted leading-snug">
+            Weighing a future payment instead?{" "}
+            <button
+              type="button"
+              onClick={() => navigateWithIntent("protect", { source: "exchange", lens: "cycle" })}
+              className="font-semibold underline underline-offset-2 hover:text-ink"
+            >
+              See what FX timing costs across a whole cycle →
+            </button>
+          </p>
+
+          {matched && !isLoading && !error && data && (
+            <dl className="mt-4 space-y-2 text-sm" data-testid="fx-metrics">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-ink-muted">Matched value</dt>
+                <dd className="font-bold text-ink tabular-nums">
+                  ${data.totalMatchedUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-ink-muted">Estimated avoided costs</dt>
+                <dd className="font-bold text-ink tabular-nums">
+                  ~${data.totalSavingsUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-ink-muted">Matches</dt>
+                <dd className="font-bold text-ink tabular-nums">{data.matches.length}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-ink-muted">Unmatched needs</dt>
+                <dd className="font-bold text-ink tabular-nums">{data.unmatchedCount}</dd>
+              </div>
+            </dl>
+          )}
+
+          {matched && !isLoading && !error && data?.matches.length ? (
+            <ul className="mt-4 space-y-2">
+              {data.matches.map((m) => {
+                const guardianLeg =
+                  m.intentA.participantId.toLowerCase().startsWith('guardian-liquidity-') ||
+                  m.intentB.participantId.toLowerCase().startsWith('guardian-liquidity-');
+                return (
+                  <li
+                    key={m.matchId}
+                    className="rounded-xl border border-line bg-surface p-3 text-sm leading-relaxed text-ink"
+                  >
+                    <span className="font-black">{m.intentA.sellCurrency}</span> →{" "}
+                    <span className="font-black">{m.intentB.sellCurrency}</span> ·{" "}
+                    <span className="font-bold tabular-nums">{m.matchedAmount.toLocaleString()}</span>{" "}
+                    matched at <span className="font-mono">{m.rate.toFixed(4)}</span>
+                    {guardianLeg && (
+                      <span
+                        className="mt-1 block text-3xs font-bold text-ink-muted"
+                        data-testid={`fx-guardian-match-${m.matchId}`}
+                      >
+                        Filled by Guardian standing liquidity — the pool’s
+                        always-on mid-market quote.
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+
+          {matched && !isLoading && !error && data?.bootstrapNote && (
+            <p
+              className="mt-3 text-xs text-ink-muted leading-snug"
+              data-testid="fx-bootstrap-note"
+            >
+              {data.bootstrapNote}
+            </p>
+          )}
+
+          {matched && !isLoading && !error && data && (
+            <footer className="mt-4 text-xs text-ink-muted leading-snug">
+              {data.rateSourceNote
+                ? `Mid-market via ${data.rateSourceNote}.`
+                : "Matching against the live mid-market."}{" "}
+              {typeof data.poolSize === 'number' && data.poolSize > 0
+                ? `Matched against ${data.poolSize} open intent${data.poolSize === 1 ? '' : 's'} in the pool. `
+                : !isLoading
+                  ? 'No open intents in the pool this run. '
+                  : ''}
+              Real matches anchor on-chain to the region-canonical ledger.
+            </footer>
+          )}
+
+          {/* Settlement-native credit file — the MSME credit layer's user surface.
+              Walletless visitors have no file (null → hidden); a thin file is
+              rendered as the honest data it is, never dressed up. */}
+          {creditProfile && !creditProfile.synthetic && (
+            <CreditFileSection profile={creditProfile} />
+          )}
+        </div>
+      ) : !matched ? (
         <div data-testid="fx-phase-intent">
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {currencyField("sell", sellCurrency, setSellCurrency)}
-            <label className="flex-1 min-w-0">
-              <span className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
-                Amount
-              </span>
-              <input
-                type="number"
-                min="0"
-                inputMode="decimal"
-                value={sellAmount}
-                onChange={(e) => setSellAmount(e.target.value)}
-                placeholder="e.g. 500000"
-                aria-label="Amount to convert"
-                className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-white dark:bg-gray-900 border border-teal-200 dark:border-teal-800 text-sm font-bold text-teal-900 dark:text-teal-100 transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60"
-              />
-            </label>
             {currencyField("buy", buyCurrency, setBuyCurrency)}
           </div>
+          <label className="mt-3 block">
+            <span className="text-sm font-semibold text-ink">Amount</span>
+            <input
+              type="number"
+              min="0"
+              inputMode="decimal"
+              value={sellAmount}
+              onChange={(e) => setSellAmount(e.target.value)}
+              placeholder="e.g. 500000"
+              aria-label="Amount to convert"
+              className="mt-1 w-full min-h-11 px-3 py-2 rounded-xl bg-surface border border-line text-lg font-bold text-ink transition-colors focus:outline-none focus:ring-2 focus:ring-teal-500/60"
+            />
+          </label>
 
           {(sellCurrency && !isKnownCurrency(sellCurrency)) ||
           (buyCurrency && !isKnownCurrency(buyCurrency)) ? (
@@ -247,232 +403,122 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             </p>
           ) : null}
 
-          <div className="mt-3 flex flex-wrap items-center gap-1.5">
-            {CORRIDOR_PRESETS.map((p) => (
-              <button
-                key={p.label}
-                type="button"
-                onClick={() => {
-                  setSellCurrency(p.sell);
-                  setBuyCurrency(p.buy);
-                }}
-                className="min-h-11 px-3 py-1.5 -my-1 rounded-full border border-teal-200 dark:border-teal-800 text-2xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100/60 dark:hover:bg-teal-900/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/60"
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
           {midQuote && (
             <p
-              className="mt-3 text-2xs text-teal-700/80 dark:text-teal-300/80 tabular-nums"
+              className="mt-3 text-sm text-ink-muted tabular-nums"
               data-testid="fx-mid-rate"
             >
-              Mid-market now · 1 {sellCurrency.toUpperCase()} ={" "}
+              Mid-market · 1 {sellCurrency.toUpperCase()} ={" "}
               {formatMidRate(midQuote.rate)} {buyCurrency.toUpperCase()}
-              {midQuote.date ? ` · table of ${midQuote.date}` : ""} — the
-              rate a match settles at.
+              {midQuote.date ? ` · Rates as of ${midQuote.date}` : ""}
             </p>
           )}
 
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!canMatch || isLoading}
-              className="min-h-11 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
-            >
-              {isLoading ? "Matching…" : "Match my intent"}
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setSellCurrency(initialSell ?? "JMD");
-                setBuyCurrency(initialBuy ?? "BBD");
-                setSellAmount("");
-              }}
-              className="min-h-11 px-3 py-2 rounded-xl text-xs font-bold text-teal-700 dark:text-teal-300 hover:bg-teal-100/60 dark:hover:bg-teal-900/30 transition-colors"
-            >
-              Reset
-            </button>
-          </div>
-
-          <p className="mt-3 text-3xs text-teal-700/60 dark:text-teal-300/60 leading-snug">
-            Weighing a future payment instead?{" "}
-            <button
-              type="button"
-              onClick={() => navigateWithIntent("protect", { source: "exchange", lens: "cycle" })}
-              className="font-semibold underline underline-offset-2 hover:text-teal-900 dark:hover:text-teal-100"
-            >
-              See what FX timing costs across a whole cycle →
-            </button>
-          </p>
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={!canMatch || isLoading}
+            className="mt-4 w-full min-h-11 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+          >
+            {isLoading ? "Matching…" : "Find a match"}
+          </button>
         </div>
       ) : (
         <div data-testid="fx-phase-review">
           {!address && (
-            <div
-              className="mb-3 rounded-xl border border-teal-200 dark:border-teal-800 bg-white/70 dark:bg-gray-900/60 p-3"
+            <p
+              className="mb-3 text-sm text-ink-muted leading-relaxed"
               data-testid="fx-observer-banner"
             >
-              <p className="text-xs text-teal-800 dark:text-teal-200 leading-relaxed">
-                <span className="font-black">You&apos;re previewing the live matching engine.</span>{" "}
-                Your intent runs against the real pool and the real mid-market,
-                but posting it for future counterparties and settling need a
-                connected wallet.
-              </p>
-            </div>
+              Live preview · nothing posted. Connect a wallet to post your
+              intent or settle a match.
+            </p>
           )}
-          {error ? (
-            <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50/60 dark:bg-amber-950/20 p-3">
-              <p className="text-xs text-amber-800 dark:text-amber-200">{error}</p>
+          {isLoading ? (
+            <p className="text-sm text-ink-muted" role="status">
+              Looking for an opposing currency need…
+            </p>
+          ) : error ? (
+            <div>
+              <p className="text-sm font-bold text-ink">Matching is unavailable</p>
+              <p className="mt-1 text-sm text-ink-muted leading-relaxed">
+                We couldn’t check the matching pool. Edit your need and try
+                again.
+              </p>
               <button
                 type="button"
-                onClick={() => setMatched(false)}
-                className="mt-2 text-xs font-bold text-amber-700 dark:text-amber-300 underline"
+                onClick={editYourNeed}
+                className="mt-2 min-h-tap text-sm font-bold text-teal-700 dark:text-teal-300 underline underline-offset-2"
               >
-                Edit my intent
+                Edit your need
               </button>
             </div>
-          ) : (
+          ) : data ? (
             <>
-              {/* The match artefact: coins link when the pool matched, seal
-                  when a leg settles on-chain. State-driven (§5) — the object
-                  replays only if this subtree remounts. */}
-              {data && data.matches.length > 0 && (
-                <div className="mb-3" data-testid="fx-net-pair">
-                  <RiveNetPair
-                    size={170}
-                    leftColor={codeCoinTint(sellCurrency)}
-                    rightColor={codeCoinTint(buyCurrency)}
-                    settled={pairSealed}
-                  />
-                </div>
-              )}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-3xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matched</div>
-                  <div className="mt-1 text-lg font-black text-teal-900 dark:text-teal-100 tabular-nums">
-                    {isLoading ? "…" : data ? `$${data.totalMatchedUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "$0"}
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-3xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Saved</div>
-                  <div className="mt-1 text-lg font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
-                    {isLoading ? "…" : data ? `~$${data.totalSavingsUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}` : "~$0"}
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-3xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Matches</div>
-                  <div className="mt-1 text-lg font-black text-teal-900 dark:text-teal-100 tabular-nums">
-                    {isLoading ? "…" : data ? data.matches.length : 0}
-                  </div>
-                </div>
-                <div className="rounded-xl bg-white dark:bg-gray-900 border border-teal-100 dark:border-teal-900 p-3">
-                  <div className="text-3xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">Unmatched</div>
-                  <div className="mt-1 text-lg font-black text-teal-900 dark:text-teal-100 tabular-nums">
-                    {isLoading ? "…" : data ? data.unmatchedCount : 0}
-                  </div>
-                </div>
-              </div>
-
-              {data && data.matches.length === 0 && !isLoading && (
-                <div className="mt-4 rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3">
-                  <p className="text-xs text-teal-800 dark:text-teal-200 leading-relaxed">
-                    No live counterparty needs{' '}
-                    <span className="font-black">
-                      {sellCurrency} ↔ {buyCurrency}
-                    </span>{' '}
-                    at mid-market right now — the engine matches opposing
-                    flows exactly; it never invents one.
-                  </p>
-                  {address ? (
-                    <p className="mt-1.5 text-2xs text-teal-700 dark:text-teal-300 leading-relaxed">
-                      Your intent stays open for the next matching cycle — the
-                      first counterparty who posts the opposing leg gets matched
-                      automatically, and you settle the net from your wallet.
-                      Guardian standing liquidity already covers BBD↔JMD and
-                      TTD↔JMD at mid-market.
-                    </p>
-                  ) : (
-                    <p className="mt-1.5 text-2xs text-teal-700 dark:text-teal-300 leading-relaxed">
-                      Connect a wallet to post your intent into the pool so the
-                      next counterparty — tomorrow, next week — matches against
-                      it. BBD↔JMD and TTD↔JMD carry Guardian standing liquidity
-                      at mid-market right now.
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {data?.matches.length ? (
-                <ul className="mt-4 space-y-2">
-                  {data.matches.map((m) => {
-                    const guardianLeg =
-                      m.intentA.participantId.toLowerCase().startsWith('guardian-liquidity-') ||
-                      m.intentB.participantId.toLowerCase().startsWith('guardian-liquidity-');
-                    return (
-                      <li
-                        key={m.matchId}
-                        className="rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3 text-xs leading-relaxed text-teal-800 dark:text-teal-200"
-                      >
-                        <span className="font-black">{m.intentA.sellCurrency}</span> →{" "}
-                        <span className="font-black">{m.intentB.sellCurrency}</span> ·{" "}
-                        <span className="font-bold tabular-nums">{m.matchedAmount.toLocaleString()}</span>{" "}
-                        matched at <span className="font-mono">{m.rate.toFixed(4)}</span>
-                        {guardianLeg && (
-                          <span
-                            className="mt-1 block text-3xs font-bold text-teal-600 dark:text-teal-400"
-                            data-testid={`fx-guardian-match-${m.matchId}`}
-                          >
-                            Filled by Guardian standing liquidity — the pool’s
-                            always-on mid-market quote.
-                          </span>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-              ) : null}
-
-              {data?.bootstrapNote && (
-                <p
-                  className="mt-3 text-3xs text-teal-700/80 dark:text-teal-300/80 leading-snug"
-                  data-testid="fx-bootstrap-note"
-                >
-                  {data.bootstrapNote}
+              {data.rateDate && (
+                <p className="text-xs text-ink-muted tabular-nums">
+                  Rates as of {data.rateDate}
                 </p>
               )}
-
-              <footer className="mt-4 text-3xs text-teal-700/70 dark:text-teal-300/70 leading-snug">
-                {data && data.rateSourceNote
-                  ? `Mid-market via ${data.rateSourceNote}.`
-                  : "Matching against the live mid-market."}{" "}
-                {typeof data?.poolSize === 'number' && data.poolSize > 0
-                  ? `Matched against ${data.poolSize} open intent${data.poolSize === 1 ? '' : 's'} in the pool. `
-                  : data && !isLoading
-                    ? 'No open intents in the pool this run. '
-                    : ''}
-                Real matches anchor on-chain to the region-canonical ledger.
-              </footer>
-
-              <SettlementSection
-                myDebts={myDebts}
-                myReceipts={myReceipts}
-                isSettling={isSettling}
-                settleError={settleError}
-                onSettle={handleSettle}
-              />
+              {data.matches.length > 0 ? (
+                <>
+                  <p className="text-3xl font-black text-ink tabular-nums">
+                    ${data.totalMatchedUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}{" "}
+                    matched
+                  </p>
+                  <p className="mt-1 text-sm text-ink-muted">
+                    {data.matches.length}{" "}
+                    {data.matches.length === 1 ? "match" : "matches"} at
+                    mid-market
+                  </p>
+                  {/* The match artefact: coins link when the pool matched, seal
+                      when a leg settles on-chain. State-driven (§5) — the object
+                      replays only if this subtree remounts. */}
+                  <div className="mt-3" data-testid="fx-net-pair">
+                    <RiveNetPair
+                      size={170}
+                      leftColor={codeCoinTint(sellCurrency)}
+                      rightColor={codeCoinTint(buyCurrency)}
+                      settled={pairSealed}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-xl font-bold text-ink">No match yet</p>
+                  <p className="mt-1 text-sm text-ink-muted leading-relaxed">
+                    {sellCurrency} → {buyCurrency} has no opposing match in
+                    this check.
+                  </p>
+                  {address && (
+                    <p className="mt-1 text-sm text-ink-muted leading-relaxed">
+                      Your intent remains open for a future opposing match.
+                    </p>
+                  )}
+                </>
+              )}
+              <button
+                type="button"
+                onClick={editYourNeed}
+                className="mt-3 min-h-tap text-sm font-bold text-ink-muted hover:text-ink underline underline-offset-2 transition-colors"
+              >
+                Edit your need
+              </button>
             </>
+          ) : (
+            <p className="text-sm text-ink-muted" role="status">
+              Waiting for matching results…
+            </p>
           )}
-        </div>
-      )}
 
-      {/* Settlement-native credit file — the MSME credit layer's user surface.
-          Walletless visitors have no file (null → hidden); a thin file is
-          rendered as the honest data it is, never dressed up. */}
-      {creditProfile && !creditProfile.synthetic && (
-        <CreditFileSection profile={creditProfile} />
+          <SettlementSection
+            myDebts={myDebts}
+            myReceipts={myReceipts}
+            isSettling={isSettling}
+            settleError={settleError}
+            onSettle={handleSettle}
+          />
+        </div>
       )}
     </div>
   );
@@ -506,25 +552,25 @@ function CreditFileSection({
           : 'No file yet';
   return (
     <div
-      className="mt-4 rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3"
+      className="mt-4 rounded-xl border border-line bg-surface p-3"
       data-testid="fx-credit-file"
     >
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-3xs font-black uppercase tracking-wider text-teal-700 dark:text-teal-300">
+        <p className="text-xs font-black uppercase tracking-wider text-ink-muted">
           Your credit file
         </p>
-        <p className="text-xs font-black text-teal-900 dark:text-teal-100" data-testid="fx-credit-score">
+        <p className="text-sm font-black text-ink" data-testid="fx-credit-score">
           {profile.score !== null ? profile.score : strengthLabel}
         </p>
       </div>
-      <p className="text-2xs text-teal-800/90 dark:text-teal-200/90 mt-1" data-testid="fx-credit-summary">
+      <p className="text-sm text-ink mt-1" data-testid="fx-credit-summary">
         {profile.settlementsCompleted >= 3
           ? `${profile.settlementsCompleted} verified settlements · $${Math.round(profile.settledVolumeUsd).toLocaleString()} · ${profile.counterparties} counterpart${profile.counterparties === 1 ? 'y' : 'ies'} · every settled trade builds this file.`
           : profile.settlementsCompleted > 0
             ? `${profile.settlementsCompleted} verified settlement${profile.settlementsCompleted === 1 ? '' : 's'} so far — your next settled trade strengthens this file.`
             : 'No verified settlements yet — your first settled trade starts this file. Like a sou-sou, the circle remembers who honours their hand; coordination today underwrites working capital tomorrow.'}
       </p>
-      <p className="text-3xs text-teal-700/70 dark:text-teal-300/70 mt-0.5">
+      <p className="text-xs text-ink-muted mt-0.5">
         {profile.lendingReadiness}
       </p>
     </div>
@@ -556,13 +602,13 @@ function SettlementSection({
       {myDebts.map((s) => (
         <div
           key={s.settlementId}
-          className="rounded-xl border border-amber-200 dark:border-amber-900/60 bg-amber-50/60 dark:bg-amber-950/20 p-3"
+          className="rounded-xl border border-line bg-surface p-3"
         >
-          <p className="text-xs font-bold text-amber-900 dark:text-amber-100">
+          <p className="text-sm font-bold text-ink">
             You owe {s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}{" "}
             {s.settlementCurrency} to {s.toParticipant.slice(0, 6)}…{s.toParticipant.slice(-4)}
           </p>
-          <p className="text-3xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+          <p className="text-xs text-ink-muted mt-0.5">
             Sent from your wallet on Celo — the transfer is verified on-chain
             before the match is marked settled.
           </p>
@@ -570,7 +616,7 @@ function SettlementSection({
             type="button"
             onClick={() => onSettle(s)}
             disabled={isSettling}
-            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
           >
             {isSettling ? "Sending…" : `Send ${s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${s.settlementCurrency}`}
           </button>
@@ -582,7 +628,7 @@ function SettlementSection({
       {myReceipts.map((s) => (
         <div
           key={s.settlementId}
-          className="rounded-xl border border-teal-100 dark:border-teal-900 bg-white/50 dark:bg-gray-900/40 p-3 text-xs text-teal-800 dark:text-teal-200"
+          className="rounded-xl border border-line bg-surface p-3 text-sm text-ink"
         >
           {s.status === 'settled' ? (
             <>

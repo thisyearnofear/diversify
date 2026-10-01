@@ -76,6 +76,12 @@ const BENCHMARK_COIN: Record<Benchmark, { glyph: string; color: string }> = {
   XAU: { glyph: 'Au', color: BENCHMARK_COLORS.XAU },
 };
 
+const BENCHMARK_SHORT: Record<Benchmark, string> = {
+  USD: 'USD',
+  EUR: 'EUR',
+  XAU: 'Gold',
+};
+
 /**
  * One accent for the whole moment. The traffic-light (red/amber/green) is
  * Western loss-aversion framing — red means luck in some cultures, and it
@@ -105,7 +111,7 @@ function DeltaNumber({ delta, accent }: { delta: number; accent: string }) {
     format: formatDelta,
   });
   return (
-    <div className="text-4xl font-black tabular-nums" style={{ color: accent }}>
+    <div className="text-5xl sm:text-6xl tracking-tight font-black tabular-nums" style={{ color: accent }}>
       <motion.span>{value}</motion.span>
     </div>
   );
@@ -320,14 +326,14 @@ export function CurrencyMomentCard({
           <div>
             {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
             <motion.div
-              className="mx-auto grid max-w-[360px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-5"
+              className="mx-auto grid max-w-[440px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-5"
               style={{ ...tilt.style, transformPerspective: 900 }}
               {...tilt.props}
             >
               <motion.div
                 animate={{ scale: reducedMotion ? 1 : localScale }}
                 transition={comparisonSettle}
-                className="w-full max-w-16 justify-self-end text-right sm:max-w-[92px] [&_svg]:max-w-full [&_svg]:h-auto"
+                className="w-full max-w-[72px] justify-self-end text-right sm:max-w-[112px] [&_svg]:max-w-full [&_svg]:h-auto"
               >
                 {/* The local coin is a door: tap flips it to its back —
                     flag + the newest dated event — and opens the story
@@ -359,7 +365,7 @@ export function CurrencyMomentCard({
                         </span>
                       ) : (
                         <Coin
-                          size={92}
+                          size={112}
                           symbol={moment.currencyCode}
                           color={accent}
                           shine={reducedMotion || hasFlipped || acted || inspecting ? false : 'once'}
@@ -379,7 +385,8 @@ export function CurrencyMomentCard({
                       transition={springPress}
                       aria-label={`Story of the ${moment.currencyCode}`}
                       aria-pressed={currencySelected}
-                      className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      title="Currency story"
+                      className="rounded-full ring-1 ring-line transition-shadow hover:ring-2 hover:ring-ink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                     >
                       {face}
                     </motion.button>
@@ -406,15 +413,22 @@ export function CurrencyMomentCard({
                 <Coin size={72} symbol={benchmarkCoin.glyph} color={benchmarkCoin.color} />
               </motion.div>
             </motion.div>
-            <div className="mt-1 text-2xs font-semibold text-gray-400 dark:text-gray-500">
-              buying power · {HORIZONS[moment.horizon].short} vs {moment.benchmarkLabel}
-            </div>
+            <h2 data-testid="home-reading" className="mt-2 text-xl sm:text-2xl font-bold text-ink">
+              {Math.abs(moment.delta) < 0.05
+                ? `${moment.currencyCode} buying power held steady`
+                : moment.delta < 0
+                  ? `${moment.currencyCode} buying power fell`
+                  : `${moment.currencyCode} buying power rose`}
+            </h2>
+            <p className="mt-1 text-sm text-ink-muted">
+              Over {HORIZONS[moment.horizon].label} against {moment.benchmarkLabel}
+            </p>
 
           {/* One personal consequence — the amount is theirs to change */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <label className="inline-flex items-baseline gap-1.5">
-                <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">Example amount</span>
+                <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Example amount</span>
                 <span className="font-bold">{moment.currencyCode}</span>
                 <input
                   type="number"
@@ -463,7 +477,7 @@ export function CurrencyMomentCard({
             data-testid="home-consequence"
             aria-live="polite"
             aria-atomic="true"
-            className="text-sm text-gray-700 dark:text-gray-300 mt-1"
+            className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 mt-1"
           >
             <motion.span
               key={`${comparisonKey}:${effectiveUnit}`}
@@ -493,7 +507,7 @@ export function CurrencyMomentCard({
             testId="home-live-line"
             beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
             alive={liveAlive && !currencySelected && !acted && !inspecting}
-            className="mt-1.5 block text-2xs font-semibold text-gray-500 dark:text-gray-400"
+            className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
           />
 
           {/* Controls — the same segmented + coin motifs learned in onboarding */}
@@ -539,11 +553,16 @@ export function CurrencyMomentCard({
                     }}
                     whileTap={reducedMotion ? undefined : press}
                     transition={springPress}
-                    className={`min-h-tap min-w-tap inline-flex items-center justify-center rounded-full transition-opacity focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                      selected ? 'opacity-100' : 'opacity-45 hover:opacity-80'
+                    className={`min-h-tap min-w-tap inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                      selected
+                        ? 'bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-900 dark:ring-white'
+                        : 'ring-1 ring-transparent hover:bg-gray-50 dark:hover:bg-gray-800/60'
                     }`}
                   >
                     <Coin size={34} symbol={c.glyph} color={c.color} variant="asset" />
+                    <span className={`text-2xs font-bold ${selected ? 'text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
+                      {BENCHMARK_SHORT[b]}
+                    </span>
                   </motion.button>
                 );
               })}
@@ -560,7 +579,7 @@ export function CurrencyMomentCard({
           onClick={onProtect}
           className="mt-4 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
-          {protectLabel ?? "See Shield"}
+          {protectLabel ?? "Review protection plan"}
         </button>
       )}
 

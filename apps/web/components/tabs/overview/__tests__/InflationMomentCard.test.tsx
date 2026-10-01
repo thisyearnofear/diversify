@@ -31,7 +31,7 @@ describe('InflationMomentCard — honest fallback hero', () => {
     expect(screen.getByText(/less buying power a year/)).toHaveTextContent('≈ 280 less buying power a year');
     expect(screen.getByText('local currency')).toBeInTheDocument();
     expect(screen.getByText(/as of 2025/)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'See Shield' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review protection plan' })).not.toBeInTheDocument();
   });
 
   it('the country picker is the heading — one select, fired on change', () => {
@@ -73,7 +73,7 @@ describe('InflationMomentCard — honest fallback hero', () => {
     });
     expect(onAmountChange).toHaveBeenCalledWith(25000);
 
-    fireEvent.click(screen.getByRole('button', { name: 'See Shield' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Review protection plan' }));
     expect(onProtect).toHaveBeenCalledTimes(1);
   });
 
@@ -89,6 +89,6 @@ describe('InflationMomentCard — honest fallback hero', () => {
     expect(
       screen.getByRole('button', { name: 'See your Buen Vivir shield' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'See Shield' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Review protection plan' })).not.toBeInTheDocument();
   });
 });

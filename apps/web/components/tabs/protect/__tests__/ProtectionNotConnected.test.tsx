@@ -147,7 +147,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       // Empty-hole morph states the plan's reserve; the connect ask lives
       // only on the button and the plan name only on the badge.
       expect(within(ring).getByText("dollar reserve")).toBeInTheDocument();
-      expect(within(ring).queryByText(/connect/i)).not.toBeInTheDocument();
+      expect(within(screen.getByTestId("ring-hole")).queryByText(/connect/i)).not.toBeInTheDocument();
       // One mention only — the badge ("Africapitalism ▾").
       expect(within(ring).getAllByText(/Africapitalism/)).toHaveLength(1);
       expect(within(ring).getByTestId("plan-badge")).toHaveTextContent("Africapitalism");
@@ -219,6 +219,23 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       expect(
         screen.queryByRole("button", { name: /Connect to use/ }),
       ).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("committed walletless puts the connect CTA inside the controls slot — before the legend, never below it", () => {
+    mockState.financialStrategy = "africapitalism";
+    try {
+      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      const cta = screen.getByRole("button", { name: "Connect wallet" });
+      const legend = screen.getByTestId("shield-legend");
+      expect(
+        cta.compareDocumentPosition(legend) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(
+        screen.getAllByRole("button", { name: "Connect wallet" }),
+      ).toHaveLength(1);
     } finally {
       mockState.financialStrategy = null;
     }

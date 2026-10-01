@@ -91,10 +91,10 @@ export function InflationMomentCard({
         transition={{ duration: 0.25 }}
         className="mt-3"
       >
-        <div className="text-4xl font-black tabular-nums" style={{ color: GOLD.color }}>
+        <div className="text-5xl sm:text-6xl tracking-tight font-black tabular-nums" style={{ color: GOLD.color }}>
           {moment.inflationRate.toFixed(1)}%
         </div>
-        <div className="text-2xs font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500 mt-1">
+        <div className="text-sm font-semibold text-ink-muted mt-1">
           average inflation · {moment.region} a year
         </div>
       </motion.div>
@@ -102,8 +102,8 @@ export function InflationMomentCard({
       {/* One personal consequence — the amount is theirs to change */}
       <p className="text-sm text-gray-700 dark:text-gray-300 mt-3">
         <label className="inline-flex items-baseline gap-1.5">
-          <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">Example amount</span>
-          <span className="text-2xs font-semibold text-gray-400 dark:text-gray-500">local currency</span>
+          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">Example amount</span>
+          <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">local currency</span>
           <input
             type="number"
             min={0}
@@ -115,7 +115,7 @@ export function InflationMomentCard({
           />
         </label>
       </p>
-      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+      <p className="text-lg sm:text-xl font-semibold text-gray-700 dark:text-gray-300 mt-1">
         ≈{' '}
         <strong className="tabular-nums" style={{ color: GOLD.color }}>
           {fmt(moment.annualImpact)}
@@ -131,7 +131,7 @@ export function InflationMomentCard({
           onClick={onProtect}
           className="mt-4 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
         >
-          {protectLabel ?? "See Shield"}
+          {protectLabel ?? "Review protection plan"}
         </button>
       )}
 

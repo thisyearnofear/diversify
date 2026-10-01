@@ -262,6 +262,13 @@ export function ProtectionNotConnected({
                     haptics.tap();
                   }}
                 />
+                {!balance.isPreviewing && !sleeveOpen && (
+                  <WalletButton
+                    variant="primary"
+                    className="w-full mt-3"
+                    connectLabel="Connect wallet"
+                  />
+                )}
               </div>
             ) : undefined
           }
@@ -315,7 +322,7 @@ export function ProtectionNotConnected({
 
       {/* The one CTA — attaches to the object, no card wrapper. While
           comparing, "Use this plan" is the one CTA instead. */}
-      {!comparing && !balance.isPreviewing && !sleeveOpen && (
+      {!showRing && !comparing && !balance.isPreviewing && !sleeveOpen && (
         <WalletButton variant="primary" className="w-full" connectLabel="Connect wallet" />
       )}
     </div>

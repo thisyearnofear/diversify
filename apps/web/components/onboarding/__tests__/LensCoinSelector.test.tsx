@@ -200,3 +200,119 @@ describe("LensCoinSelector — alive=false (acting rail)", () => {
     expect(onSelect).toHaveBeenCalledWith("three");
   });
 });
+
+describe("LensCoinSelector — labelMode=full (Shield rail)", () => {
+  const fullLenses = [
+    { id: "gotong", label: "Gotong Royong", glyph: "◐", accent: "#123456" },
+    { id: "global", label: "Global Diversification", glyph: "◑", accent: "#234567" },
+    { id: "three", label: "Three Lens", glyph: "◒", accent: "#345678" },
+  ];
+
+  it("renders full names without truncation in fixed-width slots", () => {
+    render(
+      <LensCoinSelector
+        lenses={fullLenses}
+        selected={null}
+        onSelect={vi.fn()}
+        labelMode="full"
+        scrollable
+      />,
+    );
+    const gotong = screen.getByRole("radio", { name: "Gotong Royong" });
+    expect(gotong).toHaveStyle({ width: "144px" });
+    expect(screen.getByText("Gotong Royong").className).not.toContain("truncate");
+    const global = screen.getByRole("radio", { name: "Global Diversification" });
+    expect(global).toHaveTextContent("Global Diversification");
+  });
+
+  it("marks the active coin with an accent outline and check — no continuous spin", () => {
+    motionSpy.recorded = [];
+    const { container } = render(
+      <LensCoinSelector
+        lenses={fullLenses}
+        selected="gotong"
+        onSelect={vi.fn()}
+        labelMode="full"
+        scrollable
+      />,
+    );
+    const active = screen.getByRole("radio", { name: "Gotong Royong" });
+    expect(active).toHaveAttribute("aria-checked", "true");
+    const activeCoin = motionSpy.recorded
+      .filter((r) => r.tag === "span")
+      .find((r) => String(r.props.className ?? "").includes("lens-coin-active"));
+    const animate = activeCoin?.props.animate as Record<string, unknown>;
+    expect(Array.isArray(animate.rotateY)).toBe(false);
+    expect(animate.rotateY).toBe(0);
+    expect(animate.scale).toBe(1.15);
+    const outer = active.querySelector(".rounded-full") as HTMLElement;
+    expect(outer.style.boxShadow).toContain("#123456");
+    expect(container.querySelector(".lens-coin-pulse")).toBeNull();
+    expect(screen.getByText("✓")).toBeInTheDocument();
+  });
+
+  it("keeps the drag guard and aria radio wiring", () => {
+    const onSelect = vi.fn();
+    render(
+      <LensCoinSelector
+        lenses={fullLenses}
+        selected={null}
+        onSelect={onSelect}
+        labelMode="full"
+        scrollable
+      />,
+    );
+    fireEvent.click(screen.getByRole("radio", { name: "Global Diversification" }));
+    expect(onSelect).toHaveBeenCalledWith("global");
+    onSelect.mockClear();
+    dragState.ref.current = true;
+    fireEvent.click(screen.getByRole("radio", { name: "Three Lens" }));
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("is row-only: labelMode=full under the stage keeps pitch geometry and combine math", () => {
+    render(
+      <LensCoinSelector
+        lenses={fullLenses}
+        selected={null}
+        onSelect={vi.fn()}
+        labelMode="full"
+        presentation="stage"
+      />,
+    );
+    for (const lens of fullLenses) {
+      expect(screen.getByRole("radio", { name: lens.label })).toHaveStyle({ width: "68px" });
+    }
+    expect(screen.queryByText("Global Diversification")).not.toBeInTheDocument();
+    expect(screen.getAllByText("Global").length).toBeGreaterThan(0);
+  });
+
+  it("the full row is still even when alive: no turntable, breath loop, or shine", () => {
+    motionSpy.recorded = [];
+    const { container } = render(
+      <LensCoinSelector
+        lenses={fullLenses}
+        selected="global"
+        onSelect={vi.fn()}
+        labelMode="full"
+        scrollable
+      />,
+    );
+    const coins = motionSpy.recorded
+      .filter((r) => r.tag === "span")
+      .filter((r) => String(r.props.className ?? "").includes("lens-coin"));
+    expect(coins.length).toBeGreaterThan(0);
+    for (const rec of coins) {
+      const animate = rec.props.animate as Record<string, unknown>;
+      const transition = (rec.props.transition ?? {}) as Record<string, unknown>;
+      expect(Array.isArray(animate.rotateY)).toBe(false);
+      expect(Array.isArray(animate.y)).toBe(false);
+      expect(Array.isArray(animate.rotate)).toBe(false);
+      for (const t of Object.values(transition)) {
+        expect((t as Record<string, unknown>).repeat).not.toBe(Infinity);
+      }
+    }
+    expect(container.querySelector(".coin-shine, .coin-shine-once")).toBeNull();
+    expect(container.querySelector(".lens-coin-pulse")).toBeNull();
+  });
+});

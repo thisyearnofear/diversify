@@ -9,6 +9,7 @@ import { NETWORKS, isTestnetChain } from '../../config';
 import { usePortfolio } from '@/context/app/PortfolioContext';
 import { walletNeedsFunds } from '@/lib/wallet/wallet-nudge';
 import StatusBadge from '@/components/shared/StatusBadge';
+import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 
 // FarCaster Mini App supported chains (as of 2025)
 // Source: https://github.com/farcasterxyz/miniapps/discussions/240
@@ -83,7 +84,18 @@ export default function WalletButton({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showChainSelector, setShowChainSelector] = useState(false);
   const [dropUp, setDropUp] = useState(false);
+  const [hasAttemptedConnect, setHasAttemptedConnect] = useState(false);
+  const [feedbackUp, setFeedbackUp] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const socialAvailable = Boolean(
+    WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID,
+  );
+  const showConnectFeedback = Boolean(
+    hasAttemptedConnect && walletError && !isConnecting && !address,
+  );
+  useDismissibleLayer(showConnectFeedback, () =>
+    setHasAttemptedConnect(false),
+  );
   const prevAddressRef = useRef<string | null>(null);
   const portfolio = usePortfolio();
   const needsFunds = walletNeedsFunds({
@@ -114,6 +126,16 @@ export default function WalletButton({
   }, [showDropdown]);
 
   useEffect(() => {
+    if (!showConnectFeedback || !wrapperRef.current) return;
+    const rect = wrapperRef.current.getBoundingClientRect();
+    setFeedbackUp(rect.bottom + 220 > window.innerHeight && rect.top > 220);
+  }, [showConnectFeedback]);
+
+  useEffect(() => {
+    if (isConnecting) setHasAttemptedConnect(false);
+  }, [isConnecting]);
+
+  useEffect(() => {
     if (address && !prevAddressRef.current) {
       showToast("Wallet connected successfully", "success");
     }
@@ -124,10 +146,13 @@ export default function WalletButton({
   }, [address, onConnect, showToast]);
 
   const handleConnect = async () => {
+    setHasAttemptedConnect(false);
     try {
       await connect();
     } catch (error) {
       console.error("Error in WalletButton handleConnect:", error);
+    } finally {
+      setHasAttemptedConnect(true);
     }
   };
 
@@ -441,19 +466,40 @@ export default function WalletButton({
   // Detect if user likely has an injected wallet
   const hasInjectedWallet = typeof window !== 'undefined' && !!(window as typeof window & { ethereum?: unknown }).ethereum;
 
+  const connectTooltip = hasInjectedWallet
+    ? "Connect with MetaMask/Coinbase or other browser wallet"
+    : socialAvailable
+      ? "Connect with email, social login, or a supported wallet"
+      : "Connect with a browser wallet or open this page in your wallet app";
+
+  const connectFeedback = walletError
+    ? /^No wallet (found|extension found)/i.test(walletError)
+      ? {
+          heading: "Choose a wallet to continue",
+          body: socialAvailable
+            ? "Try connecting again to open email or social login, or use your wallet’s browser."
+            : "Open this page in your wallet’s browser, or enable a browser wallet extension. You can keep exploring without connecting.",
+        }
+      : /reject|denied|cancel|4001/i.test(walletError)
+        ? {
+            heading: "Connection cancelled",
+            body: "Nothing changed. Try again when you’re ready.",
+          }
+        : {
+            heading: "Couldn’t connect",
+            body: "Your wallet didn’t connect. Try again, or check your wallet app.",
+          }
+    : null;
+
   return (
-    <div className="flex flex-col items-end">
+    <div className="relative flex flex-col items-end" ref={wrapperRef}>
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={handleConnect}
-        className={`group relative flex items-center justify-center px-3 sm:px-5 py-2 min-h-tap rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
-        title={hasInjectedWallet ? "Connect with MetaMask/Coinbase or other browser wallet" : "Connect via WalletConnect, Email, or Social login"}
+        className={`relative flex items-center justify-center px-3 sm:px-5 py-2 min-h-tap rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
+        title={connectTooltip}
       >
-        {variant === 'primary' && (
-          <div className="absolute top-0 -left-10 w-10 h-full bg-white/20 skew-x-[25deg] group-hover:animate-[shine_1s_infinite]" />
-        )}
-
         <svg
           xmlns="http://www.w3.org/2000/svg"
           className="h-5 w-5 mr-2 hidden sm:block"
@@ -477,8 +523,52 @@ export default function WalletButton({
           </>
         )}
       </motion.button>
-      {walletError && (
-        <p className="text-red-500 text-xs mt-1 font-medium">{walletError}</p>
+      {showConnectFeedback && connectFeedback && (
+        <div
+          className={`absolute right-0 z-[60] w-[min(20rem,calc(100vw-3rem))] rounded-2xl border border-line bg-surface p-4 shadow-lg ${
+            feedbackUp ? 'bottom-full mb-2' : 'top-full mt-2'
+          }`}
+          role="status"
+        >
+          <div className="flex items-start gap-3">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 shrink-0 text-ink-muted mt-0.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"
+              />
+            </svg>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-ink">{connectFeedback.heading}</p>
+              <p className="mt-1 text-sm text-ink-muted leading-relaxed">{connectFeedback.body}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setHasAttemptedConnect(false)}
+              aria-label="Dismiss wallet guidance"
+              className="min-h-tap min-w-tap -m-2 flex items-center justify-center text-ink-muted hover:text-ink transition-colors"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={handleConnect}
+            className="mt-3 min-h-tap w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 transition-colors"
+          >
+            Try again
+          </button>
+        </div>
       )}
     </div>
   );
