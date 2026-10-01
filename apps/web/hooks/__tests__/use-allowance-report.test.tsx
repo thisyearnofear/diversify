@@ -23,7 +23,10 @@ vi.mock('@/components/ui/Toast', () => ({
 const RESETS = '2026-01-02T00:00:00.000Z';
 // The hook's fetch tap wraps window.fetch once per process, so assert on
 // our own spy reference rather than the (possibly wrapped) global.
-const mockFetch = vi.fn(async () => ({
+const mockFetch = vi.fn(async (_url?: unknown, _init?: unknown): Promise<{
+  ok: boolean;
+  json: () => Promise<Record<string, unknown>>;
+}> => ({
   ok: true,
   json: async () => ({
     remaining: 10,
@@ -64,5 +67,53 @@ describe('reportAllowance', () => {
     expect(result.current.earnedToday).toEqual(['share_app']);
     // And it must not trigger another fetch.
     expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('two mounted consumers stay in sync on refresh without cross-render broadcasts', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const changedSpy = vi.fn();
+    window.addEventListener('diversifi-allowance-changed', changedSpy);
+
+    const a = renderHook(() => useAllowance());
+    const b = renderHook(() => useAllowance());
+
+    await waitFor(() => {
+      expect(a.result.current.remaining).toBe(10);
+      expect(b.result.current.remaining).toBe(10);
+    });
+    expect(a.result.current.bonus).toBe(2);
+    expect(b.result.current.earnedToday).toEqual(['share_app']);
+
+    const reactWarnings = consoleError.mock.calls.filter(([arg]) =>
+      typeof arg === 'string' &&
+      (arg.includes('Cannot update a component') || arg.includes('Maximum update depth')),
+    );
+    expect(reactWarnings).toHaveLength(0);
+
+    changedSpy.mockClear();
+    mockFetch.mockClear();
+    mockFetch.mockImplementationOnce(async () => ({
+      ok: true,
+      json: async () => ({ remaining: 9 }),
+    }));
+
+    await act(async () => {
+      await a.result.current.refresh();
+    });
+
+    await waitFor(() => {
+      expect(a.result.current.remaining).toBe(9);
+      expect(b.result.current.remaining).toBe(9);
+    });
+    expect(a.result.current.bonus).toBe(2);
+    expect(b.result.current.bonus).toBe(2);
+    expect(a.result.current.earnedToday).toEqual(['share_app']);
+    expect(changedSpy).toHaveBeenCalledTimes(1);
+    expect(mockFetch.mock.calls.filter(([url]) =>
+      String(url).includes('/api/agent/credits'),
+    ).length).toBe(1);
+
+    window.removeEventListener('diversifi-allowance-changed', changedSpy);
+    consoleError.mockRestore();
   });
 });

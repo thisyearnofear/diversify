@@ -335,6 +335,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           selectButton("WETH", "ring-select-weth"),
           selectButton("PAXG", "ring-select-paxg"),
           selectButton("cREAL", "ring-select-creal"),
+          selectButton("cUSD", "ring-select-cusd"),
         ),
         controls,
       );
@@ -531,6 +532,7 @@ describe("ProtectionTab — instrument shapes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFinancialStrategy = null;
+    profileState.customPlan = null;
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     demoState.isActive = false;
@@ -670,8 +672,11 @@ describe("ProtectionTab — instrument shapes", () => {
           chainId: 42220,
           chainName: "Celo",
           totalValue: 1000,
-          tokenCount: 1,
-          balances: [{ symbol: "KESm", value: 600, chainId: 42220 }],
+          tokenCount: 2,
+          balances: [
+            { symbol: "KESm", value: 600, chainId: 42220 },
+            { symbol: "USDC", value: 400, chainId: 42220 },
+          ],
         },
       ],
     } as any;
@@ -699,8 +704,11 @@ describe("ProtectionTab — instrument shapes", () => {
           chainId: 42220,
           chainName: "Celo",
           totalValue: 1000,
-          tokenCount: 1,
-          balances: [{ symbol: "KESm", value: 600, chainId: 42220 }],
+          tokenCount: 2,
+          balances: [
+            { symbol: "KESm", value: 600, chainId: 42220 },
+            { symbol: "USDC", value: 400, chainId: 42220 },
+          ],
         },
       ],
     } as any;
@@ -724,6 +732,121 @@ describe("ProtectionTab — instrument shapes", () => {
     const cta = screen.getByRole("button", { name: "Ask Guardian what to do with WETH" });
     fireEvent.click(cta);
     expect(mockAdvisor).toHaveBeenCalledWith(expect.stringContaining("WETH"));
+  });
+
+  it("exposure-grouped held %: the inspector reads the bucket, not the ticker", () => {
+    profileState.customPlan = {
+      from: "islamic",
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 50 },
+        { exposure: "XAU", target: 50 },
+      ],
+    };
+    mockFinancialStrategy = "custom";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    const grouped = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 650,
+          tokenCount: 3,
+          balances: [
+            { symbol: "USDm", value: 400 },
+            { symbol: "EURm", value: 150 },
+            { symbol: "KESm", value: 100 },
+          ],
+        },
+        {
+          chainId: 42161,
+          chainName: "Arbitrum",
+          totalValue: 350,
+          tokenCount: 2,
+          balances: [
+            { symbol: "USDC", value: 250 },
+            { symbol: "PAXG", value: 100 },
+          ],
+        },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={grouped} />);
+    fireEvent.click(screen.getByTestId("ring-select-cusd"));
+    expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
+    expect(screen.getByText(/15 points over/)).toBeInTheDocument();
+    expect(screen.queryByText(/On target/)).not.toBeInTheDocument();
+    expect(screen.getByText(/65% held/)).toBeInTheDocument();
+    const cta = screen.getByRole("button", { name: "Review allocation with Guardian" });
+    fireEvent.click(cta);
+    expect(mockNavigateToGuardian).toHaveBeenCalledTimes(1);
+    expect(mockNavigateToGuardian.mock.calls[0][0]?.prompt).toContain(
+      "15 points over target",
+    );
+    expect(mockNavigateToGuardian.mock.calls[0][0]?.prompt).toContain(
+      "Explain the options without proposing an automatic move",
+    );
+  });
+
+  it("held-below-target still reads light; within ±2 stays on target", () => {
+    profileState.customPlan = {
+      from: "islamic",
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 50 },
+        { exposure: "XAU", target: 50 },
+      ],
+    };
+    mockFinancialStrategy = "custom";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    const light = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 1000,
+          tokenCount: 2,
+          balances: [
+            { symbol: "USDm", value: 400 },
+            { symbol: "PAXG", value: 600 },
+          ],
+        },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={light} />);
+    fireEvent.click(screen.getByTestId("ring-select-cusd"));
+    expect(screen.getByText(/10 points light/)).toBeInTheDocument();
+    cleanup();
+
+    const onTarget = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 1000,
+      chains: [
+        {
+          chainId: 42220,
+          chainName: "Celo",
+          totalValue: 1000,
+          tokenCount: 2,
+          balances: [
+            { symbol: "USDm", value: 490 },
+            { symbol: "PAXG", value: 510 },
+          ],
+        },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={onTarget} />);
+    fireEvent.click(screen.getByTestId("ring-select-cusd"));
+    expect(screen.getByText(/On target/)).toBeInTheDocument();
+    expect(screen.queryByText(/points light|points over/)).not.toBeInTheDocument();
   });
 
   it("empty-wallet slice: the CTA is fund-the-plan, not a dead end", () => {
@@ -1899,6 +2022,7 @@ describe("ProtectionTab — shared plan card + provenance flip", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockFinancialStrategy = null;
+    profileState.customPlan = null;
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     demoState.isActive = false;

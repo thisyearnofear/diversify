@@ -39,7 +39,13 @@ export function canSafelyExecute(freshness: PortfolioFreshness): boolean {
 }
 
 export function getWalletHoldings(portfolio: MultichainPortfolio | null | undefined): WalletHolding[] {
-  const balances = (portfolio?.chains ?? []).flatMap((chain) => chain.balances ?? []);
+  const balances = (portfolio?.chains ?? []).flatMap((chain) =>
+    (chain.balances ?? []).map((balance) => ({
+      ...balance,
+      chainId: balance.chainId ?? chain.chainId,
+      chainName: balance.chainName ?? chain.chainName,
+    })),
+  );
   const byToken = new Map<string, TokenBalance[]>();
 
   for (const balance of balances) {
@@ -137,9 +143,9 @@ function heldAsParts(holding: WalletHolding | undefined): [string, string, numbe
   for (const b of holding?.balances ?? []) {
     if (!(b.value > 0)) continue;
     const symbol = displayToken(b.symbol);
-    const key = `${symbol}|${b.chainName}`;
+    const key = `${symbol}|${b.chainName ?? ''}`;
     const prev = parts.get(key);
-    parts.set(key, [symbol, b.chainName, (prev?.[2] ?? 0) + b.value]);
+    parts.set(key, [symbol, b.chainName ?? '', (prev?.[2] ?? 0) + b.value]);
   }
   return [...parts.values()].sort((a, b) => b[2] - a[2]);
 }
@@ -149,7 +155,7 @@ export function heldAsLine(holding: WalletHolding | undefined, totalUsd: number)
   const parts = heldAsParts(holding);
   if (parts.length === 0 || totalUsd <= 0) return null;
   return `Held as: ${parts
-    .map(([symbol, chain, value]) => `${symbol} · ${chain} ${Math.round((value / totalUsd) * 100)}%`)
+    .map(([symbol, chain, value]) => `${symbol}${chain ? ' · ' + chain : ''} ${Math.round((value / totalUsd) * 100)}%`)
     .join(', ')}`;
 }
 

@@ -59,7 +59,7 @@ import {
   type CustomPlan,
 } from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
-import { canonicalToken, configTokenFor, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
+import { configTokenFor, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
 import { strongerFloorOffer } from "@/lib/shield-lens";
 import { PlanFloorControl } from "./protect/PlanFloorControl";
 import { deriveShieldShape } from "./protect/shield-shape";
@@ -249,7 +249,14 @@ export default function ProtectionTab({
   const allocations = useMemo(() => {
     return resolvePlan({ customPlan: config.customPlan, strategy: strategyKey, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
   }, [strategyKey, config.riskTolerance, anchorCurrency, config.customPlan]);
-  const { rules: planRules, floor: planFloor } = resolvePlan({ customPlan: config.customPlan, strategy: strategyKey, anchorCurrency });
+  const { rules: planRules, floor: planFloor } = useMemo(
+    () => resolvePlan({ customPlan: config.customPlan, strategy: strategyKey, anchorCurrency }),
+    [config.customPlan, strategyKey, anchorCurrency],
+  );
+  const walletView = useMemo(
+    () => buildWalletPortfolioView(activePortfolio, allocations, planRules),
+    [activePortfolio, allocations, planRules],
+  );
   const latestAdvice = useLatestAdvice();
   const guardianTilt = useMemo(() => {
     const plan = latestAdvice?.guardianPlan;
@@ -284,18 +291,10 @@ export default function ProtectionTab({
     return resolvePlan({ customPlan: config.customPlan, strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency }).legs;
   }, [strategyKey, balance.risk, anchorCurrency, config.customPlan]);
 
-  const heldPctByToken = useMemo(() => {
-    const map = new Map<string, number>();
-    if (totalValue <= 0) return map;
-    const balances = (chains ?? []).flatMap((c) => c.balances as TokenBalance[]);
-    for (const b of balances) {
-      if (b.value > 0) {
-        const key = canonicalToken(b.symbol);
-        map.set(key, (map.get(key) ?? 0) + (b.value / totalValue) * 100);
-      }
-    }
-    return map;
-  }, [chains, totalValue]);
+  const heldPctByToken = useMemo(
+    () => new Map(walletView.holdings.map((holding) => [holding.symbol, holding.percent])),
+    [walletView.holdings],
+  );
 
   // The tokenized-asset lens reads the plan the visitor actually sees: the
   // committed strategy, else the onboarding philosophy (walletless ghost).
@@ -554,11 +553,6 @@ export default function ProtectionTab({
     alignmentScore: alignment.score ?? 0,
     guardianMonitoring: guardianState === "monitoring",
   });
-
-  const walletView = useMemo(
-    () => buildWalletPortfolioView(activePortfolio, allocations, planRules),
-    [activePortfolio, allocations, planRules],
-  );
 
   // "Try a stronger floor" lens — only helps when the wallet already holds
   // MORE dollars than the plan asks for. Under-reserved is the gap CTA's

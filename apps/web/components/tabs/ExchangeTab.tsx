@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import SwapTab from "./SwapTab";
 import { useNavigation } from "@/context/app/NavigationContext";
@@ -372,6 +372,11 @@ export default function ExchangeTab({
   // offer the decision-window lens (fresh dated macro beats only —
   // never a forward calendar).
   const [pair, setPair] = useState<{ from: string; to: string } | null>(null);
+  const handlePairChange = useCallback(
+    (from: string, to: string) =>
+      setPair((prev) => (prev?.from === from && prev?.to === to ? prev : { from, to })),
+    [],
+  );
   const [decisionWindow, setDecisionWindow] = useState(false);
   const pairSignals = useCorridorSignals(pair?.from ?? "", pair?.to ?? "");
   const freshSignal = pair
@@ -524,7 +529,7 @@ export default function ExchangeTab({
               onInspectJourney={() => setInspectorSel({ kind: "journey" })}
               lookupAddress={lookupAddress}
               onLookupAddress={setLookupAddress}
-              onPairChange={(from, to) => setPair({ from, to })}
+              onPairChange={handlePairChange}
               decisionWindow={decisionWindow}
               onExitDecisionWindow={() => setDecisionWindow(false)}
             />
@@ -601,7 +606,7 @@ export default function ExchangeTab({
             quoteInspected={inspectorSel?.kind === "pair"}
             capitalHistory={capitalHistory}
             onInspectJourney={() => setInspectorSel({ kind: "journey" })}
-            onPairChange={(from, to) => setPair({ from, to })}
+            onPairChange={handlePairChange}
             decisionWindow={decisionWindow}
             onExitDecisionWindow={() => setDecisionWindow(false)}
           />

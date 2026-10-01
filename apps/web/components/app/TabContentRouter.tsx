@@ -9,8 +9,8 @@
  * Guardian request (hand-off or ?tab=agent) switches Simple → Full so
  * the tab appears instead of bouncing.
  */
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { getVisibleTabIds, isTabId } from "@/constants/tabs";
@@ -57,11 +57,16 @@ interface TabPaneProps {
   direction: 1 | -1;
 }
 
-function TabPane({ id, children, direction }: TabPaneProps) {
+const TabPane = forwardRef<HTMLDivElement, TabPaneProps>(function TabPane(
+  { id, children, direction },
+  ref,
+) {
   const reducedMotion = useReducedMotion();
+  const present = useIsPresent();
   return (
     <motion.div
       key={id}
+      ref={ref}
       initial={
         reducedMotion
           ? { opacity: 0 }
@@ -74,13 +79,22 @@ function TabPane({ id, children, direction }: TabPaneProps) {
           : { opacity: 0, x: -24 * direction, y: 0 }
       }
       transition={{ duration: 0.18, ease: "easeOut" }}
+      style={{
+        pointerEvents: present ? "auto" : "none",
+        position: present ? "relative" : "absolute",
+        top: present ? undefined : 0,
+        left: present ? undefined : 0,
+        right: present ? undefined : 0,
+      }}
+      inert={present ? undefined : true}
+      aria-hidden={!present}
       role="tabpanel"
       aria-label={id}
     >
       {children}
     </motion.div>
   );
-}
+});
 
 /**
  * KeepMountedPane — a pane that never unmounts.

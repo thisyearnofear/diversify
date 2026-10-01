@@ -242,6 +242,10 @@ its copy never says Guardian moves money on its own; "Let Guardian act
 for you" (ERC-7715 cap + GUARDIAN re-sign at the same, read-only limit)
 is the only place autonomy is granted and the only copy allowed to say
 Guardian acts without asking. Shield never signs — it hands off here.
+Walletless Guardian can morph its reading into an explicitly labeled
+example decision. It teaches standing down on missing data, user
+approval, and evidence; it has no receipt or live monitoring state and
+never enables sample balances or execution.
 
 Tripwire: `corridor-context.test.tsx` asserts the resting corridor line
 stays under a word budget — sediment fails CI, not review.
@@ -460,7 +464,7 @@ no country override, no visit memory — with an in-object "← Your currency" t
 coin flips the same way when a curated provenance entry exists (`ProvenanceCoinBack`, reset on selection change). Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring. Shield's since-last-visit alignment
-lives in the ring hole (`sinceHint`), not the status tier. When a swap
+lives in the status tier (`ShieldStatusTier`), not the ring hole. When a swap
 settles, the destination's region coin wears a seal on the next Home
 visit — derived from refreshed balances (never the receipt's word), one
 emerald pulse plus a persistent ✓; reduced motion shows the ✓ alone.
@@ -483,6 +487,8 @@ stage as a `PairReceipt`. Provenance, the journey rail, the time
 machine, pair sharing, and Ask Guardian live in the pair inspector.
 Full spec: [`exchange-instrument.md`](./exchange-instrument.md).
 
+Counterparty matching is a state of the pair inspector, not a dashboard: Your need shows the currency pair, amount, dated mid-market reading, and Find a match. Details replaces that composition with presets, matched/unmatched figures, estimated avoided costs, rate provenance, and the settlement-native credit file. Loading and failed checks never display a retained result as current; walletless checks are labeled live previews with nothing posted. Pending settlement actions and receipts remain visible in the result; settlement still requires the user's wallet.
+
 Header: chain visibility ("see the chain without hunting", 2026-09-03
 tester feedback) is now the wallet button's job, not a second header
 control. The closed button face shows the current chain's icon + short
@@ -493,6 +499,8 @@ list, and testers found the header itself crowded (streak badge, mode
 toggle, voice, chain pill, wallet button all competing at once). The
 Simple/Full toggle moved to Home's region/settings disclosure; the
 voice button lives only where voice input is contextual (Ask Guardian).
+
+Connection feedback belongs only to the wallet button the user attempted. Missing-wallet guidance is subordinate, readable, dismissible with Escape/back, and offers only configured connection paths. A missing browser wallet is not a financial emergency; never print the raw provider error below every wallet button. Email/social availability depends on Privy being configured, not on the presence of a Connect label.
 
 Reduced-motion is a real mode, not an afterthought: flick/drag/tilt off,
 tap stays, content identical. Gate with `useReducedMotion()` (see

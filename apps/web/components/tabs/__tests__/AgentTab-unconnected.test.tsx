@@ -106,11 +106,22 @@ describe("AgentTab — unconnected morph", () => {
     expect(screen.queryByText("Bounded execution")).not.toBeInTheDocument();
   });
 
-  it("keeps trust + demo as quiet status-tier lines (shared tier)", () => {
+  it("keeps trust as a quiet status-tier line and teaches via a labeled example", () => {
     render(<AgentTab />);
 
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Explore a sample plan" }));
-    expect(mockEnableDemo).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
+
+    const example = screen.getByTestId("guardian-example");
+    expect(example).toHaveTextContent("Example decision · not live monitoring");
+    expect(example).toHaveTextContent("Wait for reliable data");
+    expect(example).toHaveTextContent("Your approval");
+    expect(example).toHaveTextContent("Evidence");
+    expect(screen.queryByTestId("verified-evidence")).not.toBeInTheDocument();
+    expect(mockEnableDemo).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to Guardian" }));
+    expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
+    expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
   });
 });

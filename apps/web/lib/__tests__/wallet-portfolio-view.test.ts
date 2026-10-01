@@ -118,4 +118,51 @@ describe("wallet portfolio view — exposure buckets", () => {
   it("has no held-as line without balances", () => {
     expect(heldAsLine(undefined, 100)).toBeNull();
   });
+
+  it("inherits chain metadata from the enclosing chain when a balance omits it", () => {
+    const bare = (symbol: string, value: number) => ({
+      symbol,
+      value,
+      balance: String(value),
+      formattedBalance: String(value),
+      name: symbol,
+      region: "Global" as never,
+    });
+    const targets = [
+      { token: "cUSD", region: "Global", percent: 50, why: "x" },
+      { token: "PAXG", region: "Global", percent: 50, why: "x" },
+    ];
+    const view = buildWalletPortfolioView(
+      portfolio([
+        { chainId: 42220, chainName: "Celo", balances: [bare("USDm", 400)] },
+        { chainId: 42161, chainName: "Arbitrum", balances: [bare("USDC", 250), bare("PAXG", 100)] },
+        { chainId: 42220, chainName: "Celo", balances: [bare("EURm", 150), bare("KESm", 100)] },
+      ]),
+      targets,
+    );
+    const dollar = view.holdings.find((h) => h.symbol === "cUSD");
+    expect(dollar?.valueUsd).toBe(650);
+    expect(dollar?.percent).toBe(65);
+    expect(view.gaps.find((g) => g.token === "cUSD")?.deltaPercent).toBe(-15);
+    expect(heldAsLine(dollar, view.totalUsd)).toBe(
+      "Held as: USDm · Celo 40%, USDC · Arbitrum 25%",
+    );
+  });
+
+  it("omits the chain label when neither balance nor chain names it", () => {
+    const bare = (symbol: string, value: number) => ({
+      symbol,
+      value,
+      balance: String(value),
+      formattedBalance: String(value),
+      name: symbol,
+      region: "Global" as never,
+    });
+    const view = buildWalletPortfolioView(
+      portfolio([{ balances: [bare("USDm", 100)] }]),
+    );
+    const usdm = view.holdings.find((h) => h.symbol === "USDm");
+    expect(heldAsLine(usdm, view.totalUsd)).toBe("Held as: USDm 100%");
+    expect(heldAsLine(usdm, view.totalUsd)).not.toContain("undefined");
+  });
 });

@@ -302,15 +302,17 @@ export function useProtectionProfile(): ProtectionProfileContextValue {
 function useProtectionProfileState() {
   // Config is the source of truth for persisted data
   const [config, setConfig] = useState<ProtectionConfig>(DEFAULT_CONFIG);
-  
+  const [hydrated, setHydrated] = useState(false);
+
   // UI flow state
   const [mode, setMode] = useState<ProfileMode>('editing');
   const [currentStep, setCurrentStep] = useState(0);
-  
+
   // Load from storage on mount + sync cross-tab updates
   useEffect(() => {
     const loaded = loadConfig();
     setConfig(loaded);
+    setHydrated(true);
 
     const isComplete = loaded.userGoal && loaded.riskTolerance && loaded.timeHorizon;
     setMode(isComplete ? 'complete' : 'editing');
@@ -329,8 +331,8 @@ function useProtectionProfileState() {
 
   // Save to storage when config changes
   useEffect(() => {
-    saveConfig(config);
-  }, [config]);
+    if (hydrated) saveConfig(config);
+  }, [config, hydrated]);
 
   // Computed values
   const isComplete = useMemo(() => {

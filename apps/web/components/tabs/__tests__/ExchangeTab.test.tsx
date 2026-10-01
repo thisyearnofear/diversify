@@ -78,17 +78,9 @@ vi.mock("@/components/swap/RouteSchematic", () => ({
 }));
 
 let mockPairToggle = 0;
+let mockEchoPair = false;
 vi.mock("../SwapTab", () => ({
-  default: ({
-    instrument,
-    onInspectQuote,
-    onInspectJourney,
-    lookupAddress,
-    onLookupAddress,
-    onPairChange,
-    decisionWindow,
-    onExitDecisionWindow,
-  }: {
+  default: function MockSwapTab(props: {
     instrument?: boolean;
     onInspectQuote?: (from: string, to: string, view?: "story" | "route") => void;
     onInspectJourney?: () => void;
@@ -97,8 +89,21 @@ vi.mock("../SwapTab", () => ({
     onPairChange?: (from: string, to: string) => void;
     decisionWindow?: boolean;
     onExitDecisionWindow?: () => void;
-  }) =>
-    React.createElement(
+  }) {
+    const {
+      instrument,
+      onInspectQuote,
+      onInspectJourney,
+      lookupAddress,
+      onLookupAddress,
+      onPairChange,
+      decisionWindow,
+      onExitDecisionWindow,
+    } = props;
+    React.useEffect(() => {
+      if (mockEchoPair) onPairChange?.("NGNm", "KESm");
+    }, [onPairChange]);
+    return React.createElement(
       "div",
       { "data-testid": "swap-tab" },
       instrument ? "instrument" : "chrome",
@@ -133,6 +138,17 @@ vi.mock("../SwapTab", () => ({
               },
             },
             "pair-change",
+          )
+        : null,
+      onPairChange
+        ? React.createElement(
+            "button",
+            {
+              type: "button",
+              "data-testid": "same-pair-trigger",
+              onClick: () => onPairChange("NGNm", "KESm"),
+            },
+            "same-pair",
           )
         : null,
       React.createElement(
@@ -176,7 +192,8 @@ vi.mock("../SwapTab", () => ({
             "journey",
           )
         : null,
-    ),
+    );
+  },
 }));
 
 import type { CapitalHistory } from "@diversifi/shared/src/services/capital-history";
@@ -185,8 +202,12 @@ import type { CorridorSignal } from "@/lib/corridor-context";
 const signalState: {
   signals: { from: CorridorSignal | null; to: CorridorSignal | null };
 } = { signals: { from: null, to: null } };
+const corridorCalls: [string, string][] = [];
 vi.mock("@/hooks/use-corridor-signals", () => ({
-  useCorridorSignals: () => signalState.signals,
+  useCorridorSignals: (from: string, to: string) => {
+    corridorCalls.push([from, to]);
+    return signalState.signals;
+  },
 }));
 
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -222,7 +243,9 @@ describe("ExchangeTab — instrument", () => {
     journeyState.data = null;
     capitalHistoryArgs.length = 0;
     signalState.signals = { from: null, to: null };
+    corridorCalls.length = 0;
     mockPairToggle = 0;
+    mockEchoPair = false;
     demoState.isActive = false;
     sessionStorage.clear();
   });
@@ -251,6 +274,39 @@ describe("ExchangeTab — instrument", () => {
     // The old marketing stack is gone: no hero card, no how-it-works.
     expect(screen.queryByText("Protect your savings")).not.toBeInTheDocument();
     expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
+  });
+
+  it("repeated identical pair reports bail out — no continual re-render", () => {
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+
+    const before = corridorCalls.length;
+    fireEvent.click(screen.getByTestId("same-pair-trigger"));
+    const afterFirst = corridorCalls.length;
+    expect(afterFirst).toBeGreaterThan(before);
+    expect(corridorCalls[corridorCalls.length - 1]).toEqual(["NGNm", "KESm"]);
+
+    fireEvent.click(screen.getByTestId("same-pair-trigger"));
+    expect(corridorCalls.length).toBe(afterFirst);
+
+    fireEvent.click(screen.getByTestId("pair-change-trigger"));
+    expect(corridorCalls.length).toBe(afterFirst);
+    fireEvent.click(screen.getByTestId("pair-change-trigger"));
+    expect(corridorCalls.length).toBeGreaterThan(afterFirst);
+    expect(corridorCalls[corridorCalls.length - 1]).toEqual(["USDC", "KESm"]);
+  });
+
+  it("mount-effect pair report settles once — an unstable callback would loop forever", () => {
+    mockEchoPair = true;
+    const err = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+      expect(corridorCalls[corridorCalls.length - 1]).toEqual(["NGNm", "KESm"]);
+      expect(err.mock.calls.flat().join(" ")).not.toMatch(
+        /Maximum update depth/,
+      );
+    } finally {
+      err.mockRestore();
+    }
   });
 
   it("unconnected: the trust line renders exactly once — the tier owns it", () => {

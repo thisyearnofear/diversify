@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext, useMemo } from 'react';
+import { useState, useEffect, useCallback, useContext, useMemo, useRef } from 'react';
 import { useWalletContext } from '../components/wallet/WalletProvider';
 import { useToast } from '../components/ui/Toast';
 import { DemoModeContext } from '../context/app/DemoModeContext';
@@ -104,9 +104,11 @@ export function useAllowance() {
   const [state, setState] = useState<AllowanceState | null>(null);
   const [loading, setLoading] = useState(true);
   const [granting, setGranting] = useState<RewardActionKey | null>(null);
+  const publishAfterCommit = useRef(false);
 
   const applyServer = useCallback((data: Partial<AllowanceState> | null | undefined) => {
     if (!data) return;
+    publishAfterCommit.current = true;
     setState((prev) => {
       const next: AllowanceState = {
         remaining: typeof data.remaining === 'number' ? data.remaining : prev?.remaining ?? 0,
@@ -117,11 +119,17 @@ export function useAllowance() {
         resetsAt: data.resetsAt ?? prev?.resetsAt ?? '',
         earnedToday: (data.earnedToday as RewardActionKey[] | undefined) ?? prev?.earnedToday ?? [],
       };
-      broadcast(next);
       return next;
     });
     setLoading(false);
   }, [address]);
+
+  useEffect(() => {
+    if (state && publishAfterCommit.current) {
+      publishAfterCommit.current = false;
+      broadcast(state);
+    }
+  }, [state]);
 
   const refresh = useCallback(async () => {
     try {

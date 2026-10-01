@@ -411,7 +411,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
                 {selectedAlloc ? (
                   <StatusBadge
                     label={`${selectedAlloc.percent}% target${totalValue > 0 ? ` · ${fmt((selectedAlloc.percent / 100) * totalValue)}` : ""}`}
-                    tone={gapPct > 2 ? "warning" : "ready"}
+                    tone={Math.abs(gapPct) > 2 ? "warning" : "ready"}
                     compact
                   />
                 ) : (
@@ -423,8 +423,8 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
           {/* One sentence carries gap + plan vs held — numbers do the explaining (§6), badges stay quiet */}
           <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
             {selectedAlloc
-              ? gapPct > 2
-                ? `You're ${gapPct.toFixed(0)} points light${totalValue > 0 ? ` (≈ ${fmt((gapPct / 100) * totalValue)})` : ""} — plan ${selectedAlloc.percent}%, you hold ${selectedHeld.toFixed(0)}%${riskData ? ` · ${riskData.code} is the risk this offsets` : ""}.`
+              ? Math.abs(gapPct) > 2
+                ? `You're ${Math.abs(gapPct).toFixed(0)} points ${gapPct > 0 ? 'light' : 'over'}${totalValue > 0 ? ` (≈ ${fmt((Math.abs(gapPct) / 100) * totalValue)})` : ""} — plan ${selectedAlloc.percent}%, you hold ${selectedHeld.toFixed(0)}%${riskData ? ` · ${riskData.code} is the risk this offsets` : ""}.`
                 : `On target — you hold ${selectedHeld.toFixed(0)}% vs ${selectedAlloc.percent}% plan${totalValue > 0 ? ` (≈ ${fmt((selectedHeld / 100) * totalValue)})` : ""}.`
               : `Outside the plan — you hold ${selectedHeld.toFixed(0)}%${totalValue > 0 ? ` (≈ ${fmt((selectedHeld / 100) * totalValue)})` : ""} in a token the plan doesn't use.`}
           </p>
@@ -575,7 +575,21 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
               Fund this plan — copy deposit address
             </button>
           )}
-          {address && selectedAlloc && gapPct <= 2 && (
+          {address && selectedAlloc && gapPct < -2 && (
+            <button
+              type="button"
+              onClick={() =>
+                navigateToGuardian({
+                  summary: `${focusedToken} — ${Math.abs(gapPct).toFixed(0)} points over target (${selectedHeld.toFixed(0)}% held vs ${selectedAlloc.percent}% plan)`,
+                  prompt: `Guardian, review my ${focusedToken} holding — it is ${Math.abs(gapPct).toFixed(0)} points over target at ${selectedHeld.toFixed(0)}% vs the ${selectedAlloc.percent}% plan for my ${planName}. Explain the options without proposing an automatic move.`,
+                })
+              }
+              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
+            >
+              Review allocation with Guardian
+            </button>
+          )}
+          {address && selectedAlloc && Math.abs(gapPct) <= 2 && (
             <button
               type="button"
               onClick={() => {

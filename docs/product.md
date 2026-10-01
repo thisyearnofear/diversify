@@ -1,6 +1,8 @@
 # Product
 
-> **Current state (2026-09-15):** the connected-wallet experience shares one portfolio data model across all tabs — live holdings, plan-target gaps, and data freshness everywhere; the adaptive experience (signal-detected persona routing + landing-page FX calculator) is live. Dated change history: [`roadmap-log.md`](./roadmap-log.md).
+> **Current UI state (2026-10-01):** Home, Shield, Exchange, and Guardian remain four instruments. Home and Shield now use expressive clarity—readable financial meaning and values-led selection without extra card stacks. Counterparty matching has separate Your need and Details views; wallet guidance reflects configured connection paths. This is a UI release, not a claim that production login, autonomy, or payment activation has been re-verified. Dated change history: [`roadmap-log.md`](./roadmap-log.md).
+
+> Production smoke check (2026-10-01): the public app served the release’s UI markers and opened configured Privy login options without authentication. The immutable Vercel deployment URL required SSO, so alias-to-commit identity was not independently proven. No signature, payment, or settlement was performed.
 
 ## Core Story
 
@@ -45,7 +47,8 @@ protection. It monitors markets, detects inflation and FX shifts, and
 protects capital by routing between **Celo/Mento** (local stablecoins,
 low-cost savings), **Arbitrum** (deep liquidity, RWA yield), and **HashKey
 Chain** (APAC regulated-market savings) — with on-chain proof of every
-decision.
+decision. Walletless visitors can inspect a labeled instructional decision
+before connecting.
 
 **What it is:** An FX-risk intelligence layer with a reference consumer
 (the Guardian savings app) that demonstrates the full loop: risk
@@ -159,10 +162,10 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 ## How It Works (Guardian app)
 
-1. **Connect** — Privy login or existing wallet (email, social login, embedded wallet onboarding)
+1. **Connect** — Explore currency risk and preview a protection plan without connecting. Connect an existing supported wallet when ready; email/social and embedded-wallet onboarding are available only where Privy is configured.
 2. **Pick a Protection Plan** — Savings stay in your own wallet; the Guardian starts proposing moves
 3. **Approve a move** — One tap opens Exchange prefilled; you sign in your wallet. On supported chains, add a wallet-enforced limit (ERC-7715/7710, enforced on-chain by your own smart account) and the Guardian can act within those limits
-4. **Monitor** — Real-time receipts, allocations, P&L in a single dashboard
+4. **Monitor** — Review holdings, plan-target gaps, Guardian decisions, and settlement receipts in their respective instruments.
 5. **Your keys, always** — No deposit, no custodial account, revoke anytime
 
 ## Protection Plans
@@ -185,7 +188,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 3. **Verifiable autonomy.** A server-side Guardian loop monitors markets 24/7 and proposes moves the user approves in one tap; it executes on its own only within an ERC-7715/7710 permission the user's smart account enforces on-chain. Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings, Arbitrum for yield — with reasoning anchored to 0G Storage as tamper-proof evidence. LiveProofCard surfaces those receipts before wallet connect: proof-first, not splash-first. Each chain has an irreplaceable role — see [`rails.md`](./rails.md).
 
-4. **Calm instrument UX.** A savings protection app, not a trading terminal — the Guardian proposes one clear action at a time and every tab is a single manipulable object ([`design-language.md`](./design-language.md)). First run is guided: philosophy onboarding (detect country → show risk → choose plan) is primary; a 3-step tour and a 2-tab discovery hint cover the skipped path. Two modes: Simple (default) shows Shield, Home, Exchange; Full adds Guardian and the swap ticket's extra detail. Asking for Guardian, three swaps, or the header's Simple | Full switch moves a user to Full.
+4. **Expressive instrument UX.** A savings protection app, not a trading terminal: Home makes the stakes land, Shield makes the plan feel like yours, Exchange makes the choice tangible, and Guardian makes the agent present and accountable. Each tab keeps one manipulable object and one primary action; discovery invites, exploration responds, commitment settles. Simple shows Shield, Home, and Exchange; Full adds Guardian. A hand-off to Guardian promotes Simple to Full, and the mode control lives in Home’s settings.
 
 5. **Currencies as stories — the engagement layer is the literacy layer.** Every token carries a curated provenance answering three questions — who controls it (origin, backing, keys), what has happened to it (dated geopolitical events), and what might happen next (the cadence and mechanism to watch, never a prediction). The memetic/cultural/political texture of money is surfaced at the moment of choice: the ticket's pair sentence, the coin-back flip in the picker, the pair inspector's event trail and watch lines. Facts are hand-sourced and dated (`packages/shared/src/constants/token-provenance.ts`), re-verified on a 90-day cycle — engagement built on understanding, never on tickers, leaderboards, or invented forecasts. The timeline teaches mechanism, not prediction.
 
@@ -224,10 +227,10 @@ tab or a noun. Tab labels have one source — `TAB_LABELS` in
 | **Chain-aware ledger** | `RecommendationLedger` records decisions on the chain where the action settles — Celo for savings, Arbitrum for yield, HashKey for APAC savings, Robinhood for RWA/stock-token legs, Arc for x402-settled intelligence, 0G as the evidence mirror. One `0x3BCf…369C` address; the canonical fan-out is `PROOF_FEED_CHAIN_IDS`. Each ledger entry references a 0G Storage evidence CID. |
 | **0G verifiability** | Evidence layer: Storage (reasoning CIDs) + Compute (TEE-verified inference) + Guardian-state snapshots on 0G Storage. 0G DA is **not** integrated — see `architecture.md`. 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
 | **Live data** | 11+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, TinyFish Search, Firecrawl |
-| **Agent memory** | Cognee for cross-session persistent context |
+| **Agent memory** | Opt-in, default Off: device-local facts or signature-verified cross-device facts with user-selected Tablestore/Cognee; no implicit transcript memory. |
 | **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — contract live, see `rails.md` § Implementation status), Robinhood (RWA ledger, chain 4663 — env-gated), 0G (evidence/anchoring), Arc (x402 settlement rail, chain 5042 — env-gated) |
 | **Wallet** | User's own wallet (MetaMask/MiniPay/Farcaster-compatible) + Privy for login and embedded-wallet onboarding — Privy never executes |
-| **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Surfaced + depositable via `BestYieldCard`. See `docs/roadmap-log.md` § Yield Engine Strategy. |
+| **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Yield opportunities are reached through the current instrument/inspector surfaces, not a standalone yield-dashboard tab. See `docs/roadmap-log.md` § Yield Engine Strategy. |
 | **Voice** | Guardian voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
 | **Free web/news search** | TinyFish Search (web/news/research) feeds the Guardian region-specific context (FX news, central-bank moves) — free, replaces paid marketplace search. |
 | **Cost discipline** | Paid insights (e.g. vaults.fyi) are engagement-gated (`insight-tier.ts`): Free → Saver (≥$100 or 7-day streak) → Committed. Default-deny; free data open to all. |
@@ -259,9 +262,21 @@ tab or a noun. Tab labels have one source — `TAB_LABELS` in
 
 Tab IDs are `protect / overview / exchange / agent`; labels come only from `TAB_LABELS` (`apps/web/constants/tabs.ts`). The dock order is fixed — personas never reorder it.
 
-**Simple mode**: Shield → Home → Exchange only. **Full mode** adds Guardian. Any hand-off to Guardian switches Simple → Full, as do three swaps or the header's Simple | Full switch (sm+). There is no Learn tab — the calculator lives as the Shield empty-wallet inspector + optional Home amount-inspect. See `design-language.md` §5.
+**Simple mode**: Shield → Home → Exchange only. **Full mode** adds Guardian. Any hand-off to Guardian switches Simple → Full, as do three swaps or the Simple | Full control in Home's settings (sm+). There is no Learn tab — the calculator lives as the Shield empty-wallet inspector + optional Home amount-inspect. See `design-language.md` §5.
 
 New users land on Shield. Swipe/tap discovery hint animates in above the tab bar on first visit — dismissed after 2 tabs visited or first swipe gesture.
+
+### Comprehension sessions — next validation
+
+Invite emerging-market savers and importers/business users only with their consent. Use a sample account or walletless view; do not ask participants to disclose balances, connect a personal wallet, sign, or trade. Explain that the interface—not the participant—is being tested and that they may stop at any time. Ask them to think aloud without explaining the controls first.
+
+1. Choose a currency relevant to you and explain what Home’s number means, including its benchmark and time period.
+2. Choose a philosophy that fits your priorities and explain what changed.
+3. Show which Shield numbers describe holdings and which describe targets.
+4. Preview a currency need and explain what Find a match does—and does not do.
+5. Find what Guardian needs your approval for and where you would check its evidence.
+
+Record consented observations, unexpected interpretations, hesitation points, and task outcomes verbatim; do not invent conversion metrics, representative findings, or completed sessions. Use neutral follow-ups: What do you expect to happen? What tells you that? Where would you look next? Recruitment and scheduling remain pending until participants are provided.
 
 ## Fees
 

@@ -16,12 +16,10 @@ import { useWalletContext } from "../wallet/WalletProvider";
 import type { MultichainPortfolio } from "../../hooks/use-multichain-balances";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import WalletButton from "../wallet/WalletButton";
-import { useDemoMode } from "../../context/app/DemoModeContext";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InstrumentWait } from "../shared/InstrumentWait";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { StatusTier } from "../shared/StatusTier";
-import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { formatDuration } from "@/lib/format-duration";
@@ -65,7 +63,6 @@ export default function AgentTab({
   refreshBalances,
 }: AgentTabProps) {
   const { address } = useWalletContext();
-  const { enableDemoMode } = useDemoMode();
   const {
     isLoading: isStatusLoading,
     statusError,
@@ -78,6 +75,7 @@ export default function AgentTab({
   // — renders once as a context card, then clears so it can't go stale.
   const { guardianContext, clearGuardianContext } = useNavigation();
   const [dismissError, setDismissError] = useState(false);
+  const [example, setExample] = useState(false);
   const previousAddress = React.useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
@@ -97,13 +95,39 @@ export default function AgentTab({
           <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
         </div>
         <div className="instrument-reading flex flex-col items-center">
-        <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
-          Guardian
-        </h2>
-        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-[300px] leading-relaxed">
-          Explains risk, proposes moves within your bounds, and proves what
-          happened on-chain.
-        </p>
+        {example ? (
+          <div data-testid="guardian-example" className="w-full">
+            <p className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+              Example decision · not live monitoring
+            </p>
+            <h2 className="text-xl font-black tracking-tight text-gray-900 dark:text-white mt-1">
+              Wait for reliable data
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-[300px] leading-relaxed mx-auto">
+              When balances or market readings are unavailable, Guardian should stand down rather than guess.
+            </p>
+            <dl className="mt-3 text-left max-w-[300px] mx-auto space-y-2">
+              <div>
+                <dt className="text-sm font-semibold text-gray-500 dark:text-gray-400">Your approval</dt>
+                <dd className="text-sm text-gray-600 dark:text-gray-300">The default proposal waits for your signature in Exchange.</dd>
+              </div>
+              <div>
+                <dt className="text-sm font-semibold text-gray-500 dark:text-gray-400">Evidence</dt>
+                <dd className="text-sm text-gray-600 dark:text-gray-300">Real decisions carry dated sources and, when anchored, receipts. This example has none.</dd>
+              </div>
+            </dl>
+          </div>
+        ) : (
+          <>
+            <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
+              Guardian
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-[300px] leading-relaxed">
+              Explains risk, proposes moves within your bounds, and proves what
+              happened on-chain.
+            </p>
+          </>
+        )}
         <div className="mt-4 w-full">
           <WalletButton variant="primary" className="w-full" />
         </div>
@@ -114,7 +138,20 @@ export default function AgentTab({
     return (
       <InstrumentShell
         object={object}
-        status={<UnconnectedStatusTier onEnableDemo={enableDemoMode} />}
+        status={
+          <StatusTier
+            trust={example ? null : <VerifiedEvidence />}
+            rail={
+              <button
+                type="button"
+                onClick={() => setExample((v) => !v)}
+                className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400"
+              >
+                {example ? "Back to Guardian" : "See an example decision"}
+              </button>
+            }
+          />
+        }
       />
     );
   }

@@ -16,6 +16,7 @@ import React from "react";
 
 const m = vi.hoisted(() => ({
   ctx: { value: null as any },
+  isPresent: { current: true },
 }));
 
 vi.mock("framer-motion", () => {
@@ -29,6 +30,7 @@ vi.mock("framer-motion", () => {
     AnimatePresence: ({ children }: any) =>
       React.createElement("div", null, children),
     useReducedMotion: () => false,
+    useIsPresent: () => m.isPresent.current,
   };
 });
 
@@ -127,6 +129,7 @@ beforeEach(() => {
   env.NODE_ENV = REAL_NODE_ENV;
   delete env.NEXT_PUBLIC_KEEP_MOUNTED_HOME;
   mockRouter.query = {};
+  m.isPresent.current = true;
 });
 
 afterEach(() => {
@@ -198,6 +201,24 @@ describe("TabContentRouter — keep-mounted Home", () => {
     rerender(<TabContentRouter />);
     expect(screen.getByTestId("agent-tab")).toBeInTheDocument();
     expect(screen.queryByTestId("overview-tab")).not.toBeInTheDocument();
+  });
+});
+
+describe("TabContentRouter — exiting pane leaves layout", () => {
+  it("a pane with useIsPresent=false is absolute, inert, and aria-hidden", () => {
+    m.ctx.value = makeContext("protect");
+    const { rerender } = render(<TabContentRouter />);
+    const pane = screen.getByTestId("protect-tab").closest("[role=tabpanel]")!;
+    expect(pane).toHaveStyle({ position: "relative" });
+    expect(pane).toHaveAttribute("aria-hidden", "false");
+    expect(pane).not.toHaveAttribute("inert");
+
+    m.isPresent.current = false;
+    rerender(<TabContentRouter />);
+    expect(pane).toHaveStyle({ position: "absolute", top: "0px", left: "0px", right: "0px" });
+    expect(pane).toHaveStyle({ pointerEvents: "none" });
+    expect(pane).toHaveAttribute("aria-hidden", "true");
+    expect(pane).toHaveAttribute("inert");
   });
 });
 
