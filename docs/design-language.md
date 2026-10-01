@@ -242,10 +242,14 @@ its copy never says Guardian moves money on its own; "Let Guardian act
 for you" (ERC-7715 cap + GUARDIAN re-sign at the same, read-only limit)
 is the only place autonomy is granted and the only copy allowed to say
 Guardian acts without asking. Shield never signs — it hands off here.
-Walletless Guardian can morph its reading into an explicitly labeled
-example decision. It teaches standing down on missing data, user
-approval, and evidence; it has no receipt or live monitoring state and
-never enables sample balances or execution.
+Walletless Guardian can morph into an explicitly labeled, three-step
+example decision performed by the mark: stand down on missing data,
+propose for user approval, then show what evidence a real decision carries.
+The visitor advances by tapping the mark; the example never auto-advances.
+"Why this decision?" opens one inspector with the current explanation.
+It has no receipt or live monitoring state and never enables sample
+balances or execution. Reduced motion preserves the selected step and
+mood with static transitions.
 
 Tripwire: `corridor-context.test.tsx` asserts the resting corridor line
 stays under a word budget — sediment fails CI, not review.
@@ -619,12 +623,16 @@ must read the same way everywhere and be one tap from gone.
   never a blur, because `TrustFootnote` already claims blur as "a
   stillness affordance, not a hide". Percentages, plans, and the
   Guardian's decisions stay readable: privacy covers *how much you
-  have*, not what the product thinks. Someone who has hidden before
-  gets re-hidden on return after ≥60s away (`everHidden` +
-  `lastActiveAt`), applied before first paint — a stale visible
-  balance never renders; a user who never hid is never touched. New
-  money surfaces must call `formatMoney`; that is the only sanctioned
-  way to render an amount.
+  have*, not what the product thinks. Guardian's account-specific daily
+  limit, used amount, and remaining amount are hidden through `formatMoney`
+  in both the object and Limits & controls. Explicit move amounts, prices,
+  fixed protocol thresholds, and the limit shown for review in a grant
+  confirmation remain visible because they explain an action or consent.
+  Someone who has hidden before gets re-hidden on return after ≥60s away
+  (`everHidden` + `lastActiveAt`), applied before first paint — a stale
+  visible balance never renders; a user who never hid is never touched.
+  New account-balance surfaces must call `formatMoney`; that is the only
+  sanctioned way to render a balance.
 
 ## 7. Honesty is styled as restraint
 
@@ -699,9 +707,9 @@ shield's visual DNA and keeps the redesign's motion discipline.
 |---|---|---|---|
 | happy | full squares | — | strategy aligned, streaks |
 | neutral | full squares | — | idle, waiting |
-| thinking | squashed (scaleY 0.8), slow x-wander | two signal dots above-right | AI processing |
-| protective | narrow slit (scaleY 0.35), gaze drops | — | shield active |
-| alert | enlarged (1.25×), gaze lifts | — | notifications |
+| thinking | squashed (scaleY 0.8), fixed slight offset | two still signal dots above-right | active AI processing |
+| protective | narrow slit (scaleY 0.35), gaze drops | — | shield active / standing down |
+| alert | enlarged (1.25×), gaze lifts | — | notifications / a proposal waiting for the user's decision |
 
 **Motion rules (§5):**
 - Mood animations communicate state only — they are legitimate (confirms).
@@ -713,9 +721,18 @@ shield's visual DNA and keeps the redesign's motion discipline.
   follow the user's pointer — awareness, not ambience. It only moves when
   you move: rAF-throttled, spring-damped pursuit, capped at ±4/±2.5 viewBox
   units, cleaned up on unmount. Use it on greeting surfaces
-  (`WelcomeScreen`, AIChat empty state); keep it off on utility surfaces.
-  A fixed `{x, y}` target (each axis [-1, 1]) is available for directed
-  attention. Moods also settle on springs (`MOOD_SPRING`), never linear snaps.
+  (`WelcomeScreen`, AIChat empty state) and the connected Guardian object
+  only while resting; stop during analysis, inspection, or a pending move.
+  In the connected Guardian object, the first pointer press or keyboard
+  focus also turns gaze off until the object remounts. Keep gaze off on
+  utility surfaces. A fixed `{x, y}` target (each axis [-1, 1]) is available
+  for directed attention. Moods settle on springs (`MOOD_SPRING`), never
+  linear snaps.
+- Thinking is a fixed eye pose with still dots, not wandering eyes or a
+  repeating signal. It appears only during active analysis or chat. An
+  authorized but idle Guardian stays neutral; a real proposal waiting for
+  the user's signature uses alert. A real analysis takes precedence over
+  the proposal pose.
 - Reduced motion: no keyframes, no repeats, no gaze tracking. Moods render
   discretely (eye shape still reflects mood; gaze is static). Motion budget
   stays spent on work that reveals or confirms.

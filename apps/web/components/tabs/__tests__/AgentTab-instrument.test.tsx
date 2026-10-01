@@ -135,7 +135,9 @@ vi.mock("@/components/agent/AutomationSettings", () => ({
   default: () => <div data-testid="automation-settings" />,
 }));
 vi.mock("@/components/shared/GuardianMascot", () => ({
-  GuardianMascot: () => <div data-testid="guardian-mascot" />,
+  GuardianMascot: ({ mood, gaze }: { mood: string; gaze: string }) => (
+    <div data-testid="guardian-mascot" data-mood={mood} data-gaze={gaze} />
+  ),
 }));
 vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
@@ -210,6 +212,19 @@ describe("AgentTab — instrument composition", () => {
     fireEvent.click(screen.getByRole("button", { name: "Review this move →" }));
     expect(mockReviewPendingMove).toHaveBeenCalledTimes(1);
     expect(mockRunPreview).not.toHaveBeenCalled();
+  });
+
+  it("the connected mark attends at rest and stills during real analysis or inspection", () => {
+    const { rerender } = render(<AgentTab />);
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-gaze", "pointer");
+    instrument = makeInstrument({ isAnalyzing: true });
+    rerender(<AgentTab />);
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "thinking");
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-gaze", "off");
+    instrument = makeInstrument({ latestCall: "rotate to KESm" });
+    rerender(<AgentTab />);
+    fireEvent.click(screen.getByTestId("guardian-latest"));
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-gaze", "off");
   });
 
   it("monitoring: Preview next move opens the journal and runs a dry run", () => {

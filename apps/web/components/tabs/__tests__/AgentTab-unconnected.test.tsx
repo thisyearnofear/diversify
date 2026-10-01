@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 // Walletless: the morph under test.
@@ -72,8 +72,8 @@ vi.mock("@/components/agent/AutomationSettings", () => ({
 // The mascot is a framer-motion SVG — stub it; its behavior is tested
 // in its own suite. What matters here is THAT it renders as the object.
 vi.mock("@/components/shared/GuardianMascot", () => ({
-  GuardianMascot: (props: { size?: number }) => (
-    <div data-testid="guardian-mascot" data-size={props.size ?? null} />
+  GuardianMascot: (props: { size?: number; mood?: string }) => (
+    <div data-testid="guardian-mascot" data-size={props.size ?? null} data-mood={props.mood} />
   ),
 }));
 
@@ -106,21 +106,63 @@ describe("AgentTab — unconnected morph", () => {
     expect(screen.queryByText("Bounded execution")).not.toBeInTheDocument();
   });
 
-  it("keeps trust as a quiet status-tier line and teaches via a labeled example", () => {
+  it("tapping the mark walks three decisions the Guardian performs, in the third person", async () => {
+    render(<AgentTab />);
+    fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
+    const mark = screen.getByTestId("guardian-example-mark");
+    expect(mark).toHaveAccessibleName("Next example decision, 1 of 3");
+    expect(screen.getByTestId("guardian-example")).toHaveTextContent("Example decision · not live");
+
+    fireEvent.click(mark);
+    await waitFor(() =>
+      expect(screen.getByTestId("guardian-example")).toHaveTextContent("Propose a move"),
+    );
+    expect(screen.getByTestId("guardian-example")).toHaveTextContent("You sign in Exchange.");
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "alert");
+    expect(mark).toHaveAccessibleName("Next example decision, 2 of 3");
+
+    fireEvent.click(mark);
+    await waitFor(() =>
+      expect(screen.getByTestId("guardian-example")).toHaveTextContent("Show the work"),
+    );
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "neutral");
+
+    // Wraps around, and the label stays honest at every step.
+    fireEvent.click(mark);
+    await waitFor(() =>
+      expect(screen.getByTestId("guardian-example")).toHaveTextContent("Wait for reliable data"),
+    );
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/\bI\b|\bI'm\b|\bmy\b/);
+    expect(text).not.toMatch(/receipt:|0x[0-9a-f]{6}/i);
+    expect(mockEnableDemo).not.toHaveBeenCalled();
+  });
+
+  it("keeps trust as a quiet status-tier line and teaches via a labeled example", async () => {
     render(<AgentTab />);
 
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
 
     const example = screen.getByTestId("guardian-example");
-    expect(example).toHaveTextContent("Example decision · not live monitoring");
+    expect(example).toHaveTextContent("Example decision · not live");
     expect(example).toHaveTextContent("Wait for reliable data");
-    expect(example).toHaveTextContent("Your approval");
-    expect(example).toHaveTextContent("Evidence");
+    expect(example).toHaveTextContent("No trustworthy reading, so no move.");
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "protective");
     expect(screen.queryByTestId("verified-evidence")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
     expect(mockEnableDemo).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Back to Guardian" }));
+    fireEvent.click(screen.getByRole("button", { name: "Why this decision?" }));
+    const inspector = screen.getByTestId("inspector-sheet");
+    expect(inspector).toHaveAttribute("data-selected-id", "example-decision");
+    expect(inspector).toHaveTextContent("stands down instead of guessing");
+    fireEvent.click(screen.getByRole("button", { name: "Close inspector" }));
+    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument());
+    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
     expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
   });

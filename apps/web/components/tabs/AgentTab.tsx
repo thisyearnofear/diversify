@@ -4,6 +4,9 @@
  */
 
 import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { press, springPress, springSoft } from "@/lib/motion-tokens";
+import { haptics } from "@/lib/haptics";
 import { ARCHETYPES } from "@/components/protection-cards/tokens";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentConfig } from "../../hooks/use-agent-config";
@@ -47,6 +50,29 @@ const AutomationSettings = dynamic(() => import("../agent/AutomationSettings"), 
   ssr: false,
 }) as typeof AutomationSettingsType;
 
+/** The walletless teaching example: three decisions the mark performs.
+ *  Illustrative only, so none of it names a balance, price, or receipt. */
+const EXAMPLE_STEPS = [
+  {
+    mood: "protective",
+    title: "Wait for reliable data",
+    line: "No trustworthy reading, so no move.",
+    why: "Without reliable wallet balances or market readings, Guardian cannot justify a move, so it stands down instead of guessing.",
+  },
+  {
+    mood: "alert",
+    title: "Propose a move",
+    line: "Guardian suggests. You sign in Exchange.",
+    why: "By default Guardian only proposes. Nothing leaves your wallet until you approve the move in Exchange.",
+  },
+  {
+    mood: "neutral",
+    title: "Show the work",
+    line: "Real decisions carry dated sources.",
+    why: "A real decision lists its dated sources and, when anchored, a receipt. This example is not live, so it has neither.",
+  },
+] as const;
+
 interface AgentTabProps {
   isMiniPay?: boolean;
   isFarcaster?: boolean;
@@ -76,10 +102,17 @@ export default function AgentTab({
   const { guardianContext, clearGuardianContext } = useNavigation();
   const [dismissError, setDismissError] = useState(false);
   const [example, setExample] = useState(false);
+  const [exampleDetails, setExampleDetails] = useState(false);
+  const [step, setStep] = useState(0);
+  const reducedMotion = useReducedMotion();
+  const current = EXAMPLE_STEPS[step];
   const previousAddress = React.useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
       setDismissError(false);
+      setExample(false);
+      setExampleDetails(false);
+      setStep(0);
       previousAddress.current = address;
     }
   }, [address]);
@@ -91,42 +124,70 @@ export default function AgentTab({
     // the connect CTA attaches; trust + demo live in the shared status tier.
     const object = (
       <div data-testid="guardian-unconnected-object" className="instrument-composition text-center py-2">
-        <div className="instrument-artifact flex justify-center">
-          <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
+        <div className="instrument-artifact flex flex-col items-center justify-center">
+          {example ? (
+            <>
+              <motion.button
+                type="button"
+                data-testid="guardian-example-mark"
+                aria-label={`Next example decision, ${step + 1} of ${EXAMPLE_STEPS.length}`}
+                onClick={() => {
+                  haptics.tap();
+                  setExampleDetails(false);
+                  setStep((s) => (s + 1) % EXAMPLE_STEPS.length);
+                }}
+                whileTap={reducedMotion ? undefined : press}
+                transition={springPress}
+                className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                <GuardianMascot size={128} mood={current.mood} />
+              </motion.button>
+              <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
+                {EXAMPLE_STEPS.map((s, i) => (
+                  <motion.span
+                    key={s.title}
+                    className="h-1.5 rounded-full bg-blue-600"
+                    animate={{ width: i === step ? 18 : 6, opacity: i === step ? 1 : 0.3 }}
+                    transition={reducedMotion ? { duration: 0 } : springSoft}
+                  />
+                ))}
+              </div>
+              <p className="mt-2 text-2xs font-semibold text-ink-muted">Tap Guardian for the next one</p>
+            </>
+          ) : (
+            <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
+          )}
         </div>
         <div className="instrument-reading flex flex-col items-center">
         {example ? (
-          <div data-testid="guardian-example" className="w-full">
-            <p className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-              Example decision · not live monitoring
+          <div data-testid="guardian-example" className="w-full max-w-[320px]" aria-live="polite">
+            <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
+              Example decision · not live
             </p>
-            <h2 className="text-xl font-black tracking-tight text-gray-900 dark:text-white mt-1">
-              Wait for reliable data
-            </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-[300px] leading-relaxed mx-auto">
-              When balances or market readings are unavailable, Guardian should stand down rather than guess.
-            </p>
-            <dl className="mt-3 text-left max-w-[300px] mx-auto space-y-2">
-              <div>
-                <dt className="text-sm font-semibold text-gray-500 dark:text-gray-400">Your approval</dt>
-                <dd className="text-sm text-gray-600 dark:text-gray-300">The default proposal waits for your signature in Exchange.</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-semibold text-gray-500 dark:text-gray-400">Evidence</dt>
-                <dd className="text-sm text-gray-600 dark:text-gray-300">Real decisions carry dated sources and, when anchored, receipts. This example has none.</dd>
-              </div>
-            </dl>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={step}
+                initial={reducedMotion ? false : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                transition={reducedMotion ? { duration: 0 } : { duration: 0.16, ease: "easeOut" }}
+              >
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-ink">
+                  {current.title}
+                </h2>
+                <p className="mt-2 text-sm text-ink-muted">{current.line}</p>
+              </motion.div>
+            </AnimatePresence>
           </div>
         ) : (
-          <>
-            <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
+          <div className="w-full max-w-[320px]">
+            <h2 className="text-2xl font-black tracking-tight text-ink">
               Guardian
             </h2>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-[300px] leading-relaxed">
-              Explains risk, proposes moves within your bounds, and proves what
-              happened on-chain.
+            <p className="mt-2 text-sm text-ink-muted">
+              Your savings stay in your wallet. Guardian proposes moves for you to approve.
             </p>
-          </>
+          </div>
         )}
         <div className="mt-4 w-full">
           <WalletButton variant="primary" className="w-full" />
@@ -138,16 +199,35 @@ export default function AgentTab({
     return (
       <InstrumentShell
         object={object}
+        inspectorOpen={exampleDetails}
+        inspector={
+          <InspectorSheet
+            selectedId={exampleDetails ? "example-decision" : null}
+            onClose={() => setExampleDetails(false)}
+            title={`Why: ${current.title}`}
+          >
+            <p className="text-sm text-ink-muted">{current.why}</p>
+          </InspectorSheet>
+        }
         status={
           <StatusTier
             trust={example ? null : <VerifiedEvidence />}
+            transition={example ? (
+              <button
+                type="button"
+                onClick={() => { setExampleDetails(false); setExample(false); setStep(0); }}
+                className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400"
+              >
+                ← Back to Guardian
+              </button>
+            ) : undefined}
             rail={
               <button
                 type="button"
-                onClick={() => setExample((v) => !v)}
+                onClick={() => example ? setExampleDetails(true) : setExample(true)}
                 className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400"
               >
-                {example ? "Back to Guardian" : "See an example decision"}
+                {example ? "Why this decision?" : "See an example decision"}
               </button>
             }
           />
@@ -321,6 +401,8 @@ function ConnectedAgent({
             isAutonomous={g.isAutonomous}
             liveBeats={liveBeats}
             liveAlive={liveAlive}
+            attention={liveAlive && !g.pendingMove}
+            proposalPending={Boolean(g.pendingMove)}
           />
         )}
       </ErrorBoundary>

@@ -62,7 +62,7 @@ export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
     },
     authorized: {
         headline: 'Your daily limit expired',
-        description: 'Renew it and Guardian will keep proposing moves — you still approve each one.',
+        description: 'Renew it and Guardian keeps proposing. You still approve each move.',
         cta: 'Renew daily limit',
         hint: 'Nothing moves until you approve it.',
     },
@@ -74,7 +74,7 @@ export const GUARDIAN_USER_COPY: Record<GuardianTierState, {
     },
     monitoring: {
         headline: 'Guardian is watching',
-        description: 'Guardian watches markets and proposes moves within your limit. You approve each one.',
+        description: 'It proposes moves within your limit. You approve each one.',
         cta: 'View activity',
         hint: 'Guardian works within the limit you set.',
     },
