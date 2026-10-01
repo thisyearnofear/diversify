@@ -28,6 +28,7 @@ vi.mock("framer-motion", () => {
     MotionConfig: ({ children }: any) =>
       React.createElement("div", null, children),
     useReducedMotion: () => false,
+    useIsPresent: () => true,
     motion: {
       div: MotionDiv,
       button: MotionButton,
