@@ -193,9 +193,9 @@ describe("WalletButton — connect feedback ownership", () => {
   it("a second button's attempt takes ownership — only B shows feedback after B fails", async () => {
     const error = "No wallet found.";
     const connectA = vi.fn().mockResolvedValue(undefined);
-    let resolveB: (() => void) | null = null;
+    const pendingB: { resolve: (() => void) | null } = { resolve: null };
     const connectB = vi.fn(
-      () => new Promise<void>((r) => { resolveB = r; }),
+      () => new Promise<void>((r) => { pendingB.resolve = r; }),
     );
     const setWalletState = (connecting: boolean, connect = connectB) => {
       vi.mocked(useWalletContext).mockReturnValue({
@@ -241,7 +241,7 @@ describe("WalletButton — connect feedback ownership", () => {
         <WalletButton />
       </>,
     );
-    resolveB?.();
+    pendingB.resolve?.();
     const panels = await screen.findAllByRole("status");
     expect(panels).toHaveLength(1);
     expect(panels[0]).toHaveTextContent("Choose a wallet to continue");
