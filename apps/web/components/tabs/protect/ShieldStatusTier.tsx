@@ -2,23 +2,16 @@
  * ShieldStatusTier — the Shield tab's StatusTier element. Pure
  * presentation extracted from ProtectionTab: the previewing quiet tier,
  * the trust badge row, and the transition priority (sleeve back >
- * compare row > floor prompt > status row). The rail slot is
- * persona-morph aware: business personas (shieldMorph "cycle") get the
- * payment-cycle entry in place of the RWA sleeve rail — the cycle is
- * plan-independent, so it does not require a visible plan ring.
+ * status row). The rail slot offers the payment-cycle entry for business
+ * personas; the connected plan's balance and tokenized assets live by the ring.
  */
 import React from "react";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
-import type { Exposure, PlanLeg } from "@/components/protection-cards/plan-preview";
-import type { strongerFloorOffer } from "@/lib/shield-lens";
+import type { PlanLeg } from "@/components/protection-cards/plan-preview";
 import type { useNavigation } from "@/context/app/NavigationContext";
-import type { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
-import { trackFunnelEvent } from "@/lib/analytics";
-import { haptics } from "@/lib/haptics";
 import { StatusTier } from "../../shared/StatusTier";
 import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import StatusBadge from "../../shared/StatusBadge";
-import { SLEEVE_ID } from "./ProtectionPlanRing";
 import type { ShieldShape } from "./shield-shape";
 
 export interface ShieldStatusTierProps {
@@ -31,18 +24,9 @@ export interface ShieldStatusTierProps {
   selectedHeld: number;
   selectedAlloc: PlanLeg | null;
   planName: string;
-  planRingVisible: boolean;
-  /** Tokenized assets the plan or wallet already carries (names the rail). */
-  rwaSymbols: string[];
   address: string | null;
-  isDemo: boolean;
   biggestGap: unknown;
   alignmentScore: number | null;
-  floorOffer: NonNullable<ReturnType<typeof strongerFloorOffer>> | null;
-  showFloorPrompt: boolean;
-  /** Reserve exposure the floor prompt names; defaults to USD. */
-  floorExposure?: Exposure;
-  balanceSelect: ReturnType<typeof usePlanBalancePreview>["select"];
   exitCompare: () => void;
   navigateToGuardian: ReturnType<typeof useNavigation>["navigateToGuardian"];
   setFocusedToken: (v: string | null) => void;
@@ -69,16 +53,9 @@ export function ShieldStatusTier({
   selectedHeld,
   selectedAlloc,
   planName,
-  planRingVisible,
-  rwaSymbols,
   address,
-  isDemo,
   biggestGap,
   alignmentScore,
-  floorOffer,
-  showFloorPrompt,
-  floorExposure = "USD",
-  balanceSelect,
   exitCompare,
   navigateToGuardian,
   setFocusedToken,
@@ -124,21 +101,6 @@ export function ShieldStatusTier({
             className="text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
             ← Back to plan
-          </button>
-        ) : showFloorPrompt && floorOffer ? (
-          <button
-            type="button"
-            data-testid="shield-floor-prompt"
-            onClick={() => {
-              balanceSelect(floorOffer.next);
-              haptics.tap();
-              if (!isDemo) {
-                trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
-              }
-            }}
-            className="min-h-tap text-xs font-semibold text-blue-600 dark:text-blue-400"
-          >
-            Your wallet keeps {floorOffer.heldFloor}% in {floorExposure === "USD" ? "dollars" : floorExposure} — try a stronger floor →
           </button>
         ) : statusRowEmpty && !sinceHint ? undefined : (
           <>
@@ -215,12 +177,8 @@ export function ShieldStatusTier({
         )
       }
       rail={
-        // One rail slot, persona-morphed (§5 rail 4): business personas
-        // get the payment-cycle entry — plan-independent, so no
-        // planRingVisible gate. Everyone else keeps the tokenized-asset
-        // rail, which names the plan's own RWA legs when there are any.
-        // Never while a lens is open — its exit lives in the transition
-        // slot.
+        // Business personas keep the plan-independent payment-cycle rail;
+        // the connected plan's tokenized-asset action sits by its ring.
         businessMorph &&
         !sleeveOpen &&
         !comparing &&
@@ -233,21 +191,6 @@ export function ShieldStatusTier({
             className="text-xs font-semibold text-blue-600 dark:text-blue-400"
           >
             What FX timing costs your next payment →
-          </button>
-        ) : !businessMorph &&
-          !sleeveOpen &&
-          !comparing &&
-          planRingVisible &&
-          !focusedToken ? (
-          <button
-            type="button"
-            data-testid="rwa-sleeve-entry"
-            onClick={() => setFocusedToken(SLEEVE_ID)}
-            className="text-xs font-semibold text-blue-600 dark:text-blue-400"
-          >
-            {rwaSymbols.length > 0
-              ? `Tokenized assets in this plan: ${rwaSymbols.join(" · ")} →`
-              : "Tokenized assets you can hold →"}
           </button>
         ) : undefined
       }

@@ -308,13 +308,19 @@ export default function ProtectionTab({
     [sleeveLegs],
   );
   const heldPctBySymbol = useMemo(() => Object.fromEntries(heldPctByToken), [heldPctByToken]);
-  // Tokenized assets the plan or wallet already carries — names the rail.
-  const rwaSymbols = useMemo(() => {
-    const set = new Set<string>();
-    for (const t of heldPctByToken.keys()) if (rwaLegFor(t)) set.add(rwaLegFor(t)!.symbol);
-    for (const l of sleeveLegs) if (rwaLegFor(l.token)) set.add(rwaLegFor(l.token)!.symbol);
-    return [...set];
-  }, [heldPctByToken, sleeveLegs]);
+  const planRwaSymbols = useMemo(
+    () => [...new Set(sleeveLegs.flatMap((l) => rwaLegFor(l.token)?.symbol ?? []))],
+    [sleeveLegs],
+  );
+  const walletOnlyRwaSymbols = useMemo(
+    () => [...new Set([...heldPctByToken.keys()].flatMap((t) => rwaLegFor(t)?.symbol ?? []))]
+      .filter((symbol) => !planRwaSymbols.includes(symbol)),
+    [heldPctByToken, planRwaSymbols],
+  );
+  const previewRwaSymbols = useMemo(
+    () => [...new Set(balanceAllocations.flatMap((l) => rwaLegFor(l.token)?.symbol ?? []))],
+    [balanceAllocations],
+  );
   const rwaMarket = useRwaMarket(sleeveOpen);
 
   // Compare/picker mode: the ring previews the focused philosophy's plan
@@ -1079,8 +1085,45 @@ export default function ProtectionTab({
                   }}
                   onCancel={() => { balance.cancel(); setFocusedToken(null); haptics.tap(); }}
                 />
+                {showFloorPrompt && floorOffer && (
+                  <button
+                    type="button"
+                    data-testid="shield-floor-prompt"
+                    onClick={() => {
+                      balance.select(floorOffer.next);
+                      haptics.tap();
+                      if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
+                    }}
+                    className="min-h-tap text-left text-xs font-semibold text-blue-600 dark:text-blue-400"
+                  >
+                    Your wallet keeps {floorOffer.heldFloor}% in {planFloor === "USD" ? "dollars" : planFloor} vs {floorOffer.planFloor}% in this plan — try a stronger floor →
+                  </button>
+                )}
                 {!balance.isPreviewing && !focusedToken && (
                   <div className="mt-1 flex justify-center">{tweakButton(strategyKey, "custom-tweak")}</div>
+                )}
+                {!businessMorph && !sleeveOpen && !comparing && !focusedToken && (
+                  balance.isPreviewing ? (
+                    (previewRwaSymbols.length > 0 || planRwaSymbols.length > 0 || walletOnlyRwaSymbols.length > 0) && (
+                      <p data-testid="rwa-preview-context" className="mt-2 text-2xs text-ink-muted">
+                        Preview plan · {previewRwaSymbols.length > 0
+                          ? `tokenized ${previewRwaSymbols.join(" · ")}`
+                          : `no tokenized assets${walletOnlyRwaSymbols.length > 0 ? ` · wallet holds ${walletOnlyRwaSymbols.join(" · ")}` : ""}`}
+                      </p>
+                    )
+                  ) : (
+                    <button
+                      type="button"
+                      data-testid="rwa-sleeve-entry"
+                      onClick={() => setFocusedToken(SLEEVE_ID)}
+                      className="mt-2 min-h-tap text-left text-xs font-semibold text-blue-600 dark:text-blue-400"
+                    >
+                      {[
+                        planRwaSymbols.length > 0 && `${planRwaSymbols.join(" · ")} in this plan`,
+                        walletOnlyRwaSymbols.length > 0 && `${walletOnlyRwaSymbols.join(" · ")} in your wallet, not the plan`,
+                      ].filter(Boolean).join(" · ") || "Tokenized assets you could hold"} · Explore tokenized assets →
+                    </button>
+                  )
                 )}
               </div>
             ) : undefined}
@@ -1258,16 +1301,9 @@ export default function ProtectionTab({
       selectedHeld={selectedHeld}
       selectedAlloc={selectedAlloc}
       planName={planName}
-      planRingVisible={planRingVisible}
-      rwaSymbols={rwaSymbols}
       address={address}
-      isDemo={isDemo}
       biggestGap={biggestGap}
       alignmentScore={alignment.score}
-      floorOffer={floorOffer}
-      floorExposure={planFloor}
-      showFloorPrompt={showFloorPrompt}
-      balanceSelect={balance.select}
       exitCompare={exitCompare}
       navigateToGuardian={navigateToGuardian}
       setFocusedToken={setFocusedToken}

@@ -1411,6 +1411,26 @@ describe("ProtectionTab — instrument shapes", () => {
     profileState.riskTolerance = "Balanced";
   });
 
+  it("Exposure previews the opposite reserve shift without saving or claiming wallet changes", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({ address: "0xabc", chainId: 42220 } as any);
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "More exposure" }));
+    const ring = screen.getByTestId("protection-plan-ring");
+    expect(ring).toHaveAttribute("data-balance-preview", "true");
+    expect(ring).toHaveAttribute("data-legs", JSON.stringify([["KESm", 72], ["cUSD", 10], ["cEUR", 18]]));
+    expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve 25% → 10%");
+    expect(screen.getByRole("radio", { name: "More exposure" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
+    expect(ring).toHaveAttribute("data-balance-preview", "false");
+    expect(screen.getByTestId("rwa-sleeve-entry")).toBeInTheDocument();
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+  });
+
   it("Keep current balance discards the draft and restores the saved ring", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
@@ -1797,6 +1817,50 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     cleanup();
   });
 
+  it("labels tokenized assets by plan versus wallet instead of claiming wallet-only PAXG is planned", () => {
+    const withPaxg = {
+      ...MOCK_PORTFOLIO,
+      totalValue: 5100,
+      chains: [
+        ...MOCK_PORTFOLIO.chains,
+        { chainId: 1, chainName: "Ethereum", totalValue: 100, tokenCount: 1,
+          balances: [{ symbol: "PAXG", value: 100, chainId: 1 }] },
+      ],
+    } as any;
+    render(<ProtectionTab userRegion="USA" portfolio={withPaxg} />);
+    const entry = screen.getByTestId("rwa-sleeve-entry");
+    expect(screen.getByTestId("protection-plan-ring").contains(entry)).toBe(true);
+    expect(entry).toHaveTextContent("PAXG in your wallet, not the plan · Explore tokenized assets");
+    expect(entry).not.toHaveTextContent("PAXG in this plan");
+    expect(document.querySelector('[data-status-slot="rail"]')).toBeNull();
+    fireEvent.click(entry);
+    expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
+    expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("rwa-sleeve-back"));
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("rwa-preview-context")).toHaveTextContent(
+      "Preview plan · no tokenized assets · wallet holds PAXG",
+    );
+  });
+
+  it("names planned PAXG and keeps preview assets explicitly provisional", () => {
+    profileState.customPlan = {
+      from: "islamic", rules: {}, slices: [
+        { exposure: "USD", target: 50 }, { exposure: "XAU", target: 50 },
+      ],
+    };
+    mockFinancialStrategy = "custom";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("rwa-sleeve-entry")).toHaveTextContent("PAXG in this plan · Explore tokenized assets");
+    expect(screen.getByTestId("rwa-sleeve-entry")).not.toHaveTextContent("PAXG in your wallet, not the plan");
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("rwa-preview-context")).toHaveTextContent("Preview plan · tokenized PAXG");
+    expect(mockSetRiskTolerance).not.toHaveBeenCalled();
+    profileState.customPlan = null;
+  });
+
   it("the status tier never exceeds three slots", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     expect(screen.getByTestId("status-tier")).toBeInTheDocument();
@@ -1911,7 +1975,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
     expect(prompt).toHaveTextContent(
-      "Your wallet keeps 64% in dollars — try a stronger floor",
+      "Your wallet keeps 64% in dollars vs 25% in this plan — try a stronger floor",
     );
     expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
   });
@@ -1955,7 +2019,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     };
     render(<ProtectionTab userRegion="USA" portfolio={shillingMajorityDollarSurplus} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
-    expect(prompt).toHaveTextContent("Your wallet keeps 40% in dollars — try a stronger floor");
+    expect(prompt).toHaveTextContent("Your wallet keeps 40% in dollars vs 25% in this plan — try a stronger floor");
     expect(prompt).not.toHaveTextContent(/KES/);
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve");
   });
