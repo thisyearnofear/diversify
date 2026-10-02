@@ -820,23 +820,25 @@ body {
     flex-direction: column;
   }
 
-  /* The workbench centres its CONTENT GROUP, and the object shrink-wraps.
+  /* The workbench fills the shell; the OBJECT fills the workbench.
 
-     The first version of the shared stage height kept `flex: 1` on the
-     object, so the object absorbed all the slack and centred itself while
-     the status tier was pushed to the very bottom edge of the taller card —
-     on Shield the CTA sat ~180px above "Verified / Tokenized assets / Explore
-     a sample plan", which read as three orphaned links rather than a footer
-     for the object above. The stage is for the object; the status row
-     belongs to it and travels with it.
+     `flex: 1` on the object is load-bearing, not incidental. The status row
+     carries `mt-auto` (InstrumentShell.tsx), and per spec auto margins
+     absorb free space BEFORE `justify-content` distributes any. So the
+     object must grow to absorb the stage's slack itself: then no free space
+     remains, `mt-auto` computes to zero, the status sits directly under the
+     object, and the object's own `justify-content: center` centres the
+     content in the filled stage.
 
-     Safe when content exceeds the min-height: the card's height is
-     auto, so it grows and there is simply no slack to distribute. */
+     A previous revision shrink-wrapped the object (`flex: 0 1 auto`) and
+     centred the workbench instead. That handed every pixel of slack to the
+     status row's auto margin — content pinned to the top of a tall card,
+     status pinned to the bottom, object no longer filling anything. Do not
+     "fix" this back to shrink-wrap without also removing `mt-auto`. */
   .instrument-workbench {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     min-width: 0;
     flex: 1;
   }
@@ -844,7 +846,7 @@ body {
   .instrument-object {
     width: 100%;
     min-width: 0;
-    flex: 0 1 auto;
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;

@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, fireEvent, waitFor } from "@testing-library/react";
+import {
+  act,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import {
@@ -39,7 +45,10 @@ vi.mock("framer-motion", async (importOriginal) => {
     useReducedMotion: () => motionMock.reduced,
     motion: new Proxy(mod.motion, {
       get: (target: typeof mod.motion, tag: string | symbol) =>
-        wrap((target as unknown as Record<string | symbol, unknown>)[tag], String(tag)),
+        wrap(
+          (target as unknown as Record<string | symbol, unknown>)[tag],
+          String(tag),
+        ),
     }),
     LayoutGroup: (props: { id?: string; children?: React.ReactNode }) => {
       motionMock.layoutGroupIds.push(props.id);
@@ -161,36 +170,73 @@ describe("InstrumentShell", () => {
     );
     const shell = container.firstElementChild as HTMLElement;
     expect(shell.className).toContain("instrument-shell");
-    const workbench = shell.querySelector(".instrument-workbench") as HTMLElement;
+    const workbench = shell.querySelector(
+      ".instrument-workbench",
+    ) as HTMLElement;
     expect(workbench).not.toBeNull();
     expect(workbench.getAttribute("data-inspector-open")).toBe("false");
     expect(shell.querySelector(".instrument-object")).not.toBeNull();
     expect(shell.querySelector(".instrument-status")).not.toBeNull();
   });
 
+  it("the object grows to fill the stage — shrink-wrap plus status mt-auto orphans both ends", async () => {
+    // Pure-CSS contract, so jsdom can't observe it in layout — assert the
+    // stylesheet text instead. The status row carries `mt-auto`
+    // (InstrumentShell.tsx), and auto margins absorb free space BEFORE
+    // justify-content distributes any. The object must therefore be the
+    // flex grower (`flex: 1`): it absorbs the stage's slack, `mt-auto`
+    // computes to zero, the status sits directly under the object, and the
+    // object's own centring fills the card. Shrink-wrapping the object
+    // (`flex: 0 1 auto`) hands every pixel of slack to the auto margin —
+    // content pinned top, status pinned bottom, nothing filling the stage.
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const css = readFileSync(
+      join(process.cwd(), "apps/web/styles/globals.css"),
+      "utf8",
+    );
+    const desktop = css.slice(css.indexOf("@media (min-width: 1024px)"));
+    const objectBlock =
+      /\.instrument-object\s*\{([^}]*)\}/.exec(desktop)?.[1] ?? "";
+    expect(objectBlock).toMatch(/(^|;)\s*flex:\s*1\s*;/);
+    expect(objectBlock).not.toMatch(/flex:\s*0\s+1\s+auto/);
+  });
+
   it("reserves no inspector slot while closed — and opens the workbench state on inspection", () => {
     const { container, rerender } = render(
       <InstrumentShell
         object={<div data-testid="object">ring</div>}
-        inspector={<InspectorSheet selectedId={null} onClose={() => {}} title="PAXG"><p>detail</p></InspectorSheet>}
+        inspector={
+          <InspectorSheet selectedId={null} onClose={() => {}} title="PAXG">
+            <p>detail</p>
+          </InspectorSheet>
+        }
       />,
     );
     let shell = container.firstElementChild as HTMLElement;
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
     expect(
-      (shell.querySelector(".instrument-workbench") as HTMLElement).getAttribute("data-inspector-open"),
+      (
+        shell.querySelector(".instrument-workbench") as HTMLElement
+      ).getAttribute("data-inspector-open"),
     ).toBe("false");
 
     rerender(
       <InstrumentShell
         inspectorOpen
         object={<div data-testid="object">ring</div>}
-        inspector={<InspectorSheet selectedId="PAXG" onClose={() => {}} title="PAXG"><p>detail</p></InspectorSheet>}
+        inspector={
+          <InspectorSheet selectedId="PAXG" onClose={() => {}} title="PAXG">
+            <p>detail</p>
+          </InspectorSheet>
+        }
       />,
     );
     shell = container.firstElementChild as HTMLElement;
     expect(
-      (shell.querySelector(".instrument-workbench") as HTMLElement).getAttribute("data-inspector-open"),
+      (
+        shell.querySelector(".instrument-workbench") as HTMLElement
+      ).getAttribute("data-inspector-open"),
     ).toBe("true");
     expect(shell.querySelector(".instrument-inspector")).not.toBeNull();
   });
@@ -209,7 +255,10 @@ describe("InstrumentShell", () => {
     const { container } = render(
       <InstrumentShell
         object={<div data-testid="object">ring</div>}
-        pattern={{ className: "shields-pattern--pan_caribbean", color: "#0ea5e9" }}
+        pattern={{
+          className: "shields-pattern--pan_caribbean",
+          color: "#0ea5e9",
+        }}
       />,
     );
     const shell = container.firstElementChild as HTMLElement;
@@ -281,30 +330,62 @@ describe("InstrumentShell — inspector placement", () => {
 
   it("places the inspector beside the object when border-box 754 leaves 720 content", () => {
     mockViewport({ desktop: true, width: 754, padding: 16, border: 1 });
-    render(<InstrumentShell object={<PlacementProbe />} inspectorOpen inspector={<span />} />);
+    render(
+      <InstrumentShell
+        object={<PlacementProbe />}
+        inspectorOpen
+        inspector={<span />}
+      />,
+    );
     expect(screen.getByTestId("placement")).toHaveTextContent("side");
     expect(ROStub.instances).toHaveLength(1);
   });
 
   it("folds on desktop when border-box 753 leaves 719 content", () => {
     mockViewport({ desktop: true, width: 753, padding: 16, border: 1 });
-    render(<InstrumentShell object={<PlacementProbe />} inspectorOpen inspector={<span />} />);
+    render(
+      <InstrumentShell
+        object={<PlacementProbe />}
+        inspectorOpen
+        inspector={<span />}
+      />,
+    );
     expect(screen.getByTestId("placement")).toHaveTextContent("fold");
   });
 
   it("folds off-desktop even when the shell is wide", () => {
     mockViewport({ desktop: false, width: 900, padding: 16, border: 1 });
-    render(<InstrumentShell object={<PlacementProbe />} inspectorOpen inspector={<span />} />);
+    render(
+      <InstrumentShell
+        object={<PlacementProbe />}
+        inspectorOpen
+        inspector={<span />}
+      />,
+    );
     expect(screen.getByTestId("placement")).toHaveTextContent("fold");
   });
 
   it("responds to ResizeObserver and media-query changes", () => {
     const viewport = mockViewport({ desktop: true, width: 900 });
-    render(<InstrumentShell object={<PlacementProbe />} inspectorOpen inspector={<span />} />);
+    render(
+      <InstrumentShell
+        object={<PlacementProbe />}
+        inspectorOpen
+        inspector={<span />}
+      />,
+    );
     expect(screen.getByTestId("placement")).toHaveTextContent("side");
 
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-      width: 600, height: 100, top: 0, left: 0, right: 600, bottom: 100, x: 0, y: 0, toJSON: () => ({}),
+      width: 600,
+      height: 100,
+      top: 0,
+      left: 0,
+      right: 600,
+      bottom: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
     } as DOMRect);
     act(() => ROStub.instances[0].cb());
     expect(screen.getByTestId("placement")).toHaveTextContent("fold");
@@ -318,12 +399,26 @@ describe("InstrumentShell — inspector placement", () => {
     delete (window as { ResizeObserver?: unknown }).ResizeObserver;
     const viewport = mockViewport({ desktop: true, width: 900 });
     void viewport;
-    render(<InstrumentShell object={<PlacementProbe />} inspectorOpen inspector={<span />} />);
+    render(
+      <InstrumentShell
+        object={<PlacementProbe />}
+        inspectorOpen
+        inspector={<span />}
+      />,
+    );
     expect(screen.getByTestId("placement")).toHaveTextContent("side");
     expect(ROStub.instances).toHaveLength(0);
 
     vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-      width: 600, height: 100, top: 0, left: 0, right: 600, bottom: 100, x: 0, y: 0, toJSON: () => ({}),
+      width: 600,
+      height: 100,
+      top: 0,
+      left: 0,
+      right: 600,
+      bottom: 100,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
     } as DOMRect);
     act(() => {
       window.dispatchEvent(new Event("resize"));
@@ -354,7 +449,11 @@ describe("InspectorSheet — focus restoration", () => {
           Open
         </button>
         <button data-testid="elsewhere">Elsewhere</button>
-        <InspectorSheet selectedId={sel} onClose={() => setSel(null)} title="PAXG">
+        <InspectorSheet
+          selectedId={sel}
+          onClose={() => setSel(null)}
+          title="PAXG"
+        >
           <p>detail</p>
         </InspectorSheet>
       </>
@@ -378,11 +477,14 @@ describe("InspectorSheet — focus restoration", () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.click(close);
-    await waitFor(() =>
-      expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+    await waitFor(
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 
   it("restores the initiating control after Escape", async () => {
@@ -393,17 +495,32 @@ describe("InspectorSheet — focus restoration", () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.keyDown(document.body, { key: "Escape" });
-    await waitFor(() =>
-      expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+    await waitFor(
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 
   it("dismisses on a downward drag release (shared close path restores focus)", async () => {
-    expect(shouldDismissDrag({ offset: { x: 0, y: 100 }, velocity: { x: 0, y: 0 } })).toBe(true);
-    expect(shouldDismissDrag({ offset: { x: 0, y: 20 }, velocity: { x: 0, y: 600 } })).toBe(true);
-    expect(shouldDismissDrag({ offset: { x: 0, y: 20 }, velocity: { x: 0, y: 100 } })).toBe(false);
+    expect(
+      shouldDismissDrag({ offset: { x: 0, y: 100 }, velocity: { x: 0, y: 0 } }),
+    ).toBe(true);
+    expect(
+      shouldDismissDrag({
+        offset: { x: 0, y: 20 },
+        velocity: { x: 0, y: 600 },
+      }),
+    ).toBe(true);
+    expect(
+      shouldDismissDrag({
+        offset: { x: 0, y: 20 },
+        velocity: { x: 0, y: 100 },
+      }),
+    ).toBe(false);
 
     render(<Harness />);
     const trigger = screen.getByTestId("trigger");
@@ -412,7 +529,9 @@ describe("InspectorSheet — focus restoration", () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.click(close);
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 
   it("does not recapture or restore on a selection change", async () => {
@@ -420,9 +539,17 @@ describe("InspectorSheet — focus restoration", () => {
       const [sel, setSel] = React.useState<string | null>(null);
       return (
         <>
-          <button data-testid="trigger" onClick={() => setSel("A")}>Open</button>
-          <button data-testid="elsewhere" onClick={() => setSel("B")}>Switch</button>
-          <InspectorSheet selectedId={sel} onClose={() => setSel(null)} title="Detail">
+          <button data-testid="trigger" onClick={() => setSel("A")}>
+            Open
+          </button>
+          <button data-testid="elsewhere" onClick={() => setSel("B")}>
+            Switch
+          </button>
+          <InspectorSheet
+            selectedId={sel}
+            onClose={() => setSel(null)}
+            title="Detail"
+          >
             <p>detail</p>
           </InspectorSheet>
         </>
@@ -432,13 +559,20 @@ describe("InspectorSheet — focus restoration", () => {
     const trigger = screen.getByTestId("trigger");
     trigger.focus();
     fireEvent.click(trigger);
-    expect(await screen.findByTestId("inspector-sheet")).toHaveAttribute("data-selected-id", "A");
+    expect(await screen.findByTestId("inspector-sheet")).toHaveAttribute(
+      "data-selected-id",
+      "A",
+    );
 
     const elsewhere = screen.getByTestId("elsewhere");
     elsewhere.focus();
     fireEvent.click(elsewhere);
-    await waitFor(() =>
-      expect(screen.getByTestId("inspector-sheet")).toHaveAttribute("data-selected-id", "B"),
+    await waitFor(
+      () =>
+        expect(screen.getByTestId("inspector-sheet")).toHaveAttribute(
+          "data-selected-id",
+          "B",
+        ),
       { timeout: 3000 },
     );
     expect(document.activeElement).toBe(elsewhere);
@@ -449,9 +583,20 @@ describe("InspectorSheet — focus restoration", () => {
       const [sel, setSel] = React.useState<string | null>(null);
       return (
         <>
-          <button data-testid="trigger" onClick={() => setSel("PAXG")}>Open</button>
-          <button data-testid="swap" onClick={() => setSel((s) => (s ? null : "GLD"))}>Swap</button>
-          <InspectorSheet selectedId={sel} onClose={() => setSel(null)} title="Detail">
+          <button data-testid="trigger" onClick={() => setSel("PAXG")}>
+            Open
+          </button>
+          <button
+            data-testid="swap"
+            onClick={() => setSel((s) => (s ? null : "GLD"))}
+          >
+            Swap
+          </button>
+          <InspectorSheet
+            selectedId={sel}
+            onClose={() => setSel(null)}
+            title="Detail"
+          >
             <p>detail</p>
           </InspectorSheet>
         </>
@@ -467,8 +612,12 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(close);
     swap.focus();
     fireEvent.click(swap);
-    await waitFor(() =>
-      expect(screen.getByTestId("inspector-sheet")).toHaveAttribute("data-selected-id", "GLD"),
+    await waitFor(
+      () =>
+        expect(screen.getByTestId("inspector-sheet")).toHaveAttribute(
+          "data-selected-id",
+          "GLD",
+        ),
       { timeout: 3000 },
     );
     expect(document.activeElement).toBe(swap);
@@ -511,10 +660,9 @@ describe("InspectorSheet — focus restoration", () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.click(close);
-    await waitFor(
-      () => expect(document.activeElement).toBe(trigger),
-      { timeout: 3000 },
-    );
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 
   it("does not restore while the trigger remains hidden", async () => {
@@ -534,7 +682,11 @@ describe("InspectorSheet — focus restoration", () => {
           >
             Open
           </button>
-          <InspectorSheet selectedId={sel} onClose={() => setSel(null)} title="PAXG">
+          <InspectorSheet
+            selectedId={sel}
+            onClose={() => setSel(null)}
+            title="PAXG"
+          >
             <p>detail</p>
           </InspectorSheet>
         </>
@@ -548,7 +700,8 @@ describe("InspectorSheet — focus restoration", () => {
     close.focus();
     fireEvent.click(close);
     await waitFor(
-      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
     expect(document.activeElement).not.toBe(trigger);
@@ -566,7 +719,8 @@ describe("InspectorSheet — focus restoration", () => {
     const elsewhere = screen.getByTestId("elsewhere");
     elsewhere.focus();
     await waitFor(
-      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
     expect(document.activeElement).toBe(elsewhere);
@@ -589,10 +743,18 @@ describe("InspectorSheet — focus restoration", () => {
       return (
         <>
           {!gone && (
-            <button data-testid="trigger" onClick={() => setSel("PAXG")}>Open</button>
+            <button data-testid="trigger" onClick={() => setSel("PAXG")}>
+              Open
+            </button>
           )}
-          <button data-testid="remove" onClick={() => setGone(true)}>Remove</button>
-          <InspectorSheet selectedId={sel} onClose={() => setSel(null)} title="PAXG">
+          <button data-testid="remove" onClick={() => setGone(true)}>
+            Remove
+          </button>
+          <InspectorSheet
+            selectedId={sel}
+            onClose={() => setSel(null)}
+            title="PAXG"
+          >
             <p>detail</p>
           </InspectorSheet>
         </>
@@ -606,8 +768,9 @@ describe("InspectorSheet — focus restoration", () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.click(close);
-    await waitFor(() =>
-      expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+    await waitFor(
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
     expect(document.activeElement).not.toBe(trigger);
@@ -635,7 +798,10 @@ describe("InstrumentShell — motion choreography props", () => {
 
   const sectionProps = () =>
     motionMock.recorded
-      .filter((r) => r.tag === "section" && r.props["data-testid"] === "inspector-sheet")
+      .filter(
+        (r) =>
+          r.tag === "section" && r.props["data-testid"] === "inspector-sheet",
+      )
       .at(-1)?.props;
 
   it("object/inspector/status wrappers use position-only layout with the shared settle", () => {
@@ -648,9 +814,16 @@ describe("InstrumentShell — motion choreography props", () => {
         status={<span />}
       />,
     );
-    for (const cls of ["instrument-object", "instrument-inspector", "instrument-status"]) {
+    for (const cls of [
+      "instrument-object",
+      "instrument-inspector",
+      "instrument-status",
+    ]) {
       const rec = motionMock.recorded
-        .filter((r) => r.tag === "div" && String(r.props.className ?? "").includes(cls))
+        .filter(
+          (r) =>
+            r.tag === "div" && String(r.props.className ?? "").includes(cls),
+        )
         .at(-1);
       expect(rec, cls).toBeTruthy();
       expect(rec!.props.layout).toBe("position");
@@ -664,11 +837,18 @@ describe("InstrumentShell — motion choreography props", () => {
     motionMock.reduced = true;
     mockViewport({ desktop: true, width: 754, padding: 16, border: 1 });
     render(
-      <InstrumentShell object={<span />} inspector={<span />} inspectorOpen status={<span />} />,
+      <InstrumentShell
+        object={<span />}
+        inspector={<span />}
+        inspectorOpen
+        status={<span />}
+      />,
     );
     const rec = motionMock.recorded
       .filter(
-        (r) => r.tag === "div" && String(r.props.className ?? "").includes("instrument-object"),
+        (r) =>
+          r.tag === "div" &&
+          String(r.props.className ?? "").includes("instrument-object"),
       )
       .at(-1);
     expect(rec!.props.layout).toBe(false);
@@ -704,8 +884,18 @@ describe("InstrumentShell — motion choreography props", () => {
     );
     const p = sectionProps();
     expect(p).toBeTruthy();
-    expect(p!.initial).toEqual({ x: 12, rotateX: 0, opacity: 0, height: "auto" });
-    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.initial).toEqual({
+      x: 12,
+      rotateX: 0,
+      opacity: 0,
+      height: "auto",
+    });
+    expect(p!.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(p!.exit).toEqual({ x: 12, rotateX: 0, opacity: 0, height: "auto" });
   });
 
@@ -724,14 +914,26 @@ describe("InstrumentShell — motion choreography props", () => {
     );
     const p = sectionProps();
     expect(p!.initial).toEqual({ x: 0, rotateX: -88, opacity: 0, height: 0 });
-    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(p!.exit).toEqual({ x: 0, rotateX: -88, opacity: 0, height: 0 });
   });
 
   it("normalizes the same mounted sheet across a fold→side→fold resize", () => {
     const resize = (width: number) => {
       vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
-        width, height: 100, top: 0, left: 0, right: width, bottom: 100, x: 0, y: 0,
+        width,
+        height: 100,
+        top: 0,
+        left: 0,
+        right: width,
+        bottom: 100,
+        x: 0,
+        y: 0,
         toJSON: () => ({}),
       } as DOMRect);
       act(() => ROStub.instances[0].cb());
@@ -750,19 +952,32 @@ describe("InstrumentShell — motion choreography props", () => {
     );
     const sheetEl = screen.getByTestId("inspector-sheet");
     expect(sectionProps()!.animate).toEqual({
-      x: 0, rotateX: 0, opacity: 1, height: "auto",
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
     });
 
     resize(900);
     expect(screen.getByTestId("inspector-sheet")).toBe(sheetEl);
     const side = sectionProps()!;
-    expect(side.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(side.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(side.initial).toMatchObject({ x: 12, rotateX: 0 });
 
     resize(400);
     expect(screen.getByTestId("inspector-sheet")).toBe(sheetEl);
     const fold = sectionProps()!;
-    expect(fold.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(fold.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(fold.exit).toEqual({ x: 0, rotateX: -88, opacity: 0, height: 0 });
   });
 
@@ -782,7 +997,10 @@ describe("InstrumentShell — motion choreography props", () => {
     const { rerender } = render(tree());
     const sheetEl = screen.getByTestId("inspector-sheet");
     expect(sectionProps()!.animate).toEqual({
-      x: 0, rotateX: 0, opacity: 1, height: "auto",
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
     });
 
     motionMock.reduced = true;
@@ -815,15 +1033,29 @@ describe("InstrumentShell — motion choreography props", () => {
     );
     const p = sectionProps();
     expect(p).toBeTruthy();
-    expect(p!.initial).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
-    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.initial).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 0,
+      height: "auto",
+    });
+    expect(p!.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(p!.exit).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
     expect(p!.drag).toBe(false);
     const sheet = screen.getByTestId("inspector-sheet");
     expect(sheet.className).not.toContain("bg-surface");
     expect(sheet.className).not.toContain("rounded-2xl");
-    expect(screen.queryByTestId("inspector-sheet-handle")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Close inspector")).toHaveTextContent("← Back");
+    expect(
+      screen.queryByTestId("inspector-sheet-handle"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Close inspector")).toHaveTextContent(
+      "← Back",
+    );
     expect(sheet.style.perspective).toBe("");
   });
 
@@ -847,8 +1079,18 @@ describe("InstrumentShell — motion choreography props", () => {
       />,
     );
     const p = sectionProps();
-    expect(p!.initial).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
-    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.initial).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 0,
+      height: "auto",
+    });
+    expect(p!.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(p!.exit).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
     expect(p!.transition).toEqual({ duration: 0 });
   });
@@ -868,8 +1110,18 @@ describe("InstrumentShell — motion choreography props", () => {
       />,
     );
     const p = sectionProps();
-    expect(p!.initial).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
-    expect(p!.animate).toEqual({ x: 0, rotateX: 0, opacity: 1, height: "auto" });
+    expect(p!.initial).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
+    expect(p!.animate).toEqual({
+      x: 0,
+      rotateX: 0,
+      opacity: 1,
+      height: "auto",
+    });
     expect(p!.exit).toEqual({ x: 0, rotateX: 0, opacity: 0, height: "auto" });
     expect(p!.transition).toEqual({ duration: 0 });
   });
@@ -884,7 +1136,9 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
     const [sel, setSel] = React.useState<string | null>(null);
     return (
       <>
-        <button data-testid="trigger" onClick={() => setSel("KES")}>Open</button>
+        <button data-testid="trigger" onClick={() => setSel("KES")}>
+          Open
+        </button>
         <button data-testid="elsewhere">Elsewhere</button>
         <InspectorSheet
           selectedId={sel}
@@ -908,10 +1162,13 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
     close.focus();
     fireEvent.keyDown(document.body, { key: "Escape" });
     await waitFor(
-      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 
   it("restores focus after the ← Back control", async () => {
@@ -924,10 +1181,13 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
     close.focus();
     fireEvent.click(close);
     await waitFor(
-      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 
   it("the exiting stage is inert, hidden, and out of the layout flow", async () => {
@@ -947,9 +1207,12 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
       expect(screen.queryByRole("region", { name: "KES" })).toBeNull();
     }
     await waitFor(
-      () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+      () =>
+        expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), {
+      timeout: 3000,
+    });
   });
 });
