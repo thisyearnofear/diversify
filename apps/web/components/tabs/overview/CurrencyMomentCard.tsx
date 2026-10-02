@@ -26,7 +26,7 @@ import {
   type Horizon,
 } from "@/constants/currency-risk";
 import type { NarrativeMoment } from "@/lib/narrative/currency-moment";
-import { CountryOverrideSelect } from "./CountryOverrideSelect";
+import { CountryPicker } from "./CountryPicker";
 import { CurrencyVisitReview } from "./CurrencyVisitReview";
 import type { MomentFrame } from "@/lib/narrative/moment-framing";
 import { useCurrencyVisit } from "@/hooks/use-currency-visit";
@@ -315,7 +315,7 @@ export function CurrencyMomentCard({
           default — nothing was detected, so nothing claims otherwise. */}
       {onChangeCountry ? (
         <div className="mb-3">
-          <CountryOverrideSelect
+          <CountryPicker
             currentCountryCode={countryIsDefault ? "" : moment.iso2}
             currentCountryName={countryIsDefault ? "" : moment.countryName}
             onChange={(code) => {

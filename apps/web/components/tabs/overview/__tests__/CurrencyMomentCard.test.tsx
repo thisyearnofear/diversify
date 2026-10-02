@@ -172,18 +172,24 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.getByText(/live 1Y/)).toBeInTheDocument();
   });
 
-  it('the country picker is the heading — one select, no static duplicate or tail label', () => {
+  it('the country picker opens the same sheet as Exchange — one trigger, no native select', async () => {
     const onChangeCountry = vi.fn();
     render(<CurrencyMomentCard {...baseProps} onChangeCountry={onChangeCountry} />);
-    const select = screen.getByLabelText('Select the country where your savings live');
-    expect(select).toBeInTheDocument();
-    expect(select).toHaveValue('GH');
-    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    // A real button with a dialog behind it — never an OS-rendered select.
+    const trigger = screen.getByRole('button', { name: /Change the country where your savings live/ });
+    expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByText('Currency')).toBeInTheDocument();
     expect(screen.queryByText('Whose savings?')).not.toBeInTheDocument();
     expect(screen.queryByText(/Ghana · GHS/)).not.toBeInTheDocument();
-    fireEvent.change(select, { target: { value: 'KE' } });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Kenya \(KES\)/ }));
     expect(onChangeCountry).toHaveBeenCalledWith('KE');
+    // Choosing closes the sheet — selection commits, nothing lingers
+    // (the exit animation unmounts a beat later, so wait for it).
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
   it('keeps the static country heading when no change handler exists', () => {
@@ -200,8 +206,8 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
         countryIsDefault
       />,
     );
-    const select = screen.getByLabelText('Select the country where your savings live');
-    expect(select).toHaveValue('');
+    const trigger = screen.getByRole('button', { name: /Change the country where your savings live/ });
+    expect(trigger).toBeInTheDocument();
     expect(screen.getByText('Currency')).toBeInTheDocument();
     expect(screen.getByText('Ghana (GHS)')).toBeInTheDocument();
     expect(
@@ -407,8 +413,8 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
         onClearSharedView={onClearSharedView}
       />,
     );
-    const select = screen.getByLabelText('Select the country where your savings live');
-    expect(select).toHaveValue('GH');
+    const trigger = screen.getByRole('button', { name: /Change the country where your savings live/ });
+    expect(trigger).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: '← Your currency' }));
     expect(onClearSharedView).toHaveBeenCalledTimes(1);
   });

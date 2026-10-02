@@ -261,8 +261,8 @@ vi.mock("@/components/portfolio/ZakatCalculator", () => ({
   default: () => <div data-testid="zakat-calculator" />,
 }));
 vi.mock("@/components/enterprise-fx/TradeIntelligence", () => ({ default: () => null }));
-vi.mock("../CountryOverrideSelect", () => ({
-  CountryOverrideSelect: () => <select data-testid="country-override-select" />,
+vi.mock("../CountryPicker", () => ({
+  CountryPicker: () => <div data-testid="country-override-select" />,
 }));
 vi.mock("../InflationMomentCard", () => ({
   InflationMomentCard: () => <div data-testid="inflation-moment-card" />,

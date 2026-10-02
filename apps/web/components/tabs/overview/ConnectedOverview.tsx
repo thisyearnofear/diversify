@@ -21,7 +21,7 @@ import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { CountryOverrideSelect } from "./CountryOverrideSelect";
+import { CountryPicker } from "./CountryPicker";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { Coin } from "../../shared/FloatingCoins";
 import { InstrumentShell } from "../../shared/InstrumentShell";
@@ -397,7 +397,7 @@ export function ConnectedOverview({
           We could not detect your country — choose where your savings live
           to see your specific currency risk.
         </p>
-        <CountryOverrideSelect
+        <CountryPicker
           currentCountryCode={countryCode ?? ''}
           currentCountryName=''
           onChange={onChangeCountry}

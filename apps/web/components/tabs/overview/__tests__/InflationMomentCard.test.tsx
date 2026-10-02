@@ -43,11 +43,13 @@ describe('InflationMomentCard — honest fallback hero', () => {
         onChangeCountry={onChangeCountry}
       />,
     );
-    const select = screen.getByLabelText('Select the country where your savings live');
-    expect(select).toHaveValue('JP');
-    expect(screen.getAllByRole('combobox')).toHaveLength(1);
+    const trigger = screen.getByRole('button', { name: /Change the country where your savings live/ });
+    expect(trigger).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByText('Currency')).toBeInTheDocument();
-    fireEvent.change(select, { target: { value: 'GH' } });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Ghana \(GHS\)/ }));
     expect(onChangeCountry).toHaveBeenCalledWith('GH');
   });
 

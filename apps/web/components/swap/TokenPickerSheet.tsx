@@ -1,12 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
+import React, { useEffect, useMemo, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
-import Scrim from "../shared/Scrim";
+import { PickerSheetShell } from "../shared/PickerSheetShell";
 import { haptics } from "@/lib/haptics";
-import { spring, springPop } from "@/lib/motion-tokens";
-import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
-import { shouldDismissDrag, useDismissDetent } from "../shared/InspectorSheet";
+import { springPop } from "@/lib/motion-tokens";
 // Deep leaf import — provenance facts are curated constants.
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
 import { ProvenanceCoinBack } from "./ProvenanceCoinBack";
@@ -50,30 +47,12 @@ export default function TokenPickerSheet({
   title,
 }: TokenPickerSheetProps) {
   const [query, setQuery] = useState("");
-  const searchRef = useRef<HTMLInputElement>(null);
   const reducedMotion = useReducedMotion();
-  const dragControls = useDragControls();
-  const detent = useDismissDetent();
 
-  // Escape + back gesture close the picker (topmost layer only).
-  useDismissibleLayer(isOpen, onClose);
-
-  // Reset search each time the sheet opens, then focus it
+  // Reset search each time the sheet opens (autofocus lives in the shell).
   useEffect(() => {
     if (!isOpen) return;
     setQuery("");
-    const t = setTimeout(() => searchRef.current?.focus(), 50);
-    return () => clearTimeout(t);
-  }, [isOpen]);
-
-  // Lock body scroll while open
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = originalOverflow;
-    };
   }, [isOpen]);
 
   const filtered = useMemo(() => {
@@ -139,100 +118,19 @@ export default function TokenPickerSheet({
     return num.toFixed(2);
   };
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <>
-      {/* Scrim is a sibling, not a child: nested, its fixed z-[49]
-          would paint above the panel (z-auto) and swallow its clicks. */}
-      {isOpen && <Scrim intensity="light" onClick={onClose} />}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center"
-            role="dialog"
-            aria-modal="true"
-            aria-label={title}
-            onClick={onClose}
-            initial={{ opacity: 1 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-          <motion.div
-            initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
-            animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-            exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
-            transition={spring}
-            className="relative w-full sm:max-w-md max-h-[80dvh] bg-surface rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-            // Bottom sheet tracks the finger from its header; a long drag
-            // or a downward flick dismisses, anything else springs back.
-            drag="y"
-            dragControls={dragControls}
-            dragListener={false}
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.05, bottom: 0.9 }}
-            onDragStart={detent.onDragStart}
-            onDrag={detent.onDrag}
-            onDragEnd={(_e, info) => {
-              if (shouldDismissDrag(info)) onClose();
-            }}
-          >
-            {/* Header — the drag handle. Controls inside it opt out. */}
-            <div
-              className="px-4 pt-2 pb-3 border-b border-gray-100 dark:border-gray-800"
-              style={{ touchAction: "none" }}
-              data-testid="token-picker-handle"
-              onPointerDown={(e) => {
-                const target = e.target as HTMLElement;
-                if (target.closest("input, button")) return;
-                dragControls.start(e);
-              }}
-            >
-              <div className="flex justify-center pb-2 sm:hidden" aria-hidden="true">
-                <span className="block w-10 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-              </div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black uppercase tracking-tight text-ink">
-                  {title}
-                </h3>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  aria-label="Close token picker"
-                  className="group size-tap -my-1.5 -mr-1.5 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                >
-                  {/* 32px visual disc inside a 44px hit area. */}
-                  <span className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </span>
-                </button>
-              </div>
-              <div className="relative">
-                <svg
-                  className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
-                </svg>
-                <input
-                  ref={searchRef}
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search name, symbol, or region"
-                  aria-label="Search tokens"
-                  className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900"
-                />
-              </div>
-            </div>
-
-            {/* Token list */}
-            <div className="flex-1 overflow-y-auto overscroll-contain p-2 custom-scrollbar">
+  // Chrome (portal, scrim, drag handle, search, scroll lock, dismissal)
+  // lives in PickerSheetShell — this component owns only the rows.
+  return (
+    <PickerSheetShell
+      isOpen={isOpen}
+      onClose={onClose}
+      title={title}
+      query={query}
+      onQueryChange={setQuery}
+      searchPlaceholder="Search name, symbol, or region"
+      searchAriaLabel="Search tokens"
+      closeButtonAriaLabel="Close token picker"
+    >
               {sorted.length === 0 && (
                 <p className="py-8 text-center text-sm text-gray-400">
                   No tokens match &ldquo;{query}&rdquo;
@@ -366,12 +264,6 @@ export default function TokenPickerSheet({
                   Show less
                 </button>
               )}
-            </div>
-          </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>,
-    document.body,
+    </PickerSheetShell>
   );
 }

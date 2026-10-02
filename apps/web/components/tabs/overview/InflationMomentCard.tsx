@@ -15,7 +15,7 @@ import { BENCHMARK_COLORS } from "@/components/shared/palette";
 import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '@/components/shared/FloatingCoins';
 import type { InflationMoment } from '@/lib/narrative/currency-moment';
-import { CountryOverrideSelect } from './CountryOverrideSelect';
+import { CountryPicker } from './CountryPicker';
 import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 
 interface Props {
@@ -53,7 +53,7 @@ export function InflationMomentCard({
           personal; lets an expat re-point the moment at their home country. */}
       {onChangeCountry ? (
         <div className="mb-3">
-          <CountryOverrideSelect
+          <CountryPicker
             currentCountryCode={moment.countryCode}
             currentCountryName={moment.countryName}
             onChange={(code) => { act(); onChangeCountry(code); }}

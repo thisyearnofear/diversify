@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 // The moment hook drives which object renders — mock it with overridable
@@ -98,7 +98,7 @@ vi.mock("@/components/shared/TabComponents", () => ({
 }));
 
 import { NotConnectedState } from "../NotConnectedState";
-import { CountryOverrideSelect } from "../CountryOverrideSelect";
+import { CountryPicker } from "../CountryPicker";
 
 describe("NotConnectedState — Home's unconnected morph", () => {
   beforeEach(() => {
@@ -162,13 +162,13 @@ describe("NotConnectedState — Home's unconnected morph", () => {
 
     // Honest copy + a working control (§5: selection rewrites the artefact).
     expect(screen.getByText(/could not detect your country/i)).toBeInTheDocument();
-    const select = screen.getByLabelText(
-      "Select the country where your savings live",
-    );
-    expect(select).toBeInTheDocument();
-    // Placeholder state — no country silently pre-selected.
-    expect(select).toHaveValue("");
-    expect(screen.getByText("Choose a country…")).toBeInTheDocument();
+    const trigger = screen.getByRole('button', {
+      name: /Change the country where your savings live/,
+    });
+    expect(trigger).toBeInTheDocument();
+    // Placeholder state — no country silently pre-selected, no native select.
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.getByText('Choose a country…')).toBeInTheDocument();
   });
 
   it("forwards isActive to the moment card's visit memory", () => {
@@ -204,10 +204,12 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     hookState.isLoading = false;
     render(<NotConnectedState onEnableDemo={vi.fn()} />);
 
-    const select = screen.getByLabelText(
-      "Select the country where your savings live",
-    );
-    fireEvent.change(select, { target: { value: "JM" } });
+    const trigger = screen.getByRole('button', {
+      name: /Change the country where your savings live/,
+    });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Jamaica \(JMD\)/ }));
     expect(hookState.onChangeCountry).toHaveBeenCalledWith("JM");
   });
 
@@ -256,47 +258,63 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   });
 });
 
-describe("CountryOverrideSelect — no-country placeholder state", () => {
-  it("renders the curated list behind a disabled placeholder when no country is known", () => {
+describe("CountryPicker — no-country placeholder state", () => {
+  it("renders the curated list in the shared sheet behind a placeholder when no country is known", () => {
     render(
-      <CountryOverrideSelect
+      <CountryPicker
         currentCountryCode=""
         currentCountryName=""
         onChange={vi.fn()}
       />,
     );
-    const select = screen.getByLabelText(
-      "Select the country where your savings live",
-    );
-    expect(select).toHaveValue("");
+    // Trigger names the placeholder; the list lives behind the dialog.
     expect(screen.getByText("Choose a country…")).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Change the country where your savings live/,
+      }),
+    );
+    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
     // Curated corridors present (Caribbean + Africa + benchmarks).
     expect(
-      screen.getByRole("option", { name: /Jamaica \(JMD\)/ }),
+      screen.getByRole("button", { name: /Jamaica \(JMD\)/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: /Barbados \(BBD\)/ }),
+      screen.getByRole("button", { name: /Barbados \(BBD\)/ }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("option", { name: /Ghana \(GHS\)/ }),
+      screen.getByRole("button", { name: /Ghana \(GHS\)/ }),
     ).toBeInTheDocument();
   });
 
-  it("fires onChange only for a real selection — the placeholder is inert", () => {
+  it("fires onChange only for a real selection — dismissing without choosing is inert", async () => {
     const onChange = vi.fn();
     render(
-      <CountryOverrideSelect
+      <CountryPicker
         currentCountryCode=""
         currentCountryName=""
         onChange={onChange}
       />,
     );
-    const select = screen.getByLabelText(
-      "Select the country where your savings live",
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Change the country where your savings live/,
+      }),
     );
-    fireEvent.change(select, { target: { value: "" } });
+    // Dismiss via the close button without choosing anything.
+    fireEvent.click(screen.getByRole('button', { name: 'Close country picker' }));
     expect(onChange).not.toHaveBeenCalled();
-    fireEvent.change(select, { target: { value: "JM" } });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // A real row commits its ISO2 and closes the sheet.
+    fireEvent.click(
+      screen.getByRole('button', {
+        name: /Change the country where your savings live/,
+      }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Jamaica \(JMD\)/ }));
     expect(onChange).toHaveBeenCalledWith("JM");
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 });

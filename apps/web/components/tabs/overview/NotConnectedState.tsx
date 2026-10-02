@@ -13,7 +13,7 @@ import { useCurrencyMoment } from "@/hooks/use-currency-moment";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { CurrencyStoryInspector } from "./CurrencyStoryInspector";
-import { CountryOverrideSelect } from "./CountryOverrideSelect";
+import { CountryPicker } from "./CountryPicker";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
@@ -105,7 +105,7 @@ export function NotConnectedState({
               We could not detect your country — choose where your savings live
               to see your specific currency risk.
             </p>
-            <CountryOverrideSelect
+            <CountryPicker
               currentCountryCode={countryCode ?? ''}
               currentCountryName=''
               onChange={onChangeCountry}
