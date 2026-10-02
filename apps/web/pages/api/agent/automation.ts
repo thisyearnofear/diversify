@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AutomationService } from '@diversifi/shared';
+import { AutomationService } from '@diversifi/shared/src/services/automation-service';
 import * as path from 'path';
 import { readJsonFile, writeJsonFile } from '@/lib/agent/json-store';
 

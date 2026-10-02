@@ -32,7 +32,8 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { recommendationLedgerService, constantTimeEqual } from '@diversifi/shared';
+import { recommendationLedgerService } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
 import { recordGuardianRun } from '../../../lib/guardian-run-status';
 import { GUARDIAN_AGENT_ADDRESS } from '../../../constants/guardian-identity';
 // Phase 0 (unified Guardian reasoning): the deterministic synthesizer moved

@@ -11,14 +11,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  recommendationLedgerService,
-  getLedgerContractAddress,
-  getDefaultLedgerChainId,
-  buildLedgerExplorerUrl,
-  verifyLedgerTx,
-  type LedgerRecommendation,
-} from '@diversifi/shared';
+import { recommendationLedgerService, getLedgerContractAddress, getDefaultLedgerChainId, buildLedgerExplorerUrl, verifyLedgerTx, type LedgerRecommendation } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import {
   PROOF_FEED_CHAIN_IDS,
   mergeProofFeedRecommendations,

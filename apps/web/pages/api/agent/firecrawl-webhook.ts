@@ -21,12 +21,10 @@
 
 import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  assessMacroSignalWithTypeSafe,
-  constantTimeEqual,
-  generateChatCompletion,
-  recommendationLedgerService,
-} from '@diversifi/shared';
+import { generateChatCompletion } from '@diversifi/shared/src/services/ai/ai-service';
+import { recommendationLedgerService } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { assessMacroSignalWithTypeSafe } from '@diversifi/shared/src/services/typesafe-signal-lens.service';
+import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
 import { enqueueRecommendation } from '@/lib/vault/guardian-state';
 import { loadGatewayEvaluate } from '@/lib/agent/load-gateway-evaluate';
 import { guardianEventBus } from '@/lib/agent/guardian-event-bus';

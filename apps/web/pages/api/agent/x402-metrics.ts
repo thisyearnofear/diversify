@@ -1,16 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-  listArcResearchSources,
-  x402Analytics,
-  getAgentAddress,
-  getAgentUSDCBalance,
-  getSettlementStats,
-  DEFAULT_SETTLEMENT_NETWORK,
-  getSettlementConfig,
-  SETTLEMENT_ENV,
-  getLedgerStats,
-  withTimeout,
-} from '@diversifi/shared';
+import { getLedgerStats } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { getAgentAddress, getAgentUSDCBalance, getSettlementStats, DEFAULT_SETTLEMENT_NETWORK, getSettlementConfig, SETTLEMENT_ENV } from '@diversifi/shared/src/services/settlement-service';
+import { listArcResearchSources } from '@diversifi/shared/src/utils/arc-research-sources';
+import { withTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { x402Analytics } from '@diversifi/shared/src/utils/x402-analytics';
 
 const METRICS_RPC_TIMEOUT_MS = 5_000;
 

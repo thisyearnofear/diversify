@@ -1,7 +1,7 @@
 import type { ValidatedGuardianPlan } from "@/lib/guardian-tilts";
 import type { MultichainPortfolio } from "./use-multichain-balances";
 import type { RegionalInflationData } from "./use-inflation-data";
-import type { ResearchReceipt } from "@diversifi/shared";
+import type { ResearchReceipt } from '@diversifi/shared/src/types/research-billing';
 import type { GuardianRecommendationContract } from "@diversifi/shared/src/types/guardian-protection";
 import type { SwapPrefill } from "../context/app/types";
 

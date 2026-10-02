@@ -9,11 +9,19 @@ const mockRemember = vi.fn();
 const mockDbConnect = vi.fn();
 const mockFindOneAndUpdate = vi.fn();
 
-vi.mock('@diversifi/shared', () => ({
+vi.mock('@diversifi/shared/src/services/typesafe-signal-lens.service', () => ({
   assessMacroSignalWithTypeSafe: (...args: unknown[]) => mockAssessMacroSignalWithTypeSafe(...args),
+}));
+vi.mock('@diversifi/shared/src/services/ai/ai-service', () => ({
   generateChatCompletion: (...args: unknown[]) => mockGenerateChatCompletion(...args),
+}));
+vi.mock('@diversifi/shared/src/services/cognee-memory-service', () => ({
   cogneeMemoryService: { remember: (...args: unknown[]) => mockRemember(...args) },
+}));
+vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', () => ({
   recommendationLedgerService: { recordRecommendation: (...args: unknown[]) => mockRecordRecommendation(...args) },
+}));
+vi.mock('@diversifi/shared/src/utils/security', () => ({
   constantTimeEqual: () => true,
 }));
 

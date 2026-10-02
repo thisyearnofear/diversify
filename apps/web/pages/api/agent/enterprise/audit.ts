@@ -1,11 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import {
-    validateApiKey,
-    getRecommendation,
-    getUserRecommendations,
-    listSupportedLedgerChains,
-    buildLedgerExplorerUrl,
-} from '@diversifi/shared';
+import { validateApiKey } from '@diversifi/shared/src/services/enterprise-auth.service';
+import { getRecommendation, getUserRecommendations, listSupportedLedgerChains, buildLedgerExplorerUrl } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import { zeroGStorageService } from '@diversifi/shared-0g/src/services/storage-service';
 import { listTenantRecommendations } from '../../../../lib/audit-index';
 

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getSmartAccountProvider, getLedgerGasRunways, type LedgerGasRunway } from "@diversifi/shared";
+import { getLedgerGasRunways, type LedgerGasRunway } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { getSmartAccountProvider } from '@diversifi/shared/src/services/vault/smart-account-provider';
 
 export default async function handler(
   req: NextApiRequest,

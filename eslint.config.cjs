@@ -40,13 +40,13 @@ module.exports = [
     ],
     rules: {
       '@typescript-eslint/no-restricted-imports': [
-        'warn',
+        'error',
         {
           paths: [
             {
               name: '@diversifi/shared',
               message:
-                'Deep-import the specific leaf module (@diversifi/shared/src/...) instead of the barrel — the barrel ships the whole AI/swap/ethers stack to the client. Type-only imports are fine.',
+                'Deep-import the specific leaf module (@diversifi/shared/src/...) instead of the barrel — the barrel ships the whole AI/swap/ethers stack to the client AND into every serverless function (NFT traces file reachability, not tree-shaken usage; one barrel import once cost healthz 63 MB). Type-only imports are fine.',
               allowTypeImports: true,
             },
           ],

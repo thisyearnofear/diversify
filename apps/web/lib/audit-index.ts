@@ -17,13 +17,7 @@
 
 import connectDB from './mongodb';
 import { TenantRecommendation } from '../models/TenantRecommendation';
-import {
-    getRecommendation,
-    getUserRecommendations,
-    listSupportedLedgerChains,
-    buildLedgerExplorerUrl,
-    type RecommendationAnchorMeta,
-} from '@diversifi/shared';
+import { getRecommendation, getUserRecommendations, listSupportedLedgerChains, buildLedgerExplorerUrl, type RecommendationAnchorMeta } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import { zeroGStorageService } from '@diversifi/shared-0g/src/services/storage-service';
 
 export interface AuditRow {

@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AIService, analyzePortfolio, type MultichainPortfolio } from '@diversifi/shared';
+import { AIService } from '@diversifi/shared/src/services/ai/ai-service';
+import { type MultichainPortfolio } from '@diversifi/shared/src/types/portfolio';
+import { analyzePortfolio } from '@diversifi/shared/src/utils/portfolio-analysis';
 
 /**
  * Web-Enriched Analysis API Endpoint

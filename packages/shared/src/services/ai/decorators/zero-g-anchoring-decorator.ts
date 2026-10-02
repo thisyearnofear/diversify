@@ -18,7 +18,31 @@ import {
   ChatCompletionOptions,
   ChatCompletionResult
 } from '../types';
-import { zeroGStorageService } from "@diversifi/shared-0g/src/services/storage-service";
+// The 0G storage SDK (~24MB traced) is loaded lazily inside anchorToZeroG,
+// not statically here. A static import would drag the full SDK into every
+// serverless function whose graph reaches AIService — including probes and
+// status endpoints that can never produce anchorable content — because NFT
+// traces file reachability, not tree-shaken usage. The dynamic import below
+// follows the same pattern this file already uses for the ledger service.
+// Routes whose responses can genuinely anchor keep working because they
+// carry the SDK via outputFileTracingIncludes (next.config.js SDK_INCLUDE).
+type ZeroGStorageService = {
+  uploadEvidence: (
+    bundle: string,
+    meta: { agent: string; source: string; timestamp: number },
+  ) => Promise<{ cid?: string; merkleRoot?: string }>;
+};
+
+let cachedStorageService: ZeroGStorageService | null = null;
+async function loadZeroGStorageService(): Promise<ZeroGStorageService> {
+  if (!cachedStorageService) {
+    const mod = await import(
+      "@diversifi/shared-0g/src/services/storage-service"
+    );
+    cachedStorageService = mod.zeroGStorageService as ZeroGStorageService;
+  }
+  return cachedStorageService;
+}
 // recommendationLedgerService is imported dynamically to avoid circular deps
 
 interface AnchorPayload {
@@ -151,6 +175,10 @@ export class ZeroGAnchoringDecorator {
     evidenceBundle: string,
   ): Promise<AnchorPayload | null> {
     try {
+      // Lazily resolved (see top-of-file note): on functions that never
+      // ship the SDK this rejects, which is caught below and degrades to
+      // "no anchor" — the chat response itself is unaffected.
+      const zeroGStorageService = await loadZeroGStorageService();
       const { cid, merkleRoot } = await zeroGStorageService.uploadEvidence(
         evidenceBundle,
         {

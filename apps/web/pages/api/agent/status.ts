@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AIService } from '@diversifi/shared';
+import { AIService } from '@diversifi/shared/src/services/ai/ai-service';
 import { getGuardianRunHealth } from '../../../lib/guardian-run-status';
 import { getMacroSignalReceipt } from '../../../lib/macro-signal-receipt';
 

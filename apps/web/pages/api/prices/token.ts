@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { TokenPriceService } from "@diversifi/shared";
+import { TokenPriceService } from '@diversifi/shared/src/utils/api-services';
 
 type TokenPriceResponse = {
   success: boolean;

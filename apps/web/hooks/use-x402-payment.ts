@@ -41,7 +41,7 @@ import {
     randomNonce32,
     toWireSignedMandate,
 } from '@diversifi/shared/src/services/hsp/hsp-settlement.service';
-import type { ResearchQuote, ResearchReceipt, ResearchSourceLineItem } from '@diversifi/shared';
+import type { ResearchQuote, ResearchReceipt, ResearchSourceLineItem } from '@diversifi/shared/src/types/research-billing';
 
 const GATEWAY_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 const HSP_CHAIN_IDS: number[] = [NETWORKS.HASHKEY_TESTNET.chainId, NETWORKS.HASHKEY_MAINNET.chainId];

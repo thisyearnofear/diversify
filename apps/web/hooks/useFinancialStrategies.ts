@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useStrategy } from '@/context/app/StrategyContext';
-import type { FinancialStrategy as SharedFinancialStrategy } from '@diversifi/shared';
+import type { FinancialStrategy as SharedFinancialStrategy } from '@diversifi/shared/src/types/strategy';
 // Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
 import { StrategyService } from '@diversifi/shared/src/services/strategy/strategy.service';
 import { STRATEGIES, type Strategy } from '@/constants/strategies';

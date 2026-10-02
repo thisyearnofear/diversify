@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getAgenticIdService, type AgenticIdBundle } from "@diversifi/shared";
+import { getAgenticIdService, type AgenticIdBundle } from '@diversifi/shared/src/services/agentic-id.service';
 
 const ADDRESS_REGEX = /^0x[a-fA-F0-9]{40}$/;
 

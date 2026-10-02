@@ -5,7 +5,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ArcAgent } from '@diversifi/shared';
+import { ArcAgent } from '@diversifi/shared/src/services/arc-agent';
 
 export default async function handler(
   req: NextApiRequest,

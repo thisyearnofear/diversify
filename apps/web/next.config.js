@@ -65,36 +65,24 @@ const nextConfig = {
     // traces (open-jsonrpc-provider pulls ws/axios). Scoped (2026-09-25) to the
     // routes whose bundle actually contains storage-service/persistence-service
     // — a '*' key was adding ~22 MB of SDK to every function.
+    //
+    // KEEP RULE (2026-10-02): an entry stays ONLY if the route can reach
+    // AIService.chat()/generateChatCompletion with user-influenced content —
+    // that is the sole path to anchorAndRecord. 22 entries were removed after
+    // verifying each route's static graph never reaches chat (probes, status
+    // checks, price feeds, speech/transcription, direct ledger reads/writes,
+    // deterministic advisory synthesis). The anchoring decorator loads the
+    // SDK lazily, so uncovered routes degrade to "no anchor, response
+    // unaffected" rather than crashing — but do NOT re-add an entry without
+    // confirming the route actually anchors, or the ~24 MB comes back.
     '/api/agent/advisor': SDK_INCLUDE,
-    '/api/agent/agentic-id': SDK_INCLUDE,
-    '/api/agent/arc-balance': SDK_INCLUDE,
-    '/api/agent/automation': SDK_INCLUDE,
-    '/api/agent/business/cycle-monitor': SDK_INCLUDE,
-    '/api/agent/check-connection': SDK_INCLUDE,
-    '/api/agent/deep-analyze': SDK_INCLUDE,
-    '/api/agent/enterprise/audit': SDK_INCLUDE,
     '/api/agent/firecrawl-webhook': SDK_INCLUDE,
-    '/api/agent/guardian-heartbeat': SDK_INCLUDE,
     '/api/agent/guardian-loop': SDK_INCLUDE,
     '/api/agent/intelligence': SDK_INCLUDE,
     '/api/agent/memory': SDK_INCLUDE,
     '/api/agent/onramp-help': SDK_INCLUDE,
-    '/api/agent/social-resolve': SDK_INCLUDE,
-    '/api/agent/speak': SDK_INCLUDE,
-    '/api/agent/status': SDK_INCLUDE,
-    '/api/agent/test-zapier': SDK_INCLUDE,
-    '/api/agent/transcribe': SDK_INCLUDE,
     '/api/agent/web-analyze': SDK_INCLUDE,
     '/api/agent/x402-gateway': SDK_INCLUDE,
-    '/api/agent/x402-metrics': SDK_INCLUDE,
-    '/api/agent/zero-g-ledger': SDK_INCLUDE,
-    '/api/bitso/juno': SDK_INCLUDE,
-    '/api/emerging-markets/prices': SDK_INCLUDE,
-    '/api/healthz': SDK_INCLUDE,
-    '/api/prices/token': SDK_INCLUDE,
-    '/api/status': SDK_INCLUDE,
-    '/api/trading/market-pulse': SDK_INCLUDE,
-    '/api/trading/signals': SDK_INCLUDE,
   },
 
   // NOTE (2026-09-11): outputFileTracingExcludes REMOVED entirely. Both

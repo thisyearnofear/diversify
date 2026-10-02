@@ -1,4 +1,12 @@
-import { AIService, chatStream, GoodDollarService, StrategyService, generateChatCompletion, analyzePortfolio, getOnrampSystemPrompt, getAdaptiveTokenLimit, guardianMemoryService, type FinancialStrategy, type PortfolioAnalysis, type RegionalInflationData, type ChainBalance } from '@diversifi/shared';
+import { AIService, chatStream, generateChatCompletion, getAdaptiveTokenLimit } from '@diversifi/shared/src/services/ai/ai-service';
+import { getOnrampSystemPrompt } from '@diversifi/shared/src/services/ai/onramp-agent-context';
+import { GoodDollarService } from '@diversifi/shared/src/services/gooddollar-service';
+import { guardianMemoryService } from '@diversifi/shared/src/services/guardian-memory-service';
+import { StrategyService } from '@diversifi/shared/src/services/strategy/strategy.service';
+import { type RegionalInflationData } from '@diversifi/shared/src/types/inflation';
+import { type ChainBalance } from '@diversifi/shared/src/types/portfolio';
+import { type FinancialStrategy } from '@diversifi/shared/src/types/strategy';
+import { analyzePortfolio, type PortfolioAnalysis } from '@diversifi/shared/src/utils/portfolio-analysis';
 import { GUARDIAN_FACT_MAX, sanitizeFactText } from '@/lib/guardian-memory';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
 import { getLiveDepreciation, getLiveRate } from '@diversifi/shared/src/services/fx-rate.service';

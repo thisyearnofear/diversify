@@ -17,11 +17,13 @@ const mocks = vi.hoisted(() => {
   };
 });
 
-vi.mock('@diversifi/shared', () => ({
+vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', () => ({
   recommendationLedgerService: {
     recordRecommendation: mocks.recordRecommendation,
     mirrorRecommendationToZeroG: mocks.mirrorRecommendationToZeroG,
   },
+}));
+vi.mock('@diversifi/shared/src/utils/security', () => ({
   constantTimeEqual: (a: string, b: string) => a === b,
 }));
 

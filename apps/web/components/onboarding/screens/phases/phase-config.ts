@@ -8,7 +8,7 @@
 
 import type { Variants } from 'framer-motion';
 import type { ArchetypeId } from '../../../protection-cards/tokens';
-import type { FinancialStrategy } from '@diversifi/shared';
+import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
 
 // ── Animation variants ─────────────────────────────────────────────────
 // Blur-swap phase transition (transitions.dev "text states swap" pattern)

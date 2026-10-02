@@ -36,9 +36,13 @@ const { mockChat, mockChatStream, mockCompletion, mockLiveDep, mockLiveRate, moc
     })),
   }));
 
-vi.mock("@diversifi/shared", () => ({
+vi.mock("@diversifi/shared/src/services/ai/ai-service", () => ({
   AIService: { chat: mockChat },
   chatStream: mockChatStream,
+  generateChatCompletion: mockCompletion,
+  getAdaptiveTokenLimit: () => 512,
+}));
+vi.mock("@diversifi/shared/src/services/gooddollar-service", () => ({
   GoodDollarService: {
     createReadOnly: () => ({
       isVerified: async () => false,
@@ -49,11 +53,17 @@ vi.mock("@diversifi/shared", () => ({
       }),
     }),
   },
+}));
+vi.mock("@diversifi/shared/src/services/strategy/strategy.service", () => ({
   StrategyService: { getAIPrompt: () => "" },
-  generateChatCompletion: mockCompletion,
-  analyzePortfolio: mockAnalyze,
+}));
+vi.mock("@diversifi/shared/src/services/ai/onramp-agent-context", () => ({
   getOnrampSystemPrompt: () => "",
-  getAdaptiveTokenLimit: () => 512,
+}));
+vi.mock("@diversifi/shared/src/utils/portfolio-analysis", () => ({
+  analyzePortfolio: mockAnalyze,
+}));
+vi.mock("@diversifi/shared/src/services/cognee-memory-service", () => ({
   cogneeMemoryService: {
     getAdvisorContext: async () => "",
     persistInteraction: () => {},

@@ -6,7 +6,8 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from "next";
-import { getEmergingMarketsPriceService, emergingMarketsPriceService, unifiedCache } from "@diversifi/shared";
+import { getEmergingMarketsPriceService, emergingMarketsPriceService } from '@diversifi/shared/src/services/price/emerging-markets-price.service';
+import { unifiedCache } from '@diversifi/shared/src/utils/unified-cache-service';
 
 // Get the service instance with fallback to handle module resolution edge cases
 const getPriceService = () => {

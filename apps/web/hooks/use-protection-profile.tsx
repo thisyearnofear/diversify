@@ -6,7 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo, createContext, useContext, type ReactNode } from 'react';
-import type { FinancialStrategy } from '@diversifi/shared';
+import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
 import type { MoneyPurpose } from '@/constants/money-purpose';
 import type { CustomPlan } from '@/components/protection-cards/plan-preview';
 import { normalizeCustomPlan } from '@/lib/custom-plan';

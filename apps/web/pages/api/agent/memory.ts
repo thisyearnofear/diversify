@@ -26,12 +26,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { rateLimit, getClientIp } from '@/lib/rate-limit';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
-import {
-  cogneeMemoryService,
-  extractGuardianFacts,
-  guardianMemoryService,
-  tablestoreMemoryService,
-} from '@diversifi/shared';
+import { cogneeMemoryService } from '@diversifi/shared/src/services/cognee-memory-service';
+import { extractGuardianFacts } from '@diversifi/shared/src/services/guardian-memory-extract';
+import { guardianMemoryService } from '@diversifi/shared/src/services/guardian-memory-service';
+import { tablestoreMemoryService } from '@diversifi/shared/src/services/tablestore-memory-service';
 
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;

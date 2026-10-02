@@ -6,7 +6,7 @@
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '@/lib/mongodb';
-import { constantTimeEqual } from '@diversifi/shared';
+import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
 import { runCycleMonitor } from '@/lib/guardian/cycle-monitor-run';
 
 const GUARDIAN_LOOP_SECRET = (() => {

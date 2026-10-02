@@ -32,9 +32,17 @@ const { mockChat, mockChatStream, mockProvider } = vi.hoisted(() => ({
 
 const mockPersistInteraction = vi.hoisted(() => vi.fn());
 
-vi.mock("@diversifi/shared", () => ({
+vi.mock("@diversifi/shared/src/services/ai/ai-service", () => ({
   AIService: { chat: mockChat },
   chatStream: mockChatStream,
+  generateChatCompletion: vi.fn(async () => ({
+    content: JSON.stringify({ action: "HOLD", reasoning: "mock" }),
+    provider: "mock",
+    model: "mock-model",
+  })),
+  getAdaptiveTokenLimit: () => 512,
+}));
+vi.mock("@diversifi/shared/src/services/gooddollar-service", () => ({
   GoodDollarService: {
     createReadOnly: () => ({
       isVerified: async () => false,
@@ -45,12 +53,14 @@ vi.mock("@diversifi/shared", () => ({
       }),
     }),
   },
+}));
+vi.mock("@diversifi/shared/src/services/strategy/strategy.service", () => ({
   StrategyService: { getAIPrompt: () => "" },
-  generateChatCompletion: vi.fn(async () => ({
-    content: JSON.stringify({ action: "HOLD", reasoning: "mock" }),
-    provider: "mock",
-    model: "mock-model",
-  })),
+}));
+vi.mock("@diversifi/shared/src/services/ai/onramp-agent-context", () => ({
+  getOnrampSystemPrompt: () => "",
+}));
+vi.mock("@diversifi/shared/src/utils/portfolio-analysis", () => ({
   analyzePortfolio: vi.fn(() => ({
     totalValue: 0,
     tokenCount: 0,
@@ -64,13 +74,15 @@ vi.mock("@diversifi/shared", () => ({
     targetAllocations: {},
     projections: { optimizedPath: { purchasingPowerPreserved: 0 } },
   })),
-  getOnrampSystemPrompt: () => "",
-  getAdaptiveTokenLimit: () => 512,
+}));
+vi.mock("@diversifi/shared/src/services/cognee-memory-service", () => ({
   cogneeMemoryService: {
     getAdvisorContext: async () => "",
     persistInteraction: mockPersistInteraction,
     isAvailable: () => false,
   },
+}));
+vi.mock("@diversifi/shared/src/services/guardian-memory-service", () => ({
   guardianMemoryService: {
     providerFor: (id: unknown) => (id === 'cognee' ? mockProvider : null),
     listAvailableProviders: () => [],

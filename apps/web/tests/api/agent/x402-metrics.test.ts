@@ -10,19 +10,21 @@ const mockGetSettlementStats = vi.fn();
 const mockGetLedgerStats = vi.fn();
 const mockWithTimeout = vi.fn();
 
-vi.mock('@diversifi/shared', () => ({
+vi.mock('@diversifi/shared/src/utils/arc-research-sources', () => ({
   listArcResearchSources: () => [
     { id: 'macro', label: 'Macro source', price: '0.004' },
   ],
+}));
+vi.mock('@diversifi/shared/src/utils/x402-analytics', () => ({
   x402Analytics: {
     getDashboardData: () => mockDashboard(),
     getAnalyticsReport: () => mockReport(),
   },
+}));
+vi.mock('@diversifi/shared/src/services/settlement-service', () => ({
   getAgentAddress: () => mockGetAgentAddress(),
   getAgentUSDCBalance: (...args: unknown[]) => mockGetAgentUSDCBalance(...args),
   getSettlementStats: (...args: unknown[]) => mockGetSettlementStats(...args),
-  getLedgerStats: (...args: unknown[]) => mockGetLedgerStats(...args),
-  withTimeout: (...args: unknown[]) => mockWithTimeout(...args),
   DEFAULT_SETTLEMENT_NETWORK: 'ARBITRUM',
   SETTLEMENT_ENV: 'mainnet',
   getSettlementConfig: () => ({
@@ -31,6 +33,12 @@ vi.mock('@diversifi/shared', () => ({
     usdcAddress: '0x0000000000000000000000000000000000000002',
     explorerBase: 'https://arbiscan.io',
   }),
+}));
+vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', () => ({
+  getLedgerStats: (...args: unknown[]) => mockGetLedgerStats(...args),
+}));
+vi.mock('@diversifi/shared/src/utils/promise-utils', () => ({
+  withTimeout: (...args: unknown[]) => mockWithTimeout(...args),
 }));
 
 import handler from '@/pages/api/agent/x402-metrics';

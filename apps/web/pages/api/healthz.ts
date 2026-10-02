@@ -21,7 +21,7 @@
  */
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../lib/mongodb';
-import { AIService } from '@diversifi/shared';
+import { AIService } from '@diversifi/shared/src/services/ai/ai-service';
 
 const STARTED_AT = Date.now();
 // 10s, not 6s: Venice completions on the probe model routinely take ~7s under

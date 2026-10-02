@@ -2,42 +2,25 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { ethers } from 'ethers';
 import { getSoSoValueIntelligence, getSoSoMacroEvents } from '../../../lib/sosovalue';
-import {
-    ARC_DATA_HUB_CONFIG,
-    buildArcResearchBundle,
-    BrightDataService,
-    circleService,
-    getArcResearchSource,
-    normalizeArcResearchSource,
-    settleWithAuthorization,
-    DEFAULT_SETTLEMENT_NETWORK,
-    getSettlementConfig,
-    getHspRailConfig,
-    resolveHspRuntime,
-    verifyHspSettlement,
-    getHspChainInfo,
-    registerMandate,
-    type WireSignedMandate,
-    SETTLEMENT_ENV,
-    generateChatCompletion,
-    startBrightDataWarming,
-    type ArcResearchCategory,
-    type ArcResearchDataType,
-    type ArcResearchSourceDefinition,
-    type BrightDataBankCode,
-    type BrightDataCommodity,
-    x402Analytics
-} from '@diversifi/shared';
-import { validateApiKey, recordRecommendation, anchorIntelligence, type EnterpriseKey, constantTimeEqual, getLedgerContractAddress, buildSettlementMeta } from '@diversifi/shared';
-import {
-    analyzeCycles,
-    requiredDates,
-    validateCycles,
-    buildServerlessRateProvider,
-    fxRegionForCurrency,
-    GHANA_IMPORTER_SAMPLE,
-    type DragInput,
-} from '@diversifi/shared';
+import { ARC_DATA_HUB_CONFIG } from '@diversifi/shared/src/config/index';
+import { generateChatCompletion } from '@diversifi/shared/src/services/ai/ai-service';
+import { BrightDataService } from '@diversifi/shared/src/services/bright-data-service';
+import { type BrightDataBankCode, type BrightDataCommodity } from '@diversifi/shared/src/services/bright-data-types';
+import { startBrightDataWarming } from '@diversifi/shared/src/services/bright-data-warmer';
+import { circleService } from '@diversifi/shared/src/services/circle-service';
+import { resolveHspRuntime, verifyHspSettlement, getHspChainInfo, registerMandate, type WireSignedMandate } from '@diversifi/shared/src/services/hsp/hsp-settlement.service';
+import { settleWithAuthorization, DEFAULT_SETTLEMENT_NETWORK, getSettlementConfig, getHspRailConfig, SETTLEMENT_ENV } from '@diversifi/shared/src/services/settlement-service';
+import { buildArcResearchBundle, getArcResearchSource, normalizeArcResearchSource, type ArcResearchCategory, type ArcResearchDataType, type ArcResearchSourceDefinition } from '@diversifi/shared/src/utils/arc-research-sources';
+import { x402Analytics } from '@diversifi/shared/src/utils/x402-analytics';
+import { validateApiKey, type EnterpriseKey } from '@diversifi/shared/src/services/enterprise-auth.service';
+import { anchorIntelligence } from '@diversifi/shared/src/services/intelligence-anchor.service';
+import { recordRecommendation, getLedgerContractAddress } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { buildSettlementMeta } from '@diversifi/shared/src/services/settlement-service';
+import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
+import { analyzeCycles, requiredDates, validateCycles, type DragInput } from '@diversifi/shared/src/services/fx-drag/calc';
+import { buildServerlessRateProvider } from '@diversifi/shared/src/services/fx-drag/rates-serverless';
+import { fxRegionForCurrency } from '@diversifi/shared/src/services/fx-drag/regions';
+import { GHANA_IMPORTER_SAMPLE } from '@diversifi/shared/src/services/fx-drag/sample-ghana';
 import { CURRENCY_BY_CODE } from '../../../constants/currency-risk';
 import { indexRecommendation } from '../../../lib/audit-index';
 import { getClientStore, type ClientState } from '../../../lib/client-store';

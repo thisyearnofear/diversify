@@ -16,12 +16,17 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('@diversifi/shared', () => ({
+// Mock-path note: the handler imports these as deep leaves (never the
+// barrel), so each leaf is mocked at the specifier the handler uses —
+// mocking the barrel would no longer intercept anything.
+vi.mock('@diversifi/shared/src/services/cognee-memory-service', () => ({
   cogneeMemoryService: {
     persistInteraction: vi.fn().mockReturnValue({ catch: vi.fn() }),
     isAvailable: vi.fn().mockReturnValue(false),
     sweepStaleMemories: vi.fn().mockResolvedValue({ swept: 0, attempted: 0, evicted: 0 }),
   },
+}));
+vi.mock('@diversifi/shared/src/services/memory-consolidation-service', () => ({
   memoryConsolidationService: {
     consolidate: vi.fn().mockResolvedValue({
       consolidated: false,
@@ -33,6 +38,8 @@ vi.mock('@diversifi/shared', () => ({
       reason: 'memory_service_unavailable',
     }),
   },
+}));
+vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', () => ({
   recommendationLedgerService: {
     recordRecommendation: vi.fn().mockResolvedValue({
       status: 'anchored',
@@ -50,11 +57,24 @@ vi.mock('@diversifi/shared', () => ({
       explorerUrl: '',
     }),
   },
-  CELO_TOKEN_ADDRESS_BY_SYMBOL: {
-    cUSD: '0xCUSD',
-    cEUR: '0xCEUR',
-  },
+}));
+vi.mock('@diversifi/shared/src/config/index', async (importOriginal) => {
+  // Spread the real module: config/chain-capabilities imports NETWORKS back
+  // from ./index (intra-package cycle), so a bare factory breaks the
+  // transitive load. Override only what the handler reads.
+  const actual = await importOriginal<typeof import('@diversifi/shared/src/config/index')>();
+  return {
+    ...actual,
+    CELO_TOKEN_ADDRESS_BY_SYMBOL: {
+      cUSD: '0xCUSD',
+      cEUR: '0xCEUR',
+    },
+  };
+});
+vi.mock('@diversifi/shared/src/utils/security', () => ({
   constantTimeEqual: (a: string, b: string) => a === b,
+}));
+vi.mock('@diversifi/shared/src/types/strategy', () => ({
   deriveLedgerRoutingContextFromVault: vi.fn().mockReturnValue(undefined),
 }));
 
@@ -411,7 +431,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
     // PHASE 5 ASSERTION: ledger must be stamped with CYCLE_PROTECTION,
     // not AUTONOMOUS_REBALANCE — cycle-driven executions need to be
     // grep-able separately from generic rebalances on the ledger.
-    const { recommendationLedgerService } = await import('@diversifi/shared');
+    const { recommendationLedgerService } = await import('@diversifi/shared/src/services/recommendation-ledger.service');
     const calls = vi.mocked(recommendationLedgerService.recordRecommendation).mock.calls;
     expect(calls.length).toBeGreaterThan(0);
     const firstCallArgs = calls[0][0];
@@ -422,7 +442,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
 
     // Guardian memory is opt-in: a successful execution must NOT write
     // anything to memory. The ledger record above is the only record.
-    const { cogneeMemoryService } = await import('@diversifi/shared');
+    const { cogneeMemoryService } = await import('@diversifi/shared/src/services/cognee-memory-service');
     expect(cogneeMemoryService.persistInteraction).not.toHaveBeenCalled();
   });
 
@@ -612,7 +632,7 @@ describe('Phase 5: cycle-aware Guardian execution integration', () => {
 
     expect(body.executionsSucceeded).toBe(1);
 
-    const { recommendationLedgerService } = await import('@diversifi/shared');
+    const { recommendationLedgerService } = await import('@diversifi/shared/src/services/recommendation-ledger.service');
     const calls = vi.mocked(recommendationLedgerService.recordRecommendation).mock.calls;
     expect(calls.length).toBeGreaterThan(0);
     const firstCallArgs = calls[0][0];

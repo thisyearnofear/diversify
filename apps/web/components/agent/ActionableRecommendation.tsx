@@ -13,7 +13,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { type PortfolioAnalysis, type RebalancingOpportunity } from '@diversifi/shared';
+import { type PortfolioAnalysis, type RebalancingOpportunity } from '@diversifi/shared/src/utils/portfolio-analysis';
 import type { MultichainPortfolio } from '../../hooks/use-multichain-balances';
 import { useJunoStatus } from '../../hooks/use-juno-status';
 import { NETWORKS } from '../../config';

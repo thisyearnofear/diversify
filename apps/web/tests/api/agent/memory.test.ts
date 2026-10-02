@@ -51,16 +51,22 @@ const {
   };
 });
 
-vi.mock('@diversifi/shared', () => ({
+vi.mock('@diversifi/shared/src/services/cognee-memory-service', () => ({
   cogneeMemoryService: {
     forget: (...args: unknown[]) => mockCogneeForget(...args),
     isAvailable: () => mockCogneeAvailable(),
   },
+}));
+vi.mock('@diversifi/shared/src/services/tablestore-memory-service', () => ({
   tablestoreMemoryService: {
     forget: (...args: unknown[]) => mockTablestoreForget(...args),
     isAvailable: () => mockTablestoreAvailable(),
   },
+}));
+vi.mock('@diversifi/shared/src/services/guardian-memory-service', () => ({
   guardianMemoryService: mockGuardianService,
+}));
+vi.mock('@diversifi/shared/src/services/guardian-memory-extract', () => ({
   extractGuardianFacts: (...args: unknown[]) => mockExtract(...args),
 }));
 

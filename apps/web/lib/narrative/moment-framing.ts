@@ -21,7 +21,7 @@ import {
   strategyToArchetype,
   type ArchetypeId,
 } from '@/components/protection-cards/tokens';
-import type { FinancialStrategy } from '@diversifi/shared';
+import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
 
 export interface MomentFrame {
   archetype: ArchetypeId;

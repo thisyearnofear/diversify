@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { junoService } from '@diversifi/shared';
+import { junoService } from '@diversifi/shared/src/services/juno-service';
 
 const MUTATING_ACTIONS = new Set(['mock-deposit', 'execute-conversion', 'redeem-mxnb']);
 const isDemoMode = () => process.env.JUNO_DEMO_MODE === 'true';

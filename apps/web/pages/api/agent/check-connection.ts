@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { AutomationService, TokenVaultClient } from '@diversifi/shared';
+import { TokenVaultClient } from '@diversifi/shared/src/services/auth0-token-vault';
+import { AutomationService } from '@diversifi/shared/src/services/automation-service';
 import * as path from 'path';
 import { readJsonFile } from '@/lib/agent/json-store';
 

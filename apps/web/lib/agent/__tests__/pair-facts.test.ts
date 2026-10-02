@@ -16,15 +16,25 @@ vi.mock("@diversifi/shared/src/services/fx-rate.service", () => ({
   getLiveDepreciation: vi.fn(async () => null),
 }));
 
-vi.mock("@diversifi/shared", () => ({
+vi.mock("@diversifi/shared/src/services/ai/ai-service", () => ({
   AIService: { chat: mockChat },
   chatStream: vi.fn(),
-  GoodDollarService: { getContext: async () => "" },
-  StrategyService: { getAIPrompt: () => "" },
   generateChatCompletion: vi.fn(),
-  analyzePortfolio: vi.fn(),
-  getOnrampSystemPrompt: () => "",
   getAdaptiveTokenLimit: () => 512,
+}));
+vi.mock("@diversifi/shared/src/services/gooddollar-service", () => ({
+  GoodDollarService: { getContext: async () => "" },
+}));
+vi.mock("@diversifi/shared/src/services/strategy/strategy.service", () => ({
+  StrategyService: { getAIPrompt: () => "" },
+}));
+vi.mock("@diversifi/shared/src/services/ai/onramp-agent-context", () => ({
+  getOnrampSystemPrompt: () => "",
+}));
+vi.mock("@diversifi/shared/src/utils/portfolio-analysis", () => ({
+  analyzePortfolio: vi.fn(),
+}));
+vi.mock("@diversifi/shared/src/services/cognee-memory-service", () => ({
   cogneeMemoryService: {
     getAdvisorContext: async () => "",
     persistInteraction: () => {},

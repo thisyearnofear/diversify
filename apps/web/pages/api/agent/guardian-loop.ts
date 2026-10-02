@@ -41,7 +41,12 @@ import { appendDecisionLog, bumpUserActivity, claimExecutionLock, dequeueRecomme
 import { bumpGlobalActivity, isoWeekKey } from '@/lib/guardian-activity-counter';
 import { VaultService, VaultExecutionUnavailableError, type RebalanceRecommendation } from '@diversifi/shared/src/services/vault/vault.service';
 import { smartAccountExecutor, getActiveProvider, isAutonomyEligibleChain } from '@/lib/vault/executor';
-import { cogneeMemoryService, memoryConsolidationService, recommendationLedgerService, CELO_TOKEN_ADDRESS_BY_SYMBOL, constantTimeEqual, deriveLedgerRoutingContextFromVault } from '@diversifi/shared';
+import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from '@diversifi/shared/src/config/index';
+import { cogneeMemoryService } from '@diversifi/shared/src/services/cognee-memory-service';
+import { memoryConsolidationService } from '@diversifi/shared/src/services/memory-consolidation-service';
+import { recommendationLedgerService } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { deriveLedgerRoutingContextFromVault } from '@diversifi/shared/src/types/strategy';
+import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
 // Phase 1 (unified Guardian reasoning): the loop's on-chain records compose
 // their reasoning through the ONE shared builder so identical facts produce
 // identical wording on every surface (docs/internal/guardian-reasoning-service.md §5).

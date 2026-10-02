@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { zapierMCPService, ZapierMCPService } from '@diversifi/shared';
+import { zapierMCPService, ZapierMCPService } from '@diversifi/shared/src/services/zapier-mcp-service';
 
 /**
  * Test Zapier MCP Integration
