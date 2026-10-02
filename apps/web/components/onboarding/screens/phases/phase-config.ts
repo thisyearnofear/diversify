@@ -9,45 +9,39 @@
 import type { Variants } from 'framer-motion';
 import type { ArchetypeId } from '../../../protection-cards/tokens';
 import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
+import { reveal, STAGGER_STEP_S } from '@/lib/motion-tokens';
 
 // ── Animation variants ─────────────────────────────────────────────────
-// Blur-swap phase transition (transitions.dev "text states swap" pattern)
-// Uses filter: blur instead of y-offset for a more cinematic feel.
+// One quiet phase transition; material motion belongs to the selected coin.
 
 export const phaseVariants: Variants = {
   initial: {
     opacity: 0,
-    filter: 'blur(6px)',
     scale: 0.98,
   },
   animate: {
     opacity: 1,
-    filter: 'blur(0px)',
     scale: 1,
     transition: {
-      duration: 0.35,
-      ease: [0.16, 1, 0.3, 1],
-      staggerChildren: 0.06,
+      ...reveal,
+      staggerChildren: STAGGER_STEP_S,
     },
   },
   exit: {
     opacity: 0,
-    filter: 'blur(6px)',
     scale: 1.02,
     transition: {
-      duration: 0.2,
-      ease: [0.4, 0, 1, 1],
+      ...reveal,
     },
   },
 };
 
 export const staggerChild: Variants = {
-  initial: { opacity: 0, y: 10, filter: 'blur(2px)' },
+  initial: { opacity: 0, y: 10 },
   animate: {
     opacity: 1,
     y: 0,
-    filter: 'blur(0px)',
-    transition: { duration: 0.3, ease: [0.16, 1, 0.3, 1] },
+    transition: reveal,
   },
 };
 

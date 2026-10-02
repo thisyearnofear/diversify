@@ -2,10 +2,8 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import {
-  AnimatePresence,
   motion,
   useReducedMotion,
-  type PanInfo,
   type TargetAndTransition,
   type Transition,
 } from "framer-motion";
@@ -48,11 +46,12 @@ export function useLensCoinMetrics(): {
 } {
   const [compact, setCompact] = useState(false);
   useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
     const mq = window.matchMedia("(max-width: 380px)");
     const update = () => setCompact(mq.matches);
     update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
   }, []);
   return compact
     ? { coinSize: 46, gapClass: "gap-0", pitch: 54 }
@@ -189,10 +188,8 @@ interface LensCoinSelectorProps {
    * 'row' (default) — a plain picker row: full stack stays visible,
    * active coin spins on its turntable. Used by GuardianPlanSwitcher.
    *
-   * 'stage' — preview-then-commit: the first tap peeks (coin lifts,
-   *   name + one-liner chip appears), the second tap on the same coin
-   *   commits and runs the combine choreography. Flick left/right to
-   *   move the peek between coins.
+   * 'stage' — one tap opens the lens. Saving the plan is a separate
+   *   explicit action in the parent, never a second-tap gesture.
    */
   presentation?: Presentation;
   /** Which combine choreography to play (stage only). The parent cycles
@@ -218,9 +215,7 @@ interface LensCoinSelectorProps {
  *
  * Both presentations fix the mystery-meat problem: every coin carries
  * a one-word label beneath it, so the five options are scannable at a
- * glance (icon + text beats icon alone). The stage adds a two-tap
- * preview gate — coins are theatrical, committing to one opens a
- * full-stage bloom, so the first tap previews rather than commits.
+ * glance (icon + text beats icon alone). One tap opens the detail stage.
  */
 export function LensCoinSelector({
   lenses,
@@ -240,44 +235,14 @@ export function LensCoinSelector({
   const selectedIndex = lenses.findIndex((l) => l.id === selected);
   const combining = presentation === "stage" && selectedIndex >= 0;
 
-  // Peek (preview-then-commit), stage only: first tap lifts the coin and
-  // names it; second tap on the same coin commits. Flick cycles the peek.
-  const [peekedId, setPeekedId] = useState<string | null>(null);
-  const peekedIndex = lenses.findIndex((l) => l.id === peekedId);
-
   // Remember the last chosen slot so that when the user returns to the
   // row, the coins can burst back out of that exact point.
   const lastSelectedRef = useRef(-1);
   if (selectedIndex >= 0) lastSelectedRef.current = selectedIndex;
 
   const handleCoinTap = (lens: LensCoinDef) => {
-    if (presentation !== "stage") {
-      onSelect(lens.id);
-      return;
-    }
-    if (peekedId === lens.id) {
-      // Second tap — commit to the combine.
-      setPeekedId(null);
-      onSelect(lens.id);
-    } else {
-      setPeekedId(lens.id);
-    }
+    onSelect(lens.id);
   };
-
-  // Flick/swipe — moves the peek one slot over. Direction reads like a
-  // carousel: content follows the finger (flick left → next).
-  const handlePanEnd = (_e: unknown, info: PanInfo) => {
-    if (presentation !== "stage" || combining || reduceMotion) return;
-    if (Math.abs(info.offset.x) < 50 && Math.abs(info.velocity.x) < 350) return;
-    const dir = info.offset.x < 0 || info.velocity.x < 0 ? 1 : -1;
-    const base = peekedIndex >= 0 ? peekedIndex : dir === 1 ? -1 : lenses.length;
-    const next = Math.min(lenses.length - 1, Math.max(0, base + dir));
-    if (next !== peekedIndex && next >= 0 && next < lenses.length) {
-      setPeekedId(lenses[next].id);
-    }
-  };
-
-  const peekedLens = peekedIndex >= 0 ? lenses[peekedIndex] : null;
 
   const effectiveLabelMode = presentation === "row" ? labelMode : "compact";
 
@@ -295,10 +260,21 @@ export function LensCoinSelector({
 
   const row = (
     <div
-      ref={scrollable ? scrollRowRef : undefined}
+      ref={scrollRowRef}
       className={`flex items-center ${scrollable ? "justify-start" : "justify-center"} ${gapClass}`}
       role="radiogroup"
       aria-label={ariaLabel}
+      onKeyDown={(event) => {
+        if (combining || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="radio"]'));
+        const index = buttons.findIndex((button) => button === document.activeElement);
+        if (index < 0) return;
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? buttons.length - 1
+          : (index + (event.key === "ArrowRight" ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+        if (presentation === "row") onSelect(lenses[next].id);
+      }}
       style={combining ? { pointerEvents: "none" } : undefined}
     >
       {lenses.map((lens, i) => (
@@ -308,14 +284,14 @@ export function LensCoinSelector({
           index={i}
           count={lenses.length}
           selectedIndex={selectedIndex}
-          peeked={lens.id === peekedId && !combining}
+          peeked={false}
           combining={combining}
           variant={combineVariant}
           pitch={pitch}
           coinSize={coinSize}
           lastSelected={lastSelectedRef.current}
           reduceMotion={reduceMotion ?? false}
-          alive={effectiveLabelMode === "full" ? false : alive}
+          alive={effectiveLabelMode === "full" || presentation === "stage" ? false : alive}
           labelMode={effectiveLabelMode}
           onTap={handleCoinTap}
           onTapPoint={onTapPoint}
@@ -339,47 +315,9 @@ export function LensCoinSelector({
     <motion.div
       className="absolute inset-0 flex items-center justify-center select-none"
       aria-hidden={combining || undefined}
-      onPanEnd={handlePanEnd}
-      // Vertical scrolling stays native; horizontal swipes belong to the peek.
       style={{ touchAction: "pan-y" }}
     >
       {row}
-
-      {/* Peek chip — names the tapped coin and teaches the second tap. */}
-      <AnimatePresence>
-        {peekedLens && !combining && (
-          <div
-            key={peekedLens.id}
-            className="absolute top-1 left-0 right-0 flex justify-center z-10 pointer-events-none"
-          >
-            <motion.div
-              initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.9 }}
-              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, transition: { duration: 0.12 } }}
-              transition={springPress}
-              role="status"
-              aria-live="polite"
-              className="flex items-center gap-2 max-w-full rounded-full bg-slate-900/90 border px-3 py-1.5 shadow-lg"
-              style={{ borderColor: `${peekedLens.accent}55` }}
-            >
-              <span className="text-xs font-black text-white whitespace-nowrap">
-                {peekedLens.label}
-              </span>
-              {peekedLens.description && (
-                <span className="text-3xs text-slate-400 truncate max-w-[180px] sm:max-w-[240px]">
-                  {peekedLens.description}
-                </span>
-              )}
-              <span
-                className="text-[9px] font-black uppercase tracking-widest whitespace-nowrap"
-                style={{ color: peekedLens.accent }}
-              >
-                tap again
-              </span>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </motion.div>
   );
 }
@@ -434,7 +372,7 @@ function LensCoinButton({
   if (combining) {
     if (reduceMotion) {
       animate = { opacity: 0 };
-      transition = { duration: 0.15 };
+      transition = { duration: 0 };
     } else {
       const dx = (selectedIndex - index) * pitch;
       const offset = index - selectedIndex;
@@ -591,23 +529,14 @@ function LensCoinButton({
         </div>
       ) : (
         <div
-          className={`mt-1 text-center leading-tight truncate max-w-full ${
-            isActive || peeked ? '' : 'text-gray-500 dark:text-slate-500'
+          className={`mt-1.5 text-center leading-tight max-w-full ${
+            isActive || peeked ? '' : 'text-ink-muted'
           }`}
           style={isActive || peeked ? { color: lens.accent } : undefined}
         >
-          <span className="text-3xs font-bold block truncate">{shortLabel}</span>
-          <span className="text-[9px] block truncate opacity-80">
-            {lens.description ? truncate(lens.description, 60) : ''}
-          </span>
+          <span className="text-xs font-semibold block">{shortLabel}</span>
         </div>
       )}
     </motion.button>
   );
-}
-
-function truncate(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  const cutoff = text.slice(0, maxLen).lastIndexOf(' ');
-  return (cutoff > 0 ? text.slice(0, cutoff) : text.slice(0, maxLen - 1)) + '…';
 }

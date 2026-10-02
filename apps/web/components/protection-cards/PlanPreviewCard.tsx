@@ -9,11 +9,12 @@
  * (the strip card above already names it). What remains: one shield
  * line and a row of allocation chips.
  */
-import React from 'react';
-import type { PlanPreview } from './plan-preview';
+import React, { useEffect, useState } from 'react';
+import { resolvePlan, type Exposure, type PlanPreview } from './plan-preview';
 import { ARCHETYPES } from './tokens';
 import { TokenIcon } from '../shared/TokenIcon';
 import { displayToken } from '@/lib/plan-legs';
+import { InspectorSheet } from '../shared/InspectorSheet';
 
 export interface PlanPreviewCardProps {
   preview: PlanPreview;
@@ -22,16 +23,36 @@ export interface PlanPreviewCardProps {
   currencyPrefix?: string;
 }
 
+const EXPOSURE_NAMES: Partial<Record<Exposure, string>> = {
+  KES: 'Kenyan shilling',
+  USD: 'US dollar',
+  BRL: 'Brazilian real',
+  COP: 'Colombian peso',
+  PHP: 'Philippine peso',
+};
+
 export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' }: PlanPreviewCardProps) {
   const archetype = ARCHETYPES[preview.archetypeId];
   const fmt = (n: number) => n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  const [selectedToken, setSelectedToken] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => {
+    setSelectedToken(null);
+    setShowAll(false);
+  }, [preview.archetypeId]);
+  const legs = resolvePlan({ strategy: preview.archetypeId }).legs;
+  const labelFor = (token: string) => {
+    const leg = legs.find((item) => item.token === token);
+    return leg ? `${(leg.exposure && EXPOSURE_NAMES[leg.exposure]) ?? leg.label ?? displayToken(token)} · ${leg.region}` : displayToken(token);
+  };
+  const selectedLeg = legs.find((leg) => leg.token === selectedToken);
 
   // Top-N aggregation: this moment needs the *flavor* of the plan, not
   // the ledger. Six chips wrap into an unreadable stack and the 10%
   // tail carries no decision value — show the leading four, name the
   // count of the rest. (The full split is one tap away, in-app.)
   const MAX_CHIPS = 4;
-  const visible = preview.slices.slice(0, MAX_CHIPS);
+  const visible = showAll ? preview.slices : preview.slices.slice(0, MAX_CHIPS);
   const hiddenCount = preview.slices.length - visible.length;
 
   return (
@@ -41,36 +62,64 @@ export function PlanPreviewCard({ preview, className = '', currencyPrefix = '$' 
     >
       {preview.slices.length > 0 ? (
         <>
-          <p className="text-[13px] text-gray-700 dark:text-slate-200 mb-1.5">
-            Shield <strong className="text-gray-900 dark:text-white">{preview.shieldPercent}%</strong> of{' '}
+          <div hidden={Boolean(selectedToken)}>
+          <p className="text-sm text-ink mb-1">
+            Example: allocate <strong>{preview.shieldPercent}%</strong> of{' '}
             <strong className="text-gray-900 dark:text-white">
               {currencyPrefix}{fmt(preview.savingsAmount)}
             </strong>
           </p>
+          <p className="text-xs text-ink-muted mb-2">Shares within that allocation</p>
           <div className="flex flex-wrap items-center gap-1.5">
             {visible.map((slice) => (
-              <span
+              <button
+                type="button"
                 key={slice.token}
-                className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-sm font-bold text-gray-900 dark:text-white bg-gray-50 dark:bg-white/[0.08]"
+                onClick={() => setSelectedToken(slice.token)}
+                aria-label={`Inspect ${labelFor(slice.token)}, ${slice.percent}% of the allocation`}
+                className="min-h-tap inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold text-ink bg-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
                 style={{ borderColor: `${archetype.accent}4d` }}
               >
                 <TokenIcon symbol={displayToken(slice.token)} size={16} />
-                {displayToken(slice.token)}
+                {labelFor(slice.token)}
                 <span className="tabular-nums" style={{ color: archetype.accent }}>
                   {slice.percent}%
                 </span>
-              </span>
+              </button>
             ))}
             {hiddenCount > 0 && (
-              <span className="inline-flex items-center px-2.5 py-1 text-sm font-bold text-gray-500 dark:text-slate-400">
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="min-h-tap inline-flex items-center px-2.5 py-1 text-sm font-semibold text-ink-muted"
+              >
                 +{hiddenCount} more
-              </span>
+              </button>
             )}
           </div>
+          </div>
+          <InspectorSheet
+            selectedId={selectedToken}
+            onClose={() => setSelectedToken(null)}
+            title={`Why ${selectedToken ? labelFor(selectedToken) : 'this allocation'}?`}
+            presentation="stage"
+          >
+            <div className="space-y-2 text-sm text-ink-muted">
+              <p>{selectedLeg?.why}</p>
+              <p>
+                {selectedLeg?.exposure === 'XAU'
+                  ? 'Gold prices can fall. Issuer and liquidity risks remain.'
+                  : selectedLeg?.exposure === 'USD' || selectedLeg?.exposure === 'EUR'
+                    ? 'Pegged exposure, not a bank deposit. Depeg, issuer and liquidity risks remain.'
+                    : 'This currency can move against your home currency. Issuer and liquidity risks remain.'}
+              </p>
+              <p className="text-xs">{selectedToken ? displayToken(selectedToken) : ''} · not funded</p>
+            </div>
+          </InspectorSheet>
         </>
       ) : (
         <p className="text-[13px] text-gray-500 dark:text-slate-400">
-          You&apos;ll set your own token targets after connecting your wallet.
+          Set your own allocation in Shield. No wallet needed to explore.
         </p>
       )}
 

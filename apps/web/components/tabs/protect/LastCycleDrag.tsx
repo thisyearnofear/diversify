@@ -1,24 +1,25 @@
 /**
  * LastCycleDrag — the historical FX-drag engine as an inspector body.
- * What did FX timing cost your LAST payment cycle? Reconstructed over a
- * trailing window (73 days ending 2 days before today) from the open
- * currency dataset. The forward half of this inspector is "Next payment";
+ * Representative scenario over a trailing window (73 days ending 2 days
+ * before today), not an audit of the user's actual payment dates.
+ * The forward half of this inspector is "Next payment";
  * the standalone /fx-drag-calculator page is now a doorway here.
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { analyzeCycles, requiredDates, DEFAULT_OPTIONS, type CycleResult } from '@diversifi/shared/src/services/fx-drag/calc';
 import { buildServerlessRateProvider } from '@diversifi/shared/src/services/fx-drag/rates-serverless';
 import { LAST_CYCLE_DAYS, lastCycleWindow, representativeCycleInput } from '@diversifi/shared/src/services/fx-drag/representative-cycle';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 import { trackFunnelEvent } from '@/lib/analytics';
 import { InlineSpinner } from '@/components/ui/Skeleton';
+import { InspectorSheet } from '@/components/shared/InspectorSheet';
 
 const fmt = (n: number, digits = 0): string =>
   n.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
 
 function money(currency: string, n: number): string {
-  const sign = n < 0 ? '−' : '';
+  const sign = n < 0 && Math.round(Math.abs(n)) > 0 ? '−' : '';
   return `${sign}${currency} ${fmt(Math.abs(n))}`;
 }
 
@@ -61,10 +62,13 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputError, setInputError] = useState<string | null>(null);
+  const calculationVersion = useRef(0);
 
   // A new currency means a new cycle — the stale result would lie.
   useEffect(() => {
     setResults(null);
+    calculationVersion.current += 1;
+    setIsCalculating(false);
   }, [currency]);
 
   const calculate = useCallback(async () => {
@@ -81,6 +85,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
     setIsCalculating(true);
     setError(null);
     setResults(null);
+    const version = ++calculationVersion.current;
     try {
       // One clock read: the computed window and the displayed window must match.
       const today = new Date();
@@ -90,6 +95,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
       );
       const rates = await buildServerlessRateProvider(code, requiredDates(dragInput));
       const summary = analyzeCycles(dragInput, rates.getRate, DEFAULT_OPTIONS);
+      if (version !== calculationVersion.current) return;
 
       const warnings: string[] = [];
       for (const c of summary.cycles) warnings.push(...c.warnings);
@@ -121,10 +127,11 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
       });
       trackFunnelEvent('fx_drag_calculated', { currency: code, source: 'inspector' });
     } catch (err) {
+      if (version !== calculationVersion.current) return;
       console.error('[LastCycleDrag] Calculation failed:', err);
       setError('Could not compute the drag report — check your numbers and try again.');
     } finally {
-      setIsCalculating(false);
+      if (version === calculationVersion.current) setIsCalculating(false);
     }
   }, [earningsLocal, paymentUsd, achievedRate, feesLocal, currency]);
 
@@ -132,6 +139,19 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
 
   return (
     <div className="space-y-4">
+      {results ? (
+        <>
+          <button
+            type="button"
+            onClick={() => setResults(null)}
+            className="min-h-tap text-sm font-semibold text-ink-muted hover:text-action"
+          >
+            ← Edit inputs
+          </button>
+          <LastCycleResult data={results} onTrackNext={onTrackNext} />
+        </>
+      ) : (
+        <>
       <div className="grid grid-cols-2 gap-2">
         <label className="col-span-1 space-y-1">
           <span className="text-3xs font-bold uppercase text-gray-500">Local currency</span>
@@ -139,7 +159,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
             value={currency}
             onChange={(e) => onCurrencyChange(e.target.value.toUpperCase().slice(0, 3))}
             placeholder="GHS"
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+            className="w-full min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
           />
         </label>
         <label className="col-span-1 space-y-1">
@@ -150,7 +170,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
             value={earningsLocal}
             onChange={(e) => setEarningsLocal(e.target.value.replace(/[^0-9.,]/g, ''))}
             placeholder="Your sales this cycle"
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+            className="w-full min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
           />
         </label>
         <label className="col-span-1 space-y-1">
@@ -161,7 +181,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
             value={paymentUsd}
             onChange={(e) => setPaymentUsd(e.target.value.replace(/[^0-9.,]/g, ''))}
             placeholder="Supplier payment"
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+            className="w-full min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
           />
         </label>
         <label className="col-span-1 space-y-1">
@@ -172,7 +192,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
             value={achievedRate}
             onChange={(e) => setAchievedRate(e.target.value.replace(/[^0-9.]/g, ''))}
             placeholder={`${code || 'Local'} per $1`}
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+            className="w-full min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
           />
         </label>
         <label className="col-span-2 space-y-1">
@@ -183,7 +203,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
             value={feesLocal}
             onChange={(e) => setFeesLocal(e.target.value.replace(/[^0-9.,]/g, ''))}
             placeholder="0"
-            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
+            className="w-full min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-sm"
           />
         </label>
       </div>
@@ -192,10 +212,10 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
         type="button"
         onClick={calculate}
         disabled={isCalculating}
-        className="w-full py-2.5 rounded-xl bg-action hover:bg-action-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+        className="w-full min-h-tap py-2.5 rounded-xl bg-action hover:bg-action-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
       >
         {isCalculating ? <InlineSpinner /> : null}
-        {isCalculating ? 'Computing…' : 'See what it cost'}
+        {isCalculating ? 'Estimating…' : 'Estimate FX drag'}
       </button>
 
       {inputError && (
@@ -217,10 +237,10 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
         </div>
       )}
 
-      {results && <LastCycleResult data={results} onTrackNext={onTrackNext} />}
-
-      <p className="text-3xs text-gray-400 italic">
-        Historical scenario, not advice. Indicative mid-market, not tradeable quotes.
+        </>
+      )}
+      <p className="text-xs text-ink-muted">
+        {LAST_CYCLE_DAYS}-day historical scenario · indicative mid-market, not a quote.
       </p>
     </div>
   );
@@ -234,6 +254,7 @@ function LastCycleResult({
   onTrackNext: LastCycleDragProps['onTrackNext'];
 }) {
   const { currency, summary, cycles, warnings, window: w } = data;
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const firstCycle = cycles[0];
   // Annualize per cycle, not per week: a cycle lasts its exposure window, so
   // a year holds ~365 / window cycles. Assumes each cycle looks like this
@@ -246,9 +267,9 @@ function LastCycleResult({
   return (
     <div className="space-y-3 pt-1" data-testid="last-cycle-result">
       {/* Hero number — the percentage rides the sub-line. */}
-      <div className="text-center">
+      <div className="text-center" hidden={detailsOpen}>
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-          Paying <span className="text-gray-900 dark:text-white">${fmt(summary.totalUsdPaid)}</span> to suppliers
+          {cameOutAhead ? 'Estimated advantage' : 'Estimated drag'} · ${fmt(summary.totalUsdPaid)} supplier payment
         </p>
         <div
           data-testid="last-cycle-drag-total"
@@ -259,23 +280,35 @@ function LastCycleResult({
           {money(currency, Math.abs(summary.totalDragLocal))}
         </div>
         <p className="text-xs font-medium text-gray-600 dark:text-gray-400">
-          {cameOutAhead
-            ? 'Timing worked in your favour this cycle — waiting cost you less than converting on arrival.'
-            : `${fmt(Math.abs(summary.totalDragPct), 1)}% of what you paid went to FX timing, bank spread and fees before it reached your supplier.`}
+          {fmt(Math.abs(summary.totalDragPct), 1)}% {cameOutAhead ? 'advantage' : 'drag'} relative to the modeled payment cost.
         </p>
         <p className="text-2xs text-gray-400 mt-1">
-          {fmtDate(w.start)} – {fmtDate(w.end)} · {LAST_CYCLE_DAYS} days · mid-market from the open currency dataset
+          {fmtDate(w.start)} – {fmtDate(w.end)} · open currency dataset
         </p>
+        <button
+          type="button"
+          onClick={() => setDetailsOpen(true)}
+          className="min-h-tap mt-1 text-sm font-semibold text-action"
+        >
+          How this is estimated →
+        </button>
       </div>
 
+      <InspectorSheet
+        selectedId={detailsOpen ? 'scenario-detail' : null}
+        onClose={() => setDetailsOpen(false)}
+        title="Scenario detail"
+        presentation="stage"
+      >
+      <div className="space-y-3">
       {/* Decomposition — plain rows, no card */}
       <div className="space-y-2.5">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-              {currency} movement while money sat exposed
+              {currency} timing {summary.totalTimingLocal < 0 ? 'advantage' : 'cost'}
             </p>
-            <p className="text-2xs text-gray-400 mt-0.5">Depreciation during your {firstCycle?.exposureDays}-day window</p>
+            <p className="text-xs text-ink-muted mt-0.5">Modeled {firstCycle?.exposureDays}-day exposure</p>
           </div>
           <span className={`text-xs font-bold ${summary.totalTimingLocal < 0 ? 'text-emerald-500' : 'text-amber-600 dark:text-amber-400'}`}>
             {money(currency, summary.totalTimingLocal)}
@@ -283,10 +316,10 @@ function LastCycleResult({
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Bank rate vs real market rate</p>
-            <p className="text-2xs text-gray-400 mt-0.5">What your bank charged vs mid-market</p>
+            <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Bank spread</p>
+            <p className="text-xs text-ink-muted mt-0.5">Entered bank rate vs mid-market reference</p>
           </div>
-          <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+          <span className={`text-xs font-bold ${summary.totalSpreadLocal < 0 ? 'text-emerald-500' : 'text-amber-600 dark:text-amber-400'}`}>
             {money(currency, summary.totalSpreadLocal)}
           </span>
         </div>
@@ -303,7 +336,7 @@ function LastCycleResult({
 
       {/* Annual context — one line */}
       <p className="text-xs text-gray-600 dark:text-gray-400">
-        {cameOutAhead ? 'In your favour' : 'FX drag'} runs about ~{money(currency, Math.abs(annualDrag))} a year if every cycle looks like this (~{cyclesPerYear} a year).
+        Annualized {cameOutAhead ? 'advantage' : 'drag'}: ~{money(currency, Math.abs(annualDrag))}, assuming {cyclesPerYear} identical scenarios. Not a forecast.
       </p>
 
       {/* Warnings — plain amber text, no card */}
@@ -312,8 +345,11 @@ function LastCycleResult({
           {wText}
         </p>
       ))}
+      </div>
+      </InspectorSheet>
 
       {/* One CTA — carry this cycle into the forward report */}
+      {!detailsOpen && (
       <button
         type="button"
         onClick={() => {
@@ -324,6 +360,7 @@ function LastCycleResult({
       >
         Track your next payment →
       </button>
+      )}
     </div>
   );
 }

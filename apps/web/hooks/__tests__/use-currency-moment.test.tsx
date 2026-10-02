@@ -8,6 +8,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
+import { writeMomentBenchmark, writeMomentHorizon } from '@/constants/moment-horizon';
 
 const mocks = vi.hoisted(() => ({
   query: {} as Record<string, string | string[] | undefined>,
@@ -70,9 +71,47 @@ beforeEach(() => {
   mocks.risk.isLoading = false;
   vi.clearAllMocks();
   window.localStorage.clear();
+  window.sessionStorage.clear();
 });
 
 afterEach(() => cleanup());
+
+describe('useCurrencyMoment — onboarding continuity', () => {
+  it('continues the same currency, benchmark, and horizon into Home', () => {
+    writeMomentBenchmark('KES', 'XAU');
+    writeMomentHorizon('5yr');
+    const { result } = renderHook(() => useCurrencyMoment());
+    expect(result.current.moment?.currencyCode).toBe('KES');
+    expect(result.current.benchmark).toBe('XAU');
+    expect(result.current.horizon).toBe('5yr');
+  });
+
+  it('does not apply another currency benchmark or a self-comparison', () => {
+    mocks.risk.currencyCode = 'NGN';
+    mocks.risk.riskData = CURRENCY_BY_CODE.NGN;
+    mocks.risk.countryCode = 'NG';
+    writeMomentBenchmark('KES', 'XAU');
+    const first = renderHook(() => useCurrencyMoment());
+    expect(first.result.current.benchmark).toBe('USD');
+    first.unmount();
+    mocks.risk.currencyCode = 'USD';
+    mocks.risk.riskData = CURRENCY_BY_CODE.USD;
+    mocks.risk.countryCode = 'US';
+    mocks.risk.isBenchmarkCurrency = true;
+    writeMomentBenchmark('USD', 'USD');
+    const second = renderHook(() => useCurrencyMoment());
+    expect(second.result.current.benchmark).toBe('XAU');
+  });
+
+  it('a shared-card view retains its own benchmark rather than borrowing onboarding context', () => {
+    writeMomentBenchmark('NGN', 'XAU');
+    mocks.isReady = true;
+    mocks.query = { currency: 'NGN' };
+    const { result } = renderHook(() => useCurrencyMoment());
+    expect(result.current.viewingShared).toBe(true);
+    expect(result.current.benchmark).toBe('USD');
+  });
+});
 
 describe('useCurrencyMoment — shared-card landing', () => {
   it('?currency=NGN views the naira moment without writing overrides or visit memory', () => {

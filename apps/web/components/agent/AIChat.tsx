@@ -32,9 +32,8 @@ import { clearDeviceFacts } from "@/lib/guardian-memory";
 import { RwaActionWidget, HoldActionWidget } from "./ChatActionWidgets";
 import { ModelSettingsModal } from "./ModelSettingsModal";
 import {
-  STARTER_PROMPTS,
-  STARTERS_BY_TAB,
-  DEFAULT_STARTERS,
+  contextualStarters,
+  readSelectedCurrency,
   GREETING_BY_TAB,
   DEFAULT_GREETING,
   readExchangePair,
@@ -46,6 +45,9 @@ import { WorldAnswerCard } from "./WorldAnswerCard";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { useSharedMultichainBalances } from "@/context/app/PortfolioContext";
 import { useToast } from "../ui/Toast";
+import { useProtectionProfile } from "@/hooks/use-protection-profile";
+import { DemoModeContext } from "@/context/app/DemoModeContext";
+import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 
 const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
   ssr: false,
@@ -93,6 +95,8 @@ export default function AIChat() {
   const { showToast } = useToast();
   const portfolio = useSharedMultichainBalances(address);
   const walletView = buildWalletPortfolioView(portfolio);
+  const { config: profileConfig } = useProtectionProfile();
+  const demo = React.useContext(DemoModeContext);
   const isDesktop = useIsDesktop();
   const reducedMotion = useReducedMotion();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -279,10 +283,17 @@ export default function AIChat() {
   // No auto-triggers — no tab switches, no claim popups, no navigation.
 
   const mascotMood = activeGuardianReview ? 'alert' : isChatting ? 'thinking' : 'neutral';
-  const starterIds = STARTERS_BY_TAB[activeTab as TabId] ?? DEFAULT_STARTERS;
-  const starters = starterIds
-    .map((id) => STARTER_PROMPTS.find((p) => p.id === id))
-    .filter((p): p is (typeof STARTER_PROMPTS)[number] => Boolean(p));
+  const archetypeId = strategyToArchetype(
+    demo?.demoMode.isActive ? demo.demoMode.previewStrategy ?? profileConfig.philosophy : profileConfig.philosophy,
+  );
+  const starters = contextualStarters(activeTab as TabId, {
+    currency: isDrawerOpen ? readSelectedCurrency() : null,
+    planName: archetypeId ? ARCHETYPES[archetypeId].name : null,
+    pair: exchangePair,
+    upcomingPayment: profileConfig.moneyPurpose === 'upcoming_payment',
+    walletConnected: Boolean(address),
+    sample: demo?.demoMode.isActive,
+  });
   const greeting = GREETING_BY_TAB[activeTab as TabId] ?? DEFAULT_GREETING;
 
   const handleConfirmClear = () => {
@@ -755,9 +766,6 @@ export default function AIChat() {
                         delay={0.15}
                         lineClassName="text-base font-bold text-blue-900 dark:text-blue-100"
                       />
-                      <p className="max-w-[280px] text-sm text-gray-600 dark:text-gray-300">
-                        Risk, a plan, or a payment question — one ask at a time.
-                      </p>
                     </div>
 
                     <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
@@ -1031,13 +1039,13 @@ export default function AIChat() {
                 {/* Starter prompts: compact row when messages exist (full hero shown when empty above) */}
                 {!isChatting && messages.length > 0 && (
                   <div className="flex flex-wrap justify-center gap-1.5 pt-2 pb-1">
-                    {STARTER_PROMPTS.map(({ label, prompt }) => (
+                    {starters.map(({ id, question, prompt }) => (
                       <button
-                        key={label}
+                        key={id}
                         onClick={() => submitPrompt(prompt)}
                         className="px-2.5 py-1 text-3xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       >
-                        {label}
+                        {question}
                       </button>
                     ))}
                   </div>
@@ -1105,6 +1113,8 @@ export default function AIChat() {
                 size="sm"
                 variant="embedded"
                 tooltipPlacement="top"
+                showFirstVisitHint={false}
+                showSuggestions={false}
                 onTranscription={(t) => {
                   submitPrompt(t);
                 }}

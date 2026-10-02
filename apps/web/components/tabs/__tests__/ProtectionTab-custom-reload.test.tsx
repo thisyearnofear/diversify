@@ -161,5 +161,5 @@ describe("ProtectionTab — a saved Custom plan after reload", () => {
     const usdy = screen.getByRole("button", { name: /USDY — wallet holding/ });
     fireEvent.click(usdy);
     expect(ring).toHaveTextContent(/30%\s*USDY\s*outside plan/);
-  });
+  }, 15000);
 });

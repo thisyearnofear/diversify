@@ -15,7 +15,7 @@ import '@testing-library/jest-dom/vitest';
 
 const motionPreference = vi.hoisted(() => ({ reduced: false }));
 vi.mock('framer-motion', async (importOriginal) => {
-  const mod = await importOriginal<typeof import('framer-motion')>();
+  const mod = await importOriginal() as typeof import('framer-motion');
   return { ...mod, useReducedMotion: () => motionPreference.reduced };
 });
 afterEach(() => { motionPreference.reduced = false; });
@@ -134,6 +134,10 @@ vi.mock('@/hooks/use-agent-voice', () => ({
 
 vi.mock('@/hooks/use-credits', () => ({
   useCredits: () => ({ claimReward: vi.fn() }),
+}));
+
+vi.mock('@/hooks/use-protection-profile', () => ({
+  useProtectionProfile: () => ({ config: {} }),
 }));
 
 vi.mock('@/hooks/claim-flow-context', () => ({

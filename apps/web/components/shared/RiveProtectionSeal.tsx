@@ -24,7 +24,7 @@ interface RiveProtectionSealProps {
   size?: number;
   /** Seal accent (hex) — the archetype's accent. */
   color?: string;
-  /** True once the protection plan is committed. */
+  /** True once the allocation is saved, not a monitoring or execution grant. */
   armed?: boolean;
 }
 
@@ -35,7 +35,7 @@ function StaticSeal({ size, color, armed }: { size: number; color: string; armed
       height={size}
       viewBox="0 0 96 96"
       role="img"
-      aria-label={armed ? 'Protection armed' : 'Protection not armed'}
+      aria-label={armed ? 'Plan saved' : 'Plan preview'}
     >
       {armed && (
         <>

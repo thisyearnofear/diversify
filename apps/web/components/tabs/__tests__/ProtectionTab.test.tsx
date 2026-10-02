@@ -35,7 +35,7 @@ const mockSetRiskTolerance = vi.fn();
 const mockSetCustomPlan = vi.fn();
 const mockTrackFunnelEvent = vi.fn();
 vi.mock("@/lib/analytics", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/lib/analytics")>();
+  const mod = await importOriginal() as typeof import("@/lib/analytics");
   return {
     ...mod,
     trackFunnelEvent: (...args: unknown[]) =>
@@ -91,7 +91,7 @@ vi.mock("@/hooks/use-streak-rewards", () => ({
 }));
 
 vi.mock("@/hooks/useFinancialStrategies", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/hooks/useFinancialStrategies")>();
+  const actual = await importOriginal() as typeof import("@/hooks/useFinancialStrategies");
   return {
     ...actual,
     useFinancialStrategies: () => ({
@@ -184,7 +184,7 @@ vi.mock("@/hooks/use-vault", () => ({
   }),
 }));
 vi.mock("@/lib/wallet-auth", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/wallet-auth")>()),
+  ...(await importOriginal() as typeof import("@/lib/wallet-auth")),
   getCachedWalletAuth: () => vaultState.cachedProof,
 }));
 
@@ -344,10 +344,13 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
 });
 
 // Mutable demo flag for the demo-honesty tests below.
-const demoState = { isActive: false };
+const demoState = { isActive: false, previewStrategy: null as string | null };
+const mockSetDemoStrategy = vi.fn((strategy: string | null) => { demoState.previewStrategy = strategy; });
+beforeEach(() => { demoState.previewStrategy = null; });
 vi.mock("@/context/app/DemoModeContext", () => ({
   useDemoMode: () => ({
     demoMode: demoState,
+    setDemoStrategy: mockSetDemoStrategy,
     enableDemoMode: vi.fn(() => {
       demoState.isActive = true;
     }),
@@ -382,7 +385,7 @@ vi.mock("@/components/ui/Toast", () => ({
 // animation's mid-exit styles are part of an existing assertion).
 const reducedMotionState = { on: false };
 vi.mock("framer-motion", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("framer-motion")>();
+  const actual = await importOriginal() as typeof import("framer-motion");
   return { ...actual, useReducedMotion: () => reducedMotionState.on };
 });
 
@@ -1073,7 +1076,7 @@ describe("ProtectionTab — instrument shapes", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
     expect(screen.getByTestId("leg-why")).toHaveTextContent(
-      "Kenyan shilling — wealth stays home",
+      "Kenyan-shilling exposure — the regional leg of this plan",
     );
   });
 
@@ -1286,6 +1289,15 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute("data-mode", "last");
+    expect(screen.queryByTestId("shield-ring")).not.toBeInTheDocument();
+  });
+  it("a walletless payment doorway makes the cycle the primary stage", () => {
+    mockRouterQuery = { cycle: "1" };
+    mockFinancialStrategy = null;
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute("data-mode", "next");
+    expect(screen.queryByTestId("shield-ring")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("shield-unconnected-object")).not.toBeInTheDocument();
   });
 
   it("consumes a compare-lens intent without entering compare when there is no plan", () => {

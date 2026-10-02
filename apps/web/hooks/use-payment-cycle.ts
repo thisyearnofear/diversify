@@ -54,9 +54,9 @@ export function seedPaymentCycleDraft(patch: Partial<PaymentCycleDraft>): void {
   saveDraft({ ...loadDraft(), ...patch });
 }
 
-export function usePaymentCycleDraft(defaultLocalCurrency?: string) {
+export function usePaymentCycleDraft(defaultLocalCurrency?: string, persist = true) {
   const [draft, setDraft] = useState<PaymentCycleDraft>(() => {
-    const loaded = loadDraft();
+    const loaded = persist ? loadDraft() : { ...DEFAULT_DRAFT };
     if (!loaded.localCurrency && defaultLocalCurrency) {
       return { ...loaded, localCurrency: defaultLocalCurrency };
     }
@@ -70,8 +70,8 @@ export function usePaymentCycleDraft(defaultLocalCurrency?: string) {
   }, [defaultLocalCurrency, draft.localCurrency]);
 
   useEffect(() => {
-    saveDraft(draft);
-  }, [draft]);
+    if (persist) saveDraft(draft);
+  }, [draft, persist]);
 
   const updateDraft = useCallback((patch: Partial<PaymentCycleDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
@@ -80,11 +80,11 @@ export function usePaymentCycleDraft(defaultLocalCurrency?: string) {
   const clearDraft = useCallback(() => {
     setDraft({ ...DEFAULT_DRAFT, localCurrency: defaultLocalCurrency ?? '' });
     try {
-      localStorage.removeItem(STORAGE_KEY);
+      if (persist) localStorage.removeItem(STORAGE_KEY);
     } catch {
       // ignore
     }
-  }, [defaultLocalCurrency]);
+  }, [defaultLocalCurrency, persist]);
 
   return { draft, updateDraft, clearDraft };
 }

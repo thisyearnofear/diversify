@@ -1,11 +1,12 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import type { DemoModeState } from './types';
+import type { DemoModeState, NullableFinancialStrategy } from './types';
 import { useNavigation } from './NavigationContext';
 
 type DemoModeContextValue = {
   demoMode: DemoModeState;
   enableDemoMode: () => void;
   disableDemoMode: () => void;
+  setDemoStrategy: (strategy: NullableFinancialStrategy) => void;
 };
 
 /** Exported for soft reads — listeners that must not throw when a test
@@ -26,12 +27,16 @@ export function DemoModeProvider({ children }: { children: React.ReactNode }) {
   }, [setActiveTab]);
 
   const disableDemoMode = useCallback(() => {
-    setDemoMode((prev) => ({ ...prev, isActive: false }));
+    setDemoMode((prev) => ({ ...prev, isActive: false, previewStrategy: undefined }));
+  }, []);
+
+  const setDemoStrategy = useCallback((previewStrategy: NullableFinancialStrategy) => {
+    setDemoMode((prev) => ({ ...prev, previewStrategy }));
   }, []);
 
   const value = useMemo<DemoModeContextValue>(
-    () => ({ demoMode, enableDemoMode, disableDemoMode }),
-    [demoMode, enableDemoMode, disableDemoMode],
+    () => ({ demoMode, enableDemoMode, disableDemoMode, setDemoStrategy }),
+    [demoMode, enableDemoMode, disableDemoMode, setDemoStrategy],
   );
 
   return <DemoModeContext.Provider value={value}>{children}</DemoModeContext.Provider>;

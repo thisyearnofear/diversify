@@ -27,6 +27,8 @@ function makeProps(overrides: Record<string, unknown> = {}) {
     countryRequestError: null,
     handleCountryRequest: vi.fn(),
     onAdvance: vi.fn(),
+    moneyPurpose: 'long_term_savings' as const,
+    setMoneyPurpose: vi.fn(),
     onSkip: vi.fn(),
     ...overrides,
   };
@@ -78,6 +80,23 @@ describe("DetectPhase — country picker empty-search state", () => {
 });
 
 describe("DetectPhase — one tap to the numbers", () => {
+  it("does not advance on the previous country's data", () => {
+    const onAdvance = vi.fn();
+    const props = makeProps({ onAdvance, riskData: { flag: "🇳🇬", countryName: "Nigeria", code: "NGN" } });
+    const { rerender } = render(<DetectPhase {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: /Ghana GHS/ }));
+    expect(onAdvance).not.toHaveBeenCalled();
+    rerender(<DetectPhase {...props} riskData={{ flag: "🇬🇭", countryName: "Ghana", code: "GHS" }} />);
+    expect(onAdvance).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers supplier-payment intent before a values plan", () => {
+    const props = makeProps();
+    render(<DetectPhase {...props} />);
+    fireEvent.click(screen.getByRole("radio", { name: "Supplier payment" }));
+    expect(props.setMoneyPurpose).toHaveBeenCalledWith("upcoming_payment");
+  });
+
   it("picking a country advances once its data resolves — no second CTA tap", () => {
     const onAdvance = vi.fn();
     const props = makeProps({ onAdvance });

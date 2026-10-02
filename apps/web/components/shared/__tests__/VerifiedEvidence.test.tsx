@@ -38,7 +38,7 @@ describe("VerifiedEvidence", () => {
 
   it("shows the quiet trust line with no hex in the collapsed default", () => {
     render(<VerifiedEvidence />);
-    const toggle = screen.getByRole("button", { name: /verified/i });
+    const toggle = screen.getByRole("button", { name: /verify evidence/i });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     // No hex anywhere until the user asks for it (§7: no hex in first viewport).
     expect(screen.queryByText(/0x3BCf/)).not.toBeInTheDocument();
@@ -46,7 +46,7 @@ describe("VerifiedEvidence", () => {
 
   it("expands in place to chain dots, ledger address, and Guardian #1", () => {
     render(<VerifiedEvidence />);
-    const toggle = screen.getByRole("button", { name: /verified/i });
+    const toggle = screen.getByRole("button", { name: /verify evidence/i });
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/same ledger/i)).toBeInTheDocument();
@@ -56,7 +56,7 @@ describe("VerifiedEvidence", () => {
 
   it("keeps the verify button disabled until the hash looks like a tx hash", () => {
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verified/i }));
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
     const verifyButton = screen.getByRole("button", { name: /^verify$/i });
     expect(verifyButton).toBeDisabled();
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
@@ -74,7 +74,7 @@ describe("VerifiedEvidence", () => {
       Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verified/i }));
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });
@@ -98,7 +98,7 @@ describe("VerifiedEvidence", () => {
       ),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verified/i }));
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });
@@ -111,7 +111,7 @@ describe("VerifiedEvidence", () => {
   it("shows an error state when the verification service is unreachable", async () => {
     mockFetch(() => Promise.reject(new Error("network down")));
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verified/i }));
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });

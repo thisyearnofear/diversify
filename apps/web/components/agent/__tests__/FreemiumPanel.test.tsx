@@ -40,6 +40,7 @@ function renderPanel(demoActive = false) {
         demoMode: { isActive: demoActive, mockAddress: '0xDemo', mockChainId: 42220 },
         enableDemoMode: vi.fn(),
         disableDemoMode: vi.fn(),
+        setDemoStrategy: vi.fn(),
       }}
     >
       <FreemiumPanel onGoodDollarClaim={vi.fn()} />

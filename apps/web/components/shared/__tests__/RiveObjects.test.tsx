@@ -85,13 +85,13 @@ describe('RiveProtectionSeal', () => {
     reducedMotionState.on = true;
     render(<RiveProtectionSeal size={34} armed />);
     expect(screen.queryByTestId('rive-canvas-stub')).not.toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Protection armed' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Plan saved' })).toBeInTheDocument();
   });
 
   it('renders an empty seal when not armed', () => {
     reducedMotionState.on = true;
     const { container } = render(<RiveProtectionSeal size={34} armed={false} />);
-    expect(screen.getByRole('img', { name: 'Protection not armed' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Plan preview' })).toBeInTheDocument();
     expect(container.querySelector('circle')).not.toBeInTheDocument();
   });
 });

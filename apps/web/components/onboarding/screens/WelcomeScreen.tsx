@@ -11,14 +11,13 @@
  * my-auto wrapper below centers short content and top-aligns tall content.
  */
 
-import { writeMomentHorizon } from '@/constants/moment-horizon';
+import { readMomentHorizon, writeMomentBenchmark, writeMomentHorizon } from '@/constants/moment-horizon';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { useCurrencyRisk } from '../../../hooks/use-currency-risk';
 import { regionForCountry } from '../../../hooks/use-user-region';
 import { trackFunnelEvent } from '../../../lib/analytics';
-import { useStrategy } from '../../../context/app/StrategyContext';
 import { useDemoMode } from '../../../context/app/DemoModeContext';
 import {
   ARCHETYPES,
@@ -29,13 +28,13 @@ import {
   exampleSavingsFor,
   type Benchmark,
 } from '../../../constants/currency-risk';
-import { saveMoneyPurpose, useProtectionProfile } from '../../../hooks/use-protection-profile';
+import { useProtectionProfile } from '../../../hooks/use-protection-profile';
 import type { MoneyPurpose } from '../../../constants/money-purpose';
+import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
 
 import { GuardianMascot } from '../../shared/GuardianMascot';
 import { FloatingCoins } from '../../shared/FloatingCoins';
 import {
-  COMBINE_VARIANT_COUNT,
   COMBINE_PANEL_DELAY,
   combineOriginX,
   useLensCoinMetrics,
@@ -55,15 +54,22 @@ import { CoinSteps } from './phases/CoinSteps';
 import { DetectPhase } from './phases/DetectPhase';
 import { RiskPhase } from './phases/RiskPhase';
 import { PhilosophyPhase } from './phases/PhilosophyPhase';
-import { spring, springSoft } from "@/lib/motion-tokens";
+import { springSoft } from "@/lib/motion-tokens";
+import { haptics } from "@/lib/haptics";
+import { seedPaymentCycleDraft } from '@/hooks/use-payment-cycle';
+
+export interface OnboardingSelection {
+    philosophy?: FinancialStrategy;
+    moneyPurpose?: MoneyPurpose;
+}
 
 interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue?: () => void;
     chainId?: number;
-    onComplete?: (region: string | null) => void;
+    onComplete?: (region: string | null, selection?: OnboardingSelection) => void;
 }
 
-export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onComplete }: WelcomeScreenProps) {
+export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
     const {
       riskData,
       isLoading: riskLoading,
@@ -77,29 +83,26 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
       isLive1yr,
       liveSeries,
     } = useCurrencyRisk();
-    const { setFinancialStrategy } = useStrategy();
     const { config: profileConfig } = useProtectionProfile();
-    const { enableDemoMode } = useDemoMode();
+    const { enableDemoMode, setDemoStrategy } = useDemoMode();
     const reduceMotion = useReducedMotion();
 
     const [selectedArchetype, setSelectedArchetype] = useState<ArchetypeId | null>(null);
     const [selectedLens, setSelectedLens] = useState<ValuesLens | null>(null);
     const [showAllApproaches, setShowAllApproaches] = useState(false);
-    // Which combine choreography the stage plays next — cycles 0→1→2 on
-    // each selection so every pick gets a different trick, not a template.
-    const [lensVariant, setLensVariant] = useState(0);
+    // One consistent selection choreography; the financial draft stays local.
+    const lensVariant = 0;
     // Bump when returning to the coin row so the coins burst back out of
     // the point the previous pick collapsed into.
     const [emergeKey, setEmergeKey] = useState(0);
     const [manualCountrySearch, setManualCountrySearch] = useState('');
     const [showCountryPicker, setShowCountryPicker] = useState(false);
-    const [selectedHorizon, setSelectedHorizonState] = useState<Horizon>('5yr');
+    const [selectedHorizon, setSelectedHorizonState] = useState<Horizon>(() => readMomentHorizon() ?? '5yr');
     // Home continues the story the visitor read here (constants/moment-horizon).
     const setSelectedHorizon = useCallback((h: Horizon) => {
         setSelectedHorizonState(h);
-        writeMomentHorizon(h);
     }, []);
-    useEffect(() => { writeMomentHorizon('5yr'); }, []);
+    useEffect(() => { writeMomentHorizon(selectedHorizon); }, [selectedHorizon]);
     const [showBusinessContextOpen, setShowBusinessContextOpen] = useState(false);
     const [openEventKey, setOpenEventKey] = useState<string | null>(null);
     const [waitlistEmail, setWaitlistEmail] = useState('');
@@ -125,11 +128,6 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
 
     const handleArchetypeSelect = (id: ArchetypeId) => {
       setSelectedArchetype(id);
-      setFinancialStrategy(STRATEGY_ID[id]);
-      trackFunnelEvent('philosophy_chosen', {
-        philosophy: id,
-        ...(countryCode ? { country: countryCode } : {}),
-      });
     };
 
     const handleJoinWaitlist = async () => {
@@ -166,13 +164,28 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
       }
     };
 
-    const handleFinish = (country?: string | null) => {
-      if (country && typeof window !== 'undefined') {
-        const region = regionForCountry(country);
-        if (region) localStorage.setItem('user-region', region);
-      }
-      if (moneyPurpose) saveMoneyPurpose(moneyPurpose);
-      onComplete?.(countryCode ?? country ?? null);
+    const handleFinish = (selection?: OnboardingSelection) => {
+      const region = countryCode ? regionForCountry(countryCode) ?? null : null;
+      onComplete?.(region, selection);
+    };
+
+    const handleUsePlan = () => {
+      if (!selectedArchetype || !planPreview) return;
+      haptics.confirm();
+      trackFunnelEvent('philosophy_chosen', {
+        philosophy: selectedArchetype,
+        ...(countryCode ? { country: countryCode } : {}),
+      });
+      handleFinish({
+        philosophy: STRATEGY_ID[selectedArchetype],
+        ...(moneyPurpose ? { moneyPurpose } : {}),
+      });
+    };
+
+    const handleExploreDemo = () => {
+      setDemoStrategy(selectedArchetype && planPreview ? STRATEGY_ID[selectedArchetype] : null);
+      enableDemoMode();
+      handleFinish();
     };
 
     const handleCountryRequest = async () => {
@@ -264,16 +277,17 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
     );
     const panelDelay = COMBINE_PANEL_DELAY[lensVariant % COMBINE_PANEL_DELAY.length];
 
-    // Tap a coin → the row combines into it (a different variation each
-    // time) and the detail opens from the same point.
+    // Tap a coin → open its detail from the same point every time.
     const handleLensSelect = (id: ValuesLens) => {
-      setLensVariant((v) => (v + 1) % COMBINE_VARIANT_COUNT);
+      setSelectedArchetype(null);
+      setShowAllApproaches(false);
       setSelectedLens(id);
     };
 
     // Back to the row → the coins burst back out of the chosen point.
     const handleBackToCoins = () => {
       setSelectedLens(null);
+      setSelectedArchetype(null);
       setShowAllApproaches(false);
       setEmergeKey((k) => k + 1);
     };
@@ -288,56 +302,26 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
         ? getPlanPreviewFor(selectedArchetype, localExample, 20, profileConfig.riskTolerance)
         : null;
 
-    // Panel entrance — one per combine variant, timed off the hand-off
-    // the coins exported. V0: the panel is revealed by an expanding
-    // circle centred on the chosen coin (the "sprout"). V1: a soft
-    // drop-in behind the dissolving pick. V2: an eruption from it.
+    // The panel opens from the chosen coin; reduced motion is instant.
     const panelEntrance: {
       initial: TargetAndTransition;
       animate: TargetAndTransition;
       transition: Transition;
     } = reduceMotion
-      ? { initial: { opacity: 0 }, animate: { opacity: 1 }, transition: { duration: 0.15 } }
-      : lensVariant === 0
-      ? {
+      ? { initial: { opacity: 1 }, animate: { opacity: 1 }, transition: { duration: 0 } }
+      : {
           initial: { opacity: 1, clipPath: `circle(0px at ${bloomOrigin} 50%)` },
           animate: { opacity: 1, clipPath: `circle(560px at ${bloomOrigin} 50%)` },
           transition: { duration: 0.55, delay: panelDelay, ease: [0.16, 1, 0.3, 1] },
-        }
-      : lensVariant === 1
-      ? {
-          initial: { opacity: 0, y: -14 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.45, delay: panelDelay, ease: [0.16, 1, 0.3, 1] },
-        }
-      : {
-          initial: { opacity: 0, scale: 0.4 },
-          animate: { opacity: 1, scale: 1 },
-          transition: { ...springSoft, delay: panelDelay },
         };
 
-    // Content turns: V1 cascades downward, V2 assembles outward from the
-    // pick, V0 needs nothing (the circle mask does the reveal).
-    const panelChildMotion = (i: number): {
+    // The panel reveal owns the motion budget; its children stay still.
+    const panelChildMotion = (_i: number): {
       initial: TargetAndTransition | false;
       animate: TargetAndTransition;
       transition: Transition;
     } => {
-      if (reduceMotion || lensVariant === 0) {
-        return { initial: false, animate: { opacity: 1 }, transition: { duration: 0.1 } };
-      }
-      if (lensVariant === 1) {
-        return {
-          initial: { opacity: 0, y: 14 },
-          animate: { opacity: 1, y: 0 },
-          transition: { duration: 0.4, delay: panelDelay + 0.08 * i, ease: [0.16, 1, 0.3, 1] },
-        };
-      }
-      return {
-        initial: { opacity: 0, y: 10, scale: 0.65 },
-        animate: { opacity: 1, y: 0, scale: 1 },
-        transition: { ...spring, delay: panelDelay + 0.06 * i },
-      };
+      return { initial: false, animate: { opacity: 1 }, transition: { duration: 0 } };
     };
 
     return (
@@ -391,7 +375,7 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
                           <span className="text-xs font-black text-white uppercase tracking-widest">DiversiFi</span>
                       </div>
                       <p className="text-xs font-semibold text-slate-300 leading-snug">
-                        Currency protection that fits your values — never a lock-up.
+                        Understand your currency. Choose your next move.
                       </p>
                     </div>
                   </div>
@@ -431,7 +415,16 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
                   setCountryRequestError={setCountryRequestError}
                   countryRequestError={countryRequestError}
                   handleCountryRequest={handleCountryRequest}
-                  onAdvance={() => setStep('risk')}
+                  moneyPurpose={moneyPurpose}
+                  setMoneyPurpose={setMoneyPurpose}
+                  onAdvance={() => {
+                    if (moneyPurpose === 'upcoming_payment') {
+                      if (riskData?.code) seedPaymentCycleDraft({ localCurrency: riskData.code });
+                      handleFinish({ moneyPurpose });
+                    } else {
+                      setStep('risk');
+                    }
+                  }}
                   onSkip={onSkip}
                 />
               )}
@@ -465,7 +458,10 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
                   setWaitlistError={setWaitlistError}
                   handleJoinWaitlist={handleJoinWaitlist}
                   countryCode={countryCode}
-                  onAdvance={() => setStep('philosophy')}
+                  onAdvance={() => {
+                    if (riskData && heroRow) writeMomentBenchmark(riskData.code, heroRow.bench);
+                    setStep('philosophy');
+                  }}
                 />
               )}
 
@@ -489,12 +485,8 @@ export function WelcomeScreen({ onSkip, onConnectWallet, isWalletConnected, onCo
                   setShowAllApproaches={setShowAllApproaches}
                   planPreview={planPreview}
                   localPrefix={localPrefix}
-                  moneyPurpose={moneyPurpose}
-                  setMoneyPurpose={setMoneyPurpose}
-                  isWalletConnected={Boolean(isWalletConnected)}
-                  onConnectWallet={onConnectWallet}
-                  handleFinish={() => handleFinish(countryCode)}
-                  enableDemoMode={enableDemoMode}
+                  handleUsePlan={handleUsePlan}
+                  handleExploreDemo={handleExploreDemo}
                   riskData={riskData}
                   onBackToRisk={() => setStep('risk')}
                 />

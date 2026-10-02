@@ -111,7 +111,7 @@ export default function ProtectionTab({
 }: ProtectionTabProps) {
   const { address, chainId, isMiniPay } = useWalletContext();
   const { navigateToSwap, navigateToGuardian } = useNavigation();
-  const { demoMode, enableDemoMode } = useDemoMode();
+  const { demoMode, enableDemoMode, setDemoStrategy } = useDemoMode();
   const { experienceMode } = useExperience();
   const { config: adaptiveConfig } = useAdaptiveContext();
   const { visibility } = useGuardianVisibility();
@@ -138,7 +138,9 @@ export default function ProtectionTab({
   const { riskData } = useCurrencyRisk();
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
   const { showToast } = useToast();
-  const strategyKey = (selectedStrategy || financialStrategy) as string | null;
+  const strategyKey = (isDemo
+    ? demoMode.previewStrategy ?? selectedStrategy ?? financialStrategy ?? 'global'
+    : selectedStrategy || financialStrategy) as string | null;
 
   const [focusedToken, setFocusedToken] = useState<string | null>(null);
   const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
@@ -707,14 +709,18 @@ export default function ProtectionTab({
     if (shareLandingFor("plan_card") === focusedPhilosophy) {
       trackFunnelEvent("share_settled", { source: "plan_card" });
     }
-    setFinancialStrategy(focusedPhilosophy);
+    if (isDemo) {
+      setDemoStrategy(focusedPhilosophy);
+    } else {
+      setFinancialStrategy(focusedPhilosophy);
+    }
     setFocusedPhilosophy(null);
     setFocusedToken(null);
     setComparing(false);
     setPhilosophyDetailsOpen(false);
     haptics.confirm();
-    followOnGuardian(focusedPhilosophy);
-    if (address && chainId) {
+    if (!isDemo) followOnGuardian(focusedPhilosophy);
+    if (!isDemo && address && chainId) {
       void Promise.resolve(
         recordActivity({
           action: "protection",
@@ -723,7 +729,7 @@ export default function ProtectionTab({
         }),
       ).catch(() => {});
     }
-  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy, followOnGuardian]);
+  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy, followOnGuardian, isDemo, setDemoStrategy]);
 
   // "Tweak this plan": a philosophy's (unshifted) plan becomes a Custom draft.
   const startTweak = useCallback(
@@ -763,6 +769,10 @@ export default function ProtectionTab({
   }, []);
   const saveCustom = useCallback(() => {
     if (!customDraft) return;
+    if (isDemo) {
+      showToast("Sample only. Exit sample mode to save a custom plan.", "info");
+      return;
+    }
     setCustomPlan(customDraft);
     setFinancialStrategy("custom");
     setCustomDraft(null);
@@ -770,7 +780,7 @@ export default function ProtectionTab({
     setFocusedToken(null);
     haptics.confirm();
     showToast("Custom plan saved. Your holdings have not moved.", "success");
-  }, [customDraft, setCustomPlan, setFinancialStrategy, showToast]);
+  }, [customDraft, setCustomPlan, setFinancialStrategy, showToast, isDemo]);
 
   // Privacy switch — every dollar figure (gap CTA, slice inspector) renders
   // through formatMoney so the eye toggle masks it.
@@ -1017,6 +1027,7 @@ export default function ProtectionTab({
             savedLegs={allocations}
             portfolio={activePortfolio as MultichainPortfolio}
             selectedToken={focusedToken}
+            sample={isDemo}
             onSelectToken={comparing ? handleCompareSliceSelect : handleMarqueeSelect}
             alignmentScore={comparing ? previewAlignment.score : alignment.score}
             empty={shape === "fund"}
@@ -1076,7 +1087,6 @@ export default function ProtectionTab({
                   onChange={(risk) => {
                     setFocusedToken(null);
                     balance.select(risk);
-                    haptics.tap();
                     trackFunnelEvent('marquee_select', { source: 'shield_balance', selection: risk });
                   }}
                   onApply={isDemo ? undefined : () => {
@@ -1288,6 +1298,7 @@ export default function ProtectionTab({
       showToast={showToast}
       cycleOpen={cycleOpen && !balance.isPreviewing}
       cycleMode={cycleMode}
+      sample={isDemo}
       onCloseCycle={() => setCycleOpen(false)}
       onOpenCycle={() => openCycle("next")}
     />
@@ -1317,6 +1328,17 @@ export default function ProtectionTab({
       sinceHint={alignmentSinceHint ?? undefined}
     />
   );
+
+  // A payment intent transforms the primary stage, with or without a wallet
+  // or plan. The ring returns only when the user leaves the cycle.
+  if (cycleOpen && !balance.isPreviewing) {
+    return (
+      <InstrumentShell
+        object={inspector}
+        status={isDemo ? <p className="text-xs text-ink-muted">Sample mode · no monitoring or execution</p> : undefined}
+      />
+    );
+  }
 
   if (!address && !isDemo) {
     // The deep-linked sleeve (?sleeve=rwa) still opens its inspector on

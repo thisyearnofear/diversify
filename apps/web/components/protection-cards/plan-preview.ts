@@ -59,7 +59,7 @@ export const STRATEGY_PLANS: Record<string, ExposurePlan> = {
   africapitalism: {
     rules: {},
     slices: [
-      { exposure: 'KES', target: 60, region: 'Kenya', why: 'Kenyan shilling — wealth stays home' },
+      { exposure: 'KES', target: 60, region: 'Kenya', why: 'Kenyan-shilling exposure — the regional leg of this plan' },
       { exposure: 'USD', target: 25, region: 'US', why: 'Dollar floor for the plan' },
       { exposure: 'EUR', target: 15, region: 'EU', why: 'Euro leg — a second anchor' },
     ],

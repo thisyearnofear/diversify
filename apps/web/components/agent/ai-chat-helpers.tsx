@@ -5,6 +5,7 @@
  */
 import React, { useEffect, useState } from "react";
 import type { TabId } from "@/constants/tabs";
+import { CURRENCY_RISK_DATA } from "@/constants/currency-risk";
 
 // Persisted user API key (client-side only, never sent to our server unintentionally)
 export const USER_GEMINI_KEY_STORAGE = "diversifi_user_gemini_key";
@@ -52,6 +53,55 @@ export const STARTERS_BY_TAB: Partial<Record<TabId, readonly StarterId[]>> = {
   exchange: ["currency", "payment", "summary"],
 };
 export const DEFAULT_STARTERS: readonly StarterId[] = ["summary", "currency", "plan"];
+
+export interface StarterContext {
+  currency?: string | null;
+  planName?: string | null;
+  pair?: { fromToken: string; toToken: string } | null;
+  upcomingPayment?: boolean;
+  walletConnected?: boolean;
+  sample?: boolean;
+}
+
+/** Curated labels + current context; no market fetching or invented portfolio. */
+export function contextualStarters(tab: TabId, context: StarterContext) {
+  const ids = context.upcomingPayment && tab === "protect"
+    ? (["payment", "currency", "plan"] as const)
+    : STARTERS_BY_TAB[tab] ?? DEFAULT_STARTERS;
+  return ids.map((id) => {
+    const original = STARTER_PROMPTS.find((prompt) => prompt.id === id)!;
+    let question: string = original.question;
+    let prompt: string = original.prompt;
+    if (id === "summary" && context.sample) {
+      question = "What does this sample show?";
+      prompt = "Explain this sample allocation without treating its balances or plan as mine.";
+    } else if (id === "currency" && context.pair) {
+      const pair = `${context.pair.fromToken} → ${context.pair.toToken}`;
+      question = `What changes with ${pair}?`;
+      prompt = `Explain the currency exposure and issuer risks of ${pair}, using dated sources. This is a comparison, not a request to trade.`;
+    } else if (id === "currency" && context.currency) {
+      question = `What could move ${context.currency}?`;
+      prompt = `Explain risks affecting ${context.currency}, distinguishing dated history from current evidence.`;
+    } else if (id === "plan" && context.planName) {
+      question = `Why this ${context.planName} allocation?`;
+      prompt = `Explain the ${context.planName} allocation and its trade-offs. A selected plan is not a funded position or permission to move money.`;
+    } else if (id === "summary" && !context.walletConnected) {
+      question = "What can I explore without a wallet?";
+      prompt = "Explain what I can explore without a wallet. Do not infer holdings or active protection.";
+    }
+    if (context.sample) prompt = `I am exploring sample mode, not my real holdings. ${prompt}`;
+    return { ...original, question, prompt };
+  });
+}
+
+export function readSelectedCurrency(): string | null {
+  try {
+    const country = localStorage.getItem("user-country-code");
+    return CURRENCY_RISK_DATA.find((entry) => entry.iso2 === country)?.code ?? null;
+  } catch {
+    return null;
+  }
+}
 
 // Per-tab greeting for the empty state — one line, keyed to the surface the
 // user was on when they opened the drawer.

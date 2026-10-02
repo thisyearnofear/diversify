@@ -9,18 +9,16 @@
  */
 
 import { motion, AnimatePresence, type TargetAndTransition, type Transition } from 'framer-motion';
-import { ShimmerText } from '../../../shared/ShimmerText';
+import { useEffect, useRef } from 'react';
 import {
-  ARCHETYPES,
   ARCHETYPE_ORDER,
   type ArchetypeId,
 } from '../../../protection-cards/tokens';
 import { LensCoinSelector } from '../../LensCoinSelector';
 import { PlanPreviewCard } from '../../../protection-cards/PlanPreviewCard';
 import type { PlanPreview } from '../../../protection-cards/plan-preview';
-import { MONEY_PURPOSES, type MoneyPurpose } from '../../../../constants/money-purpose';
 import { ArchetypeStrip } from './ArchetypeStrip';
-import { PHILOSOPHY_CTA, VALUES_LENSES, staggerChild, phaseVariants, type ValuesLens } from './phase-config';
+import { VALUES_LENSES, staggerChild, phaseVariants, type ValuesLens } from './phase-config';
 import { springPress } from "@/lib/motion-tokens";
 
 export interface PanelEntrance {
@@ -51,12 +49,8 @@ interface PhilosophyPhaseProps {
   setShowAllApproaches: (v: boolean) => void;
   planPreview: PlanPreview | null;
   localPrefix: string;
-  moneyPurpose: MoneyPurpose | null;
-  setMoneyPurpose: (v: MoneyPurpose) => void;
-  isWalletConnected: boolean;
-  onConnectWallet?: () => Promise<void> | void;
-  handleFinish: () => void;
-  enableDemoMode: () => void;
+  handleUsePlan: () => void;
+  handleExploreDemo: () => void;
   riskData: { flag: string } | null;
   onBackToRisk: () => void;
 }
@@ -79,38 +73,34 @@ export function PhilosophyPhase({
   setShowAllApproaches,
   planPreview,
   localPrefix,
-  moneyPurpose,
-  setMoneyPurpose,
-  isWalletConnected,
-  onConnectWallet,
-  handleFinish,
-  enableDemoMode,
+  handleUsePlan,
+  handleExploreDemo,
   riskData,
   onBackToRisk,
 }: PhilosophyPhaseProps) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (activeLens) panelRef.current?.focus();
+  }, [activeLens]);
   return (
     <motion.div
       key="phase-philosophy"
-      variants={phaseVariants}
-      initial="initial"
+      variants={reduceMotion ? undefined : phaseVariants}
+      initial={reduceMotion ? false : "initial"}
       animate="animate"
       exit="exit"
       className="w-full max-w-md"
     >
       <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
-        How will you protect your{' '}
+        Make this plan{' '}
         <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300">
-          savings?
+          yours.
         </span>
       </motion.h2>
-      <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-4">
-        Tap a coin to preview it — tap again to choose.
-      </motion.p>
 
       {/* Stage — a fixed-height canvas holding BOTH the coin
           row and the lens detail as overlapping layers. Tap a
-          coin: the others combine into it (the choreography
-          cycles through three variations), then the detail
+          coin: the others combine into it, then the detail
           blooms out of the chosen coin's exact slot. Fixed
           height + overlapping layers — nothing below the
           stage ever moves. */}
@@ -161,7 +151,9 @@ export function PhilosophyPhase({
               animate={panelEntrance.animate}
               exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.15 } }}
               transition={panelEntrance.transition}
-              className="relative flex flex-col justify-center px-2 z-10 min-h-[300px]"
+              ref={panelRef}
+              tabIndex={-1}
+              className="relative flex flex-col justify-center px-2 z-10 min-h-[300px] focus:outline-none"
             >
               {/* Lens detail sits on a SOLID panel — the coin row
                   stays mounted behind it for the bloom
@@ -173,10 +165,10 @@ export function PhilosophyPhase({
                   when sharing one row). Escape hatches stay right. */}
               <motion.div {...panelChildMotion(0)} className="flex items-start justify-between gap-2 mb-2">
                 <div className="min-w-0 text-left">
-                  <p className="text-sm font-black text-white truncate">
+                  <p className="text-sm font-black text-white">
                     {showAllApproaches ? 'All approaches' : activeLens.label}
                   </p>
-                  <p className="text-2xs text-slate-400 truncate mt-0.5">
+                  <p className="text-xs text-slate-300 mt-0.5">
                     {showAllApproaches
                       ? 'Every approach in one list.'
                       : activeLens.description}
@@ -187,17 +179,17 @@ export function PhilosophyPhase({
                     <button
                       type="button"
                       onClick={() => setShowAllApproaches(true)}
-                      className="min-h-tap px-1 text-2xs font-bold text-slate-400 hover:text-emerald-400 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
+                      className="min-h-tap px-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
                     >
-                      All 8 →
+                      All plans →
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={handleBackToCoins}
-                    className="min-h-tap px-2 rounded-lg text-2xs font-bold text-slate-400 hover:text-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
+                    className="min-h-tap px-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
                   >
-                    ← Coins
+                    ← Values
                   </button>
                 </div>
               </motion.div>
@@ -217,10 +209,10 @@ export function PhilosophyPhase({
                   {planPreview ? (
                     <motion.div
                       key={`preview-${selectedArchetype}`}
-                      initial={{ opacity: 0, y: 8 }}
+                      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                      transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                      transition={{ duration: reduceMotion ? 0 : 0.25, ease: [0.16, 1, 0.3, 1] }}
                     >
                       <PlanPreviewCard preview={planPreview} currencyPrefix={localPrefix} />
                     </motion.div>
@@ -230,9 +222,9 @@ export function PhilosophyPhase({
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0, transition: { duration: 0.12 } }}
-                      className="px-2 text-2xs text-slate-400 text-center"
+                      className="px-2 text-xs text-slate-300 text-center"
                     >
-                      Tap an approach to preview its plan.
+                      Choose an approach to see its allocation.
                     </motion.p>
                   )}
                 </AnimatePresence>
@@ -244,91 +236,25 @@ export function PhilosophyPhase({
 
       </motion.div>
 
-      {/* Money purpose — compact single-line segmented control.
-          Icon + label per chip; the heading + description caption
-          are gone (chip labels already say it). */}
-      <motion.div variants={staggerChild} className="mb-4">
-        {/* One visible label — "Soon / Years / By date" means nothing alone. */}
-        <p id="money-purpose-label" className="text-2xs font-bold text-slate-300 mb-1.5 text-left">
-          When will you need this money?
-        </p>
-        <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 dark:bg-slate-800/70 p-1" role="radiogroup" aria-labelledby="money-purpose-label">
-          {MONEY_PURPOSES.map((purpose) => (
-            <button
-              key={purpose.value}
-              type="button"
-              role="radio"
-              aria-checked={moneyPurpose === purpose.value}
-              onClick={() => setMoneyPurpose(purpose.value)}
-              aria-label={purpose.label}
-              className={`min-h-tap rounded-lg px-1 py-2 text-2xs font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${
-                moneyPurpose === purpose.value
-                  ? 'bg-emerald-500 text-white shadow-sm'
-                  : 'text-gray-600 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400'
-              }`}
-            >
-              <span aria-hidden="true">{purpose.icon}</span>{' '}
-              {purpose.value === 'everyday_buffer'
-                ? 'Soon'
-                : purpose.value === 'long_term_savings'
-                ? 'Years'
-                : 'By date'}
-            </button>
-          ))}
-        </div>
-      </motion.div>
-
-      {/* Actions — archetype-aware when a philosophy is selected */}
+      {/* Preview never saves or opens a wallet. The explicit action commits. */}
       <motion.div variants={staggerChild} className="space-y-2">
-        {selectedArchetype ? (
+        {selectedArchetype && planPreview && (
           <motion.button
-            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={springPress}
-            onClick={async () => {
-              if (onConnectWallet && !isWalletConnected) {
-                try { await onConnectWallet(); } catch { /* fall through */ }
-              }
-              handleFinish();
-            }}
-            className="w-full px-6 py-4 text-white font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2"
-            style={{
-              background: `linear-gradient(135deg, ${ARCHETYPES[selectedArchetype].accent}, ${ARCHETYPES[selectedArchetype].accentSoft})`,
-              boxShadow: `0 12px 32px -12px ${ARCHETYPES[selectedArchetype].accent}80`,
-            }}
-            whileHover={{ y: -2 }}
-            whileTap={{ scale: 0.97 }}
+            transition={reduceMotion ? { duration: 0 } : springPress}
+            onClick={handleUsePlan}
+            className="min-h-tap w-full px-6 py-4 bg-action hover:bg-action-hover text-white font-bold rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+            whileTap={reduceMotion ? undefined : { scale: 0.97 }}
           >
-            <ShimmerText>{PHILOSOPHY_CTA[selectedArchetype]} →</ShimmerText>
+            Use this plan →
           </motion.button>
-        ) : (
-          <>
-            {onConnectWallet && !isWalletConnected && (
-              <motion.button
-                onClick={async () => {
-                  try { await onConnectWallet(); } catch { /* fall through */ }
-                  handleFinish();
-                }}
-                className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.97 }}
-              >
-                Connect wallet to start
-              </motion.button>
-            )}
-          </>
         )}
         <button
-          onClick={() => {
-            // Actually enable demo mode so the user gets the
-            // mock wallet + demo data, not just a route to
-            // Protect with an unconnected wallet.
-            enableDemoMode();
-            handleFinish();
-          }}
+          onClick={handleExploreDemo}
           className="w-full px-6 py-2.5 text-xs font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 rounded-lg"
         >
-          Explore demo first
+          Explore a sample →
         </button>
         {riskData && (
           <button

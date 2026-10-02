@@ -39,7 +39,7 @@ const motionSpy = vi.hoisted(() => ({
   recorded: [] as { tag: string; props: Record<string, unknown> }[],
 }));
 vi.mock("framer-motion", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("framer-motion")>();
+  const mod = await importOriginal() as typeof import("framer-motion");
   const ReactMod = await import("react");
   const cache = new Map<string, unknown>();
   const wrap = (Comp: unknown, tag: string) => {
@@ -314,5 +314,26 @@ describe("LensCoinSelector — labelMode=full (Shield rail)", () => {
     }
     expect(container.querySelector(".coin-shine, .coin-shine-once")).toBeNull();
     expect(container.querySelector(".lens-coin-pulse")).toBeNull();
+  });
+});
+
+describe("LensCoinSelector — predictable stage selection", () => {
+  it("opens a lens on the first tap", () => {
+    const onSelect = vi.fn();
+    render(<LensCoinSelector lenses={lenses} selected={null} onSelect={onSelect} presentation="stage" />);
+    fireEvent.click(screen.getByRole("radio", { name: "Two Lens" }));
+    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledWith("two");
+  });
+
+  it("allows keyboard navigation without opening a stage lens until activation", () => {
+    const onSelect = vi.fn();
+    render(<LensCoinSelector lenses={lenses} selected={null} onSelect={onSelect} presentation="stage" />);
+    screen.getByRole("radio", { name: "One Lens" }).focus();
+    fireEvent.keyDown(screen.getByRole("radiogroup"), { key: "ArrowRight" });
+    expect(screen.getByRole("radio", { name: "Two Lens" })).toHaveFocus();
+    expect(onSelect).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("radio", { name: "Two Lens" }));
+    expect(onSelect).toHaveBeenCalledWith("two");
   });
 });

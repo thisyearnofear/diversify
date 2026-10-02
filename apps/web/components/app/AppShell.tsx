@@ -178,6 +178,7 @@ function AppShellInner() {
         isFarcaster={isFarcaster}
         isMiniPay={isMiniPay}
         activeTab={activeTab}
+        onAskGuardian={openAdvisor}
       />
 
       <TabDiscoveryProvider>

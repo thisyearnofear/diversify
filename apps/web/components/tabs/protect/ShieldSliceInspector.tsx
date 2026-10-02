@@ -103,6 +103,7 @@ export interface ShieldSliceInspectorProps {
   /** Which payment-cycle engine the inspector opens on (`?cycle=last` from
    *  the /fx-drag-calculator doorway; everything else is 'next'). */
   cycleMode?: "next" | "last";
+  sample?: boolean;
   onCloseCycle?: () => void;
   /** Opens the payment-cycle inspector in 'next' mode — the one place the
    *  tool lives (a slice inspector links out, it doesn't embed it). */
@@ -202,6 +203,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
     showToast,
     cycleOpen = false,
     cycleMode = "next",
+    sample = false,
     onCloseCycle,
     onOpenCycle,
   } = props;
@@ -229,12 +231,14 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
         selectedId="payment-cycle"
         onClose={() => onCloseCycle?.()}
         title="Payment cycle"
+        presentation="stage"
       >
         <PaymentCycleReport
-          key={cycleMode}
+          key={`${cycleMode}-${sample ? 'sample' : 'live'}`}
           defaultLocalCurrency={riskData?.code}
           onAskGuardian={(prompt) => askAdvisor(prompt)}
           initialMode={cycleMode}
+          sample={sample}
         />
       </InspectorSheet>
     );

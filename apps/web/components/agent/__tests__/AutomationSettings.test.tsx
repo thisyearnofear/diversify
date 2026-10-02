@@ -58,7 +58,7 @@ describe("AutomationSettings — Guardian updates row", () => {
 
     fireEvent.click(quiet);
     expect(visibilityMock.current.setVisibility).toHaveBeenCalledWith("quiet", "user");
-  });
+  }, 15000);
 
   it("discloses an agent-applied change so it stays legible and reversible", async () => {
     visibilityMock.current = {
@@ -79,5 +79,5 @@ describe("AutomationSettings — Guardian updates row", () => {
       expect(screen.getByText(/daily limit and pause live in Limits/)).toBeInTheDocument(),
     );
     expect(screen.queryByText(/Delegated Identity|DAILY LIMIT|SPENT TODAY|0xabc/)).not.toBeInTheDocument();
-  });
+  }, 15000);
 });

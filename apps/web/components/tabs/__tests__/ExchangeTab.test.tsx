@@ -317,7 +317,7 @@ describe("ExchangeTab — instrument", () => {
 
     // UnconnectedStatusTier already renders VerifiedEvidence; the
     // netting hand-off must not bring a second copy.
-    expect(screen.getAllByText("Verified")).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /verify evidence/i })).toHaveLength(1);
     expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
   });
 
@@ -555,8 +555,7 @@ describe("ExchangeTab — instrument", () => {
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
 
-    expect(screen.getByText("Verified")).toBeInTheDocument();
-    expect(screen.getByText("· Evidence mirrored")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /verify evidence/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
     expect(
       document.querySelectorAll("[data-status-slot]").length,

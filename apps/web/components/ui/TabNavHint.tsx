@@ -17,10 +17,12 @@ import React from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTabDiscovery } from '@/hooks/use-tab-discovery';
 import type { TabId } from '@/constants/tabs';
+import { useAIConversationOptional } from '@/context/AIConversationContext';
 
 export function TabNavHint({ activeTab }: { activeTab: TabId }) {
     const { showHint, dismiss } = useTabDiscovery();
     const prefersReducedMotion = useReducedMotion();
+    const chatOpen = useAIConversationOptional()?.isDrawerOpen ?? false;
 
     const motionProps = prefersReducedMotion
       ? { initial: { opacity: 1, y: 0 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 0 }, transition: { duration: 0 } }
@@ -28,11 +30,11 @@ export function TabNavHint({ activeTab }: { activeTab: TabId }) {
 
     return (
         <AnimatePresence>
-            {showHint && activeTab !== 'protect' && (
+            {showHint && !chatOpen && activeTab !== 'protect' && (
                 <motion.div
                     key="tab-nav-hint"
                     {...motionProps}
-                    className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+                    className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 pointer-events-none"
                     role="status"
                     aria-live="polite"
                 >

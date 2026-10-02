@@ -17,6 +17,7 @@ interface AppHeaderProps {
   isFarcaster: boolean;
   isMiniPay?: boolean;
   activeTab?: TabId;
+  onAskGuardian?: () => void;
 }
 
 // Tabs whose unconnected object already carries a connect CTA (§5: one
@@ -29,7 +30,7 @@ const TABS_WITH_OWN_CONNECT: ReadonlySet<TabId> = new Set([
 ]);
 
 export default function AppHeader({
-  address, isWhitelisted, isFarcaster, isMiniPay = false, activeTab,
+  address, isWhitelisted, isFarcaster, isMiniPay = false, activeTab, onAskGuardian,
 }: AppHeaderProps) {
   // The streak badge's claim affordance rides the shared claim flow —
   // "Claim ready" in the header is a working action, not just a signal.
@@ -42,9 +43,9 @@ export default function AppHeader({
   }
 
   return (
-    <div className="flex items-center justify-between gap-3 mb-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+    <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-x-3 gap-y-2 mb-3 rounded-xl border border-gray-200 bg-white px-3 py-2 shadow-sm dark:border-gray-800 dark:bg-gray-900">
       {/* Left: Logo */}
-      <div className="flex items-center gap-2 sm:gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         <div
           className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden bg-slate-900 dark:bg-slate-900 shadow-sm flex-shrink-0 group/logo"
           title="Portable Guardian · portable across wallets — AgenticID #1 on 0G (0x6815…33D60, 0G Storage root)"
@@ -73,7 +74,18 @@ export default function AppHeader({
       </div>
 
         {/* Right: Controls */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="ml-auto flex items-center gap-1 sm:gap-2">
+        {onAskGuardian && (
+          <button
+            type="button"
+            onClick={onAskGuardian}
+            aria-label="Ask Guardian"
+            title="Ask Guardian"
+            className="size-tap shrink-0 flex items-center justify-center rounded-xl text-action hover:bg-blue-50 dark:hover:bg-blue-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 lg:hidden"
+          >
+            <GuardianMascot size={28} mood="neutral" />
+          </button>
+        )}
         {/* Compact streak on narrow screens — header's hidden wordmark leaves room; show badge here instead */}
         <div className="min-[400px]:hidden">
           <StreakNavBadge variant="header" onClaim={handleClaim} />

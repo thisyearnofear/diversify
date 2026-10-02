@@ -6,7 +6,7 @@
  * (minting motif); the accent border alone says "selected" — no badge.
  */
 
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Coin } from '../../../shared/FloatingCoins';
 import FlickScrollRow, { useDidDrag } from '../../../shared/FlickScrollRow';
 import { ARCHETYPES, type ArchetypeId } from '../../../protection-cards/tokens';
@@ -29,6 +29,7 @@ function ArchetypeCard({
   onSelect: (id: ArchetypeId) => void;
 }) {
   const didDragRef = useDidDrag();
+  const reducedMotion = useReducedMotion();
   const a = ARCHETYPES[id];
   return (
     <button
@@ -43,7 +44,7 @@ function ArchetypeCard({
         isActive
           ? 'bg-white dark:bg-gray-800'
           : isDimmed
-          ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 opacity-40'
+          ? 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800'
           : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-emerald-300 dark:hover:border-emerald-600'
       }`}
       style={isActive ? { borderColor: a.accent, boxShadow: `0 8px 24px -12px ${a.accent}60` } : undefined}
@@ -51,15 +52,15 @@ function ArchetypeCard({
       {/* Archetype coin — flips like a freshly minted coin when selected */}
       <motion.span
         className="w-8 h-8 flex-shrink-0"
-        animate={isActive ? { rotateY: 360, scale: 1.1 } : { rotateY: 0, scale: 1 }}
-        transition={springSoft}
+        animate={reducedMotion ? { rotateY: 0, scale: 1 } : isActive ? { rotateY: 360, scale: 1.1 } : { rotateY: 0, scale: 1 }}
+        transition={reducedMotion ? { duration: 0 } : springSoft}
         style={{ transformPerspective: 400 }}
       >
         <Coin size={32} symbol={a.name[0]} color={a.accent} variant="selection" />
       </motion.span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[13px] font-black text-gray-900 dark:text-white truncate">{a.name}</span>
-        <span className="block mt-0.5 text-2xs leading-snug text-gray-500 dark:text-gray-400 line-clamp-2">{a.philosophy}</span>
+        <span className="block text-sm font-bold text-ink">{a.name}</span>
+        <span className="block mt-0.5 text-xs leading-snug text-ink-muted">{a.philosophy}</span>
       </span>
     </button>
   );
@@ -78,14 +79,24 @@ export function ArchetypeStrip({
   // left edge — scrolling is only needed for the "All 8" view. Chevrons
   // stay off: the stage owns this surface's motion budget and the strip
   // rarely overflows.
-  const centerWhenShort = ids.length <= 2 ? 'justify-center' : '';
   return (
     <FlickScrollRow
-      className={`gap-2 -mx-1 px-1 py-1 ${centerWhenShort}`}
+      className="gap-2 -mx-1 px-1 py-1"
       fade="slate"
       chevrons={false}
       role="radiogroup"
       aria-label="Approaches"
+      onKeyDown={(event) => {
+        if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+        const buttons = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('button[role="radio"]'));
+        const index = buttons.findIndex((button) => button === document.activeElement);
+        if (index < 0) return;
+        event.preventDefault();
+        const next = event.key === 'Home' ? 0 : event.key === 'End' ? buttons.length - 1
+          : (index + (event.key === 'ArrowRight' ? 1 : -1) + buttons.length) % buttons.length;
+        buttons[next]?.focus();
+        onSelect(ids[next]);
+      }}
     >
       {ids.map((id) => (
         <ArchetypeCard

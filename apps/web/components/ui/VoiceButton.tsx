@@ -26,6 +26,8 @@ interface VoiceButtonProps {
     onSuggestionsChange?: (open: boolean) => void;
     /** First-visit tooltip direction — 'top' keeps it inside a bottom-docked panel. */
     tooltipPlacement?: 'top' | 'bottom';
+    /** Embedded chat already teaches its own input; don't overlay a second hint. */
+    showFirstVisitHint?: boolean;
 }
 
 type RecordingState = 'idle' | 'recording' | 'processing';
@@ -49,6 +51,7 @@ export default function VoiceButton({
     externalSuggestionsOpen,
     onSuggestionsChange,
     tooltipPlacement = 'bottom',
+    showFirstVisitHint = true,
 }: VoiceButtonProps) {
     const { capabilities } = useAgentStatus();
     const { transcribeAudio } = useAgentVoice({ apiBase: API_BASE, capabilities });
@@ -100,10 +103,10 @@ export default function VoiceButton({
         setIsDisabled(disabled);
 
         const firstSeen = localStorage.getItem(VOICE_FIRST_SEEN_KEY);
-        if (!firstSeen) {
+        if (!firstSeen && showFirstVisitHint) {
             setIsFirstVisit(true);
         }
-    }, []);
+    }, [showFirstVisitHint]);
 
     // Mark as seen after animation
     useEffect(() => {
@@ -379,7 +382,7 @@ export default function VoiceButton({
         <div className={`relative ${className}`} ref={menuRef}>
             {/* First Visit Tooltip */}
             <AnimatePresence>
-                {isFirstVisit && !hasBeenSeen && (
+                {showFirstVisitHint && isFirstVisit && !hasBeenSeen && (
                     <motion.div
                         initial={{ opacity: 0, y: tooltipPlacement === 'top' ? -10 : 10, scale: 0.9 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}

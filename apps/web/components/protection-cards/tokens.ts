@@ -66,7 +66,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'Africapitalism',
     kicker: 'Protection Plan · Africapitalism',
     philosophy:
-      'Keep wealth in African economies. Every USDm, EURm, KESm stays close to home.',
+      'Kenyan-shilling exposure with dollar and euro reserves.',
     allocation: ['KESm', 'GHSm', 'ZARm', 'cUSD', 'cEUR', 'PAXG'],
     accent: '#d97706',
     accentSoft: '#fbbf24',
@@ -90,7 +90,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'Pan-Caribbean',
     kicker: 'Protection Plan · Pan-Caribbean',
     philosophy:
-      'Weather every storm. USD-pegged savings against imported inflation, gold against food shocks.',
+      'Dollar and euro reserves with a gold allocation.',
     allocation: ['USDC', 'cUSD', 'PAXG', 'USDY'],
     accent: '#06b6d4',
     accentSoft: '#a5f3fc',
@@ -101,7 +101,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     id: 'confucian',
     name: 'Confucian',
     kicker: 'Protection Plan · Confucian',
-    philosophy: 'Long-term stability. Low volatility. Patience as a strategy.',
+    philosophy: 'Liquid dollar reserves with a treasury-yield allocation.',
     allocation: ['USDC', 'cUSD', 'USDC (HashKey)', 'PAXG'],
     accent: '#b91c1c',
     accentSoft: '#fca5a5',
@@ -136,7 +136,7 @@ export const ARCHETYPES: Record<ArchetypeId, Archetype> = {
     name: 'Global Diversification',
     kicker: 'Protection Plan · Global',
     philosophy:
-      'Geographic diversification across all regions. Maximum spread.',
+      'Currency exposure across regions, balanced with dollar reserves.',
     allocation: ['USDC', 'cUSD', 'cEUR', 'PHPm', 'COPm', 'cREAL'],
     accent: '#0284c7',
     accentSoft: '#7dd3fc',

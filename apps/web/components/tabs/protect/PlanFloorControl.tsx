@@ -14,11 +14,14 @@ import { press, springPress } from "@/lib/motion-tokens";
 import { haptics } from "@/lib/haptics";
 import {
   floorPercent,
+  isFloorLeg,
+  legExposure,
   reserveLabel,
   type Exposure,
   type PlanLeg,
   type RiskTolerance,
 } from "@/components/protection-cards/plan-preview";
+import { exposureLabel } from '@diversifi/shared/src/config/exposures';
 
 const OPTIONS: RiskTolerance[] = ["Conservative", "Balanced", "Aggressive"];
 
@@ -79,6 +82,21 @@ export function PlanFloorControl({
   const caption = isPreviewing
     ? `${reserve} reserve ${savedFloor}% → ${floor}%`
     : `${reserve} reserve · ${floor}% — ${reserve.toLowerCase()}-pegged, not risk-free`;
+  const changedExposure = legs
+    .filter((leg) => !isFloorLeg(leg, floorExposure))
+    .map((leg) => {
+      const exposure = legExposure(leg);
+      const from = savedLegs.find((savedLeg) => savedLeg.token === leg.token)?.percent ?? 0;
+      return { exposure, leg, from, to: leg.percent };
+    })
+    .filter((change) => change.from !== change.to)
+    .sort((a, b) => Math.abs(b.to - b.from) - Math.abs(a.to - a.from))[0];
+  const exposureName = changedExposure?.exposure
+    ? `${exposureLabel(changedExposure.exposure)}${changedExposure.leg.prefer === 'yield' ? ' yield' : ` · ${changedExposure.leg.region}`}`
+    : changedExposure?.leg.label ?? changedExposure?.leg.token;
+  const tradeOff = changedExposure
+    ? `${exposureName} ${changedExposure.from}% → ${changedExposure.to}%. ${changedExposure.to < changedExposure.from ? 'Less' : 'More'} in this leg, ${floor > savedFloor ? 'more' : 'less'} in the liquid ${reserve.toLowerCase()} reserve.`
+    : null;
 
   const focusOption = (index: number) => {
     groupRef.current
@@ -156,6 +174,9 @@ export function PlanFloorControl({
       </p>
       {isPreviewing && (
         <div className="mt-2 space-y-1.5">
+          <p className="text-xs text-ink-muted" data-testid="balance-trade-off">
+            {tradeOff ?? 'This changes allocation targets, not holdings.'}
+          </p>
           {onApply ? (
             <button
               type="button"

@@ -101,13 +101,13 @@ export default function FloatingControls({
         onClick={openAdvisor}
         aria-label={`${ASK_GUARDIAN_LABEL} — ask about your protection`}
         title={ASK_GUARDIAN_LABEL}
-        initial={{ opacity: 0, scale: 0.9 }}
+        initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.94 }}
-        transition={{ duration: 0.2, ease: "easeOut" }}
-        className="fixed bottom-20 right-4 z-40 h-12 pl-2.5 pr-4 rounded-2xl bg-white dark:bg-gray-900 text-blue-950 dark:text-blue-100 shadow-lg shadow-blue-900/20 border border-blue-200 dark:border-blue-800/60 flex items-center gap-2"
+        whileHover={reducedMotion ? undefined : { scale: 1.04 }}
+        whileTap={reducedMotion ? undefined : { scale: 0.94 }}
+        transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+        className="hidden lg:flex fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-12 pl-2.5 pr-4 rounded-2xl bg-white dark:bg-gray-900 text-blue-950 dark:text-blue-100 shadow-lg shadow-blue-900/20 border border-blue-200 dark:border-blue-800/60 items-center gap-2"
       >
         {/* Inner content fades out fast — the layout morph only reshapes the
             shared container; without this the pill's text stretches into the
@@ -126,9 +126,9 @@ export default function FloatingControls({
         {badgeCount > 0 && (
           <motion.span
             key={`badge-${bounceKey}`}
-            initial={{ scale: 0.6, opacity: 0 }}
-            animate={{ scale: [0.6, 1.2, 1], opacity: 1 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
+            initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
+            animate={{ scale: reducedMotion ? 1 : [0.6, 1.2, 1], opacity: 1 }}
+            transition={{ duration: reducedMotion ? 0 : 0.25, ease: "easeOut" }}
             className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
           >
             {badgeCount > 9 ? "9+" : badgeCount}

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
 
@@ -35,6 +35,15 @@ afterEach(() => {
 });
 
 describe('AppHeader mobile layout', () => {
+  it('opens Guardian through a mobile-only header action', () => {
+    const onAskGuardian = vi.fn();
+    render(<AppHeader {...baseProps} onAskGuardian={onAskGuardian} />);
+    const button = screen.getByRole('button', { name: 'Ask Guardian' });
+    expect(button.className).toContain('lg:hidden');
+    expect(button.parentElement?.parentElement?.className).toContain('flex-wrap');
+    fireEvent.click(button);
+    expect(onAskGuardian).toHaveBeenCalledTimes(1);
+  });
   it('always shows the "DiversiFi" wordmark — a lone mascot read as a broken header', () => {
     render(<AppHeader {...baseProps} address="0xabc" isWhitelisted={true} />);
 

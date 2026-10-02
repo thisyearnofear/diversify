@@ -54,6 +54,22 @@ describe("PlanFloorControl — balance preview", () => {
     expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
       "Dollar reserve 25% → 40%",
     );
+    expect(screen.getByTestId("balance-trade-off")).toHaveTextContent("Shilling · Kenya 60% → 48%");
+    expect(screen.getByTestId("balance-trade-off")).toHaveTextContent("more in the liquid dollar reserve");
+  });
+
+  it("makes the opposite exposure trade-off explicit, without promising returns", () => {
+    renderControl({ value: "Aggressive", legs: legsForRisk(getArchetypeAllocations("africapitalism"), "Aggressive"), isPreviewing: true });
+    expect(screen.getByTestId("balance-trade-off")).toHaveTextContent("Shilling · Kenya 60% → 72%");
+    expect(screen.getByTestId("balance-trade-off")).toHaveTextContent("less in the liquid dollar reserve");
+    expect(screen.queryByText(/guaranteed|earn more/i)).not.toBeInTheDocument();
+  });
+
+  it("explains liquid-versus-yield dollars even when both legs share an exposure", () => {
+    const current = legsForRisk(getArchetypeAllocations("confucian"), "Balanced");
+    const next = legsForRisk(getArchetypeAllocations("confucian"), "Conservative");
+    renderControl({ value: "Conservative", legs: next, savedLegs: current, isPreviewing: true });
+    expect(screen.getByTestId("balance-trade-off")).toHaveTextContent("Dollar yield 30% → 15%");
   });
 
   it("radio labels read as choices; selecting fires onChange only — never apply", () => {

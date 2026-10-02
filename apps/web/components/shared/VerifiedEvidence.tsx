@@ -1,7 +1,7 @@
 /**
  * VerifiedEvidence — quiet chain-agnostic trust line with progressive disclosure.
  *
- * Default: "✓ Verified · Evidence mirrored" (no hex, no chain names) — the
+ * Default: "Verify evidence" (no hex, no chain names) — the
  * trust tier (§7 Honesty is restraint). Tap/hover rewrites the artefact in
  * place to the 5 dots + shared ledger + Guardian #1 + working ?verify= check —
  * not a chain banner. Respects docs/design-language.md §7 Chain-agnostic trust.
@@ -75,22 +75,23 @@ export function VerifiedEvidence({ className = "" }: Props) {
         onClick={() => setExpanded((v) => !v)}
         className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
       >
-        <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 text-3xs font-black" aria-hidden="true">✓</span>
-        <span className="font-semibold tracking-wide">Verified</span>
-        <span className="opacity-60">· Evidence mirrored</span>
+        <span className="font-semibold tracking-wide">Verify evidence</span>
         <span className="text-3xs opacity-50 ml-0.5" aria-hidden="true">{expanded ? "−" : "+"}</span>
       </button>
 
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
-            initial={reducedMotion ? false : { opacity: 0, height: 0, filter: "blur(6px)" }}
-            animate={{ opacity: 1, height: "auto", filter: "blur(0px)" }}
-            exit={reducedMotion ? { opacity: 0, height: 0 } : { opacity: 0, height: 0, filter: "blur(6px)" }}
-            transition={{ duration: 0.22, ease: "easeOut" }}
+            initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.22, ease: "easeOut" }}
             className="overflow-hidden"
           >
             <div className="mt-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-3 space-y-2">
+              <p className="text-xs text-ink-muted">
+                Check an on-chain receipt, not an allocation&apos;s safety or return.
+              </p>
               <div className="flex items-center gap-1.5 flex-wrap">
                 {CHAINS.map((c) => (
                   <span

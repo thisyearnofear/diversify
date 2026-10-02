@@ -6,7 +6,29 @@
  * date until the payment date.
  */
 
-import type { Cycle, DragInput } from './calc';
+import type { Cycle, DragInput, DragSummary } from './calc';
+
+export interface PaymentScenarioComparison {
+  convertEarlyLocal: number;
+  waitScenarioLocal: number;
+  differenceLocal: number;
+  direction: 'more' | 'less' | 'similar';
+}
+
+/** Compare the two modeled costs, never a quote or a recommendation. */
+export function paymentScenarioComparison(summary: DragSummary): PaymentScenarioComparison | null {
+  const waitScenarioLocal = summary.totalActualLocal;
+  const convertEarlyLocal = waitScenarioLocal - summary.totalDragLocal;
+  if (!Number.isFinite(waitScenarioLocal) || !Number.isFinite(convertEarlyLocal) ||
+      waitScenarioLocal <= 0 || convertEarlyLocal <= 0) return null;
+  const differenceLocal = summary.totalDragLocal;
+  return {
+    convertEarlyLocal,
+    waitScenarioLocal,
+    differenceLocal,
+    direction: Math.round(Math.abs(differenceLocal)) === 0 ? 'similar' : differenceLocal > 0 ? 'more' : 'less',
+  };
+}
 
 export interface PaymentIntentInput {
   /** ISO 4217 local currency code, e.g. GHS */
@@ -29,6 +51,7 @@ export interface PaymentIntentInput {
 }
 
 const MS_PER_DAY = 86_400_000;
+export const DEFAULT_PAYMENT_BANK_SPREAD_BPS = 150;
 
 function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(b) - Date.parse(a)) / MS_PER_DAY);
@@ -62,7 +85,7 @@ export function buildPaymentIntentDragInput(
     throw new Error('Payment date must be on or after exposure start');
   }
 
-  const spreadBps = intent.bankSpreadBps ?? 150;
+  const spreadBps = intent.bankSpreadBps ?? DEFAULT_PAYMENT_BANK_SPREAD_BPS;
   const achievedRate = midRateAtPayment * (1 + spreadBps / 10_000);
   const amountLocal = intent.targetAmount * midRateAtExposureStart;
 

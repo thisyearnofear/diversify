@@ -63,6 +63,8 @@ interface Props {
    * reserve %) instead of repeating the connect CTA that sits below it.
    */
   walletless?: boolean;
+  /** Illustrative holdings, never the user's funded portfolio. */
+  sample?: boolean;
   /** Makes the hole tappable while idle/empty — Shield uses it for compare mode. */
   onHoleTap?: () => void;
   /** Replaces the idle hint text (compare mode: "under this plan"). */
@@ -110,6 +112,7 @@ export function ProtectionPlanRing({
   alignmentScore = null,
   empty = false,
   walletless = false,
+  sample = false,
   onHoleTap,
   holeHintOverride,
   legs,
@@ -158,7 +161,7 @@ export function ProtectionPlanRing({
     if (!forcePlanLegs && !balancePreview && walletView.holdings.length > 0) {
       return walletView.holdings.map((holding, i) => ({
         id: holding.symbol,
-        label: `${displayToken(holding.symbol)} — wallet holding`,
+        label: `${displayToken(holding.symbol)} — ${sample ? 'sample holding' : 'wallet holding'}`,
         percent: holding.percent,
         color:
           TOKEN_COLORS[holding.symbol] ??
@@ -175,7 +178,7 @@ export function ProtectionPlanRing({
           (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(a.token)),
     }));
-  }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs]);
+  }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs, sample]);
 
   // Selection derivations feed the count-up hook below — and every hook
   // must run before the early return (rules of hooks): the ring simply
@@ -365,6 +368,7 @@ export function ProtectionPlanRing({
   const fmt = (n: number) => formatMoney(n);
   const moneyText = fmt(totalValue);
   const moneySizeClass = moneyText.length > 7 ? 'text-2xl' : 'text-3xl';
+  const savingsLabel = sample ? 'sample balance' : 'your savings';
 
   // `size` rides on the face so the number's type size is decided once,
   // here — never by which utility happens to win in the cascade.
@@ -445,13 +449,13 @@ export function ProtectionPlanRing({
     // Funded with nothing to align against: the total is the only fact.
     if (alignmentScore === null) {
       return totalValue > 0
-        ? { number: hidden ? MONEY_MASK : <motion.span>{moneyCount}</motion.span>, label: 'your savings', hint: '', size: moneySizeClass }
+        ? { number: hidden ? MONEY_MASK : <motion.span>{moneyCount}</motion.span>, label: savingsLabel, hint: '', size: moneySizeClass }
         : { number: '—' as React.ReactNode, label: archetype.name, hint: holeHintOverride ?? 'no holdings yet' };
     }
     // Idle, funded: money is the primary face, alignment one tap away.
     if (flipAvailable) {
       return idleFace === 'money'
-        ? { number: hidden ? MONEY_MASK : <motion.span>{moneyCount}</motion.span>, label: 'your savings', hint: '', size: moneySizeClass }
+        ? { number: hidden ? MONEY_MASK : <motion.span>{moneyCount}</motion.span>, label: savingsLabel, hint: '', size: moneySizeClass }
         : {
             number: <motion.span>{alignmentFormatted}</motion.span>,
             label: 'aligned',
@@ -479,14 +483,16 @@ export function ProtectionPlanRing({
         <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
           {balancePreview
             ? 'Preview allocation'
+            : sample
+              ? 'Sample portfolio'
             : !forcePlanLegs && walletView.holdings.length > 0
               ? 'Your holdings'
-              : 'Your plan targets'}
+              : 'Plan preview'}
         </h3>
         {/* Armed-state seal — stamps once per mount (keyed to the plan),
             then holds. The §5 confirm artefact for committing a plan. */}
         <div className="flex items-center gap-2">
-          {!balancePreview && (
+          {!balancePreview && !walletless && !sample && !forcePlanLegs && (
             <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
           )}
         {onHoleTap ? (

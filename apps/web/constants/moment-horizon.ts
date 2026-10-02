@@ -7,10 +7,31 @@
  * seconds. Home now continues the story the visitor just read; the 1Y/3Y/5Y
  * control still changes it. Session-scoped, never persisted across visits.
  */
-import type { Horizon } from './currency-risk';
+import type { Benchmark, Horizon } from './currency-risk';
 
 const KEY = 'diversifi.moment.horizon';
 const VALID: readonly Horizon[] = ['1yr', '3yr', '5yr'];
+const BENCHMARK_KEY = 'diversifi.moment.benchmark';
+
+/** The benchmark of the last onboarding reading, scoped to its currency. */
+export function readMomentBenchmark(currency: string): Benchmark | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(BENCHMARK_KEY) ?? 'null');
+    return stored?.currency === currency && ['USD', 'EUR', 'XAU'].includes(stored.benchmark)
+      ? stored.benchmark as Benchmark : null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeMomentBenchmark(currency: string, benchmark: Benchmark): void {
+  try {
+    sessionStorage.setItem(BENCHMARK_KEY, JSON.stringify({ currency, benchmark }));
+  } catch {
+    // Session storage is optional.
+  }
+}
 
 export function readMomentHorizon(): Horizon | null {
   if (typeof window === 'undefined') return null;

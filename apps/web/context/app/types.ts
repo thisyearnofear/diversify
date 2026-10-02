@@ -50,6 +50,8 @@ export interface DemoModeState {
   isActive: boolean;
   mockAddress: string;
   mockChainId: number;
+  /** Session-only plan exploration; never written to the protection profile. */
+  previewStrategy?: NullableFinancialStrategy;
 }
 
 export type ThemeMode = 'auto' | 'light' | 'dark';

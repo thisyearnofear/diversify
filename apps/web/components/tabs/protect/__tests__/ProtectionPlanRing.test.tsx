@@ -17,7 +17,7 @@ vi.mock('@/lib/haptics', () => ({
 
 const reducedMotion = vi.hoisted(() => ({ on: false }));
 vi.mock('framer-motion', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('framer-motion')>();
+  const actual = await importOriginal() as typeof import('framer-motion');
   return { ...actual, useReducedMotion: () => reducedMotion.on };
 });
 
@@ -41,6 +41,20 @@ const portfolio = {
 } as unknown as MultichainPortfolio;
 
 describe('ProtectionPlanRing — projections shape', () => {
+  it('identifies sample holdings at the object and never seals them as saved', () => {
+    render(<ProtectionPlanRing strategyKey="africapitalism" portfolio={portfolio} selectedToken={null} onSelectToken={() => {}} sample />);
+    expect(screen.getByRole('heading', { name: 'Sample portfolio' })).toBeInTheDocument();
+    expect(screen.getByText('sample balance')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /sample holding/ }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('img', { name: 'Plan saved' })).not.toBeInTheDocument();
+  });
+
+  it('walletless targets are a preview, not armed protection', () => {
+    render(<ProtectionPlanRing strategyKey="africapitalism" portfolio={portfolio} selectedToken={null} onSelectToken={() => {}} walletless empty />);
+    expect(screen.queryByRole('img', { name: 'Plan saved' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /armed/i })).not.toBeInTheDocument();
+  });
+
   it('does not crash when projections is the legacy demo shape (no currentPath)', () => {
     const legacy = {
       ...DEMO_PORTFOLIO,
@@ -93,7 +107,7 @@ describe('ProtectionPlanRing — projections shape', () => {
       />,
     );
     expect(screen.getAllByRole('heading')).toHaveLength(1);
-    expect(screen.getByRole('heading', { name: 'Your plan targets' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Plan preview' })).toBeInTheDocument();
 
     rerender(
       <ProtectionPlanRing
@@ -120,7 +134,7 @@ describe('ProtectionPlanRing — projections shape', () => {
       />,
     );
     expect(screen.getAllByRole('heading')).toHaveLength(1);
-    expect(screen.getByRole('heading', { name: 'Your plan targets' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Plan preview' })).toBeInTheDocument();
   });
 
   it('renders no stress-test affordance — the ring carries no defense verdict', () => {
@@ -357,7 +371,7 @@ describe('ProtectionPlanRing — projections shape', () => {
       />,
     );
     expect(
-      screen.queryByText(/Your holdings|Your plan targets|Preview allocation/),
+      screen.queryByText(/Your holdings|Plan preview|Preview allocation/),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
     const hole = screen.getByTestId('ring-hole');
@@ -748,7 +762,7 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.queryByRole('button', { name: /wallet holding/ })).not.toBeInTheDocument();
     expect(screen.getByText('Preview allocation')).toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Protection armed' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Plan saved' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
     expect(screen.getByText('Dollar reserve')).toBeInTheDocument();
     expect(screen.getByText('Preview · not saved')).toBeInTheDocument();
@@ -767,7 +781,7 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.queryByRole('button', { name: /preview target/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /wallet holding/ }).length).toBeGreaterThan(0);
     expect(screen.getByText(/3-year path/)).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Protection armed' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Plan saved' })).toBeInTheDocument();
   });
 
   it('selected slice answers preview vs saved — not a gap, not a holding', () => {
@@ -900,7 +914,7 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.getByText('48%')).toBeInTheDocument();
     expect(screen.getByText('60% in saved plan')).toBeInTheDocument();
     expect(screen.queryByTestId('ring-ghost')).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: 'Protection armed' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Plan saved' })).not.toBeInTheDocument();
     expect(screen.queryByText(/3-year path/)).not.toBeInTheDocument();
     expect(screen.queryByText(/held/)).not.toBeInTheDocument();
   });

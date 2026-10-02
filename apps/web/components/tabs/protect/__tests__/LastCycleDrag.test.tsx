@@ -26,7 +26,7 @@ const fillAndRun = () => {
   fill(/Earnings this cycle/, '100000');
   fill(/USD paid to suppliers/, '5000');
   fill(/Bank rate/, '16');
-  fireEvent.click(screen.getByRole('button', { name: 'See what it cost' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Estimate FX drag' }));
 };
 
 describe('LastCycleDrag', () => {
@@ -50,13 +50,19 @@ describe('LastCycleDrag', () => {
     expect(result).toBeInTheDocument();
     // Drag hero: achieved 16 vs mid 15 → positive drag (bank spread > 0).
     expect(screen.getByTestId('last-cycle-drag-total')).toHaveTextContent(/^GHS \d/);
-    expect(screen.getByText(/went to FX timing, bank spread and fees/)).toBeInTheDocument();
+    expect(screen.getByText(/Estimated drag/)).toBeInTheDocument();
+    expect(screen.getByText(/drag relative to the modeled payment cost/)).toBeInTheDocument();
+    expect(screen.queryByText(/Annualized/)).not.toBeInTheDocument();
     const { start, end } = lastCycleWindow(new Date());
     const fmt = (iso: string) =>
       new Date(`${iso}T00:00:00Z`).toLocaleDateString('en-US', {
         day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC',
       });
-    expect(screen.getByText(new RegExp(`${fmt(start)}.+${fmt(end)}.+73 days`))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`${fmt(start)}.+${fmt(end)}`))).toBeInTheDocument();
+    expect(screen.getByText(/73-day historical scenario/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Earnings this cycle/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /How this is estimated/ }));
+    expect(screen.getByText(/assuming 5 identical scenarios. Not a forecast/)).toBeInTheDocument();
     expect(mockTrack).toHaveBeenCalledWith('fx_drag_calculated', {
       currency: 'GHS',
       source: 'inspector',
@@ -79,7 +85,7 @@ describe('LastCycleDrag', () => {
 
   it('invalid input shows an inline alert instead of silently no-oping', () => {
     render(<LastCycleDrag currency="GHS" onCurrencyChange={() => {}} onTrackNext={() => {}} />);
-    fireEvent.click(screen.getByRole('button', { name: 'See what it cost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Estimate FX drag' }));
     expect(screen.getByRole('alert')).toHaveTextContent(
       'Enter your earnings, the USD you paid and your bank rate — all above zero.',
     );
@@ -92,7 +98,7 @@ describe('LastCycleDrag', () => {
     await screen.findByTestId('last-cycle-result');
     expect(screen.queryByText(/converting on arrival/i)).not.toBeInTheDocument();
     // The percentage rides the hero sub-line instead.
-    expect(screen.getByText(/% of what you paid went to FX timing/)).toBeInTheDocument();
+    expect(screen.getByText(/% drag relative to the modeled payment cost/)).toBeInTheDocument();
   });
 
   it('came-out-ahead copy renders when timing beats converting on arrival', async () => {
@@ -102,8 +108,18 @@ describe('LastCycleDrag', () => {
     fill(/Earnings this cycle/, '100000');
     fill(/USD paid to suppliers/, '5000');
     fill(/Bank rate/, '14');
-    fireEvent.click(screen.getByRole('button', { name: 'See what it cost' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Estimate FX drag' }));
     await screen.findByTestId('last-cycle-result');
-    expect(screen.getByText(/Timing worked in your favour/)).toBeInTheDocument();
+    expect(screen.getByText(/Estimated advantage/)).toBeInTheDocument();
+    expect(screen.getByText(/% advantage relative to the modeled payment cost/)).toBeInTheDocument();
+  });
+
+  it('returns to editable inputs without clearing their values', async () => {
+    render(<LastCycleDrag currency="GHS" onCurrencyChange={() => {}} onTrackNext={() => {}} />);
+    fillAndRun();
+    await screen.findByTestId('last-cycle-result');
+    fireEvent.click(screen.getByRole('button', { name: '← Edit inputs' }));
+    expect(screen.getByLabelText(/Earnings this cycle/)).toHaveValue('100000');
+    expect(screen.queryByTestId('last-cycle-result')).not.toBeInTheDocument();
   });
 });

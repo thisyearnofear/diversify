@@ -96,11 +96,29 @@ and `FloatingCoins`. Rule: **the coins do work**. Readable labels and visible se
 
 - Phase 3 lens selection used to be five text cards. It's now
   `LensCoinSelector` — five flickable coins, each with a per-lens accent;
-  tapping flips the coin (the minting animation doing real work) and
-  unfolds its archetypes.
+  one tap opens its archetypes with a consistent coin-to-panel transition.
+  Approach taps preview locally; only **Use this plan** persists a plan.
 - The segmented control (1Y/3Y/5Y in the risk card) is the *same
-  control* used for money purpose (Soon/Years/By date) one phase later.
+  control* used for money purpose (Buffer/Long term/Supplier payment) at country selection.
   Users learn a control once; the design loans that learning forward.
+
+Supplier payment goes directly to Shield's payment stage, without a values-plan prerequisite.
+Payment scenarios compute before any wallet prompt. Saving a payment and enabling monitoring
+are separate explicit actions; neither authorizes a trade. Historical inputs describe a
+**73-day scenario**, not an audit of the visitor's actual dates. Decomposition and annualization
+belong behind the result's inspector. Sample strategies and payment edits never change saved plans or real drafts.
+
+The supplier-payment entry has three editable inputs: earning currency, USD invoice amount,
+and due date. Its result compares **Convert early reference** with **Wait in this scenario**,
+derived from the same modeled summary; negative drag stays visible as a cheaper waiting scenario,
+never realized savings. Cost assumptions are explicit in Details. Saved payments reopen their
+dated snapshots without a rate fetch; only **Refresh scenario** requests another reading.
+Monitoring on is a saved setting, not proof of a fresh check or a proposal. Existing execution
+consent stays visible rather than claiming every account is manual-only.
+
+Savings reserve previews name the displaced exposure or yield leg alongside the reserve change.
+Both compare targets, not holdings. Onboarding carries its currency-scoped benchmark and horizon
+into Home; shared-card views retain their own comparison.
 
 When you need a new control, first check whether an existing motif can
 carry it. Inventing a new control idiom costs the user learning you
@@ -141,8 +159,9 @@ initial bundle. Live objects (all `apps/web/components/shared/Rive*.tsx`,
 rebuilt via `pnpm rive:build`): `claim-coin` mints on claim + swap-success
 (accent binds to the token's brand color), `net-pair` converges two
 currency-tinted coins and seals on settlement (FX netting card),
-`protection-seal` stamps ring + shield + check when a plan arms (Shield
-ring header), `guardian` postures the agent status chip
+`protection-seal` stamps ring + shield + check for **Plan saved**, never
+active protection or trade permission. Walletless and sample previews do not stamp it.
+`guardian` postures the agent status chip
 (watching/acting/alert/resting), `verified-seal` stamps on confirmed
 on-chain evidence (`VerifiedEvidence`). Host state crosses the WASM
 boundary through view-model binds (colors as RGB channels, booleans,
@@ -309,8 +328,10 @@ stays live behind it. The FAB morphs into the panel via a shared
 `layoutId` (fade only under reduced motion), and hides while it's open.
 ⌘K / Ctrl+K or "/" opens it, Esc closes it; the header carries one
 context line (`Looking at: {tab} · {from} → {to}` on Exchange) and the
-Protection Balance lives once in the footer. Mobile keeps the bottom
-sheet unchanged.
+Protection Balance lives once in the footer. Mobile opens the same bottom
+sheet from the header, with no floating Guardian button over the instrument.
+Starters reflect the selected currency, plan, payment purpose, or Exchange pair;
+sample prompts explicitly distinguish illustrative holdings from the user's money.
 
 `DisclosureSection` is not IA. Accordion rows are a density tactic.
 Disclosure is allowed only for **trust footnotes** (data source, method).
@@ -644,7 +665,7 @@ numbers to fill a gap (per AGENTS.md Wave 8 — expired cache before a
 fake `+0.0%`); apply the same rule to copy: no claim you're not making
 truthfully somewhere verifiable.
 
-**Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The UI stays chain-agnostic by default: one quiet line — `Verified · Evidence mirrored` with a `✓` — in the trust tier (`TrustFootnote` / `InstrumentShell status`), not the object. No chain names, no hex in the first viewport. Detail is progressive disclosure: tapping `Verified` rewrites the artefact in place to the 5 dots + shared address + `Guardian #1` + explorer `0G/Celoscan/Arbiscan` links and the `/api/agent/zero-g-ledger?verify=<hash>` check (`LiveProofCard` lazy `✓`). Beginners never see a hex until they care; reviewers get the exact vision sentence in one tap. Header `GuardianMascot` tooltip reads `Portable Guardian · portable across wallets`, not `ERC-721`. Home is the exception — the moment and story already carry their own source/date provenance, so Home's status tier leaves the generic trust slot empty rather than mirroring a second Verified line.
+**Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The generic trust affordance says **Verify evidence**, not that the current plan, portfolio, or scenario has been verified. Confirmed verification stays bound to the specific evidence record. No chain names or hex in the first viewport. Tapping the affordance reveals network dots, ledger address, Guardian identity, explorer links, and the `/api/agent/zero-g-ledger?verify=<hash>` check. Evidence verification confirms ledger settlement, not recommendation accuracy, active protection, or authority to trade. Home's dated story already carries its own provenance, so its status tier omits this generic trust line.
 
 **Colour carries meaning, so there is one action hue.** Every primary CTA and every product hand-off link wears `--action` (`bg-action` in Tailwind; numerically blue-600 so legacy call sites still match, but `action` is the sanctioned spelling). Green and teal are reserved for verified / ready / settled state (`StatusBadge` `ready`) — spending them on an upsell makes a pitch read as a confirmation, which is exactly the confusion this section exists to prevent. Status-tier text links follow one grammar: `.link-handoff` is a real next step (carries a verb, wears the action hue, the heaviest thing in the row); `.link-quiet` is supporting or exploratory (gray, never the action hue). The demo entry is quiet by contract — it is illustrative, not the way forward, so it never wears blue. Arrows suffix interactive hand-offs only; a static sentence never ends in `→`.
 

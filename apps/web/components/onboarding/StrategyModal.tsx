@@ -20,7 +20,8 @@ import {
   ARCHETYPES,
   strategyToArchetype,
 } from '@/components/protection-cards/tokens';
-import { WelcomeScreen } from './screens/WelcomeScreen';
+import { WelcomeScreen, type OnboardingSelection } from './screens/WelcomeScreen';
+import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 
 // Film-grain overlay keeps the big gradient from banding and adds texture.
 const NOISE_TEXTURE = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
@@ -42,24 +43,13 @@ export default function StrategyModal({
     isWalletConnected,
     chainId,
 }: StrategyModalProps) {
-    const { setMultipleConfig } = useProtectionProfile();
+    const { config, setMultipleConfig } = useProtectionProfile();
     const { financialStrategy } = useStrategy();
-    const { setActiveTab } = useNavigation();
+    const { setActiveTab, navigateWithIntent } = useNavigation();
 
     // A selected philosophy personalizes the vault with a quiet tint
     const archetypeId = strategyToArchetype(financialStrategy);
     const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
-
-    // Escape = "Explore app". The screen has no chrome to dismiss, but the
-    // exit stays one keystroke away. No focus trap: nothing exists outside.
-    useEffect(() => {
-        if (!isOpen) return;
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        document.addEventListener('keydown', handleKeyDown);
-        return () => document.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, onClose]);
 
     // A11y: the onboarding IS the screen, so announce that state — give the
     // document an onboarding title and move focus into the screen container.
@@ -74,9 +64,13 @@ export default function StrategyModal({
         };
     }, [isOpen]);
 
-    const finish = useCallback((region?: string | null) => {
-        const profileUpdates = deriveProfileFromPhilosophy(financialStrategy, region ?? null);
-        if (Object.keys(profileUpdates).length > 0) {
+    const finish = useCallback((region?: string | null, selection?: OnboardingSelection) => {
+        const profileUpdates = selection?.philosophy
+            ? { ...deriveProfileFromPhilosophy(selection.philosophy, region ?? null), riskTolerance: config.riskTolerance ?? ('Balanced' as const) }
+            : region ? { userRegion: region } : {};
+        if (selection?.moneyPurpose) {
+            setMultipleConfig({ ...profileUpdates, moneyPurpose: selection.moneyPurpose });
+        } else if (Object.keys(profileUpdates).length > 0) {
             setMultipleConfig(profileUpdates);
         }
         if (region && typeof window !== 'undefined') {
@@ -85,13 +79,18 @@ export default function StrategyModal({
         dismissFirstRunTour();
         // A visitor choosing “Explore the app” should arrive at Shield, not at
         // an unrelated tab restored from a prior browser session.
-        setActiveTab('protect');
+        if (selection?.moneyPurpose === 'upcoming_payment') {
+            navigateWithIntent('protect', { source: 'shield', lens: 'cycle' });
+        } else {
+            setActiveTab('protect');
+        }
         if (typeof document !== 'undefined') {
             document.documentElement.removeAttribute('data-pending-onboarding');
         }
         onClose();
         onComplete?.();
-    }, [onClose, onComplete, setMultipleConfig, financialStrategy, setActiveTab]);
+    }, [onClose, onComplete, setMultipleConfig, setActiveTab, navigateWithIntent, config.riskTolerance]);
+    useDismissibleLayer(isOpen, () => finish(null));
 
     return (
         <AnimatePresence>

@@ -33,7 +33,7 @@ interface RiveProtectionSealCanvasProps {
   size: number;
   /** Seal accent (hex). Defaults to the file's emerald. */
   color?: string;
-  /** True once the protection plan is committed. */
+  /** True once the allocation is saved, not a monitoring or execution grant. */
   armed: boolean;
 }
 
@@ -63,7 +63,7 @@ export default function RiveProtectionSealCanvas({ size, color, armed }: RivePro
   }, [armed, setArmed]);
 
   return (
-    <div style={{ width: size, height: size }} role="img" aria-label={armed ? 'Protection armed' : 'Protection not armed'}>
+    <div style={{ width: size, height: size }} role="img" aria-label={armed ? 'Plan saved' : 'Plan preview'}>
       <RiveComponent style={{ width: '100%', height: '100%' }} />
     </div>
   );

@@ -9,7 +9,7 @@
  */
 
 import { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { NETWORKS } from '../../../../config';
 import { useWalletContext } from '../../../wallet/WalletProvider';
 import { showTestnetUi, optIntoTestnetUi } from '../../../../constants/testnet';
@@ -17,6 +17,8 @@ import { ShimmerText } from '../../../shared/ShimmerText';
 import { phaseVariants, staggerChild } from './phase-config';
 import { BENCHMARKS, type Benchmark } from '../../../../constants/currency-risk';
 import { spring } from "@/lib/motion-tokens";
+import { MONEY_PURPOSES, type MoneyPurpose } from '@/constants/money-purpose';
+import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 
 interface DetectPhaseProps {
   riskLoading: boolean;
@@ -34,6 +36,8 @@ interface DetectPhaseProps {
   countryRequestError: string | null;
   handleCountryRequest: () => void;
   onAdvance: () => void;
+  moneyPurpose: MoneyPurpose | null;
+  setMoneyPurpose: (purpose: MoneyPurpose) => void;
   /** Kept for callers; the modal's "Explore app" pill is the one exit now. */
   onSkip?: () => void;
 }
@@ -54,18 +58,22 @@ export function DetectPhase({
   countryRequestError,
   handleCountryRequest,
   onAdvance,
+  moneyPurpose,
+  setMoneyPurpose,
 }: DetectPhaseProps) {
   const { switchNetwork, isConnected } = useWalletContext();
+  const reducedMotion = useReducedMotion();
+  useDismissibleLayer(showCountryPicker, () => setShowCountryPicker(false));
   const [isSwitching, setIsSwitching] = useState(false);
   const [switchDone, setSwitchDone] = useState(false);
   const [showTestDetails, setShowTestDetails] = useState(false);
   // A manual pick is an explicit answer — advance straight to the numbers
   // once the chosen country's data resolves, instead of asking for a
   // second "Show me the numbers" tap (onboarding lost ~89% here).
-  const [advanceOnPick, setAdvanceOnPick] = useState(false);
+  const [advanceOnPick, setAdvanceOnPick] = useState<string | null>(null);
   useEffect(() => {
-    if (advanceOnPick && riskData && !riskLoading) {
-      setAdvanceOnPick(false);
+    if (advanceOnPick && riskData?.code === advanceOnPick && !riskLoading) {
+      setAdvanceOnPick(null);
       onAdvance();
     }
   }, [advanceOnPick, riskData, riskLoading, onAdvance]);
@@ -85,21 +93,54 @@ export function DetectPhase({
   return (
     <motion.div
       key="phase-detect"
-      variants={phaseVariants}
-      initial="initial"
+      variants={reducedMotion ? undefined : phaseVariants}
+      initial={reducedMotion ? false : "initial"}
       animate="animate"
       exit="exit"
       className="w-full max-w-sm"
     >
       <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
-        Is your money quietly{' '}
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300">
-          losing value?
-        </span>
+        {moneyPurpose === 'upcoming_payment' ? 'Plan your next supplier payment.' : 'Make a plan for your money.'}
       </motion.h2>
       <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-5">
-        Find out in 30 seconds.
+        {moneyPurpose === 'upcoming_payment' ? 'Start with the currency you earn.' : 'Start with the currency you use.'}
       </motion.p>
+
+      <motion.div variants={staggerChild} className="mb-4 text-left">
+        <p id="money-purpose-label" className="text-xs font-semibold text-slate-200 mb-2">
+          What is this money for?
+        </p>
+        <div
+          className="grid grid-cols-3 gap-1 rounded-xl bg-slate-800 p-1"
+          role="radiogroup"
+          aria-labelledby="money-purpose-label"
+          onKeyDown={(event) => {
+            if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const index = Math.max(0, MONEY_PURPOSES.findIndex((purpose) => purpose.value === moneyPurpose));
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? MONEY_PURPOSES.length - 1
+              : (index + (event.key === 'ArrowRight' ? 1 : -1) + MONEY_PURPOSES.length) % MONEY_PURPOSES.length;
+            setMoneyPurpose(MONEY_PURPOSES[next].value);
+            event.currentTarget.querySelectorAll<HTMLButtonElement>('button')[next]?.focus();
+          }}
+        >
+          {MONEY_PURPOSES.map((purpose) => (
+            <button
+              key={purpose.value}
+              type="button"
+              role="radio"
+              aria-checked={moneyPurpose === purpose.value}
+              tabIndex={moneyPurpose === purpose.value || (!moneyPurpose && purpose === MONEY_PURPOSES[0]) ? 0 : -1}
+              onClick={() => setMoneyPurpose(purpose.value)}
+              className={`min-h-tap rounded-lg px-2 py-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+                moneyPurpose === purpose.value ? 'bg-action text-white' : 'text-slate-200 hover:bg-slate-700'
+              }`}
+            >
+              {purpose.value === 'everyday_buffer' ? 'Buffer' : purpose.value === 'long_term_savings' ? 'Long term' : 'Supplier payment'}
+            </button>
+          ))}
+        </div>
+      </motion.div>
 
       {/* Detected country card */}
       <motion.div variants={staggerChild}>
@@ -155,10 +196,10 @@ export function DetectPhase({
       <AnimatePresence>
         {showCountryPicker && (
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }}
-            transition={spring}
+            transition={reducedMotion ? { duration: 0 } : spring}
             role="dialog"
             aria-modal="true"
             aria-label="Choose your country"
@@ -259,7 +300,7 @@ export function DetectPhase({
                       setCountryOverride(c.iso2);
                       setShowCountryPicker(false);
                       setManualCountrySearch('');
-                      setAdvanceOnPick(true);
+                      setAdvanceOnPick(c.code);
                     }}
                     className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
                   >
@@ -281,10 +322,10 @@ export function DetectPhase({
           variants={staggerChild}
           onClick={onAdvance}
           className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
-          whileHover={{ y: -2 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={reducedMotion ? undefined : { y: -2 }}
+          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
         >
-          <ShimmerText>Show me the numbers →</ShimmerText>
+          <ShimmerText>{moneyPurpose === 'upcoming_payment' ? 'Review a payment →' : 'Show me the numbers →'}</ShimmerText>
         </motion.button>
       )}
 

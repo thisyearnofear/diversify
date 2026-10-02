@@ -12,7 +12,7 @@
  * Uncovered currencies get an honest inflation-only moment instead of a
  * fake currency-vs-benchmark delta.
  */
-import { readMomentHorizon } from '../constants/moment-horizon';
+import { readMomentBenchmark, readMomentHorizon } from '../constants/moment-horizon';
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { useCurrencyRisk } from './use-currency-risk';
@@ -140,12 +140,14 @@ export function useCurrencyMoment(
     if (!activeEntry) return;
     const code = activeEntry.code;
     if (seededFor === code) return;
+    const remembered = readMomentBenchmark(code);
+    const continuedBenchmark = remembered && selectableBenchmarks(code).includes(remembered) ? remembered : null;
     setBenchmark(
       viewEntry
         ? momentBenchmarkFor(code)
-        : risk.isBenchmarkCurrency || isDefaultComparisonInert(activeEntry)
+        : continuedBenchmark ?? (risk.isBenchmarkCurrency || isDefaultComparisonInert(activeEntry)
           ? 'XAU'
-          : 'USD',
+          : 'USD'),
     );
     setSavingsAmount(exampleSavingsFor(code));
     setSeededFor(code);
