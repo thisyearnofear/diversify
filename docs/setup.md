@@ -12,6 +12,40 @@ pnpm dev                      # Starts on port 3042
 
 Users can sign in via email, social login, or existing wallet (Privy). No wallet required to explore the demo.
 
+### Tests and push checks
+
+GitHub's **Tests / Full regression** job runs the complete Vitest suite,
+root typecheck, and lint on pushes and pull requests. Make that job a required
+check in branch protection; adding the workflow alone does not enforce merges.
+
+Local pre-push checks use every outgoing ref's remote-to-local commit range:
+
+- Documentation-only changes skip code checks.
+- Application TypeScript changes run root typecheck, seven safety suites,
+  edited test files, and tests related through Vitest's import graph.
+- Shared packages, configuration, tooling, deleted source, unknown assets,
+  new branches, and unavailable remote history run the full suite.
+- Local modifications and untracked files are included because checks run
+  against the checkout. A pushed ref must match the checked-out commit.
+
+Signer credentials are scrubbed in every test worker. React Testing Library
+cleanup is loaded only for DOM workers. Financial, authorization, privacy, and
+execution safety coverage remains in the suite.
+
+After a fresh install, prepare package declarations before typechecking:
+
+```bash
+pnpm exec turbo run build --filter=@diversifi/shared --filter=@stable-station/mento-utils
+pnpm exec tsc --noEmit
+pnpm test
+node --test scripts/pre-push-checks.test.mjs
+```
+
+CI prepares package declarations automatically. The local hook also prepares
+these packages if their required declarations are missing. Full local tests
+remain available through `pnpm test`; selective push checks do not replace CI.
+CI uses Node 24, matching the runtime used to verify this configuration.
+
 ### Required Environment Variables
 
 | Variable | Purpose |

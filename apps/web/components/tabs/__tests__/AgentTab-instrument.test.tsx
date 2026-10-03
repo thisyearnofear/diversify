@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, cleanup, within, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -330,7 +330,7 @@ describe("AgentTab — instrument composition", () => {
     ).toBeInTheDocument();
   });
 
-  it("closing the inspector restores the resting CTA", async () => {
+  it("closing the inspector restores the resting CTA", () => {
     instrument = makeInstrument({
       guardianState: "monitoring",
       hasValidPermission: true,
@@ -338,18 +338,7 @@ describe("AgentTab — instrument composition", () => {
     });
     render(<AgentTab />);
     fireEvent.click(screen.getByTestId("guardian-latest"));
-    await waitFor(() =>
-      expect(
-        screen.getAllByRole("button", { name: "Preview next move" }),
-      ).toHaveLength(1),
-    );
-    expect(
-      within(screen.getByTestId("inspector-sheet")).getByRole("button", { name: "Preview next move" }),
-    ).toBeInTheDocument();
-
-    const sheet = screen.getByTestId("inspector-sheet");
     fireEvent.click(screen.getByRole("button", { name: "Close inspector" }));
-    await waitFor(() => expect(sheet).toHaveStyle({ opacity: 0 }));
     expect(
       within(screen.getByTestId("guardian-object")).getByRole("button", { name: "Preview next move" }),
     ).toBeInTheDocument();

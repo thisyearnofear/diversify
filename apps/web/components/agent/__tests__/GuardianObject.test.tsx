@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GuardianObject } from "../GuardianObject";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -110,17 +110,15 @@ describe("GuardianObject — state copy", () => {
 });
 
 describe("GuardianObject — budget line", () => {
-  it("shows $X left of $Y today only with permission + session + limit, and opens bounds", async () => {
+  it("shows $X left of $Y today only with permission + session + limit, and opens bounds", () => {
     const props = renderObject({
       hasValidPermission: true,
       sessionInfo: sessionInfo(),
       dailyLimit: 25,
     });
     const budget = screen.getByTestId("guardian-budget");
-    // The figure counts up to the ledger value — assert the landing.
-    await waitFor(() =>
-      expect(budget).toHaveTextContent("$20 left of $25 today"),
-    );
+    // Initial render uses the real remaining amount, without a zero tween.
+    expect(budget).toHaveTextContent("$20 left of $25 today");
     fireEvent.click(budget);
     expect(props.onOpenBounds).toHaveBeenCalledTimes(1);
   });
@@ -152,7 +150,7 @@ describe("GuardianObject — budget line", () => {
     localStorage.removeItem("diversifi.balances.hidden");
   });
 
-  it("re-masks and reveals both amounts with the shared visibility toggle", async () => {
+  it("re-masks and reveals both amounts with the shared visibility toggle", () => {
     function Toggle() {
       const { toggle } = useBalanceVisibility();
       return <button type="button" onClick={toggle}>Toggle balances</button>;
@@ -175,12 +173,12 @@ describe("GuardianObject — budget line", () => {
       </BalanceVisibilityProvider>,
     );
     const budget = screen.getByTestId("guardian-budget");
-    await waitFor(() => expect(budget).toHaveTextContent("$20 left of $25 today"));
+    expect(budget).toHaveTextContent("$20 left of $25 today");
     fireEvent.click(screen.getByRole("button", { name: "Toggle balances" }));
     expect(budget).toHaveTextContent("•••• left of •••• today");
     expect(budget).not.toHaveTextContent(/\$20|\$25/);
     fireEvent.click(screen.getByRole("button", { name: "Toggle balances" }));
-    await waitFor(() => expect(budget).toHaveTextContent("$20 left of $25 today"));
+    expect(budget).toHaveTextContent("$20 left of $25 today");
   });
 
   it.each([

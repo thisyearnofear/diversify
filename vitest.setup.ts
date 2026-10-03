@@ -13,11 +13,6 @@
  * reliable pattern.
  */
 import { afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
-
-afterEach(() => {
-  cleanup();
-});
 
 /**
  * Scrub real signer credentials from the test environment.
@@ -44,3 +39,10 @@ afterEach(() => {
 import { scrubSignerEnvKeys } from './packages/shared/src/utils/signer-env-keys';
 
 scrubSignerEnvKeys();
+
+// Load DOM cleanup only after credentials are scrubbed. Node-only service
+// and API workers never import React Testing Library.
+if (typeof document !== 'undefined') {
+  const { cleanup } = await import('@testing-library/react');
+  afterEach(() => cleanup());
+}

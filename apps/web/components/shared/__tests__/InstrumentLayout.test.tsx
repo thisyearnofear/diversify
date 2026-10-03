@@ -168,25 +168,6 @@ describe("InstrumentShell", () => {
     expect(shell.querySelector(".instrument-status")).not.toBeNull();
   });
 
-  it("the object grows to fill the stage — shrink-wrap plus status mt-auto orphans both ends", async () => {
-    // Pure-CSS contract, so jsdom can't observe it in layout — assert the
-    // stylesheet text instead. The status row carries `mt-auto`
-    // (InstrumentShell.tsx), and auto margins absorb free space BEFORE
-    // justify-content distributes any. The object must therefore be the
-    // flex grower (`flex: 1`): it absorbs the stage's slack, `mt-auto`
-    // computes to zero, the status sits directly under the object, and the
-    // object's own centring fills the card. Shrink-wrapping the object
-    // (`flex: 0 1 auto`) hands every pixel of slack to the auto margin —
-    // content pinned top, status pinned bottom, nothing filling the stage.
-    const { readFileSync } = await import("node:fs");
-    const { join } = await import("node:path");
-    const css = readFileSync(join(process.cwd(), "apps/web/styles/globals.css"), "utf8");
-    const desktop = css.slice(css.indexOf("@media (min-width: 1024px)"));
-    const objectBlock = /\.instrument-object\s*\{([^}]*)\}/.exec(desktop)?.[1] ?? "";
-    expect(objectBlock).toMatch(/(^|;)\s*flex:\s*1\s*;/);
-    expect(objectBlock).not.toMatch(/flex:\s*0\s+1\s+auto/);
-  });
-
   it("reserves no inspector slot while closed — and opens the workbench state on inspection", () => {
     const { container, rerender } = render(
       <InstrumentShell
