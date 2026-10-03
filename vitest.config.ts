@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['**/*.test.{ts,tsx}'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', 'lib/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/.next/**', 'lib/**', '.agents/**'],
     env: {
       NODE_ENV: 'test',
     },
