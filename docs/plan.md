@@ -94,13 +94,17 @@ switches default-off (`config/jurisdictions.ts`), sanctions geo-block (451 →
 per-IP limit, legal page drafts `noindex` until `NEXT_PUBLIC_LEGAL_APPROVED`,
 retail perps off with PAXG spot substitution, no streaks/badges for real-money
 swaps.
-*Still open:* counsel's written answers + `[COUNSEL: …]` placeholders; the
-direct-Hetzner geo gap (heavy routes are rewritten from Vercel to Hetzner, so a
+*Still open:* counsel's written answers + `[COUNSEL: …]` placeholders (brief
+outline: [`archive/compliance-competitors-2026-10.md`](./archive/compliance-competitors-2026-10.md)
+§4); the direct-Hetzner geo gap (heavy routes are rewritten from Vercel to Hetzner, so a
 direct call to the Hetzner host bypasses the Vercel proxy geo-block — close with an
-origin allowlist or GeoIP at the reverse proxy); rate-limit store shared across
-instances before fees make "unavailable" fail closed. Screening is keyless today
-(Chainalysis on-chain oracle on Celo, Arbitrum fallback), so autonomy is not
-blocked on a missing key.
+origin allowlist (Host + secret header) or GeoIP at the reverse proxy, runbook in
+`reference.md` §7); rate-limit store shared across instances (Upstash Redis or
+Mongo) before fees make "unavailable" fail closed. Screening is keyless today
+(Chainalysis on-chain oracle on Celo, Arbitrum fallback — best-effort by
+Chainalysis's own caveat; daily probe + free API key for redundancy) so autonomy is not
+blocked on a missing key; `jurisdictions.ts` entries need `last-reviewed + source`
+comments.
 
 **Phase 1 — disclosed fee capture.** `config/fees.ts` bps by tier + treasury per
 chain + per-jurisdiction switch; every quote shows the fee line **in-app before
@@ -232,7 +236,9 @@ is stale.
 Remaining: the importer `FinancialStrategy` archetype (config sketch + Shield ring
 morph, no new tabs — the archetype lives inside the existing app until demand
 forces a split) · graduation-funnel **measurement** (conversion, not the prompt) ·
-a GHS on/off-ramp partner (partnered, never built) · a rails design partner (LOI)
+a GHS on/off-ramp partner (partnered, never built — partner-not-build: we stay
+non-custodial intelligence, a licensed rail onboards; see the archived compliance
+brief §2) · a rails design partner (LOI)
 · the business dashboard + enterprise endpoints behind
 `NEXT_PUBLIC_BUSINESS_DASHBOARD_ENABLED`, gated on prior phases proving per-cycle
 value. Report engine is USD-targets-only today; generalise when a non-USD-target
@@ -346,3 +352,6 @@ onramp users must already hold crypto — the biggest UX gap, and the reason it 
 | **Earn / yield** (managed) | Global | Yield.xyz, Veda Labs | Alternative if a managed vault suits the UX better |
 | **Offramp** (stablecoins → fiat) | Africa, LatAm, SE Asia | Kotani Pay, MoneyGram (Stellar), Yellow Card (Polygon USDC) | Exit to local currency; Kotani does mobile-money cash-out on Celo |
 | **Card** | Global | Rain, Wirex, Bridge | Post-revenue; needs a card-issuing partner + compliance |
+
+Compliance posture per provider + dated regulatory backdrop:
+[`archive/compliance-competitors-2026-10.md`](./archive/compliance-competitors-2026-10.md).

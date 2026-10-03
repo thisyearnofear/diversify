@@ -147,6 +147,7 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `NEXT_PUBLIC_ENABLE_ARC` | — | **removed** | The old Arc-research flag was never read and is gone; rail selection is `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`. |
 | `MONGODB_URI` | server | — | MongoDB connection. Required for the Caribbean FX netting demo — hosts the intent pool so intents match across users and time (free Atlas tier; shape in `.env.example`). |
 | `GUARDIAN_LOOP_SECRET` | server | — | Protects the `/api/agent/guardian-loop` cron endpoint (server-to-server only). |
+| `HETZNER_EDGE_SECRET` | server | — | **Planned, not wired:** nothing reads it yet (no header on the `next.config.js` rewrites, no nginx check). Reserved for the direct-host allowlist in §7.5. |
 | `FIRECRAWL_WEBHOOK_SECRET` | server | — | Authenticates incoming Firecrawl macro-signal webhooks (`/api/agent/firecrawl-webhook`). |
 | `GUARDIAN_CONFIDENCE_THRESHOLD` | server | `0.6` | Prevents low-confidence auto-execution. |
 | `GUARDIAN_SESSION_PRIVATE_KEY` | server | — | Dedicated ERC-4337 session-signer key; its address is what users grant Advanced Permissions to (autonomy path, §1.6). |
@@ -1324,6 +1325,32 @@ The following files are git-ignored and must be configured from `.example` templ
 - `nginx.conf` — Reverse proxy config
 
 The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not gitignored) — see [`scripts/README.md`](../scripts/README.md) for details.
+
+#### Hetzner edge parity (geo-block)
+
+`proxy.ts` runs on Vercel only. Heavy routes rewritten to `HETZNER_API_URL`
+(`next.config.js`: `/api/agent/status`, `/advisor`, `/deep-analyze`,
+`/x402-gateway`, `/api/vault/*`, `/api/streaks/*`) bypass it when called
+against the Hetzner host directly — so the Hetzner nginx
+(`scripts/nginx-diversifi-api.conf`) must enforce the same block. Until then,
+do not claim edge-blocking covers vault routes.
+
+1. Add an allowlist (not yet implemented): the rewrites would send a shared
+   `X-Edge-Secret` header from `HETZNER_EDGE_SECRET`, and nginx would accept
+   only requests carrying it, returning 451 otherwise. Direct-host calls would
+   then fail closed.
+2. Or add MaxMind GeoIP2 with the same `SANCTIONED_COUNTRIES` /
+   `SANCTIONED_REGIONS` list as `config/jurisdictions.ts` and return 451.
+3. Verify: `curl -H "Host: api.diversifi.famile.xyz" https://<hetzner-ip>/api/vault/guardian-state`
+   without the secret must return 451.
+
+#### Compliance rate-limit store
+
+`/api/compliance/screen` (20 req/min/IP) and `lib/rate-limit.ts` are
+per-instance memory — best-effort. Before `NEXT_PUBLIC_FEATURE_FEES=true`
+makes `unavailable` fail closed, move `compliance-screen:*` counters to
+Upstash Redis or Mongo (fixed window, `Retry-After` preserved). Keep the
+in-memory fallback and log which store served.
 
 Agent-endpoint secrets (`GUARDIAN_LOOP_SECRET`, `FIRECRAWL_WEBHOOK_SECRET`) and signer keys are §2 rows; signer env vars are scrubbed in every test worker (`vitest.setup.ts` + `packages/shared/src/utils/signer-env-keys.ts`, enforced by `apps/web/lib/__tests__/signer-env-leak.test.ts`).
 
