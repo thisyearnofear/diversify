@@ -20,6 +20,11 @@ interface QuoteResult {
 
 const resultCache: Map<string, CacheEntry<QuoteResult>> = new Map();
 
+/** Review handoffs must request a new venue quote, not reuse observed prices. */
+export function invalidateExpectedOutputCache(): void {
+  resultCache.clear();
+}
+
 function getCachedResult(fromToken: string, toToken: string, amount: string, chainId: number | null): QuoteResult | null {
   const key = `${fromToken}-${toToken}-${amount}-${chainId}`;
   const cached = resultCache.get(key);

@@ -4,9 +4,11 @@
 
 > **Positioning — the Guardian within your rules:** the target pipeline is
 > **data → deterministic risk calculation → constrained strategy → AI
-> explanation → user approval → on-chain execution**. Four live paths still
-> let model output choose recommendations or user-facing numbers without
-> the required deterministic check; see [the implementation gaps](./guardian.md#where-the-model-still-decides).
+> explanation → user approval → on-chain execution**. The four legacy model-authority
+> paths now fail closed: research analysis holds without financial estimates,
+> while authenticated allocation analysis computes review-only repair proposals.
+> Stablecoin price signals use independent dated measurements; other scraped
+> changes remain observations. Scope and deployment limits are in [the authority audit](./guardian.md#where-the-model-still-decides).
 > The model never authorizes a move. Default execution requires the user's
 > signature; opt-in autonomous execution uses a bounded ERC-7715 grant.
 > Broader on-chain policy remains deferred, as the enforcement tiers in
@@ -1000,7 +1002,7 @@ what feeds the surface it powers, where it comes from, and how it stays honest.
 |---|---|---|---|
 | Emerging-market prices | `/api/emerging-markets/prices` (per-provider) | EM tracker, currency chart | Per-provider timeouts; serves **expired cache** before a static price; `hasEstimates` → “Includes estimates” |
 | Yield | `/api/agent/best-yield` (vaults.fyi, LI.FI Earn, DefiLlama, GMX GM pools) | BestYieldCard, GMX deposits | Free-first: raw APY free, personalized layer gated by `insight-tier` (default-deny) |
-| Macro signals | Firecrawl monitors (central banks, yield trackers, depeg) → `MACRO_SIGNAL:*` on the proof-feed cache | TradeIntelligence pill | Items are universal (impact stripped); pill appears only when a fresh signal exists |
+| Macro evidence | Curated Firecrawl sources → `MACRO_OBSERVATION`; independent dated stablecoin prices can produce `MACRO_SIGNAL:PRICE_DEVIATION` | Proof feed; measured signals can enter signal surfaces | Scraped text alone never establishes materiality; neither path queues portfolio moves |
 | Market regime | `useMarketRegime` | tips + regime pill | Classifies holdings by regime; non-prescriptive |
 | Exchange rates / FX netting | `/api/exchange-rates` + `fx-netting/*` (pure matching engine) | CaribbeanFxNetCard, SME FX | Currency-agnostic mid-market matching; net obligations settle on the region-canonical chain |
 
@@ -1063,10 +1065,12 @@ Strategies are ranked by `SWAP_CONFIG.STRATEGY_SCORES` + `TOKEN_PREFERENCES` + t
 The Guardian is a server-side cron (`*/5 * * * *`) on Hetzner. Savings stay in the user's own wallet; the default is a queued one-tap proposal the user signs on Exchange. Autonomous execution happens only for GUARDIAN-tier permissions on ERC-7710-eligible chains (`ChainDetectionService.isSupported` ∩ installed `@metamask/smart-accounts-kit` environments) with a configured session account — the provider redeems the stored `delegationContext` on the user's smart account, with approve+swap as one atomic UserOp (Mento on Celo, LI.FI quote API elsewhere). Anything else fails closed to a journaled one-tap proposal. The LLM synthesizes and explains the recommendation; whether it passes at all is decided by the deterministic checks below (threshold, daily limit, allowlist, routing). See [`guardian.md`](./guardian.md):
 
 ```
-1. Firecrawl detects macro change
-   → webhook /api/agent/firecrawl-webhook
-   → AI extracts signal
-   → stored in guardian-state (MongoDB)
+1. Firecrawl detects page change
+   → authenticated webhook /api/agent/firecrawl-webhook
+   → exact curated source policy
+   → independently dated stablecoin prices where supported
+   → record observation or measured price deviation + readable reasoning echo
+   → no user recommendation queue, execution fan-out, or memory write
 
 2. Cron ticks → /api/agent/guardian-loop
    → DB query: find active, non-expired permissions
@@ -1350,8 +1354,8 @@ flowchart TD
     subgraph Agent["Agent Orchestration"]
         direction TB
         WEBHOOK["Firecrawl webhook<br/>/api/agent/firecrawl-webhook"]
-        EXTRACT["AI signal extraction<br/>Gemini Flash → Venice → 0G Serving"]
-        STORE["Store signal in<br/>guardian-state (MongoDB)"]
+        EXTRACT["Curated source policy<br/>independent dated prices where supported"]
+        STORE["Record observation or measured price signal<br/>no portfolio recommendation fan-out"]
         CRON["Guardian cron loop<br/>every 5 min · /api/agent/guardian-loop"]
         QUERY["Query active non-expired<br/>permissions from DB"]
         SYNTH["AI synthesis<br/>multi-provider failover chain<br/>+ Cognee memory context"]

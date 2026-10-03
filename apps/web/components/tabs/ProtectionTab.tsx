@@ -56,6 +56,7 @@ import { shieldPatternFor } from "./protect/shield-pattern";
 import {
   compactPlanDelta,
   resolvePlan,
+  allocationPlanFromResolved,
   type CustomPlan,
 } from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
@@ -693,13 +694,16 @@ export default function ProtectionTab({
         address &&
         !isDemo &&
         vault.vault?.strategy &&
-        vault.vault.strategy !== plan &&
         getCachedWalletAuth(address)
       ) {
-        void vault.updateStrategy(address, plan).catch(() => {});
+        void vault.updateStrategy(address, plan, allocationPlanFromResolved(resolvePlan({
+          strategy: plan, riskTolerance: config.riskTolerance, anchorCurrency,
+        }))).then((saved) => {
+          if (!saved) showToast('Plan saved on this device. Guardian targets could not be synced; use Follow in Guardian.', 'warning');
+        }).catch(() => showToast('Guardian targets could not be synced.', 'warning'));
       }
     },
-    [address, isDemo, vault],
+    [address, isDemo, vault, config.riskTolerance, anchorCurrency, showToast],
   );
 
   const commitFocusedPlan = useCallback(() => {
@@ -1094,6 +1098,14 @@ export default function ProtectionTab({
                       setFocusedToken(null);
                       haptics.confirm();
                       showToast('Balance saved. Your holdings have not moved.', 'success');
+                      if (address && strategyKey && strategyKey !== 'custom' && vault.vault && getCachedWalletAuth(address)) {
+                        const committed = allocationPlanFromResolved(resolvePlan({
+                          strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency,
+                        }));
+                        void vault.updateStrategy(address, strategyKey, committed).then((saved) => {
+                          if (!saved) showToast('Balance saved on this device. Guardian targets could not be synced; use Follow in Guardian.', 'warning');
+                        }).catch(() => showToast('Guardian targets could not be synced.', 'warning'));
+                      }
                     }
                   }}
                   onCancel={() => { balance.cancel(); setFocusedToken(null); haptics.tap(); }}

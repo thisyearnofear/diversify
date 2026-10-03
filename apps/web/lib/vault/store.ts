@@ -18,6 +18,7 @@ function toVaultType(doc: IVault): VaultType {
     circleWalletAddress: doc.circleWalletAddress,
     contractAddress: doc.contractAddress,
     strategy: doc.strategy,
+    allocationPlan: doc.allocationPlan,
     status: doc.status,
     totalDepositedUSD: doc.totalDepositedUSD,
     totalWithdrawnUSD: doc.totalWithdrawnUSD,
@@ -78,7 +79,12 @@ export const vaultStore: VaultStore = {
   },
 
   async updateVault(vaultId: string, update: Partial<VaultType>) {
-    const doc = await Vault.findByIdAndUpdate(vaultId, update, { new: true });
+    const { allocationPlan, ...fields } = update;
+    const clearingPlan = Object.prototype.hasOwnProperty.call(update, 'allocationPlan') && allocationPlan === undefined;
+    const doc = await Vault.findByIdAndUpdate(vaultId, {
+      $set: { ...fields, ...(allocationPlan ? { allocationPlan } : {}) },
+      ...(clearingPlan ? { $unset: { allocationPlan: 1 } } : {}),
+    }, { new: true });
     if (!doc) throw new Error('Vault not found');
     return toVaultType(doc);
   },

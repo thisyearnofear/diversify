@@ -37,6 +37,7 @@ export interface IVault extends Document {
 
   // Investment strategy
   strategy: string; // FinancialStrategy type
+  allocationPlan?: import('@diversifi/shared/src/config/allocation-plans').ExposurePlan;
 
   // Status
   status: VaultStatus;
@@ -95,6 +96,7 @@ const VaultSchema = new Schema<IVault>(
     contractChainId: { type: Number },
 
     strategy: { type: String, required: true, default: 'global' },
+    allocationPlan: { type: Schema.Types.Mixed, default: undefined },
     status: { type: String, enum: ['active', 'paused', 'closed'], default: 'active' },
 
     totalDepositedUSD: { type: Number, default: 0 },

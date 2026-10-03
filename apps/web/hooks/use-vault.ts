@@ -36,6 +36,7 @@ export interface VaultData {
   _id: string;
   userAddress: string;
   strategy: string;
+  allocationPlan?: import('@diversifi/shared/src/config/allocation-plans').ExposurePlan;
   status: string;
   circleWalletAddress?: string;
   totalDepositedUSD: number;
@@ -94,7 +95,7 @@ export interface UseVaultReturn {
   revokePermission: (userAddress: string) => Promise<void>;
   refresh: (userAddress: string) => Promise<void>;
   triggerRebalance: (userAddress: string, dryRun?: boolean) => Promise<any>;
-  updateStrategy: (userAddress: string, strategy: string) => Promise<boolean>;
+  updateStrategy: (userAddress: string, strategy: string, allocationPlan?: import('@diversifi/shared/src/config/allocation-plans').ExposurePlan) => Promise<boolean>;
 }
 
 export function useVault(): UseVaultReturn {
@@ -239,7 +240,7 @@ export function useVault(): UseVaultReturn {
     return resp.json();
   }, [authHeadersFor]);
 
-  const updateStrategy = useCallback(async (userAddress: string, strategy: string): Promise<boolean> => {
+  const updateStrategy = useCallback(async (userAddress: string, strategy: string, allocationPlan?: import('@diversifi/shared/src/config/allocation-plans').ExposurePlan): Promise<boolean> => {
     try {
       setLoading(true);
       setError(null);
@@ -250,7 +251,7 @@ export function useVault(): UseVaultReturn {
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', ...authHeaders },
-          body: JSON.stringify({ userAddress, strategy }),
+          body: JSON.stringify({ userAddress, strategy, allocationPlan }),
         },
         VAULT_FETCH_TIMEOUT_MS,
       );

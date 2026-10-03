@@ -15,7 +15,7 @@ Nothing that earns money or adds surface ships ahead of it.
 
 | # | Priority | Why this order |
 |---|---|---|
-| **1** | **Make the claim true** — close the four paths where the model decides instead of explains, then decide on ERC-7710 | Verifiability *is* the differentiator; a claim that outruns the code is not tech debt, it's a lost moat. Every row below inherits this gate. |
+| **1** | **Make the claim true** — build useful deterministic candidates on the closed authority boundary, then decide on ERC-7710 | Verifiability *is* the differentiator; a claim that outruns the code is not tech debt, it's a lost moat. Every row below inherits this gate. |
 | **2** | **Make it earn** — Phase 0 compliance exit gate, then disclosed fee capture | No swap fee is collected on any route today, so volume earns $0; and nothing that earns or promotes may ship before counsel signs off. |
 | **3** | **Make the plan model hold** — exposure-based plans, chain-capability matrix | Direct user feedback (customising a philosophy doesn't work) plus both production swap bugs were chain-list class failures. |
 
@@ -23,25 +23,31 @@ Nothing that earns money or adds surface ships ahead of it.
 
 ## 1 · Guardian determinism — gating work
 
-Four paths where the pipeline (`data → deterministic calculation → constrained
-strategy → AI explanation → approval → execution`) is not yet literally true.
-Each is specified with file:line in [`guardian.md`](./guardian.md) § Where the
-model still decides.
+The four legacy authority paths now fail closed; the [audit](./guardian.md#where-the-model-still-decides)
+records their safety boundaries. A deterministic allocation-repair optimizer now
+uses authenticated wallet identity, saved targets, pinned-block balances, and
+independently dated prices. It proposes same-chain, review-only moves and
+quantifies pre-fee allocation drift, not returns or savings:
 
-- **Structured output + deterministic floor** on
-  `services/guardian/guardian-recommendation.service.ts` — code picks token and
-  chain within the strategy's bands; the model ranks and explains. Validate with a
-  real schema, not `normalizeNumber` clamping.
-- **One execution choke point** — route `services/agent-service.ts:287-318`
-  through `VaultService.validateSwap` like every other path.
-- **Numbers in prose only** — `pages/api/agent/deep-analyze.ts:106-107` derives
-  shown figures deterministically; model supplies explanation.
-- **Source-class gate** on `pages/api/agent/firecrawl-webhook.ts` — `riskLevel`
-  from curated materiality, not the model's self-reported confidence; the current
-  web-signal path stays out of execution by accident (missing `tradeAmountUSD`),
-  not by design.
+- Legacy research analysis returns code-owned HOLD. Model output is bounded
+  commentary only, not an action, token, chain, risk level, or savings number.
+- Analysis-owned swap, bridge, hedge, and simulated execution paths are removed.
+  Any future execution must use verified permission and common authorization gates.
+- Without validated calculations, savings are absent and portfolio risk is UNKNOWN.
+  Notifications do not invent zero savings or annualize an unsupported estimate.
+- Firecrawl rejects unknown sources. The stablecoin monitor independently
+  retrieves provider prices and observation dates; deviations above 1% with
+  evidence no older than five minutes can record measured price signals.
+  Other page changes remain unverified observations. Neither path queues trades.
+- Guardian's allocation inspector passes exact token quantities to Exchange,
+  discards cached quotes, and leaves execution to the user's review/signature.
 
-**Unification** (fixes all four at once, zero-behaviour-change phases, golden
+Next: rehearse the server measurement path against live providers, expand
+source-specific adapters beyond stablecoin prices, and enforce venue/asset policy
+in owner-authorized on-chain delegations before enabling richer autonomy.
+Preserve the disclosed ERC-20 savings scope and fail closed on unavailable data.
+
+**Unification** (the longer-term reasoning domain, staged with golden
 tests): ONE reasoning domain — signals → deterministic synthesizer floor →
 optional AI rank/explain within the gates → pure `GatesEvaluator` → one artifact +
 one on-chain reasoning builder. Draft:

@@ -32,9 +32,11 @@ questions, and each one is a claim we can prove rather than assert:
 **The AI is the interface, not the authority.**
 `data → deterministic risk calculation → constrained strategy → AI explanation →
 your approval → on-chain execution`. The model explains and ranks; it does not
-authorize. Where today that is not yet universally true, the paths are named —
-not glossed over — in [`guardian.md`](./guardian.md) § Where the model still
-decides, and closing them is the top of [`plan.md`](./plan.md).
+authorize. The four legacy authority paths now fail closed: paid research
+returns HOLD without financial estimates; measured allocation repair uses the
+separate authenticated endpoint, and scraped text cannot establish materiality. The [authority audit](./guardian.md#where-the-model-still-decides)
+describes the measured allocation-repair optimizer and dated stablecoin-price
+adapter, alongside source coverage and on-chain policy still requiring work.
 
 **Two things make this hard to copy. Everything else is commodity:**
 
@@ -199,7 +201,7 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 ## What Makes It Different
 
-1. **Verifiable, bounded autonomy — the claim everything else serves.** A server-side Guardian loop monitors markets 24/7 and proposes moves the user approves in one tap; it acts on its own only inside an ERC-7715 grant that the **user's own smart account** enforces on-chain, and chains that can't enforce it fall back to one-tap and journal the decline. Risk arithmetic, allocation bands and spending caps are deterministic code — the model explains and ranks, it does not authorize. Every decision is recorded on a `RecommendationLedger` at the one `0x3BCf…369C` address on the chain where the money moves (Celo for savings, Arbitrum for yield), with reasoning anchored to 0G Storage as tamper-proof evidence. `LiveProofCard` surfaces those receipts before wallet connect: proof-first, not splash-first. What is enforced where — and which four paths still need closing — is stated plainly in [`guardian.md`](./guardian.md). Each chain has an irreplaceable role — see [`architecture.md`](./architecture.md).
+1. **Verifiable, bounded autonomy — the claim everything else serves.** A server-side Guardian loop monitors markets 24/7 and proposes moves the user approves in one tap; it acts on its own only inside an ERC-7715 grant that the **user's own smart account** enforces on-chain, and chains that can't enforce it fall back to one-tap and journal the decline. Risk arithmetic, allocation bands and spending caps are deterministic code — the model explains and ranks, it does not authorize. Every decision is recorded on a `RecommendationLedger` at the one `0x3BCf…369C` address on the chain where the money moves (Celo for savings, Arbitrum for yield), with reasoning anchored to 0G Storage as tamper-proof evidence. `LiveProofCard` surfaces those receipts before wallet connect: proof-first, not splash-first. What is enforced where — and how the four legacy authority paths now fail closed — is stated plainly in [`guardian.md`](./guardian.md). Each chain has an irreplaceable role — see [`architecture.md`](./architecture.md).
 
 2. **FX-risk intelligence for working capital — the highest-value application, and the revenue destination.** We quantify the currency drag on a business that earns in one currency and owes a supplier in another, per purchase cycle, and protect it autonomously. The savings app is where that capability earns trust first; the business layer is where it scales. This is a *claim about the product's shape*, not a second headline — see [`plan.md`](./plan.md) § 5.
 

@@ -36,6 +36,7 @@ export interface Vault {
   circleWalletAddress?: string;
   contractAddress?: string;
   strategy: string;
+  allocationPlan?: import('../../config/allocation-plans').ExposurePlan;
   status: VaultStatus;
   totalDepositedUSD: number;
   totalWithdrawnUSD: number;

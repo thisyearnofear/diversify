@@ -29,10 +29,12 @@ import { formatDuration } from "@/lib/format-duration";
 import { useGuardianInstrument } from "@/hooks/use-guardian-instrument";
 import { GRANT_ELIGIBLE_CHAIN_IDS } from "@/lib/erc7715-client-grant";
 import { GuardianObject } from "../agent/GuardianObject";
+import { GuardianAllocationReview } from '../agent/GuardianAllocationReview';
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
-import { resolvePlan } from "@/components/protection-cards/plan-preview";
+import { EXPOSURE_LABELS, type Exposure } from '@diversifi/shared/src/config/exposures';
+import { resolvePlan, allocationPlanFromResolved } from "@/components/protection-cards/plan-preview";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianCadenceLine } from "../shared/LiveProofCard";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
@@ -315,7 +317,7 @@ function ConnectedAgent({
   const shieldPlanName = shieldPlan
     ? STRATEGIES.find((s) => s.id === shieldPlan)?.name ?? null
     : null;
-  const [sel, setSel] = useState<"journal" | "bounds" | "settings" | null>(null);
+  const [sel, setSel] = useState<"journal" | "bounds" | "settings" | "allocation" | null>(null);
 
   // The live line — only facts that already exist: a saved payment cycle
   // the wallet already unlocked (usePurchaseCycles never signs here), a
@@ -348,7 +350,7 @@ function ConnectedAgent({
     Boolean(guardianContext) ||
     (sel === "journal" &&
       (g.guardianState === "monitoring" || Boolean(g.pendingMove))) ||
-    sel === "bounds";
+    sel === "bounds" || sel === 'allocation';
 
   // One CTA per state — the setup/fund action belongs to the object, the
   // monitoring state's CTA opens the journal with a live dry-run.
@@ -411,6 +413,8 @@ function ConnectedAgent({
 
   const inspectorTitle = guardianContext
     ? "From your Shield plan"
+    : sel === 'allocation'
+      ? 'Measured allocation'
     : sel === "journal"
       ? "Guardian journal"
       : sel === "settings"
@@ -475,6 +479,8 @@ function ConnectedAgent({
                 Ask Guardian about this
               </button>
             </>
+          ) : sel === 'allocation' ? (
+            <GuardianAllocationReview />
           ) : sel === "journal" ? (
             <GuardianJournalSheet
               sessionInfo={g.sessionInfo}
@@ -515,8 +521,13 @@ function ConnectedAgent({
                 shieldPlan && shieldPlan !== "custom" && address
                   ? () =>
                       void g.vault
-                        .updateStrategy(address, shieldPlan)
-                        .then(() => g.vault.refresh(address))
+                        .updateStrategy(address, shieldPlan, allocationPlanFromResolved(resolvePlan({
+                          strategy: shieldPlan, customPlan,
+                          riskTolerance: profileConfig.riskTolerance,
+                          anchorCurrency: profileConfig.anchorCurrency && Object.hasOwn(EXPOSURE_LABELS, profileConfig.anchorCurrency)
+                            ? profileConfig.anchorCurrency as Exposure : null,
+                        })))
+                        .then((saved) => { if (saved) return g.vault.refresh(address); })
                   : undefined
               }
               walletStableBalanceUSD={g.stableBalanceOnChain.total}
@@ -529,6 +540,7 @@ function ConnectedAgent({
               onOpenGrantModal={() => g.setShowGrantConfirmModal(true)}
               onSwitchToGrantChain={() => void g.switchToChain(GRANT_ELIGIBLE_CHAIN_IDS[0])}
               onOpenSettings={() => setSel("settings")}
+              onReviewAllocation={shieldPlan === 'custom' ? undefined : () => setSel('allocation')}
               researchFunding={address ? <ResearchFundingLine /> : null}
             />
           )}
@@ -599,7 +611,8 @@ function ConnectedAgent({
             g.vault.refresh(address);
           }}
           onCancel={() => g.setShowStrategySwitcher(false)}
-          onUpdatePlan={async (plan) => g.vault.updateStrategy(address, plan)}
+          onUpdatePlan={async (plan) => g.vault.updateStrategy(address, plan,
+            allocationPlanFromResolved(resolvePlan({ strategy: plan, riskTolerance: profileConfig.riskTolerance })))}
         />
       )}
     </>

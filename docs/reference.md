@@ -635,12 +635,11 @@ pnpm rehearse-macro-signal --send                 # terminal 2 — local target
 pnpm rehearse-macro-signal --verify-only --url https://api.diversifi.famile.xyz
 ```
 
-A rehearsal exercises the path without producing news or side effects: the
-webhook runs live model analysis and counts which users would be eligible
-(`usersWouldUpdate` in the response), but it queues no intents, publishes no
-events, and writes nothing to Cognee memory. When the model judges it
-actionable (confidence ≥ 0.6) it still anchors one permanent ledger record —
-typed `MACRO_SIGNAL:REHEARSAL` with a server-forced
+A rehearsal exercises observation recording without producing news or user
+recommendations. No primary model decision or per-user eligibility walk runs;
+`usersWouldUpdate` is zero. Optional shadow assessment is telemetry only.
+The webhook queues no intents, publishes no events, and writes no user memory.
+It anchors one permanent observation record, typed `MACRO_SIGNAL:REHEARSAL`, with a server-forced
 `[Rehearsal — not a market event]` echo, so beats, the macro pill, and the
 health check all filter it by action rather than text. That permanent ledger
 write is why remote targets are refused unless `--allow-remote` is passed.
@@ -1456,8 +1455,8 @@ change.
 | Item | Value | Why |
 |---|---|---|
 | Chain | Celo mainnet (rehearsal: Celo Sepolia, faucet) | Mainnet = real receipts, real explorers, no labels; Sepolia is in `ChainDetectionService.isSupported` for drills |
-| Holdings | cUSD ≈ $60 equivalent | cUSD is the webhook's funding token — the relevance gate requires holding it |
-| Permission `allowedTokens` | `['KESm', 'cEUR', 'USDY']` | Matches the targetToken vocabulary in `firecrawl-webhook.ts`; passes the per-user relevance gate (target permitted + holds cUSD) |
+| Holdings | cUSD ≈ $60 equivalent | Funding for separately permissioned Guardian moves; webhook observations do not spend it |
+| Permission `allowedTokens` | `['KESm', 'cEUR', 'USDY']` | Bounds separately permissioned proposals; Firecrawl currently selects no destination token |
 | Permission `dailyLimitUSD` | $5 (≈8%) | Small enough that a second same-day signal plausibly declines — declines are shot list §8.5 |
 | Permission `expiresAt` | rolling, ≤90 days | Renew in the monthly runbook before expiry |
 | Key custody | Privy-backed account, credentials documented in the ops vault | Anyone on the team must be able to arm it; it is not a secrets vault — size the funds to "annoying to lose, not catastrophic" |
@@ -1480,11 +1479,15 @@ caption-worthy entries, note the ISO week in the capture journal.
 
 - Watchers: registered via `scripts/setup-firecrawl-monitors.ts` — Fed/ECB
   rate pages, DeFiLlama yield data, stablecoin depeg trackers.
-- Webhook gate: `actionable && confidence >= 0.6` (see
-  `firecrawl-webhook.ts`), then per-user relevance (allowed token + cUSD
-  held). The rig is dimensioned in §8.2 to pass both.
+- Webhook gate: exact curated HTTPS source policy in `macro-source-policy.ts`.
+  Page changes remain `MACRO_OBSERVATION` unless an independent adapter supplies
+  dated measurements. The stablecoin page triggers fresh USDC/USDT/DAI price
+  reads: deviations greater than 1% can record `MACRO_SIGNAL:PRICE_DEVIATION`.
+  Missing or stale prices cannot promote scraped claims into measured signals.
+  Neither path fans out into user recommendations; price deviation is not a
+  solvency finding or a trade instruction.
 - Not every shoot day has a real event. `pnpm rehearse-macro-signal --send`
-  drives the identical entry point (signed POST → analysis → anchor → echo →
+  drives the identical entry point (authenticated POST → observation → anchor → echo →
   feed) without queueing intents or writing memory — honest on camera because
   the anchor is typed `MACRO_SIGNAL:REHEARSAL` and its echo is server-forced
   to `[Rehearsal — not a market event]` at the marker URL. Check readability

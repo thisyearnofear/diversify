@@ -16,6 +16,21 @@ import {
 } from '@diversifi/shared/src/config/exposures';
 
 export type { Exposure };
+import { STRATEGY_PLANS, type ExposurePlan, type PlanSlice, type PlanRules, type SlicePreference } from '@diversifi/shared/src/config/allocation-plans';
+export { STRATEGY_PLANS };
+export type { ExposurePlan, PlanSlice, PlanRules, SlicePreference };
+
+/** Serialize committed resolved targets; never call this on a draft to save it. */
+export function allocationPlanFromResolved(plan: ResolvedPlan): ExposurePlan {
+  return {
+    rules: { ...plan.rules },
+    slices: plan.legs.flatMap((leg) => {
+      const exposure = legExposure(leg);
+      return exposure ? [{ exposure, target: leg.percent, region: leg.region, why: leg.why,
+        ...(leg.prefer ? { prefer: leg.prefer } : {}) }] : [];
+    }),
+  };
+}
 
 /**
  * One ring slice. `token` is the slice id and the instrument the resolver
@@ -34,86 +49,6 @@ export interface PlanLeg {
   label?: string;
 }
 
-export type SlicePreference = 'yield' | 'liquid';
-
-export interface PlanSlice {
-  exposure: Exposure;
-  target: number;
-  region: string;
-  why: string;
-  prefer?: SlicePreference;
-}
-
-export interface PlanRules {
-  /** No yield-bearing instruments (riba). */
-  excludeYield?: boolean;
-}
-
-export interface ExposurePlan {
-  slices: PlanSlice[];
-  rules: PlanRules;
-}
-
-/** Financial-strategy ids (StrategyContext / GuardianPlanSwitcher). */
-export const STRATEGY_PLANS: Record<string, ExposurePlan> = {
-  africapitalism: {
-    rules: {},
-    slices: [
-      { exposure: 'KES', target: 60, region: 'Kenya', why: 'Kenyan-shilling exposure — the regional leg of this plan' },
-      { exposure: 'USD', target: 25, region: 'US', why: 'Dollar floor for the plan' },
-      { exposure: 'EUR', target: 15, region: 'EU', why: 'Euro leg — a second anchor' },
-    ],
-  },
-  buen_vivir: {
-    rules: {},
-    slices: [
-      { exposure: 'BRL', target: 45, region: 'Brazil', why: "Brazil's real — the LatAm anchor" },
-      { exposure: 'COP', target: 35, region: 'Colombia', why: 'Colombian peso — the second LatAm leg' },
-      { exposure: 'USD', target: 20, region: 'US', why: 'Dollar floor for the plan' },
-    ],
-  },
-  pan_caribbean: {
-    rules: {},
-    slices: [
-      { exposure: 'USD', target: 50, region: 'US', why: 'USD-pegged core against imported inflation' },
-      { exposure: 'XAU', target: 30, region: 'Global', why: 'Gold — hedge for food and fuel shocks' },
-      { exposure: 'EUR', target: 20, region: 'EU', why: 'Euro leg — a second anchor' },
-    ],
-  },
-  confucian: {
-    rules: {},
-    slices: [
-      { exposure: 'USD', target: 70, region: 'Savings core', why: 'Liquid dollar savings core' },
-      { exposure: 'USD', target: 30, region: 'Treasury yield', why: 'Treasury yield, low volatility', prefer: 'yield' },
-    ],
-  },
-  gotong_royong: {
-    rules: {},
-    slices: [
-      { exposure: 'USD', target: 50, region: 'Savings core', why: 'Liquid dollar savings core' },
-      { exposure: 'PHP', target: 30, region: 'Philippines', why: 'Philippine peso — local leg' },
-      { exposure: 'USD', target: 20, region: 'Treasury yield', why: 'Treasury yield, shared upside', prefer: 'yield' },
-    ],
-  },
-  global: {
-    rules: {},
-    slices: [
-      { exposure: 'USD', target: 25, region: 'Global', why: 'Global liquid core' },
-      { exposure: 'EUR', target: 20, region: 'EU', why: 'Europe' },
-      { exposure: 'KES', target: 20, region: 'Kenya', why: 'Africa' },
-      { exposure: 'BRL', target: 15, region: 'Brazil', why: 'Latin America' },
-      { exposure: 'COP', target: 10, region: 'Colombia', why: 'Latin America — second leg' },
-      { exposure: 'PHP', target: 10, region: 'Philippines', why: 'Asia' },
-    ],
-  },
-  islamic: {
-    rules: { excludeYield: true },
-    slices: [
-      { exposure: 'XAU', target: 50, region: 'Global', why: 'Gold — asset-backed, no riba' },
-      { exposure: 'USD', target: 50, region: 'US', why: 'Dollar floor, no interest' },
-    ],
-  },
-};
 
 const CELO_MAINNET = NETWORKS.CELO_MAINNET.chainId;
 

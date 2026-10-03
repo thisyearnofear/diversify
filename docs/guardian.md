@@ -49,19 +49,43 @@ Consequences worth stating plainly:
 
 ## Where the model still decides
 
-Four paths where the pipeline above is not yet the literal truth — the model's
-output reaches a decision or a user-facing number without a deterministic check
-behind it. Closing these is what turns the headline from directional to
-unqualified. Tracked as gating work in [`plan.md`](./plan.md).
+The four original authority paths below are now closed by conservative defaults.
+Legacy paid-research commentary remains HOLD without forecast estimates. The
+authenticated allocation endpoint instead computes useful review-only candidates
+from saved targets and independently measured holdings. Firecrawl uses curated
+source policy and independently dated price measurements where supported;
+scraped text never selects a trade or queues a portfolio recommendation.
+
+Authenticated allocation analysis now uses saved exposure targets and server-read
+ERC-20 balances pinned to recent Celo/Arbitrum blocks. Dated contract-address
+prices supply valuations; incomplete or stale evidence produces HOLD. The pure
+optimizer selects a same-chain allocation repair funded from an overweight
+holding, caps its size, rounds token quantities downward in integer units, and
+recomputes allocation drift. Guardian's allocation inspector hands the exact
+amount to Exchange after discarding cached quotes. Drift is an indicative
+pre-fee allocation metric, not savings, yield, or a guaranteed trade outcome.
+Native gas and other networks are outside the disclosed savings scope.
+
+The stablecoin monitor independently fetches USDC/USDT/DAI USD prices and source
+observation dates. A deviation greater than 1% with evidence no older than five
+minutes can produce a measured price signal; stale or missing measurements
+remain observations. This does not establish issuer solvency. Other scraped
+macro sources still require source-specific measurement adapters.
+
+Broader on-chain policy remains undeployed: the current periodic token grant
+does not encode venue, destination, or allocation-plan restrictions. Removing
+that limitation requires an owner-signed constrained delegation, verified
+enforcer deployments, and on-chain allowed/rejected-call rehearsals. Local
+optimizer tests do not establish those properties.
 
 | Path | Today | Required |
 |---|---|---|
-| `services/guardian/guardian-recommendation.service.ts:55` | The model returns `action` / `targetToken` / `expectedSavings` as the decision; `buildFinalResult` only clamps numbers — no schema validation, no deterministic recomputation | Structured-output schema + deterministic floor: code picks token and chain within the strategy's bands, the model ranks and explains |
-| `packages/shared/src/services/agent-service.ts:287-318` | Under a spending limit, a model-chosen `SWAP` executes via `GuardianExecutionService.executeSwap` **without** `validateSwap` | Route every execution path through the same `validateSwap` choke point |
-| `pages/api/agent/deep-analyze.ts:106-107` | Model JSON returned verbatim as user-facing `advice`, including `confidence`, `riskLevel`, `expectedSavings` | Derive shown numbers deterministically; the model supplies prose only |
-| `pages/api/agent/firecrawl-webhook.ts:292` | `riskLevel` derived from the model's own confidence; the signal survives auto-execution only because it lacks `tradeAmountUSD` (an accident, not a gate) | Explicit source-class gate + risk level from curated materiality, not model self-report |
+| `services/guardian/guardian-recommendation.service.ts` | Code-owned HOLD, no target, no savings estimate, confidence 0 (no eligible candidate), risk UNKNOWN. The model may return one bounded commentary field; extra authority fields invalidate it. Commentary is separate from the decision and its ledger reasoning | Legacy commentary remains non-authoritative; measured allocation proposals use the separate authenticated endpoint. Forecast savings still require a validated calculation |
+| `packages/shared/src/services/agent-service.ts` → `GuardianAnalysisDataService` | **Execution bypass closed:** analysis cannot swap, bridge capital, or open hedges. The simulated-success fallback is removed; the result builder always reports `ADVISORY` without an execution hash. Paid research and evidence writes remain separate; unavailable or disabled research funding returns HOLD before model analysis | Keep analysis advisory-only. Any future portfolio execution requires verified permission and the common authorization checks, not a research spending limit |
+| `pages/api/agent/deep-analyze.ts` | Signed wallet identity, validated saved targets, pinned-block server balances and dated prices feed deterministic allocation repair. Review-only SWAP candidates carry exact token quantities and pre-fee drift; invalid or unavailable evidence yields HOLD. No model call or execution key | Live provider rehearsal and quote-time revalidation; expand measurement coverage without weakening input gates |
+| `pages/api/agent/firecrawl-webhook.ts` | Curated HTTPS source policy rejects unknown pages. The stablecoin monitor independently fetches dated USD prices: fresh deviations above 1% record `MACRO_SIGNAL:PRICE_DEVIATION` with the measured asset and source date. Unsupported or unavailable measurements remain `MACRO_OBSERVATION`. Neither path queues trades or writes user memory; rehearsals retain their explicit label | Extend source-specific measurement coverage and rehearse live providers; price deviation is not an issuer-solvency finding or trade authorization |
 
-The unification that fixes all four at once is drafted in
+The longer-term reasoning-domain unification is drafted in
 `docs/internal/guardian-reasoning-service.md`, and its shape is the pipeline
 above: ONE reasoning domain — signals → deterministic synthesizer floor →
 optional AI rank/explain within the gates → pure `GatesEvaluator` → one artifact

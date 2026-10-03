@@ -18,7 +18,7 @@ import { readPaymentCycleDraft } from "./use-payment-cycle";
 // rotating thinkingStep messages so they don't give up before the LLM
 // finishes; 12s covers the multi-source synthesis for autonomous mode.
 const ADVISOR_ANALYSIS_TIMEOUT_MS = 30000;
-const DEEP_ANALYZE_TIMEOUT_MS = 12000;
+const DEEP_ANALYZE_TIMEOUT_MS = 35000;
 const GUARDIAN_STATE_TIMEOUT_MS = 6000;
 
 /** Headers from this session's cached wallet proof — never prompts for a signature. */
@@ -349,15 +349,17 @@ export function useAgentAnalysis({
           });
 
           if (result.advice) {
-            const topAction = result.advice.action
-              ? `\n\n💡 **Top action:** ${result.advice.action}${result.advice.oneLiner ? ` — ${result.advice.oneLiner}` : ""}. Want me to set that up?`
-              : "";
+            const topAction = result.advice.action === 'HOLD'
+              ? '\n\nNo portfolio move was selected.'
+              : result.advice.action
+                ? `\n\n**Proposed action:** ${result.advice.action}${result.advice.oneLiner ? ` — ${result.advice.oneLiner}` : ""}. Review it before signing.`
+                : "";
             const summary = [
               `📊 **Portfolio Analysis Complete**`,
               result.advice.oneLiner,
               result.advice.reasoning ? `\n${result.advice.reasoning}` : "",
-              result.advice.expectedSavings
-                ? `\n💰 Potential savings: $${result.advice.expectedSavings.toFixed(2)}/yr`
+              typeof result.advice.expectedSavings === 'number' && Number.isFinite(result.advice.expectedSavings)
+                ? `\nSavings estimate: $${result.advice.expectedSavings.toFixed(2)}${result.advice.timeHorizon ? ` over ${result.advice.timeHorizon}` : ''}`
                 : "",
               topAction,
             ]
@@ -504,7 +506,7 @@ export function useAgentAnalysis({
           `${apiBase}/api/agent/deep-analyze`,
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json", ...cachedAuthHeaders(address) },
             body: JSON.stringify({
               portfolio,
               inflationData,
@@ -542,7 +544,7 @@ export function useAgentAnalysis({
 
       return null;
     },
-    [apiBase, autonomousEnabled, autonomousStatus, user?.id, config],
+    [apiBase, autonomousEnabled, autonomousStatus, user?.id, config, address],
   );
 
   const clearAdvice = useCallback(() => updateState({ advice: null }), []);

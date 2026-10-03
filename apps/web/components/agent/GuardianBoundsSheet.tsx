@@ -48,6 +48,7 @@ export function GuardianBoundsSheet({
   onSwitchToGrantChain,
   onOpenSettings,
   researchFunding,
+  onReviewAllocation,
 }: {
   hasValidPermission: boolean;
   /** GUARDIAN tier — Guardian may act without a per-move signature. */
@@ -84,6 +85,7 @@ export function GuardianBoundsSheet({
   onOpenSettings: () => void;
   /** Optional slot: how Guardian's research is funded (ResearchFundingLine). */
   researchFunding?: React.ReactNode;
+  onReviewAllocation?: () => void;
 }) {
   const { formatMoney } = useBalanceVisibility();
   const planMismatch = Boolean(
@@ -199,7 +201,7 @@ export function GuardianBoundsSheet({
               {vault.vault.strategy.replace(/-/g, ' ')}
             </p>
           </div>
-          {planMismatch && !localCustom && onFollowShieldPlan ? (
+          {(planMismatch || !vault.vault.allocationPlan) && !localCustom && onFollowShieldPlan ? (
             <button
               type="button"
               onClick={onFollowShieldPlan}
@@ -236,7 +238,7 @@ export function GuardianBoundsSheet({
             Optional · Let Guardian act for you
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Skip the per-move signature: Guardian may move up to {formatMoney(dailyLimit)}/day on its own, and MetaMask enforces that cap on-chain — not just us.
+            Skip the per-move signature: Guardian may move up to {formatMoney(dailyLimit)}/day on its own, and MetaMask enforces that cap on-chain.
           </p>
           {!grantAvailable ? (
             <p className="text-xs text-gray-400 dark:text-gray-500">
@@ -272,6 +274,12 @@ export function GuardianBoundsSheet({
         </div>
       )}
 
+      {onReviewAllocation && (
+        <button type="button" onClick={onReviewAllocation} className="min-h-tap text-left text-sm font-semibold text-action">
+          Review saved allocation →
+        </button>
+      )}
+      {vault.error && <p role="alert" className="text-sm text-red-600">{vault.error}</p>}
       {researchFunding}
 
       <div className="pt-4 border-t border-gray-200 dark:border-gray-700">

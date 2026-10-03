@@ -1,120 +1,77 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { ArcAgent } from '@diversifi/shared/src/services/arc-agent';
-import { erc7715Service } from '@diversifi/shared/src/services/erc7715-service';
-import type { SignedSessionPermission } from '@diversifi/shared/src/services/erc7715-service';
-import { getPreferredNetworkForGoal } from '../../../config';
+import { requireWalletAuth } from '@/lib/require-wallet-auth';
+import dbConnect from '@/lib/mongodb';
+import { vaultStore } from '@/lib/vault/store';
+import { validateAllocationPlan } from '@diversifi/shared/src/services/guardian/allocation-plan-validation';
+import { optimizeAllocation } from '@diversifi/shared/src/services/guardian/allocation-optimizer';
+import { readAllocationSnapshot } from '@diversifi/shared/src/services/guardian/wallet-allocation-snapshot';
 
-// Chain ID the server accepts permissions for
-const EXPECTED_CHAIN_ID = parseInt(process.env.ARC_CHAIN_ID || '5042002', 10);
-
-/**
- * Build an ArcAgent from a client-supplied signed session permission.
- * The server generates a fresh disposable keypair per request — the session
- * private key never persists beyond the lifetime of this handler invocation.
+/** Measured allocation repair, not forecast alpha or transaction authorization.
+ * Never accepts portfolio balances, strategy targets or a signer from the body.
  */
-function buildSessionAgent(signedPermission: SignedSessionPermission, spendingLimit: number): ArcAgent {
-    const validation = erc7715Service.verifySignedPermission(signedPermission, EXPECTED_CHAIN_ID);
-    if (!validation.isValid) {
-        throw new Error(`Invalid session permission: ${validation.errors.join('; ')}`);
-    }
-
-    // Generate a fresh disposable keypair for this request
-    const sessionKeyPair = erc7715Service.generateSessionKey();
-
-    return new ArcAgent({
-        sessionKey: {
-            privateKey: sessionKeyPair.privateKey,
-            permission: {
-                ...signedPermission.permission,
-                // Bind to the freshly generated address so SessionKeyProvider validates correctly
-                sessionKeyAddress: sessionKeyPair.address,
-            },
-        },
-        isTestnet: process.env.ARC_AGENT_TESTNET !== 'false',
-        spendingLimit,
-    });
-}
-
-/**
- * Fallback: legacy server-side private key (deprecated — use session key flow).
- * Kept for backward compatibility during migration; will be removed once all
- * clients send a signed permission.
- */
-let legacyAgentInstance: ArcAgent | null = null;
-
-function getLegacyAgent(): ArcAgent | null {
-    if (legacyAgentInstance) return legacyAgentInstance;
-
-    const privateKey = process.env.ARC_AGENT_PRIVATE_KEY;
-    if (!privateKey) return null;
-
-    console.warn(
-        '[deep-analyze] Using deprecated ARC_AGENT_PRIVATE_KEY. ' +
-        'Migrate to the session key flow (send signedPermission in the request body).'
-    );
-
-    legacyAgentInstance = new ArcAgent({
-        privateKey,
-        isTestnet: process.env.ARC_AGENT_TESTNET !== 'false',
-        spendingLimit: parseFloat(process.env.ARC_AGENT_DAILY_LIMIT || '5.0'),
-    });
-
-    return legacyAgentInstance;
-}
-
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-    if (req.method !== 'POST') {
-        return res.status(405).json({ error: 'Method not allowed' });
+  res.setHeader('Cache-Control', 'no-store');
+  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+  const address = requireWalletAuth(req);
+  if (!address) return res.status(401).json({ error: 'Wallet signature required' });
+
+  const hold = (reason: string) => ({
+    action: 'HOLD', reasoning: reason, oneLiner: reason,
+    confidence: 0, riskLevel: 'UNKNOWN', executionMode: 'ADVISORY',
+    executionEligibility: 'manual_review', actionSteps: [],
+    urgencyLevel: 'LOW',
+  });
+  try {
+    await dbConnect();
+    const profile = await vaultStore.findVaultByUser(address);
+    const plan = validateAllocationPlan(profile?.allocationPlan, profile?.strategy);
+    if (!profile || profile.status !== 'active' || !plan) {
+      return res.status(200).json({ advice: hold('Sync your committed Shield allocation with Guardian before requesting a move.') });
     }
-
-    try {
-        const { portfolio, config, networkInfo, signedPermission } = req.body;
-
-        let agent: ArcAgent | null = null;
-
-        if (signedPermission) {
-            // Preferred non-custodial path: client provides a user-signed ERC-7715 permission
-            const spendingLimit = (signedPermission as SignedSessionPermission).permission?.dailyLimitUSD ?? 5.0;
-            agent = buildSessionAgent(signedPermission as SignedSessionPermission, spendingLimit);
-        } else {
-            // Legacy fallback: server-side master key (deprecated)
-            agent = getLegacyAgent();
-        }
-
-        if (!agent) {
-            return res.status(503).json({
-                error: 'Agent not configured. Provide signedPermission (Session Key flow).',
-            });
-        }
-
-        // Phase 1C: Extract the shape analyzePortfolioAutonomously actually expects.
-        // Frontend sends a full MultichainPortfolio, but the agent needs { balance, holdings }.
-        const agentPortfolio = {
-            balance: portfolio?.totalValue ?? 0,
-            holdings: portfolio?.allTokens?.map((t: any) => t.symbol) 
-                ?? portfolio?.chains?.flatMap((c: any) => c.balances?.map((b: any) => b.symbol) ?? []) 
-                ?? [],
-        };
-
-        // Also derive networkInfo if not explicitly sent
-        const fallbackNetwork = getPreferredNetworkForGoal(config?.userGoal);
-        const resolvedNetworkInfo = networkInfo ?? {
-            chainId: portfolio?.chains?.[0]?.chainId ?? fallbackNetwork.chainId,
-            name: portfolio?.chains?.[0]?.chainName ?? fallbackNetwork.name,
-        };
-
-        const result = await agent.analyzePortfolioAutonomously(agentPortfolio, config, resolvedNetworkInfo);
-        // Phase 1B: Wrap response so frontend can read result.advice
-        return res.status(200).json({ advice: result });
-    } catch (error: unknown) {
-        console.error('[Deep Analyze] Error:', error);
-        const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-        return res.status(500).json({
-            error: errorMessage,
-            action: 'HOLD',
-            reasoning: 'Deep analysis temporarily unavailable.',
-            confidence: 0,
-            riskLevel: 'LOW',
-        });
+    const snapshot = await readAllocationSnapshot(address);
+    // Review-only proposals do not need a delegated spending grant. The default
+    // size is at most 5% of measured savings; an active signed profile can only
+    // reduce it. Actual execution remains on Exchange with fresh quotes.
+    const total = snapshot.holdings.reduce((sum, h) => sum + h.valueUsd, 0);
+    const permission = await vaultStore.findActivePermission(profile._id);
+    let maxMoveUsd = total * 0.05;
+    if (permission) {
+      const now = Math.floor(Date.now() / 1000);
+      if (permission.userAddress.toLowerCase() !== address.toLowerCase() ||
+          permission.status !== 'active' || (permission.expiresAt !== 0 && permission.expiresAt <= now)) {
+        return res.status(200).json({ advice: hold('The saved permission is inactive or does not match this wallet.') });
+      }
+      const spentToday = permission.spentDate === new Date().toISOString().slice(0, 10)
+        ? permission.spentTodayUSD : 0;
+      maxMoveUsd = Math.min(maxMoveUsd,
+        Math.max(0, permission.dailyLimitUSD - spentToday),
+        Math.max(0, permission.spendingLimitUSD - permission.totalSpentUSD));
     }
+    const decision = optimizeAllocation({ snapshot, plan, maxMoveUsd });
+    if (decision.action === 'HOLD') {
+      return res.status(200).json({ advice: { ...hold(decision.reason), scope: snapshot.scope, errors: snapshot.errors } });
+    }
+    if (permission && (
+      permission.chainId !== decision.chainId ||
+      !permission.allowedActions.some((a) => ['SWAP', 'REBALANCE'].includes(a.toUpperCase())) ||
+      !permission.allowedTokens.some((t) => t === '*' || t.toLowerCase() === decision.targetToken.toLowerCase())
+    )) return res.status(200).json({ advice: hold('The proposed allocation repair falls outside your saved permission.') });
+
+    return res.status(200).json({ advice: {
+      action: 'SWAP', targetToken: decision.targetToken, targetChainId: decision.chainId,
+      fromToken: decision.fromToken, suggestedAmount: Number(decision.amountIn),
+      reasoning: decision.reason, oneLiner: decision.reason,
+      confidence: 0, riskLevel: 'UNKNOWN', executionMode: 'ADVISORY',
+      executionEligibility: 'manual_review', urgencyLevel: 'LOW',
+      allocationProposal: decision, scope: snapshot.scope,
+      authorizationStatus: 'user_signature_required',
+      planStrategy: profile.strategy,
+      permissionChecks: permission ? 'app_limits_checked' : 'no_delegation_used',
+      dataSources: [...new Set(snapshot.holdings.map((h) => h.priceSource))],
+      actionSteps: ['Review the allocation repair in Exchange.', 'Refresh the quote, fees and balances before signing.'],
+    } });
+  } catch (error) {
+    console.error('[Deep Analyze] Measured allocation unavailable:', error);
+    return res.status(503).json({ error: 'Measured allocation analysis unavailable', advice: hold('Wallet evidence is unavailable. No move selected.') });
+  }
 }

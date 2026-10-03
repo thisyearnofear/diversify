@@ -102,5 +102,8 @@ material: [`docs/reference.md`](./docs/reference.md). Docs index:
 - Config-gated, default off: fees (**no swap fee is collected today**),
   sanctions regions, perps, thesis surfaces.
 - Opt-in and chain-limited: autonomous execution (Celo, Celo Sepolia, Arbitrum).
-- Open: four paths where the model still decides rather than explains — tracked
-  as gating work in [`docs/plan.md`](./docs/plan.md).
+- Fail-closed: legacy research analysis returns HOLD without financial estimates;
+  authenticated allocation repair uses saved targets and measured holdings;
+  stablecoin deviations use dated independent prices. Broader source coverage
+  and deployed on-chain venue/plan policy remain work in
+  [`docs/plan.md`](./docs/plan.md).

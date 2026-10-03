@@ -25,7 +25,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - `pnpm validate-agent`: Checks configuration integrity.
 - `pnpm register-erc8004`: Mints the DiversiFi Guardian agent identity NFT on the ERC-8004 Identity Registry (see `docs/guardian.md`).
 - `pnpm register-agent`: Registers on the Celo AgentScan registry.
-- `pnpm rehearse-macro-signal`: Drives the Firecrawl macro path end to end (signed POST → model analysis → fan-out → on-chain anchor → reasoning echo → feed read) against localhost by default; remote targets require `--allow-remote`, and `--verify-only` just inspects the feed.
+- `pnpm rehearse-macro-signal`: Drives the Firecrawl macro path end to end (authenticated POST → curated source policy → observation-only anchor → reasoning echo → feed read; no recommendation fan-out) against localhost by default; remote targets require `--allow-remote`, and `--verify-only` just inspects the feed.
 - `pnpm backfill-ledger-reasoning`: Backfills readable reasoning echoes for historical on-chain records from the GuardianState queue, gated on a keccak match against the record's commitment (dry-run by default; `--apply` to write).
 
 ## Coding Style & Naming Conventions

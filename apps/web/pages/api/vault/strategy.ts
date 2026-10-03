@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import dbConnect from '../../../lib/mongodb';
 import { vaultStore } from '@/lib/vault/store';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
+import { validateAllocationPlan } from '@diversifi/shared/src/services/guardian/allocation-plan-validation';
 
 // Must match the strategies exposed in hooks/useFinancialStrategies.ts and
 // the FinancialStrategy type in @diversifi/shared. Previously this list had
@@ -11,6 +12,7 @@ const VALID_STRATEGIES = [
   'global',
   'africapitalism',
   'buen_vivir',
+  'pan_caribbean',
   'confucian',
   'gotong_royong',
   'islamic',
@@ -25,9 +27,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'Wallet signature required (x-wallet-auth-message / x-wallet-auth-signature headers)' });
   }
 
-  await dbConnect();
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) {
+    return res.status(400).json({ error: 'Invalid plan request' });
+  }
 
-  const { userAddress, strategy } = req.body;
+  const { userAddress, strategy, allocationPlan: submittedPlan } = req.body;
+  const allocationPlan = submittedPlan === undefined ? undefined : validateAllocationPlan(submittedPlan, strategy);
+  if (allocationPlan === null) return res.status(400).json({ error: 'Invalid committed allocation targets' });
   if (!userAddress) return res.status(400).json({ error: 'Missing userAddress' });
   if (typeof userAddress !== 'string' || userAddress.toLowerCase() !== auth) {
     return res.status(403).json({ error: 'userAddress does not match the authenticated wallet' });
@@ -37,6 +43,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
+    await dbConnect();
     // The vault record is the Guardian profile (strategy + bookkeeping) —
     // upsert so choosing a plan is self-contained.
     let vault = await vaultStore.findVaultByUser(userAddress.toLowerCase());
@@ -45,6 +52,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         userAddress: userAddress.toLowerCase(),
         vaultType: 'circle',
         strategy,
+        ...(allocationPlan ? { allocationPlan } : {}),
         status: 'active',
         totalDepositedUSD: 0,
         totalWithdrawnUSD: 0,
@@ -57,7 +65,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(200).json({ success: true, vault });
     }
 
-    const updated = await vaultStore.updateVault(vault._id, { strategy });
+    // Changing strategy without targets must not retain a previous plan's vector.
+    const updated = await vaultStore.updateVault(vault._id, {
+      strategy,
+      allocationPlan: allocationPlan ?? (vault.strategy === strategy ? vault.allocationPlan : undefined),
+    });
     return res.status(200).json({ success: true, vault: updated });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
