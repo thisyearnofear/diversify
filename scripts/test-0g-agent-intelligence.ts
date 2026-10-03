@@ -1,11 +1,9 @@
 /**
  * 0G Agent Intelligence Integration Test
- * Verifies the full autonomous analysis flow:
- * 1. Data Gathering from verified sources
- * 2. Evidence commitment to 0G Storage (CIDs)
- * 3. Reasoning using Gemini 1.5 Flash
- * 4. State anchoring to 0G DA
- * 5. On-chain settlement of data access on 0G Galileo
+ * Exercises advisory analysis with paid research and evidence writes.
+ * This manual script can spend research funds and write evidence on-chain;
+ * it does not execute portfolio swaps, bridges, or hedges.
+ * State snapshots use 0G Storage, not 0G Data Availability.
  */
 
 import { AgentService } from '@diversifi/shared/src/services/agent-service';
@@ -43,7 +41,7 @@ async function runTest() {
     };
 
     try {
-        console.log('--- Phase 2: Autonomous Analysis (Reasoning + 0G Storage) ---');
+        console.log('--- Phase 2: Advisory Analysis (Reasoning + 0G Storage) ---');
         const result = await agent.analyzePortfolioAutonomously(
             portfolioData,
             userPreferences,
@@ -65,9 +63,9 @@ async function runTest() {
             console.warn('⚠ No evidence CIDs found (Freemium mode or Storage skip)');
         }
 
-        console.log('\n--- Phase 4: Autonomous Settlement ---');
+        console.log('\n--- Phase 4: Research-payment proofs ---');
         if (result.paymentHashes && Object.keys(result.paymentHashes).length > 0) {
-            console.log('✓ Micro-payments settled on 0G Chain:');
+            console.log('✓ Reported research-payment proofs (verify each on its settlement rail):');
             Object.entries(result.paymentHashes).forEach(([source, hash]) => {
                 console.log(`  - ${source}: ${hash}`);
             });
@@ -75,9 +73,10 @@ async function runTest() {
             console.log('ℹ No payments required (using cached or free data)');
         }
 
-        if (result.arcTxHash) {
-            console.log(`\n✓ Immutable Execution Receipt: https://chainscan-galileo.0g.ai/tx/${result.arcTxHash}`);
+        if (result.executionMode !== 'ADVISORY' || result.arcTxHash) {
+            throw new Error('Analysis must not claim a portfolio execution receipt');
         }
+        console.log('Portfolio recommendation is advisory; no portfolio move was executed.');
 
     } catch (error: any) {
         console.error('❌ Test failed:', error.message);

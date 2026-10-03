@@ -387,7 +387,9 @@ export class AutomationService {
                             },
                             {
                                 type: 'mrkdwn',
-                                text: `*Expected Savings:* $${payload.analysis.expectedSavings}`
+                                text: typeof payload.analysis.expectedSavings === 'number'
+                                  ? `*Estimated savings:* $${payload.analysis.expectedSavings}`
+                                  : '*Savings estimate:* Unavailable'
                             },
                             {
                                 type: 'mrkdwn',
@@ -440,7 +442,10 @@ export class AutomationService {
         const urgencyPrefix = analysis.urgencyLevel === 'CRITICAL' ? '🚨 URGENT: ' :
             analysis.urgencyLevel === 'HIGH' ? '⚠️ Important: ' : '';
 
-        const subject = `${urgencyPrefix}DiversiFi: ${analysis.action} Recommendation - Save $${analysis.expectedSavings}`;
+        const savingsText = typeof analysis.expectedSavings === 'number'
+            ? `$${analysis.expectedSavings} estimated over ${analysis.timeHorizon}`
+            : 'Unavailable; no validated savings calculation';
+        const subject = `${urgencyPrefix}DiversiFi: ${analysis.action} recommendation`;
 
         const html = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -457,7 +462,7 @@ export class AutomationService {
                         </h2>
                         
                         <div style="background: #e3f2fd; padding: 15px; border-radius: 6px; margin: 15px 0;">
-                            <strong>Expected Protection:</strong> $${analysis.expectedSavings} saved over ${analysis.timeHorizon}
+                            <strong>Savings estimate:</strong> ${savingsText}
                         </div>
                         
                         <p><strong>Reasoning:</strong> ${analysis.reasoning}</p>
@@ -499,7 +504,7 @@ export class AutomationService {
         const text = `
 DiversiFi Advisor - ${analysis.action} Recommendation
 
-Expected Protection: $${analysis.expectedSavings} saved over ${analysis.timeHorizon}
+Savings estimate: ${savingsText}
 
 Reasoning: ${analysis.reasoning}
 

@@ -20,7 +20,7 @@ export interface ZapierTriggerData {
         action: string;
         target_token?: string;
         target_network?: string;
-        expected_savings: number;
+        expected_savings?: number;
         urgency_level: string;
         confidence: number;
         reasoning: string;

@@ -21,19 +21,10 @@ export class GuardianAnalysisDataService {
     dataSources: string[];
     paymentHashes: Record<string, string>;
     getUnifiedUSDCBalance: () => Promise<any>;
-    executeAutonomousBridge: (params: {
-      fromChainId: number;
-      toChainId: number;
-      fromToken: string;
-      toToken: string;
-      amount: string;
-    }) => Promise<any>;
-    transferUSDCViaGateway: (fromChainId: number, toChainId: number, amount: string) => Promise<string>;
     fetchWithNanopayment: (url: string, payment: { amount: string; currency: 'USDC' }) => Promise<Response>;
     fetchInflationData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string>; storageCids?: Record<string, string> }>;
     fetchEconomicData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string>; storageCids?: Record<string, string> }>;
     fetchYieldData: (steps: string[], sources: string[]) => Promise<{ data: any; hashes: Record<string, string>; storageCids?: Record<string, string> }>;
-    monitorRiskExposure: (steps: string[], portfolioUsd: number) => Promise<any>;
     getFallbackRecommendation: () => any;
   }): Promise<{ context?: GuardianAnalysisContext; earlyResult?: any }> {
     const {
@@ -43,13 +34,10 @@ export class GuardianAnalysisDataService {
       dataSources,
       paymentHashes,
       getUnifiedUSDCBalance,
-      executeAutonomousBridge,
-      transferUSDCViaGateway,
       fetchWithNanopayment,
       fetchInflationData,
       fetchEconomicData,
       fetchYieldData,
-      monitorRiskExposure,
       getFallbackRecommendation,
     } = params;
 
@@ -58,36 +46,17 @@ export class GuardianAnalysisDataService {
     const balance = parseFloat(unifiedBalance.arcBalance || '0');
     console.log(`[Arc Agent] Capital efficiency check: Total ${unifiedBalance.totalUSDC} USDC`);
 
-    if (balance < spendingLimit) {
-      if (parseFloat(unifiedBalance.totalUSDC) >= spendingLimit) {
-        steps.push("Optimizing capital location via BridgeService...");
-
-        const sourceChain = unifiedBalance.chainBalances?.sort((a: any, b: any) => parseFloat(b.amount) - parseFloat(a.amount))[0];
-
-        if (sourceChain) {
-          steps.push(`Moving capital from ${sourceChain.chainName} using LI.FI optimal route...`);
-
-          try {
-            const bridgeResult = await executeAutonomousBridge({
-              fromChainId: sourceChain.chainId,
-              toChainId: 5042002,
-              fromToken: 'USDC',
-              toToken: 'USDC',
-              amount: spendingLimit.toString()
-            });
-
-            steps.push(`✓ Capital optimized: ${bridgeResult.txHash}`);
-            return { earlyResult: getFallbackRecommendation() };
-          } catch (bridgeError) {
-            console.error('LI.FI bridge failed, falling back to Circle Native:', bridgeError);
-            const transferHash = await transferUSDCViaGateway(sourceChain.chainId, 5042002, spendingLimit.toString());
-            steps.push(`✓ Circle Native transfer: ${transferHash}`);
-            return { earlyResult: getFallbackRecommendation() };
-          }
-        }
-      } else {
-        throw new Error(`Insufficient USDC balance across all chains.`);
-      }
+    if (!Number.isFinite(balance) || !Number.isFinite(spendingLimit) || spendingLimit <= 0 || balance < spendingLimit) {
+      steps.push("Research funding unavailable on Arc. Analysis does not move funds between chains.");
+      return {
+        earlyResult: {
+          ...getFallbackRecommendation(),
+          action: 'HOLD',
+          executionMode: 'ADVISORY',
+          arcTxHash: undefined,
+          actionSteps: [...steps],
+        },
+      };
     }
 
     let macroData: any = {};
@@ -150,12 +119,9 @@ export class GuardianAnalysisDataService {
 
     steps.push("Synth sunset: probabilistic forecasts removed (was SynthData)...");
 
-    const riskStatus = await monitorRiskExposure(steps, parseFloat(unifiedBalance.totalUSDC));
-    if (riskStatus.status === 'PROTECTED') {
-      paymentHashes['Hyperliquid Risk Hedge'] = riskStatus.hedgeTx!;
-    }
-
     const pulse = await marketPulseService.getMarketPulse();
+    // Observing risk is not permission to open a hedge.
+    const riskStatus = { status: 'ADVISORY' };
 
     return {
       context: {

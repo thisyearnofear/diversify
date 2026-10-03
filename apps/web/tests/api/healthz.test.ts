@@ -1,14 +1,13 @@
 /**
  * Tests for the GET /api/healthz handler.
  *
- * The full handler depends on MongoDB and AIService being real. We mock
- * @diversifi/shared at the module level to prevent the shared-0g import
- * chain from failing during test load.
+ * The handler probes MongoDB and an AI provider in production. Mock its exact
+ * leaf import so unit tests never invoke a live provider or evidence upload.
  */
 
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
-vi.mock('@diversifi/shared', () => ({
+vi.mock('@diversifi/shared/src/services/ai/ai-service', () => ({
   AIService: {
     chat: vi.fn().mockResolvedValue({ content: 'ok' }),
   },

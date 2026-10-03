@@ -57,16 +57,4 @@ export class GuardianExecutionService {
     };
   }
 
-  static async executeSimulatedFallback(params: {
-    wallet: WalletLike;
-    agentAddress: string;
-    steps: string[];
-  }): Promise<string> {
-    params.steps.push(`⚠ Falling back to simulated on-chain payload for testnet demonstration...`);
-    const tx = await params.wallet.sendTransaction({ to: params.agentAddress, value: 0, data: '0x' });
-    const receipt = await tx.wait ? await tx.wait() : tx;
-    const executionTxHash = receipt.transactionHash || tx.hash || '0x_simulated_swap_hash_12345';
-    params.steps.push(`✓ Simulated Execution payload complete: ${executionTxHash}`);
-    return executionTxHash;
-  }
 }

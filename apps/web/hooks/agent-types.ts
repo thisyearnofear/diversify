@@ -182,7 +182,8 @@ export interface AIAdvice {
   }>;
 
   confidence: number;
-  riskLevel?: "LOW" | "MEDIUM" | "HIGH";
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | "UNKNOWN";
+  researchCommentary?: string;
   dataSources?: string[];
   evidenceCids?: Record<string, string>; // 0G Storage CIDs for research evidence
   stateAnchor?: string; // 0G Storage/DA anchor for agent state

@@ -15,7 +15,6 @@ import { circleService, CircleService } from './circle-service';
 
 import { hyperliquidService } from './hyperliquid.service';
 import { HYPERLIQUID_CONFIG } from '../config/index';
-import { GuardianExecutionService } from './guardian/guardian-execution.service';
 import { GuardianAnalysisDataService } from './guardian/guardian-analysis-data.service';
 import { GuardianRecommendationService } from './guardian/guardian-recommendation.service';
 import { GuardianDataAccessService } from './guardian/guardian-data-access.service';
@@ -59,9 +58,11 @@ export interface AnalysisResult {
     targetNetwork?: 'Celo' | 'Arbitrum' | 'Ethereum';
     confidence: number;
     reasoning: string;
-    expectedSavings: number;
+    expectedSavings?: number;
+    /** Unverified model summary, separate from the code-owned decision. */
+    researchCommentary?: string;
     timeHorizon: string;
-    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+    riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' | 'UNKNOWN';
     dataSources: string[];
     arcTxHash?: string;
     paymentHashes?: Record<string, string>; // Maps source name to x402 payment hash
@@ -139,7 +140,7 @@ export class AgentService {
         spendingLimit?: number;
     }) {
         this.network = config.network;
-        this.spendingLimit = config.spendingLimit || 5.0;
+        this.spendingLimit = config.spendingLimit ?? 5.0;
         
         // Initialize shared services
         this.walletService = new WalletService({
@@ -217,7 +218,8 @@ export class AgentService {
     }
 
     /**
-     * Autonomous analysis with real x402 payments for premium data
+     * Advisory portfolio analysis with separately budgeted x402 research.
+     * This method never swaps, bridges, or opens hedges for the portfolio.
      */
     async analyzePortfolioAutonomously(
         portfolioData: { balance: number; holdings: string[] },
@@ -253,13 +255,10 @@ export class AgentService {
                 dataSources,
                 paymentHashes,
                 getUnifiedUSDCBalance: () => this.getUnifiedUSDCBalance(),
-                executeAutonomousBridge: (params) => this.executeAutonomousBridge(params),
-                transferUSDCViaGateway: (fromChainId, toChainId, amount) => this.transferUSDCViaGateway(fromChainId, toChainId, amount),
                 fetchWithNanopayment: (url, payment) => dataAccess.fetchWithNanopayment(url, payment),
                 fetchInflationData: (analysisSteps, sources) => dataAccess.fetchInflationData(analysisSteps, sources, DATA_SOURCES),
                 fetchEconomicData: (analysisSteps, sources) => dataAccess.fetchEconomicData(analysisSteps, sources, DATA_SOURCES),
                 fetchYieldData: (analysisSteps, sources) => dataAccess.fetchYieldData(analysisSteps, sources, DATA_SOURCES),
-                monitorRiskExposure: (analysisSteps, portfolioUsd) => this.monitorRiskExposure(analysisSteps, portfolioUsd),
                 getFallbackRecommendation: () => this.getFallbackRecommendation(),
             });
 
@@ -275,74 +274,18 @@ export class AgentService {
             Object.assign(evidenceCids, context.economicResult.storageCids || {});
             Object.assign(evidenceCids, context.yieldResult.storageCids || {});
 
-            const recommendation = await GuardianRecommendationService.generateRecommendation(
-                context,
-                (content) => this.parseRecommendation(content)
-            );
-            const action = this.normalizeAction(recommendation.action);
+            const recommendation = await GuardianRecommendationService.generateRecommendation(context);
             
-            // --- 2026 Autonomous Execution Block ---
-            let executionTxHash: string | undefined = undefined;
+            // Analysis can explain a candidate, never authorize capital movement.
+            // SpendingLimit here budgets research purchases, not swaps or bridges.
+            steps.push("Advisory only. Review any proposed move in Exchange before signing.");
 
-            const canExecute = this.spendingLimit > 0 && !!action;
-
-            // 1) Teleportation to Arbitrum
-            if (canExecute && action === 'BRIDGE' && recommendation.targetNetwork === 'Arbitrum') {
-                steps.push(`🚀 Autonomous Opportunity: Teleporting fuel to Arbitrum for yield...`);
-                
-                try {
-                    const execution = await GuardianExecutionService.executeBridgeToArbitrum({
-                        arcBalance: context.unifiedBalance.arcBalance,
-                        bridgeToArbitrum: (amount) => this.bridgeToArbitrum(amount),
-                        steps,
-                    });
-                    recommendation.reasoning += execution.reasoningSuffix || '';
-                    executionTxHash = execution.executionTxHash;
-                } catch (bridgeError: any) {
-                    console.error('[Arc Agent] Autonomous bridge failed:', bridgeError.message);
-                    steps.push(`⚠ Autonomous action failed: ${bridgeError.message}`);
-                }
-            }
-
-            // 2) Swapping USDC to target tokens (Phase 5B)
-            if (canExecute && action === 'SWAP' && recommendation.targetToken) {
-                steps.push(`🚀 Autonomous Opportunity: Swapping USDC to ${recommendation.targetToken} for stable yield...`);
-                try {
-                    const execution = await GuardianExecutionService.executeSwap({
-                        wallet: this.walletService,
-                        targetToken: recommendation.targetToken,
-                        networkInfo,
-                        agentAddress: this.agentAddress,
-                        steps,
-                    });
-                    executionTxHash = execution.executionTxHash;
-                    recommendation.reasoning += execution.reasoningSuffix || '';
-                } catch (swapError: any) {
-                    console.error('[Arc Agent] Autonomous swap failed:', swapError.message);
-                    steps.push(`⚠ Autonomous swap failed: ${swapError.message}`);
-
-                    // Fallback to demo payload if real swap fails (e.g. no signer or no liquidity on testnet)
-                    executionTxHash = await GuardianExecutionService.executeSimulatedFallback({
-                        wallet: this.walletService,
-                        agentAddress: this.agentAddress,
-                        steps,
-                    });
-                }
-            }
-
-            const portfolioValue = this.normalizeNumber(context.unifiedBalance.totalUSDC, portfolioData.balance || 0, 0);
             const finalResult = GuardianRecommendationService.buildFinalResult({
                 recommendation,
-                normalizedAction: action,
-                normalizeNumber: (value, fallback, min, max) => this.normalizeNumber(value, fallback, min, max),
-                normalizeRiskLevel: (value) => this.normalizeRiskLevel(value),
-                determineUrgency: (analysis, currentPortfolioValue) => this.determineUrgency(analysis, currentPortfolioValue),
-                portfolioValue,
                 dataSources,
                 paymentHashes,
                 evidenceCids,
                 steps,
-                executionTxHash,
             });
 
             // Phase 5E: Record to 0G Recommendation Ledger. The result
@@ -381,21 +324,6 @@ export class AgentService {
 
             // Phase 5F: Persist state to 0G Storage.
             await this.persistAgentState();
-
-            // Phase 5C: Execution Receipts — Record successful autonomous analysis on-chain
-            if (executionTxHash) {
-                try {
-                    const receiptHash = await GuardianPostAnalysisService.recordAnalysisOnChain({
-                        ensureInitialized: () => this.initialize(),
-                        wallet: this.walletService,
-                        agentAddress: this.agentAddress,
-                        analysis: finalResult,
-                    });
-                    finalResult.actionSteps.push(`✓ Immutable execution receipt recorded: ${receiptHash}`);
-                } catch (err) {
-                    console.warn('[Arc Agent] Failed to record analysis execution receipt on-chain:', err);
-                }
-            }
 
             // Cache for A2A intelligence (Phase 3B)
             this.lastAnalysisResult = finalResult;
@@ -551,9 +479,8 @@ export class AgentService {
             action: 'HOLD',
             confidence: 0,
             reasoning: 'Unable to analyze due to data source failures. Recommend holding current position.',
-            expectedSavings: 0,
-            timeHorizon: '1 month',
-            riskLevel: 'LOW',
+            timeHorizon: 'unavailable',
+            riskLevel: 'UNKNOWN',
             dataSources: [],
             executionMode,
             actionSteps: ['Review portfolio manually', 'Consider consulting financial advisor'],
