@@ -2,7 +2,7 @@
 
 **Future Caribbean Global AI Buildathon 2026 — Finance, Payments & MSME Capital track**
 
-> Companion documents: [Logbook](./logbook.md) (build-in-public record) · [Architecture](../architecture.md) · [Setup](../setup.md) · [License](../../LICENSE) (MIT)
+> Companion documents: [Logbook](./logbook.md) (build-in-public record) · [Architecture](../../architecture.md) · [Setup](../../reference.md) · [License](../../../LICENSE) (MIT)
 > Live proof: RecommendationLedger `0x3BCf…369C` on Celo/Arbitrum/HashKey/0G mainnet · Agentic ID `0x6815…33D60` on 0G mainnet
 
 ---

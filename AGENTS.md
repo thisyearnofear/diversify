@@ -44,9 +44,10 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 
 ## Current State
 
-- **Positioning:** risk-aware, values-driven treasury management — both directions of the same trade (emerging-market savers protecting purchasing power; developed-market savers/businesses taking values-aligned, FX-quantified emerging-market exposure). Authoritative: `docs/product.md`.
-- **Grant tracks:** five in parallel on one architecture — 0G Bridge (evidence layer), Celo Prezenti (savings + identity), Arbitrum Open House (yield + execution), HashKey Horizon (APAC regulated rail), Future Caribbean (FX netting/coordination). Status and forward plan: `docs/roadmap.md`.
-- **Dated progress:** `docs/roadmap-log.md` is the history sink — waves, migrations, test counts. Don't paste progress notes into this file; add them to the log.
+- **Positioning (one claim):** *you set the rules, the Guardian operates within them, and every decision is explainable and verifiable.* The AI is the interface, not the authority — `data → deterministic risk calculation → constrained strategy → AI explanation → user approval → on-chain execution`. Both FX directions (emerging-market savers protecting purchasing power; developed-market savers/businesses taking values-aligned, FX-quantified emerging-market exposure) and the philosophy layer are *applications* of that claim, never co-headlines. Authoritative: `docs/guardian.md` (trust model) + `docs/product.md` (positioning).
+- **Grant tracks are closed (2026-10-03):** 0G Bridge, HashKey Horizon, Celo Prezenti, Arbitrum Open House, Future Caribbean, SERV Ed. 01, Qwen MemoryAgent, Enterprise B2B, TypeSafe Signal Lens. Their *machinery* stays live (0G anchoring, the HashKey ledger on chain 177, Celo/Arbitrum routing) but nothing here is on the plan. What each left behind and what is dormant: `docs/archive/tracks/CLOSED.md`. Never reintroduce a track narrative into a core doc — that is the specific failure that made these docs incoherent.
+- **Dated progress:** `docs/history/roadmap-log.md` is the history sink — waves, migrations, test counts. Don't paste progress notes into this file; add them to the log.
+- **Docs house rules** (full list: `docs/README.md` § House rules): one headline per product; track/event material goes to `docs/archive/`; dated progress to `docs/history/`; any claim of enforcement/verification/"live" needs a trace to code or a transaction, else it is written as intent; consolidation must never summarize away an env var, address, chain ID or runbook.
 - **Deployed:** `RecommendationLedger` at `0x3BCf…369C` on Celo, Arbitrum, and 0G mainnets; `AgenticID` ERC-721 at `0x6815…33D60` on 0G mainnet (token #1 = the Guardian). Verification: `GET /api/agent/zero-g-ledger?verify=<txHash>`.
 
 ## Working Conventions (load-bearing, learned the hard way)
@@ -85,19 +86,15 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 
 | Topic | Doc |
 |---|---|
-| Forward plan, grant tracks, yield engine | `docs/roadmap.md` |
-| Wave-by-wave history, migrations, test counts | `docs/roadmap-log.md` |
-| Product story, personas, differentiators | `docs/product.md` |
-| SME FX north star + funnel | `docs/strategy.md` |
-| Regional rails (APAC HashKey, Caribbean) | `docs/rails.md` |
-| System architecture | `docs/architecture.md` |
-| Guardian enforcement + security + identity | `docs/guardian.md` |
+| Trust model — what bounds the Guardian, where enforced, the claims audit | `docs/guardian.md` |
+| Product story, personas, vocabulary, shipped vs. intended | `docs/product.md` |
+| Forward plan in priority order (was `roadmap.md` + `monetisation-plan.md` + `exposure-plans.md` + `strategy.md`) | `docs/plan.md` |
+| System architecture **and** chains/rails (was `architecture.md` + `rails.md`) | `docs/architecture.md` |
+| Setup, env vars, endpoints, providers, ops, demo capture (was 4 files) | `docs/reference.md` |
 | Surface/design contract | `docs/design-language.md` |
 | Exchange pair/ticket/receipt spec | `docs/exchange-instrument.md` |
-| External services, env, security | `docs/integrations.md` |
-| Setup, env vars, test drive | `docs/setup.md` |
-| Alibaba deployment | `docs/ops.md` |
-| Capture playbook (public wallet, consented-user track, honesty tiers) | `docs/demo-capture.md` |
+| Wave-by-wave history, migrations, test counts | `docs/history/roadmap-log.md` |
+| Closed grant tracks + hackathon submissions | `docs/archive/tracks/CLOSED.md` |
 | Exploratory/design drafts | `docs/internal/` |
 
 ## Tool Notes

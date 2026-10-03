@@ -1,13 +1,19 @@
 # Monetisation plan — compliance first, then fees, then the thesis layer
 
+> **Archived 2026-10-03.** Superseded by [`../plan.md`](../plan.md) § 2, which
+> carries the same phase structure, gates and numbers as the live plan. This
+> original is kept as the dated record of the decision (status below is as of
+> 2026-09-29). Nothing here replaces legal advice, and no phase that earns or
+> promotes ships before counsel signs off.
+
 > Status (2026-09-29): Phase 0 code shipped (items 2–6 below); the exit
 > gate is still open — see "Phase 0 — remaining". Phase 5's first asset
 > shipped early the same day: stamps/postcards (see Phase 5). Nothing
 > here replaces
 > legal advice — every phase that earns or promotes is gated on counsel
 > sign-off.
-> Product positioning: [`product.md`](./product.md). Forward plan:
-> [`roadmap.md`](./roadmap.md). Design rules: [`design-language.md`](./design-language.md).
+> Product positioning: [`product.md`](../product.md). Forward plan:
+> [`roadmap.md`](../plan.md). Design rules: [`design-language.md`](../design-language.md).
 
 ## Why
 
@@ -98,11 +104,16 @@ and PAXG as the spot commodity leg while perps are off. Still open:
    in-app before the wallet prompt; the receipt repeats it. `getEstimate`
    returns `feeUSD`.
 3. **Capture per route** — LI.FI `fee` option (+ integrator/fee wallet
-   registered with LI.FI); 1inch `fee` + `referrer`; Mento + Uniswap via a
-   small audited `FeeRouter` (Foundry, `contracts/`) that pulls input,
-   routes the fee to treasury and swaps to the user — still one approve +
-   one swap. Until the router is audited, Mento stays fee-free rather than
-   adding a second signature. Guardian 7710 batches add a fee transfer leg.
+   registered with LI.FI); 1inch `fee` + `referrer`; **Uniswap Trading API**
+   via `integratorFees` on `/quote` (up to 4 recipients, ≤500 bips total;
+   multi-recipient needs `x-universal-router-version: 2.1.1` and exact-input —
+   see [`integrations.md`](../reference.md) § Uniswap Trading API). Prefer
+   the API fee path over a custom router wherever the Trading API is already
+   the quote source. Mento (and any on-chain-only Uniswap V3 path that does
+   not go through the Trading API) still needs a small audited `FeeRouter`
+   (Foundry, `contracts/`) — pull input, fee to treasury, swap to user, one
+   approve + one swap — or stays fee-free until that router is audited.
+   Guardian 7710 batches add a fee transfer leg.
 4. **Invariant tests** — fee shown = fee taken; every route collects or is
    explicitly exempt; jurisdiction off ⇒ $0.
 5. **Revenue ledger** — `fee_collected` event + `pnpm reconcile-fees`

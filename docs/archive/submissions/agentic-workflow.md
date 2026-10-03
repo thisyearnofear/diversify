@@ -1,6 +1,6 @@
 # DiversiFi — Agentic Workflow & Architecture (Caribbean submission)
 
-> The full-system architecture lives in [`docs/architecture.md`](../architecture.md) (with rendered diagram `architecture-diagram.png`). This page is the **track-focused view**: the FX coordination loop the judges will evaluate, showing agents, orchestration, reasoning, human-in-the-loop, and deterministic guarantees.
+> The full-system architecture lives in [`docs/architecture.md`](../../architecture.md) (with rendered diagram `architecture-diagram.png`). This page is the **track-focused view**: the FX coordination loop the judges will evaluate, showing agents, orchestration, reasoning, human-in-the-loop, and deterministic guarantees.
 
 ## The FX coordination loop (CARICOM FX Swap Network)
 
@@ -75,4 +75,4 @@ flowchart TD
 | Storage/infra | MongoDB (intent pool — amounts/deadlines only), Hetzner (API runtime), Vercel (frontend) |
 | Engineering | Next.js, TypeScript, pnpm/turbo, Vitest (1,169 tests), Foundry (contract tests) |
 
-*Full env-var and integration tables: [`docs/integrations.md`](../integrations.md).*
+*Full env-var and integration tables: [`docs/integrations.md`](../../reference.md).*

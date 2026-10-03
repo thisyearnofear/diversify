@@ -1,71 +1,71 @@
 # Docs
 
-Navigation index for `docs/`. Start at the top, drill down by need.
+Six documents. Read them in this order if you want to understand the product;
+jump by need if you're working on something.
 
-## Repository layout
+**The one claim everything serves:** you set the rules, the Guardian operates
+within them, and every decision is explainable and verifiable. If a doc makes a
+different thing the headline, that doc is out of date — including this index.
 
-| Area | Where |
+## The core set
+
+| # | Doc | Answers |
+|---|-----|---|
+| 1 | **[`guardian.md`](./guardian.md)** | **The trust model.** What bounds execution (consent → app gates → on-chain caveats → deferred policy), where each is enforced, the four paths where the model still decides, the standing claims-vs-implementation audit, agent identity (ERC-8004 + Self Protocol). Read this first — it *is* the positioning. |
+| 2 | **[`product.md`](./product.md)** | What DiversiFi is, the three questions the first 30 seconds answer, both FX directions, protection plans, personas, vocabulary, what's shipped vs. intended. |
+| 3 | **[`plan.md`](./plan.md)** | The forward plan in priority order: Guardian determinism → compliance and fees → exposure plans; chain-capability matrix, SME FX phases, verification items, deferred list. |
+| 4 | **[`architecture.md`](./architecture.md)** | System architecture (AI provider chain, swap orchestrator, Guardian loop, data streams) **plus chains and settlement rails** — Celo/Mento, Arbitrum, Arc, HashKey, Caribbean, the layer→chain table, payment-rail phases, the 0G evidence stack. |
+| 5 | **[`reference.md`](./reference.md)** | Operational material, one file: local dev, the consolidated env-var table, endpoints, providers, external-agent integration, deployment and ops, demo capture, troubleshooting. |
+| 6 | **[`design-language.md`](./design-language.md)** | Surface contract for any user-facing work — one job per screen, controls-as-motif, depth layers, motion rules, PR checklist. Rules are summarised in `AGENTS.md`. |
+
+Supporting: **[`exchange-instrument.md`](./exchange-instrument.md)** — the
+Exchange pair/ticket/receipt spec, the densest surface in the app.
+
+## Not part of the active set
+
+| Where | What |
 |---|---|
-| Next.js app | `apps/web/` (`components/`, `hooks/`, `pages/`, …) |
-| Domain logic | `packages/shared/` |
-| Agent APIs | `apps/web/pages/api/agent/` |
-| Contracts | `contracts/`, `scripts/Deploy*.s.sol` (Foundry libs in root `lib/`) |
-| Ops (Alibaba FC, etc.) | `ops/` |
-| Contributor guide | [`../CONTRIBUTING.md`](../CONTRIBUTING.md) |
-| Agent conventions | [`../AGENTS.md`](../AGENTS.md) |
-
-`contracts/test/` = Foundry (Solidity). `scripts/smoke/` = x402 Node smoke scripts. Root map: [`../README.md`](../README.md).
-
-## The docs
-
-| # | Doc | What's in it |
-|---|-----|--------------|
-| 1 | **[`setup.md`](./setup.md)** | Quick start, env vars, supported chains, x402 research-payment mode, test drive, troubleshooting |
-| 2 | **[`product.md`](./product.md)** | What DiversiFi is, who it's for (both directions of the FX trade), protection plans, differentiators — adaptive-experience summary links to `internal/` |
-| 3 | **[`design-language.md`](./design-language.md)** | Surface design principles — one job per screen, concentrated expressiveness, controls-as-motif, disclosure tiers, PR checklist |
-| 4 | **[`architecture.md`](./architecture.md)** | System architecture, AI provider chain, swap orchestrator, Guardian loop, 0G verifiability stack, data streams & their jobs |
-| 5 | **[`integrations.md`](./integrations.md)** | API endpoints, AI providers, data sources, env var tables, external agent integration guide |
-| 6 | **[`roadmap.md`](./roadmap.md)** | The forward-looking plan only — active priorities, long-term chain architecture, deferred list |
-| 7 | **[`strategy.md`](./strategy.md)** | North star — SME FX working capital, Ghanaian-importer wedge, market research, implementation plan |
-| 8 | **[`guardian.md`](./guardian.md)** | Guardian spending bounds, threat model, enforcement plan + agent identity (ERC-8004 + Self Protocol) |
-| 9 | **[`rails.md`](./rails.md)** | Regional savings & settlement lanes — APAC (HashKey), Caribbean, Arbitrum x402 settlement |
-| 10 | **[`ops.md`](./ops.md)** | Deployment & ops (Alibaba Cloud proof, deploy scripts) |
-| — | [`roadmap-log.md`](./roadmap-log.md) | Historical log of what shipped per wave + grant-track close-outs — the dated history sink |
-| — | [`internal/architecture-notes.md`](./internal/architecture-notes.md) | Exploratory engineering findings (Circle agent stack, dependency audit) — reference, not current architecture |
-| — | [`internal/adaptive-experience.md`](./internal/adaptive-experience.md) | Adaptive-experience design doc — signal schema, per-persona routing, phases (summary: `product.md` § Adaptive experience) |
-| — | [`internal/guardian-reasoning-service.md`](./internal/guardian-reasoning-service.md) | Design draft for the unified Guardian reasoning service (shipped — see `guardian.md`) |
-| — | [`exposure-plans.md`](./exposure-plans.md) | Design draft — exposure-based plans with bands, anchor currency, Guardian tilts validated by code, Custom plan editor (roadmap § Now) |
-| — | [`internal/mascot-raster-brief.md`](./internal/mascot-raster-brief.md) | **Superseded** mascot raster brief (authoritative spec: `design-language.md` §9) |
-| — | [`submission/`](./submission/) | Hackathon/grant artifacts — agentic workflow, demo scripts, logbook, [`submission/serv-edition-01.md`](./submission/serv-edition-01.md) (SERV Hackathon: X draft, form fields, video storyboard) |
-| — | **This file** | Navigation index |
+| **[`history/roadmap-log.md`](./history/roadmap-log.md)** | Dated record of what shipped, wave by wave, incl. migrations, test counts and security-review findings. **The history sink** — new progress notes go here, never into a core doc. |
+| **[`archive/tracks/CLOSED.md`](./archive/tracks/CLOSED.md)** | The nine closed grant/hackathon tracks: what each left in the product, what is dormant, and why parallel track narratives were the source of the doc sprawl. Start here before citing anything about 0G Bridge, HashKey Horizon, Celo Prezenti, Arbitrum Open House, Future Caribbean, SERV, Qwen, or the B2B tier. |
+| **[`archive/strategy-2026-07.md`](./archive/strategy-2026-07.md)** | SME FX market evidence + competitive gap, with the list of claims in it that were already stale. Dated figures, no re-verification schedule. |
+| **[`archive/monetisation-plan-2026-09.md`](./archive/monetisation-plan-2026-09.md)** | The original monetisation plan (2026-09-29 status); superseded by `plan.md` § 2. |
+| **[`archive/submissions/`](./archive/submissions/)** | Hackathon submission artifacts — project overviews, demo scripts, logbooks. Dated records. |
+| **[`internal/`](./internal/)** | Exploratory findings, design drafts, superseded briefs. Reference, not current architecture. |
 
 ## By need
 
-- **New contributor setting up locally** → [`setup.md`](./setup.md)
-- **External agent integrating with the intelligence gateway** → [`integrations.md`](./integrations.md) § External Agent Integration Guide
-- **Looking up an API endpoint, provider, env var, or data stream** → [`integrations.md`](./integrations.md)
-- **How the data streams work together & stay honest** → [`architecture.md`](./architecture.md) § Data Streams & their Jobs
-- **Understanding the Guardian's spending bounds & security** → [`guardian.md`](./guardian.md)
-- **Agent identity (ERC-8004 + Self Protocol)** → [`guardian.md`](./guardian.md) § Agent Identity
-- **Building or reviewing any user-facing surface** → [`design-language.md`](./design-language.md) (rules also in `AGENTS.md` § Surface design principles)
-- **Regional rails (APAC / Caribbean / Arbitrum x402)** → [`rails.md`](./rails.md)
-- **Forward plan + track status** → [`roadmap.md`](./roadmap.md); **what shipped when** → [`roadmap-log.md`](./roadmap-log.md)
-- **North star — SME FX strategy** → [`strategy.md`](./strategy.md)
-- **Architecture & the data-stream map** → [`architecture.md`](./architecture.md)
-
-## Deploy ops
-
-- **Backend** → run `./scripts/deploy-to-hetzner.sh` from the project root. See top-of-script comments for env overrides (`DEPLOY_SKIP_BUILD`, `DEPLOY_SYNC_ENV`, `DEPLOY_SKIP_GATE`).
-- **Contracts** → run `./scripts/deploy-all.sh <chain> [--verify]`. See script header for supported chains.
-- **Frontend** → Vercel handles deploys on push to `main`. No manual step.
-- **Cloud setup details** → [`ops.md`](./ops.md)
+- **New contributor, setting up locally** → [`reference.md`](./reference.md) § 1
+- **Looking up an env var, endpoint, provider or data source** → [`reference.md`](./reference.md) § 2, § 4, § 5
+- **External agent integrating with the intelligence gateway** → [`reference.md`](./reference.md) § 6
+- **Deploying / ops / which script does what** → [`reference.md`](./reference.md) § 7
+- **Capturing demo material (public wallet, consented user, honesty tiers)** → [`reference.md`](./reference.md) § 8
+- **Why the Guardian can be trusted with a proposal** → [`guardian.md`](./guardian.md)
+- **"Is X actually enforced, or just claimed?"** → [`guardian.md`](./guardian.md) § What bounds execution + § Standing check
+- **Which chain does what job, and what's deployed vs. activated** → [`architecture.md`](./architecture.md)
+- **Building or reviewing any user-facing surface** → [`design-language.md`](./design-language.md) (+ `AGENTS.md` § Surface design principles)
+- **Working on Exchange specifically** → [`exchange-instrument.md`](./exchange-instrument.md)
+- **What we're doing next, and in what order** → [`plan.md`](./plan.md)
+- **What shipped when** → [`history/roadmap-log.md`](./history/roadmap-log.md)
+- **Is this grant track still live?** → [`archive/tracks/CLOSED.md`](./archive/tracks/CLOSED.md). No.
 
 ## Top-level
 
-- **[`../README.md`](../README.md)** — product summary, quick start, repo map
+- **[`../README.md`](../README.md)** — the one claim, the pipeline, quick start, repo map
 - **[`../CONTRIBUTING.md`](../CONTRIBUTING.md)** — setup, commands, "where do I change X?"
-- **[`../AGENTS.md`](../AGENTS.md)** — repo conventions, build/test commands, coding style for coding agents
+- **[`../AGENTS.md`](../AGENTS.md)** — repo conventions and the load-bearing working rules for coding agents
 
-## Internal docs
+## House rules for these docs
 
-`docs/internal/` holds exploratory, superseded, and design-draft material — committed, but not part of the active doc set. Historical shipped-work detail lives in [`roadmap-log.md`](./roadmap-log.md).
+1. **One headline.** The product has one claim (`guardian.md`). Positioning
+   material in other docs must support it, not compete with it. No doc gets to
+   make a subsystem the headline.
+2. **Track and event material doesn't enter the core set.** Grant/hackathon
+   narratives go to `archive/`. This is the specific rule that, if followed, keeps
+   that pattern of confusion from recurring.
+3. **Dated progress goes to `history/roadmap-log.md`.** Not into a core doc.
+4. **A claim about enforcement, verification or "live" status needs a trace to
+   code or a transaction**, or it is written as intent. The audit that enforces
+   this is in `guardian.md` § Standing check.
+5. **Reference detail is never summarized away.** `reference.md` and
+   `architecture.md` exist so that env vars, addresses, chain IDs and runbooks
+   have exactly one home. Consolidating docs must not lose facts.

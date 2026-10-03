@@ -2,7 +2,7 @@
 
 This directory holds the **enterprise FX dashboard** — the SME/importer/
 exporter working-capital tools that complement the retail savings app.
-They are the Track 4 deliverable per `docs/strategy.md`.
+They are the Track 4 deliverable per `docs/archive/strategy-2026-07.md`.
 
 ## Why staged without wiring
 

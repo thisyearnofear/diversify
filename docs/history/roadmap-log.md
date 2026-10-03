@@ -1,6 +1,10 @@
 # Roadmap Log — historical waves & file deltas
 
-> Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](./roadmap.md).
+> Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](../plan.md).
+
+### Uniswap ecosystem scan — Trading API fees, PAXGy, Japan gateway (2026-10-03)
+
+Doc-only research pass against Uniswap Labs' early-October update (no app code). **Useful now:** Trading API `integratorFees` (up to 4 recipients, ≤5% total; multi-recipient needs Universal Router 2.1.1 + exact-input) is the preferred Phase 1 fee path for `/api/swap/uniswap/*` instead of a custom FeeRouter on that route; proxies still send `x-universal-router-version: 2.0` today. `BRIDGE` routing + `/swap_5792`/`/swap_7702` are UX/cross-chain candidates to evaluate later — Arc arrival stays Circle CCTP, not Uniswap bridge, until proven. UniswapX v3 lists Arc (5042) and Robinhood (4663); both remain non-execution for retail. **Watch:** PAXGy (Paxos Labs gold-accruing receipt on PAXG, 2026-09-24 — not a PAXG substitute; X Layer–centric at launch); tokenized-equity volume concentration on Uniswap / RH pools (reinforces research rail only); SMBC Nikko × Nethermind × Uniswap v4 Japan DeFi Gateway MoU (mid-2027 target, compliance-in-hook on Base — HashKey stays APAC savings rail; JPYm on Mento stays yen exposure). **Ignored for backlog:** OUSD (payments stablecoin), cirBTC-on-Arc liquidity trivia, Spark PYUSD/USDS pool stats. Docs updated: `integrations.md` § DEX & Routing / Uniswap Trading API / Adjacent assets; `monetisation-plan.md` Phase 1 capture; `rails.md` Japan watch under APAC trust model; `roadmap.md` monetisation row + yield open items.
 
 ### Transparent supplier-payment journey, savings trade-offs, and onboarding continuity (2026-10-03)
 
@@ -1015,7 +1019,7 @@ verifiable ledger). **The problem is universal** — any business with a
 currency mismatch between revenue and costs faces the same risk (UK
 exporters, US retailers sourcing from EUR, Brazilian traders, Philippine
 BPOs). Ghana is the wedge; the market is global. See
-[`strategy.md`](./strategy.md) for the full universal framing.
+[`strategy.md`](../archive/strategy-2026-07.md) for the full universal framing.
 
 **Current state (2026-07-13):** Guardian product consolidation (single identity, non-modal proactive updates, shared recommendation contract) shipped alongside the first SME FX vertical slice and a trust pass:
 
@@ -1031,7 +1035,7 @@ BPOs). Ghana is the wedge; the market is global. See
 Still planned: Importer `FinancialStrategy` archetype, graduation funnel (Phase 4).
 
 The concierge FX drag report (`scripts/fx-drag-report.ts`) still validates math with real trader data; it now delegates rendering to shared. Full phased plan:
-in [`docs/strategy.md`](./strategy.md).
+in [`docs/strategy.md`](../archive/strategy-2026-07.md).
 
 **Market:** China–Africa trade $348B (2025, +20% YoY); SSA stablecoin
 volume $50B in Q1 2026 (+340% YoY, large B2B share); ~$5B/yr lost to
@@ -1057,7 +1061,7 @@ ethos. Position as intelligence/software; licensed partners hold custody
 and conversion.
 
 Full strategy, market data with sources, competitive table, archetype
-design, honesty guardrails, and risks: [`strategy.md`](./strategy.md).
+design, honesty guardrails, and risks: [`strategy.md`](../archive/strategy-2026-07.md).
 
 ### Yield Engine Strategy (Arbitrum) — strategy + shipped detail (2026-07-11/12)
 
@@ -1310,21 +1314,21 @@ The Wave 1 submission is otherwise a packaging exercise. The hard work (the 0G i
 #### 7. Cross-references
 
 - Project context: [`README.md`](../README.md)
-- Architecture: [`docs/architecture.md`](./architecture.md)
-- All integrations: [`docs/integrations.md`](./integrations.md)
+- Architecture: [`docs/architecture.md`](../architecture.md)
+- All integrations: [`docs/integrations.md`](../reference.md)
 - Internal runbook: `docs/internal/zero-g-mainnet-runbook.md` (to be created when 0G mainnet deploy happens)
-- 0G contract: [`contracts/RecommendationLedger.sol`](../contracts/RecommendationLedger.sol)
-- 0G Storage service: [`packages/shared-0g/src/services/storage-service.ts`](../packages/shared-0g/src/services/storage-service.ts)
-- 0G DA service: [`packages/shared-0g/src/services/persistence-service.ts`](../packages/shared-0g/src/services/persistence-service.ts)
-- 0G AI provider: [`packages/shared/src/services/ai/providers/zero-g-provider.ts`](../packages/shared/src/services/ai/providers/zero-g-provider.ts)
-- 0G Anchoring decorator: [`packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts`](../packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts)
-- 0G ledger service (chain-aware): [`packages/shared/src/services/recommendation-ledger.service.ts`](../packages/shared/src/services/recommendation-ledger.service.ts)
-- 0G settlement (multi-chain): [`packages/shared/src/services/settlement-service.ts`](../packages/shared/src/services/settlement-service.ts)
-- 0G endpoint: [`pages/api/agent/zero-g-ledger.ts`](../apps/web/pages/api/agent/zero-g-ledger.ts)
-- 0G config: [`packages/shared/src/config/index.ts`](../packages/shared/src/config/index.ts) (`NETWORKS.ZERO_G_TESTNET`, `ZERO_G_DATA_HUB_CONFIG`)
-- Foundry config: [`foundry.toml`](../foundry.toml) (`zero_g_testnet` rpc endpoint)
-- Deploy script (Arbitrum template): [`scripts/DeployArbitrum.s.sol`](../scripts/DeployArbitrum.s.sol)
-- Deploy-all script: [`scripts/deploy-all.sh`](../scripts/deploy-all.sh)
+- 0G contract: [`contracts/RecommendationLedger.sol`](../../contracts/RecommendationLedger.sol)
+- 0G Storage service: [`packages/shared-0g/src/services/storage-service.ts`](../../packages/shared-0g/src/services/storage-service.ts)
+- 0G DA service: [`packages/shared-0g/src/services/persistence-service.ts`](../../packages/shared-0g/src/services/persistence-service.ts)
+- 0G AI provider: [`packages/shared/src/services/ai/providers/zero-g-provider.ts`](../../packages/shared/src/services/ai/providers/zero-g-provider.ts)
+- 0G Anchoring decorator: [`packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts`](../../packages/shared/src/services/ai/decorators/zero-g-anchoring-decorator.ts)
+- 0G ledger service (chain-aware): [`packages/shared/src/services/recommendation-ledger.service.ts`](../../packages/shared/src/services/recommendation-ledger.service.ts)
+- 0G settlement (multi-chain): [`packages/shared/src/services/settlement-service.ts`](../../packages/shared/src/services/settlement-service.ts)
+- 0G endpoint: [`pages/api/agent/zero-g-ledger.ts`](../../apps/web/pages/api/agent/zero-g-ledger.ts)
+- 0G config: [`packages/shared/src/config/index.ts`](../../packages/shared/src/config/index.ts) (`NETWORKS.ZERO_G_TESTNET`, `ZERO_G_DATA_HUB_CONFIG`)
+- Foundry config: [`foundry.toml`](../../foundry.toml) (`zero_g_testnet` rpc endpoint)
+- Deploy script (Arbitrum template): [`scripts/DeployArbitrum.s.sol`](../../scripts/DeployArbitrum.s.sol)
+- Deploy-all script: [`scripts/deploy-all.sh`](../../scripts/deploy-all.sh)
 
 ---
 

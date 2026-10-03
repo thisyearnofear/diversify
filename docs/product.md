@@ -1,60 +1,73 @@
 # Product
 
-> **Current UI state (2026-10-01):** Home, Shield, Exchange, and Guardian remain four instruments. Home and Shield now use expressive clarity—readable financial meaning and values-led selection without extra card stacks. Counterparty matching has separate Your need and Details views; wallet guidance reflects configured connection paths. This is a UI release, not a claim that production login, autonomy, or payment activation has been re-verified. Dated change history: [`roadmap-log.md`](./roadmap-log.md).
+> **Current UI state (2026-10-01):** Home, Shield, Exchange, and Guardian remain four instruments. Home and Shield now use expressive clarity—readable financial meaning and values-led selection without extra card stacks. Counterparty matching has separate Your need and Details views; wallet guidance reflects configured connection paths. This is a UI release, not a claim that production login, autonomy, or payment activation has been re-verified. Dated change history: [`history/roadmap-log.md`](./history/roadmap-log.md).
 
 > Production smoke check (2026-10-01): the public app served the release’s UI markers and opened configured Privy login options without authentication. The immutable Vercel deployment URL required SSO, so alias-to-commit identity was not independently proven. No signature, payment, or settlement was performed.
 
 ## Core Story
 
-DiversiFi is an **FX-risk intelligence and autonomous protection layer**
-for businesses that earn in one currency and must purchase in another.
+**You set the rules. The Guardian operates within them. Every decision is
+explainable and verifiable.**
 
-Two things make DiversiFi unique. Everything else is commodity:
+That sentence is the product. Everything else — the FX data, the protection
+plans, the philosophy layer, the chains — is machinery in service of it.
 
-1. **FX-risk intelligence layer** — the ability to quantify and
-   autonomously flatten currency risk for a business that earns in one
-   currency and must purchase in another. A Ghanaian importer buying from
-   China in USD. A US retailer sourcing from the Eurozone. A UK business
-   paying suppliers in USD. The currencies change; the problem is identical.
-   The SME bleeds margin in the window between local sales and the next
-   supplier payment. **No player in the market offers FX risk
-   quantification + autonomous protection.**
+In the first 30 seconds a user should be able to answer exactly three
+questions, and each one is a claim we can prove rather than assert:
 
-2. **The philosophy/values system** — no other product in DeFi or fintech
-   has this. It's not a feature; it's a structural moat that creates
-   identity-based retention and cultural community. When a user chooses
-   Africapitalism, Buen Vivir, or Islamic Finance, they are declaring a
-   cultural identity, not just a risk tolerance. **This is the reason
-   someone stays when the yield is identical elsewhere.**
+1. **Is my money losing purchasing power?** Quantified from the curated
+   depreciation and inflation datasets, in the user's own currency and against
+   the benchmarks that matter to them (USD, EUR, gold) — never a chart to
+   interpret, always a reading ("your NGN bought 72% less").
+2. **What can I do about it?** A protection plan whose allocation you choose,
+   inside limits you set. A move arrives as one artifact — proposed action,
+   quantified stakes, why it fits your plan, evidence one tap behind, bounds
+   state — and you approve it in your own wallet.
+3. **Why can I trust the thing doing it?** Because the risk arithmetic is code,
+   the caps are enforced in code and (for autonomy) by your own smart account
+   on-chain, your consent is a cryptographic signature, and the decision is
+   recorded where the money moves with its reasoning anchored as durable
+   evidence. [`guardian.md`](./guardian.md) is the evidence for that answer.
 
-The **retail savings app is top-of-funnel.** It proves the technology,
-builds trust, and surfaces the risk moment to individual entrepreneurs and
-diaspora professionals whose personal savings are also working capital. The
-**business intelligence layer is the real product.** The **philosophy
-system is the retention moat.**
+**The AI is the interface, not the authority.**
+`data → deterministic risk calculation → constrained strategy → AI explanation →
+your approval → on-chain execution`. The model explains and ranks; it does not
+authorize. Where today that is not yet universally true, the paths are named —
+not glossed over — in [`guardian.md`](./guardian.md) § Where the model still
+decides, and closing them is the top of [`plan.md`](./plan.md).
 
-**The audience runs in both directions.** Savers in volatile-currency
-economies use DiversiFi to protect purchasing power. Businesses and savers
-in developed markets use it to trade *with* emerging markets and to
-diversify along cultural, values, or philosophy lines — an importer in
-Accra bleeding cedi margin and a London saver allocating to KESm under an
-Africapitalist plan are the same machinery seen from opposite ends. FX
-exposure is quantified identically in both directions; the persona changes
-the frame, not the engine.
+**Two things make this hard to copy. Everything else is commodity:**
 
-The **DiversiFi Guardian** is the autonomous agent that executes this
-protection. It monitors markets, detects inflation and FX shifts, and
-protects capital by routing between **Celo/Mento** (local stablecoins,
-low-cost savings), **Arbitrum** (deep liquidity, RWA yield), and **HashKey
-Chain** (APAC regulated-market savings) — with on-chain proof of every
-decision. Walletless visitors can inspect a labeled instructional decision
-before connecting.
+1. **Verifiable bounded autonomy** — an agent that protects capital inside
+   user-set limits, with each decision leaving something a third party can
+   inspect. Most "AI treasury" products ask for trust; this one ships receipts.
+   It is a hard engineering claim, and it is the one we lead with.
+2. **The philosophy/values system** — choosing Africapitalism, Buen Vivir, or
+   Islamic Finance declares a cultural identity, not a risk tolerance, and it
+   reshapes the allocation. Nobody else in DeFi or fintech builds that into the
+   product. It is the **retention layer** — the reason someone stays when the
+   yield is identical elsewhere — and it is deliberately *not* the headline.
 
-**What it is:** An FX-risk intelligence layer with a reference consumer
-(the Guardian savings app) that demonstrates the full loop: risk
-quantification → autonomous decision → on-chain settlement → verifiable
-evidence.
-**What it is not:** A payment rail, a trading terminal, a DeFi control panel,
+**Two audiences, one engine.** Savers in volatile-currency economies protect
+purchasing power. Businesses and savers in strong-currency economies take
+emerging-market exposure deliberately, with the FX cost quantified rather than
+hidden — and an SME that earns in one currency while owing a supplier in another
+can see exactly what that window costs it per payment cycle. An importer in Accra
+bleeding cedi margin and a London saver allocating to KESm under an
+Africapitalist plan are the same machinery seen from opposite ends. The persona
+changes the frame, not the engine.
+
+The **Guardian** is the agent that executes the protection. It monitors markets,
+detects inflation and FX shifts, and routes between **Celo/Mento** (regional
+stablecoins, low-cost savings) and **Arbitrum** (deep liquidity, RWA yield)
+today; the **HashKey** APAC ledger is deployed and seeded but stays behind an
+"APAC rail — coming soon" banner until its frontend env var is set, and savings
+decisions do not route to it before then. Walletless visitors can inspect a
+labeled instructional decision before connecting.
+
+**What it is:** a bounded, verifiable savings Guardian, with the FX-risk
+intelligence it runs on as the layer other products can consume.
+**What it is not:** a payment rail, a trading terminal, a DeFi control panel,
 or a yield farming dashboard.
 
 ## Current State vs. Vision
@@ -69,19 +82,23 @@ or a yield farming dashboard.
 - **Enterprise audit** — the `x-api-key` enterprise gateway and audit export are implemented for B2B licensing.
 
 **North star / in progress:**
-- **SME FX-risk intelligence layer — remaining phases** — the importer/trader `FinancialStrategy` archetype, a GHS on/off-ramp partner, a rails design partner, and a measured graduation funnel ([`roadmap.md`](./roadmap.md), [`strategy.md`](./strategy.md)). The concierge FX drag report (`scripts/fx-drag-report.ts`) keeps validating the math with real traders.
+- **SME FX-risk intelligence layer — remaining phases** — the importer/trader `FinancialStrategy` archetype, a GHS on/off-ramp partner, a rails design partner, and a measured graduation funnel ([`plan.md`](./plan.md) § 5, [`archive/strategy-2026-07.md`](./archive/strategy-2026-07.md)). The concierge FX drag report (`scripts/fx-drag-report.ts`) keeps validating the math with real traders.
 
-The retail app is the proof surface and top-of-funnel. The business intelligence layer is the real product we are building toward.
+The bounded, verifiable Guardian is the product. The savings app is where that
+bound earns trust; the FX-risk intelligence it runs on is the highest-value
+application of it and the revenue destination.
 
-## Two layers, one product
+## One trust model, two layers of consumption
 
 | Layer | What it is | Who consumes it |
 |---|---|---|
-| **FX-risk intelligence layer (the real product)** | Quantifies per-purchase-cycle currency drag for SMEs and autonomously flattens it. Chain-aware settlement ledger, 0G evidence anchoring, open SDK, and enterprise gateway for rails players. | SME importers/traders; external agents and rails players that license the intelligence |
-| **Reference consumer (Guardian app — top-of-funnel)** | The DiversiFi Guardian — a savings protection agent for volatile economies. Proves the intelligence layer end-to-end and funnels retail trust into the business tier. | End users in emerging markets who want protection without complexity; developed-market savers and businesses who trade with emerging markets or want values/philosophy-aligned diversification; individual entrepreneurs who graduate to the importer archetype |
+| **FX-risk intelligence layer (the highest-value application; the revenue destination)** | Quantifies per-purchase-cycle currency drag for SMEs and autonomously flattens it. Chain-aware settlement ledger, 0G evidence anchoring, open SDK, and enterprise gateway for rails players. | SME importers/traders; external agents and rails players that license the intelligence |
+| **Guardian savings app (where the bound is proven)** | The DiversiFi Guardian — a savings protection agent for volatile economies. Exercises the full loop end-to-end and funnels retail trust into the business tier. | End users in emerging markets who want protection without complexity; developed-market savers and businesses who trade with emerging markets or want values/philosophy-aligned diversification; individual entrepreneurs who graduate to the importer archetype |
 
-The FX-risk intelligence layer is the product. The Guardian app is the
-proof surface and top-of-funnel. External agents and rails players are
+Both layers rest on the same claim in [`guardian.md`](./guardian.md) — bounds
+first, evidence after. The app is not a demo of the business layer and the
+business layer is not a rebrand of the app: they are one engine with two
+consumers. External agents and rails players are
 consumers #2+. This is what makes DiversiFi infrastructure other teams
 depend on, not a consumer app with infrastructure framing.
 
@@ -158,7 +175,7 @@ Retail and enterprise are not competing priorities; they are one funnel:
    autopilot."
 
 Market evidence, competitive gap, archetype design, regulatory posture
-(Ghana VASP Act 1154), and sequencing: [`strategy.md`](./strategy.md).
+(Ghana VASP Act 1154), and sequencing: [`archive/strategy-2026-07.md`](./archive/strategy-2026-07.md).
 
 ## How It Works (Guardian app)
 
@@ -182,11 +199,11 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 ## What Makes It Different
 
-1. **FX-risk intelligence layer — the real product.** We quantify the currency drag on a business's working capital and autonomously protect it per purchase cycle. The retail savings app is the proof surface and top-of-funnel; the business intelligence layer is what scales.
+1. **Verifiable, bounded autonomy — the claim everything else serves.** A server-side Guardian loop monitors markets 24/7 and proposes moves the user approves in one tap; it acts on its own only inside an ERC-7715 grant that the **user's own smart account** enforces on-chain, and chains that can't enforce it fall back to one-tap and journal the decline. Risk arithmetic, allocation bands and spending caps are deterministic code — the model explains and ranks, it does not authorize. Every decision is recorded on a `RecommendationLedger` at the one `0x3BCf…369C` address on the chain where the money moves (Celo for savings, Arbitrum for yield), with reasoning anchored to 0G Storage as tamper-proof evidence. `LiveProofCard` surfaces those receipts before wallet connect: proof-first, not splash-first. What is enforced where — and which four paths still need closing — is stated plainly in [`guardian.md`](./guardian.md). Each chain has an irreplaceable role — see [`architecture.md`](./architecture.md).
 
-2. **The philosophy/values system — a structural moat.** No other DeFi or fintech product builds cultural identity into the product. Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong — these are not risk-tolerance sliders; they are identity markers that drive retention and community. Protection plans target specific emerging-market inflation profiles, not generic "crypto yields." This is the reason someone stays when the yield is identical elsewhere.
+2. **FX-risk intelligence for working capital — the highest-value application, and the revenue destination.** We quantify the currency drag on a business that earns in one currency and owes a supplier in another, per purchase cycle, and protect it autonomously. The savings app is where that capability earns trust first; the business layer is where it scales. This is a *claim about the product's shape*, not a second headline — see [`plan.md`](./plan.md) § 5.
 
-3. **Verifiable autonomy.** A server-side Guardian loop monitors markets 24/7 and proposes moves the user approves in one tap; it executes on its own only within an ERC-7715/7710 permission the user's smart account enforces on-chain. Every decision is recorded on a verified `RecommendationLedger` on the chain where the money moves — Celo for savings, Arbitrum for yield — with reasoning anchored to 0G Storage as tamper-proof evidence. LiveProofCard surfaces those receipts before wallet connect: proof-first, not splash-first. Each chain has an irreplaceable role — see [`rails.md`](./rails.md).
+3. **The philosophy/values system — the retention layer.** No other DeFi or fintech product builds cultural identity into the product. Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong — these are not risk-tolerance sliders; they are identity markers that drive retention and community. Protection plans target specific emerging-market inflation profiles, not generic "crypto yields." This is the reason someone stays when the yield is identical elsewhere. It shapes the allocation; it is not the pitch.
 
 4. **Expressive instrument UX.** A savings protection app, not a trading terminal: Home makes the stakes land, Shield makes the plan feel like yours, Exchange makes the choice tangible, and Guardian makes the agent present and accountable. Each tab keeps one manipulable object and one primary action; discovery invites, exploration responds, commitment settles. Simple shows Shield, Home, and Exchange; Full adds Guardian. A hand-off to Guardian promotes Simple to Full, and the mode control lives in Home’s settings.
 
@@ -228,9 +245,9 @@ tab or a noun. Tab labels have one source — `TAB_LABELS` in
 | **0G verifiability** | Evidence layer: Storage (reasoning CIDs) + Compute (TEE-verified inference) + Guardian-state snapshots on 0G Storage. 0G DA is **not** integrated — see `architecture.md`. 0G is not the ledger of record — it is the tamper-proof evidence layer that the ledgers reference. |
 | **Live data** | 11+ sources feed the Guardian's macro awareness: World Bank, FRED, CoinGecko, DeFiLlama, SynthData, BrightData, TinyFish Search, Firecrawl |
 | **Agent memory** | Opt-in, default Off: device-local facts or signature-verified cross-device facts with user-selected Tablestore/Cognee; no implicit transcript memory. |
-| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC savings ledger, chain 177 — contract live, see `rails.md` § Implementation status), Robinhood (RWA ledger, chain 4663 — env-gated), 0G (evidence/anchoring), Arc (x402 settlement rail, chain 5042 — env-gated) |
+| **Multi-chain** | Celo (EM savings ledger), Arbitrum (yield ledger), HashKey (APAC ledger **deployed and seeded** on chain 177 since 2026-07-10 — but the savings rail is not user-facing until `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set; see `architecture.md` § HashKey), Robinhood (RWA ledger, chain 4663 — env-gated), 0G (evidence/anchoring), Arc (x402 settlement rail, chain 5042 — env-gated) |
 | **Wallet** | User's own wallet (MetaMask/MiniPay/Farcaster-compatible) + Privy for login and embedded-wallet onboarding — Privy never executes |
-| **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Yield opportunities are reached through the current instrument/inspector surfaces, not a standalone yield-dashboard tab. See `docs/roadmap-log.md` § Yield Engine Strategy. |
+| **Best-yield engine** | Arbitrum yield is a dynamic engine, not a fixed menu: vaults.fyi per-wallet best-deposit recommendations across 1,000+ risk-rated vaults (paid, engagement-gated), **GMX GM-pool deposits — LIVE** (`GmxGmDepositStrategy`, validated with a real deposit on Arbitrum One, blue-chip pools only, slippage-protected), free LI.FI Earn + DefiLlama base. Yield opportunities are reached through the current instrument/inspector surfaces, not a standalone yield-dashboard tab. Dated implementation history: [Yield Engine Strategy](./history/roadmap-log.md#yield-engine-strategy-arbitrum--strategy--shipped-detail-2026-07-1112). |
 | **Voice** | Guardian voice output (ElevenLabs TTS) + voice input (ElevenLabs Scribe STT) — runs on ElevenLabs alone, no OpenAI. Live in prod. |
 | **Free web/news search** | TinyFish Search (web/news/research) feeds the Guardian region-specific context (FX news, central-bank moves) — free, replaces paid marketplace search. |
 | **Cost discipline** | Paid insights (e.g. vaults.fyi) are engagement-gated (`insight-tier.ts`): Free → Saver (≥$100 or 7-day streak) → Committed. Default-deny; free data open to all. |
@@ -283,7 +300,7 @@ Record consented observations, unexpected interpretations, hesitation points, an
 | Fee | Amount | When |
 |-----|--------|------|
 | Management / performance | Under review — presupposed a custodial vault that no longer exists | — |
-| Swap fee | None charged today | A disclosed, tiered fee is planned and goes live only after legal review — see [monetisation-plan.md](./monetisation-plan.md) |
+| Swap fee | None charged today | A disclosed, tiered fee is planned and goes live only after legal review — see [`plan.md`](./plan.md) § 2 |
 
 ## Target Users
 
@@ -296,13 +313,13 @@ People in emerging and APAC markets who:
 **North-star persona (funnel target):** the individual entrepreneur /
 importer / exporter whose "savings" are actually cyclical working capital
 — local-currency proceeds exposed between purchase cycles. They enter as
-retail savers and graduate their business. See [`strategy.md`](./strategy.md).
+retail savers and graduate their business. See [`archive/strategy-2026-07.md`](./archive/strategy-2026-07.md).
 
-**Regional execution:** EM savers route through Celo (local Mento stables). Global yield legs route through Arbitrum. APAC savers on Confucian or Gotong Royong plans route savings decisions to **HashKey Chain** (when deployed); until mainnet go-live, an honest banner explains that protection still runs on global chains today. See [`rails.md`](./rails.md).
+**Regional execution:** EM savers route through Celo (local Mento stables). Global yield legs route through Arbitrum. APAC savers on Confucian or Gotong Royong plans are where the **HashKey** rail is aimed: its ledger is already deployed and seeded on chain 177, but savings decisions do **not** route there yet — until `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set, an honest "APAC rail — coming soon" banner explains that protection still runs on global chains today. See [`architecture.md`](./architecture.md).
 
 ## Current Priorities
 
-See [`roadmap.md`](./roadmap.md) for active priorities (the 14-day quality plan is closed — detail in [`roadmap-log.md`](./roadmap-log.md)).
+See [`plan.md`](./plan.md) for active priorities (the 14-day quality plan is closed — detail in [`roadmap-log.md`](./history/roadmap-log.md)).
 
 ## Adaptive experience
 

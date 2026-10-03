@@ -1,18 +1,107 @@
-# Guardian
+# Guardian — the trust model
 
-## Guardian Execution Model
+> **The product's claim:** you set the rules, the Guardian operates inside them,
+> and every decision is explainable and verifiable. This doc is the evidence for
+> that sentence — what enforces it, what doesn't yet, and where the gap is.
+
+```
+data → deterministic risk calculation → constrained strategy → AI explanation
+     → your approval → on-chain execution
+```
+
+The AI is the interface, not the authority. Risk arithmetic, allocation bands,
+asset eligibility and spending caps are code; the model explains and narrows
+inside their results. Trust comes from the bounds and the receipt, never from
+"trust our AI with your money."
 
 **Status:** wallet-native. Savings never leave the user's wallet — there is no
 Safe creation, no deposit step, and no custodial account anywhere in the flow.
 The "vault" record in MongoDB is a Guardian profile (strategy, permission,
 journal, audit trail), not a fund-holding account.
 
-This doc is the single source of truth for *how the Guardian's spending bounds
-are actually enforced*.
+---
+
+## What bounds execution
+
+Four tiers, in the order a proposal meets them. Each row says where the bound
+actually lives, because "enforced" means something different in each one.
+
+| Tier | What it bounds | Enforced by | Status |
+|---|---|---|---|
+| **Consent** | Whether the Guardian may act at all | User-signed EIP-712 permission (`erc7715-service.ts`) stored on the `Permission` record | Live, every chain |
+| **App-layer gates** | Daily + total spend, trade size, chain eligibility, data provenance | `guardian-loop.ts` gates, `VaultService.validateSwap`, `usdDebitOfAmountIn()`; each covered by tests | Live, every chain |
+| **On-chain caveats** | Token, periodic amount, expiry — for autonomous (no-signature) moves | ERC-7715 grant redeemed by the session account on the **user's own smart account**; DelegationManager rejects out-of-caveat calls | Live on Celo 42220, Celo Sepolia 11142220, Arbitrum 42161 only |
+| **On-chain policy** | Anything beyond a spend grant (asset classes, venue allowlists, behaviour rules) | ERC-7710 account permissions | **Deferred.** Until it lands, the Guardian is *bounded*, not fully *constrained*, on the autonomy path |
+
+Consequences worth stating plainly:
+
+- **One-tap is the default everywhere.** A compromised server cannot move user
+  funds on this path — it can only surface a proposal. ADVISORY and COPILOT
+  tiers only ever get it.
+- **Outside the three eligible chains, autonomy fails closed** to a one-tap
+  proposal, and the decline is journaled rather than hidden.
+- **Revoke is two places, both surfaced:** `revokePermission` sets the Mongo
+  permission inactive; the on-chain grant lives in the user's own wallet
+  (MetaMask permission UI).
+- **Browser-submitted recommendations are force-stamped `manual_review`**
+  (`pages/api/vault/guardian-state.ts`) — a client cannot present its own text
+  as a Guardian decision.
+
+## Where the model still decides
+
+Four paths where the pipeline above is not yet the literal truth — the model's
+output reaches a decision or a user-facing number without a deterministic check
+behind it. Closing these is what turns the headline from directional to
+unqualified. Tracked as gating work in [`plan.md`](./plan.md).
+
+| Path | Today | Required |
+|---|---|---|
+| `services/guardian/guardian-recommendation.service.ts:55` | The model returns `action` / `targetToken` / `expectedSavings` as the decision; `buildFinalResult` only clamps numbers — no schema validation, no deterministic recomputation | Structured-output schema + deterministic floor: code picks token and chain within the strategy's bands, the model ranks and explains |
+| `packages/shared/src/services/agent-service.ts:287-318` | Under a spending limit, a model-chosen `SWAP` executes via `GuardianExecutionService.executeSwap` **without** `validateSwap` | Route every execution path through the same `validateSwap` choke point |
+| `pages/api/agent/deep-analyze.ts:106-107` | Model JSON returned verbatim as user-facing `advice`, including `confidence`, `riskLevel`, `expectedSavings` | Derive shown numbers deterministically; the model supplies prose only |
+| `pages/api/agent/firecrawl-webhook.ts:292` | `riskLevel` derived from the model's own confidence; the signal survives auto-execution only because it lacks `tradeAmountUSD` (an accident, not a gate) | Explicit source-class gate + risk level from curated materiality, not model self-report |
+
+The unification that fixes all four at once is drafted in
+`docs/internal/guardian-reasoning-service.md`, and its shape is the pipeline
+above: ONE reasoning domain — signals → deterministic synthesizer floor →
+optional AI rank/explain within the gates → pure `GatesEvaluator` → one artifact
++ one on-chain reasoning builder — in zero-behaviour-change phases with golden
+tests. The safety floor stays deterministic; AI never authorizes; the executor
+and its `VaultService.rebalance` choke point are untouched by the migration.
+
+## Standing check: claims vs. implementation
+
+**Why this exists as a rule.** Three separate instances of the same failure
+shape — docs or UI claiming more enforcement or verifiability than the code
+guarantees:
+
+1. 0G Storage described in docs as a "DA layer" when no 0G Data Availability SDK
+   integration exists (fixed 2026-09-20).
+2. `AnchorResult.status === 'anchored'` rendered as fully verified evidence when
+   the Storage upload could have silently failed first, leaving `evidenceCid: ''`
+   on a real on-chain tx (fixed 2026-09-20).
+3. "On-chain ERC-7715 enforcement" implied by old comments and docs when bounds
+   were enforced only in application code (self-caught; ERC-7710 redemption still
+   deferred, per the tier table above).
+
+Because verifiability *is* the differentiator, this gap is not generic tech
+debt — it undercuts the claim this doc exists to support. Run the check before
+any release or submission touching verifiability surfaces, and periodically
+otherwise: for every "verified" / "anchored" / "enforced" / "live" claim, trace
+the code path and ask whether it guarantees the claim or can degrade silently to
+something weaker.
+
+- Does a UI badge render identically for "fully backed" and "partially
+  degraded"? (the `evidenceUploaded` gap's shape)
+- Does a doc name a product or component the code never calls? (the 0G DA gap)
+- Does "mock fallback allowed" apply outside dev/CI in a real deploy path?
+- Largest remaining instance of this shape: ERC-7710 on-chain policy
+  ("Target flow" below) — the single biggest reason this doc says *bounded*,
+  not *constrained*.
 
 ---
 
-## TL;DR
+## Guardian Execution Model
 
 - **Two execution modes, one honest contract.**
   - **One-tap (default, every chain):** the Guardian proposes; the user taps
@@ -188,13 +277,10 @@ The autonomous-execution Guardian (this doc: `guardian-loop` + heartbeat +
 `Permission`/`GuardianState`/`VaultService`) and the advisory analysis stack
 (`packages/shared/src/services/guardian/*` — six-question recommendation
 contract, consumed by `agent-service.ts`, the Arc/x402 marketplace agent that
-pays for its own data) share a name but almost no code. The unification plan
-is drafted in `docs/internal/guardian-reasoning-service.md`: ONE reasoning domain
-(signals → deterministic synthesizer floor → optional AI rank/explain within
-the gates → pure `GatesEvaluator` → one artifact + one on-chain reasoning
-builder), executed in zero-behaviour-change phases with golden tests. The
-safety floor is deterministic; AI never authorizes; the executor and its
-`VaultService.rebalance` choke point are untouched by the migration.
+pays for its own data) share a name but almost no code. That duplication is the
+root cause of the four paths in "Where the model still decides" above: the
+execution side has deterministic gates, the analysis side does not yet. One
+domain, one set of gates — plan in `docs/internal/guardian-reasoning-service.md`.
 
 ---
 
@@ -203,7 +289,7 @@ safety floor is deterministic; AI never authorizes; the executor and its
 **Last review:** 2026-07-12 — three-agent review (API routes, secrets/config,
 on-chain money movement); the findings table, fixes, and the root-cause cure
 for the `best-yield` engagement-trust bug are in
-[`roadmap-log.md`](./roadmap-log.md) § Guardian security review. Headline:
+[`roadmap-log.md`](./history/roadmap-log.md) § Guardian security review. Headline:
 client-claimed engagement was replaced by server-derived on-chain balance
 (`engagement.service`), and every unauthenticated paid surface is rate-limited
 plus budget-broken.

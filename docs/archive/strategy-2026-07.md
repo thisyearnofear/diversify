@@ -1,6 +1,40 @@
-# SME FX Strategy — Importer/Exporter Working Capital & the Retail→Business Funnel
+# [Archived] SME FX Strategy — Importer/Exporter Working Capital & the Retail→Business Funnel
 
-**Status:** North-star direction, partially live. Payment-cycle report, wallet-authenticated cycle CRUD, monitoring proposals, recommendation queue, the landing-page FX calculator, and signal-detected adaptive tabs are shipped; the Importer `FinancialStrategy` archetype + graduation funnel are planned. Dated history: [`roadmap-log.md`](./roadmap-log.md).
+> **Archived 2026-10-03.** This was the SME FX north-star + market-research
+> document. Its live planning material moved to [`../plan.md`](../plan.md) § 5;
+> it is kept here for the market evidence and competitive gap, which have no
+> other home. **The evidence in §2 is dated 2026-07-11/19 and was never put on a
+> re-verification cycle** — Waza's figure is a 2024 TechCrunch number. Treat every
+> figure below as a dated claim, not a current fact, and do not quote it into a
+> surface or a deck without re-checking the source.
+>
+> **Claims in this file that were already stale when it was archived** — the
+> consolidated plan states these correctly, this file does not:
+> - §4 "the graduation signal detection and CTA are not yet implemented" — **they
+>   are live**: `lib/graduation-prompt.ts`, `hooks/use-graduation-signal.ts`,
+>   `pages/api/agent/business/graduation-signals.ts`, rendered in
+>   `ConnectedOverview.tsx`. What is pending is funnel *measurement*, not the prompt.
+> - "the landing-page FX calculator (§4.2 below)" — there is no §4.2; the
+>   calculator lives in Shield's empty-wallet inspector, with `/fx-drag-calculator`
+>   as a doorway. There is no Learn tab.
+> - `ProtectionScorecard` listed as a shipped surface elsewhere in this file is
+>   **retired** (design-language §5 rail 7 — the persona morphs the object).
+> - "the HashKey Chain APAC rail already serves this corridor" / "live on-chain" /
+>   "already proven on HashKey" — the **ledger** is deployed and seeded on chain 177
+>   (rec #1; FX Protection Insight #25, tx with block number, reads verified), but
+>   the APAC savings rail is **not user-facing** until
+>   `NEXT_PUBLIC_HASHKEY_LEDGER_CONTRACT` is set, and the HSP settlement path was
+>   never exercised against a live Coordinator (blocked on Coordinator KYC). The
+>   paid loop is code-complete, not live. The HashKey Horizon grant track is closed.
+> - "Track 1d" enterprise numbering — that label is gone; the corresponding work is
+>   the enterprise B2B gateway, also now closed without a licensing customer.
+> - `caribbean-strategy.md` (referenced in §6) no longer exists; Caribbean material
+>   is in [`submissions/`](./submissions/).
+> - Phase header says "In progress (2026-07-14)" but carries a 2026-09-11 entry, and
+>   two Phase 0 rows (the `FinancialStrategy` audit, the fake-demo deletion) were
+>   never marked complete.
+
+**Status:** North-star direction, partially live. Payment-cycle report, wallet-authenticated cycle CRUD, monitoring proposals, recommendation queue, and signal-detected adaptive tabs are shipped; the Importer `FinancialStrategy` archetype is planned. Dated history: [`roadmap-log.md`](../history/roadmap-log.md).
 **Purpose:** Capture the strategic direction that emerged from a real user
 conversation — a Ghanaian importer who buys in USD abroad (China, US, UK)
 and sells locally in cedis — plus the market research, competitive gap,
@@ -9,7 +43,7 @@ Ghanaian importer is the wedge — the most extreme, clearest case — but
 the problem is universal: any business with a currency mismatch between
 revenue and costs faces the same working-capital risk.
 
-> **Adaptive experience:** The SME FX layer is delivered through an adaptive experience architecture — the same backend serves all personas; the frontend is a configuration that changes based on signals (geo, wallet, behavior). The landing page calculator (§4.2 below) is Phase 0; signal detection + adaptive tab labels (Phase 1) are wired into the app shell. Design doc: [`internal/adaptive-experience.md`](./internal/adaptive-experience.md); product summary: [`product.md`](./product.md) § Adaptive experience.
+> **Adaptive experience:** The SME FX layer is delivered through an adaptive experience architecture — the same backend serves all personas; the frontend is a configuration that changes based on signals (geo, wallet, behavior). The landing page calculator (§4.2 below) is Phase 0; signal detection + adaptive tab labels (Phase 1) are wired into the app shell. Design doc: [`internal/adaptive-experience.md`](../internal/adaptive-experience.md); product summary: [`product.md`](../product.md) § Adaptive experience.
 
 ---
 
@@ -620,7 +654,7 @@ Protection Insight** — a per-cycle FX drag report ("this cycle, protection
 preserved ₵X vs holding cedis") computed from real historical mid-market
 rates. The resulting recommendation anchors on the importer's
 **region-canonical** `RecommendationLedger` — the audit trail "follows the
-money" per [`rails.md`](./rails.md): an **APAC** importer's record
+money" per [`rails.md`](../architecture.md): an **APAC** importer's record
 lands on HashKey (payment *and* proof on one chain), an **African** importer's
 on Celo, otherwise Arbitrum. Either way the HSP settlement tx on HashKey is
 recorded as the cross-chain settlement reference — the accountant-usable audit
@@ -791,6 +825,6 @@ repo guide was wrong for the real chain and has been corrected.)
 
 ### Related docs
 
-- [`strategy.md`](./strategy.md) — the north-star direction this proves out (§8 sequencing, step 3)
-- [`rails.md`](./rails.md) — the HashKey `RecommendationLedger` this anchors to
-- [`integrations.md`](./integrations.md) — the canonical settlement-rail env var table
+- [`strategy.md`](./strategy-2026-07.md) — the north-star direction this proves out (§8 sequencing, step 3)
+- [`rails.md`](../architecture.md) — the HashKey `RecommendationLedger` this anchors to
+- [`integrations.md`](../reference.md) — the canonical settlement-rail env var table

@@ -27,7 +27,7 @@ pnpm dev                     # http://localhost:3042
 | `NEXT_PUBLIC_PRIVY_APP_ID` | Privy app (social login + smart accounts) |
 | `PRIVY_APP_SECRET` | Privy server SDK |
 
-Everything else (AI providers, feeds, ledgers, x402) is optional per feature — see [`docs/integrations.md`](./docs/integrations.md) and [`docs/README.md`](./docs/README.md) § Getting Started.
+Everything else (AI providers, feeds, ledgers, x402) is optional per feature — see [`docs/reference.md`](./docs/reference.md) and [`docs/README.md`](./docs/README.md) § Getting Started.
 
 ## Commands
 
