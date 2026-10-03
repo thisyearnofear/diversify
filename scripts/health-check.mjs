@@ -83,7 +83,10 @@ export function evaluateHealth({ status, agentStatus, routesOk, routesOutput, ma
       return action.startsWith('MACRO_SIGNAL') && action !== 'MACRO_SIGNAL:REHEARSAL';
     });
     if (macroRows.length === 0) {
-      warnings.push('warn: feed holds no MACRO_SIGNAL rows — beats engine still has no data source');
+      const observations = (macroFeed.recent ?? []).some((r) => r.action === 'MACRO_OBSERVATION');
+      warnings.push(observations
+        ? 'warn: observations recorded; no verified MACRO_SIGNAL rows (observation-only policy)'
+        : 'warn: feed holds no MACRO_SIGNAL rows — no verified market signals; inspect webhook receipts for ingestion health');
     }
   }
 

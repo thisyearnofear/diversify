@@ -108,13 +108,13 @@ async function verifyFeed(chainId?: number): Promise<'echoed' | 'hash-only' | 'n
   }
   const body: any = await res.json();
   const rows: FeedRow[] = (body.recent ?? []).filter((r: FeedRow) =>
-    String(r.action || '').startsWith('MACRO_SIGNAL'),
+    String(r.action || '').startsWith('MACRO_SIGNAL') || r.action === 'MACRO_OBSERVATION',
   );
   if (rows.length === 0) {
-    console.log('  · no MACRO_SIGNAL rows in the feed yet (anchors may still be confirming)');
+    console.log('  · no macro observation or rehearsal rows yet (anchors may still be confirming)');
     return 'no-rows';
   }
-  const printRow = (row: FeedRow, kind: 'rehearsal' | 'macro'): boolean => {
+  const printRow = (row: FeedRow, kind: 'rehearsal' | 'macro' | 'observation'): boolean => {
     const when = row.timestamp ? new Date(row.timestamp * 1000).toISOString() : 'unknown time';
     if (row.reasoning) {
       console.log(`  ✓ #${row.id} [chain ${row.chainId}] ${row.targetToken} ${when}  (${kind})`);
@@ -130,7 +130,7 @@ async function verifyFeed(chainId?: number): Promise<'echoed' | 'hash-only' | 'n
   };
   const macroRows = rows.filter((r) => r.action !== 'MACRO_SIGNAL:REHEARSAL');
   const rehearsalRows = rows.filter((r) => r.action === 'MACRO_SIGNAL:REHEARSAL');
-  for (const row of macroRows) printRow(row, 'macro');
+  for (const row of macroRows) printRow(row, row.action === 'MACRO_OBSERVATION' ? 'observation' : 'macro');
   let rehearsalEchoed = 0;
   for (const row of rehearsalRows) if (printRow(row, 'rehearsal')) rehearsalEchoed++;
   return rehearsalEchoed > 0 || macroRows.some((r) => r.reasoning) ? 'echoed' : 'hash-only';
@@ -144,7 +144,7 @@ async function main(): Promise<void> {
     console.log('\nFeed check only:');
     const state = await verifyFeed();
     if (state === 'echoed') {
-      console.log('\nReadable beats are available — the echo path is working.');
+      console.log('\nReadable ledger echoes are available; observations are not verified market beats.');
       return;
     }
     console.log(
@@ -161,8 +161,8 @@ async function main(): Promise<void> {
     console.log('\nPayload (dry — pass --send to POST it):');
     console.log(JSON.stringify(payload(), null, 2));
     console.log(
-      '\nWhat --send would do: the webhook analyses this with the live model, and if it\n' +
-        'judges it actionable (confidence ≥ 0.6) it anchors a MACRO_SIGNAL:REHEARSAL\n' +
+      '\nWhat --send would do: record a code-owned observation, with an optional\n' +
+        'shadow assessment. It anchors a MACRO_SIGNAL:REHEARSAL\n' +
         'record on-chain with a forced "[Rehearsal]" echo — no intents queued, no\n' +
         'memory written. Local targets are safe to repeat; a remote target writes\n' +
         'to the production ledger.',
@@ -173,8 +173,8 @@ async function main(): Promise<void> {
   if (!isLocalTarget(BASE_URL) && !ALLOW_REMOTE) {
     console.error(
       `\nRefusing to rehearse against ${BASE_URL}.\n` +
-        'A remote run queues no intents and writes no memory, but if the model\n' +
-        'judges it actionable it still anchors one permanent on-chain record\n' +
+        'A remote run queues no intents and writes no memory, but it still\n' +
+        'anchors one permanent on-chain observation record\n' +
         '(MACRO_SIGNAL:REHEARSAL with a forced "[Rehearsal]" echo). If that is\n' +
         'genuinely what you want (demo window, feed verification), re-run with\n' +
         '--allow-remote.',
@@ -220,7 +220,7 @@ async function main(): Promise<void> {
     );
     return;
   }
-  if (body.action !== 'signal_propagated' && body.action !== 'rehearsal_propagated') {
+  if (body.action !== 'observation_recorded' && body.action !== 'rehearsal_recorded' && body.action !== 'signal_recorded') {
     console.error(`   ✗ unexpected action. Response: ${JSON.stringify(body).slice(0, 400)}`);
     process.exit(1);
   }
@@ -228,10 +228,10 @@ async function main(): Promise<void> {
   console.log(`2) analysis — signal=${body.signal} confidence=${body.confidence} target=${body.targetToken}`);
   if (body.rehearsal) {
     console.log(
-      `3) fan-out  — rehearsal: ${body.usersWouldUpdate ?? 0} user(s) would be updated, ${body.usersSkipped} skipped — nothing queued`,
+      '3) policy   — rehearsal observation only; no recommendations or eligible users',
     );
   } else {
-    console.log(`3) fan-out  — ${body.usersUpdated} user(s) updated, ${body.usersSkipped} skipped`);
+    console.log('3) policy   — materiality unverified; no portfolio recommendations queued');
   }
 
   const anchor = body.anchor ?? {};

@@ -9,9 +9,9 @@
  * Flow:
  *   1. Firecrawl detects content change on watched URL
  *   2. Fires webhook here with change summary + markdown diff
- *   3. We run a quick AI analysis to extract actionable signals
- *   4. If signal is strong → update guardian-state for affected users
- *   5. Next guardian-loop tick picks it up and auto-executes
+ *   3. Curated source policy admits only known source URLs
+ *   4. Optional model commentary remains non-authoritative telemetry
+ *   5. Record a source observation; never queue portfolio recommendations
  *
  * Watched Sources (configured via setup script):
  *   - ECB/Fed interest rate pages
@@ -21,13 +21,12 @@
 
 import { createHash } from 'node:crypto';
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateChatCompletion } from '@diversifi/shared/src/services/ai/ai-service';
 import { recommendationLedgerService } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import { assessMacroSignalWithTypeSafe } from '@diversifi/shared/src/services/typesafe-signal-lens.service';
 import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
-import { enqueueRecommendation } from '@/lib/vault/guardian-state';
+import { macroSourcePolicy } from '@diversifi/shared/src/services/guardian/macro-source-policy';
+import { readStablecoinMeasurements, type VerifiedMacroMeasurement } from '@diversifi/shared/src/services/guardian/verified-macro-measurement';
 import { loadGatewayEvaluate } from '@/lib/agent/load-gateway-evaluate';
-import { guardianEventBus } from '@/lib/agent/guardian-event-bus';
 import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
 import { recordMacroReceipt } from '@/lib/macro-signal-receipt';
 import {
@@ -36,16 +35,11 @@ import {
   REHEARSAL_SIGNAL_ACTION,
 } from '@/lib/macro-rehearsal';
 import { GUARDIAN_AGENT_ADDRESS } from '../../../constants/guardian-identity';
-import { Permission } from '../../../models/Permission';
-import { Vault } from '../../../models/Vault';
 import { TypeSafeSignalReview } from '../../../models/TypeSafeSignalReview';
 import dbConnect from '../../../lib/mongodb';
 
-// Webhook secret is mandatory in production: this endpoint fans a signal into
-// every active user's guardian-state, which the autonomous loop then acts on.
-// An unauthenticated caller could therefore inject a rebalance intent for all
-// users, so we refuse to boot without a secret rather than silently accepting
-// any caller (the old `|| ''` behaviour skipped the check when unset).
+// Authentication is mandatory in production: even observation-only ingestion
+// spends provider resources and writes permanent ledger records.
 const FIRECRAWL_WEBHOOK_SECRET = (() => {
   const secret = process.env.FIRECRAWL_WEBHOOK_SECRET;
   if (secret && secret.length > 0) return secret;
@@ -87,6 +81,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   const payload = req.body as FirecrawlWebhookPayload;
+  if (!payload || typeof payload !== 'object' || !payload.data || typeof payload.data !== 'object') {
+    return res.status(400).json({ error: 'Invalid webhook payload' });
+  }
   // A rehearsal declares itself (`metadata.rehearsal` or the marker URL host);
   // the flag never comes from the model, which can drop a textual label.
   const isRehearsal = isRehearsalPayload(payload.data);
@@ -108,18 +105,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ acknowledged: true, action: 'ignored', reason: 'non-page event' });
   }
 
-  const { url, markdown, changeDetected, diff, summary } = payload.data || {};
+  const { url, markdown, changeDetected, diff, summary } = payload.data;
+  if ([url, markdown, diff, summary].some((value) => value !== undefined && typeof value !== 'string') ||
+      (changeDetected !== undefined && typeof changeDetected !== 'boolean')) {
+    mark('invalid_content');
+    return res.status(400).json({ error: 'Invalid webhook content fields' });
+  }
 
   if (!changeDetected && !diff && !summary) {
     mark('no_change');
     return res.status(200).json({ acknowledged: true, action: 'no_change' });
   }
 
-  // Extract the signal from the page change using AI
-  const changeContent = summary || diff || markdown?.slice(0, 2000) || '';
+  // Minimized input for optional shadow telemetry; never a trading signal.
+  const changeContent = (summary || diff || markdown || '').slice(0, 2000);
   if (!changeContent) {
     mark('empty_content');
     return res.status(200).json({ acknowledged: true, action: 'empty_content' });
+  }
+
+  const policy = macroSourcePolicy(url);
+  if (!policy && !isRehearsal) {
+    mark('source_rejected');
+    return res.status(200).json({ acknowledged: true, action: 'source_rejected', usersUpdated: 0 });
   }
 
   try {
@@ -134,45 +142,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       // Lazy injection: 'ai' is loaded only when the Gateway path actually
       // runs (key configured + enabled), keeping it off cold requests.
       evaluateGateway: async (request) => (await loadGatewayEvaluate())(request),
+    }).catch((error: unknown) => {
+      console.warn('[firecrawl-webhook] Shadow assessment unavailable:', error);
+      return null;
     });
 
-    const analysis = await generateChatCompletion({
-      messages: [
-        {
-          role: 'system',
-          content: `You are a macro signal detector for an autonomous financial agent. Analyze the following web page change and determine if it contains an actionable signal for portfolio rebalancing.
-
-Respond in JSON:
-{
-  "actionable": true/false,
-  "signal": "rate_hike" | "rate_cut" | "yield_change" | "depeg_risk" | "inflation_shift" | "none",
-  "confidence": 0.0-1.0,
-  "targetToken": "cEUR" | "cREAL" | "KESm" | "cUSD" | "USDY" | "PAXG" | null,
-  "oneLiner": "Brief summary of the signal",
-  "reasoning": "Why this matters for portfolio allocation"
-}
-
-targetToken is the token savers should shift TOWARD given this signal (or the token most directly affected). If the signal concerns a currency or asset none of the listed tokens tracks — e.g. a Caribbean currency — return null. NEVER pick the closest token as a substitute.
-
-Only set actionable=true if the change clearly implies a portfolio action. Be conservative.`,
-        },
-        {
-          role: 'user',
-          content: `URL: ${url || 'unknown'}\n\nChange detected:\n${changeContent}`,
-        },
-      ],
-      temperature: 0.3,
-      maxTokens: 300,
-      responseFormat: { type: 'json_object' },
-    });
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(analysis.data || analysis.content || '{}');
-    } catch {
-      mark('parse_failed');
-      return res.status(200).json({ acknowledged: true, action: 'parse_failed' });
-    }
+    // No primary model call: page-change receipt is a code-owned observation.
+    // Optional shadow assessments cannot choose targets or authorize fan-out.
+    const parsed = { signal: 'observation', confidence: 0, actionable: false };
 
     // Shadow telemetry is intentionally detached from the primary path: the
     // optional vendor must neither delay macro-signal propagation nor influence
@@ -214,91 +191,6 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       console.warn('[firecrawl-webhook] Could not record Signal Lens telemetry:', error),
     );
 
-    if (!parsed.actionable || parsed.confidence < 0.6) {
-      mark('not_actionable', { signal: parsed.signal });
-      return res.status(200).json({
-        acknowledged: true,
-        action: 'not_actionable',
-        signal: parsed.signal,
-        confidence: parsed.confidence,
-        signalLens: { status: 'shadow_started' },
-      });
-    }
-
-    // Signal is actionable — propagate it ONLY to users it is relevant to.
-    // A macro signal is a cUSD → targetToken rebalance intent, so a user is
-    // relevant only if BOTH:
-    //   1. the targetToken is permitted by their signed permission, and
-    //   2. their vault actually holds the source funding token (cUSD) to swap.
-    // Without this gate the webhook fans an identical recommendation into
-    // every active user's guardian-state (e.g. a cEUR intent pushed onto a
-    // user who forbids cEUR or has no cUSD to spend), which the autonomous
-    // loop would then try to act on.
-    await dbConnect();
-    const now = Math.floor(Date.now() / 1000);
-    const activePermissions = await Permission.find({
-      status: 'active',
-      $or: [{ expiresAt: { $gt: now } }, { expiresAt: 0 }],
-    }).lean();
-
-    // No target token = the signal concerns a currency we can't hedge
-    // (e.g. a Caribbean fiat). Anchor it as an event, but never map it to
-    // a default token — fan-out and beats would misattribute it.
-    const targetToken = parsed.targetToken || null;
-    const targetTokenLc = targetToken?.toLowerCase() ?? null;
-
-    let usersUpdated = 0;
-    let usersWouldUpdate = 0;
-    const skipped: Array<{ userAddress: string; reason: string }> = [];
-
-    for (const perm of targetTokenLc ? activePermissions : []) {
-      // (1) Permission must allow the destination token.
-      const allowedTokens = (perm.allowedTokens || []).map((t: string) => t.toLowerCase());
-      const tokenAllowed = allowedTokens.length === 0
-        ? false // no allowlist configured → nothing is permitted, skip rather than guess
-        : allowedTokens.includes('*') || allowedTokens.includes(targetTokenLc);
-      if (!tokenAllowed) {
-        skipped.push({ userAddress: perm.userAddress, reason: `${targetToken} not permitted` });
-        continue;
-      }
-
-      // (2) Vault must hold the cUSD funding token to swap from. No funds →
-      // the signal is irrelevant to this user, so don't queue it.
-      const vault = await Vault.findOne({ userAddress: perm.userAddress }).lean();
-      const cusdAllocation = (vault?.allocations || []).find(
-        (a: { token?: string; valueUSD?: number }) => a.token?.toLowerCase() === 'cusd',
-      );
-      if (!cusdAllocation || (cusdAllocation.valueUSD ?? 0) <= 0) {
-        skipped.push({ userAddress: perm.userAddress, reason: 'no cUSD balance to rebalance' });
-        continue;
-      }
-
-      // A rehearsal walks the same eligibility path but fans out nothing —
-      // no queued intents, no event-bus publication, no memory writes.
-      if (isRehearsal) {
-        usersWouldUpdate++;
-        continue;
-      }
-
-      const capturedAt = new Date().toISOString();
-      await enqueueRecommendation(perm.userAddress, {
-        capturedAt,
-        source: 'firecrawl-webhook',
-        action: 'REBALANCE',
-        targetToken: targetToken!, // loop only runs when targetToken is set
-        oneLiner: parsed.oneLiner || 'Macro signal detected from monitored source',
-        reasoning: parsed.reasoning || `Signal: ${parsed.signal}. Source: ${url}`,
-        confidence: parsed.confidence,
-        riskLevel: parsed.confidence > 0.8 ? 'LOW' : 'MEDIUM',
-        executionEligibility: 'guardian_eligible',
-      });
-      guardianEventBus.publish({
-        type: 'recommendation',
-        address: perm.userAddress,
-        capturedAt,
-      });
-      usersUpdated++;
-    }
 
     // Anchor signal to 0G RecommendationLedger on-chain (verifiable evidence trail).
     // Awaited and surfaced in the response so the caller can see whether
@@ -306,12 +198,28 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     // Rehearsals anchor under their own action so readers filter by action
     // rather than whether the model kept the rehearsal label; the echo's
     // readable line is forced server-side for the same reason.
+    let measurements: VerifiedMacroMeasurement[] = [];
+    let measurementStatus: 'not_supported' | 'available' | 'unavailable' = 'not_supported';
+    if (!isRehearsal && policy?.sourceUrl === 'https://www.coingecko.com/en/categories/stablecoins') {
+      try {
+        measurements = await readStablecoinMeasurements();
+        measurementStatus = 'available';
+      } catch (error) {
+        measurementStatus = 'unavailable';
+        console.warn('[firecrawl-webhook] Independent measurement unavailable:', error);
+      }
+    }
+    const materialMeasurement = measurements.filter((m) => m.material)
+      .sort((a, b) => b.deviationPercent - a.deviationPercent || a.token.localeCompare(b.token))[0];
+    const measuredSignal = Boolean(materialMeasurement);
     const anchorAction = isRehearsal
       ? REHEARSAL_SIGNAL_ACTION
-      : `MACRO_SIGNAL:${parsed.signal?.toUpperCase() || 'UNKNOWN'}`;
-    const anchorReasoning = isRehearsal
-      ? `${REHEARSAL_LABEL} ${parsed.oneLiner}. Source: ${url}`
-      : `${parsed.oneLiner}. Source: ${url}`;
+      : measuredSignal ? 'MACRO_SIGNAL:PRICE_DEVIATION' : 'MACRO_OBSERVATION';
+    const targetToken = materialMeasurement?.token ?? 'NONE';
+    const observation = materialMeasurement
+      ? `${materialMeasurement.token} traded at $${materialMeasurement.value.toFixed(6)} on ${materialMeasurement.observedAt}; ${materialMeasurement.deviationPercent.toFixed(2)}% from its $1 reference, above the ${materialMeasurement.thresholdPercent}% review threshold. Price observation, not a solvency finding or trade instruction. Source: ${materialMeasurement.sourceUrl}`
+      : `Monitored page change received. Materiality is unverified; no portfolio action selected. Source: ${policy?.sourceUrl ?? url}`;
+    const anchorReasoning = isRehearsal ? `${REHEARSAL_LABEL} ${observation}` : observation;
     const anchor = await recommendationLedgerService.recordRecommendation({
       // System-level signal — anchored under the Guardian's identity. The
       // contract reverts on address(0) (ZeroAddress guard), which is why
@@ -321,11 +229,11 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
       // 'NONE' keeps an untracked-currency signal honest: the record
       // anchors, but no corridor side can claim it (corridorSideFor('NONE')
       // is empty) and no permission can match it.
-      targetToken: targetToken ?? 'NONE',
+      targetToken,
       reasoning: anchorReasoning,
       evidenceCid: '', // Could store full page content in 0G Storage
       servingModel: 'firecrawl-monitor',
-      confidence: Math.round((parsed.confidence || 0) * 10000),
+      confidence: 0,
     });
 
     // The chain stores only the reasoning hash — echo the readable line
@@ -339,7 +247,7 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
         recordId: anchor.status === 'anchored' ? anchor.id : undefined,
         txHash: anchor.txHash,
         action: anchorAction,
-        targetToken: targetToken ?? 'NONE',
+        targetToken,
         reasoning: anchorReasoning,
       });
     }
@@ -347,20 +255,26 @@ Only set actionable=true if the change clearly implies a portfolio action. Be co
     // No memory write: Guardian memory is opt-in and user-scoped — a
     // system signal has no business shaping anyone's advice.
 
-    mark(isRehearsal ? 'rehearsal_propagated' : 'signal_propagated', {
+    mark(isRehearsal ? 'rehearsal_recorded' : measuredSignal ? 'signal_recorded' : 'observation_recorded', {
       signal: parsed.signal,
       anchorStatus: anchor.status,
     });
     return res.status(200).json({
       acknowledged: true,
-      action: isRehearsal ? 'rehearsal_propagated' : 'signal_propagated',
+      action: isRehearsal ? 'rehearsal_recorded' : measuredSignal ? 'signal_recorded' : 'observation_recorded',
       ...(isRehearsal ? { rehearsal: true } : {}),
       signal: parsed.signal,
       confidence: parsed.confidence,
-      targetToken,
-      usersUpdated,
-      usersWouldUpdate,
-      usersSkipped: skipped.length,
+      targetToken: materialMeasurement?.token ?? null,
+      measurements,
+      measurementStatus,
+      usersUpdated: 0,
+      usersWouldUpdate: 0,
+      usersSkipped: 0,
+      sourceClass: policy?.sourceClass ?? 'rehearsal',
+      materiality: measuredSignal ? 'measured_price_deviation' : 'unverified',
+      riskLevel: 'UNKNOWN',
+      executionEligibility: 'observation_only',
       signalLens: { status: 'shadow_started' },
       anchor: {
         status: anchor.status,

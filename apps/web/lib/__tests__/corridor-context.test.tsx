@@ -383,6 +383,15 @@ describe('corridorSignalsFor — fresh dated beats from the anchored ledger', ()
     expect(out.to?.dateLabel).toMatch(/^[A-Z][a-z]{2} \d{1,2}$/);
   });
 
+  it('does not promote an unverified page observation into a market signal', () => {
+    const out = corridorSignalsFor(
+      [signal('cEUR', 'Unverified page update', 0, 'MACRO_OBSERVATION')],
+      'EURm', 'USDm', NOW,
+    );
+    expect(out.from).toBeNull();
+    expect(out.to).toBeNull();
+  });
+
   it('skips MACRO_SIGNAL:REHEARSAL by action even when the text reads clean', () => {
     const out = corridorSignalsFor(
       [

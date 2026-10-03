@@ -27,11 +27,11 @@ export interface IMacroSignalReceipt extends Document {
   lastMonitorId?: string;
   lastUrl?: string;
   /** Terminal action the handler returned: 'ignored' | 'no_change' |
-   *  'empty_content' | 'parse_failed' | 'not_actionable' |
-   *  'signal_propagated' | 'error'. */
+   *  'empty_content' | 'source_rejected' | 'observation_recorded' |
+   *  'rehearsal_recorded' | 'error'. */
   lastOutcome?: string;
   lastSignal?: string;
-  /** Anchor result on the last signal_propagated call. */
+  /** Anchor result on the last recorded observation or rehearsal. */
   lastAnchorStatus?: 'pending' | 'anchored' | 'failed';
 }
 

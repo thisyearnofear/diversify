@@ -81,7 +81,7 @@ describe('health-check evaluateHealth', () => {
 
   const okMacro = {
     configured: true, receivedCount: 3, lastReceivedAgeDays: 2,
-    lastOutcome: 'signal_propagated', lastAnchorStatus: 'pending',
+    lastOutcome: 'observation_recorded', lastAnchorStatus: 'pending',
   };
   const okFeed = { recent: [{ action: 'MACRO_SIGNAL:RATE_CUT', reasoning: 'x', timestamp: 1 }] };
 
@@ -104,6 +104,16 @@ describe('health-check evaluateHealth', () => {
     const res2 = evaluateHealth({ status: okStatus, agentStatus: old, routesOk: true, routesOutput: '', macroFeed: okFeed });
     expect(res2.problems).toEqual([]);
     expect(res2.warnings.join('\n')).toContain('45d ago');
+  });
+
+  it('distinguishes healthy observation ingestion from verified market signals', () => {
+    const { problems, warnings } = evaluateHealth({
+      status: okStatus, agentStatus: { ...okAgent, macroSignal: okMacro },
+      routesOk: true, routesOutput: '',
+      macroFeed: { recent: [{ action: 'MACRO_OBSERVATION' }] },
+    });
+    expect(problems).toEqual([]);
+    expect(warnings.join('\n')).toContain('observations recorded; no verified MACRO_SIGNAL');
   });
 
   it('rehearsal rows do not satisfy the macro silence check', () => {
