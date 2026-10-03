@@ -6,6 +6,8 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   evaluateFreshness,
   parseCurrencyRisk,
@@ -96,6 +98,41 @@ describe('check-data-freshness evaluateFreshness', () => {
 });
 
 describe('check-data-freshness parseCurrencyRisk', () => {
+  const fixture = (quote: string) => [
+    `export const CURRENCY_RISK_DATA_AS_OF = ${quote}2026-09-26${quote};`,
+    `const data = [`,
+    `  {`,
+    `    code: ${quote}GHS${quote},`,
+    `    vsUSD: { ${quote}1yr${quote}: -5 },`,
+    `    riskEvents: [],`,
+    `  },`,
+    `];`,
+  ].join('\n');
+
+  it.each(["'", '"'])('accepts %s quotes and preserves the dataset-date fallback', (quote) => {
+    expect(parseCurrencyRisk(fixture(quote))).toEqual({
+      datasetAsOf: '2026-09-26',
+      entries: [{ code: 'GHS', usd1yr: -5, checkedAt: '2026-09-26' }],
+    });
+  });
+
+  it('parses the real dataset rather than only a hand-written fixture', () => {
+    const source = readFileSync(resolve(process.cwd(), 'apps/web/constants/currency-risk.ts'), 'utf8');
+    const parsed = parseCurrencyRisk(source);
+    const codes = [...source.matchAll(/^\s+code:\s*['"]([A-Z]+)['"]/gm)].map((match) => match[1]);
+    expect(parsed.entries.map((entry) => entry.code)).toEqual(codes);
+    expect(parsed.entries.length).toBeGreaterThan(0);
+    expect(parsed.datasetAsOf).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(parsed.entries.every((entry) => Number.isFinite(entry.usd1yr) && Boolean(entry.checkedAt))).toBe(true);
+  });
+
+  it('rejects missing metadata, empty entries, and unreadable rates', () => {
+    expect(() => parseCurrencyRisk(fixture('"').replace('2026-09-26', 'invalid'))).toThrow(/review date/);
+    expect(() => parseCurrencyRisk('const data = [];')).toThrow(/review date/);
+    expect(() => parseCurrencyRisk(`const CURRENCY_RISK_DATA_AS_OF = "2026-09-26";`)).toThrow(/entries/);
+    expect(() => parseCurrencyRisk(fixture('"').replace(': -5', ': undefined'))).toThrow(/readings/);
+  });
+
   it('reads codes, 1yr figures, and effective trail checked dates', () => {
     const src = [
       `export const CURRENCY_RISK_DATA_AS_OF = '2025-07-01';`,

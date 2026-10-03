@@ -38,15 +38,21 @@ const FETCH_TIMEOUT_MS = 30_000;
  *  inside an entry belong to its riskEvents. */
 export function parseCurrencyRisk(src) {
   const datasetAsOf =
-    src.match(/CURRENCY_RISK_DATA_AS_OF\s*=\s*'([0-9]{4}-[0-9]{2}-[0-9]{2})'/)?.[1] ?? null;
-  const chunks = src.split(/\n\s*\{\s*\n\s*code:\s*'/);
+    src.match(/CURRENCY_RISK_DATA_AS_OF\s*=\s*['"]([0-9]{4}-[0-9]{2}-[0-9]{2})['"]/)?.[1] ?? null;
+  const chunks = src.split(/\n\s*\{\s*\n\s*code:\s*['"]/);
   const entries = [];
   for (const chunk of chunks.slice(1)) {
     const code = chunk.match(/^([A-Z]+)/)?.[1];
-    const usd1yr = Number(chunk.match(/vsUSD:\s*\{\s*'1yr':\s*(-?[\d.]+)/)?.[1]);
-    const asOfs = [...chunk.matchAll(/asOf:\s*'([0-9]{4}-[0-9]{2}-[0-9]{2})'/g)].map((m) => m[1]);
+    const usd1yr = Number(chunk.match(/vsUSD:\s*\{\s*['"]1yr['"]:\s*(-?[\d.]+)/)?.[1]);
+    const asOfs = [...chunk.matchAll(/asOf:\s*['"]([0-9]{4}-[0-9]{2}-[0-9]{2})['"]/g)].map((m) => m[1]);
     const checkedAt = asOfs.reduce((latest, d) => (d > latest ? d : latest), datasetAsOf ?? '');
     if (code) entries.push({ code, usd1yr, checkedAt });
+  }
+  if (!datasetAsOf || Number.isNaN(Date.parse(`${datasetAsOf}T00:00:00Z`))) {
+    throw new Error('Currency risk dataset review date is missing or invalid');
+  }
+  if (!entries.length || entries.some((e) => !Number.isFinite(e.usd1yr))) {
+    throw new Error('Currency risk dataset entries or 1yr readings are unreadable');
   }
   return { datasetAsOf, entries };
 }
