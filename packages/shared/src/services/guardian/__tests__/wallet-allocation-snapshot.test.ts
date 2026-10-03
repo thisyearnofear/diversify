@@ -48,4 +48,21 @@ describe('server allocation evidence', () => {
       expect(result.errors.length).toBeGreaterThan(0);
     },
   );
+  it('names the cause and drops holdings on the failed chain', async () => {
+    const spam = await readAllocationSnapshot(address, readers('unknown'), now);
+    expect(spam.errors.join()).toContain('Unrecognized positive ERC-20 holding');
+    expect(spam.holdings.filter((h) => h.chainId === 42220)).toHaveLength(0);
+    const stale = await readAllocationSnapshot(address, readers('stale-price'), now);
+    expect(stale.errors.join()).toContain('Missing or stale price for USDm');
+    expect(stale.holdings).toHaveLength(0);
+  });
+  it('does not treat a zero-balance unknown token as spam', async () => {
+    const deps = readers();
+    const base = deps.fetcher;
+    deps.fetcher = vi.fn(async (url, init) => String(url).includes('blockscout')
+      ? new Response(JSON.stringify([{ value: '0', token: { type: 'ERC-20', address_hash: `0x${'2'.repeat(40)}`, symbol: 'SPAM' } }]))
+      : base(url, init)) as typeof fetch;
+    const result = await readAllocationSnapshot(address, deps, now);
+    expect(result.complete).toBe(true);
+  });
 });

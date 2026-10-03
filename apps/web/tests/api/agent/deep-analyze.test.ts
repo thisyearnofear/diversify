@@ -48,6 +48,15 @@ describe('authenticated deterministic allocation analysis', () => {
     mocks.snapshot.mockResolvedValue({ ...current, complete: false });
     expect((await post()).body.advice.action).toBe('HOLD');
   });
+  it.each(['42220: Unrecognized positive ERC-20 holding; savings coverage incomplete', '42220: Missing or stale price for USDm'])(
+    'spam-token or stale-price evidence ends in HOLD and surfaces the cause (%s)', async (error) => {
+      const current = await mocks.snapshot();
+      mocks.snapshot.mockResolvedValue({ ...current, complete: false, holdings: [], errors: [error] });
+      const { advice } = (await post()).body;
+      expect(advice.action).toBe('HOLD');
+      expect(advice.errors).toEqual([error]);
+      expect(advice).not.toHaveProperty('allocationProposal');
+    });
   it('wrong-chain permissions cannot authorize a proposal', async () => {
     mocks.permission.mockResolvedValue({ userAddress: address, status: 'active', expiresAt: 0, chainId: 42161,
       dailyLimitUSD: 100, spendingLimitUSD: 100, totalSpentUSD: 0, spentTodayUSD: 0,
