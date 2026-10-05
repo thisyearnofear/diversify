@@ -125,7 +125,7 @@ export function GuardianObject({
       onFocusCapture={() => setActed(true)}
     >
       <div className="instrument-artifact flex justify-center">
-        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : "off"} className="mb-3" />
+        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : "off"} className="mb-3" protagonistTab="agent" />
       </div>
       <div className="instrument-reading flex flex-col items-center">
       <div className="flex items-center justify-center gap-2 flex-wrap">

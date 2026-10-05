@@ -8,7 +8,7 @@
  *
  * index.tsx handles only page-level concerns (onboarding gate, SEO).
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { AppShellProvider, useAppShellContext } from "@/context/app/AppShellContext";
 import { useAIConversationOptional } from "@/context/AIConversationContext";
@@ -24,6 +24,9 @@ import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/t
 import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
 import { ShellCoinField } from "@/components/shared/FloatingCoins";
+import { ShellIdentityContext } from "@/components/shared/InstrumentShell";
+import ProtagonistFlight from "@/components/shared/ProtagonistFlight";
+import { shieldPatternFor } from "@/components/tabs/protect/shield-pattern";
 
 /**
  * AppBackdrop — the post-onboarding continuation of onboarding's ambience.
@@ -40,7 +43,13 @@ import { ShellCoinField } from "@/components/shared/FloatingCoins";
  * not ambience. On mobile the full-width column covers the coins, so the
  * wash alone carries the ambience as a subtle top glow behind the header.
  */
-function AppBackdrop({ accent }: { accent: string }) {
+function AppBackdrop({
+  accent,
+  patternClassName,
+}: {
+  accent: string;
+  patternClassName: string | null;
+}) {
   return (
     <div
       aria-hidden="true"
@@ -55,6 +64,14 @@ function AppBackdrop({ accent }: { accent: string }) {
           ].join(', '),
         }}
       />
+      {/* The chosen philosophy's pattern on the ground — visible in the
+          margins around the cards, never under text. */}
+      {patternClassName ? (
+        <div
+          className={`shields-pattern-layer ${patternClassName}`}
+          style={{ color: accent, opacity: 0.08 }}
+        />
+      ) : null}
       <ShellCoinField accent={accent} />
     </div>
   );
@@ -113,6 +130,15 @@ function AppShellInner() {
   // Philosophy accent for the ambient backdrop (static, §5-compliant).
   const { financialStrategy } = useStrategy();
   const archetype = ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'];
+  const shellPattern = shieldPatternFor(financialStrategy);
+  const shellIdentity = useMemo(
+    () => ({
+      pattern: shellPattern,
+      accent: shellPattern ? archetype.accent : null,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [shellPattern?.className, shellPattern?.color, archetype.accent],
+  );
 
   return (
     <motion.div
@@ -127,7 +153,7 @@ function AppShellInner() {
         experienceMode={experienceMode}
       />
       <div className="max-w-md mx-auto lg:max-w-5xl">
-      <AppBackdrop accent={archetype.accent} />
+      <AppBackdrop accent={archetype.accent} patternClassName={shellPattern?.className ?? null} />
       <FloatingControls
         openAdvisor={openAdvisor}
         unreadCount={unreadCount}
@@ -190,7 +216,10 @@ function AppShellInner() {
         />
 
         {/* Tab content */}
-        <TabContentRouter />
+        <ShellIdentityContext.Provider value={shellIdentity}>
+          <TabContentRouter />
+        </ShellIdentityContext.Provider>
+        <ProtagonistFlight activeTab={activeTab} />
       </TabDiscoveryProvider>
 
       <WalletTutorial

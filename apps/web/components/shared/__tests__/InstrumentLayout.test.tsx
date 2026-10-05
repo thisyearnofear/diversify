@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import React from "react";
 import {
   InstrumentShell,
+  ShellIdentityContext,
   useInstrumentInspection,
   useInstrumentInspectorPlacement,
 } from "../InstrumentShell";
@@ -229,6 +230,34 @@ describe("InstrumentShell", () => {
   it("renders no pattern layer when no archetype is selected", () => {
     const { container } = render(
       <InstrumentShell object={<div data-testid="object">ring</div>} />,
+    );
+    expect(container.querySelector(".shields-pattern-layer")).toBeNull();
+  });
+
+  it("carries the chosen philosophy into every shell via ShellIdentityContext", () => {
+    const identity = {
+      pattern: { className: "shields-pattern--africapitalism", color: "#d97706" },
+      accent: "#d97706",
+    };
+    const { container } = render(
+      <ShellIdentityContext.Provider value={identity}>
+        <InstrumentShell object={<div>home</div>} />
+      </ShellIdentityContext.Provider>,
+    );
+    const shell = container.firstElementChild as HTMLElement;
+    expect(shell.querySelector(".shields-pattern-layer")?.className).toContain(
+      "shields-pattern--africapitalism",
+    );
+    expect(shell.style.borderTopColor).toBe("rgb(217, 119, 6)");
+  });
+
+  it("lets an explicit pattern={null} opt out of the shell identity", () => {
+    const { container } = render(
+      <ShellIdentityContext.Provider
+        value={{ pattern: { className: "shields-pattern--global", color: "#000" }, accent: null }}
+      >
+        <InstrumentShell object={<div>x</div>} pattern={null} />
+      </ShellIdentityContext.Provider>,
     );
     expect(container.querySelector(".shields-pattern-layer")).toBeNull();
   });

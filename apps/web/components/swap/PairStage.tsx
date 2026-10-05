@@ -29,6 +29,7 @@ import type { HandoffOrigin } from '@/context/app/types';
 import { stampsForPair } from '@/lib/stamps';
 import StampSheet, { type StampEntry, type StampMode } from './StampSheet';
 import { useInstrumentInspection } from '../shared/InstrumentShell';
+import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
 const STAMP_TEACH_KEY = 'diversifi.stamps.taught';
@@ -117,7 +118,10 @@ function BeamCoin({
       animate={{ rotateY: 0, opacity: 1 }}
       transition={springPop}
     >
-      <span className="relative inline-flex drop-shadow-md">
+      <span
+        className="relative inline-flex drop-shadow-md"
+        {...(index === 0 ? protagonistAnchor("exchange", { holds: symbol }) : {})}
+      >
         <TokenIcon symbol={symbol} size={72} />
         {sealed && !reduced && (
           <motion.span

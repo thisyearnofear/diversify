@@ -59,6 +59,23 @@ export interface FreshnessInfo {
   errors?: string[] | null;
 }
 
+export interface ShellIdentity {
+  /** The chosen philosophy's pattern — the default for every shell. */
+  pattern: { className: string; color: string } | null;
+  /** The chosen philosophy's accent — the shell's top edge. */
+  accent: string | null;
+}
+
+/**
+ * The world the user chose in onboarding, carried into every instrument.
+ * AppShell provides it from the selected philosophy; a shell's own
+ * `pattern` prop still wins (`null` opts out).
+ */
+export const ShellIdentityContext = React.createContext<ShellIdentity>({
+  pattern: null,
+  accent: null,
+});
+
 interface InstrumentShellProps {
   /** The manipulable object — ring, dial, ticket, picker. */
   object: React.ReactNode;
@@ -85,11 +102,13 @@ export function InstrumentShell({
   status,
   portfolio,
   onRefresh,
-  pattern = null,
+  pattern: patternProp,
   inspectorOpen = false,
   className = "",
 }: InstrumentShellProps) {
   const reducedMotion = useReducedMotion();
+  const identity = React.useContext(ShellIdentityContext);
+  const pattern = patternProp === undefined ? identity.pattern : patternProp;
   const layoutGroupId = React.useId();
   const shellRef = useRef<HTMLDivElement>(null);
   const [placement, setPlacement] = useState<InspectorPlacement>("fold");
@@ -145,6 +164,7 @@ export function InstrumentShell({
           ref={shellRef}
           className={`instrument-shell relative ${SURFACE} ${className}`.trim()}
           data-inspector-open={inspectorOpen ? "true" : "false"}
+          style={identity.accent ? { borderTopColor: identity.accent, borderTopWidth: 3 } : undefined}
         >
           {pattern ? (
             <div

@@ -10,6 +10,7 @@
  * else is quiet. Motion reveals selection, never loops.
  */
 import React from "react";
+import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 import { BENCHMARK_COLORS } from "@/components/shared/palette";
 import { motion, useReducedMotion } from "framer-motion";
 import { Coin } from "@/components/shared/FloatingCoins";
@@ -412,6 +413,10 @@ export function CurrencyMomentCard({
             >
               <motion.div
                 data-testid="moment-local-coin"
+                {...protagonistAnchor("overview", {
+                  symbol: moment.currencyCode,
+                  color: accent,
+                })}
                 animate={{ scale: reducedMotion ? 1 : localCoinScale }}
                 transition={comparisonSettle}
                 className="w-full justify-self-end text-right [&_svg]:max-w-full [&_svg]:h-auto"

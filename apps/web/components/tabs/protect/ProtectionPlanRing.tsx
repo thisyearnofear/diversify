@@ -35,6 +35,7 @@ import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
 import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
 import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 import { rwaLegFor } from './rwa-assets';
+import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 
 /** Selection id the parent uses for the tokenized-asset (RWA) lens. */
 export const SLEEVE_ID = 'sleeve';
@@ -537,6 +538,7 @@ export function ProtectionPlanRing({
         <motion.div
           layout={reducedMotion ? undefined : true}
           className="relative"
+          {...(compact ? {} : protagonistAnchor("protect", { mode: "absorb" }))}
           transition={{ duration: 0.6, ease: "easeInOut" }}
           style={{ ...tilt.style, transformPerspective: 900 }}
           {...tilt.props}
