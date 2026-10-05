@@ -56,6 +56,7 @@ import { RiskPhase } from './phases/RiskPhase';
 import { PhilosophyPhase } from './phases/PhilosophyPhase';
 import { springSoft } from "@/lib/motion-tokens";
 import { haptics } from "@/lib/haptics";
+import { HANDOFF_ORIGIN_ATTR, stashHandoff } from '../../shared/protagonist-anchor';
 import { seedPaymentCycleDraft } from '@/hooks/use-payment-cycle';
 
 export interface OnboardingSelection {
@@ -172,6 +173,16 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
     const handleUsePlan = () => {
       if (!selectedArchetype || !planPreview) return;
       haptics.confirm();
+      // The chosen coin carries into the app: Shield's ring absorbs it.
+      const coin = document.querySelector(`[${HANDOFF_ORIGIN_ATTR}="${selectedArchetype}"]`);
+      const r = coin?.getBoundingClientRect();
+      if (r && r.width > 0) {
+        stashHandoff({
+          from: { x: r.left + r.width / 2, y: r.top + r.height / 2, size: Math.min(r.width, r.height) },
+          symbol: ARCHETYPES[selectedArchetype].name[0],
+          color: ARCHETYPES[selectedArchetype].accent,
+        });
+      }
       trackFunnelEvent('philosophy_chosen', {
         philosophy: selectedArchetype,
         ...(countryCode ? { country: countryCode } : {}),

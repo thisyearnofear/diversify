@@ -8,8 +8,13 @@
  * this overlay flies a `Coin` from the outgoing anchor to the incoming one,
  * hides the landing anchor for the flight, then hands the scene back.
  *
- * Contract: one-shot (~0.5s), only on a real tab change, never on first
- * mount, never a loop. Reduced motion or a missing anchor → no flight; the
+ * Onboarding hands off too: the plan coin the user just chose is stashed
+ * (`stashHandoff`) as onboarding unmounts, and the shell's first scene
+ * flies it into the landing tab's anchor — Shield's ring, where the plan
+ * now lives. That is the only first-mount flight.
+ *
+ * Contract: one-shot (~0.5s), only on a real tab change or that handoff,
+ * never a loop. Reduced motion or a missing anchor → no flight; the
  * content is identical either way.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -22,7 +27,9 @@ import {
   LANDING_ATTR,
   MODE_ATTR,
   SYMBOL_ATTR,
+  clearHandoff,
   holdsCurrency,
+  peekHandoff,
 } from "@/components/shared/protagonist-anchor";
 
 const FLIGHT_S = 0.52;
@@ -31,6 +38,10 @@ const HOLE_RATIO = 0.32;
 /** The incoming pane slides in over 0.18s; measure after it settles. */
 const SETTLE_MS = 200;
 const FIND_TIMEOUT_MS = 1500;
+/** The shell's first scene lazy-loads; give the handoff longer to find it. */
+const HANDOFF_FIND_TIMEOUT_MS = 3000;
+const HANDOFF_SETTLE_MS = 450;
+const HANDOFF_FLIGHT_S = 0.8;
 
 interface Box {
   x: number;
@@ -45,6 +56,8 @@ interface Flight {
   absorb: boolean;
   symbol: string;
   color: string;
+  /** Seconds; tab hops use FLIGHT_S. */
+  duration?: number;
 }
 
 function visibleBox(el: Element | null): Box | null {
@@ -92,6 +105,79 @@ export default function ProtagonistFlight({ activeTab }: { activeTab: string }) 
     landing.current = null;
   };
 
+  /** Seek the tab's live anchor, then launch from `origin`. Returns cleanup. */
+  const flyTo = (
+    tab: string,
+    origin: Box,
+    who: { symbol: string; color: string },
+    opts: {
+      matchCurrency: boolean;
+      timeoutMs: number;
+      settleMs?: number;
+      duration?: number;
+      onLaunch?: () => void;
+    },
+  ) => {
+    const { matchCurrency, timeoutMs, settleMs = SETTLE_MS, duration, onLaunch } = opts;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const started = performance.now();
+    const seek = () => {
+      if (cancelled) return;
+      const target = liveAnchor(tab);
+      if (!target) {
+        if (performance.now() - started < timeoutMs) timer = setTimeout(seek, 60);
+        return;
+      }
+      if (matchCurrency && !holdsCurrency(target.getAttribute(HOLDS_ATTR), who.symbol)) return;
+      // A 'land' anchor IS a coin — hide it so the flyer can become it. An
+      // 'absorb' anchor (the ring) stays; the coin sinks into its hole.
+      const absorb = target.getAttribute(MODE_ATTR) === "absorb";
+      if (!absorb) {
+        target.setAttribute(LANDING_ATTR, "");
+        landing.current = target;
+      }
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        const to = visibleBox(target);
+        if (!to) return release();
+        onLaunch?.();
+        setFlight({
+          id: started,
+          from: origin,
+          to,
+          absorb,
+          symbol: who.symbol,
+          color: who.color,
+          duration,
+        });
+      }, settleMs);
+    };
+    seek();
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  };
+
+  // Onboarding's chosen coin lands in the shell's first scene.
+  useEffect(() => {
+    const handoff = peekHandoff();
+    if (!handoff) return;
+    if (reduced) return clearHandoff();
+    // Slower than a tab hop, and only once the ring has drawn in: the
+    // onboarding stage has just vanished, so the coin needs a beat to read.
+    return flyTo(activeTab, handoff.from, handoff, {
+      matchCurrency: false,
+      timeoutMs: HANDOFF_FIND_TIMEOUT_MS,
+      settleMs: HANDOFF_SETTLE_MS,
+      duration: HANDOFF_FLIGHT_S,
+      onLaunch: clearHandoff,
+    });
+    // First scene only — later tab changes belong to the layout effect.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Layout effect: the outgoing pane is still where the user last saw it.
   useLayoutEffect(() => {
     const from = prevTab.current;
@@ -112,43 +198,9 @@ export default function ProtagonistFlight({ activeTab }: { activeTab: string }) 
         : originBox;
     if (!origin) return;
 
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const started = performance.now();
-    const seek = () => {
-      if (cancelled) return;
-      const target = liveAnchor(activeTab);
-      if (!target) {
-        if (performance.now() - started < FIND_TIMEOUT_MS) timer = setTimeout(seek, 60);
-        return;
-      }
-      if (!holdsCurrency(target.getAttribute(HOLDS_ATTR), who.symbol)) return;
-      // A 'land' anchor IS a coin — hide it so the flyer can become it. An
-      // 'absorb' anchor (the ring) stays; the coin sinks into its hole.
-      const absorb = target.getAttribute(MODE_ATTR) === "absorb";
-      if (!absorb) {
-        target.setAttribute(LANDING_ATTR, "");
-        landing.current = target;
-      }
-      timer = setTimeout(() => {
-        if (cancelled) return;
-        const to = visibleBox(target);
-        if (!to) return release();
-        setFlight({
-          id: started,
-          from: origin,
-          to,
-          absorb,
-          symbol: who.symbol,
-          color: who.color,
-        });
-      }, SETTLE_MS);
-    };
-    seek();
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
+    return flyTo(activeTab, origin, who, { matchCurrency: true, timeoutMs: FIND_TIMEOUT_MS });
+    // flyTo reads only refs and setters; the tab change is the trigger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, reduced]);
 
   useEffect(() => release, []);
@@ -174,7 +226,13 @@ export default function ProtagonistFlight({ activeTab }: { activeTab: string }) 
           scale: [1, 1, endSize / base],
           opacity: absorb ? [1, 1, 0] : 1,
         }}
-        transition={{ duration: FLIGHT_S, ease: [0.32, 0.72, 0, 1], times: [0, 0.45, 1] }}
+        transition={{
+          duration: flight.duration ?? FLIGHT_S,
+          ease: [0.32, 0.72, 0, 1],
+          times: [0, 0.45, 1],
+          // Visible all the way to the hole; it fades only as it sinks in.
+          opacity: { duration: flight.duration ?? FLIGHT_S, ease: "easeIn", times: [0, 0.8, 1] },
+        }}
         onAnimationComplete={() => {
           release();
           setFlight(null);
