@@ -15,6 +15,7 @@ import {
   VISOR_D,
 } from './guardian-mark';
 import { springSoft } from "@/lib/motion-tokens";
+import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 type Mood = 'happy' | 'neutral' | 'thinking' | 'protective' | 'alert';
 type Gaze = 'off' | 'pointer' | { x: number; y: number };
 
@@ -33,6 +34,9 @@ interface GuardianMascotProps {
    * - { x, y }: fixed normalized gaze target, each axis in [-1, 1].
    */
   gaze?: Gaze;
+  /** Marks the belly coin as the protagonist coin's landing on this tab
+   *  (see ProtagonistFlight). */
+  protagonistTab?: string;
 }
 
 /**
@@ -97,6 +101,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
   mood = 'happy',
   className = '',
   gaze = 'off',
+  protagonistTab,
 }) => {
   const prefersReducedMotion = useReducedMotion();
   const uid = useId();
@@ -223,16 +228,18 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
 
         {/* Belly coin — the app's motif as the Guardian's core, straddling the
             visor's lower edge. Present even in compact: identity, not decoration. */}
-        <circle cx={COIN.cx} cy={COIN.cy} r={COIN.r} fill={`url(#${coinGradId})`} />
-        <circle
-          cx={COIN.cx}
-          cy={COIN.cy}
-          r={COIN.ringR}
-          stroke={P.ring}
-          strokeWidth={COIN.ringW}
-          fill="none"
-          opacity="0.9"
-        />
+        <g {...(protagonistTab ? protagonistAnchor(protagonistTab) : {})}>
+          <circle cx={COIN.cx} cy={COIN.cy} r={COIN.r} fill={`url(#${coinGradId})`} />
+          <circle
+            cx={COIN.cx}
+            cy={COIN.cy}
+            r={COIN.ringR}
+            stroke={P.ring}
+            strokeWidth={COIN.ringW}
+            fill="none"
+            opacity="0.9"
+          />
+        </g>
 
         {/* Eyes — two digital blue squares on the visor. Outer group carries
             the pursuit gaze; rects reshape per mood from their own centers. */}

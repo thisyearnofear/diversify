@@ -550,6 +550,15 @@ body {
    ──────────────────────────────────────────────────────────────────── */
 
 /* ── Base layer: shared across all patterns ───────────────────────── */
+/* Protagonist coin (ProtagonistFlight): the landing anchor hides while the
+   flying coin is on its way, then the scene takes it back. */
+[data-protagonist-anchor] {
+  transition: opacity 0.15s ease-out;
+}
+[data-protagonist-landing] {
+  opacity: 0 !important;
+}
+
 .shields-pattern-layer {
   pointer-events: none;
   position: absolute;

@@ -8,7 +8,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, cleanup, fireEvent } from "@testing-library/react";
+import { render, screen, cleanup, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import WalletButton from "../WalletButton";
 import { useWalletContext } from "../WalletProvider";
@@ -136,7 +136,9 @@ describe("WalletButton — connect feedback ownership", () => {
     fireEvent.click(screen.getByRole("button", { name: /connect/i }));
     await screen.findByRole("status");
     fireEvent.keyDown(document.body, { key: "Escape" });
-    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    // The first dismissal's history.back() settles asynchronously; wait
+    // rather than racing it on a loaded CI runner.
+    await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
   });
 
   it("classifies a cancelled connection without echoing raw error text", async () => {

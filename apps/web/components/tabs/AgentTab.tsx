@@ -142,7 +142,7 @@ export default function AgentTab({
                 transition={springPress}
                 className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
-                <GuardianMascot size={128} mood={current.mood} />
+                <GuardianMascot size={128} mood={current.mood} protagonistTab="agent" />
               </motion.button>
               <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
                 {EXAMPLE_STEPS.map((s, i) => (
@@ -157,7 +157,7 @@ export default function AgentTab({
               <p className="mt-2 text-2xs font-semibold text-ink-muted">Tap Guardian for the next one</p>
             </>
           ) : (
-            <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" />
+            <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" protagonistTab="agent" />
           )}
         </div>
         <div className="instrument-reading flex flex-col items-center">
