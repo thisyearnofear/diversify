@@ -501,7 +501,10 @@ input reads `Example amount` (it stays an example after editing); the single
 `home-consequence` line is sign-aware and, only for a negative comparison
 with a sourced, nonzero staple equivalent, alternates money ↔ goods via the `Consequence unit`
 segmented control (same element, resets to money on currency/benchmark/
-horizon change). Guardian activity left the resting surface — the transition
+horizon change). In goods the local coin flips into a **basket** — ten
+sacks, those still full = `retainedRatio` (the coin's own scale input), the
+rest emptied; a neutral placeholder sack until regional illustrators draw
+each staple. Guardian activity left the resting surface — the transition
 slot carries only a "Review Guardian activity →" link, and the cadence line
 lives inside the selected journal/context inspector.
 
