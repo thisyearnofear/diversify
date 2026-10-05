@@ -1081,27 +1081,28 @@ describe("ProtectionTab — instrument shapes", () => {
     );
   });
 
-  it("?sleeve=rwa&serv=1 opens the sleeve inspector with SERV armed — the /rwa-vaults doorway lands walletless", () => {
+  it("?sleeve=rwa&serv=1 opens the sleeve inspector walletless — but the IXS tier is a teaser and SERV never fires without a wallet", () => {
     mockRouterQuery = { sleeve: "rwa", serv: "1" };
     // No wallet, no plan — the doorway still opens the sleeve inspector.
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
 
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
-    // SERV armed: the rail is in-flight or honestly degraded — never the
-    // "Get a deeper allocation →" opt-in affordance.
-    expect(screen.getByTestId("serv-rail").textContent).toMatch(
-      /deeper|unavailable/i,
-    );
+    // Walletless sees the teaser: no vault table, no SERV rail — a metered
+    // reasoning call must never be reachable by an anonymous click, even
+    // via the ?serv=1 deep link.
+    expect(screen.queryByTestId("serv-rail")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("serv-enhance")).not.toBeInTheDocument();
+    expect(screen.getByText(/Connect a wallet to look inside/)).toBeInTheDocument();
   });
 
-  it("?sleeve=rwa alone opens the sleeve with SERV off — free heuristic first", () => {
+  it("?sleeve=rwa alone opens the sleeve walletless with the teaser tier — SERV stays connected-only", () => {
     mockRouterQuery = { sleeve: "rwa" };
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
 
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
-    expect(screen.getByTestId("serv-enhance")).toBeInTheDocument();
+    expect(screen.queryByTestId("serv-enhance")).not.toBeInTheDocument();
   });
 
   it("walletless: the lens leads with holdable assets and can be left and re-entered", () => {
@@ -1125,6 +1126,22 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("ring-select-sleeve"));
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
+  });
+
+  it("connected: the sleeve shows the full IXS tier — catalog rows and the SERV rail", () => {
+    mockFinancialStrategy = "africapitalism";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+    mockRouterQuery = { sleeve: "rwa" };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+
+    expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
+    expect(screen.getByTestId("vault-row-ixs-usd-mmf")).toBeInTheDocument();
+    // Connected gets the opt-in rail — free heuristic by default, SERV a
+    // tap away; the request carries the cached wallet-session proof.
+    expect(screen.getByTestId("serv-enhance")).toBeInTheDocument();
   });
 
   it("tapping the ring centre enters compare mode without committing", () => {

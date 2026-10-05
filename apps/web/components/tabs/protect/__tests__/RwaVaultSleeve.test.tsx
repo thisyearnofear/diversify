@@ -27,10 +27,10 @@ const ALLOCATIONS = [
 function baseProps(overrides = {}) {
   return {
     allocations: ALLOCATIONS,
-    summary: 'SERV summary line.',
     source: 'heuristic' as const,
     loading: false,
     servOn: false,
+    servAllowed: true,
     onToggleServ: vi.fn(),
     focusedVaultId: null,
     onSelectVault: vi.fn(),
@@ -58,6 +58,17 @@ describe('RwaVaultSleeve — holdable assets', () => {
     expect(rows[0]).toHaveAttribute('data-testid', 'rwa-row-PAXG');
     expect(within(rows[0]).getByText('30% of your plan')).toBeInTheDocument();
     expect(screen.getByText(/30% of your plan · Arbitrum/)).toBeInTheDocument();
+  });
+
+  it('states "none in your plan yet" once in the header — never per row', () => {
+    render(<RwaVaultSleeve {...baseProps()} />);
+    // The header owns the aggregate fact; rows carry only differentiating
+    // state (share, routability, lens exclusion) — a bare "not in your
+    // plan" line is the same disclaimer repeated and must not appear.
+    expect(screen.getByText(/none in your plan yet/)).toBeInTheDocument();
+    for (const row of screen.getAllByTestId(/^rwa-row-/)) {
+      expect(row).not.toHaveTextContent(/not in your plan/i);
+    }
   });
 
   it('renders a live figure only when the market supplied one', () => {
@@ -137,7 +148,7 @@ describe('RwaVaultSleeve — IXS off-app section', () => {
     expect(screen.getByTestId('vault-row-ixs-usd-mmf')).toBeInTheDocument();
   });
 
-  it('shows the SERV receipt and summary when enhanced', () => {
+  it('shows the SERV receipt when enhanced — never freeform model prose', () => {
     render(
       <RwaVaultSleeve
         {...baseProps({
@@ -154,8 +165,32 @@ describe('RwaVaultSleeve — IXS off-app section', () => {
       />,
     );
     expect(screen.getByText(/reasoned by SERV · gpt-5\.4-mini · 7\.7s/)).toBeInTheDocument();
-    expect(screen.getByText('SERV summary line.')).toBeInTheDocument();
+    // The freeform SERV summary is not rendered — unconstrained
+    // first-person model copy reads as advice beside the advisory footer.
+    expect(screen.queryByText(/SERV summary/)).not.toBeInTheDocument();
     expect(screen.getByText('← instant estimate')).toBeInTheDocument();
+  });
+
+  it('teaser tier: the IXS catalog stays one honest line walletless — no table, no SERV rail', () => {
+    render(
+      <RwaVaultSleeve
+        {...baseProps({ offApp: 'teaser', walletCta: <button>Connect wallet</button> })}
+      />,
+    );
+    expect(screen.getByTestId('rwa-offapp')).toBeInTheDocument();
+    expect(screen.getByText(/Connect a wallet to look inside/)).toBeInTheDocument();
+    expect(screen.queryByTestId(/^vault-row-/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('serv-rail')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('serv-enhance')).not.toBeInTheDocument();
+    // The doorway to IXS itself remains — a link, not a CTA.
+    expect(screen.getByRole('link')).toHaveAttribute('href', 'https://ixs.finance');
+  });
+
+  it('teaser tier still carries the Islamic-lens honesty note', () => {
+    render(
+      <RwaVaultSleeve {...baseProps({ offApp: 'teaser', philosophy: 'islamic' })} />,
+    );
+    expect(screen.getByText(/None is Sharia-certified/)).toBeInTheDocument();
   });
 
   it('expands the focused vault row with rationale + indicative range', () => {

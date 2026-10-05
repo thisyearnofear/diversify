@@ -191,6 +191,11 @@ export default function ProtectionTab({
   // Free heuristic is local + instant; SERV Reasoning is an opt-in rail in
   // the inspector, fetched only while the sleeve view is open.
   const [rwaServOn, setRwaServOn] = useState(false);
+  // SERV Reasoning is connected-only: the sleeve never offers it
+  // walletless, and the fetch stays gated on an address even if a
+  // ?serv=1 deep link arms the flag — anonymous clicks must not burn
+  // a metered reasoning call. The local heuristic stays free for all.
+  const rwaServAllowed = Boolean(address) && !isDemo;
 
   // URL hand-off: ?sleeve=rwa opens the inspector on the vault sleeve;
   // ?serv=1 arms the SERV Reasoning rail. The /rwa-vaults doorway lands
@@ -229,7 +234,8 @@ export default function ProtectionTab({
       }),
       [config.philosophy, config.riskTolerance, config.userRegion, totalValue],
     ),
-    rwaServOn && sleeveOpen,
+    rwaServOn && sleeveOpen && rwaServAllowed,
+    address,
   );
 
   const hasPlan = Boolean(strategyKey);

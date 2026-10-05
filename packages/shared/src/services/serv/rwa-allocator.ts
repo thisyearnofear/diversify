@@ -151,7 +151,7 @@ export function computeHeuristicAllocation(profile: AllocationProfile): VaultAll
 // SERV-enhanced path — re-weight + explain via SERV Reasoning
 // ---------------------------------------------------------------------------
 
-export const SERV_ALLOCATION_SYSTEM_PROMPT = `You are the DiversiFi Guardian allocating stablecoin capital across licensed IXS Finance RWA vaults (ERC-4626, Bahamas DARE Act, KYC at deposit). Weight every vault in the catalog (0 = excluded), weights must sum to 100. Give each vault a one-sentence rationale tied to the user's profile, and a one-sentence summary. Respect the user's values lens (e.g. islamic profiles minimize conventional interest-bearing vaults) and stated risk tolerance; indicative APY bands are not guarantees.`;
+export const SERV_ALLOCATION_SYSTEM_PROMPT = `You are the DiversiFi Guardian scoring stablecoin allocations across licensed IXS Finance RWA vaults (ERC-4626, Bahamas DARE Act, KYC at deposit). Weight every vault in the catalog (0 = excluded), weights must sum to 100. For each vault, give a one-sentence rationale explaining the weight relative to the user's profile — descriptive only: never first-person advice, never a recommendation to act, never a promise of return. Respect the user's values lens (e.g. islamic profiles minimize conventional interest-bearing vaults) and stated risk tolerance; indicative APY bands are not guarantees.`;
 
 /** Strict json_schema for SERV structured outputs — keys are the catalog ids. */
 function allocationJsonSchema(): { name: string; schema: Record<string, unknown> } {
@@ -173,9 +173,8 @@ function allocationJsonSchema(): { name: string; schema: Record<string, unknown>
           required: ids,
           additionalProperties: false,
         },
-        summary: { type: 'string' },
       },
-      required: ['weights', 'rationale', 'summary'],
+      required: ['weights', 'rationale'],
       additionalProperties: false,
     },
   };

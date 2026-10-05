@@ -14,6 +14,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 import { useRwaAllocation } from '../use-rwa-allocation';
+import { buildWalletAuthMessage } from '@/lib/wallet-auth';
 
 function servResponse() {
     return new Response(
@@ -40,6 +41,7 @@ function servResponse() {
 describe('useRwaAllocation', () => {
     beforeEach(() => {
         vi.restoreAllMocks();
+        sessionStorage.clear();
     });
 
     it('returns the deterministic heuristic instantly — no network, no keys', () => {
@@ -122,6 +124,23 @@ describe('useRwaAllocation', () => {
             expect(result.current.degradedReason).toBe('serv_not_configured'),
         );
         expect(result.current.source).toBe('heuristic');
+    });
+
+    it('attaches the cached wallet-session proof to the SERV request — never prompts', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(servResponse());
+        vi.stubGlobal('fetch', fetchMock);
+        const address = '0x0000000000000000000000000000000000000001';
+        sessionStorage.setItem(
+            `diversifi-wallet-auth:${address}`,
+            JSON.stringify({ message: buildWalletAuthMessage(address), signature: '0xsig' }),
+        );
+
+        renderHook(() => useRwaAllocation({}, true, address));
+        await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+
+        const headers = fetchMock.mock.calls[0][1].headers;
+        expect(headers['X-Wallet-Auth-Signature']).toBe('0xsig');
+        expect(headers['X-Wallet-Auth-Message']).toBeTruthy();
     });
 
     it('toggling SERV off returns the cached heuristic without refetching', async () => {

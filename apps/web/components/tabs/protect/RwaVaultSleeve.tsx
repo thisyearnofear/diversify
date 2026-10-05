@@ -24,7 +24,6 @@ import { isSwapRoutable } from '@/constants/unroutable-swap-tokens';
 
 interface Props {
   allocations: VaultAllocation[];
-  summary: string;
   source: 'heuristic' | 'serv';
   loading: boolean;
   degradedReason?: string;
@@ -46,6 +45,15 @@ interface Props {
   onReviewMove?: (symbol: string) => void;
   /** Walletless: the connect button, rendered as the one CTA. */
   walletCta?: React.ReactNode;
+  /** 'full' renders the IXS catalog + SERV rail (connected). 'teaser'
+   *  renders the off-app tier as one honest line — a walletless visitor
+   *  shouldn't get an institutional allocation table or be able to burn
+   *  a metered reasoning call before the wallet relationship exists. */
+  offApp?: 'full' | 'teaser';
+  /** Whether the SERV enhancement may be requested at all — fails closed.
+   *  Walletless and sample-mode sessions never get the rail; the API
+   *  additionally requires a signed wallet session before spending. */
+  servAllowed?: boolean;
 }
 
 function lookup(map: Record<string, number> | undefined, symbol: string): number {
@@ -92,12 +100,19 @@ function HoldableRow({
   // Held $ derives from the user's balance — honours the privacy mask.
   // (The market figure in formatFigure stays unmasked: price, not balance.)
   const { formatMoney } = useBalanceVisibility();
+  // The section header already states the aggregate ("none in your plan
+  // yet") — a per-row "not in your plan" is the same disclaimer repeated.
+  // Rows carry only what differentiates them: their share, routability,
+  // or a lens exclusion. A row with none of those says nothing.
   const share =
     heldPct > 0
       ? `${Math.round(heldPct)}% held${totalValue > 0 ? ` · ${formatMoney((heldPct / 100) * totalValue)}` : ''}`
       : planPct > 0
         ? `${planPct}% of your plan`
-        : 'not in your plan';
+        : '';
+  const subLine = excluded
+    ? 'Interest-bearing — outside this lens'
+    : [share, routable ? '' : 'no swap route right now'].filter(Boolean).join(' · ');
   return (
     <button
       type="button"
@@ -119,13 +134,9 @@ function HoldableRow({
               {provenance?.phrase ?? asset.kind}
             </span>
           </p>
-          <p className="text-2xs text-gray-500 dark:text-gray-400">
-            {excluded
-              ? 'Interest-bearing — outside this lens'
-              : routable
-                ? share
-                : `${share} · no swap route right now`}
-          </p>
+          {subLine && (
+            <p className="text-2xs text-gray-500 dark:text-gray-400">{subLine}</p>
+          )}
         </div>
         {figure && (
           <p
@@ -214,7 +225,6 @@ function VaultRow({
 
 export function RwaVaultSleeve({
   allocations,
-  summary,
   source,
   loading,
   degradedReason,
@@ -230,6 +240,8 @@ export function RwaVaultSleeve({
   market,
   onReviewMove,
   walletCta,
+  offApp = 'full',
+  servAllowed = false,
 }: Props) {
   const [openSymbol, setOpenSymbol] = React.useState<string | null>(null);
 
@@ -324,14 +336,18 @@ export function RwaVaultSleeve({
           <p className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
             Where a dollar reserve could earn through IXS — money-market, bond and credit
             vaults on Ethereum. KYC and deposits happen on IXS, not here.
+            {offApp === 'teaser' && ' Connect a wallet to look inside.'}
             {philosophy === 'islamic' && ' None is Sharia-certified; all pay conventional interest.'}
           </p>
         </div>
 
-        {source === 'serv' && (
-          <p className="text-2xs text-gray-600 dark:text-gray-300 leading-relaxed">{summary}</p>
-        )}
+        {/* The SERV summary is deliberately not rendered — unconstrained
+            first-person model prose ("I would build…") reads as advice
+            where the footer says "advisory". The weights and per-vault
+            rationale carry the reasoning; the rail names the source. */}
 
+        {offApp === 'full' && (
+          <>
         <div className="space-y-0.5">
           {allocations.map((a) => (
             <VaultRow
@@ -344,7 +360,9 @@ export function RwaVaultSleeve({
         </div>
 
         {/* Enhancement rail — instant estimate by default; the deeper
-            allocation is one tap and always reversible. */}
+            allocation is one tap and always reversible. Connected live
+            sessions only: the teaser tier and sample mode never offer it. */}
+        {servAllowed && (
         <p data-testid="serv-rail" className="text-2xs text-gray-500 dark:text-gray-400">
           {loading ? (
             'Weighing a deeper allocation…'
@@ -387,9 +405,12 @@ export function RwaVaultSleeve({
             </>
           )}
         </p>
+        )}
+          </>
+        )}
 
         <p className="text-2xs text-gray-400 dark:text-gray-500">
-          Indicative APY ranges, not quotes · advisory ·{' '}
+          {offApp === 'full' && 'Indicative APY ranges, not quotes · advisory · '}
           <a
             href="https://ixs.finance"
             target="_blank"

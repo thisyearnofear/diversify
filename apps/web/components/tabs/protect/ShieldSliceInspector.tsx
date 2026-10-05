@@ -265,7 +265,6 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
       {sleeveOpen && (
         <RwaVaultSleeve
           allocations={rwa.allocations}
-          summary={rwa.summary}
           source={rwa.source}
           loading={rwa.loading}
           degradedReason={rwa.degradedReason}
@@ -287,6 +286,8 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
           market={rwaMarket}
           onReviewMove={address && totalValue > 0 ? openProtectionFlow : undefined}
           walletCta={!address ? <WalletButton variant="primary" className="w-full" /> : undefined}
+          offApp={address ? 'full' : 'teaser'}
+          servAllowed={Boolean(address) && !sample}
         />
       )}
       {(shape === "picker" || comparing) && focusedPhilosophy && (

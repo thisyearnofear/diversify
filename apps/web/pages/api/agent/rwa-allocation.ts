@@ -4,15 +4,19 @@
  * Free-first (SERV Hackathon Edition 01, RWA Vaults track): every caller —
  * no wallet, no keys — gets a deterministic heuristic allocation across the
  * licensed IXS vault catalog. Opt-in `serv: true` (body or ?serv=1) asks
- * SERV Reasoning to re-weight + explain, but ONLY when SERV_API_KEY is
- * configured server-side; any SERV failure (timeout, expired credits,
- * malformed output) returns the heuristic with `degradedReason` set — never
- * a 5xx for a third-party outage. Per-IP rate limit bounds the SERV spend.
+ * SERV Reasoning to re-weight + explain, but ONLY for a verified wallet
+ * session (x-wallet-auth-* headers) and only when SERV_API_KEY is configured
+ * server-side — SERV is a metered call, so anonymous opt-ins return the
+ * heuristic with `degradedReason: 'serv_auth_required'`. Any other SERV
+ * failure (timeout, expired credits, malformed output) also returns the
+ * heuristic with `degradedReason` set — never a 5xx for a third-party
+ * outage. Per-IP rate limit bounds the spend further.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getRwaAllocation, type AllocationProfile } from '@diversifi/shared/src/services/serv/rwa-allocator';
 import { rateLimit, getClientIp } from '../../../lib/rate-limit';
+import { requireWalletAuth } from '../../../lib/require-wallet-auth';
 
 const RATE_LIMIT = 15; // requests
 const RATE_WINDOW_MS = 60_000; // per minute
@@ -50,15 +54,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       ? Math.min(Math.max(body.amountUsd, 0), 1_000_000_000)
       : null;
 
-  // Explicit opt-in only — body flag or ?serv=1.
+  // Explicit opt-in only — body flag or ?serv=1. SERV is metered, so the
+  // opt-in only counts with a verified wallet signature; anonymous callers
+  // still get the free heuristic, honestly labeled.
   const servRequested = body.serv === true || req.query.serv === '1' || req.query.serv === 'true';
+  const servAuthed = servRequested && Boolean(requireWalletAuth(req));
 
   const profile: AllocationProfile = { philosophy, riskTolerance, region, amountUsd };
 
   try {
-    const result = await getRwaAllocation(profile, { servRequested });
+    const result = await getRwaAllocation(profile, { servRequested: servAuthed });
     res.setHeader('Cache-Control', 'private, max-age=60');
-    return res.status(200).json(result);
+    return res.status(200).json(
+      servRequested && !servAuthed
+        ? { ...result, servRequested: true, degradedReason: 'serv_auth_required' }
+        : result,
+    );
   } catch (err) {
     // getRwaAllocation never throws by contract — this is belt-and-braces so a
     // caller still gets a clean heuristic-shaped failure rather than a stack.

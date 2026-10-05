@@ -5,8 +5,11 @@
  * browser (pure function over the static IXS catalog — no network, no keys,
  * no wallet). SERV Reasoning is the opt-in enhancement: when `servOn`, the
  * hook calls /api/agent/rwa-allocation and re-weights the sleeve when the
- * server answers. Every failure keeps the heuristic and sets
- * `degradedReason` — the free path can never regress.
+ * server answers. SERV is a metered call, so the request carries this
+ * session's cached wallet-auth proof — the server only honors `serv` for
+ * a verified wallet; anything else falls back to the heuristic. Every
+ * failure keeps the heuristic and sets `degradedReason` — the free path
+ * can never regress.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { computeHeuristicAllocation } from '@diversifi/shared/src/services/serv/rwa-allocator';
@@ -17,6 +20,7 @@ import type {
   VaultAllocation,
 } from '@diversifi/shared/src/services/serv/rwa-allocator';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { getCachedWalletAuth } from '@/lib/wallet-auth';
 
 export interface UseRwaAllocation {
   allocations: VaultAllocation[];
@@ -39,6 +43,9 @@ const REQUEST_TIMEOUT_MS = 25_000;
 export function useRwaAllocation(
   profile: AllocationProfile,
   servOn: boolean,
+  /** Connected wallet — attaches the cached session proof to the SERV
+   *  request. Null/walletless callers get the heuristic only. */
+  address?: string | null,
 ): UseRwaAllocation {
   const profileKey = JSON.stringify(profile);
   const heuristic = useMemo(
@@ -55,11 +62,20 @@ export function useRwaAllocation(
     let cancelled = false;
     setLoading(true);
     setFailed(null);
+    const auth = address ? getCachedWalletAuth(address) : null;
     fetchWithTimeout(
       '/api/agent/rwa-allocation?serv=1',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(auth
+            ? {
+                'X-Wallet-Auth-Message': encodeURIComponent(auth.message),
+                'X-Wallet-Auth-Signature': auth.signature,
+              }
+            : {}),
+        },
         body: profileKey,
       },
       REQUEST_TIMEOUT_MS,
@@ -81,7 +97,7 @@ export function useRwaAllocation(
     return () => {
       cancelled = true;
     };
-  }, [servOn, profileKey]);
+  }, [servOn, profileKey, address]);
 
   // The heuristic is always the floor — it renders while SERV reasons and
   // remains the answer whenever SERV can't.
