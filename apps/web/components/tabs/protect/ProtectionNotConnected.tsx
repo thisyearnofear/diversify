@@ -13,7 +13,9 @@
  * live in the shared status tier — the tokenized-asset lens enters
  * through the ring itself (one quiet hatched teaser wedge, on the
  * committed ring and the picker ring alike), never a status link in
- * the action hue. During a balance preview the commit
+ * the action hue. While the lens is open it owns the moment — the ring
+ * keeps its full size as the lens's anchor and the picker rail steps
+ * out until "← Back to plan". During a balance preview the commit
  * owns the whole screen: handoffs and the demo link step out and only
  * trust remains. No hero card, no proof card.
  *
@@ -211,7 +213,11 @@ export function ProtectionNotConnected({
                   : ringLegs
           }
           forcePlanLegs={comparing || picking}
-          compact={ringCompact}
+          // The lens owns the moment: while it is open the ring keeps its
+          // full size as the lens's anchor (the picker's compact form is
+          // the picker's own grammar, not the lens's — a 130px ring beside
+          // the inspector reads as a thumbnail, not a restaged object).
+          compact={ringCompact && !sleeveOpen}
           ghostLegs={comparing ? ringLegs : undefined}
           holeOverride={hole}
           holeActionLabel={comparing ? "Exit compare" : undefined}
@@ -303,7 +309,10 @@ export function ProtectionNotConnected({
         )}
       </div>
 
-      {(comparing || picking) && (
+      {/* The picker's rail is the picker's control — it steps out while
+          the lens is open rather than squeezing beside the inspector
+          (modes transform, never append). "← Back to plan" restores it. */}
+      {(comparing || picking) && !sleeveOpen && (
         <div data-testid="shield-philosophy-rail" className="space-y-2">
           {comparing && (
             <button

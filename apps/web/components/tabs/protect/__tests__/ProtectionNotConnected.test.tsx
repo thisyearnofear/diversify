@@ -412,6 +412,42 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
+  it("the open lens owns the moment — the picker rail rests and the ring keeps its full size", () => {
+    // Planless picker with the tokenized-asset lens open: the rail must
+    // not squeeze beside the inspector, and the lens's ring anchor keeps
+    // the full 200px stage (the 130px compact form is the picker's own
+    // grammar, not the lens's).
+    const ring = () =>
+      document.querySelector('svg[aria-label="Allocation ring"]');
+    const { rerender } = render(
+      <ProtectionNotConnected
+        experienceMode="simple"
+        onEnableDemo={vi.fn()}
+        sleeveOpen
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByTestId("shield-philosophy-rail")).not.toBeInTheDocument();
+    expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
+    expect(ring()).toHaveAttribute("width", "200");
+
+    // Back to plan — the picker returns exactly as it was, teaser and all.
+    rerender(
+      <ProtectionNotConnected
+        experienceMode="simple"
+        onEnableDemo={vi.fn()}
+        onOpenSleeve={vi.fn()}
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+    expect(screen.getByTestId("shield-philosophy-rail")).toBeInTheDocument();
+    expect(ring()).toHaveAttribute("width", "130");
+    expect(
+      screen.getByRole("button", { name: /Tokenized assets — tap to look inside/ }),
+    ).toBeInTheDocument();
+  });
+
   it("a balance preview quiets the status tier to trust — handoffs and demo step out", () => {
     mockState.financialStrategy = "africapitalism";
     mockState.riskTolerance = "Balanced";

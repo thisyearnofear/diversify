@@ -304,7 +304,12 @@ export function LensCoinSelector({
     if (scrollable) {
       return (
         <div className="select-none">
-          <FlickScrollRow className="px-1 pb-1">{row}</FlickScrollRow>
+          {/* pt-2 — the track's overflow-x also clips vertically (spec:
+              a non-visible axis forces the other to auto), so the active
+              coin's ✓ badge (-top-1), its 2px accent ring and the 1.15×
+              scale overhang need real headroom or they slice at the top
+              edge. */}
+          <FlickScrollRow className="px-1 pt-2 pb-1">{row}</FlickScrollRow>
         </div>
       );
     }

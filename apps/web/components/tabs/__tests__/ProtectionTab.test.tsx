@@ -1110,6 +1110,14 @@ describe("ProtectionTab — instrument shapes", () => {
 
     expect(screen.getByTestId("rwa-row-PAXG")).toBeInTheDocument();
     expect(screen.getByTestId("rwa-offapp")).toBeInTheDocument();
+    // The lens owns the moment — the picker's rail rests and the ring
+    // keeps its full size as the lens's anchor (not the picker's 130px
+    // compact form squeezed beside the inspector).
+    expect(screen.queryByTestId("shield-philosophy-rail")).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-compact",
+      "false",
+    );
     fireEvent.click(screen.getByTestId("rwa-sleeve-back"));
     expect(screen.queryByTestId("rwa-vault-sleeve")).not.toBeInTheDocument();
     // The doorway is no longer URL-only: the ring's own teaser wedge
