@@ -81,6 +81,15 @@ vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
 }));
 
+let mockSeries: { dates: string[]; values: number[] } | null = null;
+vi.mock("@/hooks/use-currency-risk", () => ({
+  useCurrencyRisk: () => ({ currencyCode: "NGN" }),
+}));
+vi.mock("@/components/swap/CorridorContext", () => ({
+  useLiveCurrencyRisk: (code: string | null) =>
+    code && mockSeries ? { depreciation1yr: null, asOf: "2026-02-01", series: mockSeries } : null,
+}));
+
 import AgentTab from "../AgentTab";
 
 describe("AgentTab — unconnected morph", () => {
@@ -165,5 +174,24 @@ describe("AgentTab — unconnected morph", () => {
     fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
     expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
+  });
+
+  it("replays the visitor's own currency's sharpest month, labelled past data", async () => {
+    mockSeries = {
+      dates: ["2025-10-01", "2025-11-01", "2025-12-01", "2026-01-01"],
+      values: [100, 99, 90, 88],
+    };
+    try {
+      render(<AgentTab />);
+      fireEvent.click(screen.getByRole("button", { name: "Replay NGN's sharpest drop" }));
+      const replay = screen.getByTestId("guardian-example");
+      expect(replay).toHaveTextContent("Replay · NGN vs USD · past data");
+      expect(replay).toHaveTextContent("Nov 2025");
+      fireEvent.click(screen.getByTestId("guardian-example-mark"));
+      await waitFor(() => expect(replay).toHaveTextContent("NGN −9.1% in 30 days"));
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "alert");
+    } finally {
+      mockSeries = null;
+    }
   });
 });

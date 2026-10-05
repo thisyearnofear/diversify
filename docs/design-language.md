@@ -251,7 +251,8 @@ motif needs an owner and displaces nothing else's claim — otherwise
 every surface wears every motif, which is the cards problem in a nicer
 costume. Guardian's object is the mark (96px) + its state headline + two
 quiet lines: the budget line — `$X left of $Y today`, a sentence, never
-a ring — and the latest decision line. Journal and limits are inspector
+a ring (it may draw a **fence** beneath the mark: ten posts for the
+limit, spent posts fade — a row, never a ring) — and the latest decision line. Journal and limits are inspector
 sheets behind those lines. **Limits & controls holds limits only** —
 daily limit, used/left, expiry, pause, the plan Guardian follows, and the
 one autonomy opt-in; notifications, voice and integrations sit behind a
@@ -264,6 +265,11 @@ Guardian acts without asking. Shield never signs — it hands off here.
 Walletless Guardian can morph into an explicitly labeled, three-step
 example decision performed by the mark: stand down on missing data,
 propose for user approval, then show what evidence a real decision carries.
+When the visitor's own currency has a real fall (≥2% between two
+samples) in its live 12-month vs-USD series, the same three beats are a
+**replay** pinned to the sampled dates of that series and labelled `Replay · CODE vs USD ·
+past data` — never live activity, never a balance; otherwise the
+illustrative steps.
 The visitor advances by tapping the mark; the example never auto-advances.
 "Why this decision?" opens one inspector with the current explanation.
 It has no receipt or live monitoring state and never enables sample

@@ -3,7 +3,7 @@
  * Swaps belong on Shield / Exchange. Conversation lives in Ask Guardian.
  */
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { press, springPress, springSoft } from "@/lib/motion-tokens";
 import { haptics } from "@/lib/haptics";
@@ -27,6 +27,9 @@ import { VerifiedEvidence } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { formatDuration } from "@/lib/format-duration";
 import { useGuardianInstrument } from "@/hooks/use-guardian-instrument";
+import { useCurrencyRisk } from "@/hooks/use-currency-risk";
+import { useLiveCurrencyRisk } from "@/components/swap/CorridorContext";
+import { buildGuardianReplay } from "@/lib/narrative/guardian-replay";
 import { GRANT_ELIGIBLE_CHAIN_IDS } from "@/lib/erc7715-client-grant";
 import { GuardianObject } from "../agent/GuardianObject";
 import { GuardianAllocationReview } from '../agent/GuardianAllocationReview';
@@ -107,7 +110,17 @@ export default function AgentTab({
   const [exampleDetails, setExampleDetails] = useState(false);
   const [step, setStep] = useState(0);
   const reducedMotion = useReducedMotion();
-  const current = EXAMPLE_STEPS[step];
+  // Walletless only: replay the visitor's own currency's sharpest drop
+  // when the live series has one; otherwise the illustrative example.
+  const { currencyCode } = useCurrencyRisk();
+  const replayCode = address ? null : currencyCode;
+  const live = useLiveCurrencyRisk(replayCode);
+  const replay = useMemo(
+    () => (replayCode ? buildGuardianReplay(replayCode, live?.series, live?.asOf) : null),
+    [replayCode, live],
+  );
+  const steps = replay ?? EXAMPLE_STEPS;
+  const current = steps[step % steps.length];
   const previousAddress = React.useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
@@ -132,11 +145,11 @@ export default function AgentTab({
               <motion.button
                 type="button"
                 data-testid="guardian-example-mark"
-                aria-label={`Next example decision, ${step + 1} of ${EXAMPLE_STEPS.length}`}
+                aria-label={`Next example decision, ${step + 1} of ${steps.length}`}
                 onClick={() => {
                   haptics.tap();
                   setExampleDetails(false);
-                  setStep((s) => (s + 1) % EXAMPLE_STEPS.length);
+                  setStep((s) => (s + 1) % steps.length);
                 }}
                 whileTap={reducedMotion ? undefined : press}
                 transition={springPress}
@@ -145,7 +158,7 @@ export default function AgentTab({
                 <GuardianMascot size={128} mood={current.mood} protagonistTab="agent" />
               </motion.button>
               <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
-                {EXAMPLE_STEPS.map((s, i) => (
+                {steps.map((s, i) => (
                   <motion.span
                     key={s.title}
                     className="h-1.5 rounded-full bg-blue-600"
@@ -164,7 +177,7 @@ export default function AgentTab({
         {example ? (
           <div data-testid="guardian-example" className="w-full max-w-[320px]" aria-live="polite">
             <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
-              Example decision · not live
+              {replay ? `Replay · ${replayCode} vs USD · past data` : "Example decision · not live"}
             </p>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div
@@ -229,7 +242,7 @@ export default function AgentTab({
                 onClick={() => example ? setExampleDetails(true) : setExample(true)}
                 className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400"
               >
-                {example ? "Why this decision?" : "See an example decision"}
+                {example ? "Why this decision?" : replay ? `Replay ${replayCode}'s sharpest drop` : "See an example decision"}
               </button>
             }
           />

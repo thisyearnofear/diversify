@@ -110,6 +110,18 @@ describe("GuardianObject — state copy", () => {
 });
 
 describe("GuardianObject — budget line", () => {
+  it("draws the limit as a fence of posts — the ones left stand", () => {
+    renderObject({ hasValidPermission: true, sessionInfo: sessionInfo(), dailyLimit: 25 });
+    const fence = screen.getByTestId("guardian-fence");
+    expect(fence).toHaveAttribute("data-standing", "8");
+    expect(fence).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("draws no fence without a limit", () => {
+    renderObject();
+    expect(screen.queryByTestId("guardian-fence")).not.toBeInTheDocument();
+  });
+
   it("shows $X left of $Y today only with permission + session + limit, and opens bounds", () => {
     const props = renderObject({
       hasValidPermission: true,
