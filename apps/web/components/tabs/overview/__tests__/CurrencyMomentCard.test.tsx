@@ -11,6 +11,11 @@ const mocks = vi.hoisted(() => ({
   /** Curated-dataset staleness is time-dependent; tests declare the branch. */
   stale: false,
   feed: { data: null as { recent: unknown[] } | null },
+  live: null as { series: { dates: string[]; values: number[] } | null } | null,
+}));
+
+vi.mock('@/components/swap/CorridorContext', () => ({
+  useLiveCurrencyRisk: () => mocks.live,
 }));
 
 vi.mock('@/lib/haptics', () => ({
@@ -71,6 +76,7 @@ afterEach(() => {
   window.localStorage.clear();
   mocks.reduced = false;
   mocks.stale = false;
+  mocks.live = null;
 });
 
 describe('CurrencyMomentCard — Home opening artifact', () => {
@@ -1042,5 +1048,45 @@ describe('CurrencyMomentCard — comparison identity', () => {
         '≈ GHS 3,600 less buying power',
       ),
     );
+  });
+});
+
+describe('CurrencyMomentCard — the coin is the chart', () => {
+  const SERIES = {
+    dates: ['2025-07-01', '2025-08-01', '2025-09-01', '2025-10-01'],
+    values: [100, 90, 85, 80],
+  };
+
+  it('has no time track without a valid 12-month series', () => {
+    render(<CurrencyMomentCard {...baseProps} onInspectCurrency={() => {}} />);
+    expect(screen.queryByTestId('moment-time-track')).toBeNull();
+  });
+
+  it('walks the real series with arrow keys and springs back to today', async () => {
+    mocks.live = { series: SERIES };
+    render(<CurrencyMomentCard {...baseProps} onInspectCurrency={() => {}} />);
+    expect(screen.getByTestId('moment-time-track')).toBeInTheDocument();
+    const coin = screen.getByRole('button', { name: 'Story of the GHS' });
+    fireEvent.keyDown(coin, { key: 'ArrowLeft' });
+    fireEvent.keyDown(coin, { key: 'ArrowLeft' });
+    // Aug 2025 → today: 80 / 90 − 1 ≈ −11%, from the sampled points only.
+    expect(await screen.findByText('−11%')).toBeInTheDocument();
+    expect(screen.getByText(/Since Aug 2025 against US Dollar/)).toBeInTheDocument();
+    expect(screen.getByTestId('moment-local-coin')).toHaveAttribute('data-scrubbing', 'true');
+    fireEvent.keyDown(coin, { key: 'Escape' });
+    expect(await screen.findByText('−18%')).toBeInTheDocument();
+    expect(screen.getByTestId('moment-local-coin')).not.toHaveAttribute('data-scrubbing');
+  });
+
+  it('only scrubs the USD 1-year comparison the series describes', () => {
+    mocks.live = { series: SERIES };
+    render(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, horizon: '5yr' }}
+        onInspectCurrency={() => {}}
+      />,
+    );
+    expect(screen.queryByTestId('moment-time-track')).toBeNull();
   });
 });
