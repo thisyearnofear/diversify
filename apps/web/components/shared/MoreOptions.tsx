@@ -35,6 +35,9 @@ const MODE_LABEL: Record<UserExperienceMode, string> = {
 };
 
 export interface MoreOptionsProps {
+  /** Render without card chrome — for use inside an InstrumentShell's
+   *  status slot, so settings don't stack a second card under the object. */
+  bare?: boolean;
   userRegion: Region;
   setUserRegion: (region: Region) => void;
   regions: readonly Region[];
@@ -87,6 +90,7 @@ export function MoreOptions({
   anchorSource,
   anchorFx,
   onAnchorChange,
+  bare = false,
 }: MoreOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(false);
   const modeGroupRef = React.useRef<HTMLDivElement>(null);
@@ -132,7 +136,11 @@ export function MoreOptions({
     <section
       id={id}
       data-home-section={id}
-      className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 scroll-mt-20"
+      className={
+        bare
+          ? "mt-3 border-t border-gray-100 dark:border-gray-800 pt-1 scroll-mt-20"
+          : "rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 scroll-mt-20"
+      }
     >
       <button
         onClick={() => setIsOpen(!isOpen)}

@@ -3,7 +3,8 @@
  *
  * Shows a small animated indicator above the tab bar on the user's first
  * visit, hinting that they can swipe left/right or tap tabs to navigate.
- * Fades after 3 tab changes or when the user dismisses it.
+ * Fades after 3 tab changes or when the user dismisses it. Home only: it
+ * points at Shield, and on Exchange/Guardian it floated over the object.
  *
  * Per the Core Principles:
  *   - ENHANCEMENT FIRST: lives in the existing TabNavigation component's
@@ -30,15 +31,15 @@ export function TabNavHint({ activeTab }: { activeTab: TabId }) {
 
     return (
         <AnimatePresence>
-            {showHint && !chatOpen && activeTab !== 'protect' && (
+            {showHint && !chatOpen && activeTab === 'overview' && (
                 <motion.div
                     key="tab-nav-hint"
                     {...motionProps}
-                    className="fixed bottom-[calc(6rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+                    className="fixed inset-x-0 bottom-[calc(6rem+env(safe-area-inset-bottom))] z-50 flex flex-col items-center pointer-events-none"
                     role="status"
                     aria-live="polite"
                 >
-                    <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl flex items-center gap-2">
+                    <div className="bg-gray-900 dark:bg-gray-700 text-white text-xs font-bold px-4 py-2 rounded-full shadow-xl flex items-center gap-2 whitespace-nowrap">
                         <motion.span
                             aria-hidden="true"
                             animate={prefersReducedMotion ? { x: 0 } : { x: [-2, 2, -2] }}

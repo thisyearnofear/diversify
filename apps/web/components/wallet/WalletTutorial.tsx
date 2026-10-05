@@ -95,7 +95,7 @@ export const WalletTutorial: React.FC<{
               <motion.button
                 onClick={handleConnect}
                 whileTap={{ scale: 0.98 }}
-                className="w-full flex items-center justify-center gap-3 p-4 mb-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+                className="w-full flex items-center justify-center gap-3 p-4 mb-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-sm shadow-lg shadow-blue-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
               >
                 <span className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-base font-black">MP</span>
                 Connect MiniPay
