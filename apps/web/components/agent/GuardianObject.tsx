@@ -63,6 +63,41 @@ function BudgetButton({
   );
 }
 
+/** The limit drawn as a fence: one post per tenth of today's limit. Spent
+ *  posts fade; the posts left stand. A row beneath the mark — never a
+ *  ring (Shield owns the ring). The sentence stays the readable layer. */
+export const FENCE_POSTS = 10;
+
+export function BudgetFence({ remaining, limit }: { remaining: number; limit: number }) {
+  const reducedMotion = useReducedMotion();
+  const standing =
+    limit > 0 ? Math.max(0, Math.min(FENCE_POSTS, Math.round((remaining / limit) * FENCE_POSTS))) : 0;
+  return (
+    <div
+      data-testid="guardian-fence"
+      data-standing={standing}
+      aria-hidden="true"
+      className="relative -mt-1 mb-2 flex items-end justify-center gap-1.5"
+    >
+      <span className="absolute inset-x-0 bottom-1 h-px bg-blue-600/25 dark:bg-blue-400/25" />
+      {Array.from({ length: FENCE_POSTS }, (_, i) => (
+        <motion.span
+          key={i}
+          className="relative block w-1 origin-bottom rounded-t-full bg-blue-600 dark:bg-blue-400"
+          style={{ height: i % 2 ? 10 : 13 }}
+          initial={false}
+          animate={{ opacity: i < standing ? 1 : 0.18, scaleY: i < standing ? 1 : 0.55 }}
+          transition={
+            reducedMotion
+              ? { duration: 0 }
+              : { type: "spring", stiffness: 260, damping: 24, delay: i * 0.02 }
+          }
+        />
+      ))}
+    </div>
+  );
+}
+
 export function GuardianObject({
   guardianState,
   isAnalyzing,
@@ -127,6 +162,9 @@ export function GuardianObject({
       <div className="instrument-artifact flex justify-center">
         <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : "off"} className="mb-3" />
       </div>
+      {showBudget && (
+        <BudgetFence remaining={sessionInfo!.remainingTodayUSD} limit={dailyLimit} />
+      )}
       <div className="instrument-reading flex flex-col items-center">
       <div className="flex items-center justify-center gap-2 flex-wrap">
         <h2 className="text-xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
