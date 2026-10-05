@@ -43,6 +43,18 @@ import {
 } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useInstrumentInspection } from "@/components/shared/InstrumentShell";
+import { useLiveCurrencyRisk } from "@/components/swap/CorridorContext";
+import {
+  clampIndex,
+  coinWear,
+  eventForDate,
+  isScrubbableSeries,
+  monthLabel,
+  monthsBackLabel,
+  monthStep,
+  readingAt,
+  type ValueSeries,
+} from "@/lib/narrative/coin-scrub";
 
 interface Props {
   moment: NarrativeMoment;
@@ -111,10 +123,12 @@ function DeltaNumber({
   delta,
   accent,
   horizonLabel,
+  duration = comparisonSettle.duration,
 }: {
   delta: number;
   accent: string;
   horizonLabel: string;
+  duration?: number;
 }) {
   const formatDelta = (n: number) => {
     const abs = Math.abs(n);
@@ -126,7 +140,7 @@ function DeltaNumber({
   };
   const value = useCountUp(delta, {
     initialValue: delta,
-    duration: comparisonSettle.duration,
+    duration,
     format: formatDelta,
   });
   return (
@@ -148,6 +162,63 @@ function DeltaNumber({
       >
         {horizonLabel}
       </span>
+    </div>
+  );
+}
+
+/** The coin's time axis — 12 real months, year-only events as ticks at
+ *  mid-year (the honest position), the knob where the drag has taken it.
+ *  At rest it sits at today and names how far back the coin can go. */
+function TimeTrack({
+  series,
+  index,
+  events,
+  accent,
+}: {
+  series: ValueSeries;
+  index: number | null;
+  events: readonly { year: number }[];
+  accent: string;
+}) {
+  const n = series.values.length - 1;
+  const at = index === null ? 1 : index / n;
+  const t0 = Date.parse(series.dates[0]);
+  const t1 = Date.parse(series.dates[n]);
+  const ticks = events
+    .map((e) => (Date.UTC(e.year, 6, 1) - t0) / (t1 - t0))
+    .filter((f) => f >= 0 && f <= 1);
+  return (
+    <div
+      data-testid="moment-time-track"
+      aria-hidden="true"
+      className="instrument-inspect-hidden mx-auto mt-2 w-full max-w-[220px]"
+    >
+      <div className="relative h-3">
+        <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-gray-200 dark:bg-gray-700" />
+        <div
+          className="absolute right-0 top-1/2 h-0.5 -translate-y-1/2"
+          style={{ left: `${at * 100}%`, backgroundColor: accent, opacity: 0.5 }}
+        />
+        {ticks.map((f, i) => (
+          <span
+            key={i}
+            className="absolute top-1/2 h-2 w-px -translate-y-1/2 bg-gray-400 dark:bg-gray-500"
+            style={{ left: `${f * 100}%` }}
+          />
+        ))}
+        <span
+          className="absolute top-1/2 h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-white dark:ring-gray-900"
+          style={{ left: `${at * 100}%`, backgroundColor: accent }}
+        />
+      </div>
+      <div className="mt-0.5 flex justify-between text-3xs font-semibold tabular-nums text-gray-400 dark:text-gray-500">
+        <span>
+          {index === null
+            ? `← ${monthLabel(series.dates[0])}`
+            : monthLabel(series.dates[index])}
+        </span>
+        <span>today</span>
+      </div>
     </div>
   );
 }
@@ -259,6 +330,116 @@ export function CurrencyMomentCard({
   const curatedStale = !moment.isLive && isCurrencyRiskDatasetStale();
   const fmt = (n: number) => Math.round(n).toLocaleString();
 
+  // The coin is the chart: drag it sideways (or arrow keys on it) to walk
+  // the feed's real 12-month vs-USD path. Only on the USD comparison —
+  // the series is 12 months vs USD, so another benchmark or horizon would
+  // wear the wrong data.
+  const live = useLiveCurrencyRisk(moment.currencyCode);
+  const history =
+    moment.benchmark === "USD" &&
+    moment.horizon === "1yr" &&
+    !currencySelected &&
+    isScrubbableSeries(live?.series)
+      ? (live?.series ?? null)
+      : null;
+  const [scrubIndex, setScrubIndex] = React.useState<number | null>(null);
+  React.useEffect(
+    () => setScrubIndex(null),
+    [moment.currencyCode, moment.benchmark, moment.horizon],
+  );
+  const reading =
+    history && scrubIndex !== null ? readingAt(history, scrubIndex) : null;
+  const riskEvents = CURRENCY_BY_CODE[moment.currencyCode]?.riskEvents ?? [];
+  const scrubEvent = reading ? eventForDate(riskEvents, reading.date) : null;
+  const shownDelta = reading ? reading.changeToToday : moment.delta;
+  const shownImpact = reading
+    ? (moment.savingsAmount * Math.abs(shownDelta)) / 100
+    : moment.personalImpact;
+  const coinScale = reading
+    ? Math.max(0.5, Math.min(1.25, localCoinScale * reading.ratioToToday))
+    : localCoinScale;
+  // Wear is the loss carried to the shown moment: fresh at the start of
+  // the window, as worn as the reading says by today.
+  const wear = coinWear(reading ? reading.changeFromStart : moment.delta);
+  const scrubEventKey = scrubEvent ? `${scrubEvent.year}:${scrubEvent.event}` : null;
+  const lastEventRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (scrubEventKey && scrubEventKey !== lastEventRef.current) haptics.tap();
+    lastEventRef.current = scrubEventKey;
+  }, [scrubEventKey]);
+  const drag = React.useRef<{ x: number; moved: boolean } | null>(null);
+  const suppressClick = React.useRef(false);
+  const SCRUB_TRACK_PX = 220;
+  const endScrub = () => {
+    if (drag.current?.moved) {
+      suppressClick.current = true;
+      window.setTimeout(() => {
+        suppressClick.current = false;
+      }, 0);
+      setScrubIndex(null);
+    }
+    drag.current = null;
+  };
+  const scrubHandlers = history
+    ? {
+        onPointerMove: (e: React.PointerEvent<HTMLDivElement>) => {
+          const d = drag.current;
+          if (!d) return;
+          const dx = e.clientX - d.x;
+          if (!d.moved) {
+            if (Math.abs(dx) < 8) return;
+            d.moved = true;
+            act();
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+          }
+          const last = history.values.length - 1;
+          setScrubIndex(clampIndex(history, last + dx / (SCRUB_TRACK_PX / last)));
+        },
+        onPointerUp: endScrub,
+        onPointerCancel: endScrub,
+        onClickCapture: (e: React.MouseEvent) => {
+          if (!suppressClick.current) return;
+          suppressClick.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+        },
+      }
+    : {};
+  const onCoinKeyDown = history
+    ? (e: React.KeyboardEvent) => {
+        const last = history.values.length - 1;
+        const step = monthStep(history);
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          act();
+          setScrubIndex((i) => clampIndex(history, (i ?? last) - step));
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          setScrubIndex((i) => (i === null || i + step >= last ? null : i + step));
+        } else if (e.key === "Escape" && scrubIndex !== null) {
+          e.preventDefault();
+          e.stopPropagation();
+          setScrubIndex(null);
+        }
+      }
+    : undefined;
+  const scrubHintId = React.useId();
+  // The tab router swipes on horizontal pans — a drag that starts on the
+  // coin belongs to the coin. Native, because the router's drag listener
+  // sits below React's root and would see the event first.
+  const coinRef = React.useRef<HTMLDivElement>(null);
+  const scrubbable = Boolean(history);
+  React.useEffect(() => {
+    const el = coinRef.current;
+    if (!el || !scrubbable) return;
+    const down = (e: PointerEvent) => {
+      drag.current = { x: e.clientX, moved: false };
+      e.stopPropagation();
+    };
+    el.addEventListener("pointerdown", down);
+    return () => el.removeEventListener("pointerdown", down);
+  }, [scrubbable]);
+
   // The live line — real, dated facts about the visitor's currency.
   // While the story sheet is up the coin's back already shows the newest
   // risk event, so that beat drops (the line never repeats visible copy).
@@ -295,7 +476,7 @@ export function CurrencyMomentCard({
   const goodsEligible = Boolean(
     moment.goods && moment.delta < 0 && moment.goods.count > 0,
   );
-  const effectiveUnit = goodsEligible ? unit : "money";
+  const effectiveUnit = goodsEligible && !reading ? unit : "money";
   const comparisonKey = [
     moment.iso2,
     moment.currencyCode,
@@ -411,11 +592,17 @@ export function CurrencyMomentCard({
               {...tilt.props}
             >
               <motion.div
+                ref={coinRef}
                 data-testid="moment-local-coin"
-                animate={{ scale: reducedMotion ? 1 : localCoinScale }}
-                transition={comparisonSettle}
+                data-scrubbing={reading ? "true" : undefined}
+                animate={{ scale: reducedMotion ? 1 : coinScale }}
+                transition={reading ? { duration: 0.12 } : comparisonSettle}
                 className="w-full justify-self-end text-right [&_svg]:max-w-full [&_svg]:h-auto"
-                style={{ maxWidth: COIN_BASE_PX }}
+                style={{
+                  maxWidth: COIN_BASE_PX,
+                  touchAction: history ? "pan-y" : undefined,
+                }}
+                {...scrubHandlers}
               >
                 {/* The local coin is a door: tap flips it to its back —
                     flag + the newest dated event — and opens the story
@@ -457,6 +644,7 @@ export function CurrencyMomentCard({
                           size={112}
                           symbol={moment.currencyCode}
                           color={accent}
+                          wear={wear}
                           shine={
                             reducedMotion || hasFlipped || acted || inspecting
                               ? false
@@ -476,6 +664,9 @@ export function CurrencyMomentCard({
                       }}
                       whileTap={reducedMotion ? undefined : press}
                       transition={springPress}
+                      onKeyDown={onCoinKeyDown}
+                      onBlur={() => setScrubIndex(null)}
+                      aria-describedby={history ? scrubHintId : undefined}
                       aria-label={`Story of the ${moment.currencyCode}`}
                       aria-pressed={currencySelected}
                       title="Currency story"
@@ -497,9 +688,14 @@ export function CurrencyMomentCard({
                 className="min-w-0"
               >
                 <DeltaNumber
-                  delta={moment.delta}
+                  delta={shownDelta}
                   accent={accent}
-                  horizonLabel={HORIZONS[moment.horizon].label}
+                  horizonLabel={
+                    reading
+                      ? monthsBackLabel(reading.date, history?.dates.at(-1))
+                      : HORIZONS[moment.horizon].label
+                  }
+                  duration={reading ? 0.12 : undefined}
                 />
               </motion.div>
               <motion.div
@@ -516,19 +712,35 @@ export function CurrencyMomentCard({
                 />
               </motion.div>
             </motion.div>
+            {history && (
+              <>
+                <TimeTrack
+                  series={history}
+                  index={reading ? reading.index : null}
+                  events={riskEvents}
+                  accent={accent}
+                />
+                <span id={scrubHintId} className="sr-only">
+                  Drag the coin sideways, or use the arrow keys, to move through
+                  the last 12 months.
+                </span>
+              </>
+            )}
             <h2
               data-testid="home-reading"
               className="mt-2 text-xl sm:text-2xl font-bold text-ink"
             >
-              {Math.abs(moment.delta) < 0.05
+              {Math.abs(shownDelta) < 0.05
                 ? `${moment.currencyCode} buying power held steady`
-                : moment.delta < 0
+                : shownDelta < 0
                   ? `${moment.currencyCode} buying power fell`
                   : `${moment.currencyCode} buying power rose`}
             </h2>
             <p className="mt-1 text-sm text-ink-muted">
-              Over {HORIZONS[moment.horizon].label} against{" "}
-              {moment.benchmarkLabel}
+              {reading
+                ? `Since ${monthLabel(reading.date)}`
+                : `Over ${HORIZONS[moment.horizon].label}`}{" "}
+              against {moment.benchmarkLabel}
             </p>
 
             {/* One personal consequence — the amount is theirs to change */}
@@ -623,8 +835,8 @@ export function CurrencyMomentCard({
                 ) : (
                   <MoneyConsequence
                     currencyCode={moment.currencyCode}
-                    delta={moment.delta}
-                    personalImpact={moment.personalImpact}
+                    delta={shownDelta}
+                    personalImpact={shownImpact}
                     accent={accent}
                   />
                 )}
@@ -634,12 +846,23 @@ export function CurrencyMomentCard({
             {/* One rotating, data-backed line — a fresh macro beat, the
               currency's watch cadence, or a dated event — directly under
               the consequence it explains. */}
-            <LiveLine
-              testId="home-live-line"
-              beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
-              alive={liveAlive && !currencySelected && !acted && !inspecting}
-              className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
-            />
+            {reading ? (
+              <p
+                data-testid="home-scrub-line"
+                className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
+              >
+                {scrubEvent
+                  ? `${scrubEvent.year} · ${scrubEvent.event}`
+                  : monthLabel(reading.date)}
+              </p>
+            ) : (
+              <LiveLine
+                testId="home-live-line"
+                beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
+                alive={liveAlive && !currencySelected && !acted && !inspecting}
+                className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
+              />
+            )}
 
             {/* Controls — the same segmented + coin motifs learned in onboarding */}
             <div className="instrument-inspect-hidden mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">

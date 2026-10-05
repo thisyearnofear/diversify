@@ -56,6 +56,9 @@ export interface CoinProps {
   /** Delay before the shine sweep starts (s) — coordinates the sweep with
    *  an entrance settle so the band crosses AFTER the coin lands. */
   shineDelay?: number;
+  /** 0..1 — lost purchasing power worn into the coin: a duller face, a
+   *  nicked rim, a fading gloss. Data-driven only; 0 is a fresh mint. */
+  wear?: number;
 }
 
 export function Coin({
@@ -71,15 +74,22 @@ export function Coin({
   /** Shine loop period in seconds. */
   shineDuration = 2.6,
   shineDelay = 0,
+  wear = 0,
 }: CoinProps) {
   const gradId = useId();
   const shineId = useId();
   const shineOn = Boolean(shine);
   const shineOnce = shine === "once";
-  const light = mix(color, '#ffffff', 0.55);
-  const dark = mix(color, '#000000', 0.35);
-  const ink = mix(color, '#000000', 0.55);
   const compact = variant === 'progress' || variant === 'asset';
+  const worn = compact ? 0 : Math.max(0, Math.min(1, wear));
+  const face = worn > 0 ? mix(color, '#9ca3af', worn * 0.55) : color;
+  const light = mix(face, '#ffffff', 0.55);
+  const dark = mix(face, '#000000', 0.35);
+  const ink = mix(face, '#000000', 0.55);
+  const nicks = 4 + Math.round(worn * 12);
+  const nickGap = 1 + worn * 3;
+  const rimDash =
+    worn > 0.05 ? `${((2 * Math.PI * 30) / nicks - nickGap).toFixed(2)} ${nickGap.toFixed(2)}` : undefined;
   const ambient = variant === 'ambient';
 
   return (
@@ -124,7 +134,8 @@ export function Coin({
         r={compact ? 27 : 30}
         fill={`url(#${gradId})`}
         stroke={dark}
-        strokeWidth={compact ? 1.5 : 2}
+        strokeWidth={compact ? 1.5 : 2 + worn * 1.5}
+        strokeDasharray={rimDash}
       />
       {!compact && (
         <circle
@@ -134,11 +145,11 @@ export function Coin({
           fill="none"
           stroke={light}
           strokeWidth={ambient ? '1.2' : '2'}
-          opacity={ambient ? 0.45 : 0.7}
+          opacity={(ambient ? 0.45 : 0.7) * (1 - worn * 0.6)}
         />
       )}
       {!compact && !ambient && (
-        <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity="0.35" transform="rotate(-24 23 17)" />
+        <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity={0.35 * (1 - worn)} transform="rotate(-24 23 17)" />
       )}
       <text
         x="32"
