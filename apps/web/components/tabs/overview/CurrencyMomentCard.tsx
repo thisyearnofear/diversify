@@ -413,7 +413,13 @@ export function CurrencyMomentCard({
             >
               <motion.div
                 data-testid="moment-local-coin"
-                animate={{ scale: reducedMotion ? 1 : localCoinScale }}
+                // In goods the emptied sacks carry the loss — no double shrink.
+                animate={{
+                  scale:
+                    reducedMotion || effectiveUnit === "goods"
+                      ? 1
+                      : localCoinScale,
+                }}
                 transition={comparisonSettle}
                 className="w-full justify-self-end text-right [&_svg]:max-w-full [&_svg]:h-auto"
                 style={{ maxWidth: COIN_BASE_PX }}

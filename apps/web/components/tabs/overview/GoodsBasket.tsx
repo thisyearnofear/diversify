@@ -46,8 +46,8 @@ export function GoodsBasket({
               <motion.svg
                 key={slot}
                 viewBox="0 0 16 18"
-                width={size * 0.17}
-                height={size * 0.19}
+                width={size * 0.2}
+                height={size * 0.22}
                 initial={false}
                 animate={{ opacity: kept ? 1 : 0.22, scale: kept ? 1 : 0.86 }}
                 transition={
