@@ -268,6 +268,21 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.queryByText(/\bless buying power/)).not.toBeInTheDocument();
   });
 
+  it('the Goods lens turns the coin into a basket emptied by the real loss', () => {
+    render(
+      <CurrencyMomentCard
+        {...baseProps}
+        moment={{ ...MOMENT, goods: { unit: 'bags of rice', count: 51 } }}
+      />,
+    );
+    expect(screen.queryByTestId('moment-goods-basket')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Goods' }));
+    // retainedRatio 0.82 → 8 of 10 sacks still full
+    expect(screen.getByTestId('moment-goods-basket')).toHaveAttribute('data-full', '8');
+    fireEvent.click(screen.getByRole('button', { name: 'Money' }));
+    expect(screen.queryByTestId('moment-goods-basket')).not.toBeInTheDocument();
+  });
+
   it('the consequence toggles between money and goods in the same element', () => {
     render(
       <CurrencyMomentCard

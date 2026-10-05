@@ -12,6 +12,7 @@
 import React from "react";
 import { BENCHMARK_COLORS } from "@/components/shared/palette";
 import { motion, useReducedMotion } from "framer-motion";
+import { GoodsBasket } from "./GoodsBasket";
 import { Coin } from "@/components/shared/FloatingCoins";
 import { useCountUp } from "@/hooks/use-count-up";
 import { usePointerTilt } from "@/hooks/use-pointer-tilt";
@@ -430,7 +431,7 @@ export function CurrencyMomentCard({
                   );
                   const face = (
                     <motion.span
-                      key={String(currencySelected)}
+                      key={`${currencySelected}:${effectiveUnit}`}
                       className="inline-flex"
                       initial={
                         reducedMotion || !coinMountedRef.current
@@ -452,6 +453,11 @@ export function CurrencyMomentCard({
                             {newest.year} · {newest.event}
                           </span>
                         </span>
+                      ) : effectiveUnit === "goods" ? (
+                        <GoodsBasket
+                          retainedRatio={moment.retainedRatio}
+                          color={accent}
+                        />
                       ) : (
                         <Coin
                           size={112}
