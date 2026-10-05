@@ -497,12 +497,29 @@ export function ConnectedOverview({
     </button>
   ) : undefined;
 
+  // Settings live in the shell's status tier — one card per instrument,
+  // never a second "Settings & region" card stacked under the object.
   const status = (
-    <StatusTier
-      trust={null}
-      transition={inspectingSelection ? undefined : transition}
-      rail={<ClaimRail setupMode="entry" />}
-    />
+    <>
+      <StatusTier
+        trust={null}
+        transition={inspectingSelection ? undefined : transition}
+        rail={<ClaimRail setupMode="entry" />}
+      />
+      <MoreOptions
+        bare
+        userRegion={userRegion}
+        setUserRegion={setUserRegion}
+        regions={REGIONS ?? ALL_REGIONS}
+        showTwoChainsBanner={false}
+        experienceMode={experienceMode}
+        setExperienceMode={setExperienceMode}
+        anchorCurrency={anchor.anchorCurrency}
+        anchorSource={anchor.source}
+        anchorFx={anchorFx}
+        onAnchorChange={anchor.setAnchorCurrency}
+      />
+    </>
   );
 
   return (
@@ -528,20 +545,6 @@ export function ConnectedOverview({
         }}
         onRefresh={refreshBalances ? handleRefresh : undefined}
       />
-      <div className="mt-3">
-        <MoreOptions
-          userRegion={userRegion}
-          setUserRegion={setUserRegion}
-          regions={REGIONS ?? ALL_REGIONS}
-          showTwoChainsBanner={false}
-          experienceMode={experienceMode}
-          setExperienceMode={setExperienceMode}
-          anchorCurrency={anchor.anchorCurrency}
-          anchorSource={anchor.source}
-          anchorFx={anchorFx}
-          onAnchorChange={anchor.setAnchorCurrency}
-        />
-      </div>
     </div>
   );
 }

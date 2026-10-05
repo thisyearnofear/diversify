@@ -246,7 +246,7 @@ export default function WalletButton({
   const getVariantClasses = () => {
     switch (variant) {
       case 'primary':
-        return "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30";
+        return "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30";
       case 'secondary':
         return "bg-white dark:bg-gray-800 text-gray-800 dark:text-white border border-gray-200 dark:border-gray-700 hover:border-blue-300 shadow-sm";
       case 'inline':
