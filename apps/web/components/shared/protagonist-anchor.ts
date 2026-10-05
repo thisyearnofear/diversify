@@ -37,3 +37,34 @@ export function holdsCurrency(holds: string | null, symbol: string): boolean {
   return holds.toLowerCase().replace(/m$/, "") === symbol.toLowerCase();
 }
 
+
+/** Marks the onboarding coin the user just chose — the handoff's origin. */
+export const HANDOFF_ORIGIN_ATTR = "data-handoff-origin";
+
+export interface Handoff {
+  from: { x: number; y: number; size: number };
+  symbol: string;
+  color: string;
+  at: number;
+}
+
+/** A handoff older than this was never picked up — the shell is not coming. */
+export const HANDOFF_TTL_MS = 5000;
+let pending: Handoff | null = null;
+
+/** Onboarding → app shell: onboarding unmounts as the shell mounts (same
+ *  page, no navigation), so the chosen coin's last position is held here
+ *  for the shell's first scene to pick up once. */
+export function stashHandoff(h: Omit<Handoff, "at">): void {
+  pending = { ...h, at: Date.now() };
+}
+
+/** Read without consuming — a StrictMode remount must still see it. */
+export function peekHandoff(): Handoff | null {
+  if (pending && Date.now() - pending.at > HANDOFF_TTL_MS) pending = null;
+  return pending;
+}
+
+export function clearHandoff(): void {
+  pending = null;
+}

@@ -11,6 +11,7 @@ import { Coin } from '../../../shared/FloatingCoins';
 import FlickScrollRow, { useDidDrag } from '../../../shared/FlickScrollRow';
 import { ARCHETYPES, type ArchetypeId } from '../../../protection-cards/tokens';
 import { springSoft } from "@/lib/motion-tokens";
+import { HANDOFF_ORIGIN_ATTR } from '../../../shared/protagonist-anchor';
 
 /**
  * One archetype card. A CHILD COMPONENT — useDidDrag() must be called
@@ -51,6 +52,7 @@ function ArchetypeCard({
     >
       {/* Archetype coin — flips like a freshly minted coin when selected */}
       <motion.span
+        {...(isActive ? { [HANDOFF_ORIGIN_ATTR]: id } : {})}
         className="w-8 h-8 flex-shrink-0"
         animate={reducedMotion ? { rotateY: 0, scale: 1 } : isActive ? { rotateY: 360, scale: 1.1 } : { rotateY: 0, scale: 1 }}
         transition={reducedMotion ? { duration: 0 } : springSoft}
