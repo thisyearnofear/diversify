@@ -223,5 +223,11 @@ describe("CurrencyStoryInspector — actions", () => {
   it("keeps the share line quiet and secondary", () => {
     renderStory();
     expect(screen.getByText(/Share this currency's story/)).toBeInTheDocument();
+    // The share card plays the card's own curated 5y delta on the coin.
+    const card = screen.getByTestId('moment-share-card');
+    expect(card).toHaveAccessibleName(/5 years\. Replay$/);
+    const worn = Number(screen.getByTestId('moment-share-coin').getAttribute('data-worn'));
+    expect(worn).toBeGreaterThanOrEqual(0.45);
+    expect(worn).toBeLessThanOrEqual(1);
   });
 });

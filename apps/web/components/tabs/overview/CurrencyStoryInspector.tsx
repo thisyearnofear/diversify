@@ -22,7 +22,8 @@ import {
   riskEventAge,
   riskTrailCheckedAt,
 } from '@/constants/currency-risk';
-import { momentCardContent } from '@/lib/moment-card';
+import { momentCardContent, type MomentCardContent } from '@/lib/moment-card';
+import { useCountUp } from '@/hooks/use-count-up';
 import { trackFunnelEvent } from '@/lib/analytics';
 
 /** The currency's story is public knowledge — shareable via a card whose
@@ -58,6 +59,70 @@ function MomentShareLine({ code }: { code: string }) {
       {copied ? 'Link copied' : "Share this currency's story ↗"}
     </button>
   );
+}
+
+/** The share card, played once before it's shared: the coin wears down
+ *  by the card's own curated 5y delta while the figure counts to it, then
+ *  the newest dated event lands. Same numbers the /moment card renders —
+ *  nothing here a crawler couldn't derive from the code. Tap replays. */
+function MomentShareCard({ content }: { content: MomentCardContent }) {
+  const reduceMotion = useReducedMotion();
+  const [run, setRun] = useState(0);
+  const worn = Math.max(0.45, 1 + Math.min(content.delta, 0) / 100);
+  const STORY_S = 1.2;
+  return (
+    <div className="mt-3 flex flex-col items-center">
+      <button
+        type="button"
+        data-testid="moment-share-card"
+        aria-label={`${content.headline}. Replay`}
+        onClick={() => setRun((r) => r + 1)}
+        className="w-full max-w-[260px] rounded-2xl bg-[#0b0b12] px-4 py-4 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      >
+        <span key={run} className="flex flex-col items-center" aria-hidden="true">
+          <span className="flex h-16 items-center justify-center gap-3">
+            <motion.span
+              data-testid="moment-share-coin"
+              data-worn={worn.toFixed(2)}
+              className="flex size-14 items-center justify-center rounded-full border-2 border-[#3a3a48] bg-[#23232e] text-xs font-bold text-white"
+              initial={reduceMotion ? false : { scale: 1, filter: 'saturate(1)' }}
+              animate={{ scale: worn, filter: `saturate(${worn.toFixed(2)})` }}
+              transition={reduceMotion ? { duration: 0 } : { duration: STORY_S, ease: 'easeInOut', delay: 0.2 }}
+            >
+              {content.code}
+            </motion.span>
+            <span className="text-2xl font-extrabold tabular-nums text-white">
+              <CountUpFigure key={run} delta={content.delta} />
+            </span>
+            <span className="flex size-10 items-center justify-center rounded-full border-2 border-[#3a3a48] bg-[#23232e] text-3xs font-bold text-white">
+              {content.benchmark === 'XAU' ? 'Gold' : content.benchmark}
+            </span>
+          </span>
+          {content.event && (
+            <motion.span
+              className="mt-2 line-clamp-2 text-2xs text-[#8b8b9a]"
+              initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { ...reveal, delay: STORY_S + 0.2 }}
+            >
+              {content.event}
+            </motion.span>
+          )}
+          <span className="mt-1 text-3xs text-[#8b8b9a]">5 years vs {content.benchmarkName} · {content.asOf}</span>
+        </span>
+      </button>
+      <MomentShareLine code={content.code} />
+    </div>
+  );
+}
+
+/** Counts 0 → the card's own delta; remounted (keyed) on each replay. */
+function CountUpFigure({ delta }: { delta: number }) {
+  const figure = useCountUp(delta, {
+    duration: 1.2,
+    format: (n) => `${n < 0 ? '−' : n > 0 ? '+' : ''}${Math.abs(Math.round(n))}%`,
+  });
+  return <motion.span>{figure}</motion.span>;
 }
 
 /** The currency's real 12-month path vs USD, drawn from the live feed's
@@ -326,7 +391,7 @@ function CurrencyStoryBody({
           ) : null}
         </div>
       )}
-      {content && <MomentShareLine code={entry.code} />}
+      {content && <MomentShareCard content={content} />}
       <button
         type="button"
         onClick={() => {
