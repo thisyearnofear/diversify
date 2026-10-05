@@ -10,7 +10,12 @@
  * this plan" commits, "← Your plan" (or the hole) exits without
  * committing. With no philosophy the picker is the same layout minus the
  * ghost. The connect CTA attaches below when not comparing; trust + demo
- * live in the shared status tier. No hero card, no proof card.
+ * live in the shared status tier — the tokenized-asset lens enters
+ * through the ring itself (one quiet hatched teaser wedge, on the
+ * committed ring and the picker ring alike), never a status link in
+ * the action hue. During a balance preview the commit
+ * owns the whole screen: handoffs and the demo link step out and only
+ * trust remains. No hero card, no proof card.
  *
  * Persona morphs the object (rail 4): an APAC philosophy shows the APAC
  * honesty banner in the status tier; a Caribbean philosophy shows the
@@ -23,6 +28,7 @@ import type { FinancialStrategy, UserExperienceMode } from "@/context/app/types"
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { shieldPatternFor } from "./shield-pattern";
 import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
+import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useUserRegion } from "@/hooks/use-user-region";
@@ -214,11 +220,25 @@ export function ProtectionNotConnected({
           portfolio={walletlessPortfolio}
           selectedToken={sleeveOpen ? SLEEVE_ID : effectiveToken}
           onSelectToken={(token) => {
-            // A wedge tap inside the lens steps out of it to that leg.
+            // The teaser wedge is the sleeve's door — object grammar,
+            // not a status-tier link. A wedge tap inside the open lens
+            // steps out of it to that leg.
+            if (token === SLEEVE_ID) {
+              setSelectedToken(null);
+              if (!sleeveOpen) onOpenSleeve?.();
+              return;
+            }
             if (sleeveOpen) onCloseSleeve?.();
-            setSelectedToken(token === SLEEVE_ID ? null : token);
+            setSelectedToken(token);
           }}
           sleeveOpen={sleeveOpen}
+          sleeveTeaser={
+            !comparing &&
+            !sleeveOpen &&
+            !balance.isPreviewing &&
+            !onOpenCycle &&
+            Boolean(onOpenSleeve && onCloseSleeve)
+          }
           stilled={acted}
           alignmentScore={null}
           empty
@@ -336,48 +356,41 @@ export function ProtectionNotConnected({
           {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
         </div>
       )}
-      {onEnableDemo && (
-        <UnconnectedStatusTier onEnableDemo={onEnableDemo}>
-          {sleeveOpen && onCloseSleeve ? (
-            <button
-              type="button"
-              data-testid="rwa-sleeve-back"
-              onClick={() => {
-                onCloseSleeve();
-                haptics.tap();
-              }}
-              className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-            >
-              ← Back to plan
-            </button>
-          ) : onOpenCycle ? (
-            <button
-              type="button"
-              data-testid="cycle-entry"
-              onClick={() => {
-                onOpenCycle();
-                haptics.tap();
-              }}
-              className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-            >
-              What FX timing costs your next payment →
-            </button>
-          ) : onOpenSleeve && onCloseSleeve ? (
-            <button
-              type="button"
-              data-testid="rwa-sleeve-entry"
-              onClick={() => {
-                onOpenSleeve();
-                haptics.tap();
-              }}
-              className="link-handoff shrink-0"
-            >
-              Tokenized assets you can hold
-              <span aria-hidden="true" className="ml-1">→</span>
-            </button>
-          ) : null}
-        </UnconnectedStatusTier>
-      )}
+      {onEnableDemo &&
+        (balance.isPreviewing ? (
+          /* The commit moment owns the screen — trust stays, handoffs
+             and the demo link step out until it settles (§1 one job;
+             the dial already hides the rail, the CTA and the LiveLine). */
+          <VerifiedEvidence />
+        ) : (
+          <UnconnectedStatusTier onEnableDemo={onEnableDemo}>
+            {sleeveOpen && onCloseSleeve ? (
+              <button
+                type="button"
+                data-testid="rwa-sleeve-back"
+                onClick={() => {
+                  onCloseSleeve();
+                  haptics.tap();
+                }}
+                className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              >
+                ← Back to plan
+              </button>
+            ) : onOpenCycle ? (
+              <button
+                type="button"
+                data-testid="cycle-entry"
+                onClick={() => {
+                  onOpenCycle();
+                  haptics.tap();
+                }}
+                className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              >
+                What FX timing costs your next payment →
+              </button>
+            ) : null}
+          </UnconnectedStatusTier>
+        ))}
     </div>
   );
 

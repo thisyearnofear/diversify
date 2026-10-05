@@ -43,6 +43,10 @@ export const SLEEVE_ID = 'sleeve';
 export const VAULT_SLICE_PREFIX = 'vault:';
 /** Preview wedge weight when the ring holds no tokenized asset. */
 const SLEEVE_PREVIEW_PCT = 15;
+/** Teaser wedge weight — the walletless ring's quiet invite into the
+ *  tokenized-asset lens. Smaller than the open preview: the invite
+ *  grows into the lens on tap. */
+const SLEEVE_TEASER_PCT = 8;
 
 export function isSleeveSelection(id: string | null | undefined): boolean {
   return id === SLEEVE_ID || Boolean(id?.startsWith(VAULT_SLICE_PREFIX));
@@ -95,6 +99,11 @@ interface Props {
    * quiet; a ring with no tokenized asset gets one labelled preview wedge.
    */
   sleeveOpen?: boolean;
+  /** Walletless invite: append one faint hatched wedge for the
+   *  tokenized-asset lens — the object advertises its own verb instead
+   *  of a status-tier text link carrying the action hue. The tap
+   *  arrives as `onSelectToken(SLEEVE_ID)`; the parent opens the lens. */
+  sleeveTeaser?: boolean;
   stilled?: boolean;
   balancePreview?: boolean;
   savedLegs?: PlanLeg[];
@@ -124,6 +133,7 @@ export function ProtectionPlanRing({
   holeOverride,
   holeActionLabel,
   sleeveOpen = false,
+  sleeveTeaser = false,
   stilled = false,
   balancePreview = false,
   savedLegs = [],
@@ -318,7 +328,21 @@ export function ProtectionPlanRing({
   );
   const rwaPct = Math.round(rwaSlices.reduce((sum, s) => sum + s.percent, 0));
   const displaySlices = useMemo(() => {
-    if (!sleeveOpen) return ringSlicesForDisplay;
+    if (!sleeveOpen) {
+      // The teaser — one hatched wedge, quiet grey, never a plan share.
+      // The object offers the lens; a status link doesn't.
+      if (!sleeveTeaser) return ringSlicesForDisplay;
+      return [
+        ...ringSlicesForDisplay,
+        {
+          id: SLEEVE_ID,
+          label: 'Tokenized assets — tap to look inside',
+          percent: SLEEVE_TEASER_PCT,
+          color: QUIET_GRAY,
+          hatch: true,
+        },
+      ];
+    }
     const quiet = ringSlicesForDisplay.map((s) => (s.hatch ? s : { ...s, color: QUIET_GRAY }));
     if (rwaSlices.length > 0) return quiet;
     return [
@@ -331,7 +355,7 @@ export function ProtectionPlanRing({
         hatch: true,
       },
     ];
-  }, [sleeveOpen, ringSlicesForDisplay, rwaSlices.length, archetype]);
+  }, [sleeveOpen, sleeveTeaser, ringSlicesForDisplay, rwaSlices.length, archetype]);
 
   useEffect(() => {
     if (showDust && (!needsDisclosure || dust.length === 0)) setShowDust(false);

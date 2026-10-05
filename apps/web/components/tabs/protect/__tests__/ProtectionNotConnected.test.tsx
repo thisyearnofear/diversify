@@ -386,6 +386,71 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
+  it("the sleeve teaser is a quiet wedge in the ring — tap opens the lens, no status link", () => {
+    mockState.financialStrategy = "africapitalism";
+    const onOpenSleeve = vi.fn();
+    try {
+      render(
+        <ProtectionNotConnected
+          experienceMode="simple"
+          onEnableDemo={vi.fn()}
+          onOpenSleeve={onOpenSleeve}
+          onCloseSleeve={vi.fn()}
+        />,
+      );
+
+      // Object grammar, not chrome: the invite rides inside the ring as
+      // one hatched wedge — there is no action-hue text link anymore.
+      expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+      const wedge = screen.getByRole("button", {
+        name: /Tokenized assets — tap to look inside/,
+      });
+      fireEvent.click(wedge);
+      expect(onOpenSleeve).toHaveBeenCalledTimes(1);
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("a balance preview quiets the status tier to trust — handoffs and demo step out", () => {
+    mockState.financialStrategy = "africapitalism";
+    mockState.riskTolerance = "Balanced";
+    try {
+      render(
+        <ProtectionNotConnected
+          experienceMode="simple"
+          onEnableDemo={vi.fn()}
+          onOpenSleeve={vi.fn()}
+          onCloseSleeve={vi.fn()}
+        />,
+      );
+
+      // Resting: the teaser wedge + demo link are present.
+      expect(
+        screen.getByRole("button", { name: /Tokenized assets — tap to look inside/ }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Explore a sample plan" }),
+      ).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+
+      // The commit owns the screen: only the commit pair + trust remain.
+      expect(
+        screen.getByRole("button", { name: "Use this balance" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Explore a sample plan" }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: /Tokenized assets — tap to look inside/ }),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
   it("business morph: onOpenCycle renders the cycle entry instead of the tokenized link", () => {
     const onOpenCycle = vi.fn();
     render(

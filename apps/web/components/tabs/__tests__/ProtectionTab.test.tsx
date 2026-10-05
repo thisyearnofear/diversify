@@ -336,6 +336,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           selectButton("PAXG", "ring-select-paxg"),
           selectButton("cREAL", "ring-select-creal"),
           selectButton("cUSD", "ring-select-cusd"),
+          selectButton("sleeve", "ring-select-sleeve"),
         ),
         controls,
       );
@@ -1111,8 +1112,10 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("rwa-offapp")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("rwa-sleeve-back"));
     expect(screen.queryByTestId("rwa-vault-sleeve")).not.toBeInTheDocument();
-    // The doorway is no longer URL-only: the status tier re-opens it.
-    fireEvent.click(screen.getByTestId("rwa-sleeve-entry"));
+    // The doorway is no longer URL-only: the ring's own teaser wedge
+    // re-opens it — no status-tier text link.
+    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("ring-select-sleeve"));
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
   });
 
