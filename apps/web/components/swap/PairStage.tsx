@@ -10,7 +10,8 @@
  * change that side. One CTA wakes the ticket, the acting mode.
  */
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion, useReducedMotion, type PanInfo } from 'framer-motion';
+import { clink } from '@/lib/feel';
 import { Coin } from '../shared/FloatingCoins';
 import { TokenIcon } from '../shared/TokenIcon';
 import { QUIET_GRAY } from '../shared/palette';
@@ -33,6 +34,23 @@ import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
 const STAMP_TEACH_KEY = 'diversifi.stamps.taught';
+/** Drag distance along the beam that drafts the whole balance. */
+const DRAFT_TRAVEL_PX = 160;
+
+/** Snap a drag share to quarters; 0 drafts nothing. */
+export function snapDraftFraction(share: number): number | null {
+  const q = Math.round(Math.max(0, Math.min(1, share)) * 4) / 4;
+  return q > 0 ? q : null;
+}
+
+/** The amount a drafted share of the balance is — never more than held. */
+export function draftAmountFor(balance: string, fraction: number): string {
+  if (fraction >= 1) return balance;
+  const decimals = Math.min(6, balance.split('.')[1]?.length ?? 0);
+  const scale = 10 ** decimals;
+  const n = Math.floor(Number.parseFloat(balance) * fraction * scale) / scale;
+  return Number.isFinite(n) ? String(Number(n.toFixed(decimals))) : '0';
+}
 
 /** What the ticket hands back to the pair on settlement — a snapshot of
  *  the swap as it was quoted, never the modal's invented numbers. */
@@ -61,6 +79,7 @@ function BeamCoin({
   sealed = false,
   onSealStamp,
   teaching = false,
+  draft,
 }: {
   symbol: string;
   layoutId: string;
@@ -75,8 +94,42 @@ function BeamCoin({
   onSealStamp?: () => void;
   /** One-shot teach: dashed rings bloom out around the ✓ once. */
   teaching?: boolean;
+  /** Drag the coin along the beam to draft a share of the balance — a
+   *  preview: it fills the ticket, the CTA still commits. */
+  draft?: { balance: string; onDraft(amount: string): void };
 }) {
   const reduced = useReducedMotion();
+  const [fraction, setFraction] = useState<number | null>(null);
+  const dragged = useRef(false);
+  const dragProps = draft
+    ? {
+        drag: 'x' as const,
+        dragConstraints: { left: 0, right: DRAFT_TRAVEL_PX },
+        dragElastic: 0.04,
+        dragMomentum: false,
+        dragSnapToOrigin: true,
+        onPointerDownCapture: () => {
+          dragged.current = false;
+        },
+        onDragStart: () => {
+          dragged.current = true;
+        },
+        onDrag: (_: unknown, info: PanInfo) => {
+          const f = snapDraftFraction(info.offset.x / DRAFT_TRAVEL_PX);
+          if (f !== fraction) {
+            setFraction(f);
+            if (f) haptics.tap();
+          }
+        },
+        onDragEnd: () => {
+          if (fraction) {
+            clink();
+            draft.onDraft(draftAmountFor(draft.balance, fraction));
+          }
+          setFraction(null);
+        },
+      }
+    : {};
   const provenance = provenanceFor(symbol);
   const flag = provenance?.origin.flag ?? corridorSideFor(symbol)?.flag;
   // The mint-mark lives outside the coin's flip button so a ✓-as-button
@@ -145,10 +198,31 @@ function BeamCoin({
       transition={{ ...springSoft, delay: reduced ? 0 : index * STAGGER_STEP_S }}
       className="relative"
     >
+      <motion.div
+        {...dragProps}
+        data-testid={draft ? 'pair-coin-draft' : undefined}
+        title={draft ? 'Drag along the beam to set an amount' : undefined}
+        className={draft ? 'relative cursor-grab touch-pan-y active:cursor-grabbing' : 'relative'}
+      >
+      {fraction != null && draft && (
+        <span
+          data-testid="draft-readout"
+          aria-live="polite"
+          className="pointer-events-none absolute -top-7 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-2 py-0.5 text-2xs font-bold tabular-nums text-white dark:bg-white dark:text-gray-900"
+        >
+          {fraction === 1 ? 'All' : `${fraction * 100}%`} · {draftAmountFor(draft.balance, fraction)} {symbol}
+        </span>
+      )}
       {provenance ? (
         <motion.button
           type="button"
-          onClick={onFlip}
+          onClick={() => {
+            if (dragged.current) {
+              dragged.current = false;
+              return;
+            }
+            onFlip();
+          }}
           aria-label={`About ${symbol}`}
           aria-pressed={flipped}
           whileTap={reduced ? undefined : press}
@@ -187,6 +261,7 @@ function BeamCoin({
           stamp your why ✦
         </motion.span>
       )}
+      </motion.div>
     </motion.div>
   );
 }
@@ -246,6 +321,8 @@ export function PairStage({
   onDismissReceipt,
   onMoveMore,
   claim = null,
+  fromBalance = null,
+  onDraft,
 }: {
   fromToken: string;
   toToken: string;
@@ -265,6 +342,9 @@ export function PairStage({
   onDismissReceipt?(): void;
   onMoveMore?(): void;
   claim?: { label: string; onClaim(): void } | null;
+  /** The from side's held balance; null (no wallet) means nothing to draft. */
+  fromBalance?: string | null;
+  onDraft?(amount: string): void;
 }) {
   const reduced = useReducedMotion();
   const { navigateWithIntent, navigateToGuardian } = useNavigation();
@@ -325,6 +405,15 @@ export function PairStage({
   useEffect(() => {
     landed.current = true;
   }, []);
+
+  // A settled move is the one coin that earns the clink (opt-in Sound).
+  useEffect(() => {
+    if (!receipt) return;
+    const t = window.setTimeout(clink, reduced ? 0 : 1250);
+    return () => window.clearTimeout(t);
+  }, [receipt, reduced]);
+  const canDraft =
+    !receipt && onDraft && fromBalance && Number.parseFloat(fromBalance) > 0;
 
   const fromProvenance = provenanceFor(fromToken);
   const toProvenance = provenanceFor(toToken);
@@ -405,6 +494,7 @@ export function PairStage({
             index={0}
             flipped={flipped === 'from'}
             onFlip={() => { setActed(true); setFlipped(flipped === 'from' ? null : 'from'); }}
+            draft={canDraft ? { balance: fromBalance, onDraft } : undefined}
           />
           {/* The hub — the ⇅ coin AT the beam's center, counter-rotated
               so its glyph stays upright. Tap swaps the sides and the
