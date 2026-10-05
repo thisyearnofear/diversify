@@ -27,6 +27,13 @@ import {
   type AnchorSource,
 } from "@/lib/anchor-currency";
 import RegionalIconography from "../regional/RegionalIconography";
+import { FEELS, getFeel, setFeel, type Feel } from "@/lib/feel";
+
+const FEEL_LABEL: Record<Feel, string> = {
+  silent: "Silent",
+  touch: "Touch",
+  sound: "Sound",
+};
 
 const MODES: readonly UserExperienceMode[] = ["simple", "full"];
 const MODE_LABEL: Record<UserExperienceMode, string> = {
@@ -89,6 +96,20 @@ export function MoreOptions({
   onAnchorChange,
 }: MoreOptionsProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [feel, setFeelState] = React.useState<Feel>("touch");
+  React.useEffect(() => setFeelState(getFeel()), []);
+  const chooseFeel = (next: Feel) => {
+    setFeel(next);
+    setFeelState(next);
+  };
+  const onFeelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
+    if (!step) return;
+    e.preventDefault();
+    const next = FEELS[(FEELS.indexOf(feel) + step + FEELS.length) % FEELS.length];
+    chooseFeel(next);
+    e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[FEELS.indexOf(next)]?.focus();
+  };
   const modeGroupRef = React.useRef<HTMLDivElement>(null);
 
   const hasPowerActions =
@@ -213,6 +234,39 @@ export function MoreOptions({
                   </div>
                 </div>
               )}
+
+              <div className="pt-3 flex items-center justify-between gap-3">
+                <span className="text-xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                  Feel
+                </span>
+                <div
+                  role="radiogroup"
+                  aria-label="Vibration and sound"
+                  className="grid grid-cols-3 gap-1 rounded-full bg-gray-100 dark:bg-gray-800 p-1"
+                  onKeyDown={onFeelKeyDown}
+                >
+                  {FEELS.map((f) => {
+                    const isSelected = feel === f;
+                    return (
+                      <button
+                        key={f}
+                        type="button"
+                        role="radio"
+                        aria-checked={isSelected}
+                        tabIndex={isSelected ? 0 : -1}
+                        onClick={() => chooseFeel(f)}
+                        className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
+                          isSelected
+                            ? "bg-white dark:bg-gray-900 shadow-sm text-gray-900 dark:text-white"
+                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                        }`}
+                      >
+                        {FEEL_LABEL[f]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {hasAnchor && anchorCurrency && (
                 <div className="pt-3" data-testid="anchor-currency-setting">

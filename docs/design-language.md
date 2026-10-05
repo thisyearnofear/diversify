@@ -244,6 +244,20 @@ inspects, flip reveals the coin's back, flick browses a
 onto an existing verb; adding a gesture requires retiring one. Nouns
 are infinite — any artefact may carry the verbs.
 
+*Amendment 2026-10 — drag is preview's physical form.* An object may be
+dragged along **its own axis** to preview: the Home coin through time,
+the Exchange from-coin along the beam to draft a quarter-snapped share
+of the held balance (readout above the coin; release fills the ticket).
+A drag drafts, never commits — the CTA still commits — and it is never
+the only path (the ticket's amount field and the scrub's arrow keys
+remain). No drag crosses instruments.
+
+*Feel* (Settings → Feel: Silent / Touch / Sound) owns non-visual
+feedback. Touch (default) is the existing haptics; Sound is opt-in — a
+synthesised clink only when a coin settles for real (a drafted amount
+lands, a settlement's seal). Silent turns both off. Never ambient, never
+a reward.
+
 **Motifs have owners.** Home owns the coin stage + holdings row, Shield
 the ring, Exchange the pair stage (balance beam + coins) + story strip +
 journey rail, Guardian the mark. A new

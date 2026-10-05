@@ -12,6 +12,8 @@
  * everywhere else) the vibrate path is used.
  */
 
+import { getFeel } from './feel';
+
 type HapticPattern = 'light' | 'medium' | 'heavy' | 'success' | 'error' | 'warning';
 
 const PATTERNS: Record<HapticPattern, number | number[]> = {
@@ -74,6 +76,7 @@ function fireHost(pattern: HapticPattern): boolean {
 export function haptic(pattern: HapticPattern = 'medium'): void {
   if (typeof window === 'undefined') return;
   if (prefersReducedMotion()) return;
+  if (getFeel() === 'silent') return;
 
   try {
     if (fireHost(pattern)) return;

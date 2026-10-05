@@ -511,6 +511,12 @@ const SwapInterface = forwardRef<
                 wakeTicket();
               }}
               claim={claim}
+              fromBalance={address ? tokenBalances[fromToken]?.formattedBalance ?? null : null}
+              onDraft={(a) => {
+                setReceipt(null);
+                setAmount(a);
+                wakeTicket();
+              }}
             />
             {/* The settled receipt is shareable — a chain-derived page,
                 not a session artifact. Only chains the receipt route can

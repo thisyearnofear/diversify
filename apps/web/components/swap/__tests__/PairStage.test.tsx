@@ -531,3 +531,27 @@ describe('PairStage — stillness after interaction', () => {
     }
   });
 });
+
+describe('drafting by drag along the beam', () => {
+  it('snaps the share to quarters and drafts nothing at rest', async () => {
+    const { snapDraftFraction } = await import('../PairStage');
+    expect(snapDraftFraction(0.05)).toBeNull();
+    expect(snapDraftFraction(0.4)).toBe(0.5);
+    expect(snapDraftFraction(1.3)).toBe(1);
+  });
+
+  it('never drafts more than is held, and all is the exact balance', async () => {
+    const { draftAmountFor } = await import('../PairStage');
+    expect(draftAmountFor('12.345678', 0.25)).toBe('3.086419');
+    expect(draftAmountFor('100', 0.5)).toBe('50');
+    expect(draftAmountFor('0.333333', 1)).toBe('0.333333');
+  });
+
+  it('offers the drag only when there is a balance to draft', () => {
+    renderStage();
+    expect(screen.queryByTestId('pair-coin-draft')).not.toBeInTheDocument();
+    cleanup();
+    renderStage({ fromBalance: '42.5', onDraft: () => {} });
+    expect(screen.getByTestId('pair-coin-draft')).toBeInTheDocument();
+  });
+});
