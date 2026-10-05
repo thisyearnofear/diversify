@@ -34,11 +34,11 @@ export function GoodsBasket({
       data-testid="moment-goods-basket"
       data-full={full}
       aria-hidden="true"
-      className="flex aspect-square flex-col items-center justify-center gap-0.5 rounded-full border-2 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
-      style={{ width: size }}
+      className="flex aspect-square w-full flex-col items-center justify-center gap-[2%] rounded-full border-2 border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
+      style={{ maxWidth: size }}
     >
       {ROWS.map((n, r) => (
-        <span key={r} className="flex gap-0.5">
+        <span key={r} className="flex w-full justify-center gap-[2%]">
           {Array.from({ length: n }, () => {
             const slot = i++;
             const kept = slot < full;
@@ -46,8 +46,7 @@ export function GoodsBasket({
               <motion.svg
                 key={slot}
                 viewBox="0 0 16 18"
-                width={size * 0.2}
-                height={size * 0.22}
+                style={{ width: "21%", height: "auto" }}
                 initial={false}
                 animate={{ opacity: kept ? 1 : 0.22, scale: kept ? 1 : 0.86 }}
                 transition={
