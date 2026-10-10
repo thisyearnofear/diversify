@@ -110,7 +110,7 @@ describe('stampsForPair', () => {
       nowMs: NOW.getTime(),
     });
     const idx = beats.findIndex((b) => b.stampId === 'coming-ng-2027-presidential');
-    expect(idx).toBe(1); // after the watch beat, before the risk event
+    expect(idx).toBe(2); // watch, then the persona beat, then this — before the risk event
     expect(beats[idx].text).toContain('Jan 16 🇳🇬: Nigeria presidential');
   });
 

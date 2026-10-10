@@ -14,6 +14,16 @@ import { ethers } from 'ethers';
 const executeSwap = vi.hoisted(() => vi.fn((_p?: unknown, _c?: unknown) => Promise.resolve({ success: false } as unknown)));
 const isSwapSupported = vi.hoisted(() => vi.fn((_p?: unknown) => true));
 
+// Money features now need a counsel-cleared market before they are
+// "configured" — env-on alone opens nothing. The gate itself is covered
+// by jurisdictions.test.ts; here we just control whether fees CAN be
+// taken so the screening fail-closed test reaches the branch.
+const feesConfigured = vi.hoisted(() => ({ value: false }));
+vi.mock('@diversifi/shared/src/config/jurisdictions', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@diversifi/shared/src/config/jurisdictions')>();
+  return { ...mod, featureConfigured: () => feesConfigured.value };
+});
+
 vi.mock('@diversifi/shared/src/services/swap/swap-orchestrator.service', () => ({
   SwapOrchestratorService: {
     executeSwap: (...args: unknown[]) => executeSwap(args[0], args[1]),
@@ -93,6 +103,7 @@ function stubScreen(
 beforeEach(() => {
   vi.clearAllMocks();
   _resetScreenCache();
+  feesConfigured.value = false;
 });
 
 afterEach(() => {
@@ -133,6 +144,7 @@ describe('useSwap sanctions screen', () => {
 
   it('an unavailable screener fails closed once fees are on', async () => {
     process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    feesConfigured.value = true; // a cleared market exists — fees can be taken
     stubScreen({ status: 'unavailable' });
     const { result } = renderHook(() => useSwap());
 
@@ -147,6 +159,7 @@ describe('useSwap sanctions screen', () => {
 
   it('a rate-limited screen fails closed with a retry-after message', async () => {
     process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    feesConfigured.value = true;
     stubScreen(
       { status: 'unavailable', reason: 'rate_limited' },
       false,
