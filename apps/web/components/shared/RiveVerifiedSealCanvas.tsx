@@ -12,15 +12,14 @@
  * `accentLight`/`accentDark` derived with `shadeHex`).
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useRive,
-  useViewModel,
-  useViewModelInstance,
   useViewModelInstanceBoolean,
   useViewModelInstanceColor,
   useViewModelInstanceTrigger,
   RuntimeLoader,
+  type ViewModelInstance,
 } from '@rive-app/react-canvas-lite';
 import { haptics } from '../../lib/haptics';
 import { hexToRgb, shadeHex } from '../../lib/rive-color';
@@ -43,10 +42,28 @@ export default function RiveVerifiedSealCanvas({ size, verified, accent }: RiveV
     // Required: without it the runtime plays the first linear animation,
     // not the state machine — binds, transitions and events never run.
     stateMachine: 'VerifiedSeal',
+    // onRiveReady fires before the state machine advances — the first
+    // frame must already carry the real accent/verified state, not the
+    // file's defaults (the property hooks only resolve after frame 1).
+    onRiveReady: (r) => {
+      const instance = r.defaultViewModel()?.instance() ?? null;
+      if (instance) {
+        const mid = hexToRgb(accent);
+        const light = shadeHex(accent, 0.28);
+        const dark = shadeHex(accent, -0.32);
+        instance.color('accent')?.rgb(mid.r, mid.g, mid.b);
+        instance.color('accentLight')?.rgb(light.r, light.g, light.b);
+        instance.color('accentDark')?.rgb(dark.r, dark.g, dark.b);
+        const verifiedProp = instance.boolean('verified');
+        if (verifiedProp) verifiedProp.value = verified;
+        r.bindViewModelInstance(instance);
+      }
+      setVmi(instance);
+    },
   });
-  const viewModel = useViewModel(rive, { useDefault: true });
-  // useNew: each mounted seal owns its data context (see RiveCoinCanvas).
-  const vmi = useViewModelInstance(viewModel, { useNew: true, rive });
+  // Each mounted seal owns its data context — sharing the file's default
+  // instance across two canvases crashes the lite WASM (see RiveCoinCanvas).
+  const [vmi, setVmi] = useState<ViewModelInstance | null>(null);
   const { setValue: setVerified } = useViewModelInstanceBoolean('verified', vmi);
   const { setRgb: setAccent } = useViewModelInstanceColor('accent', vmi);
   const { setRgb: setAccentLight } = useViewModelInstanceColor('accentLight', vmi);

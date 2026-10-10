@@ -12,15 +12,14 @@
  * the confirm haptic lands on the exact frame, no deprecated event API.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useRive,
-  useViewModel,
-  useViewModelInstance,
   useViewModelInstanceBoolean,
   useViewModelInstanceColor,
   useViewModelInstanceTrigger,
   RuntimeLoader,
+  type ViewModelInstance,
 } from '@rive-app/react-canvas-lite';
 import { haptics } from '../../lib/haptics';
 import { hexToRgb } from '../../lib/rive-color';
@@ -45,10 +44,30 @@ export default function RiveNetPairCanvas({ size, leftColor, rightColor, settled
     // Required: without it the runtime plays the first linear animation,
     // not the state machine — binds, transitions and events never run.
     stateMachine: 'NetPair',
+    // onRiveReady fires before the state machine advances — the first
+    // frame must already carry the real pair colors/settled state, not
+    // the file's defaults (the property hooks only resolve after frame 1).
+    onRiveReady: (r) => {
+      const instance = r.defaultViewModel()?.instance() ?? null;
+      if (instance) {
+        if (leftColor) {
+          const { r: cr, g, b } = hexToRgb(leftColor);
+          instance.color('leftColor')?.rgb(cr, g, b);
+        }
+        if (rightColor) {
+          const { r: cr, g, b } = hexToRgb(rightColor);
+          instance.color('rightColor')?.rgb(cr, g, b);
+        }
+        const settledProp = instance.boolean('settled');
+        if (settledProp) settledProp.value = settled;
+        r.bindViewModelInstance(instance);
+      }
+      setVmi(instance);
+    },
   });
-  const viewModel = useViewModel(rive, { useDefault: true });
-  // useNew: each mounted pair owns its data context (see RiveCoinCanvas).
-  const vmi = useViewModelInstance(viewModel, { useNew: true, rive });
+  // Each mounted pair owns its data context — sharing the file's default
+  // instance across two canvases crashes the lite WASM (see RiveCoinCanvas).
+  const [vmi, setVmi] = useState<ViewModelInstance | null>(null);
   const { setRgb: setLeft } = useViewModelInstanceColor('leftColor', vmi);
   const { setRgb: setRight } = useViewModelInstanceColor('rightColor', vmi);
   const { setValue: setSettled } = useViewModelInstanceBoolean('settled', vmi);

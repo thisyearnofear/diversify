@@ -48,44 +48,44 @@
                         <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
                         <TransitionViewModelCondition opValue="equal">
                             <TransitionPropertyViewModelComparator>
-                                <BindablePropertyString>
-                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="635"/>
-                                </BindablePropertyString>
+                                <BindablePropertyEnum>
+                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="637"/>
+                                </BindablePropertyEnum>
                             </TransitionPropertyViewModelComparator>
-                            <TransitionValueStringComparator value="watching"/>
+                            <TransitionValueEnumComparator value="0:91"/>
                         </TransitionViewModelCondition>
                     </StateTransition>
                     <StateTransition stateToId="0:13" duration="280" interpolationType="cubic">
                         <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
                         <TransitionViewModelCondition opValue="equal">
                             <TransitionPropertyViewModelComparator>
-                                <BindablePropertyString>
-                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="635"/>
-                                </BindablePropertyString>
+                                <BindablePropertyEnum>
+                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="637"/>
+                                </BindablePropertyEnum>
                             </TransitionPropertyViewModelComparator>
-                            <TransitionValueStringComparator value="acting"/>
+                            <TransitionValueEnumComparator value="0:92"/>
                         </TransitionViewModelCondition>
                     </StateTransition>
                     <StateTransition stateToId="0:14" duration="220" interpolationType="cubic">
                         <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
                         <TransitionViewModelCondition opValue="equal">
                             <TransitionPropertyViewModelComparator>
-                                <BindablePropertyString>
-                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="635"/>
-                                </BindablePropertyString>
+                                <BindablePropertyEnum>
+                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="637"/>
+                                </BindablePropertyEnum>
                             </TransitionPropertyViewModelComparator>
-                            <TransitionValueStringComparator value="alert"/>
+                            <TransitionValueEnumComparator value="0:93"/>
                         </TransitionViewModelCondition>
                     </StateTransition>
                     <StateTransition stateToId="0:15" duration="380" interpolationType="cubic">
                         <CubicEaseInterpolator x1="0.42" y1="0" x2="0.58" y2="1"/>
                         <TransitionViewModelCondition opValue="equal">
                             <TransitionPropertyViewModelComparator>
-                                <BindablePropertyString>
-                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="635"/>
-                                </BindablePropertyString>
+                                <BindablePropertyEnum>
+                                    <DataBindContext sourcePathIds="0:80-0:81" propertyKey="637"/>
+                                </BindablePropertyEnum>
                             </TransitionPropertyViewModelComparator>
-                            <TransitionValueStringComparator value="resting"/>
+                            <TransitionValueEnumComparator value="0:94"/>
                         </TransitionViewModelCondition>
                     </StateTransition>
                 </AnyState>
@@ -214,11 +214,20 @@
         </LinearAnimation>
     </Artboard>
 
+    <!-- Labels mirror keys: the runtime enum setter resolves by name, so
+         key == value removes the ambiguity about which it wants. -->
+    <DataEnumCustom name="GuardianState" id="0:90">
+        <DataEnumValue key="watching" value="watching" id="0:91"/>
+        <DataEnumValue key="acting" value="acting" id="0:92"/>
+        <DataEnumValue key="alert" value="alert" id="0:93"/>
+        <DataEnumValue key="resting" value="resting" id="0:94"/>
+    </DataEnumCustom>
+
     <ViewModel defaultInstanceId="0:84" name="Guardian" id="0:80">
-        <ViewModelPropertyString name="state" id="0:81"/>
+        <ViewModelPropertyEnumCustom enumId="0:90" name="state" id="0:81"/>
         <ViewModelPropertyTrigger name="alerted" id="0:85"/>
         <ViewModelInstance exports="true" name="Default" id="0:84">
-            <ViewModelInstanceString propertyValue="watching" viewModelPropertyId="0:81"/>
+            <ViewModelInstanceEnum propertyValue="0:91" viewModelPropertyId="0:81"/>
         </ViewModelInstance>
     </ViewModel>
 </Rive>

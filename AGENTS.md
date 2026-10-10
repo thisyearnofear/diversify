@@ -17,7 +17,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Test**: `pnpm test` (runs the Vitest suite).
 - **Lint**: `pnpm lint` (runs workspace-wide linting; currently clean — 0 errors, warnings only).
 - **Format**: `pnpm format` (Prettier).
-- **Rive objects**: `pnpm rive:build` (recompiles all five `.rml` projects in `apps/web/rive/` → `apps/web/public/rive/`; requires the `rive` CLI). Dev-only exercise page: `/rive-test`.
+- **Rive objects**: `pnpm rive:build` (recompiles all five `.rml` projects in `apps/web/rive/` → `apps/web/public/rive/` AND re-copies the `rive.wasm` pair — the self-hosted WASM must match the installed `@rive-app/react-canvas-lite` version, so bump the package then rebuild or run `pnpm rive:wasm`; requires the `rive` CLI). Canvases bind in `onRiveReady` before frame 1 (design-language §5). Dev-only exercise page: `/rive-test`.
 
 ### Specialized Verification
 - `pnpm test-x402`: Verifies the gateway challenge/response loop.

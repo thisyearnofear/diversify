@@ -17,7 +17,7 @@
     "@farcaster/miniapp-sdk": "0.2.1",
     "@privy-io/react-auth": "3.13.1",
     "@privy-io/wagmi": "4.0.1",
-    "@rive-app/react-canvas-lite": "4.34.2",
+    "@rive-app/react-canvas-lite": "4.36.0",
     "@selfxyz/agent-sdk": "0.2.1",
     "@selfxyz/qrcode": "1.0.24",
     "@stable-station/mento-utils": "workspace:*",

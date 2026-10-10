@@ -87,8 +87,8 @@ importers:
         specifier: 4.0.1
         version: 4.0.1(@privy-io/react-auth@3.13.1(782948d9c45af95cac75ea7c19d29987))(react@19.2.3)(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))(wagmi@2.19.5(@react-native-async-storage/async-storage@1.24.0(react-native@0.84.0(@babel/core@7.29.0)(@types/react@18.3.27)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@5.0.10)))(@tanstack/query-core@5.90.20)(@tanstack/react-query@5.90.21(react@19.2.3))(@types/react@18.3.27)(bufferutil@4.1.0)(encoding@0.1.13)(fastestsmallesttextencoderdecoder@1.0.22)(react-native@0.84.0(@babel/core@7.29.0)(@types/react@18.3.27)(bufferutil@4.1.0)(react@19.2.3)(utf-8-validate@5.0.10))(react@19.2.3)(typescript@5.9.3)(utf-8-validate@5.0.10)(viem@2.44.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@5.0.10)(zod@4.3.5))(zod@4.3.5))
       '@rive-app/react-canvas-lite':
-        specifier: 4.34.2
-        version: 4.34.2(react@19.2.3)
+        specifier: 4.36.0
+        version: 4.36.0(react@19.2.3)
       '@selfxyz/agent-sdk':
         specifier: 0.2.1
         version: 0.2.1(bufferutil@4.1.0)(utf-8-validate@5.0.10)
@@ -2347,11 +2347,11 @@ packages:
     resolution: {integrity: sha512-C7c51Nn4yTxXFKvgh2txJFNweaVcfUPQxwEUFw4aWsCmfiBDJsTSwviIF8EcwjQ6k8bPyMWCl1vw4BdxE569Cg==}
     engines: {node: '>= 10'}
 
-  '@rive-app/canvas-lite@2.42.1':
-    resolution: {integrity: sha512-pBmcP4WJV0QY851H27LI4ncWnORo8BA9YhoOUb9lsD5rPdlCIMR3cMkE7VcZ0f8Km+tg64+96vrexnkRieJntw==}
+  '@rive-app/canvas-lite@2.44.0':
+    resolution: {integrity: sha512-ywsdoYLsC+8RIZ+aMCvHQQgGRxnBHojReaOxDqI5ZL2Y/nRKdySAbLFnSrJIAbGygdkuQdJVUNF3AF01mxGhEA==}
 
-  '@rive-app/react-canvas-lite@4.34.2':
-    resolution: {integrity: sha512-FGvoQX0b9tedv34wfBAk1dGECvmZuUYJgJeEMksHb+0HyBp88Yj0d2I+L6o/EQeRIaC7hDk3Uv5vbo5MhZn0PQ==}
+  '@rive-app/react-canvas-lite@4.36.0':
+    resolution: {integrity: sha512-xGcYV/gNq1nHesSWkJ0tOOy6pRzKi/y9ISiY1h4vd48+WleXlYWLyHd1zsnmmXBOHedlKSMnI6G0j8Vf9hcw+w==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0
 
@@ -11989,11 +11989,11 @@ snapshots:
 
   '@resvg/resvg-wasm@2.4.0': {}
 
-  '@rive-app/canvas-lite@2.42.1': {}
+  '@rive-app/canvas-lite@2.44.0': {}
 
-  '@rive-app/react-canvas-lite@4.34.2(react@19.2.3)':
+  '@rive-app/react-canvas-lite@4.36.0(react@19.2.3)':
     dependencies:
-      '@rive-app/canvas-lite': 2.42.1
+      '@rive-app/canvas-lite': 2.44.0
       react: 19.2.3
 
   '@rollup/rollup-android-arm-eabi@4.59.0':

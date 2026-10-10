@@ -12,14 +12,13 @@
  * entering its rest state — the confirm haptic lands on the settle frame.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useRive,
-  useViewModel,
-  useViewModelInstance,
   useViewModelInstanceColor,
   useViewModelInstanceTrigger,
   RuntimeLoader,
+  type ViewModelInstance,
 } from '@rive-app/react-canvas-lite';
 import { haptics } from '../../lib/haptics';
 import { hexToRgb, shadeHex } from '../../lib/rive-color';
@@ -42,12 +41,29 @@ export default function RiveCoinCanvas({ size, color }: RiveCoinCanvasProps) {
     // Required: without it the runtime plays the first linear animation,
     // not the state machine — binds and the Rest signal never run.
     stateMachine: 'State Machine 1',
+    // onRiveReady fires before the state machine advances — the first
+    // frame must already carry the real accent ramp, not the file's
+    // default (the property hooks only resolve after frame 1).
+    onRiveReady: (r) => {
+      const instance = r.defaultViewModel()?.instance() ?? null;
+      if (instance) {
+        if (color) {
+          const light = shadeHex(color, 0.35);
+          const mid = hexToRgb(color);
+          const dark = shadeHex(color, -0.3);
+          instance.color('accentLight')?.rgb(light.r, light.g, light.b);
+          instance.color('accent')?.rgb(mid.r, mid.g, mid.b);
+          instance.color('accentDark')?.rgb(dark.r, dark.g, dark.b);
+        }
+        r.bindViewModelInstance(instance);
+      }
+      setVmi(instance);
+    },
   });
-  const viewModel = useViewModel(rive, { useDefault: true });
-  // useNew: every mounted coin gets its own instance — sharing the file's
-  // default instance across two coins made trigger callbacks collide and
-  // crashed the lite WASM ("null function").
-  const vmi = useViewModelInstance(viewModel, { useNew: true, rive });
+  // Every mounted coin gets its own instance — sharing the file's default
+  // instance across two coins made trigger callbacks collide and crashed
+  // the lite WASM ("null function").
+  const [vmi, setVmi] = useState<ViewModelInstance | null>(null);
   const { setRgb: setLight } = useViewModelInstanceColor('accentLight', vmi);
   const { setRgb: setMid } = useViewModelInstanceColor('accent', vmi);
   const { setRgb: setDark } = useViewModelInstanceColor('accentDark', vmi);

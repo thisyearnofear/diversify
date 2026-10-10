@@ -12,14 +12,13 @@
  * warning haptic on the exact frame.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useRive,
-  useViewModel,
-  useViewModelInstance,
-  useViewModelInstanceString,
+  useViewModelInstanceEnum,
   useViewModelInstanceTrigger,
   RuntimeLoader,
+  type ViewModelInstance,
 } from '@rive-app/react-canvas-lite';
 import { haptics } from '../../lib/haptics';
 import { GuardianPosture, POSTURE_LABEL } from './RiveGuardian';
@@ -41,11 +40,23 @@ export default function RiveGuardianCanvas({ size, posture }: RiveGuardianCanvas
     // Required: without it the runtime plays the first linear animation,
     // not the state machine — binds, transitions and events never run.
     stateMachine: 'Guardian',
+    // onRiveReady fires before the state machine advances — the first
+    // frame must already carry the real posture, not the file's default
+    // (the property hooks only resolve after frame 1).
+    onRiveReady: (r) => {
+      const instance = r.defaultViewModel()?.instance() ?? null;
+      if (instance) {
+        const state = instance.enum('state');
+        if (state) state.value = posture;
+        r.bindViewModelInstance(instance);
+      }
+      setVmi(instance);
+    },
   });
-  const viewModel = useViewModel(rive, { useDefault: true });
-  // useNew: each mounted sentinel owns its data context (see RiveCoinCanvas).
-  const vmi = useViewModelInstance(viewModel, { useNew: true, rive });
-  const { setValue: setState } = useViewModelInstanceString('state', vmi);
+  // Each mounted sentinel owns its data context — sharing the file's
+  // default instance across two canvases crashes the lite WASM.
+  const [vmi, setVmi] = useState<ViewModelInstance | null>(null);
+  const { setValue: setState } = useViewModelInstanceEnum('state', vmi);
   // The file writes `alerted` on entering the alert pose — frame-accurate.
   useViewModelInstanceTrigger('alerted', vmi, { onTrigger: () => haptics.warning() });
 

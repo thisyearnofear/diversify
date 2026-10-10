@@ -11,15 +11,14 @@
  * the confirm haptic lands on the exact frame the seal sets.
  */
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   useRive,
-  useViewModel,
-  useViewModelInstance,
   useViewModelInstanceBoolean,
   useViewModelInstanceColor,
   useViewModelInstanceTrigger,
   RuntimeLoader,
+  type ViewModelInstance,
 } from '@rive-app/react-canvas-lite';
 import { haptics } from '../../lib/haptics';
 import { hexToRgb } from '../../lib/rive-color';
@@ -44,10 +43,26 @@ export default function RiveProtectionSealCanvas({ size, color, armed }: RivePro
     // Required: without it the runtime plays the first linear animation,
     // not the state machine — binds and transitions never run.
     stateMachine: 'Seal',
+    // onRiveReady fires before the state machine advances — the first
+    // frame must already carry the real accent/armed state, not the
+    // file's defaults (the property hooks only resolve after frame 1).
+    onRiveReady: (r) => {
+      const instance = r.defaultViewModel()?.instance() ?? null;
+      if (instance) {
+        if (color) {
+          const { r: cr, g, b } = hexToRgb(color);
+          instance.color('accent')?.rgb(cr, g, b);
+        }
+        const armedProp = instance.boolean('armed');
+        if (armedProp) armedProp.value = armed;
+        r.bindViewModelInstance(instance);
+      }
+      setVmi(instance);
+    },
   });
-  const viewModel = useViewModel(rive, { useDefault: true });
-  // useNew: each mounted seal owns its data context (see RiveCoinCanvas).
-  const vmi = useViewModelInstance(viewModel, { useNew: true, rive });
+  // Each mounted seal owns its data context — sharing the file's default
+  // instance across two canvases crashes the lite WASM.
+  const [vmi, setVmi] = useState<ViewModelInstance | null>(null);
   const { setRgb } = useViewModelInstanceColor('accent', vmi);
   const { setValue: setArmed } = useViewModelInstanceBoolean('armed', vmi);
   useViewModelInstanceTrigger('ready', vmi, { onTrigger: () => haptics.confirm() });

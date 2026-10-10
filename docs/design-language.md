@@ -161,14 +161,18 @@ rebuilt via `pnpm rive:build`): `claim-coin` mints on claim + swap-success
 currency-tinted coins and seals on settlement (FX netting card),
 `protection-seal` stamps ring + shield + check for **Plan saved**, never
 active protection or trade permission. Walletless and sample previews do not stamp it.
-`guardian` postures the agent status chip
-(watching/acting/alert/resting), `verified-seal` stamps on confirmed
-on-chain evidence (`VerifiedEvidence`). Host state crosses the WASM
-boundary through view-model binds (colors as RGB channels, booleans,
-strings) and file-written triggers fire frame-accurate haptics — never
-deprecated SM inputs or `onStateChange`. Every mounted object gets
-`useViewModelInstance(vm, { useNew: true })`: sharing the file's default
-instance across two canvases crashes the lite WASM.
+`guardian` postures the agent status chip via a `GuardianState`
+view-model enum (watching/acting/alert/resting), `verified-seal` stamps
+on confirmed on-chain evidence (`VerifiedEvidence`). Host state crosses
+the WASM boundary through view-model binds (colors as RGB channels,
+booleans, enums) and file-written triggers fire frame-accurate haptics —
+never deprecated SM inputs or `onStateChange`. Every mounted object owns
+its data context: `onRiveReady` creates a fresh instance
+(`defaultViewModel().instance()`), pre-binds the real prop values, and
+`bindViewModelInstance`s it *before the first frame* — the property
+hooks only resolve after frame 1, so an object that bound defaults first
+would flash the file's authored accent/posture on mount. Sharing the
+file's default instance across two canvases crashes the lite WASM.
 
 Backdrop coins obey the same budget. The app-shell field (`ShellCoinField`)
 settles once on arrival — the reveal of the post-onboarding scene — and
