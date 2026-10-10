@@ -10,7 +10,8 @@
 
 import React from "react";
 import Scrim from "../shared/Scrim";
-import { haptic } from "@/lib/haptics";
+import RiveProtectionSeal from "../shared/RiveProtectionSeal";
+import { useHoldToCommit } from "@/hooks/use-hold-to-commit";
 
 export const GuardianGrantModal: React.FC<{
   /** The signed daily limit — the cap MetaMask will enforce. */
@@ -18,6 +19,10 @@ export const GuardianGrantModal: React.FC<{
   onCancel: () => void;
   onContinue: () => void;
 }> = ({ dailyLimit, onCancel, onContinue }) => {
+  // The seal is the commitment device: sustained intent, not a tap.
+  // Releasing early drains the arc and signs nothing; a full hold fires
+  // onContinue inside the pointer's activation window so MetaMask can open.
+  const hold = useHoldToCommit({ onCommit: onContinue });
   return (
     <>
       {/* Scrim is a sibling, not a child: nested, its fixed z-[49] would
@@ -68,7 +73,7 @@ export const GuardianGrantModal: React.FC<{
           </p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
           <button
             onClick={onCancel}
             className="flex-1 text-sm font-bold text-gray-500 py-4"
@@ -76,12 +81,22 @@ export const GuardianGrantModal: React.FC<{
             Cancel
           </button>
           <button
-            onClick={() => { haptic("medium"); onContinue(); }}
-            className="flex-1 text-sm font-black bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white rounded-2xl py-4 min-h-tap transition-[color,transform] active:scale-95"
+            type="button"
+            {...hold.bind}
+            aria-describedby="guardian-grant-hold-hint"
+            className="flex-1 flex items-center justify-center gap-2.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-2xl py-3 min-h-tap select-none touch-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
           >
-            Continue to MetaMask
+            <span aria-hidden="true" className="inline-flex shrink-0">
+              <RiveProtectionSeal size={40} color="#a855f7" armed={false} holdProgress={hold.progress} />
+            </span>
+            <span className="text-sm font-black">
+              {hold.holding ? "Keep holding…" : "Hold to let Guardian act"}
+            </span>
           </button>
         </div>
+        <p id="guardian-grant-hold-hint" className="text-2xs text-gray-400 dark:text-gray-500 text-center">
+          Press and hold the seal — release early and nothing is signed.
+        </p>
       </div>
       </div>
     </>

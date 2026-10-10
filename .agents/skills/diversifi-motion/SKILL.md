@@ -101,9 +101,19 @@ swap-success mint), `RiveNetPair` (FX netting link/seal),
 behind `next/dynamic` `ssr: false`, WASM loads on demand,
 `useReducedMotion()` renders the static primitive instead. Host→file
 state crosses via view-model binds + file-written triggers for haptics;
-each canvas needs `useViewModelInstance(vm, { useNew: true })` or two
-mounted objects share one data context and crash the lite WASM. Rive
+`onRiveReady` creates a fresh instance
+(`defaultViewModel().instance()`), pre-binds real prop values, and
+`bindViewModelInstance`s it before frame 1 — sharing the file's default
+instance across two canvases crashes the lite WASM, and binding defaults
+first flashes the authored pose on mount. Rive
 never owns screen transitions; text stays in the DOM.
+
+`RiveProtectionSeal` also carries a `hold` number bind — a thin outer
+arc 0–1 for press-and-hold commits. `useHoldToCommit` (hooks/) owns the
+semantics: ~1.4s sustained pointer or Space/Enter commits once, early
+release drains and signs nothing. The static SVG fallback draws the same
+arc — reduced motion keeps the gate because the hold is about time.
+Live on `GuardianGrantModal` (the autonomy opt-in).
 
 ## Reduced-motion checklist for any new animation
 

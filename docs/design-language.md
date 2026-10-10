@@ -161,6 +161,10 @@ rebuilt via `pnpm rive:build`): `claim-coin` mints on claim + swap-success
 currency-tinted coins and seals on settlement (FX netting card),
 `protection-seal` stamps ring + shield + check for **Plan saved**, never
 active protection or trade permission. Walletless and sample previews do not stamp it.
+A second `hold` number bind drives a thin outer arc (0–1): the user's
+intent filling during press-and-hold commits (`useHoldToCommit` owns the
+timing — a full hold commits once, an early release drains and signs
+nothing), live on the autonomy grant in `GuardianGrantModal`.
 `guardian` postures the agent status chip via a `GuardianState`
 view-model enum (watching/acting/alert/resting), `verified-seal` stamps
 on confirmed on-chain evidence (`VerifiedEvidence`). Host state crosses
@@ -255,6 +259,17 @@ of the held balance (readout above the coin; release fills the ticket).
 A drag drafts, never commits — the CTA still commits — and it is never
 the only path (the ticket's amount field and the scrub's arrow keys
 remain). No drag crosses instruments.
+
+*Amendment 2026-10 — press-and-hold is commit's irreversible form.*
+Where a tap can sign away bounded autonomy (the Guardian grant), the
+commit object requires sustained intent: the seal's outer arc fills
+over ~1.4s while held; releasing early drains it and signs nothing.
+`useHoldToCommit` owns the semantics (pointer + Space/Enter, commit
+once per press), `RiveProtectionSeal.holdProgress` renders the fill,
+and the static SVG fallback draws the same arc — the hold is about
+time, not animation, so reduced motion keeps the gate. The commit
+fires inside the pointer's activation window so the wallet popup is
+never blocked.
 
 *Feel* (Settings → Feel: Silent / Touch / Sound) owns non-visual
 feedback. Touch (default) is the existing haptics; Sound is opt-in — a

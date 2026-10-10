@@ -12,7 +12,7 @@
  */
 import React from "react";
 import { describe, expect, it, vi, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, within, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GuardianPermissionModal } from "../GuardianPermissionModal";
 import { GuardianGrantModal } from "../GuardianGrantModal";
@@ -21,7 +21,7 @@ import { DAILY_LIMIT_PRESETS } from "@/constants/guardian-limits";
 import type { GuardianSessionInfo } from "@/hooks/use-session-key";
 import { BalanceVisibilityProvider } from "@/context/app/BalanceVisibilityContext";
 
-vi.mock("@/lib/haptics", () => ({ haptic: vi.fn() }));
+vi.mock("@/lib/haptics", () => ({ haptic: vi.fn(), haptics: { confirm: vi.fn() } }));
 vi.mock("../../shared/Scrim", () => ({ default: () => null }));
 vi.mock("../LoopResultSummary", () => ({ LoopResultSummary: () => null }));
 
@@ -127,14 +127,46 @@ describe("GuardianGrantModal — the one autonomy opt-in", () => {
     expect(dialog).toHaveTextContent("In MetaMask");
   });
 
-  it("Continue hands off; Cancel does not", () => {
-    const onContinue = vi.fn();
-    const onCancel = vi.fn();
-    render(<GuardianGrantModal dailyLimit={10} onCancel={onCancel} onContinue={onContinue} />);
-    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(onContinue).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "Continue to MetaMask" }));
-    expect(onContinue).toHaveBeenCalledTimes(1);
+  it("the seal requires a sustained hold — a click or early release signs nothing", () => {
+    // rAF must be faked explicitly — it is not in vitest's default toFake.
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'Date', 'performance', 'requestAnimationFrame', 'cancelAnimationFrame'],
+    });
+    try {
+      const onContinue = vi.fn();
+      render(<GuardianGrantModal dailyLimit={10} onCancel={vi.fn()} onContinue={onContinue} />);
+      const holdButton = screen.getByRole("button", { name: "Hold to let Guardian act" });
+      fireEvent.click(holdButton);
+      fireEvent.pointerDown(holdButton);
+      act(() => vi.advanceTimersByTime(400));
+      fireEvent.pointerUp(holdButton);
+      act(() => vi.advanceTimersByTime(2000));
+      expect(onContinue).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a full hold hands off to MetaMask exactly once; Cancel does not", () => {
+    vi.useFakeTimers({
+      toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'setImmediate', 'clearImmediate', 'Date', 'performance', 'requestAnimationFrame', 'cancelAnimationFrame'],
+    });
+    try {
+      const onContinue = vi.fn();
+      const onCancel = vi.fn();
+      render(<GuardianGrantModal dailyLimit={10} onCancel={onCancel} onContinue={onContinue} />);
+      fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(onContinue).not.toHaveBeenCalled();
+      const holdButton = screen.getByRole("button", { name: "Hold to let Guardian act" });
+      fireEvent.pointerDown(holdButton);
+      act(() => vi.advanceTimersByTime(1600));
+      expect(onContinue).toHaveBeenCalledTimes(1);
+      fireEvent.pointerUp(holdButton);
+      act(() => vi.advanceTimersByTime(500));
+      expect(onContinue).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
 

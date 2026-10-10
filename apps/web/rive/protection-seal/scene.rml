@@ -13,6 +13,21 @@
             </Stroke>
         </Shape>
 
+        <!-- HoldRing: thin outer arc bound to the `hold` number — the
+             user's intent filling while they press and hold. Zero-length
+             until the host presses; unrelated to the armed stamp. -->
+        <Shape x="48" y="48" name="HoldRing" id="0:50">
+            <Ellipse width="88" height="88" originX="0.5" originY="0.5" name="Path"/>
+            <Stroke thickness="2.5" name="Stroke" id="0:51" cap="round">
+                <SolidColor colorValue="FF10B981" name="Color" id="0:52">
+                    <DataBindContext sourcePathIds="0:40-0:41" propertyKey="37"/>
+                </SolidColor>
+                <TrimPath start="0" end="0" offset="0.25" name="Trim" id="0:53">
+                    <DataBindContext sourcePathIds="0:40-0:45" propertyKey="115"/>
+                </TrimPath>
+            </Stroke>
+        </Shape>
+
         <!-- Check: white stroke that draws once the shield lands. Declared
              before the shield — draw order is front-to-back, so this
              paints on top of the shield fill. -->
@@ -174,9 +189,11 @@
         <ViewModelPropertyColor name="accent" id="0:41"/>
         <ViewModelPropertyBoolean name="armed" id="0:42"/>
         <ViewModelPropertyTrigger name="ready" id="0:43"/>
+        <ViewModelPropertyNumber name="hold" id="0:45"/>
         <ViewModelInstance exports="true" name="Default" id="0:44">
             <ViewModelInstanceColor propertyValue="FF10B981" viewModelPropertyId="0:41"/>
             <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:42"/>
+            <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:45"/>
         </ViewModelInstance>
     </ViewModel>
 </Rive>

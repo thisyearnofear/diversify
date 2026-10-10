@@ -94,6 +94,14 @@ describe('RiveProtectionSeal', () => {
     expect(screen.getByRole('img', { name: 'Plan preview' })).toBeInTheDocument();
     expect(container.querySelector('circle')).not.toBeInTheDocument();
   });
+
+  it('the static fallback draws the hold arc so press-and-hold works without the canvas', () => {
+    reducedMotionState.on = true;
+    const { container } = render(<RiveProtectionSeal size={34} armed={false} holdProgress={0.5} />);
+    const arc = container.querySelector('circle');
+    expect(arc).toBeInTheDocument();
+    expect(arc).toHaveAttribute('stroke-dasharray', expect.stringContaining('138'));
+  });
 });
 
 describe('rive-color helpers', () => {

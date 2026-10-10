@@ -26,9 +26,13 @@ interface RiveProtectionSealProps {
   color?: string;
   /** True once the allocation is saved, not a monitoring or execution grant. */
   armed?: boolean;
+  /** Press-and-hold fill 0–1 — the outer intent arc. Unrelated to `armed`. */
+  holdProgress?: number;
 }
 
-function StaticSeal({ size, color, armed }: { size: number; color: string; armed: boolean }) {
+const HOLD_CIRCUMFERENCE = 2 * Math.PI * 44;
+
+function StaticSeal({ size, color, armed, holdProgress }: { size: number; color: string; armed: boolean; holdProgress: number }) {
   return (
     <svg
       width={size}
@@ -37,6 +41,19 @@ function StaticSeal({ size, color, armed }: { size: number; color: string; armed
       role="img"
       aria-label={armed ? 'Plan saved' : 'Plan preview'}
     >
+      {holdProgress > 0 && (
+        <circle
+          cx="48"
+          cy="48"
+          r="44"
+          fill="none"
+          stroke={color}
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeDasharray={`${HOLD_CIRCUMFERENCE * holdProgress} ${HOLD_CIRCUMFERENCE}`}
+          transform="rotate(-90 48 48)"
+        />
+      )}
       {armed && (
         <>
           <circle cx="48" cy="48" r="38" fill="none" stroke={color} strokeWidth="3.5" />
@@ -59,10 +76,11 @@ export default function RiveProtectionSeal({
   size = 36,
   color = STATUS_COLORS.good,
   armed = true,
+  holdProgress = 0,
 }: RiveProtectionSealProps) {
   const reducedMotion = useReducedMotion();
   if (reducedMotion || !canMountRive()) {
-    return <StaticSeal size={size} color={color} armed={armed} />;
+    return <StaticSeal size={size} color={color} armed={armed} holdProgress={holdProgress} />;
   }
-  return <RiveProtectionSealCanvas size={size} color={color} armed={armed} />;
+  return <RiveProtectionSealCanvas size={size} color={color} armed={armed} holdProgress={holdProgress} />;
 }

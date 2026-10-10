@@ -2,6 +2,7 @@
 // Exercises: mint coin (default + bound accent), net pair (linked + sealed),
 // protection seal, guardian sentinel (posture cycle), verified seal.
 import React, { useState } from 'react';
+import { useHoldToCommit } from '../hooks/use-hold-to-commit';
 import RiveCoin from '../components/shared/RiveCoin';
 import RiveNetPair from '../components/shared/RiveNetPair';
 import RiveProtectionSeal from '../components/shared/RiveProtectionSeal';
@@ -14,7 +15,9 @@ export default function RiveTest() {
   const [settled, setSettled] = useState(false);
   const [replayKey, setReplayKey] = useState(0);
   const [postureIdx, setPostureIdx] = useState(0);
+  const [holds, setHolds] = useState(0);
   const posture = POSTURES[postureIdx];
+  const hold = useHoldToCommit({ onCommit: () => setHolds((n) => n + 1) });
 
   if (process.env.NODE_ENV === 'production') return null;
 
@@ -51,6 +54,16 @@ export default function RiveTest() {
         <div style={{ textAlign: 'center' }}>
           <RiveProtectionSeal size={120} color="#a855f7" armed={settled} key={`s${replayKey}`} />
           <div>protection seal — {settled ? 'armed' : 'idle'}</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <button
+            type="button"
+            {...hold.bind}
+            style={{ padding: 12, touchAction: 'none', userSelect: 'none', cursor: 'pointer' }}
+          >
+            <RiveProtectionSeal size={120} color="#a855f7" armed={false} holdProgress={hold.progress} />
+          </button>
+          <div>hold-to-authorize — {holds} commits {hold.holding ? '· holding' : ''}</div>
         </div>
       </div>
 

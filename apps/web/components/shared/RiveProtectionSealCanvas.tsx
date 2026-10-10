@@ -16,6 +16,7 @@ import {
   useRive,
   useViewModelInstanceBoolean,
   useViewModelInstanceColor,
+  useViewModelInstanceNumber,
   useViewModelInstanceTrigger,
   RuntimeLoader,
   type ViewModelInstance,
@@ -34,9 +35,11 @@ interface RiveProtectionSealCanvasProps {
   color?: string;
   /** True once the allocation is saved, not a monitoring or execution grant. */
   armed: boolean;
+  /** Press-and-hold fill 0–1 — the outer intent arc. Unrelated to `armed`. */
+  holdProgress?: number;
 }
 
-export default function RiveProtectionSealCanvas({ size, color, armed }: RiveProtectionSealCanvasProps) {
+export default function RiveProtectionSealCanvas({ size, color, armed, holdProgress = 0 }: RiveProtectionSealCanvasProps) {
   const { rive, RiveComponent } = useRive({
     src: '/rive/protection-seal.riv',
     autoplay: true,
@@ -55,6 +58,8 @@ export default function RiveProtectionSealCanvas({ size, color, armed }: RivePro
         }
         const armedProp = instance.boolean('armed');
         if (armedProp) armedProp.value = armed;
+        const holdProp = instance.number('hold');
+        if (holdProp) holdProp.value = holdProgress;
         r.bindViewModelInstance(instance);
       }
       setVmi(instance);
@@ -65,6 +70,7 @@ export default function RiveProtectionSealCanvas({ size, color, armed }: RivePro
   const [vmi, setVmi] = useState<ViewModelInstance | null>(null);
   const { setRgb } = useViewModelInstanceColor('accent', vmi);
   const { setValue: setArmed } = useViewModelInstanceBoolean('armed', vmi);
+  const { setValue: setHold } = useViewModelInstanceNumber('hold', vmi);
   useViewModelInstanceTrigger('ready', vmi, { onTrigger: () => haptics.confirm() });
 
   useEffect(() => {
@@ -76,6 +82,10 @@ export default function RiveProtectionSealCanvas({ size, color, armed }: RivePro
   useEffect(() => {
     setArmed(armed);
   }, [armed, setArmed]);
+
+  useEffect(() => {
+    setHold(holdProgress);
+  }, [holdProgress, setHold]);
 
   return (
     <div style={{ width: size, height: size }} role="img" aria-label={armed ? 'Plan saved' : 'Plan preview'}>
