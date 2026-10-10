@@ -23,7 +23,7 @@ import {
     getAddChainParameter,
     toHexChainId,
 } from '@diversifi/shared/src/modules/wallet/core/chains';
-import { featureEnabled } from '@diversifi/shared/src/config/jurisdictions';
+import { featureConfigured } from '@diversifi/shared/src/config/jurisdictions';
 import { screenWallet } from '../lib/compliance-screen';
 import { NETWORKS, TX_CONFIG } from '../config';
 
@@ -243,7 +243,7 @@ export function useSwap() {
                 err.errorClass = 'sanctioned';
                 throw err;
             }
-            if (screening.status === 'unavailable' && featureEnabled('fees')) {
+            if (screening.status === 'unavailable' && featureConfigured('fees')) {
                 const err: any = new Error(
                     screening.reason === 'rate_limited'
                         ? `Too many checks in a short time — please try again in ${screening.retryAfterSec ? `${screening.retryAfterSec} seconds` : 'a few seconds'}.`

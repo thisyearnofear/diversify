@@ -9,19 +9,28 @@ import { describe, it, expect, afterEach } from 'vitest';
 import {
   isBlockedLocation,
   featureEnabled,
+  featureConfigured,
   SANCTIONED_COUNTRIES,
   JURISDICTION_OVERRIDES,
+  CLEARED_COUNTRIES,
 } from '../jurisdictions';
 
 const SAVED_ENV = { ...process.env };
+const ORIGINAL_OVERRIDES = JSON.parse(JSON.stringify(JURISDICTION_OVERRIDES));
+const ORIGINAL_CLEARED = JSON.parse(JSON.stringify(CLEARED_COUNTRIES));
 
-// The overrides table is a const object — tests that exercise a counsel-set
-// shape mutate it and clean up after themselves.
+// The gate tables are const objects — tests that exercise a counsel-set
+// shape mutate them and restore the shipped contents afterwards.
 afterEach(() => {
   process.env = { ...SAVED_ENV };
   for (const key of Object.keys(JURISDICTION_OVERRIDES)) {
     delete (JURISDICTION_OVERRIDES as Record<string, unknown>)[key];
   }
+  Object.assign(JURISDICTION_OVERRIDES, ORIGINAL_OVERRIDES);
+  for (const key of Object.keys(CLEARED_COUNTRIES)) {
+    delete (CLEARED_COUNTRIES as Record<string, unknown>)[key];
+  }
+  Object.assign(CLEARED_COUNTRIES, ORIGINAL_CLEARED);
 });
 
 describe('isBlockedLocation', () => {
@@ -65,12 +74,12 @@ describe('featureEnabled', () => {
   });
 
   it('requires exactly "true" — other truthy strings stay off', () => {
-    process.env.NEXT_PUBLIC_FEATURE_FEES = '1';
-    expect(featureEnabled('fees')).toBe(false);
-    process.env.NEXT_PUBLIC_FEATURE_FEES = 'TRUE';
-    expect(featureEnabled('fees')).toBe(false);
-    process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
-    expect(featureEnabled('fees')).toBe(true);
+    process.env.NEXT_PUBLIC_FEATURE_PERPS = '1';
+    expect(featureEnabled('perps')).toBe(false);
+    process.env.NEXT_PUBLIC_FEATURE_PERPS = 'TRUE';
+    expect(featureEnabled('perps')).toBe(false);
+    process.env.NEXT_PUBLIC_FEATURE_PERPS = 'true';
+    expect(featureEnabled('perps')).toBe(true);
   });
 
   it('respects per-country overrides when the global switch is on', () => {
@@ -82,9 +91,41 @@ describe('featureEnabled', () => {
     expect(featureEnabled('perps', 'US')).toBe(true);
   });
 
-  it('applies overrides only when the feature is globally on', () => {
+  it('ships GB denied for thesis surfaces pending finprom advice', () => {
+    process.env.NEXT_PUBLIC_FEATURE_THESIS = 'true';
+    expect(featureEnabled('thesis', 'GB')).toBe(false);
+    expect(featureEnabled('thesis', 'DE')).toBe(true);
+  });
+});
+
+describe('money features — counsel-cleared allowlist', () => {
+  it('an env switch alone opens nothing while the allowlist is empty', () => {
+    process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    expect(featureConfigured('fees')).toBe(false);
+    expect(featureEnabled('fees', 'DE')).toBe(false);
+    expect(featureEnabled('fees', 'US')).toBe(false);
+  });
+
+  it('is on only inside cleared markets once configured', () => {
+    process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    (CLEARED_COUNTRIES as Record<string, string[]>).fees = ['DE', 'GH'];
+    expect(featureConfigured('fees')).toBe(true);
+    expect(featureEnabled('fees', 'DE')).toBe(true);
+    expect(featureEnabled('fees', 'gh')).toBe(true);
+    expect(featureEnabled('fees', 'US')).toBe(false);
+  });
+
+  it('fails closed on unknown geo — an unlocated user is never charged', () => {
+    process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    (CLEARED_COUNTRIES as Record<string, string[]>).fees = ['DE'];
+    expect(featureEnabled('fees')).toBe(false);
+    expect(featureEnabled('fees', null)).toBe(false);
+  });
+
+  it('a country deny still wins over the allowlist', () => {
+    process.env.NEXT_PUBLIC_FEATURE_FEES = 'true';
+    (CLEARED_COUNTRIES as Record<string, string[]>).fees = ['DE'];
     (JURISDICTION_OVERRIDES as Record<string, { fees?: boolean }>).DE = { fees: false };
-    delete process.env.NEXT_PUBLIC_FEATURE_FEES;
     expect(featureEnabled('fees', 'DE')).toBe(false);
   });
 });
