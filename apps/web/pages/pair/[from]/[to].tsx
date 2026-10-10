@@ -52,7 +52,7 @@ export default function PairPage({ content, deepLink, ogImageUrl, pageUrl }: Pro
 
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
-  const description = [content.beat, content.whatIf]
+  const description = [content.epithet, content.beat, content.whatIf]
     .filter(Boolean)
     .join(' — ');
 

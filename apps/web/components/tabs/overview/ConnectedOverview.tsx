@@ -11,6 +11,7 @@ import type { TabId } from "@/constants/tabs";
 import { DataError, HeroValue } from "../../shared/TabComponents";
 import { ContextualBanner } from "../../shared/ContextualBanner";
 import { ClaimRail } from "../../rewards/ClaimRail";
+import { PendingFundRail } from "../../rewards/PendingFundRail";
 import { useHomeSections } from "@/hooks/use-home-sections";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { HomeRiskTheater } from "./HomeRiskTheater";
@@ -504,7 +505,12 @@ export function ConnectedOverview({
       <StatusTier
         trust={null}
         transition={inspectingSelection ? undefined : transition}
-        rail={<ClaimRail setupMode="entry" />}
+        rail={
+          <>
+            <PendingFundRail tokens={portfolio.allTokens ?? []} />
+            <ClaimRail setupMode="entry" />
+          </>
+        }
       />
       <MoreOptions
         bare

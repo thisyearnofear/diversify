@@ -41,8 +41,12 @@ describe('homeBeats', () => {
       nowMs: NOW,
     });
     expect(beats[0].text).toMatch(/^\w+ \d+ 🇬🇭: Bank of Ghana held the benchmark rate$/);
+    // The persona beat rides second when the currency has a voice —
+    // "the cedi's season" around the same dataset drift number.
+    expect(beats[1].key).toBe('voice-GHS');
+    expect(beats[1].text).toContain("the cedi's season");
     // The dated curated event follows.
-    expect(beats[1].text).toBe('2022: Domestic debt exchange');
+    expect(beats.some((b) => b.text === '2022: Domestic debt exchange')).toBe(true);
   });
 
   it('falls back to the currency watch cadence when no signal is fresh', () => {
@@ -79,9 +83,10 @@ describe('homeBeats', () => {
       nowMs: NOW,
     });
     expect(beats.every((b) => !b.key.startsWith('risk-'))).toBe(true);
-    // Watch cadence + the sourced coming beat (INEC is ~110 days out).
+    // Watch cadence + persona + the sourced coming beat (INEC is ~110 days out).
     expect(beats.map((b) => b.key)).toEqual([
       'watch-NGNm',
+      'voice-NGN',
       'coming-ng-2027-presidential',
     ]);
   });

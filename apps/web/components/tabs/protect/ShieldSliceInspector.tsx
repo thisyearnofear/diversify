@@ -29,6 +29,8 @@ import StatusBadge from "../../shared/StatusBadge";
 import WalletButton from "../../wallet/WalletButton";
 import { ProtectionCalculator } from "../../inflation/ProtectionCalculator";
 import { PaymentCycleReport } from "./PaymentCycleReport";
+import { ClaimRail } from "../../rewards/ClaimRail";
+import { SmartBuyCryptoButton } from "../../onramp";
 import { RwaVaultSleeve } from "./RwaVaultSleeve";
 import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./ProtectionPlanRing";
 import { STRATEGIES } from "@/hooks/useFinancialStrategies";
@@ -565,20 +567,35 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
             </div>
           )}
           {address && selectedAlloc && gapPct > 2 && totalValue <= 0 && (
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await navigator.clipboard.writeText(address);
-                  showToast("Address copied — fund this wallet to start the plan", "success");
-                } catch {
-                  showToast("Could not copy address", "error");
-                }
-              }}
-              className="min-h-tap w-full rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold px-4 transition-colors"
-            >
-              Fund this plan — copy deposit address
-            </button>
+            <div className="space-y-2">
+              {/* Same funding control as the wallet dropdown and Home's
+                  cold-start banner — one buy button learned once. */}
+              <SmartBuyCryptoButton defaultAmount="100" className="w-full" />
+              <p className="text-xs text-center text-gray-500 dark:text-gray-400">
+                💳 Buy with card or bank transfer
+              </p>
+              {/* The zero-fiat onramp: daily G$ claims need no deposit (gas
+                  is topped up by the claim flow). Self-hides when there is
+                  nothing claimable. */}
+              <div className="flex items-baseline gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <span>Or start free —</span>
+                <ClaimRail setupMode="entry" />
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(address);
+                    showToast("Address copied — send tokens here to start the plan", "success");
+                  } catch {
+                    showToast("Could not copy address", "error");
+                  }
+                }}
+                className="min-h-tap w-full text-xs font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+              >
+                or copy deposit address
+              </button>
+            </div>
           )}
           {address && selectedAlloc && gapPct < -2 && (
             <button

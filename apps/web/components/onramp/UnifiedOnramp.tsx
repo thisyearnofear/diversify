@@ -12,6 +12,13 @@ export interface UnifiedOnrampProps {
     variant?: "default" | "white" | "outline";
     defaultAmount?: string;
     showProviderChoice?: boolean;
+    /** Intent fields — what the user's paused action actually needs, so the
+     *  widget pre-fills the right asset and a real amount instead of a
+     *  generic CELO/$100. Passed to embedded providers; outbound-link
+     *  providers (Guardarian) can't take them yet. */
+    neededAsset?: string;
+    neededAmountUsd?: number;
+    onBuyStarted?: () => void;
 }
 
 type OnrampProvider = "guardarian" | "mtpelerin";
@@ -23,6 +30,9 @@ export function UnifiedOnramp({
     variant = "default",
     defaultAmount = "100",
     showProviderChoice = false,
+    neededAsset,
+    neededAmountUsd,
+    onBuyStarted,
 }: UnifiedOnrampProps) {
     const { address, chainId } = useWalletContext();
     const [selectedProvider, setSelectedProvider] = useState<OnrampProvider>("guardarian");
@@ -31,18 +41,14 @@ export function UnifiedOnramp({
     const amount = parseFloat(defaultAmount || "100");
     const isSmallAmount = amount <= 700; // €700 Guardarian no-KYC limit
 
-    // Network-specific provider optimization
+    // Network-specific provider optimization.
+    // Mt Pelerin is the default everywhere: it is the only real integration —
+    // an embedded widget that prefills the user's address and chain.
+    // Guardarian stays selectable via provider choice but is an outbound
+    // link (no address handoff) until a partner integration lands.
     const getOptimalProvider = useCallback((): OnrampProvider => {
-        // Both providers support Celo and Arbitrum, but optimize based on strengths
-        switch (chainId) {
-            case 42161: // Arbitrum - Guardarian excels with ARB support and no-KYC
-                return "guardarian";
-            case NETWORKS.CELO_MAINNET.chainId: // Celo - For small amounts use Guardarian (no-KYC), larger amounts prefer Mt Pelerin
-                return isSmallAmount ? "guardarian" : "mtpelerin";
-            default:
-                return "guardarian"; // Default to Guardarian for other networks
-        }
-    }, [chainId, isSmallAmount]);
+        return "mtpelerin";
+    }, []);
 
     // Auto-select optimal provider on network/amount change
     React.useEffect(() => {
@@ -54,24 +60,9 @@ export function UnifiedOnramp({
     // Get network-specific provider descriptions
     const getProviderDescription = (provider: OnrampProvider) => {
         if (provider === "guardarian") {
-            switch (chainId) {
-                case 42161: // Arbitrum
-                    return "Recommended • ARB Support";
-                case NETWORKS.CELO_MAINNET.chainId: // Celo
-                    return isSmallAmount ? "No KYC • Up to €700" : "No KYC • Up to €700";
-                default:
-                    return "No KYC • Up to €700";
-            }
-        } else {
-            switch (chainId) {
-                case 42161: // Arbitrum
-                    return "Swiss Regulated";
-                case NETWORKS.CELO_MAINNET.chainId: // Celo
-                    return isSmallAmount ? "Swiss Regulated" : "Recommended • Higher Limits";
-                default:
-                    return "Swiss Regulated";
-            }
+            return "No KYC • Up to €700 • opens in browser";
         }
+        return "Recommended • Swiss Regulated";
     };
 
     const getModeLabel = () => {
@@ -121,6 +112,9 @@ export function UnifiedOnramp({
                 className={className}
                 compact={compact}
                 variant={variant}
+                neededAsset={neededAsset}
+                neededAmountUsd={neededAmountUsd}
+                onBuyStarted={onBuyStarted}
             />
         );
     }
@@ -170,6 +164,9 @@ export function UnifiedOnramp({
                                 mode={mode}
                                 compact
                                 className="last:border-b-0"
+                                neededAsset={neededAsset}
+                                neededAmountUsd={neededAmountUsd}
+                                onBuyStarted={onBuyStarted}
                             />
                         </motion.div>
                     )}
@@ -193,6 +190,9 @@ export function UnifiedOnramp({
                     mode={mode}
                     className={className}
                     variant={variant}
+                    neededAsset={neededAsset}
+                    neededAmountUsd={neededAmountUsd}
+                    onBuyStarted={onBuyStarted}
                 />
             )}
 

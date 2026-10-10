@@ -861,8 +861,13 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
+    // The shared buy control leads; copying the deposit address is the
+    // quiet fallback, not the only path.
     expect(
-      screen.getByRole("button", { name: /Fund this plan/ }),
+      screen.getByRole("button", { name: /Buy Crypto/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /copy deposit address/ }),
     ).toBeInTheDocument();
   });
 

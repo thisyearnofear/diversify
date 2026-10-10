@@ -15,6 +15,7 @@ import {
   type CorridorSignal,
   type CorridorSignalRecord,
 } from '@/lib/corridor-context';
+import { voiceBeatForCode } from '@/lib/corridor-voice';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 import {
   comingStampsForFiat,
@@ -100,6 +101,12 @@ export function homeBeats(args: {
     macroSignalBeatForCode(records, currencyCode, nowMs) ??
     watchBeatForCode(currencyCode);
   if (first) beats.push(first);
+
+  // The persona beat — the currency's own register ("japa math", "la
+  // TRM") around its 5y drift. Second in rotation: the persona hooks,
+  // the calendar and risk event keep it grounded.
+  const voice = voiceBeatForCode(currencyCode);
+  if (voice) beats.push(voice);
 
   // The sourced calendar — informational on Home (no stamping UI here).
   const coming = comingBeatForCode(currencyCode, new Date(nowMs));

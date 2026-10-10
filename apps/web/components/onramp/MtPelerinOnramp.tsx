@@ -9,6 +9,16 @@ export interface MtPelerinOnrampProps {
   className?: string;
   compact?: boolean;
   variant?: "default" | "white" | "outline";
+  /** Token symbol the user actually needs — prefilled as the widget's
+   *  destination currency when it's one the ramp sells (see MTP_BUYABLE).
+   *  Anything else buys USDC, the closest bridgeable asset. */
+  neededAsset?: string;
+  /** Fiat amount (USD) prefill — the intent's gap + buffer, never a
+   *  generic round number when we can compute the real one. */
+  neededAmountUsd?: number;
+  /** Called once when the widget opens — callers persist the paused
+   *  intent (pending-fund) so Home can resume it on arrival. */
+  onBuyStarted?: () => void;
 }
 
 // Mt Pelerin widget configuration
@@ -16,6 +26,23 @@ export interface MtPelerinOnrampProps {
 // Full documentation: https://developers.mtpelerin.com
 
 const MTP_WIDGET_BASE = "https://widget.mtpelerin.com";
+
+/**
+ * Widget destination codes verified to render. Keep this small — an
+ * unknown `wdc` is worse than a USDC default because the widget silently
+ * ignores it. Add symbols only after checking the live widget.
+ */
+export const MTP_BUYABLE: ReadonlySet<string> = new Set([
+  "CELO",
+  "CUSD",
+  "USDC",
+]);
+
+/** The destination code to prefill for a needed app symbol. */
+export function mtpDestinationFor(symbol: string | null | undefined): string {
+  const s = (symbol ?? "").toUpperCase();
+  return MTP_BUYABLE.has(s) ? s : "USDC";
+}
 
 function getNetworkName(chainId: number | null): string {
   switch (chainId) {
@@ -39,6 +66,9 @@ export function MtPelerinOnramp({
   className = "",
   compact = false,
   variant = "default",
+  neededAsset,
+  neededAmountUsd,
+  onBuyStarted,
 }: MtPelerinOnrampProps) {
   const { address, chainId } = useWalletContext();
   const [isOpen, setIsOpen] = useState(false);
@@ -52,16 +82,16 @@ export function MtPelerinOnramp({
       addr: address,
       lang: "en",
       net: getNetworkName(chainId),
-      wdc: "CELO", // Wallet Destination Code
+      wdc: mtpDestinationFor(neededAsset), // Wallet Destination Code
       fiat: "USD",
-      amount: "100",
+      amount: String(Math.max(1, Math.ceil(neededAmountUsd ?? 100))),
       // Embedded optimizations
       theme: "light",
       redirectUrl: typeof window !== 'undefined' ? window.location.origin : '',
     });
 
     setWidgetUrl(`${MTP_WIDGET_BASE}/?${params.toString()}`);
-  }, [address, chainId, mode]);
+  }, [address, chainId, mode, neededAsset, neededAmountUsd]);
 
   const getModeLabel = () => {
     switch (mode) {
@@ -111,6 +141,7 @@ export function MtPelerinOnramp({
   const openModal = () => {
     if (widgetUrl) {
       setIsOpen(true);
+      onBuyStarted?.();
     }
   };
 

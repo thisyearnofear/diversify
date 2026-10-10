@@ -19,6 +19,7 @@ import {
   type CorridorSignalRecord,
 } from './corridor-context';
 import { hasHype } from './card-tone';
+import { voiceFor } from './corridor-voice';
 import { tokenColor } from '@/components/shared/palette';
 
 const CELO_SYMBOLS = NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId];
@@ -43,6 +44,9 @@ export interface PairCardContent {
   whatIf: string | null;
   /** "Jul 2025" — always disclosed. */
   asOf: string;
+  /** The weaker side's own name for the story ("japa math") — the card's
+   *  kicker when a curated corridor voice exists, null otherwise. */
+  epithet: string | null;
   /** A fresh dated macro beat for the newer side's signal
    *  ("Sep 18 🇳🇬 · CBN held the benchmark rate") — only when ledger
    *  records are passed in (server-side), the signal is fresh and
@@ -113,6 +117,11 @@ export function pairCardContent(
     headline,
     whatIf: whatIf ? whatIfSentence(whatIf) : null,
     asOf: currencyRiskAsOfLabel(),
+    epithet: corridor.drift
+      ? voiceFor(
+          (corridor.drift.weaker === 'from' ? corridor.from : corridor.to).code,
+        )?.epithet ?? null
+      : null,
     beat,
     tilt: tiltForDrift(corridor.drift),
     fromFlag: corridor.from.flag,

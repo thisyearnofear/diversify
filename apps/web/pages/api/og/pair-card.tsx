@@ -108,6 +108,7 @@ export default async function handler(req: NextRequest) {
     whatIf,
     asOf,
     beat,
+    epithet,
   } = content;
 
   return new ImageResponse(
@@ -166,6 +167,21 @@ export default async function handler(req: NextRequest) {
           />
         </div>
 
+        {epithet && (
+          <div
+            style={{
+              display: 'flex',
+              color: '#8f8fa8',
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: 2,
+              textTransform: 'uppercase',
+              marginBottom: 14,
+            }}
+          >
+            {epithet}
+          </div>
+        )}
         <div
           style={{
             display: 'flex',

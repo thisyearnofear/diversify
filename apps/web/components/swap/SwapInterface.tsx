@@ -22,6 +22,9 @@ import { SocialContactPicker } from "./SocialContactPicker";
 import { useSocialResolve } from "../../hooks/use-social-resolve";
 import SwapActionButton from "./SwapActionButton";
 import WalletButton from "../wallet/WalletButton";
+import { SmartBuyCryptoButton } from "../onramp";
+import { MTP_BUYABLE } from "../onramp/MtPelerinOnramp";
+import { savePendingFund } from "@/lib/pending-fund";
 import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY } from "../shared/palette";
 import { springPop, springSoft, STAGGER_STEP_S } from "@/lib/motion-tokens";
@@ -41,6 +44,10 @@ interface Token {
   name: string;
   region: string;
 }
+
+/** Ramp-buyable tokens quoted at ~$1 — the gap can be sized honestly
+ *  even at zero balance. Anything else needs a held-balance price. */
+const USD_STABLE_BUYABLE = new Set(["USDC", "CUSD"]);
 
 interface SwapInterfaceProps {
   availableTokens: Token[];
@@ -149,7 +156,7 @@ const SwapInterface = forwardRef<
   },
   ref,
 ) {
-  const { recordSettlement } = useNavigation();
+  const { recordSettlement, swapPrefill } = useNavigation();
   const { experienceMode } = useExperience();
   const { financialStrategy } = useStrategy();
   const { askAdvisor } = useAdvisor();
@@ -405,6 +412,52 @@ const SwapInterface = forwardRef<
   };
 
   const ctaDisabledReason = getSwapDisabledReason();
+
+  // Adaptive funding: when the only blocker is a fromToken shortfall AND
+  // the ramp can sell that token directly, the CTA morphs into the buy —
+  // sized to the real gap, never a generic amount. Non-buyable source
+  // tokens (e.g. local Mento stables) keep the plain disabled reason:
+  // buying a different asset would strand the intent, not resolve it.
+  const fundingGapUsd = (() => {
+    if (ctaDisabledReason !== `Exceeds ${fromToken} balance`) return null;
+    if (status !== "idle" || isLoading) return null;
+    if (!routeProvider || quoteNoRoute || quoteMarketClosed) return null;
+    if (!MTP_BUYABLE.has(fromToken.toUpperCase())) return null;
+    const heldUsd = tokenBalances[fromToken]?.value ?? 0;
+    const unit =
+      availableBalance > 0 && heldUsd > 0
+        ? heldUsd / availableBalance
+        : USD_STABLE_BUYABLE.has(fromToken.toUpperCase())
+          ? 1
+          : null;
+    return unit === null ? null : (parsedAmount - availableBalance) * unit;
+  })();
+
+  const armPendingFund = () => {
+    const watchChain = fromChainId ?? chainId;
+    if (!watchChain || fundingGapUsd === null) return;
+    savePendingFund({
+      asset: fromToken,
+      chainId: watchChain,
+      neededBalance: parsedAmount,
+      usdEstimate: fundingGapUsd,
+      // Full prefill, not a bare pair: a funded Shield move or Guardian
+      // proposal keeps its reason + origin so the resumed ticket restores
+      // the context (and the receipt keeps the attribution).
+      resume: {
+        ...swapPrefill,
+        fromToken,
+        toToken,
+        amount,
+        fromChainId: fromChainId ?? swapPrefill?.fromChainId,
+        toChainId: toChainId ?? swapPrefill?.toChainId,
+      },
+    });
+    trackFunnelEvent("fund_started", {
+      asset: fromToken,
+      chainId: String(watchChain),
+    });
+  };
 
   const handleSwitch = () => {
     if (reducedMotion) {
@@ -886,18 +939,37 @@ const SwapInterface = forwardRef<
               CTA becomes the connect button (§5 — state morphs the object;
               a disabled swap button would be a dead control). */}
           {address ? (
-            <SwapActionButton
-              isLoading={isLoading}
-              status={status}
-              isBeginner={isBeginner}
-              zapMode={zapMode}
-              disabled={Boolean(ctaDisabledReason)}
-              disabledReason={ctaDisabledReason}
-              onClick={() => executeSwap(onSwap, contractCall)}
-              // In instrument mode the tab dock owns the bottom edge — a
-              // fixed CTA would render on top of it (both bottom-0 z-50).
-              stickyMobile={isMobile && !instrument}
-            />
+            fundingGapUsd !== null ? (
+              /* Funding morph — the CTA slot becomes the resolver, not a
+                 dead disabled button. The buy is sized to the shortfall
+                 (~5% headroom for ramp fees, disclosed) and pauses the
+                 intent so Home can resume it when the asset lands. */
+              <div data-testid="swap-funding-path" className="space-y-2">
+                <p className="text-center text-xs text-gray-500 dark:text-gray-400">
+                  ≈${Math.ceil(fundingGapUsd)} more {fromToken} needed — buy
+                  includes ~5% for ramp fees
+                </p>
+                <SmartBuyCryptoButton
+                  neededAsset={fromToken}
+                  neededAmountUsd={Math.ceil(fundingGapUsd * 1.05)}
+                  onBuyStarted={armPendingFund}
+                  className="w-full"
+                />
+              </div>
+            ) : (
+              <SwapActionButton
+                isLoading={isLoading}
+                status={status}
+                isBeginner={isBeginner}
+                zapMode={zapMode}
+                disabled={Boolean(ctaDisabledReason)}
+                disabledReason={ctaDisabledReason}
+                onClick={() => executeSwap(onSwap, contractCall)}
+                // In instrument mode the tab dock owns the bottom edge — a
+                // fixed CTA would render on top of it (both bottom-0 z-50).
+                stickyMobile={isMobile && !instrument}
+              />
+            )
           ) : (
             <WalletButton variant="primary" className="w-full" />
           )}

@@ -70,6 +70,11 @@ export const FUNNEL_EVENTS = [
   // addresses, or raw amounts).
   'swap_outcome',
   'claim_outcome',
+  // Adaptive funding — an insufficient-balance moment opened the buy
+  // widget ('fund_started') and a landed balance resumed the paused move
+  // ('fund_resumed'). Coarse: asset symbol + chainId, never amounts.
+  'fund_started',
+  'fund_resumed',
   // Stamps — does pressing curated facts onto a move delight? Coarse:
   // sheet mode, stamp kind, share target + count. Never content or
   // identity.

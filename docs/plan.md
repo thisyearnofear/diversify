@@ -65,6 +65,72 @@ touching verifiability surfaces.
 
 ## 2 · Monetisation — compliance first, then fees, then the thesis layer
 
+**Posture (2026-10-10): feeless — drive usage first.** Fee capture stays
+parked behind the Phase 0 gate; money features now sit on a counsel-cleared
+country allowlist (`CLEARED_COUNTRIES` in `config/jurisdictions.ts`), so the
+env switch alone can never open a market.
+
+**The feeless funnel.** install → wallet connect → **daily G$ claim** (the
+zero-fiat onramp: no deposit needed, the claim flow tops up gas) →
+"Protect your G$" → first protected position → graduation prompt → saved
+payment cycle → business. Claim surfaces: Home's status rail (`ClaimRail`)
+and Shield's empty-wallet inspector, next to the buy control.
+
+**What usage has to prove, in order.** ~100 weekly-active protected savers
+(the retention loop) → 10–20 real payment cycles (the revenue engine
+exists) → then scale corridors. Registered-user counts prove neither.
+
+**When the money question matters.** Two different thresholds: promotion
+rules apply at *first marketing contact* in a jurisdiction (hence GB deny,
+general-information copy, no "you should" — already in code, not a
+later problem). The fee switch matters at *volume*: ~$5M/month ≈
+$10–25k/month at candidate take rates — ~3.3k monthly $50 retail swappers,
+or ~30–50 active importer cycles. The business path gets there at a
+fraction of the headcount, which is why §5 is the destination.
+
+**Distribution assets already shipped:** stamps/postcards + `/postcard`,
+`/pair/[from]/[to]` corridor cards, the fx-drag calculator handoff, the
+graduation prompt, Ask Guardian. Server-resolved numbers only — nothing to
+overclaim. Measure with `pnpm funnel-outcomes` (30d outcomes + stage
+counts: share→land→settle, stamps, graduation→cycle, calculator,
+onboarding, chat) before building more share surface — the open question
+is whether `stamp_press`/`postcard_share` show anyone cares.
+
+**Adaptive funding.** The onramp is now an intent resolver, not a
+feature: Exchange's "Exceeds balance" dead end morphs into a buy CTA
+sized to the real shortfall (+~5% ramp-fee buffer, disclosed) when the
+needed token is one the ramp sells (CELO/cUSD/USDC); opening the widget
+persists a `pending-fund` intent (`lib/pending-fund.ts`, 7-day TTL), and
+Home's `PendingFundRail` watches refreshed balances — when the asset
+lands, it offers "finish the move" (user-confirmed, never silent).
+Shield commits and Guardian proposals ride the same loop for free —
+both hand off through `navigateToSwap`, and the paused record keeps the
+full prefill (chains, reason, origin) so a funded plan move resumes
+named: "finish your {plan} move". Meets `fund_started`/`fund_resumed`
+events in the funnel report.
+
+**Corridor voices — the meme layer.** `lib/corridor-voice.ts` holds the
+curated registers ("japa math" NGN, "padala math" PHP, "la TRM" COP,
+"custo Brasil" BRL, "el dólar blue" ARS, "the cedi's season" GHS):
+epithet + lost/gained templates that wrap the SAME drift number every
+other surface computes — voices carry no numbers, no dates, no claims.
+They surface as the persona beat in Home's `homeBeats` rotation and as
+the kicker on `/pair/[from]/[to]` share cards + OG images. The
+sovereign-debt dataset is ready at
+`packages/shared/src/constants/sovereign-debt.ts` (hand-sourced, dated,
+12 countries) for `/debt/[code]` — counsel-gated with the rest of the
+thesis surfaces.
+
+**Still blocking usage:** card/bank onramps exist and are surfaced —
+Mt Pelerin's embedded widget (prefills address + chain, no API key) in the
+wallet dropdown, Home's cold-start banner, and Shield's empty-wallet
+inspector; Guardarian remains selectable but is an outbound link stub
+until a partner integration exists. The real gap is **corridor payment
+methods** — neither ramp does M-Pesa / GHS / NGN mobile money; Fonbnk /
+Kotani (Celo-native mobile-money ramps) stay deferred partners (§10).
+Comprehension sessions are unrun (§7) — recruiting 5 corridor users is the
+cheapest signal available.
+
 Full phase detail: this section is the live summary; the original plan file is
 merged here.
 
@@ -94,9 +160,10 @@ switches default-off (`config/jurisdictions.ts`), sanctions geo-block (451 →
 per-IP limit, legal page drafts `noindex` until `NEXT_PUBLIC_LEGAL_APPROVED`,
 retail perps off with PAXG spot substitution, no streaks/badges for real-money
 swaps.
-*Still open:* counsel's written answers + `[COUNSEL: …]` placeholders (brief
-outline: [`archive/compliance-competitors-2026-10.md`](./archive/compliance-competitors-2026-10.md)
-§4); the direct-Hetzner geo gap (heavy routes are rewritten from Vercel to Hetzner, so a
+*Still open:* counsel's written answers + `[COUNSEL: …]` placeholders — the
+live pack is [`internal/counsel-pack.md`](./internal/counsel-pack.md) (asked
+as regulated / not / regulated-unless-X under fee-free and disclosed-fee
+postures); the direct-Hetzner geo gap (heavy routes are rewritten from Vercel to Hetzner, so a
 direct call to the Hetzner host bypasses the Vercel proxy geo-block — close with an
 origin allowlist (Host + secret header) or GeoIP at the reverse proxy, runbook in
 `reference.md` §7); rate-limit store shared across instances (Upstash Redis or
@@ -235,7 +302,10 @@ is stale.
 
 Remaining: the importer `FinancialStrategy` archetype (config sketch + Shield ring
 morph, no new tabs — the archetype lives inside the existing app until demand
-forces a split) · graduation-funnel **measurement** (conversion, not the prompt) ·
+forces a split) · graduation-funnel measurement — events are wired
+(`graduation_signal_detected`/`_viewed`/`_clicked`/`_dismissed` →
+`cycle_report_run`); `pnpm funnel-outcomes` prints the 30-day stage counts,
+what's missing is the habit of reading it ·
 a GHS on/off-ramp partner (partnered, never built — partner-not-build: we stay
 non-custodial intelligence, a licensed rail onboards; see the archived compliance
 brief §2) · a rails design partner (LOI)

@@ -1,6 +1,7 @@
 // Fiat On-Ramp Components
-// Guardarian (primary) - no-KYC up to €700, native integration
-// Mt Pelerin (fallback) - Swiss regulated, higher limits
+// Mt Pelerin (default) - embedded widget, prefills address + chain
+// Guardarian (selectable) - outbound link stub until a partner
+// integration lands; their no-KYC tier is up to €700
 
 // Primary exports - Smart network-optimized approach
 export {
