@@ -415,8 +415,10 @@ DiversiFi's product today is savings protection (hold → protect → monitor). 
 natural expansion completes the lifecycle: onramp → protect + grow → offramp.
 Listed so the integration surface is visible and the decisions stay intentional —
 **nothing here is a commitment to a provider.** Deferred because it needs counsel
-sign-off and a fee route before a fiat leg makes sense, and because without an
-onramp users must already hold crypto — the biggest UX gap, and the reason it waits.
+sign-off and a fee route before a fiat leg makes sense. Card/bank onramps already
+ship (Mt Pelerin live; Guardarian env-gated) and the adaptive-funding resolver
+sizes them to intent — the remaining UX gap is **corridor mobile money**, which is
+exactly what these providers exist for.
 
 | Layer | Target | Priority providers | Why |
 |---|---|---|---|

@@ -400,6 +400,7 @@ Provider priority: Farcaster > MiniPay > Injected > AppKit
 | Macro Monitoring | Firecrawl (event-driven page watching) |
 | Swaps | Mento Protocol v3 + Uniswap V3 (Celo), Uniswap V3/1inch/LiFi (Arbitrum) |
 | Bridging | Circle CCTP, LiFi |
+| Fiat onramp | Mt Pelerin (embedded widget, live — no credentials) + Guardarian (partner integration via `/api/onramp/guardarian-url`, env-gated on `NEXT_PUBLIC_GUARDARIAN_PARTNER_ID`) |
 | Hedging | Hyperliquid perps |
 | Data | World Bank, FRED, CoinGecko, DeFiLlama |
 | Database | MongoDB |
@@ -1334,6 +1335,11 @@ The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not g
 against the Hetzner host directly — so the Hetzner nginx
 (`scripts/nginx-diversifi-api.conf`) must enforce the same block. Until then,
 do not claim edge-blocking covers vault routes.
+
+The proxy also forwards `x-vercel-ip-country` into the `dfi-cc` cookie so
+surfaces can self-gate (`lib/geo.ts`, `useGeoCountry` — e.g. the `thesis`
+deny). That signal is Vercel-only too: Hetzner-direct traffic sees unknown
+geo, which fails open for promo surfaces and closed for money features.
 
 1. Add an allowlist (not yet implemented): the rewrites would send a shared
    `X-Edge-Secret` header from `HETZNER_EDGE_SECRET`, and nginx would accept
