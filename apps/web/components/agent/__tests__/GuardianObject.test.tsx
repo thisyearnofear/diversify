@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from "react";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { GuardianObject } from "../GuardianObject";
 import type { GuardianTierState } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -223,6 +223,37 @@ describe("GuardianObject — latest line + CTA", () => {
     expect(props.onOpenJournal).toHaveBeenCalledTimes(1);
   });
 
+  it("an on-chain record carries the hallmark; an unanchored line does not", () => {
+    renderObject({
+      latestEvent: {
+        id: "e1",
+        source: "vault",
+        title: "Guardian swap",
+        subtitle: "USDC -> KESm · $10",
+        timestamp: Date.now() - 60_000,
+        status: "confirmed",
+        txHash: "0xabc123",
+      },
+    });
+    expect(
+      within(screen.getByTestId("guardian-latest")).getByTestId("hallmark"),
+    ).toBeInTheDocument();
+    cleanup();
+    renderObject({
+      latestEvent: {
+        id: "e2",
+        source: "vault",
+        title: "Guardian swap",
+        subtitle: "USDC -> KESm · $10",
+        timestamp: Date.now() - 60_000,
+        status: "confirmed",
+      },
+    });
+    expect(
+      within(screen.getByTestId("guardian-latest")).queryByTestId("hallmark"),
+    ).toBeNull();
+  });
+
   it("falls back to the latest call when no event exists", () => {
     renderObject({ latestCall: "rotate to KESm" });
     expect(screen.getByTestId("guardian-latest")).toHaveTextContent(
@@ -283,5 +314,65 @@ describe("GuardianObject — live line", () => {
   it("renders nothing when no beat resolves", () => {
     renderObject({ liveBeats: [], liveAlive: true });
     expect(screen.queryByTestId("guardian-live-line")).not.toBeInTheDocument();
+  });
+});
+
+describe("GuardianObject — the beat lands on the mark", () => {
+  it("a fresh signal widens the eyes; a cadence narrows them; the state mood takes back over", () => {
+    vi.useFakeTimers();
+    try {
+      renderObject({
+        liveAlive: true,
+        liveBeats: [
+          { key: "watch-KESm", text: "Watch 🇰🇪: CBK decisions · 8× a year" },
+          { key: "signal-NGN", text: "Sep 18 🇳🇬: CBN held the benchmark rate" },
+        ],
+      });
+      // Beat 0 (the cadence) is silent — the object's arrival owns the
+      // opening; monitoring's protective rest is the mood.
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "protective");
+
+      // The signal beat lands — the mark saw the print.
+      act(() => vi.advanceTimersByTime(7100));
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "alert");
+
+      // ~2.4s later the pulse settles — protective rest takes back over.
+      act(() => vi.advanceTimersByTime(2600));
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "protective");
+
+      // Rotation wraps to the cadence — routine attention narrows the eyes.
+      act(() => vi.advanceTimersByTime(4600));
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "thinking");
+
+      // The pulse settles, then the SECOND wrap re-shows the signal —
+      // already played once. A repeated fact re-reading as reaction is
+      // wallpaper; the face stays at protective rest.
+      act(() => vi.advanceTimersByTime(2400 + 7100));
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "protective");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("a proposal's alert owns the face — a beat never competes with real state", () => {
+    vi.useFakeTimers();
+    try {
+      renderObject({
+        proposalPending: true,
+        liveAlive: true,
+        liveBeats: [
+          { key: "watch-KESm", text: "Watch 🇰🇪: CBK decisions · 8× a year" },
+          { key: "signal-NGN", text: "Sep 18 🇳🇬: CBN held the benchmark rate" },
+        ],
+      });
+      act(() => vi.advanceTimersByTime(7100));
+      // The signal's pulse arrived — but proposalPending's alert wins either
+      // way; the distinction is it never got narrow-eyed first.
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "alert");
+      act(() => vi.advanceTimersByTime(4600));
+      expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "alert");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

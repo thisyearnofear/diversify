@@ -52,6 +52,8 @@ import { STRATEGIES } from "@/constants/strategies";
 import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { shieldBeats } from "@/lib/live-lines";
+import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
+import { motion } from "framer-motion";
 import { LiveLine } from "@/components/shared/LiveLine";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
@@ -162,6 +164,17 @@ export function ProtectionNotConnected({
   const [acted, setActed] = React.useState(false);
   const liveLineShowing =
     !ringCompact && !sleeveOpen && !balance.isPreviewing && effectiveToken === null;
+
+  // The beat→object event — same grammar as connected Shield: a signal
+  // on a plan leg's currency tremors the ring, the cadence breathes it.
+  // Silent on the first beat, dead once the user acts.
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const ringBeat = useBeatImpulse(
+    activeBeatKey,
+    liveLineShowing && !acted && !inspectorOpen,
+    { surface: "shield" },
+  );
+  useInstrumentDwell("shield", liveLineShowing && !acted, acted);
   const hole = (() => {
     if (!comparing && !picking) return undefined;
     if (!focusedPhilosophy) {
@@ -197,6 +210,11 @@ export function ProtectionNotConnected({
       onFocusCapture={() => setActed(true)}
     >
       <div data-testid="shield-ring" data-walletless data-comparing={comparing || undefined}>
+        <motion.div
+          data-testid="beat-impulse"
+          data-impulse={ringBeat.impulse ?? "none"}
+          animate={ringBeat.controls}
+        >
         <ProtectionPlanRing
           customPlan={customPlan}
           strategyKey={
@@ -299,11 +317,13 @@ export function ProtectionNotConnected({
             ) : undefined
           }
         />
+        </motion.div>
         {liveLineShowing && (
           <LiveLine
             testId="shield-live-line"
             beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
             alive={!acted && !inspectorOpen}
+            onBeatChange={reportBeat}
             className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
           />
         )}

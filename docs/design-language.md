@@ -235,6 +235,43 @@ additions, neither counted against the ambient budget:
   acts, stays on its first beat under reduced motion, never repeats a block
   already on screen, and renders nothing when no beat resolves. It is one
   line, never a feed.
+- **A beat happens TO the object, not beside it.** `LiveLine` reports the
+  shown beat's key (`onBeatChange`); `beatImpulseForKey` classifies the
+  key grammar into a physical signature the object plays once — a macro
+  signal is a tremor the coin absorbs, the corridor voice is a lean
+  toward the benchmark, the watch cadence is a breath, a dated event
+  ahead lifts, a dated risk event presses down. `useBeatReporter` keeps
+  the first shown beat silent (the stage's arrival owns the opening
+  move); `useBeatImpulse` plays every later signature, dead under
+  reduced motion and once the user acts. Each object answers in its own
+  grammar: Home's moment coin takes the impulse itself; the Exchange
+  beam's signature lands on the coin the beat NAMES (`beatSideForKey` —
+  a signal tremors its own side, the pair's story presses both, and the
+  beam never tips because a beat carries no direction); the Guardian
+  mark postures (`GUARDIAN_BEAT_MOOD` — a fresh print widens the eyes,
+  a cadence narrows them); Shield's ring tremors and breathes with the
+  plan. The signature table lives in `lib/beat-impulse.ts`. A signature
+  fires **once per beat per mount** — a re-shown fact is wallpaper if it
+  keeps moving, so the played ledger stays still on rotation wraps and a
+  re-staged object (a new pair's re-weigh) plays fresh. Voice signatures
+  are authored one per corridor and only after validation against real
+  corridor users: `voice-NGN` is `japa` — the money reaching, wavering,
+  reaching further — every other corridor keeps the generic lean.
+- **Verified numbers carry a struck mark.** `Hallmark`
+  (`components/shared/Hallmark.tsx`) is the assay stamp in miniature —
+  two die-rings and an assay check, `currentColor`, `aria-hidden` (the
+  DOM text beside it stays authoritative). It rides inline with the fact
+  it verifies: the "Verify evidence" door, `guardian-latest` when the
+  event carries a `txHash`, the receipt's settled line when the tx
+  exists. Only on-chain-anchored facts earn the mark — sourced beats,
+  estimates and projections carry none, and that absence is part of the
+  language. Never stamp an unanchored claim.
+- **Is anyone watching?** `beat_impulse` fires only when a signature
+  actually plays (surface + kind); `instrument_dwell` fires once per
+  mount on the first act with a coarse bucket, clock starting when the
+  instrument first breathes (`useInstrumentDwell`). Reduced-motion and
+  acted surfaces count as never-seen — the funnel measures the craft
+  read, not the arm state.
 
 ### The density contract — depth layers, finite verbs, owned motifs
 

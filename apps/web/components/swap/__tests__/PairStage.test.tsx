@@ -532,6 +532,88 @@ describe('PairStage — stillness after interaction', () => {
   });
 });
 
+describe('PairStage — the beat lands on the money', () => {
+  const SIG = {
+    dateLabel: 'Sep 18',
+    text: 'Central bank held the rate',
+    timestamp: Date.now(),
+  };
+
+  it('a signal tremors the coin it names — the beam never invents a direction', () => {
+    vi.useFakeTimers();
+    try {
+      renderStage({
+        fromToken: 'KESm',
+        toToken: 'PAXG',
+        signals: { from: SIG, to: null },
+      });
+      const from = screen.getByTestId('beat-impulse-from');
+      const to = screen.getByTestId('beat-impulse-to');
+      // Beat 0 (the pair's story) is silent — the stage's arrival owns it.
+      expect(from).toHaveAttribute('data-impulse', 'none');
+      expect(to).toHaveAttribute('data-impulse', 'none');
+      // signal-KESm — the shock lands on the named side only; the
+      // drift's tilt stays the only word on direction.
+      act(() => { vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 500); });
+      expect(from).toHaveAttribute('data-impulse', 'signal');
+      expect(to).toHaveAttribute('data-impulse', 'none');
+      // watch-PAXG — the cadence breathes the gold side alone.
+      act(() => { vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 500); });
+      expect(from).toHaveAttribute('data-impulse', 'none');
+      expect(to).toHaveAttribute('data-impulse', 'watch');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('the pair’s shared story presses both coins together — one fact, two objects', () => {
+    vi.useFakeTimers();
+    try {
+      renderStage({
+        fromToken: 'KESm',
+        toToken: 'PAXG',
+        signals: { from: SIG, to: null },
+      });
+      // Wrap back to the story beat (index 0 of 3) — a re-shown shared
+      // fact settles both coins ONCE (its mount suppression only
+      // silenced the first show; it never played). Dwell-by-dwell: a
+      // beat is only an event when it is actually shown.
+      for (let i = 0; i < 3; i++) {
+        act(() => { vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 500); });
+      }
+      expect(screen.getByTestId('beat-impulse-from')).toHaveAttribute('data-impulse', 'settle');
+      expect(screen.getByTestId('beat-impulse-to')).toHaveAttribute('data-impulse', 'settle');
+      // Second wrap — every beat has played once. A re-shown fact is
+      // wallpaper if it keeps moving; the objects stay still.
+      for (let i = 0; i < 3; i++) {
+        act(() => { vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 500); });
+      }
+      expect(screen.getByTestId('beat-impulse-from')).toHaveAttribute('data-impulse', 'none');
+      expect(screen.getByTestId('beat-impulse-to')).toHaveAttribute('data-impulse', 'none');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('acting stills the beat signatures with the line', () => {
+    vi.useFakeTimers();
+    try {
+      renderStage({
+        fromToken: 'KESm',
+        toToken: 'PAXG',
+        signals: { from: SIG, to: null },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Switch tokens' }));
+      act(() => { vi.advanceTimersByTime(3 * LIVE_LINE_DWELL_MS + 500); });
+      // The line stilled on beat 0 — no later beat ever reported.
+      expect(screen.getByTestId('beat-impulse-from')).toHaveAttribute('data-impulse', 'none');
+      expect(screen.getByTestId('beat-impulse-to')).toHaveAttribute('data-impulse', 'none');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe('drafting by drag along the beam', () => {
   it('snaps the share to quarters and drafts nothing at rest', async () => {
     const { snapDraftFraction } = await import('../PairStage');

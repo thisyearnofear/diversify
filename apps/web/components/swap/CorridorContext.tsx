@@ -92,6 +92,29 @@ export interface CorridorBeat {
   stampId?: string;
 }
 
+/** Which beam coin a beat belongs to. Signals and cadences name their
+ *  token (`signal-KESm`, `watch-PAXG`); a coming event resolves through
+ *  its scheduled fiat. The pair's shared facts — the provenance story
+ *  and anything unsided — land on BOTH coins together: one fact, two
+ *  objects struck by it. Never tips the beam itself: a beat carries no
+ *  direction, and the tilt is the drift's word, not the news's. */
+export function beatSideForKey(
+  key: string | null | undefined,
+  fromToken: string,
+  toToken: string,
+): 'from' | 'to' | 'both' | null {
+  if (!key) return null;
+  if (key === `signal-${fromToken}` || key === `watch-${fromToken}`) return 'from';
+  if (key === `signal-${toToken}` || key === `watch-${toToken}`) return 'to';
+  if (key.startsWith('coming-')) {
+    const fiat = SCHEDULED_EVENTS.find((e) => `coming-${e.id}` === key)?.fiat;
+    if (fiat && fiat === corridorSideFor(fromToken)?.code) return 'from';
+    if (fiat && fiat === corridorSideFor(toToken)?.code) return 'to';
+    return null;
+  }
+  return 'both';
+}
+
 /** The corridor line's beat list — pure so tests can assert that every
  *  stampable beat resolves through resolveStamps for the pair.
  *  Order: the provenance story, each side's nearest coming event (≤120
@@ -208,6 +231,7 @@ export function CorridorLine({
   decisionWindow = false,
   onExitDecisionWindow,
   onStamp,
+  onBeatChange,
 }: {
   fromToken: string;
   toToken: string;
@@ -236,6 +260,10 @@ export function CorridorLine({
   /** Keep a beat as a stamp — renders a trailing ✦ on beats that carry
    *  a stampId. Only wired on the resting pair stage. */
   onStamp?: (stampId: string) => void;
+  /** Reports the shown beat's key (rotation beats and the return-visit
+   *  lead) so the stage's object can play the beat's physical
+   *  signature — the beat→object event. */
+  onBeatChange?: (key: string) => void;
 }) {
   const corridor = corridorFor(fromToken, toToken, horizon);
   const a = provenanceFor(fromToken);
@@ -310,6 +338,12 @@ export function CorridorLine({
     );
     return () => window.clearTimeout(id);
   }, [leadShowing, rotating]);
+  // The lead renders outside LiveLine, so it reports its own key — the
+  // "new since last visit" fact is exactly the kind of beat the object
+  // should feel.
+  useEffect(() => {
+    if (leadShowing && leadBeat) onBeatChange?.(leadBeat.key);
+  }, [leadShowing, leadBeat, onBeatChange]);
   if (!story && !corridor) return null;
 
   const arrow = onInspect ? (
@@ -395,11 +429,14 @@ export function CorridorLine({
     // beat 0 — the same reset the inline rotation did, now inside LiveLine.
     <LiveLine
       key={rotating ? 'rotating' : 'still'}
-      beats={beats.map((b, i) => ({
-        key: `corridor-${i}`,
+      // Semantic keys, not positional — the object above classifies
+      // the shown beat by its grammar (signal-*, coming-*, story…).
+      beats={beats.map((b) => ({
+        key: b.key,
         content: beatContent(b),
       }))}
       alive={rotating}
+      onBeatChange={onBeatChange}
       dwellMs={LIVE_LINE_DWELL_MS}
       className="block text-xs font-semibold text-gray-700 dark:text-gray-300"
     />

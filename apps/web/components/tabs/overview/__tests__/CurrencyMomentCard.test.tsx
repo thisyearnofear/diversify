@@ -651,6 +651,82 @@ describe('CurrencyMomentCard — live line', () => {
     }
   });
 
+  it('the shown beat plays its signature on the coin — the news lands on the object', () => {
+    vi.useFakeTimers();
+    try {
+      mocks.feed.data = TWO_BEATS;
+      render(<CurrencyMomentCard {...baseProps} liveAlive />);
+      const impulse = screen.getByTestId('beat-impulse');
+      // Beat 0 (the macro signal) is silent — the stage's arrival owns
+      // the opening move, so no signature plays yet.
+      expect(impulse).toHaveAttribute('data-impulse', 'none');
+      act(() => {
+        vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 1000);
+      });
+      // Rotation moves to the corridor voice — the pull.
+      expect(impulse).toHaveAttribute('data-impulse', 'voice');
+      act(() => {
+        vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 1000);
+      });
+      // Then the dated 2022 cedi crisis — the weight of what happened.
+      expect(impulse).toHaveAttribute('data-impulse', 'risk');
+      // The wrap re-shows the macro signal — it never played (mount
+      // suppression silenced its first show), so it lands once now.
+      act(() => {
+        vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 1000);
+      });
+      expect(impulse).toHaveAttribute('data-impulse', 'signal');
+      // The NEXT re-show is wallpaper — a beat's signature fires once
+      // per mount; the fact stays, the move doesn't repeat.
+      act(() => {
+        vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 1000);
+      });
+      expect(impulse).toHaveAttribute('data-impulse', 'none');
+    } finally {
+      vi.useRealTimers();
+      mocks.feed.data = null;
+    }
+  });
+
+  it('the naira’s voice beat is japa — the authored signature, not the generic pull', () => {
+    vi.useFakeTimers();
+    try {
+      mocks.feed.data = {
+        recent: [
+          {
+            action: 'MACRO_SIGNAL:macro',
+            targetToken: 'NGNm',
+            reasoning: 'CBN held the benchmark rate. Source: https://reuters.example/c',
+            timestamp: Math.floor(Date.now() / 1000) - 3600,
+          },
+        ],
+      };
+      render(
+        <CurrencyMomentCard
+          {...baseProps}
+          liveAlive
+          moment={{
+            ...MOMENT,
+            currencyCode: 'NGN',
+            countryName: 'Nigeria',
+            iso2: 'NG',
+            flag: '🇳🇬',
+          }}
+        />,
+      );
+      const impulse = screen.getByTestId('beat-impulse');
+      act(() => {
+        vi.advanceTimersByTime(LIVE_LINE_DWELL_MS + 1000);
+      });
+      // Beat 1 is the naira's persona beat — "japa math" gets its own
+      // restless reach, distinct from the generic voice lean.
+      expect(impulse).toHaveAttribute('data-impulse', 'japa');
+    } finally {
+      vi.useRealTimers();
+      mocks.feed.data = null;
+    }
+  });
+
   it('a Money/Goods click stills the live line and the coin shine', () => {
     vi.useFakeTimers();
     try {

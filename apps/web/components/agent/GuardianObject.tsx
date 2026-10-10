@@ -5,9 +5,13 @@
  * no projected savings (never rendered as realized money).
  */
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { press, springPress } from "@/lib/motion-tokens";
+import { beatImpulseForKey, GUARDIAN_BEAT_MOOD } from "@/lib/beat-impulse";
+import { useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
+import { trackFunnelEvent } from "@/lib/analytics";
+import { Hallmark } from "../shared/Hallmark";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import StatusBadge from "../shared/StatusBadge";
 import {
@@ -145,11 +149,51 @@ export function GuardianObject({
     guardianState === "monitoring" && isAutonomous
       ? GUARDIAN_AUTONOMOUS_COPY
       : GUARDIAN_USER_COPY[guardianState];
+
+  // The beat→object event, Guardian's grammar: its signature is a
+  // posture, not a shake — a fresh print or a dated danger widens the
+  // eyes (alert), a cadence or a watched payment narrows them
+  // (thinking). The pulse holds ~2.4s, then the state mood takes back
+  // over; the mood change also earns the mascot's transition blink.
+  // Silent on the first beat (the object's arrival owns the opening),
+  // while the user acts, and on a rotation wrap — the same fact landing
+  // twice reads as wallpaper, not reaction (once per beat, like the
+  // coins' signatures).
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const [beatMood, setBeatMood] = useState<"alert" | "thinking" | null>(null);
+  const resting = (liveAlive ?? false) && !acted;
+  const playedBeats = useRef(new Set<string>());
+  useEffect(() => {
+    // Only pulse when the pulse can be seen — a beat landing while real
+    // state owns the face (analyzing, a pending proposal) is not marked
+    // played and never counted.
+    if (
+      !activeBeatKey ||
+      !resting ||
+      isAnalyzing ||
+      proposalPending ||
+      playedBeats.current.has(activeBeatKey)
+    ) {
+      return;
+    }
+    const kind = beatImpulseForKey(activeBeatKey) ?? "settle";
+    const next = GUARDIAN_BEAT_MOOD[kind];
+    if (!next) return;
+    playedBeats.current.add(activeBeatKey);
+    setBeatMood(next);
+    trackFunnelEvent("beat_impulse", { surface: "guardian", kind });
+    const t = setTimeout(() => setBeatMood(null), 2400);
+    return () => clearTimeout(t);
+  }, [activeBeatKey, resting, isAnalyzing, proposalPending]);
+  useEffect(() => {
+    if (!resting) setBeatMood(null);
+  }, [resting]);
+  useInstrumentDwell("guardian", resting, acted);
   const mood = isAnalyzing
     ? "thinking"
     : proposalPending
       ? "alert"
-      : MOOD_BY_STATE[guardianState];
+      : (resting && beatMood) || MOOD_BY_STATE[guardianState];
   const showBudget =
     hasValidPermission && sessionInfo != null && dailyLimit > 0;
 
@@ -207,6 +251,9 @@ export function GuardianObject({
           transition={springPress}
           className="mt-1 min-h-tap text-xs text-gray-500 dark:text-gray-400"
         >
+          {latestEvent.txHash && (
+            <Hallmark size={10} className="mr-1 align-[-1px] opacity-70" />
+          )}
           {latestEvent.title} · {latestEvent.subtitle} · {timeAgo(latestEvent.timestamp)}
         </motion.button>
       ) : latestCall ? (
@@ -226,6 +273,7 @@ export function GuardianObject({
         testId="guardian-live-line"
         beats={(liveBeats ?? []).map((b) => ({ key: b.key, content: b.text }))}
         alive={liveAlive ?? false}
+        onBeatChange={reportBeat}
         className="mt-1 block text-2xs text-gray-500 dark:text-gray-400"
       />
 

@@ -17,6 +17,7 @@ import {
   LEDGER_VERIFY_PATH,
 } from "@/constants/guardian-identity";
 import RiveVerifiedSeal from "@/components/shared/RiveVerifiedSeal";
+import { Hallmark } from "@/components/shared/Hallmark";
 
 const CHAINS = TRUST_CHAINS;
 
@@ -75,6 +76,7 @@ export function VerifiedEvidence({ className = "" }: Props) {
         onClick={() => setExpanded((v) => !v)}
         className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
       >
+        <Hallmark size={10} className="opacity-70" />
         <span className="font-semibold tracking-wide">Verify evidence</span>
         <span className="text-3xs opacity-50 ml-0.5" aria-hidden="true">{expanded ? "−" : "+"}</span>
       </button>

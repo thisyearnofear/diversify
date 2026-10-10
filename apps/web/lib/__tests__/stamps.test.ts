@@ -5,7 +5,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { stampsForPair, resolveStamps } from '../stamps';
-import { corridorBeatsFor } from '../../components/swap/CorridorContext';
+import { corridorBeatsFor, beatSideForKey } from '../../components/swap/CorridorContext';
 import { comingBeatForCode, homeBeats } from '../live-lines';
 import { NETWORK_TOKENS, NETWORKS } from '@/config';
 import { hasHype } from '../card-tone';
@@ -184,5 +184,37 @@ describe('resolveStamps', () => {
     const a = stampsForPair('NGNm', 'USDm', NOW).map((s) => s.id);
     const b = stampsForPair('ngnm', 'usdm', NOW).map((s) => s.id);
     expect(a).toEqual(b);
+  });
+});
+
+describe('beatSideForKey', () => {
+  it('a signal or cadence lands on the coin its token names', () => {
+    expect(beatSideForKey('signal-NGNm', 'NGNm', 'USDm')).toBe('from');
+    expect(beatSideForKey('watch-USDm', 'NGNm', 'USDm')).toBe('to');
+    expect(beatSideForKey('signal-USDm', 'NGNm', 'USDm')).toBe('to');
+    expect(beatSideForKey('watch-NGNm', 'NGNm', 'USDm')).toBe('from');
+  });
+
+  it('a coming event resolves through its scheduled fiat', () => {
+    // coming-ng-2027-presidential is an NGN event — it lands on the
+    // naira side whichever slot the naira occupies.
+    expect(
+      beatSideForKey('coming-ng-2027-presidential', 'NGNm', 'USDm'),
+    ).toBe('from');
+    expect(
+      beatSideForKey('coming-ng-2027-presidential', 'PAXG', 'NGNm'),
+    ).toBe('to');
+  });
+
+  it('a coming event for no side resolves null — never a wrong coin', () => {
+    expect(
+      beatSideForKey('coming-br-2026-runoff', 'KESm', 'USDm'),
+    ).toBeNull();
+  });
+
+  it('the pair’s shared facts land on both coins; unknown keys stay both', () => {
+    expect(beatSideForKey('story', 'NGNm', 'USDm')).toBe('both');
+    expect(beatSideForKey('drift-xau-5yr', 'PAXG', 'USDm')).toBe('both');
+    expect(beatSideForKey(null, 'NGNm', 'USDm')).toBeNull();
   });
 });

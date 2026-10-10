@@ -1,6 +1,6 @@
 import React from "react";
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, within, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, within, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
 // The strategy/profile hooks drive the persona banners. Default: no
@@ -76,6 +76,13 @@ vi.mock("@/components/shared/CaribbeanRailHonestyBanner", () => ({
 
 vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
+}));
+
+// The live line's beats come from the proof feed — a holder the tests
+// fill before render (null → only the watch cadence resolves).
+const feedHolder = { data: null as { recent: unknown[] } | null };
+vi.mock("@/hooks/use-proof-feed", () => ({
+  useProofFeed: () => ({ data: feedHolder.data }),
 }));
 
 import { ProtectionNotConnected } from "../ProtectionNotConnected";
@@ -534,6 +541,40 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       mockState.financialStrategy = null;
       mockState.userRegion = null;
       mockState.detectedRegion = "USA";
+    }
+  });
+
+  it("the beat lands on the ring — a plan-leg signal tremors it, the cadence breathes it", () => {
+    vi.useFakeTimers();
+    mockState.financialStrategy = "africapitalism";
+    feedHolder.data = {
+      recent: [
+        {
+          action: "MACRO_SIGNAL:macro",
+          targetToken: "KESm",
+          reasoning:
+            "Central bank held the benchmark rate. Source: https://reuters.example/a",
+          timestamp: Math.floor(Date.now() / 1000) - 3600,
+        },
+      ],
+    };
+    try {
+      render(
+        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+      );
+      const impulse = screen.getByTestId("beat-impulse");
+      // Beat 0 (the fresh signal) is silent — the ring's arrival owns it.
+      expect(impulse).toHaveAttribute("data-impulse", "none");
+      // The cadence — one slow breath on the standing watch.
+      act(() => vi.advanceTimersByTime(7500));
+      expect(impulse).toHaveAttribute("data-impulse", "watch");
+      // Wrapping back to the signal — the shock now lands on the plan.
+      act(() => vi.advanceTimersByTime(7500));
+      expect(impulse).toHaveAttribute("data-impulse", "signal");
+    } finally {
+      vi.useRealTimers();
+      mockState.financialStrategy = null;
+      feedHolder.data = null;
     }
   });
 });

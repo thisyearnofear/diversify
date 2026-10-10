@@ -34,6 +34,7 @@ import type { MomentFrame } from "@/lib/narrative/moment-framing";
 import { useCurrencyVisit } from "@/hooks/use-currency-visit";
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { useGeoCountry } from "@/hooks/use-geo-country";
+import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
 import { homeBeats } from "@/lib/live-lines";
 import { LiveLine } from "@/components/shared/LiveLine";
 import {
@@ -459,6 +460,17 @@ export function CurrencyMomentCard({
     [liveFeed, moment.currencyCode, currencySelected, geoCountry],
   );
 
+  // The beat→object event: the shown beat plays its physical signature
+  // on the local coin — the news lands ON the money, the caption below
+  // explains it. Silent on the first beat (the stage's arrival owns
+  // that move) and dead whenever the user is acting, scrubbing, or in
+  // the inspector — the same stillness contract as the line itself.
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const beatAlive =
+    liveAlive && !acted && !inspecting && !reading && !currencySelected;
+  const beat = useBeatImpulse(activeBeatKey, beatAlive, { surface: "home" });
+  useInstrumentDwell("home", beatAlive, acted);
+
   const sharedReturn =
     viewingShared && onClearSharedView ? (
       <button
@@ -619,7 +631,15 @@ export function CurrencyMomentCard({
               >
                 {/* The local coin is a door: tap flips it to its back —
                     flag + the newest dated event — and opens the story
-                    inspector. Same flip verb as the pair stage's coins. */}
+                    inspector. Same flip verb as the pair stage's coins.
+                    The impulse layer is a sibling of the face: the beat's
+                    signature plays here so it works whatever face shows. */}
+                <motion.div
+                  data-testid="beat-impulse"
+                  data-impulse={beat.impulse ?? "none"}
+                  animate={beat.controls}
+                  className="inline-flex w-full justify-end"
+                >
                 {(() => {
                   const events =
                     CURRENCY_BY_CODE[moment.currencyCode]?.riskEvents ?? [];
@@ -696,6 +716,7 @@ export function CurrencyMomentCard({
                     face
                   );
                 })()}
+                </motion.div>
               </motion.div>
               {/* The number that carries the meaning */}
               <motion.div
@@ -878,6 +899,7 @@ export function CurrencyMomentCard({
                 testId="home-live-line"
                 beats={liveTexts.map((b) => ({ key: b.key, content: b.text }))}
                 alive={liveAlive && !currencySelected && !acted && !inspecting}
+                onBeatChange={reportBeat}
                 className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
               />
             )}

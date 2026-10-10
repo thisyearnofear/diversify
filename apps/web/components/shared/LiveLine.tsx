@@ -27,6 +27,7 @@ export function LiveLine({
   dwellMs = LIVE_LINE_DWELL_MS,
   className,
   testId,
+  onBeatChange,
 }: {
   beats: LiveBeat[];
   /** false = the user is acting → the line stills on the current beat. */
@@ -35,6 +36,10 @@ export function LiveLine({
   /** Class applied to each beat's span (the text grammar is the caller's). */
   className?: string;
   testId?: string;
+  /** Reports the shown beat's key — mount, rotation, or a shrunk array —
+   *  so the object above can play the beat's physical signature (the
+   *  beat→object event). Fires on the key, not the render. */
+  onBeatChange?: (key: string) => void;
 }): JSX.Element | null {
   const reduced = useReducedMotion();
   const [beat, setBeat] = useState(0);
@@ -55,6 +60,14 @@ export function LiveLine({
   // expires), the stored index can transiently exceed it — wrap, never
   // render an empty beat.
   const shown = beats.length > 0 ? beat % beats.length : 0;
+  const shownKey = beats.length > 0 ? beats[shown].key : null;
+
+  // The object above plays each beat's signature — keyed on the shown
+  // beat's key so a re-rendered beats array doesn't refire it.
+  useEffect(() => {
+    if (shownKey) onBeatChange?.(shownKey);
+  }, [shownKey, onBeatChange]);
+
   if (beats.length === 0) return null;
 
   return (

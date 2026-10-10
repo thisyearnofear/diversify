@@ -81,6 +81,14 @@ export const FUNNEL_EVENTS = [
   'stamp_sheet_open',
   'stamp_press',
   'postcard_share',
+  // Beat→object craft read — is the choreography seen at all, and does
+  // anyone sit with the instrument? 'beat_impulse' fires only when a
+  // signature actually plays (never on reduced-motion, acted, or a
+  // rotation replay); 'instrument_dwell' fires once per mount on the
+  // first act with a coarse bucket. Props: surface + kind/bucket —
+  // never beat content, amounts, or identity.
+  'beat_impulse',
+  'instrument_dwell',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

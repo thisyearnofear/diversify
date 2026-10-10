@@ -32,7 +32,7 @@ import {
 } from "@/lib/custom-plan";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
-import { AnimatePresence, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
@@ -91,6 +91,7 @@ import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
 import { useRwaMarket } from "@/hooks/use-rwa-market";
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { shieldBeats } from "@/lib/live-lines";
+import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
 import { LiveLine } from "@/components/shared/LiveLine";
 import { useRouter } from "next/router";
 
@@ -639,6 +640,18 @@ export default function ProtectionTab({
     !cycleOpen &&
     !gapCtaShowing;
 
+  // The beat→object event: a fresh signal on a plan leg's currency
+  // tremors the ring, the standing cadence breathes it — the caption
+  // below explains. Silent on the first beat (the ring's arrival owns
+  // that move), dead the moment the user acts.
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const ringBeat = useBeatImpulse(
+    activeBeatKey,
+    liveLineShowing && !acted && !tiltShowing,
+    { surface: "shield" },
+  );
+  useInstrumentDwell("shield", liveLineShowing && !acted, acted);
+
   useShieldIntent({
     address,
     isDemo,
@@ -1003,6 +1016,11 @@ export default function ProtectionTab({
       )}
       {planRingVisible && shape !== "picker" && (
         <div data-testid="shield-ring" data-comparing={comparing || undefined}>
+          <motion.div
+            data-testid="beat-impulse"
+            data-impulse={ringBeat.impulse ?? "none"}
+            animate={ringBeat.controls}
+          >
           <ProtectionPlanRing
             strategyKey={previewKey}
             customPlan={config.customPlan}
@@ -1159,11 +1177,13 @@ export default function ProtectionTab({
               </div>
             ) : undefined}
           />
+          </motion.div>
           {liveLineShowing && (
             <LiveLine
               testId="shield-live-line"
               beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
               alive={!acted && !cycleOpen && !tiltShowing}
+              onBeatChange={reportBeat}
               className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
             />
           )}

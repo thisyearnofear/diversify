@@ -22,7 +22,9 @@ import { provenanceFor, type TokenProvenance } from '@diversifi/shared/src/const
 import TokenPickerSheet, { type TokenPickerItem } from './TokenPickerSheet';
 import { ProvenanceCoinBack } from './ProvenanceCoinBack';
 import { MintMark } from './MintMark';
-import { CorridorLine } from './CorridorContext';
+import { CorridorLine, beatSideForKey } from './CorridorContext';
+import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from '@/hooks/use-beat-impulse';
+import { Hallmark } from '@/components/shared/Hallmark';
 import { goodsEquivalentFor } from '@/lib/corridor-context';
 import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
 import { useNavigation } from '@/context/app/NavigationContext';
@@ -401,6 +403,46 @@ export function PairStage({
     !stampSheet &&
     !receipt &&
     !decisionWindow;
+
+  // The beat→object event: the corridor line reports the shown beat;
+  // each coin plays the signature only when the beat belongs to its
+  // side (a signal names its token, a coming event resolves through its
+  // fiat, the pair's story lands on both). The beam itself never tips —
+  // a beat carries no direction; the tilt is the drift's word alone.
+  // Silent on the first beat: the stage's re-weigh owns the opening.
+  const { beatKey: activeBeatKey, reportBeat, reset: resetBeat } = useBeatReporter();
+  // Re-arm the first-beat silence on a real pair change — never on
+  // mount: child effects report beat 0 before this effect runs, and an
+  // unconditional reset would swallow the second beat too.
+  const prevPair = useRef<string | null>(null);
+  const beatSide = beatSideForKey(activeBeatKey, fromToken, toToken);
+  const fromBeat = useBeatImpulse(
+    beatSide === 'from' || beatSide === 'both' ? activeBeatKey : null,
+    alive,
+    { surface: 'exchange' },
+  );
+  // The right coin's x-signatures mirror: the pull is always toward the
+  // other side of the scale.
+  const toBeat = useBeatImpulse(
+    beatSide === 'to' || beatSide === 'both' ? activeBeatKey : null,
+    alive,
+    { mirror: true, surface: 'exchange' },
+  );
+  const { reset: resetFromBeat } = fromBeat;
+  const { reset: resetToBeat } = toBeat;
+  useEffect(() => {
+    const pair = `${fromToken}-${toToken}`;
+    if (prevPair.current === pair) return;
+    const changed = prevPair.current !== null;
+    prevPair.current = pair;
+    if (changed) {
+      resetBeat();
+      resetFromBeat();
+      resetToBeat();
+    }
+  }, [fromToken, toToken, resetBeat, resetFromBeat, resetToBeat]);
+  useInstrumentDwell('exchange', alive, acted);
+
   const landed = useRef(false);
   useEffect(() => {
     landed.current = true;
@@ -487,15 +529,22 @@ export function PairStage({
               </motion.span>
             </div>
           )}
-          <BeamCoin
-            symbol={fromToken}
-            layoutId="pair-coin-from"
-            tilt={tilt}
-            index={0}
-            flipped={flipped === 'from'}
-            onFlip={() => { setActed(true); setFlipped(flipped === 'from' ? null : 'from'); }}
-            draft={canDraft ? { balance: fromBalance, onDraft } : undefined}
-          />
+          <motion.div
+            data-testid="beat-impulse-from"
+            data-impulse={fromBeat.impulse ?? 'none'}
+            animate={fromBeat.controls}
+            className="relative"
+          >
+            <BeamCoin
+              symbol={fromToken}
+              layoutId="pair-coin-from"
+              tilt={tilt}
+              index={0}
+              flipped={flipped === 'from'}
+              onFlip={() => { setActed(true); setFlipped(flipped === 'from' ? null : 'from'); }}
+              draft={canDraft ? { balance: fromBalance, onDraft } : undefined}
+            />
+          </motion.div>
           {/* The hub — the ⇅ coin AT the beam's center, counter-rotated
               so its glyph stays upright. Tap swaps the sides and the
               beam swings across; its shine loop is the stage's ambient
@@ -526,21 +575,28 @@ export function PairStage({
               </motion.button>
             </motion.div>
           </div>
-          <BeamCoin
-            symbol={toToken}
-            layoutId="pair-coin-to"
-            tilt={tilt}
-            index={1}
-            flipped={flipped === 'to'}
-            onFlip={() => { setActed(true); setFlipped(flipped === 'to' ? null : 'to'); }}
-            sealed={Boolean(receipt)}
-            onSealStamp={
-              receipt && stampable
-                ? () => { setActed(true); setStampSheet({ mode: 'moved', entry: 'receipt' }); }
-                : undefined
-            }
-            teaching={teaching}
-          />
+          <motion.div
+            data-testid="beat-impulse-to"
+            data-impulse={toBeat.impulse ?? 'none'}
+            animate={toBeat.controls}
+            className="relative"
+          >
+            <BeamCoin
+              symbol={toToken}
+              layoutId="pair-coin-to"
+              tilt={tilt}
+              index={1}
+              flipped={flipped === 'to'}
+              onFlip={() => { setActed(true); setFlipped(flipped === 'to' ? null : 'to'); }}
+              sealed={Boolean(receipt)}
+              onSealStamp={
+                receipt && stampable
+                  ? () => { setActed(true); setStampSheet({ mode: 'moved', entry: 'receipt' }); }
+                  : undefined
+              }
+              teaching={teaching}
+            />
+          </motion.div>
         </motion.div>
 
         {/* The stand — a thin post down to a small base under the hub.
@@ -600,6 +656,9 @@ export function PairStage({
             </p>
           )}
           <p className="mt-0.5 text-2xs text-gray-500 dark:text-gray-400">
+            {receipt.txHash && (
+              <Hallmark size={10} className="mr-1 align-[-1px] opacity-70" />
+            )}
             Settled on {chainDisplayName(receipt.chainId)}
             {receipt.txHash && (
               <>
@@ -699,6 +758,7 @@ export function PairStage({
               setActed(true);
               setStampSheet({ mode: 'watching', entry: 'beat', ids: [stampId] });
             }}
+            onBeatChange={reportBeat}
           />
 
           <button
