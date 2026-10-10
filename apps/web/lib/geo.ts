@@ -28,8 +28,13 @@ function readCookieHeader(header: string | null | undefined): string | null {
 
 /** Server-side: request headers → ISO alpha-2 country, or null. */
 export function geoCountryFromHeaders(
-  headers: Pick<Headers, 'get'> | Record<string, string | string[] | undefined>,
+  headers:
+    | Pick<Headers, 'get'>
+    | Record<string, string | string[] | undefined>
+    | undefined
+    | null,
 ): string | null {
+  if (!headers) return null;
   const get =
     typeof (headers as Pick<Headers, 'get'>).get === 'function'
       ? (k: string) => (headers as Pick<Headers, 'get'>).get(k)

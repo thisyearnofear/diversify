@@ -31,7 +31,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
     params?.to as string | undefined,
     records,
     undefined,
-    geoCountryFromHeaders(req.headers as Record<string, string | string[] | undefined>),
+    geoCountryFromHeaders(req?.headers),
   );
   if (!content) return { notFound: true };
 
