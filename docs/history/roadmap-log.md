@@ -2,6 +2,14 @@
 
 > Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](../plan.md).
 
+### Guardarian partner integration + thesis gate wiring (2026-10-10)
+
+Two changes on top of the adaptive-funding wave:
+
+- **Guardarian becomes a real partner integration.** The homepage stub is gone: `GET /api/onramp/guardarian-url` resolves every Guardarian URL server-side so partner secrets never reach the browser — `GUARDARIAN_PRIVATE_KEY` (RSA PEM) signs Calculator v2 widget URLs embedded in the shared `OnrampModal`; `GUARDARIAN_PARTNER_API_TOKEN` falls back to a `payments.guardarian.com` transaction link in a new tab; neither → 501 and the provider isn't offered. `lib/guardarian.ts` maps app symbols to ticker/network pairs verified against Guardarian's live `/v1/currencies` (cUSD isn't listed → USDC fallback, never a ticker the checkout would ignore); buys prefill asset/network/intent-sized amount + `payout_address`. `GuardarianOnramp` resolves its URL on mount so the click stays synchronous (the repo's no-`window.open`-after-await rule); Mt Pelerin's ~150-line modal extracted to `OnrampModal` with a brand prop. `UnifiedOnramp` offers Guardarian only when `NEXT_PUBLIC_GUARDARIAN_PARTNER_ID` is set, auto-winning ≤€700 buys when live. Open verify-items in code comments: exact signature payload, `payout_address` as a URL param.
+- **The `thesis` deny is now real + geo plumbing.** `GB: { thesis: false }` was a marker nothing read. `proxy.ts` forwards `x-vercel-ip-country` into a `dfi-cc` cookie (country only); `lib/geo.ts` reads it server-side (header-first, cookie fallback — also the dev simulation path) and `useGeoCountry` client-side. New `featureDenied(feature, country)` — live-by-default surfaces withdraw where denied, unknown geo ≠ denial — wired to: persona beats in `homeBeats`, `PairShareLine`, `StampSheet`'s share row, `pairCardContent` epithets on `/pair` meta + OG, and the graduation prompt. Dated facts stay (information, not flavor); pressing stamps stays (the *propagation* is gated). `JURISDICTION_NOTICES` + `JurisdictionNotice` render counsel-supplied verbatim copy in Home's trust tier — empty until advice lands, and the tier mounts no slot when there's no notice. Counsel-pack question 4a added: the s.21 banner's legal read + whether GB needs a promo restriction or a product restriction.
+- Verified: 52 gate/geo/live-lines/pair-card tests, 167 component tests across touched surfaces, `@diversifi/web` typecheck clean.
+
 ### Counsel-gated money features + adaptive funding + corridor voices (2026-10-10)
 
 Posture shift recorded in `plan.md` §2: the product stays **feeless** while it proves ~100 weekly-active protected savers and 10–20 real payment cycles; the fee question is a volume threshold (~$5M/month ≈ $10–25k at candidate rates), not a user count. Two builds landed on that footing:
