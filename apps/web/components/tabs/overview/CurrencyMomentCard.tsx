@@ -33,6 +33,7 @@ import { CurrencyVisitReview } from "./CurrencyVisitReview";
 import type { MomentFrame } from "@/lib/narrative/moment-framing";
 import { useCurrencyVisit } from "@/hooks/use-currency-visit";
 import { useProofFeed } from "@/hooks/use-proof-feed";
+import { useGeoCountry } from "@/hooks/use-geo-country";
 import { homeBeats } from "@/lib/live-lines";
 import { LiveLine } from "@/components/shared/LiveLine";
 import {
@@ -446,14 +447,16 @@ export function CurrencyMomentCard({
   // While the story sheet is up the coin's back already shows the newest
   // risk event, so that beat drops (the line never repeats visible copy).
   const { data: liveFeed } = useProofFeed();
+  const geoCountry = useGeoCountry();
   const liveTexts = React.useMemo(
     () =>
       homeBeats({
         records: liveFeed?.recent,
         currencyCode: moment.currencyCode,
         includeRiskEvent: !currencySelected,
+        country: geoCountry,
       }),
-    [liveFeed, moment.currencyCode, currencySelected],
+    [liveFeed, moment.currencyCode, currencySelected, geoCountry],
   );
 
   const sharedReturn =

@@ -218,3 +218,27 @@ describe('primaryLocalToken', () => {
     expect(primaryLocalToken([{ token: 'cUSD', percent: 100 }])).toBeNull();
   });
 });
+
+describe('homeBeats — thesis surface gating', () => {
+  it('GB drops the persona beat but keeps the dated facts', () => {
+    const beats = homeBeats({
+      records: [],
+      currencyCode: 'NGN',
+      nowMs: NOW,
+      country: 'GB',
+    });
+    expect(beats.find((b) => b.key === 'voice-NGN')).toBeUndefined();
+    // The fact beats stay — dates and events are information, not flavor.
+    expect(beats.some((b) => b.key === 'watch-NGNm')).toBe(true);
+    expect(beats.some((b) => b.stampId === 'coming-ng-2027-presidential')).toBe(true);
+  });
+
+  it('unknown geo keeps the persona beat — a deny needs a known country', () => {
+    const beats = homeBeats({
+      records: [],
+      currencyCode: 'NGN',
+      nowMs: NOW,
+    });
+    expect(beats.find((b) => b.key === 'voice-NGN')).toBeDefined();
+  });
+});

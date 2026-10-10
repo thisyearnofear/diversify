@@ -45,7 +45,18 @@ export function proxy(request: NextRequest): NextResponse {
     request.headers,
     request.nextUrl.pathname,
   );
-  if (!blocked) return NextResponse.next();
+  if (!blocked) {
+    const res = NextResponse.next();
+    // Forward the edge geo to client surfaces (feature gating, notices) —
+    // same signal, one cookie, refreshed only when it changes.
+    if (country && request.cookies.get('dfi-cc')?.value !== country) {
+      res.cookies.set('dfi-cc', country, {
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+    return res;
+  }
 
   // One structured line per blocked request; declines are recorded, not
   // hidden — but no IP is ever logged.

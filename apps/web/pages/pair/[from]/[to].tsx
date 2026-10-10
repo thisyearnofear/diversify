@@ -10,6 +10,7 @@ import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { pairCardContent, type PairCardContent } from '@/lib/pair-card';
 import { fetchLedgerRecords } from '@/lib/server/fetch-ledger-records';
+import { geoCountryFromHeaders } from '@/lib/geo';
 
 interface Props {
   content: PairCardContent;
@@ -20,6 +21,7 @@ interface Props {
 
 export const getServerSideProps: GetServerSideProps<Props> = async ({
   params,
+  req,
 }) => {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
@@ -28,6 +30,8 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
     params?.from as string | undefined,
     params?.to as string | undefined,
     records,
+    undefined,
+    geoCountryFromHeaders(req.headers as Record<string, string | string[] | undefined>),
   );
   if (!content) return { notFound: true };
 

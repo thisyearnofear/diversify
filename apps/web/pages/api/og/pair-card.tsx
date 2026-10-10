@@ -9,6 +9,7 @@ import { ImageResponse } from '@vercel/og';
 import type { NextRequest } from 'next/server';
 import { pairCardContent } from '@/lib/pair-card';
 import { fetchLedgerRecords } from '@/lib/server/fetch-ledger-records';
+import { geoCountryFromHeaders } from '@/lib/geo';
 
 export const config = {
   runtime: 'edge',
@@ -78,6 +79,8 @@ export default async function handler(req: NextRequest) {
     searchParams.get('from'),
     searchParams.get('to'),
     records,
+    undefined,
+    geoCountryFromHeaders(req.headers),
   );
 
   const headers = {

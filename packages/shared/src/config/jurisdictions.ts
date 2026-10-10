@@ -49,6 +49,39 @@ export const JURISDICTION_OVERRIDES: Readonly<
 };
 
 /**
+ * Counsel-supplied notice copy per country (ISO alpha-2), rendered as a
+ * quiet trust-tier line wherever `JurisdictionNotice` mounts. Strings go
+ * in verbatim from written advice — never drafted here, and never a
+ * substitute for the real control: a notice that contradicts what the
+ * product does is worse than none. Empty = nothing renders.
+ */
+export const JURISDICTION_NOTICES: Readonly<Record<string, string>> = {};
+
+/** The notice owed to a visitor from this country, or null. */
+export function jurisdictionNoticeFor(
+  country?: string | null,
+): string | null {
+  if (!country) return null;
+  return JURISDICTION_NOTICES[country.toUpperCase()] ?? null;
+}
+
+/**
+ * Per-country deny check for surfaces that ship by default and withdraw
+ * only where counsel marks them denied (e.g. promo-flavored surfaces in
+ * GB under the finprom regime). Distinct from `featureEnabled`: the env
+ * switch governs whether a gated feature exists at all; `featureDenied`
+ * is for things already live that must not appear in a denied market.
+ * Unknown geo is not a denial.
+ */
+export function featureDenied(
+  feature: GatedFeature,
+  country?: string | null,
+): boolean {
+  const cc = country?.toUpperCase();
+  return !!cc && JURISDICTION_OVERRIDES[cc]?.[feature] === false;
+}
+
+/**
  * True when the location (ISO alpha-2 country, optional ISO 3166-2 region
  * in either "43" or "UA-43" form) is comprehensively sanctioned. Missing
  * country returns false — local dev has no geo header and must not block.

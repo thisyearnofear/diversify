@@ -33,6 +33,9 @@ import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
 import { StatusTier } from "../../shared/StatusTier";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
 import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-prompt";
+import { useGeoCountry } from "@/hooks/use-geo-country";
+import { featureDenied, jurisdictionNoticeFor } from "@diversifi/shared/src/config/jurisdictions";
+import { JurisdictionNotice } from "../../shared/JurisdictionNotice";
 import { MoreOptions } from "../../shared/MoreOptions";
 import { useAnchorCurrency, useAnchorFx } from "@/hooks/use-anchor-currency";
 import { useExperience } from "@/context/app/ExperienceContext";
@@ -195,11 +198,14 @@ export function ConnectedOverview({
   // purpose get the payment-cycle transition instead, so it never doubles.
   const graduation = useGraduationSignal(isDemo ? null : address);
   const graduationSignals = graduation.data?.signals ?? null;
+  // An upsell nudge is promo-flavored — withdraws where thesis is denied.
+  const geoCountry = useGeoCountry();
   const graduationLine =
     !home.isPaymentCycle &&
     graduation.data?.shouldShow &&
     !graduation.isDismissed &&
-    graduationSignals
+    graduationSignals &&
+    !featureDenied('thesis', geoCountry)
       ? graduationPromptLine(graduationSignals)
       : null;
   const graduationLead = graduationSignals ? leadGraduationSignal(graduationSignals) ?? "none" : "none";
@@ -503,7 +509,9 @@ export function ConnectedOverview({
   const status = (
     <>
       <StatusTier
-        trust={null}
+        // The trust slot stays empty until counsel copy lands — a tier
+        // that mounts an empty slot is worse than no slot.
+        trust={jurisdictionNoticeFor(geoCountry) ? <JurisdictionNotice /> : null}
         transition={inspectingSelection ? undefined : transition}
         rail={
           <>

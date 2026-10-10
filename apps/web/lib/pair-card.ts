@@ -20,6 +20,7 @@ import {
 } from './corridor-context';
 import { hasHype } from './card-tone';
 import { voiceFor } from './corridor-voice';
+import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import { tokenColor } from '@/components/shared/palette';
 
 const CELO_SYMBOLS = NETWORK_TOKENS[NETWORKS.CELO_MAINNET.chainId];
@@ -69,6 +70,10 @@ export function pairCardContent(
   toParam: string | null | undefined,
   records?: CorridorSignalRecord[] | null,
   nowMs?: number,
+  /** Visitor's ISO country — the epithet is a `thesis` surface and drops
+   *  where denied (GB pending finprom advice); the numbers stay — they're
+   *  dated facts, not inducements. */
+  country?: string | null,
 ): PairCardContent | null {
   const from = canonicalPairSymbol(fromParam);
   const to = canonicalPairSymbol(toParam);
@@ -117,11 +122,12 @@ export function pairCardContent(
     headline,
     whatIf: whatIf ? whatIfSentence(whatIf) : null,
     asOf: currencyRiskAsOfLabel(),
-    epithet: corridor.drift
-      ? voiceFor(
-          (corridor.drift.weaker === 'from' ? corridor.from : corridor.to).code,
-        )?.epithet ?? null
-      : null,
+    epithet:
+      corridor.drift && !featureDenied('thesis', country)
+        ? voiceFor(
+            (corridor.drift.weaker === 'from' ? corridor.from : corridor.to).code,
+          )?.epithet ?? null
+        : null,
     beat,
     tilt: tiltForDrift(corridor.drift),
     fromFlag: corridor.from.flag,

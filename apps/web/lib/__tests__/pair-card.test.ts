@@ -127,3 +127,19 @@ describe('pairCardContent — the fresh beat', () => {
     expect(c!.beat).toBeNull();
   });
 });
+
+describe('pairCardContent — thesis surface gating', () => {
+  it('GB drops the epithet but keeps the numbers', () => {
+    const gb = pairCardContent('NGNm', 'USDm', null, undefined, 'GB');
+    expect(gb).not.toBeNull();
+    expect(gb!.epithet).toBeNull();
+    expect(gb!.headline).toContain('lost ~60%'); // facts stay — they're not inducements
+
+    const ng = pairCardContent('NGNm', 'USDm', null, undefined, 'NG');
+    expect(ng!.epithet).toBe('japa math');
+
+    // Unknown geo is not a denial.
+    const anon = pairCardContent('NGNm', 'USDm');
+    expect(anon!.epithet).toBe('japa math');
+  });
+});

@@ -16,6 +16,7 @@ import {
   type CorridorSignalRecord,
 } from '@/lib/corridor-context';
 import { voiceBeatForCode } from '@/lib/corridor-voice';
+import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 import {
   comingStampsForFiat,
@@ -94,6 +95,9 @@ export function homeBeats(args: {
   currencyCode: string | null | undefined;
   includeRiskEvent?: boolean;
   nowMs?: number;
+  /** Visitor's ISO country — the persona beat is a `thesis` surface and
+   *  drops where the surface is denied (GB pending finprom advice). */
+  country?: string | null;
 }): LiveBeatText[] {
   const { records, currencyCode, nowMs = Date.now() } = args;
   const beats: LiveBeatText[] = [];
@@ -104,9 +108,12 @@ export function homeBeats(args: {
 
   // The persona beat — the currency's own register ("japa math", "la
   // TRM") around its 5y drift. Second in rotation: the persona hooks,
-  // the calendar and risk event keep it grounded.
-  const voice = voiceBeatForCode(currencyCode);
-  if (voice) beats.push(voice);
+  // the calendar and risk event keep it grounded. Thesis-gated: a
+  // register is flavor, not fact.
+  if (!featureDenied('thesis', args.country)) {
+    const voice = voiceBeatForCode(currencyCode);
+    if (voice) beats.push(voice);
+  }
 
   // The sourced calendar — informational on Home (no stamping UI here).
   const coming = comingBeatForCode(currencyCode, new Date(nowMs));

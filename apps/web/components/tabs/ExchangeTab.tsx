@@ -13,6 +13,8 @@ import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { FxNettingRail } from "@/components/business/FxNettingRail";
 import { corridorFor, corridorSideFor } from "@/lib/corridor-context";
 import { pairCardContent } from "@/lib/pair-card";
+import { useGeoCountry } from "@/hooks/use-geo-country";
+import { featureDenied } from "@diversifi/shared/src/config/jurisdictions";
 import { stampsForPair } from "@/lib/stamps";
 import StampSheet from "../swap/StampSheet";
 import { provenanceFor } from "@diversifi/shared/src/constants/token-provenance";
@@ -143,8 +145,10 @@ function JourneyBody({
  *  personal and never get this affordance. */
 function PairShareLine({ from, to }: { from: string; to: string }) {
   const [copied, setCopied] = useState(false);
+  // A share mechanic is a promotion vector — withdraws where denied.
+  const thesisDenied = featureDenied('thesis', useGeoCountry());
   const content = pairCardContent(from, to);
-  if (!content) return null;
+  if (thesisDenied || !content) return null;
 
   const url = `${typeof window !== "undefined" ? window.location.origin : ""}/pair/${content.from}/${content.to}`;
   const headline = content.headline;

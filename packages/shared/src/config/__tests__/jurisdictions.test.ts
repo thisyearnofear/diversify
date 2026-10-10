@@ -13,6 +13,9 @@ import {
   SANCTIONED_COUNTRIES,
   JURISDICTION_OVERRIDES,
   CLEARED_COUNTRIES,
+  featureDenied,
+  jurisdictionNoticeFor,
+  JURISDICTION_NOTICES,
 } from '../jurisdictions';
 
 const SAVED_ENV = { ...process.env };
@@ -127,5 +130,34 @@ describe('money features — counsel-cleared allowlist', () => {
     (CLEARED_COUNTRIES as Record<string, string[]>).fees = ['DE'];
     (JURISDICTION_OVERRIDES as Record<string, { fees?: boolean }>).DE = { fees: false };
     expect(featureEnabled('fees', 'DE')).toBe(false);
+  });
+});
+
+describe('featureDenied — live-by-default surfaces', () => {
+  it('GB is denied for thesis; other and unknown countries are not', () => {
+    expect(featureDenied('thesis', 'GB')).toBe(true);
+    expect(featureDenied('thesis', 'gb')).toBe(true);
+    expect(featureDenied('thesis', 'NG')).toBe(false);
+    expect(featureDenied('thesis', null)).toBe(false); // unknown geo ≠ denial
+    expect(featureDenied('thesis', undefined)).toBe(false);
+  });
+
+  it('reads the same override table featureEnabled does', () => {
+    (JURISDICTION_OVERRIDES as Record<string, { perps?: boolean }>).DE = { perps: false };
+    expect(featureDenied('perps', 'DE')).toBe(true);
+    expect(featureDenied('perps', 'FR')).toBe(false);
+  });
+});
+
+describe('jurisdictionNoticeFor — counsel-supplied copy', () => {
+  it('ships empty: no counsel copy, no notice', () => {
+    expect(jurisdictionNoticeFor('GB')).toBeNull();
+    expect(jurisdictionNoticeFor(null)).toBeNull();
+  });
+
+  it('returns verbatim copy for a listed country, case-insensitive', () => {
+    (JURISDICTION_NOTICES as Record<string, string>).GB = 'counsel text';
+    expect(jurisdictionNoticeFor('gb')).toBe('counsel text');
+    delete (JURISDICTION_NOTICES as Record<string, string>).GB;
   });
 });

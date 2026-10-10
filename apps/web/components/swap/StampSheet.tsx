@@ -20,6 +20,8 @@ import { springPop } from '@/lib/motion-tokens';
 import { haptics } from '@/lib/haptics';
 import { trackFunnelEvent } from '@/lib/analytics';
 import { useDemoMode } from '@/context/app/DemoModeContext';
+import { useGeoCountry } from '@/hooks/use-geo-country';
+import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import {
   stampsForPair,
   resolveStamps,
@@ -300,6 +302,10 @@ export function StampSheet({
   const canNativeShare =
     typeof navigator !== 'undefined' && typeof navigator.share === 'function';
 
+  // Sharing is a promotion vector — it withdraws where promo surfaces
+  // are denied (GB pending finprom advice); pressing seals stays.
+  const thesisDenied = featureDenied('thesis', useGeoCountry());
+
   return (
     <InspectorSheet
       selectedId={open ? `stamps-${mode}` : null}
@@ -343,7 +349,7 @@ export function StampSheet({
         </FlickScrollRow>
 
         {/* Share — derives url + text from ids and curated names only. */}
-        {canNativeShare ? (
+        {!thesisDenied && (canNativeShare ? (
           <button
             type="button"
             disabled={pressed.length === 0}
@@ -379,10 +385,12 @@ export function StampSheet({
               {copied ? 'Link copied' : 'Copy link'}
             </button>
           </div>
+        ))}
+        {!thesisDenied && (
+          <p className="mt-2 text-center text-3xs text-gray-400 dark:text-gray-500">
+            Facts cited by DiversiFi · dated · not advice
+          </p>
         )}
-        <p className="mt-2 text-center text-3xs text-gray-400 dark:text-gray-500">
-          Facts cited by DiversiFi · dated · not advice
-        </p>
       </LayoutGroup>
     </InspectorSheet>
   );
