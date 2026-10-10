@@ -124,8 +124,13 @@ thesis surfaces.
 **Still blocking usage:** card/bank onramps exist and are surfaced —
 Mt Pelerin's embedded widget (prefills address + chain, no API key) in the
 wallet dropdown, Home's cold-start banner, and Shield's empty-wallet
-inspector; Guardarian remains selectable but is an outbound link stub
-until a partner integration exists. The real gap is **corridor payment
+inspector. Guardarian is a real partner integration behind
+`/api/onramp/guardarian-url`: set `NEXT_PUBLIC_GUARDARIAN_PARTNER_ID` +
+`GUARDARIAN_PRIVATE_KEY` for the embedded Calculator v2 (RSA-signed URL),
+or `GUARDARIAN_PARTNER_API_TOKEN` for the payments checkout link — both
+prefill the intent's asset/network/amount and hand off the wallet as
+`payout_address`. Unflagged deployments simply don't offer it; when live
+it auto-wins ≤€700 buys (the no-KYC tier). The real gap is **corridor payment
 methods** — neither ramp does M-Pesa / GHS / NGN mobile money; Fonbnk /
 Kotani (Celo-native mobile-money ramps) stay deferred partners (§10).
 Comprehension sessions are unrun (§7) — recruiting 5 corridor users is the

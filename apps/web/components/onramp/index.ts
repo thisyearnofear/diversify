@@ -1,7 +1,10 @@
 // Fiat On-Ramp Components
-// Mt Pelerin (default) - embedded widget, prefills address + chain
-// Guardarian (selectable) - outbound link stub until a partner
-// integration lands; their no-KYC tier is up to €700
+// Mt Pelerin (default) - embedded widget, prefills address + chain,
+//   no credentials required
+// Guardarian - real partner integration via /api/onramp/guardarian-url:
+//   RSA-signed Calculator v2 widget (embedded) or a payments checkout
+//   link, both prefilled with the intent's asset/amount/address.
+//   Offered only when NEXT_PUBLIC_GUARDARIAN_PARTNER_ID is set.
 
 // Primary exports - Smart network-optimized approach
 export {

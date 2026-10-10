@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { GuardarianOnramp } from "./GuardarianOnramp";
 import { MtPelerinOnramp } from "./MtPelerinOnramp";
-import { NETWORKS } from "../../config";
 
 export interface UnifiedOnrampProps {
     mode?: "buy" | "sell";
@@ -14,14 +13,18 @@ export interface UnifiedOnrampProps {
     showProviderChoice?: boolean;
     /** Intent fields — what the user's paused action actually needs, so the
      *  widget pre-fills the right asset and a real amount instead of a
-     *  generic CELO/$100. Passed to embedded providers; outbound-link
-     *  providers (Guardarian) can't take them yet. */
+     *  generic CELO/$100. Both providers take them. */
     neededAsset?: string;
     neededAmountUsd?: number;
     onBuyStarted?: () => void;
 }
 
 type OnrampProvider = "guardarian" | "mtpelerin";
+
+// Guardarian is a partner integration — it exists only when the deployment
+// carries partner credentials (NEXT_PUBLIC_GUARDARIAN_PARTNER_ID plus a
+// server-side token or signing key). No flag, no dead provider option.
+const GUARDARIAN_ENABLED = Boolean(process.env.NEXT_PUBLIC_GUARDARIAN_PARTNER_ID);
 
 export function UnifiedOnramp({
     mode = "buy",
@@ -41,14 +44,13 @@ export function UnifiedOnramp({
     const amount = parseFloat(defaultAmount || "100");
     const isSmallAmount = amount <= 700; // €700 Guardarian no-KYC limit
 
-    // Network-specific provider optimization.
-    // Mt Pelerin is the default everywhere: it is the only real integration —
-    // an embedded widget that prefills the user's address and chain.
-    // Guardarian stays selectable via provider choice but is an outbound
-    // link (no address handoff) until a partner integration lands.
+    // Mt Pelerin is the default: it works with no credentials, embeds, and
+    // prefills the user's address and chain. When Guardarian carries
+    // partner credentials it wins small amounts — the no-KYC tier exists
+    // precisely for the ≤€700 buys our funding morph usually sizes.
     const getOptimalProvider = useCallback((): OnrampProvider => {
-        return "mtpelerin";
-    }, []);
+        return GUARDARIAN_ENABLED && isSmallAmount ? "guardarian" : "mtpelerin";
+    }, [isSmallAmount]);
 
     // Auto-select optimal provider on network/amount change
     React.useEffect(() => {
@@ -60,7 +62,7 @@ export function UnifiedOnramp({
     // Get network-specific provider descriptions
     const getProviderDescription = (provider: OnrampProvider) => {
         if (provider === "guardarian") {
-            return "No KYC • Up to €700 • opens in browser";
+            return "No KYC • Up to €700";
         }
         return "Recommended • Swiss Regulated";
     };
@@ -98,13 +100,16 @@ export function UnifiedOnramp({
     // If amount is small or no provider choice needed, use optimal provider
     if (!showProviderChoice || isSmallAmount) {
         const optimalProvider = getOptimalProvider();
-        return optimalProvider === "guardarian" ? (
+        return optimalProvider === "guardarian" && GUARDARIAN_ENABLED ? (
             <GuardarianOnramp
                 mode={mode}
                 className={className}
                 compact={compact}
                 variant={variant}
                 defaultAmount={defaultAmount}
+                neededAsset={neededAsset}
+                neededAmountUsd={neededAmountUsd}
+                onBuyStarted={onBuyStarted}
             />
         ) : (
             <MtPelerinOnramp
@@ -155,11 +160,16 @@ export function UnifiedOnramp({
                             exit={{ opacity: 0, y: -10 }}
                             className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
                         >
-                            <GuardarianOnramp
-                                mode={mode}
-                                compact
-                                className="border-b border-gray-100 dark:border-gray-700 last:border-b-0"
-                            />
+                            {GUARDARIAN_ENABLED && (
+                                <GuardarianOnramp
+                                    mode={mode}
+                                    compact
+                                    className="border-b border-gray-100 dark:border-gray-700 last:border-b-0"
+                                    neededAsset={neededAsset}
+                                    neededAmountUsd={neededAmountUsd}
+                                    onBuyStarted={onBuyStarted}
+                                />
+                            )}
                             <MtPelerinOnramp
                                 mode={mode}
                                 compact
@@ -178,12 +188,15 @@ export function UnifiedOnramp({
     // Full button with provider selection
     return (
         <div className="flex items-center gap-2">
-            {selectedProvider === "guardarian" ? (
+            {selectedProvider === "guardarian" && GUARDARIAN_ENABLED ? (
                 <GuardarianOnramp
                     mode={mode}
                     className={className}
                     variant={variant}
                     defaultAmount={defaultAmount}
+                    neededAsset={neededAsset}
+                    neededAmountUsd={neededAmountUsd}
+                    onBuyStarted={onBuyStarted}
                 />
             ) : (
                 <MtPelerinOnramp
@@ -228,6 +241,7 @@ export function UnifiedOnramp({
                                 className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50"
                             >
                                 <div className="p-2">
+                                    {GUARDARIAN_ENABLED && (
                                     <button
                                         onClick={() => {
                                             setSelectedProvider("guardarian");
@@ -246,6 +260,7 @@ export function UnifiedOnramp({
                                             </span>
                                         </div>
                                     </button>
+                                    )}
 
                                     <button
                                         onClick={() => {
