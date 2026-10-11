@@ -25,6 +25,7 @@ const HUB_TOKEN = "USDm";
 // session — walletless browsing carries into the connected state.
 // Prefill/setTokens always win over the stored pair.
 const PAIR_STORAGE_KEY = "diversifi.exchange.pair";
+const PAIR_CHOSEN_STORAGE_KEY = "diversifi.exchange.pair.chosen";
 
 // Funnel outcome mapping — errorClass values 1:1 to funnel outcomes.
 type SwapOutcome =
@@ -250,14 +251,22 @@ export function useSwapController({
   // The pair a restore just queued — the sync effect runs in the same
   // pass with pre-restore state and must reconcile against this instead.
   const restoredPairRef = useRef<{ fromToken: string; toToken: string } | null>(null);
+  const explicitStoredPairRef = useRef(false);
+  const markPairChosen = useCallback(() => {
+    try {
+      sessionStorage.setItem(PAIR_CHOSEN_STORAGE_KEY, "1");
+    } catch {}
+  }, []);
   const setFromTokenByUser = useCallback((t: string) => {
     pairTouchedRef.current = true;
+    markPairChosen();
     setFromToken(t);
-  }, []);
+  }, [markPairChosen]);
   const setToTokenByUser = useCallback((t: string) => {
     pairTouchedRef.current = true;
+    markPairChosen();
     setToToken(t);
-  }, []);
+  }, [markPairChosen]);
   useEffect(() => {
     if (pairRestoreDoneRef.current) return;
     let hasStored = false;
@@ -272,6 +281,10 @@ export function useSwapController({
     pairRestoreDoneRef.current = true;
     const stored = readStoredPair(availableTokens);
     if (!stored || pairTouchedRef.current) return;
+    try {
+      explicitStoredPairRef.current =
+        sessionStorage.getItem(PAIR_CHOSEN_STORAGE_KEY) === "1";
+    } catch {}
     restoredPairRef.current = stored;
     setFromToken(stored.fromToken);
     setToToken(stored.toToken);
@@ -476,10 +489,11 @@ export function useSwapController({
   // 5. Actions
   const handleSwitchTokens = useCallback(() => {
     pairTouchedRef.current = true;
+    markPairChosen();
     const temp = fromToken;
     setFromToken(toToken);
     setToToken(temp);
-  }, [fromToken, toToken]);
+  }, [fromToken, toToken, markPairChosen]);
 
   const refreshWithRetries = useCallback(
     async (retries = 3, delay = 2000) => {
@@ -785,6 +799,7 @@ export function useSwapController({
     // state
     fromToken,
     setFromToken: setFromTokenByUser,
+    pairChosen: pairTouchedRef.current || explicitStoredPairRef.current,
     toToken,
     setToToken: setToTokenByUser,
     amount,

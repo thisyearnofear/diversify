@@ -72,6 +72,14 @@ describe('PairStage', () => {
     expect(screen.getByRole('button', { name: 'Change PAXG' })).toBeInTheDocument();
   });
 
+  it('marks an illustrative fallback pair as an example — and never otherwise', () => {
+    renderStage({ examplePair: true });
+    expect(screen.getByTestId('example-pair')).toHaveTextContent('Example pair');
+    cleanup();
+    renderStage();
+    expect(screen.queryByTestId('example-pair')).not.toBeInTheDocument();
+  });
+
   it('tilts the beam toward the weaker side (from)', () => {
     // KES lost ~97% to gold in 5y — drift weaker:'from' → negative tilt.
     renderStage({ fromToken: 'KESm', toToken: 'PAXG' });

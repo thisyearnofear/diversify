@@ -34,7 +34,7 @@ vi.mock("@/context/app/NavigationContext", () => ({
 }));
 
 vi.mock("@/context/app/StrategyContext", () => ({
-  useStrategy: () => ({ financialStrategy: "africapitalism" }),
+  useStrategy: () => ({ financialStrategy: "africapitalism", valuesPhilosophy: "africapitalism" }),
 }));
 
 vi.mock("@/hooks/use-protection-profile", () => ({

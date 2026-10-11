@@ -42,6 +42,20 @@ describe('authenticated saved allocation targets', () => {
     expect((await patch({ userAddress: address, strategy: 'islamic', allocationPlan: plan })).code).toBe(400);
     expect(m.update).not.toHaveBeenCalled();
   });
+  it('rejects a custom strategy without a committed vector and accepts a valid one', async () => {
+    expect((await patch({ userAddress: address, strategy: 'custom' })).code).toBe(400);
+    expect(m.update).not.toHaveBeenCalled();
+    const res = await patch({
+      userAddress: address,
+      strategy: 'custom',
+      allocationPlan: { slices: [
+        { exposure: 'USD', target: 60 },
+        { exposure: 'BRL', target: 40 },
+      ], rules: {} },
+    });
+    expect(res.code).toBe(200);
+    expect(m.update.mock.calls[0][1].allocationPlan.slices.map((s: any) => s.target)).toEqual([60, 40]);
+  });
   it('requires signature-derived identity', async () => {
     m.auth.mockReturnValue(null);
     expect((await patch({ userAddress: address, strategy: 'islamic' })).code).toBe(401);

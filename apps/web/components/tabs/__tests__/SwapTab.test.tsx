@@ -103,6 +103,11 @@ vi.mock("@/hooks/claim-flow-context", () => ({
   }),
 }));
 
+let mockLocalCurrencyCode: string | null = null;
+vi.mock("@/hooks/use-currency-risk", () => ({
+  useCurrencyRisk: () => ({ currencyCode: mockLocalCurrencyCode }),
+}));
+
 vi.mock("@/hooks/use-protection-profile", () => ({
   useProtectionProfile: () => ({
     config: {
@@ -211,7 +216,10 @@ vi.mock("@/components/swap/SwapInterface", () => {
   // the mock strongly typed.
   const MockSwapInterface = React.forwardRef<
     unknown,
-    { handoffOrigin?: { origin: { source: string }; fromToken: string; toToken: string } | null }
+    {
+      handoffOrigin?: { origin: { source: string }; fromToken: string; toToken: string } | null;
+      localCurrencyUnlisted?: boolean;
+    }
   >(
     (props, ref) => {
       React.useImperativeHandle(ref, () => ({
@@ -222,6 +230,7 @@ vi.mock("@/components/swap/SwapInterface", () => {
       return React.createElement("div", {
         "data-testid": "mock-swap-interface",
         "data-handoff-origin": props.handoffOrigin?.origin.source ?? "",
+        "data-local-currency-unlisted": props.localCurrencyUnlisted ? "true" : "false",
       });
     },
   );
@@ -569,6 +578,56 @@ describe("SwapTab prefill — wallet auto-switch", () => {
       "",
     );
     expect(mockTrackFunnelEvent).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("SwapTab — walletless example pair provenance", () => {
+  beforeEach(() => {
+    mockSwapPrefill = null;
+    mockAddress = null;
+    mockWalletChainId = 42220;
+    mockLocalCurrencyCode = null;
+  });
+
+  afterEach(() => {
+    cleanup();
+    mockAddress = "0xtest";
+    mockLocalCurrencyCode = null;
+  });
+
+  it("an unknown-geo visitor (no local currency) flags the resting pair as an example", () => {
+    render(<SwapTab userRegion="USA" inflationData={{}} />);
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-local-currency-unlisted",
+      "true",
+    );
+  });
+
+  it("an unlisted local currency flags the resting pair as an example", () => {
+    mockLocalCurrencyCode = "INR";
+    render(<SwapTab userRegion="USA" inflationData={{}} />);
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-local-currency-unlisted",
+      "true",
+    );
+  });
+
+  it("a listed local currency is never flagged as an example", () => {
+    mockLocalCurrencyCode = "NGN";
+    render(<SwapTab userRegion="USA" inflationData={{}} />);
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-local-currency-unlisted",
+      "false",
+    );
+  });
+
+  it("a connected wallet never flags its pair as an example", () => {
+    mockAddress = "0xtest";
+    render(<SwapTab userRegion="USA" inflationData={{}} />);
+    expect(screen.getByTestId("mock-swap-interface")).toHaveAttribute(
+      "data-local-currency-unlisted",
+      "false",
+    );
   });
 });
 

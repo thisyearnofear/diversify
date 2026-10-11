@@ -17,14 +17,15 @@ import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { LensCoinSelector } from "../onboarding/LensCoinSelector";
 import { displayToken } from "@/lib/plan-legs";
 
-// Canonical plans (same ids/names as StrategyContext). `custom` joins once
-// the user has saved one on the Shield ring.
+// Canonical plans (same ids/names as StrategyContext). Custom stays a
+// Shield construction path — it is shaped on the ring, not picked here.
 const ALL_PLANS = CANONICAL_STRATEGIES.map((s) => ({
   id: s.id,
   name: s.name,
   icon: s.icon,
   tagline: s.tagline,
 }));
+const PLANS = ALL_PLANS.filter((p) => p.id !== "custom");
 
 export function GuardianPlanSwitcher({
   currentPlan,
@@ -38,7 +39,9 @@ export function GuardianPlanSwitcher({
   onComplete: () => void;
   onCancel: () => void;
 }) {
-  const [selected, setSelected] = useState<string>(currentPlan || "global");
+  const [selected, setSelected] = useState<string>(
+    currentPlan && PLANS.some((p) => p.id === currentPlan) ? currentPlan : "global",
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -46,10 +49,6 @@ export function GuardianPlanSwitcher({
   const { config: profileConfig } = useProtectionProfile();
   const { anchorCurrency } = useAnchorCurrency();
   const customPlan = profileConfig.customPlan ?? null;
-  const PLANS = useMemo(
-    () => ALL_PLANS.filter((p) => p.id !== "custom" || customPlan),
-    [customPlan],
-  );
 
   useEffect(() => {
     const id = setTimeout(() => headingRef.current?.focus(), 50);
@@ -181,7 +180,10 @@ export function GuardianPlanSwitcher({
         <button
           type="button"
           onClick={save}
-          disabled={loading || selected === currentPlan}
+          disabled={
+            loading ||
+            (selected === currentPlan && PLANS.some((p) => p.id === currentPlan))
+          }
           className="w-full py-4 min-h-[56px] bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
         >
           {loading ? "Saving…" : "Use this plan"}

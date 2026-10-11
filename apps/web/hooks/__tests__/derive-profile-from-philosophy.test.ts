@@ -5,6 +5,7 @@ describe('deriveProfileFromPhilosophy', () => {
   it('maps Africapitalism to geographic diversification with balanced defaults', () => {
     expect(deriveProfileFromPhilosophy('africapitalism', 'Africa')).toEqual({
       philosophy: 'africapitalism',
+      valuesPhilosophy: 'africapitalism',
       userGoal: 'geographic_diversification',
       userRegion: 'Africa',
       riskTolerance: 'Balanced',

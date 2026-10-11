@@ -37,14 +37,14 @@ import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
 import { EXPOSURE_LABELS, type Exposure } from '@diversifi/shared/src/config/exposures';
-import { resolvePlan, allocationPlanFromResolved } from "@/components/protection-cards/plan-preview";
+import { resolvePlan } from "@/components/protection-cards/plan-preview";
+import { guardianPlanForShield, sameGuardianPlan } from "@/lib/plan-sync";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianCadenceLine } from "../shared/LiveProofCard";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
 import { ResearchFundingLine } from "../agent/ResearchFundingLine";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
 import { GuardianGrantModal } from "../agent/GuardianGrantModal";
-import { GuardianPlanSwitcher } from "../agent/GuardianPlanSwitcher";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import dynamic from "next/dynamic";
 import type AutomationSettingsType from "../agent/AutomationSettings";
@@ -131,6 +131,11 @@ export default function AgentTab({
       previousAddress.current = address;
     }
   }, [address]);
+  useEffect(() => {
+    if (address || !guardianContext?.example) return;
+    setExample(true);
+    clearGuardianContext();
+  }, [address, guardianContext, clearGuardianContext]);
 
   if (!address) {
     // Unconnected morph (§5 rail 5): the Guardian ITSELF is the object —
@@ -324,12 +329,26 @@ function ConnectedAgent({
   clearGuardianContext: () => void;
 }) {
   const g = useGuardianInstrument({ isMiniPay, onNavigateToFund });
+  const { navigateToCompare } = useNavigation();
   const { financialStrategy: shieldPlan } = useStrategy();
   const { config: profileConfig } = useProtectionProfile();
   const customPlan = profileConfig.customPlan;
   const shieldPlanName = shieldPlan
     ? STRATEGIES.find((s) => s.id === shieldPlan)?.name ?? null
     : null;
+  const guardianAnchor =
+    profileConfig.anchorCurrency && Object.hasOwn(EXPOSURE_LABELS, profileConfig.anchorCurrency)
+      ? (profileConfig.anchorCurrency as Exposure)
+      : null;
+  const guardianTarget = guardianPlanForShield({
+    planId: shieldPlan,
+    valuesPhilosophy: profileConfig.valuesPhilosophy ?? null,
+    customPlan,
+    riskTolerance: profileConfig.riskTolerance,
+    anchorCurrency: guardianAnchor,
+  });
+  const guardianSynced = sameGuardianPlan(g.vault.vault, guardianTarget);
+  const planSyncNeeded = Boolean(guardianTarget && !guardianSynced);
   const [sel, setSel] = useState<"journal" | "bounds" | "settings" | "allocation" | null>(null);
 
   // The live line — only facts that already exist: a saved payment cycle
@@ -527,19 +546,24 @@ function ConnectedAgent({
               onRevoke={() => void g.handleRevokePermission()}
               onSetLimit={() => g.setShowPermissionModal(true)}
               vault={g.vault}
-              onChangeStrategy={() => g.setShowStrategySwitcher(true)}
+              onEditPlanInShield={() => {
+                setSel(null);
+                navigateToCompare('guardian');
+              }}
               shieldPlan={shieldPlan}
               shieldPlanName={shieldPlanName}
+              valuesPlanName={
+                profileConfig.valuesPhilosophy
+                  ? STRATEGIES.find((s) => s.id === profileConfig.valuesPhilosophy)?.name ?? null
+                  : null
+              }
+              planSyncNeeded={planSyncNeeded}
+              planSynced={guardianSynced}
               onFollowShieldPlan={
-                shieldPlan && shieldPlan !== "custom" && address
+                planSyncNeeded && address && guardianTarget
                   ? () =>
                       void g.vault
-                        .updateStrategy(address, shieldPlan, allocationPlanFromResolved(resolvePlan({
-                          strategy: shieldPlan, customPlan,
-                          riskTolerance: profileConfig.riskTolerance,
-                          anchorCurrency: profileConfig.anchorCurrency && Object.hasOwn(EXPOSURE_LABELS, profileConfig.anchorCurrency)
-                            ? profileConfig.anchorCurrency as Exposure : null,
-                        })))
+                        .updateStrategy(address, guardianTarget.strategy, guardianTarget.allocationPlan)
                         .then((saved) => { if (saved) return g.vault.refresh(address); })
                   : undefined
               }
@@ -553,7 +577,7 @@ function ConnectedAgent({
               onOpenGrantModal={() => g.setShowGrantConfirmModal(true)}
               onSwitchToGrantChain={() => void g.switchToChain(GRANT_ELIGIBLE_CHAIN_IDS[0])}
               onOpenSettings={() => setSel("settings")}
-              onReviewAllocation={shieldPlan === 'custom' ? undefined : () => setSel('allocation')}
+              onReviewAllocation={guardianSynced ? () => setSel('allocation') : undefined}
               researchFunding={address ? <ResearchFundingLine /> : null}
             />
           )}
@@ -615,19 +639,6 @@ function ConnectedAgent({
         />
       )}
 
-      {/* Plan switcher — changes the plan Guardian follows; never signs. */}
-      {g.showStrategySwitcher && g.vault.vault && address && (
-        <GuardianPlanSwitcher
-          currentPlan={g.vault.vault.strategy}
-          onComplete={() => {
-            g.setShowStrategySwitcher(false);
-            g.vault.refresh(address);
-          }}
-          onCancel={() => g.setShowStrategySwitcher(false)}
-          onUpdatePlan={async (plan) => g.vault.updateStrategy(address, plan,
-            allocationPlanFromResolved(resolvePlan({ strategy: plan, riskTolerance: profileConfig.riskTolerance })))}
-        />
-      )}
     </>
   );
 }

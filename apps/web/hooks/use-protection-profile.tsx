@@ -26,6 +26,29 @@ export type UserGoal =
 export type RiskTolerance = 'Conservative' | 'Balanced' | 'Aggressive';
 export type TimeHorizon = '1 month' | '3 months' | '1 year';
 
+export type NamedPhilosophy =
+  | 'africapitalism'
+  | 'buen_vivir'
+  | 'pan_caribbean'
+  | 'confucian'
+  | 'gotong_royong'
+  | 'islamic'
+  | 'global';
+
+const NAMED_PHILOSOPHIES: ReadonlySet<string> = new Set<NamedPhilosophy>([
+  'africapitalism',
+  'buen_vivir',
+  'pan_caribbean',
+  'confucian',
+  'gotong_royong',
+  'islamic',
+  'global',
+]);
+
+export function isNamedPhilosophy(value: unknown): value is NamedPhilosophy {
+  return typeof value === 'string' && NAMED_PHILOSOPHIES.has(value);
+}
+
 export interface ProtectionConfig {
   userGoal: UserGoal | null;
   userRegion: string | null;
@@ -33,6 +56,7 @@ export interface ProtectionConfig {
   timeHorizon: TimeHorizon | null;
   /** Protection philosophy — single source of truth (replaces `financialStrategy` localStorage key). */
   philosophy: FinancialStrategy | null;
+  valuesPhilosophy?: NamedPhilosophy | null;
   /** What this money is for — separate from values/philosophy. */
   moneyPurpose: MoneyPurpose | null;
   /** ISO code the user thinks in; unset → derived (payment cycle, holdings, USD). */
@@ -69,6 +93,7 @@ const DEFAULT_CONFIG: ProtectionConfig = {
   riskTolerance: null,
   timeHorizon: null,
   philosophy: null,
+  valuesPhilosophy: null,
   moneyPurpose: null,
 };
 
@@ -104,6 +129,7 @@ export function deriveProfileFromPhilosophy(
 
   return {
     philosophy: strategy,
+    valuesPhilosophy: isNamedPhilosophy(strategy) ? strategy : null,
     userGoal: PHILOSOPHY_DEFAULT_GOAL[strategy] ?? 'inflation_protection',
     userRegion: region ?? null,
     riskTolerance: 'Balanced',
@@ -208,26 +234,45 @@ function migrateLegacyPhilosophy(config: ProtectionConfig): ProtectionConfig {
   return config;
 }
 
+function valuesFor(config: ProtectionConfig): NamedPhilosophy | null {
+  if (isNamedPhilosophy(config.philosophy)) return config.philosophy;
+  if (config.philosophy !== 'custom') return null;
+  if (
+    isNamedPhilosophy(config.valuesPhilosophy) &&
+    (config.valuesPhilosophy !== 'islamic' ||
+      config.customPlan?.rules.excludeYield === true)
+  ) {
+    return config.valuesPhilosophy;
+  }
+  const plan = config.customPlan;
+  if (!plan || !isNamedPhilosophy(plan.from)) return null;
+  if (plan.from === 'islamic' && plan.rules.excludeYield !== true) return null;
+  return plan.from;
+}
+
 function loadConfig(): ProtectionConfig {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return migrateLegacyPhilosophy({
+      const migrated = migrateLegacyPhilosophy({
         userGoal: parsed.userGoal || null,
         userRegion: parsed.userRegion || null,
         riskTolerance: parsed.riskTolerance || null,
         timeHorizon: parsed.timeHorizon || null,
         philosophy: parsed.philosophy || null,
+        valuesPhilosophy: parsed.valuesPhilosophy || null,
         moneyPurpose: parsed.moneyPurpose || null,
         anchorCurrency: parsed.anchorCurrency || null,
         customPlan: normalizeCustomPlan(parsed.customPlan),
       });
+      return { ...migrated, valuesPhilosophy: valuesFor(migrated) };
     }
   } catch {
     // Ignore storage errors
   }
-  return migrateLegacyPhilosophy({ ...DEFAULT_CONFIG });
+  const migrated = migrateLegacyPhilosophy({ ...DEFAULT_CONFIG });
+  return { ...migrated, valuesPhilosophy: valuesFor(migrated) };
 }
 
 /** Read persisted philosophy without React (StrategyContext, API helpers). */
@@ -235,10 +280,29 @@ export function loadPhilosophy(): FinancialStrategy | null {
   return loadConfig().philosophy;
 }
 
+export function loadValuesPhilosophy(): NamedPhilosophy | null {
+  return loadConfig().valuesPhilosophy ?? null;
+}
+
+function valuesForWrite(
+  strategy: FinancialStrategy | null,
+  previous: NamedPhilosophy | null | undefined,
+  customPlan?: CustomPlan | null,
+): NamedPhilosophy | null {
+  if (isNamedPhilosophy(strategy)) return strategy;
+  if (strategy === null) return null;
+  if (previous === 'islamic' && customPlan?.rules.excludeYield !== true) return null;
+  return previous ?? null;
+}
+
 /** Persist philosophy into the protection profile (removes legacy key). */
 export function savePhilosophy(strategy: FinancialStrategy | null): void {
   const config = loadConfig();
-  saveConfig({ ...config, philosophy: strategy });
+  saveConfig({
+    ...config,
+    philosophy: strategy,
+    valuesPhilosophy: valuesForWrite(strategy, config.valuesPhilosophy, config.customPlan),
+  });
   try {
     localStorage.removeItem(LEGACY_STRATEGY_KEY);
   } catch {
@@ -501,8 +565,13 @@ function useProtectionProfileState() {
     setRiskTolerance: useCallback((risk: RiskTolerance) => updateConfig('riskTolerance', risk), [updateConfig]),
     setTimeHorizon: useCallback((time: TimeHorizon) => updateConfig('timeHorizon', time), [updateConfig]),
     setPhilosophy: useCallback(
-      (philosophy: FinancialStrategy | null) => updateConfig('philosophy', philosophy),
-      [updateConfig],
+      (philosophy: FinancialStrategy | null) =>
+        setConfig(prev => ({
+          ...prev,
+          philosophy,
+          valuesPhilosophy: valuesForWrite(philosophy, prev.valuesPhilosophy, prev.customPlan),
+        })),
+      [],
     ),
 
     setCustomPlan: useCallback(

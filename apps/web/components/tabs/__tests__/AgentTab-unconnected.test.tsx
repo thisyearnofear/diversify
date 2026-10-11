@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
@@ -47,12 +47,17 @@ vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: vi.fn() }),
 }));
 
+const navState = {
+  guardianContext: null as {
+    summary: string;
+    prompt: string;
+    example?: boolean;
+  } | null,
+  clearGuardianContext: vi.fn(),
+  navigateToGuardian: vi.fn(),
+};
 vi.mock("@/context/app/NavigationContext", () => ({
-  useNavigation: () => ({
-    guardianContext: null,
-    clearGuardianContext: vi.fn(),
-    navigateToGuardian: vi.fn(),
-  }),
+  useNavigation: () => navState,
 }));
 
 vi.mock("@/components/wallet/WalletButton", () => ({
@@ -93,6 +98,33 @@ vi.mock("@/components/swap/CorridorContext", () => ({
 import AgentTab from "../AgentTab";
 
 describe("AgentTab — unconnected morph", () => {
+  beforeEach(() => {
+    navState.guardianContext = null;
+    navState.clearGuardianContext.mockClear();
+  });
+
+  it("a Shield example hand-off lands straight in the example — consumed once, no intro detour", async () => {
+    navState.guardianContext = {
+      summary: "An example Guardian decision",
+      prompt: "Show me an example Guardian decision",
+      example: true,
+    };
+    const { rerender } = render(<AgentTab />);
+
+    await waitFor(() =>
+      expect(screen.getByTestId("guardian-example")).toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("guardian-example")).toHaveTextContent(
+      "Example decision · not live",
+    );
+    rerender(<AgentTab />);
+    expect(navState.clearGuardianContext).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/your Shield plan/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Connect wallet" }),
+    ).toBeInTheDocument();
+  });
+
   it("makes the Guardian itself the object, with the connect CTA attached", () => {
     render(<AgentTab />);
 

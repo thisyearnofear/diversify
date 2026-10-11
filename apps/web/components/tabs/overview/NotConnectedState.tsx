@@ -19,6 +19,7 @@ import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
+import { useNavigation } from "@/context/app/NavigationContext";
 
 interface NotConnectedStateProps {
   isActive?: boolean;
@@ -45,6 +46,7 @@ export function NotConnectedState({
     viewingShared,
     clearSharedView,
   } = useCurrencyMoment({ fallbackCountryCode: 'NG' });
+  const { navigateWithIntent } = useNavigation();
   const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
 
   const selectBenchmark = (b: Benchmark) => {
@@ -81,12 +83,25 @@ export function NotConnectedState({
             countryIsDefault={countryIsDefault}
             rememberVisit={isActive && !viewingShared && !countryIsDefault}
             liveAlive={isActive}
+            onProtect={() =>
+              navigateWithIntent("protect", {
+                source: "home",
+                lens: "compare",
+                currencyCode: moment.currencyCode,
+                example: countryIsDefault || Boolean(viewingShared),
+              })
+            }
+            protectLabel="Explore plans from this reading"
           />
         ) : inflationMoment ? (
           <InflationMomentCard
             moment={inflationMoment}
             onAmountChange={setSavingsAmount}
             onChangeCountry={onChangeCountry}
+            onProtect={() =>
+              navigateWithIntent("protect", { source: "home", lens: "compare" })
+            }
+            protectLabel="Explore protection plans"
           />
         ) : isLoading ? (
           <div className="text-center py-2">
@@ -113,7 +128,10 @@ export function NotConnectedState({
           </div>
         )}
         {/* The one CTA — attached to the object, no card wrapper. */}
-        <WalletButton variant="primary" className="w-full" />
+        <WalletButton
+          variant={moment || inflationMoment ? "minimal" : "primary"}
+          className="w-full"
+        />
       </div>
       <CurrencyStoryInspector
         code={inspectedCurrency}

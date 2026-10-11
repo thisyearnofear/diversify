@@ -41,6 +41,7 @@ export interface ShieldStatusTierProps {
   /** Quiet memory — alignment drift since the last visit. Lived here
    *  (transition tier) rather than stacked into the ring hole. */
   sinceHint?: string;
+  planSync?: { synced: boolean; syncing: boolean; onSync: () => void } | null;
 }
 
 export function ShieldStatusTier({
@@ -64,6 +65,7 @@ export function ShieldStatusTier({
   cycleOpen,
   onOpenCycle,
   sinceHint,
+  planSync,
 }: ShieldStatusTierProps) {
   // One resting row: badge · state text · [Set up Guardian] · sinceHint ·
   // verified. A second row only exists while a mode needs it — the
@@ -198,6 +200,30 @@ export function ShieldStatusTier({
           >
             What FX timing costs your next payment →
           </button>
+        ) : planSync && !sleeveOpen && !comparing && !focusedToken && !cycleOpen ? (
+          planSync.synced ? (
+            <p
+              data-testid="shield-plan-synced"
+              className="text-2xs font-medium text-gray-400 dark:text-gray-500"
+            >
+              Targets synced for measured review
+            </p>
+          ) : (
+            <span className="inline-flex items-center gap-2" data-testid="shield-plan-unsynced">
+              <span className="text-2xs font-medium text-gray-500 dark:text-gray-400">
+                {planSync.syncing ? "Syncing…" : "On this device"}
+              </span>
+              {!planSync.syncing && (
+                <button
+                  type="button"
+                  onClick={planSync.onSync}
+                  className="text-2xs font-semibold text-blue-600 dark:text-blue-400"
+                >
+                  Sync targets for measured review
+                </button>
+              )}
+            </span>
+          )
         ) : undefined
       }
     />

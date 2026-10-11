@@ -31,6 +31,7 @@ export interface GuardianContext {
    * measured — not a paraphrase.
    */
   decisionRef?: GuardianDecisionRef;
+  example?: boolean;
 }
 
 /** Cross-tab hand-off: carries the question, not just the tab. Transient —
@@ -44,6 +45,8 @@ export interface TreasuryIntent {
   /** A specific mode the target tab should open in, not a slice.
    *  `cycle` opens Shield's payment-cycle inspector (per-cycle FX drag). */
   lens?: 'compare' | 'netting' | 'cycle';
+  currencyCode?: string;
+  example?: boolean;
 }
 
 export interface GuardianDecisionRef {

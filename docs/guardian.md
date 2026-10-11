@@ -64,7 +64,12 @@ holding, caps its size, rounds token quantities downward in integer units, and
 recomputes allocation drift. Guardian's allocation inspector hands the exact
 amount to Exchange after discarding cached quotes. Drift is an indicative
 pre-fee allocation metric, not savings, yield, or a guaranteed trade outcome.
-Native gas and other networks are outside the disclosed savings scope.
+Native gas and other networks are outside the disclosed savings scope. The
+review consumes only that synced, validated saved vector: the scheduled
+guardian-loop reads queued decisions and does not currently evaluate the
+user's allocation plan. An authenticated sync therefore grants eligibility
+for measured read-only allocation review only — an unsynced local mix is
+not a Guardian plan, and no surface may present the mix as followed.
 
 The stablecoin monitor independently fetches USDC/USDT/DAI USD prices and source
 observation dates. A deviation greater than 1% with evidence no older than five

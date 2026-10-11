@@ -319,6 +319,7 @@ export function PairStage({
   decisionWindow = false,
   onExitDecisionWindow,
   ctaLabel,
+  examplePair = false,
   receipt = null,
   onDismissReceipt,
   onMoveMore,
@@ -340,6 +341,7 @@ export function PairStage({
   decisionWindow?: boolean;
   onExitDecisionWindow?: () => void;
   ctaLabel: string;
+  examplePair?: boolean;
   receipt?: PairReceipt | null;
   onDismissReceipt?(): void;
   onMoveMore?(): void;
@@ -487,7 +489,7 @@ export function PairStage({
     <div data-testid="pair-stage" className="instrument-composition pair-stage mx-auto w-full max-w-[340px]">
       {/* The scale */}
       <div className="instrument-artifact">
-      <div aria-label={corridor?.line ?? undefined}>
+      <div aria-label={corridor?.line ? `${examplePair ? "Example pair — " : ""}${corridor.line}` : undefined}>
         <motion.div
           data-testid="pair-beam"
           data-tilt={Math.round(tilt)}
@@ -741,6 +743,14 @@ export function PairStage({
         </div>
       ) : (
         <>
+          {examplePair && (
+            <p
+              data-testid="example-pair"
+              className="mb-1 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
+            >
+              Example pair · illustrative selection
+            </p>
+          )}
           <CorridorLine
             key={`${fromToken}-${toToken}`}
             fromToken={fromToken}

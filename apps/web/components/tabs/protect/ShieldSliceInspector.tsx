@@ -348,7 +348,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
             mixLabel={learnMixLabel}
             onSelectYear={setLearnYear}
             onProtect={commitFocusedPlan}
-            ctaLabel="Use this plan"
+            ctaLabel="Use starting mix"
           />
           <button
             type="button"

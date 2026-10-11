@@ -16,7 +16,6 @@ import type {
 } from "@/hooks/use-session-key";
 import type { useVault } from "@/hooks/use-vault";
 import { MIN_AUTO_SAVER_FUNDS_USD } from "@/constants/guardian-limits";
-import { STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
 
 export function GuardianBoundsSheet({
@@ -33,9 +32,12 @@ export function GuardianBoundsSheet({
   onRevoke,
   onSetLimit,
   vault,
-  onChangeStrategy,
+  onEditPlanInShield,
   shieldPlan,
   shieldPlanName,
+  valuesPlanName,
+  planSyncNeeded = false,
+  planSynced = false,
   onFollowShieldPlan,
   walletStableBalanceUSD,
   isMiniPay,
@@ -65,10 +67,18 @@ export function GuardianBoundsSheet({
   /** Opens the daily-limit setup when no limit is signed yet. */
   onSetLimit: () => void;
   vault: ReturnType<typeof useVault>;
-  onChangeStrategy: () => void;
+  /** Leaves the sheet for Shield's compare/picker — the one place the
+   *  user-owned plan is edited. */
+  onEditPlanInShield?: () => void;
   /** The plan chosen on Shield (StrategyContext). */
   shieldPlan?: string | null;
   shieldPlanName?: string | null;
+  /** Named values a synced custom mix was seeded from, if any. */
+  valuesPlanName?: string | null;
+  /** The Shield plan's targets differ from the synced vector. */
+  planSyncNeeded?: boolean;
+  /** The synced vector already matches the Shield plan. */
+  planSynced?: boolean;
   /** Point Guardian at the Shield plan (user-initiated; may sign). */
   onFollowShieldPlan?: () => void;
   walletStableBalanceUSD: number;
@@ -88,14 +98,6 @@ export function GuardianBoundsSheet({
   onReviewAllocation?: () => void;
 }) {
   const { formatMoney } = useBalanceVisibility();
-  const planMismatch = Boolean(
-    vault.vault?.strategy && shieldPlan && vault.vault.strategy !== shieldPlan,
-  );
-  // Custom slices live only in this browser — the server Guardian can't follow them.
-  const localCustom = planMismatch && shieldPlan === "custom";
-  const serverPlanName = vault.vault?.strategy
-    ? STRATEGIES.find((s) => s.id === vault.vault?.strategy)?.name ?? vault.vault.strategy.replace(/-/g, " ")
-    : null;
   const isWaitingForFunds =
     hasValidPermission && walletStableBalanceUSD < MIN_AUTO_SAVER_FUNDS_USD;
 
@@ -192,43 +194,47 @@ export function GuardianBoundsSheet({
         </div>
       )}
 
-      {/* The plan Guardian follows. Same noun as Shield ("Protection plan"). */}
-      {vault.vault?.strategy && (
+      {/* Saved allocation for measured review. Same noun as Shield ("Protection plan"). */}
+      {(vault.vault?.strategy || (planSyncNeeded && onFollowShieldPlan) || onEditPlanInShield) && (
         <div className="flex items-center justify-between gap-3 text-sm pt-4 border-t border-gray-200 dark:border-gray-700">
           <div className="min-w-0">
             <p className="text-gray-500">Protection plan</p>
             <p className="font-bold capitalize truncate">
-              {vault.vault.strategy.replace(/-/g, ' ')}
+              {planSynced && shieldPlan === 'custom'
+                ? `Custom mix${valuesPlanName ? ` · ${valuesPlanName} values` : ''}`
+                : vault.vault?.strategy
+                  ? vault.vault.strategy.replace(/-/g, ' ')
+                  : 'None synced'}
             </p>
           </div>
-          {(planMismatch || !vault.vault.allocationPlan) && !localCustom && onFollowShieldPlan ? (
+          {onFollowShieldPlan ? (
             <button
               type="button"
               onClick={onFollowShieldPlan}
               className="min-h-tap px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
             >
-              Follow {shieldPlanName ?? "Shield plan"}
+              Sync targets for measured review
             </button>
-          ) : (
+          ) : onEditPlanInShield ? (
             <button
               type="button"
-              onClick={onChangeStrategy}
+              onClick={onEditPlanInShield}
               className="min-h-tap px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
             >
-              Change plan
+              {shieldPlan ? 'Edit plan in Shield' : 'Choose a plan in Shield'}
             </button>
-          )}
+          ) : null}
         </div>
       )}
-      {localCustom ? (
-        <p className="-mt-4 text-2xs text-gray-500 dark:text-gray-400" data-testid="guardian-plan-custom-local">
-          Guardian keeps following {serverPlanName} — Custom plans live on this device.
+      {planSyncNeeded ? (
+        <p className="-mt-4 text-2xs text-gray-500 dark:text-gray-400" data-testid="guardian-plan-unsynced">
+          On this device{shieldPlanName ? ` — Shield plan: ${shieldPlanName}` : ""}
         </p>
-      ) : planMismatch && (
-        <p className="-mt-4 text-2xs text-amber-700 dark:text-amber-300" data-testid="guardian-plan-mismatch">
-          Your Shield plan is {shieldPlanName ?? shieldPlan} — Guardian is still proposing for this one.
+      ) : planSynced ? (
+        <p className="-mt-4 text-2xs text-gray-500 dark:text-gray-400" data-testid="guardian-plan-synced">
+          Targets synced for measured review
         </p>
-      )}
+      ) : null}
 
       {/* Optional wallet-enforced cap (ERC-7715). Only offered once a
           limit is signed — the grant attaches to that permission. */}

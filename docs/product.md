@@ -189,15 +189,40 @@ Market evidence, competitive gap, archetype design, regulatory posture
 
 ## Protection Plans
 
-| Plan | Philosophy | Focus |
-|------|-----------|-------|
-| **Africapitalism** | African prosperity | Keep wealth in African economies (cUSD, KESm, COPm) |
-| **Buen Vivir** | Latin American balance | Balance material wealth with community |
-| **Confucian** | East Asian prudence | Long-term stability, low volatility |
-| **Gotong Royong** | Southeast Asian mutual aid | Community-first, shared risk |
-| **Islamic Finance** | Sharia-compliant | No interest-bearing assets, ethical screening (excludes perp strategies) |
-| **Global Diversification** | Maximum spread | Geographic diversification across all regions |
-| **Custom** | User-defined | Set your own allocation targets |
+A protection plan is the user's own exposure: explicit target weights across
+currencies and assets — what to hold, in what proportions — owned by the
+user and changed only by the user. A **philosophy** is the durable choice
+underneath it: values and priorities, not a risk slider. Naming a philosophy
+supplies an editable starting mix — the resulting plan is the user's to
+reshape (legs, weights, the risk-floor dial). Hard constraints exist only
+where code enforces them: the Islamic mix excludes yield-bearing legs
+(`STRATEGY_PLANS.islamic`, `validateAllocationPlan`); no philosophy currently
+encodes venue-level or on-chain allocation enforcement.
+
+| Philosophy | Priority | Sample starting mix (editable) |
+|-----------|----------|-------------------------------|
+| **Africapitalism** | African prosperity | KES 60 · USD 25 · EUR 15 |
+| **Buen Vivir** | Latin American balance | BRL 45 · COP 35 · USD 20 |
+| **Pan-Caribbean** | Imported-inflation defence | USD 50 · XAU 30 · EUR 20 |
+| **Confucian** | East Asian prudence | USD 70 liquid · 30 yield-preferred |
+| **Gotong Royong** | Southeast Asian mutual aid | USD 50 liquid · PHP 30 · 20 yield-preferred |
+| **Islamic Finance** | Sharia-compliant | XAU 50 · USD 50 — no interest-bearing legs |
+| **Global Diversification** | Maximum spread | USD 25 · EUR 20 · KES 20 · BRL 15 · COP 10 · PHP 10 |
+
+**Custom** sits outside the philosophies: it is a construction path seeded
+from a named plan or existing holdings (walletless starts from a valid
+editable starting mix), never an empty committed plan.
+
+A plan names targets, not holdings: the plan may differ from what the wallet
+actually holds, and nothing moves until the user signs on Exchange (or the
+Guardian acts inside an on-chain-enforced grant the user issued). The
+Guardian's measured allocation review reads a separately synced, validated
+saved plan (`/api/agent/deep-analyze`); the scheduled Guardian loop reads
+queued decisions, not the plan itself — a mix that exists only on-device is
+not yet a Guardian plan, and an authenticated sync grants eligibility for
+measured read-only allocation review only: the scheduled loop does not
+currently evaluate this vector, so no surface may claim the Guardian is
+following it.
 
 ## What Makes It Different
 
@@ -225,7 +250,8 @@ Tripwire: `apps/web/lib/__tests__/vocabulary.test.ts`.
 | Its permission (EIP-712, `COPILOT`) | **Daily limit** — proposal-only, you approve each move | "Auto-Saver is on", "Guardian may swap" | `requestPermission('COPILOT')` |
 | Optional ERC-7715 grant + GUARDIAN re-sign (the one autonomy path) | **Let Guardian act for you** (wallet-enforced limit) | "Stronger protection", "Advanced Permissions" (except MetaMask's own errors) | `requestAdvancedPermission`, `delegationContext` |
 | Pausing it | **Pause Guardian** | Revoke, stop Auto-Saver | `revokePermission` |
-| The allocation choice | **Protection plan** (Africapitalism, …, Custom plan) | Strategy | `FinancialStrategy`, `vault.strategy` |
+| The values/priority choice | **Philosophy** (Africapitalism, Buen Vivir, …) — names the starting mix | Diversification strategy | `financialStrategy`, `LensCoinSelector` |
+| The allocation choice | **Protection plan** — the user's own exposure mix (a philosophy supplies the start; Custom builds it) | Strategy, diversification strategy | `FinancialStrategy`, `vault.strategy` |
 | Moving between currencies | **Move savings** | Rebalance, Re-protect, Execute | `rebalance` action type |
 | Tabs | **Shield · Home · Exchange · Guardian** | Shield, Home, Exchange, Guardian as tab names | `protect / overview / exchange / agent` |
 | Prepaid review credit | **Protection Balance** (intended; deployment-dependent) | Agent Fuel | x402 |

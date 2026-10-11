@@ -1,5 +1,5 @@
 import type { FinancialStrategy, NullableFinancialStrategy } from './types';
-import { useProtectionProfile } from '@/hooks/use-protection-profile';
+import { useProtectionProfile, type NamedPhilosophy } from '@/hooks/use-protection-profile';
 
 /**
  * Philosophy selection — reads/writes `config.philosophy` on the protection profile.
@@ -7,12 +7,14 @@ import { useProtectionProfile } from '@/hooks/use-protection-profile';
  */
 export function useStrategy(): {
   financialStrategy: NullableFinancialStrategy;
+  valuesPhilosophy: NamedPhilosophy | null;
   setFinancialStrategy: (strategy: NullableFinancialStrategy) => void;
 } {
   const { config, setPhilosophy } = useProtectionProfile();
 
   return {
     financialStrategy: config.philosophy as NullableFinancialStrategy,
+    valuesPhilosophy: config.valuesPhilosophy ?? null,
     setFinancialStrategy: setPhilosophy as (strategy: NullableFinancialStrategy) => void,
   };
 }

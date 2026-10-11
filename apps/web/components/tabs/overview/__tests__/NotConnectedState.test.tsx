@@ -38,11 +38,15 @@ vi.mock("@/components/tabs/overview/CurrencyMomentCard", () => ({
     countryIsDefault,
     onInspectCurrency,
     currencySelected,
+    onProtect,
+    protectLabel,
   }: {
     rememberVisit?: boolean;
     countryIsDefault?: boolean;
     onInspectCurrency?: () => void;
     currencySelected?: boolean;
+    onProtect?: () => void;
+    protectLabel?: string;
   }) => (
     <div
       data-testid="moment-card"
@@ -57,6 +61,11 @@ vi.mock("@/components/tabs/overview/CurrencyMomentCard", () => ({
           onClick={onInspectCurrency}
         >
           Story
+        </button>
+      ) : null}
+      {onProtect ? (
+        <button type="button" onClick={onProtect}>
+          {protectLabel ?? "Protect"}
         </button>
       ) : null}
     </div>
@@ -88,10 +97,33 @@ vi.mock("@/components/tabs/overview/CurrencyStoryInspector", async () => {
   };
 });
 vi.mock("@/components/tabs/overview/InflationMomentCard", () => ({
-  InflationMomentCard: () => <div data-testid="inflation-card" />,
+  InflationMomentCard: ({
+    onProtect,
+    protectLabel,
+  }: {
+    onProtect?: () => void;
+    protectLabel?: string;
+  }) => (
+    <div data-testid="inflation-card">
+      {onProtect ? (
+        <button type="button" onClick={onProtect}>
+          {protectLabel ?? "Protect"}
+        </button>
+      ) : null}
+    </div>
+  ),
 }));
 vi.mock("@/components/wallet/WalletButton", () => ({
-  default: () => <button type="button">Connect wallet</button>,
+  default: ({ variant }: { variant?: string }) => (
+    <button type="button" data-variant={variant}>Connect wallet</button>
+  ),
+}));
+
+const navState = {
+  navigateWithIntent: vi.fn(),
+};
+vi.mock("@/context/app/NavigationContext", () => ({
+  useNavigation: () => navState,
 }));
 vi.mock("@/components/shared/TabComponents", () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -108,6 +140,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     hookState.countryCode = null;
     hookState.countryIsDefault = false;
     hookState.onChangeCountry.mockReset();
+    navState.navigateWithIntent.mockReset();
   });
 
   it("keeps the moment card as the object with the connect CTA attached", () => {
@@ -119,7 +152,57 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     // One CTA, attached to the object — no card wrapper, no second button.
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
-    ).toBeInTheDocument();
+    ).toHaveAttribute("data-variant", "minimal");
+  });
+
+  it("the moment's one primary explores a plan for its currency — carrying the walletless compare intent", () => {
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+
+    const cta = screen.getByRole("button", { name: "Explore plans from this reading" });
+    fireEvent.click(cta);
+    expect(navState.navigateWithIntent).toHaveBeenCalledWith("protect", {
+      source: "home",
+      lens: "compare",
+      currencyCode: "NGN",
+      example: false,
+    });
+    expect(
+      screen.getByRole("button", { name: "Connect wallet" }),
+    ).toHaveAttribute("data-variant", "minimal");
+  });
+
+  it("a default/shared currency is handed off as an example, never the visitor's own reading", () => {
+    hookState.countryIsDefault = true;
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Explore plans from this reading" }));
+    expect(navState.navigateWithIntent).toHaveBeenCalledWith("protect", {
+      source: "home",
+      lens: "compare",
+      currencyCode: "NGN",
+      example: true,
+    });
+  });
+
+  it("inflation-only fallback offers generic plan exploration — no invented currency", () => {
+    hookState.moment = null;
+    hookState.inflationMoment = { currencyCode: "NGN" };
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Explore protection plans" }));
+    expect(navState.navigateWithIntent).toHaveBeenCalledWith("protect", {
+      source: "home",
+      lens: "compare",
+    });
+  });
+
+  it("with no moment at all, connect stays the one primary affordance", () => {
+    hookState.moment = null;
+    hookState.isLoading = false;
+    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    expect(
+      screen.getByRole("button", { name: "Connect wallet" }),
+    ).toHaveAttribute("data-variant", "primary");
   });
 
   it("drops the marketing stack — no how-it-works, no proof card", () => {

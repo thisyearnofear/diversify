@@ -106,11 +106,13 @@ vi.mock("@/context/app/ExperienceContext", () => ({
 vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAskAdvisor }),
 }));
+const mockNavigateToCompare = vi.fn();
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({
     guardianContext: mockGuardianContext,
     clearGuardianContext: mockClearGuardianContext,
     navigateToGuardian: vi.fn(),
+    navigateToCompare: mockNavigateToCompare,
   }),
 }));
 vi.mock("@/components/wallet/WalletButton", () => ({
@@ -129,7 +131,15 @@ vi.mock("@/components/agent/GuardianJournalSheet", () => ({
   ),
 }));
 vi.mock("@/components/agent/GuardianBoundsSheet", () => ({
-  GuardianBoundsSheet: () => <div data-testid="guardian-bounds-sheet" />,
+  GuardianBoundsSheet: ({ onEditPlanInShield }: { onEditPlanInShield?: () => void }) => (
+    <div data-testid="guardian-bounds-sheet">
+      {onEditPlanInShield ? (
+        <button type="button" data-testid="edit-plan-in-shield" onClick={onEditPlanInShield}>
+          Edit plan in Shield
+        </button>
+      ) : null}
+    </div>
+  ),
 }));
 vi.mock("@/components/agent/AutomationSettings", () => ({
   default: () => <div data-testid="automation-settings" />,
@@ -249,6 +259,19 @@ describe("AgentTab — instrument composition", () => {
     const inspector = screen.getByTestId("inspector-sheet");
     expect(inspector).toHaveAttribute("data-selected-id", "bounds");
     expect(within(inspector).getByTestId("guardian-bounds-sheet")).toBeInTheDocument();
+  });
+
+  it("the bounds sheet's plan edit routes to Shield compare without signing", () => {
+    instrument = makeInstrument({
+      guardianState: "monitoring",
+      hasValidPermission: true,
+      sessionInfo: monitoringSession,
+      dailyLimit: 25,
+    });
+    render(<AgentTab />);
+    fireEvent.click(screen.getByTestId("guardian-budget"));
+    fireEvent.click(screen.getByTestId("edit-plan-in-shield"));
+    expect(mockNavigateToCompare).toHaveBeenCalledWith("guardian");
   });
 
   it("latest line opens the Guardian journal sheet", () => {

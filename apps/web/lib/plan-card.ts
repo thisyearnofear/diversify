@@ -6,7 +6,8 @@
  */
 // Deep leaf import — NOT the barrel — keeps the AI/ethers stack out of
 // the edge bundle.
-import { StrategyService } from '@diversifi/shared/src/services/strategy/strategy.service';
+import { STRATEGY_PLANS } from '@diversifi/shared/src/config/allocation-plans';
+import { exposureLabel } from '@diversifi/shared/src/config/exposures';
 import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
 import { STRATEGIES } from '@/constants/strategies';
 
@@ -30,8 +31,8 @@ export function planCardContent(
   if (!strategy) return null;
   if (strategy.id === 'custom' || strategy.id === 'exploring') return null;
 
-  const targets = StrategyService.getConfig(strategy.id).targetAllocations;
-  if (!targets || targets.length === 0) return null;
+  const slices = STRATEGY_PLANS[strategy.id]?.slices;
+  if (!slices || slices.length === 0) return null;
 
   return {
     id: strategy.id,
@@ -39,6 +40,9 @@ export function planCardContent(
     nativeName: strategy.nativeName,
     tagline: strategy.tagline,
     icon: strategy.icon,
-    targets: targets.map((t) => ({ region: t.region, ideal: t.ideal })),
+    targets: slices.map(({ exposure, target, prefer }) => ({
+      region: `${exposureLabel(exposure)}${prefer === 'yield' ? ' yield' : ''}`,
+      ideal: target,
+    })),
   };
 }

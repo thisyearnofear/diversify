@@ -383,6 +383,54 @@ describe("useSwapController — session pair persistence", () => {
     expect(result.current.fromToken).toBe("USDm");
     expect(result.current.toToken).toBe("BRLm");
   });
+
+  it("an auto-persisted default pair is not 'chosen' after remount", () => {
+    const first = renderController();
+    const persisted = JSON.parse(sessionStorage.getItem(KEY)!);
+    first.unmount();
+
+    const second = renderController();
+    expect(second.result.current.fromToken).toBe(persisted.fromToken);
+    expect(second.result.current.toToken).toBe(persisted.toToken);
+    expect(second.result.current.pairChosen).toBe(false);
+  });
+
+  it("an explicit visitor pick stays 'chosen' after remount", () => {
+    const first = renderController();
+    act(() => {
+      first.result.current.setFromToken("BRLm");
+      first.result.current.setToToken("USDm");
+    });
+    expect(first.result.current.pairChosen).toBe(true);
+    first.unmount();
+
+    const second = renderController();
+    expect(second.result.current.fromToken).toBe("BRLm");
+    expect(second.result.current.toToken).toBe("USDm");
+    expect(second.result.current.pairChosen).toBe(true);
+  });
+
+  it("a stored pair with no chosen marker is restored but not 'chosen'", () => {
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "USDm", toToken: "BRLm" }),
+    );
+    const { result } = renderController();
+    expect(result.current.fromToken).toBe("USDm");
+    expect(result.current.toToken).toBe("BRLm");
+    expect(result.current.pairChosen).toBe(false);
+  });
+
+  it("a chosen marker without a valid stored pair does not count", () => {
+    sessionStorage.setItem("diversifi.exchange.pair.chosen", "1");
+    sessionStorage.setItem(
+      KEY,
+      JSON.stringify({ fromToken: "USDm", toToken: "ZZZ" }),
+    );
+    const { result } = renderController();
+    expect(result.current.toToken).not.toBe("ZZZ");
+    expect(result.current.pairChosen).toBe(false);
+  });
 });
 
 const WIDE_TOKENS = [

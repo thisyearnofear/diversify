@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within, waitFor, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
@@ -55,15 +55,39 @@ vi.mock("@/components/tabs/protect/PhilosophyCoinRail", () => ({
       </button>
     </div>
   ),
-  FocusedPlanLine: ({ strategyId }: { strategyId: string | null }) => (
-    <p data-testid="focused-plan-line">{strategyId ?? "none"}</p>
+  FocusedPlanLine: ({
+    strategyId,
+    legs,
+  }: {
+    strategyId: string | null;
+    legs?: { label?: string; token: string; percent: number }[];
+  }) => (
+    <p data-testid="focused-plan-line">
+      {`${strategyId ?? "none"}${
+        legs?.length
+          ? ` | ${legs.map((l) => `${l.label ?? l.token} ${l.percent}%`).join(", ")}`
+          : ""
+      }`}
+    </p>
   ),
 }));
 
 vi.mock("@/components/wallet/WalletButton", () => ({
-  default: ({ connectLabel }: { connectLabel?: string }) => (
-    <button type="button">{connectLabel ?? "Connect wallet"}</button>
+  default: ({ connectLabel, variant }: { connectLabel?: string; variant?: string }) => (
+    <button type="button" data-variant={variant}>{connectLabel ?? "Connect wallet"}</button>
   ),
+}));
+
+const navState = {
+  pendingIntent: null as {
+    tab: string;
+    intent: { source: string; lens?: string; currencyCode?: string; example?: boolean };
+  } | null,
+  consumeIntent: vi.fn(),
+  navigateToGuardian: vi.fn(),
+};
+vi.mock("@/context/app/NavigationContext", () => ({
+  useNavigation: () => navState,
 }));
 
 vi.mock("@/components/shared/ApacRailHonestyBanner", () => ({
@@ -88,21 +112,139 @@ vi.mock("@/hooks/use-proof-feed", () => ({
 import { ProtectionNotConnected } from "../ProtectionNotConnected";
 
 describe("ProtectionNotConnected — Shield's unconnected morph", () => {
-  it("keeps the philosophy picker as the object with the connect CTA attached", () => {
+  beforeEach(() => {
+    navState.pendingIntent = null;
+    navState.consumeIntent.mockClear();
+    navState.navigateToGuardian.mockClear();
+    mockState.setFinancialStrategy.mockClear();
+  });
+
+  it("keeps the philosophy picker as the object, instructs the coin tap, and quiets connect to the minimal affordance", () => {
     render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
 
     // The picker renders walletless — compact ring + coin rail, choosing
     // a lens needs no funds.
     expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Connect wallet" }),
+      screen.getByText("Tap a philosophy coin to preview its plan"),
     ).toBeInTheDocument();
+    const connect = screen.getByRole("button", { name: "Connect wallet" });
+    expect(connect).toHaveAttribute("data-variant", "minimal");
     // Two buttons total besides coins: the connect CTA + the demo
     // text link. No other actions exist.
     const buttons = screen
       .getAllByRole("button")
       .filter((b) => !b.getAttribute("data-testid")?.startsWith("coin-"));
     expect(buttons.length).toBe(2);
+  });
+
+  it("planless: the first coin tap only previews — 'Use starting mix' is the primary commit", () => {
+    mockState.setFinancialStrategy.mockClear();
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByTestId("walletless-commit"));
+    expect(mockState.setFinancialStrategy).toHaveBeenCalledWith("buen_vivir");
+  });
+
+  it("a committed plan at rest offers one quiet bridge to Guardian's walletless example", () => {
+    mockState.financialStrategy = "africapitalism";
+    try {
+      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      const link = screen.getByTestId("guardian-plan-link");
+      expect(link).toHaveTextContent("See an example Guardian decision");
+      fireEvent.click(link);
+      expect(navState.navigateToGuardian).toHaveBeenCalledWith(
+        expect.objectContaining({ example: true }),
+      );
+
+      fireEvent.click(screen.getByTestId("ring-hole"));
+      expect(screen.queryByTestId("guardian-plan-link")).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
+  });
+
+  it("no planless Guardian link and none while the sleeve lens owns the moment", () => {
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    expect(screen.queryByTestId("guardian-plan-link")).not.toBeInTheDocument();
+  });
+
+  it("a Home compare intent opens the walletless compare and anchors its example context", () => {
+    mockState.financialStrategy = "africapitalism";
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "compare", currencyCode: "NGN", example: true },
+    };
+    try {
+      const { rerender } = render(
+        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+      );
+      expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
+      expect(screen.getByTestId("shield-intent-context")).toHaveTextContent(
+        "From Home’s NGN example",
+      );
+      rerender(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      expect(navState.consumeIntent).toHaveBeenCalledTimes(1);
+      expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+    } finally {
+      mockState.financialStrategy = null;
+      navState.pendingIntent = null;
+    }
+  });
+
+  it("a confirmed Home compare intent names the visitor's own reading, not an example", () => {
+    mockState.financialStrategy = "africapitalism";
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "compare", currencyCode: "NGN" },
+    };
+    try {
+      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      expect(screen.getByTestId("shield-intent-context")).toHaveTextContent(
+        "From your NGN reading",
+      );
+    } finally {
+      mockState.financialStrategy = null;
+      navState.pendingIntent = null;
+    }
+  });
+
+  it("a compare intent with no plan stays in the picker and keeps the context line", () => {
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "compare", currencyCode: "NGN", example: true },
+    };
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-ring")).not.toHaveAttribute("data-comparing", "true");
+    expect(screen.getByTestId("shield-intent-context")).toHaveTextContent(
+      "From Home’s NGN example",
+    );
+    expect(navState.consumeIntent).toHaveBeenCalledTimes(1);
+  });
+
+  it("a plan change exits the intent compare and drops the hand-off context", () => {
+    mockState.financialStrategy = "africapitalism";
+    navState.pendingIntent = {
+      tab: "protect",
+      intent: { source: "home", lens: "compare", currencyCode: "NGN", example: true },
+    };
+    try {
+      const { rerender } = render(
+        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+      );
+      expect(screen.getByTestId("shield-intent-context")).toBeInTheDocument();
+      mockState.financialStrategy = "buen_vivir";
+      rerender(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      expect(screen.getByTestId("shield-ring")).not.toHaveAttribute("data-comparing", "true");
+      expect(screen.queryByTestId("shield-intent-context")).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+      navState.pendingIntent = null;
+    }
   });
 
   it("drops the marketing stack — no hero card, no how-it-works, no scrollytelling card", () => {
@@ -187,7 +329,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
-  it("the hole tap enters compare; a coin previews and 'Use this plan' commits", async () => {
+  it("the hole tap enters compare; a coin previews and 'Use starting mix' commits", async () => {
     mockState.financialStrategy = "africapitalism";
     mockState.setFinancialStrategy.mockClear();
     try {
@@ -576,5 +718,29 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       mockState.financialStrategy = null;
       feedHolder.data = null;
     }
+  });
+});
+
+describe("ProtectionNotConnected — shape-the-mix handoffs", () => {
+  it("'Shape this mix' hands the focused philosophy to the shared editor without committing", () => {
+    mockState.setFinancialStrategy.mockClear();
+    const onShapePlan = vi.fn();
+    render(
+      <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} onShapePlan={onShapePlan} />,
+    );
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    fireEvent.click(screen.getByTestId("walletless-shape"));
+    expect(onShapePlan).toHaveBeenCalledWith("buen_vivir");
+    expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("'Build my mix' opens the standalone editor path from the planless picker", () => {
+    const onShapePlan = vi.fn();
+    render(
+      <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} onShapePlan={onShapePlan} />,
+    );
+    fireEvent.click(screen.getByTestId("build-my-mix"));
+    expect(onShapePlan).toHaveBeenCalledWith(null);
+    expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
   });
 });

@@ -47,6 +47,7 @@ export function useShieldIntent({
     if (pendingIntent?.tab !== "protect") return;
     if (address && !isDemo && isLoading && portfolio?.lastUpdated == null) return;
     const intent = pendingIntent.intent;
+    if (!address && !isDemo && intent.lens === "compare") return;
     let outcome: "compare" | "cycle" | "focused" | "unfocused" | "preview_kept";
     if (intent.lens === "cycle") {
       // Plan-independent: a business user with no plan or allocation still

@@ -68,6 +68,7 @@ interface SwapInterfaceProps {
   preferredToRegion?: string;
   /** Visitor's own currency token (e.g. NGNm) — the default "from". */
   preferredFromSymbol?: string;
+  localCurrencyUnlisted?: boolean;
   chainId?: number | null;
   enableCrossChain?: boolean;
   zapMode?: boolean;
@@ -135,6 +136,7 @@ const SwapInterface = forwardRef<
     preferredFromRegion,
     preferredToRegion,
     preferredFromSymbol,
+    localCurrencyUnlisted = false,
     chainId,
     enableCrossChain = false,
     zapMode = false,
@@ -158,7 +160,7 @@ const SwapInterface = forwardRef<
 ) {
   const { recordSettlement, swapPrefill } = useNavigation();
   const { experienceMode } = useExperience();
-  const { financialStrategy } = useStrategy();
+  const { valuesPhilosophy } = useStrategy();
   const { askAdvisor } = useAdvisor();
   const isFull = experienceMode === "full";
   const isBeginner = !isFull;
@@ -171,6 +173,7 @@ const SwapInterface = forwardRef<
   const {
     fromToken,
     setFromToken,
+    pairChosen,
     toToken,
     setToToken,
     amount,
@@ -385,8 +388,8 @@ const SwapInterface = forwardRef<
     } catch {}
   };
 
-  const stageFromItems = useTokenPickerItems(availableFromTokens, tokenBalances, financialStrategy ?? undefined);
-  const stageToItems = useTokenPickerItems(availableToTokens, tokenBalances, financialStrategy ?? undefined);
+  const stageFromItems = useTokenPickerItems(availableFromTokens, tokenBalances, valuesPhilosophy ?? undefined);
+  const stageToItems = useTokenPickerItems(availableToTokens, tokenBalances, valuesPhilosophy ?? undefined);
 
   const getChainName = (selectedChainId?: number | null) =>
     Object.values(NETWORKS).find((network) => network.chainId === selectedChainId)?.name;
@@ -510,6 +513,12 @@ const SwapInterface = forwardRef<
     },
   }));
 
+  const preferredFromListed = preferredFromSymbol
+    ? availableTokens.find(
+        (t) => t.symbol.toLowerCase() === preferredFromSymbol.toLowerCase(),
+      )?.symbol
+    : undefined;
+
   return (
     // The shell (InstrumentShell) owns the surface — the ticket renders bare
     // inside it (design-language §1: one solid card per tab, owned by the
@@ -556,7 +565,14 @@ const SwapInterface = forwardRef<
               signals={corridorSignals}
               decisionWindow={decisionWindow}
               onExitDecisionWindow={onExitDecisionWindow}
-              ctaLabel="Move savings"
+              examplePair={
+                !pairChosen &&
+                (localCurrencyUnlisted ||
+                  (!address &&
+                    preferredFromListed != null &&
+                    fromToken.toLowerCase() !== preferredFromListed.toLowerCase()))
+              }
+              ctaLabel={address ? "Move savings" : "Explore this move"}
               receipt={receipt}
               onDismissReceipt={() => setReceipt(null)}
               onMoveMore={() => {
@@ -715,7 +731,7 @@ const SwapInterface = forwardRef<
             currentChainId={chainId ?? undefined}
             tokenChainId={fromChainId}
             experienceMode={experienceMode}
-            financialStrategy={financialStrategy ?? undefined}
+            financialStrategy={valuesPhilosophy ?? undefined}
             hasWallet={Boolean(address)}
           />
           </motion.div>
@@ -774,7 +790,7 @@ const SwapInterface = forwardRef<
             currentChainId={chainId ?? undefined}
             tokenChainId={toChainId}
             experienceMode={experienceMode}
-            financialStrategy={financialStrategy ?? undefined}
+            financialStrategy={valuesPhilosophy ?? undefined}
             hasWallet={Boolean(address)}
             receiveAmount={expectedOutput}
           />

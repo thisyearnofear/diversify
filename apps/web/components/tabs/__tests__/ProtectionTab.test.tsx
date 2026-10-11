@@ -33,6 +33,7 @@ const profileState = {
 };
 const mockSetRiskTolerance = vi.fn();
 const mockSetCustomPlan = vi.fn();
+const mockSetMultipleConfig = vi.fn();
 const mockTrackFunnelEvent = vi.fn();
 vi.mock("@/lib/analytics", async (importOriginal) => {
   const mod = await importOriginal() as typeof import("@/lib/analytics");
@@ -44,6 +45,9 @@ vi.mock("@/lib/analytics", async (importOriginal) => {
 });
 vi.mock("@/hooks/use-protection-profile", () => ({
   consumeRetiredPhilosophyNotice: () => false,
+  isNamedPhilosophy: (v: unknown) =>
+    typeof v === "string" &&
+    ["africapitalism", "buen_vivir", "pan_caribbean", "confucian", "gotong_royong", "islamic", "global"].includes(v),
   useProtectionProfile: () => ({
     mode: "view" as const,
     currentStep: 0,
@@ -68,6 +72,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
     setUserGoal: vi.fn(),
     setRiskTolerance: mockSetRiskTolerance,
     setCustomPlan: mockSetCustomPlan,
+    setMultipleConfig: mockSetMultipleConfig,
     setTimeHorizon: vi.fn(),
   }),
   USER_GOALS: [
@@ -461,11 +466,21 @@ vi.mock("@/components/tabs/protect/PhilosophyCoinRail", () => ({
         ),
       ),
     ),
-  FocusedPlanLine: ({ strategyId }: { strategyId: string | null }) =>
+  FocusedPlanLine: ({
+    strategyId,
+    legs,
+  }: {
+    strategyId: string | null;
+    legs?: { label?: string; token: string; percent: number }[];
+  }) =>
     React.createElement(
       "p",
       { "data-testid": "focused-plan-line" },
-      strategyId ?? "none",
+      `${strategyId ?? "none"}${
+        legs?.length
+          ? ` | ${legs.map((l) => `${l.label ?? l.token} ${l.percent}%`).join(", ")}`
+          : ""
+      }`,
     ),
 }));
 
@@ -598,7 +613,7 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
   });
 
-  it("inspects a plan then commits with Use this plan", () => {
+  it("inspects a plan then commits with Use starting mix", () => {
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
@@ -616,10 +631,10 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("protection-calculator")).toBeInTheDocument();
     const sheet = screen.getByTestId("inspector-sheet");
-    expect(within(sheet).getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "Use starting mix" })).toBeInTheDocument();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
 
-    fireEvent.click(within(sheet).getByRole("button", { name: "Use this plan" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "Use starting mix" }));
     expect(mockSetFinancialStrategy).toHaveBeenCalledWith("africapitalism");
   });
 
@@ -1198,7 +1213,7 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByRole("button", { name: "Set up Guardian" })).not.toBeInTheDocument();
   });
 
-  it("a coin tap re-slices the ring in place and 'Use this plan' commits", () => {
+  it("a coin tap re-slices the ring in place and 'Use starting mix' commits", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
@@ -1762,7 +1777,7 @@ describe("ProtectionTab — instrument shapes", () => {
       expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
       expect(
         within(screen.getByTestId("inspector-sheet")).getByRole("button", {
-          name: "Use this plan",
+          name: "Use starting mix",
         }),
       ).toBeInTheDocument();
     } finally {
@@ -1917,7 +1932,9 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     render(<ProtectionTab userRegion="USA" portfolio={withPaxg} />);
     const ring = screen.getByTestId("protection-plan-ring");
     expect(ring).toHaveAttribute("data-sleeve-teaser", "true");
-    expect(document.querySelector('[data-status-slot="rail"]')).toBeNull();
+    expect(
+      document.querySelector('[data-status-slot="rail"]')?.textContent ?? "",
+    ).not.toMatch(/tokenized|sleeve|cycle/i);
     // The wedge's tap arrives as the sleeve selection — the lens opens.
     fireEvent.click(screen.getByTestId("ring-select-sleeve"));
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
@@ -2515,27 +2532,36 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
     expect(sum(legsOf())).toBe(100);
   });
 
-  it("Save plan commits into customPlan and switches to Custom", () => {
+  it("Save plan commits exact targets, keeps named values, and resets the floor", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("custom-tweak"));
+    expect(screen.getByTestId("custom-provenance")).toHaveTextContent("Starting from Africapitalism · you set targets");
+    expect(screen.getByTestId("custom-exact-note")).toHaveTextContent("exact targets");
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
     fireEvent.click(screen.getByTestId("custom-step-up"));
+    expect(screen.getByTestId("custom-slice-delta")).toHaveTextContent("60% → 65%");
     fireEvent.click(screen.getByTestId("custom-save"));
-    expect(mockSetCustomPlan).toHaveBeenCalledWith({
-      from: "africapitalism",
-      rules: {},
-      slices: [
-        { exposure: "KES", target: 65 },
-        { exposure: "USD", target: 20 },
-        { exposure: "EUR", target: 15 },
-      ],
+    expect(mockSetMultipleConfig).toHaveBeenCalledWith({
+      customPlan: {
+        from: "africapitalism",
+        rules: {},
+        slices: [
+          { exposure: "KES", target: 65 },
+          { exposure: "USD", target: 20 },
+          { exposure: "EUR", target: 15 },
+        ],
+      },
+      philosophy: "custom",
+      valuesPhilosophy: "africapitalism",
+      riskTolerance: "Balanced",
     });
-    expect(mockSetFinancialStrategy).toHaveBeenCalledWith("custom");
+    expect(mockSetCustomPlan).not.toHaveBeenCalled();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
     expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
   });
 
-  it("saving a Custom plan never repoints the server Guardian, even with a cached proof", () => {
-    const updateStrategy = vi.fn(() => Promise.resolve());
+  it("saving a Custom plan with a cached proof syncs targets for measured review", () => {
+    const updateStrategy = vi.fn((..._args: unknown[]) => Promise.resolve());
     vaultState.vault = { strategy: "africapitalism" };
     vaultState.updateStrategy = updateStrategy;
     vaultState.cachedProof = { message: "m", signature: "0xsig" };
@@ -2545,13 +2571,31 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
       fireEvent.click(screen.getByTestId("ring-select-kesm"));
       fireEvent.click(screen.getByTestId("custom-step-up"));
       fireEvent.click(screen.getByTestId("custom-save"));
-      expect(mockSetFinancialStrategy).toHaveBeenCalledWith("custom");
-      expect(updateStrategy).not.toHaveBeenCalled();
+      expect(updateStrategy).toHaveBeenCalledWith("0xabc", "africapitalism", expect.objectContaining({
+        slices: expect.any(Array),
+      }));
+      const sent = updateStrategy.mock.calls[0]?.[2] as { slices: { target: number }[] };
+      expect(sent.slices.map((s) => s.target)).toEqual([65, 20, 15]);
     } finally {
       vaultState.vault = null;
       vaultState.updateStrategy = () => Promise.resolve();
       vaultState.cachedProof = null;
     }
+  });
+
+  it("saving a standalone mix keeps no named values", () => {
+    mockFinancialStrategy = null;
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("build-my-mix"));
+    expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("custom-provenance")).toHaveTextContent("Starting from your wallet · you set targets");
+    fireEvent.click(screen.getByTestId("custom-save"));
+    expect(mockSetMultipleConfig).toHaveBeenCalledWith(expect.objectContaining({
+      philosophy: "custom",
+      valuesPhilosophy: null,
+    }));
+    expect(mockSetMultipleConfig.mock.calls[0][0].customPlan.slices.reduce((s: number, x: { target: number }) => s + x.target, 0)).toBe(100);
+    expect(mockSetMultipleConfig.mock.calls[0][0].customPlan.slices.length).toBeGreaterThanOrEqual(2);
   });
 
   it("Cancel leaves the saved plan untouched", () => {
@@ -2560,6 +2604,7 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
     fireEvent.click(screen.getByTestId("custom-cancel"));
     expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
     expect(mockSetCustomPlan).not.toHaveBeenCalled();
+    expect(mockSetMultipleConfig).not.toHaveBeenCalled();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
@@ -2590,5 +2635,68 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
     fireEvent.click(screen.getByTestId("custom-tweak"));
     expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
     expect(legsOf()).toEqual([["cUSD", 50], ["PAXG", 30], ["cEUR", 20]]);
+  });
+});
+
+describe("ProtectionTab — walletless editor round-trips", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = null;
+    profileState.customPlan = null;
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: null,
+      chainId: null,
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("canceling Shape this mix returns to the named preview without committing", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("buen_vivir");
+    fireEvent.click(screen.getByTestId("walletless-shape"));
+    expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("custom-cancel"));
+    expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("buen_vivir");
+    expect(screen.getByTestId("walletless-commit")).toBeInTheDocument();
+    expect(mockSetMultipleConfig).not.toHaveBeenCalled();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("canceling Build my mix returns to the unfocused picker", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("build-my-mix"));
+    expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("custom-cancel"));
+    expect(screen.queryByTestId("shield-custom-editor")).not.toBeInTheDocument();
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("none");
+    expect(mockSetMultipleConfig).not.toHaveBeenCalled();
+  });
+
+  it("a Global-seeded standalone draft is 'Custom · your mix', not 'from your wallet'", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("build-my-mix"));
+    expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();
+    expect(screen.getByTestId("custom-provenance")).toHaveTextContent(
+      "Starting from a global mix · you set targets",
+    );
+  });
+
+  it("the focused line reads the previewed starting mix, not the tagline", () => {
+    render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("coin-africapitalism"));
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("Shilling 60%");
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("Dollar 25%");
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("Real 45%");
   });
 });

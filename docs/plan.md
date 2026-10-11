@@ -253,9 +253,13 @@ copy is approved, with 5 alongside 4.
 Plans become **exposures** (USD, EUR, KES, gold…) with bands, not tickers;
 holdings score by exposure on any chain; the floor is the user's anchor currency;
 the Guardian suggests tilts within bands while code picks the token and chain and
-validates every suggestion. Trigger: customising a philosophy doesn't work today
-(Custom has no legs; the Guardian uses a different target model than the ring) and
-non-Celo recommendations lose their chain. Five PRs — design detail:
+validates every suggestion. Trigger: the plan-vs-philosophy separation is settled —
+a named philosophy supplies an editable starting mix, Custom is a construction
+path (one editor serves connected and walletless Shield; walletless entry seeds
+a valid mix, never an empty commit) —
+but the Guardian reads a different target model than the ring's local mix
+(a separately synced, validated saved vector for measured review, not the
+scheduled loop); and non-Celo recommendations lose their chain. Five PRs — design detail:
 [`internal/exposure-plans.md`](./internal/exposure-plans.md).
 
 1. **Chain-honest execution** — kill the `rebalance.ts` → cEUR coercion, carry
@@ -263,7 +267,11 @@ non-Celo recommendations lose their chain. Five PRs — design detail:
 2. **Exposure registry + scoring.**
 3. **Anchor currency** as the plan floor.
 4. **Guardian tilts** within bands + the scenario suite.
-5. **Custom plan editor** — give Custom real legs or remove it.
+5. **Custom plan persistence + Guardian sync** — shipped: the shared editor,
+   atomic local save, and authenticated saved-vector sync (`On this device` /
+   `Targets synced for measured review`) the measured allocation review
+   consumes. Remaining honesty boundary: the scheduled loop still does not
+   evaluate that vector, so no surface may claim the Guardian follows it.
 
 ## 4 · Chain-capability matrix
 

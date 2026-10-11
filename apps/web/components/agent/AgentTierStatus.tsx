@@ -91,10 +91,10 @@ export function GuardianStatusChip({
   className = '',
 }: GuardianStatusChipProps) {
   const { address, guardianState, copy, isActive, lastActivity } = useGuardianTierSnapshot();
-  const { financialStrategy } = useStrategy();
+  const { valuesPhilosophy } = useStrategy();
   const archetype = useMemo(
-    () => ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'],
-    [financialStrategy],
+    () => ARCHETYPES[strategyToArchetype(valuesPhilosophy) ?? 'custom'],
+    [valuesPhilosophy],
   );
 
   // Sentinel posture from the shared tier state: monitoring protects,

@@ -10,7 +10,7 @@ import { canonicalToken } from "@/lib/plan-legs";
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { resolveAnchorCurrency } from "@/lib/anchor-currency";
 import { buildPlanContext, type PlanContext } from "@/lib/guardian-tilts";
-import { loadAnchorCurrency, loadCustomPlan } from "./use-protection-profile";
+import { loadAnchorCurrency, loadCustomPlan, loadPhilosophy } from "./use-protection-profile";
 import { readPaymentCycleDraft } from "./use-payment-cycle";
 
 // Tiered timeouts (see packages/shared/src/utils/promise-utils jsdoc for the
@@ -31,7 +31,7 @@ function cachedAuthHeaders(address: string | null | undefined): Record<string, s
   };
 }
 import { useToast } from "../components/ui/Toast";
-import { getPersistedStrategy, getStrategyPrompt } from "./useFinancialStrategies";
+import { getStrategyPrompt } from "./useFinancialStrategies";
 import { agentEventBus } from "./agent-event-bus";
 import type {
   AgentAnalysisActions,
@@ -148,7 +148,7 @@ export function useAgentAnalysis({
         );
         updateState({ portfolioAnalysis: localAnalysis });
 
-        const strategy = getPersistedStrategy();
+        const strategy = loadPhilosophy();
         let planContext: PlanContext | undefined;
         if (strategy) {
           // Same risk-adjusted legs the ring draws — drift feedback can't

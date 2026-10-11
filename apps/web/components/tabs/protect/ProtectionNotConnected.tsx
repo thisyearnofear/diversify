@@ -57,6 +57,7 @@ import { motion } from "framer-motion";
 import { LiveLine } from "@/components/shared/LiveLine";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
+import { useNavigation } from "@/context/app/NavigationContext";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -71,6 +72,10 @@ interface Props {
   /** Business morph: the status rail offers the payment-cycle entry
    *  instead of the tokenized-assets link. */
   onOpenCycle?: () => void;
+  onShapePlan?: (from: string | null) => void;
+  /** Remount seed after the shared editor closes without a save — the
+   *  philosophy the visitor was previewing when they opened it. */
+  resumeFocus?: string | null;
 }
 
 export function ProtectionNotConnected({
@@ -82,8 +87,11 @@ export function ProtectionNotConnected({
   onOpenSleeve,
   onCloseSleeve,
   onOpenCycle,
+  onShapePlan,
+  resumeFocus = null,
 }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
+  const { pendingIntent, consumeIntent, navigateToGuardian } = useNavigation();
   const ambient = useAmbientOrigin();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
   // holdings, no loading shimmer. Fresh instance per mount — never a
@@ -130,11 +138,33 @@ export function ProtectionNotConnected({
   // goes compact, the current plan's outline sits behind it, and the
   // coin rail previews philosophies in place. A coin tap previews (it no
   // longer commits instantly); "Use this plan" commits and exits.
-  const [comparing, setComparing] = React.useState(false);
-  const [focusedPhilosophy, setFocusedPhilosophy] = React.useState<string | null>(null);
+  const [comparing, setComparing] = React.useState(resumeFocus != null && showRing);
+  const [focusedPhilosophy, setFocusedPhilosophy] = React.useState<string | null>(resumeFocus);
+  const [intentContext, setIntentContext] = React.useState<{
+    currencyCode: string;
+    example: boolean;
+  } | null>(null);
   React.useEffect(() => {
+    if (pendingIntent?.tab !== "protect" || pendingIntent.intent.lens !== "compare") return;
+    const intent = pendingIntent.intent;
+    setIntentContext(
+      intent.currencyCode
+        ? { currencyCode: intent.currencyCode, example: intent.example === true }
+        : null,
+    );
+    if (showRing) {
+      setComparing(true);
+      setFocusedPhilosophy(null);
+    }
+    consumeIntent();
+  }, [pendingIntent, consumeIntent, showRing]);
+  const prevRingKeyRef = React.useRef(ringKey);
+  React.useEffect(() => {
+    if (prevRingKeyRef.current === ringKey) return;
+    prevRingKeyRef.current = ringKey;
     setComparing(false);
     setFocusedPhilosophy(null);
+    setIntentContext(null);
   }, [ringKey]);
 
   const focusedArchetype = focusedPhilosophy
@@ -192,6 +222,7 @@ export function ProtectionNotConnected({
   const exitCompare = () => {
     setComparing(false);
     setFocusedPhilosophy(null);
+    setIntentContext(null);
     haptics.tap();
   };
   const commitFocusedPlan = () => {
@@ -199,6 +230,7 @@ export function ProtectionNotConnected({
     setFinancialStrategy(focusedPhilosophy as FinancialStrategy);
     setComparing(false);
     setFocusedPhilosophy(null);
+    setIntentContext(null);
     haptics.confirm();
   };
 
@@ -334,6 +366,24 @@ export function ProtectionNotConnected({
           (modes transform, never append). "← Back to plan" restores it. */}
       {(comparing || picking) && !sleeveOpen && (
         <div data-testid="shield-philosophy-rail" className="space-y-2">
+          {intentContext && (
+            <p
+              data-testid="shield-intent-context"
+              className="text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
+            >
+              {intentContext.example
+                ? `From Home’s ${intentContext.currencyCode} example`
+                : `From your ${intentContext.currencyCode} reading`}
+            </p>
+          )}
+          {picking && (
+            <p
+              data-testid="picker-instruction"
+              className="text-center text-xs font-semibold text-gray-600 dark:text-gray-300"
+            >
+              Tap a philosophy coin to preview its plan
+            </p>
+          )}
           {comparing && (
             <button
               type="button"
@@ -353,16 +403,47 @@ export function ProtectionNotConnected({
             }}
             onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
           />
-          <FocusedPlanLine strategyId={focusedPhilosophy ?? ringKey} />
+          <FocusedPlanLine
+            strategyId={focusedPhilosophy ?? ringKey}
+            legs={focusedPhilosophy ? focusedLegs : ringLegs}
+          />
           {focusedPhilosophy && focusedPhilosophy !== ringKey && (
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-2">
               <button
                 type="button"
                 data-testid="walletless-commit"
                 onClick={commitFocusedPlan}
                 className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
               >
-                Use this plan
+                Use starting mix
+              </button>
+              {onShapePlan && (
+                <button
+                  type="button"
+                  data-testid="walletless-shape"
+                  onClick={() => {
+                    onShapePlan(focusedPhilosophy);
+                    haptics.tap();
+                  }}
+                  className="link-quiet shrink-0"
+                >
+                  Shape this mix
+                </button>
+              )}
+            </div>
+          )}
+          {picking && onShapePlan && (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                data-testid="build-my-mix"
+                onClick={() => {
+                  onShapePlan(null);
+                  haptics.tap();
+                }}
+                className="link-quiet shrink-0"
+              >
+                Build my mix
               </button>
             </div>
           )}
@@ -372,7 +453,7 @@ export function ProtectionNotConnected({
       {/* The one CTA — attaches to the object, no card wrapper. While
           comparing, "Use this plan" is the one CTA instead. */}
       {!showRing && !comparing && !balance.isPreviewing && !sleeveOpen && (
-        <WalletButton variant="primary" className="w-full" connectLabel="Connect wallet" />
+        <WalletButton variant="minimal" className="w-full" connectLabel="Connect wallet" />
       )}
     </div>
   );
@@ -416,6 +497,22 @@ export function ProtectionNotConnected({
                 className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
               >
                 What FX timing costs your next payment →
+              </button>
+            ) : showRing && !comparing ? (
+              <button
+                type="button"
+                data-testid="guardian-plan-link"
+                onClick={() => {
+                  navigateToGuardian({
+                    summary: "An example Guardian decision",
+                    prompt: "Show me an example Guardian decision",
+                    example: true,
+                  });
+                  haptics.tap();
+                }}
+                className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+              >
+                See an example Guardian decision →
               </button>
             ) : null}
           </UnconnectedStatusTier>

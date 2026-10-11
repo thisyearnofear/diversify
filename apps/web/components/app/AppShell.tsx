@@ -128,9 +128,9 @@ function AppShellInner() {
   const dockPadding = atXl ? 452 : 372;
 
   // Philosophy accent for the ambient backdrop (static, §5-compliant).
-  const { financialStrategy } = useStrategy();
-  const archetype = ARCHETYPES[strategyToArchetype(financialStrategy) ?? 'custom'];
-  const shellPattern = shieldPatternFor(financialStrategy);
+  const { valuesPhilosophy } = useStrategy();
+  const archetype = ARCHETYPES[strategyToArchetype(valuesPhilosophy) ?? 'custom'];
+  const shellPattern = shieldPatternFor(valuesPhilosophy);
   const shellIdentity = useMemo(
     () => ({
       pattern: shellPattern,

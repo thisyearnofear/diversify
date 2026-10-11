@@ -12,7 +12,9 @@ import React, { useMemo } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { LensCoinSelector } from "@/components/onboarding/LensCoinSelector";
 import { philosophyLenses } from "@/components/protection-cards/philosophy-lenses";
+import type { PlanLeg } from "@/components/protection-cards/plan-preview";
 import { STRATEGIES } from "@/constants/strategies";
+import { displayToken } from "@/lib/plan-legs";
 
 const LENSES = philosophyLenses();
 
@@ -51,13 +53,29 @@ export function PhilosophyCoinRail({
   );
 }
 
-/** "Name — tagline", blur-swapped on change (the GuardianPlanSwitcher pattern). */
-export function FocusedPlanLine({ strategyId }: { strategyId: string | null }) {
+/** "Name — starting mix", blur-swapped on change (the GuardianPlanSwitcher pattern). */
+export function FocusedPlanLine({
+  strategyId,
+  legs,
+}: {
+  strategyId: string | null;
+  /** The resolved legs the ring is previewing — the line's only numbers. */
+  legs?: PlanLeg[];
+}) {
   const reducedMotion = useReducedMotion();
   const strategy = useMemo(
     () => STRATEGIES.find((s) => s.id === strategyId) ?? null,
     [strategyId],
   );
+  const mixLine = useMemo(() => {
+    if (!legs || legs.length === 0) return null;
+    const top = [...legs].sort((a, b) => b.percent - a.percent).slice(0, 2);
+    const head = top
+      .map((leg) => `${leg.label ?? displayToken(leg.token)} ${leg.percent}%`)
+      .join(" · ");
+    const more = legs.length > 2 ? ` · +${legs.length - 2} more` : "";
+    return `${strategyId === "custom" ? "Your mix" : "Starting mix"} · ${head}${more}`;
+  }, [legs, strategyId]);
   return (
     <div className="text-center min-h-[22px]">
       <AnimatePresence mode="wait" initial={false}>
@@ -76,7 +94,7 @@ export function FocusedPlanLine({ strategyId }: { strategyId: string | null }) {
                 {strategy.name}
               </span>
               <span className="block text-sm font-medium text-ink-muted whitespace-normal">
-                {strategy.tagline}
+                {mixLine ?? strategy.tagline}
               </span>
             </>
           ) : (

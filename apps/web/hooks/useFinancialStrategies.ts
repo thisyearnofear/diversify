@@ -11,7 +11,7 @@ import type { FinancialStrategy as SharedFinancialStrategy } from '@diversifi/sh
 // Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
 import { StrategyService } from '@diversifi/shared/src/services/strategy/strategy.service';
 import { STRATEGIES, type Strategy } from '@/constants/strategies';
-import { loadPhilosophy } from './use-protection-profile';
+import { loadValuesPhilosophy } from './use-protection-profile';
 
 /** Single source of truth — re-exported from @diversifi/shared */
 export type FinancialStrategy = SharedFinancialStrategy;
@@ -32,7 +32,7 @@ export function useFinancialStrategies() {
 
 /** Read the persisted strategy without a React hook (for use in API calls) */
 export function getPersistedStrategy(): FinancialStrategy | null {
-    return loadPhilosophy();
+    return loadValuesPhilosophy();
 }
 
 /** Get the full AI prompt for the persisted strategy (tokens + allocations) */

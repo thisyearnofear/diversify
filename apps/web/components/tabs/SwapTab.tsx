@@ -286,6 +286,14 @@ export default function SwapTab({
   const { currencyCode: localCurrencyCode } = useCurrencyRisk();
   const localCurrencyToken =
     localCurrencyCode && localCurrencyCode !== "USD" ? `${localCurrencyCode}m` : undefined;
+  const localCurrencyUnlisted =
+    !address &&
+    !(
+      localCurrencyToken &&
+      tradeableTokens.some(
+        (t) => t.symbol.toLowerCase() === localCurrencyToken.toLowerCase(),
+      )
+    );
 
   // A hand-off that arrived as a swap prefill: the origin rides along so a
   // settled receipt can lead back to the surface that sent the user.
@@ -532,6 +540,7 @@ export default function SwapTab({
             preferredFromRegion={userRegion}
             preferredToRegion={targetRegion ?? undefined}
             preferredFromSymbol={localCurrencyToken}
+            localCurrencyUnlisted={localCurrencyUnlisted}
             title=""
             chainId={walletChainId}
             enableCrossChain={true}

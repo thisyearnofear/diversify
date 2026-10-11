@@ -180,7 +180,43 @@ describe('SwapInterface — pair stage at rest', () => {
     renderSwap({ address: null });
     expect(screen.getByTestId('pair-stage')).toBeInTheDocument();
     expect(screen.queryByLabelText('From amount')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pair-stage-wake')).toHaveTextContent('Explore this move');
+  });
+
+  it('connected: the resting stage keeps the Move savings verb', () => {
+    renderSwap({ address: '0xabc' });
     expect(screen.getByTestId('pair-stage-wake')).toHaveTextContent('Move savings');
+  });
+
+  it('an unlisted local currency marks the resting pair as an example — a chosen pair is never relabeled', () => {
+    renderSwap({ address: null, localCurrencyUnlisted: true });
+    expect(screen.getByTestId('example-pair')).toHaveTextContent('Example pair');
+    cleanup();
+    resetCtrl({ pairChosen: true });
+    renderSwap({ address: null, localCurrencyUnlisted: true });
+    expect(screen.queryByTestId('example-pair')).not.toBeInTheDocument();
+    cleanup();
+    resetCtrl();
+    renderSwap({ address: null, preferredFromSymbol: 'KESm' });
+    expect(screen.queryByTestId('example-pair')).not.toBeInTheDocument();
+  });
+
+  it('a walletless untouched pair that disagrees with a listed local currency is still an example', () => {
+    resetCtrl({ fromToken: 'EURm' });
+    renderSwap({ address: null, preferredFromSymbol: 'NGNm' });
+    expect(screen.getByTestId('example-pair')).toHaveTextContent('Example pair');
+    cleanup();
+    resetCtrl({ fromToken: 'NGNm' });
+    renderSwap({ address: null, preferredFromSymbol: 'NGNm' });
+    expect(screen.queryByTestId('example-pair')).not.toBeInTheDocument();
+    cleanup();
+    resetCtrl({ fromToken: 'EURm', pairChosen: true });
+    renderSwap({ address: null, preferredFromSymbol: 'NGNm' });
+    expect(screen.queryByTestId('example-pair')).not.toBeInTheDocument();
+    cleanup();
+    resetCtrl({ fromToken: 'EURm' });
+    renderSwap({ address: '0xabc', preferredFromSymbol: 'NGNm' });
+    expect(screen.queryByTestId('example-pair')).not.toBeInTheDocument();
   });
 
   it('the CTA wakes the ticket and remembers it for the session', () => {

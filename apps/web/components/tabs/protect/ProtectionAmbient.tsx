@@ -126,9 +126,9 @@ interface Props {
 }
 
 export function ProtectionAmbient({ children }: Props) {
-  const { financialStrategy } = useStrategy();
-  const archetypeId = financialStrategy
-    ? strategyToArchetype(financialStrategy)
+  const { valuesPhilosophy } = useStrategy();
+  const archetypeId = valuesPhilosophy
+    ? strategyToArchetype(valuesPhilosophy)
     : null;
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 

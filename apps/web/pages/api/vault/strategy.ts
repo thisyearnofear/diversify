@@ -41,6 +41,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!strategy || !VALID_STRATEGIES.includes(strategy)) {
     return res.status(400).json({ error: `Invalid strategy. Must be one of: ${VALID_STRATEGIES.join(', ')}` });
   }
+  if (strategy === 'custom' && !allocationPlan) {
+    return res.status(400).json({ error: 'Custom strategies require committed allocation targets' });
+  }
 
   try {
     await dbConnect();

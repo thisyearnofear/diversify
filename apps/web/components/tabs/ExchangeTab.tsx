@@ -367,7 +367,7 @@ export default function ExchangeTab({
   const { demoMode, enableDemoMode, disableDemoMode } = useDemoMode();
   const router = useRouter();
   const { setSwapPrefill, swapPrefill, pendingIntent, consumeIntent } = useNavigation();
-  const { financialStrategy } = useStrategy();
+  const { valuesPhilosophy } = useStrategy();
   const { config } = useProtectionProfile();
   const sharedPortfolio = usePortfolio();
   const previousAddress = useRef(address);
@@ -432,7 +432,7 @@ export default function ExchangeTab({
   // exchange. The ticket remains the object underneath; a swap prefill
   // always wins.
   const nettingPersona =
-    (financialStrategy === "pan_caribbean" || config.moneyPurpose === "upcoming_payment") &&
+    (valuesPhilosophy === "pan_caribbean" || config.moneyPurpose === "upcoming_payment") &&
     !swapPrefill;
   const personaOpenedRef = useRef(false);
   useEffect(() => {
@@ -555,7 +555,7 @@ export default function ExchangeTab({
               selection={inspectorSel}
               userRegion={userRegion}
               onClose={() => setInspectorSel(null)}
-              lead={leadForStrategy(financialStrategy)}
+              lead={leadForStrategy(valuesPhilosophy)}
               journey={capitalHistory.data}
               journeyReadOnly={Boolean(lookupAddress)}
               onStampWatch={(f, t) =>
@@ -659,7 +659,7 @@ export default function ExchangeTab({
             selection={inspectorSel}
             userRegion={userRegion}
             onClose={() => setInspectorSel(null)}
-            lead={leadForStrategy(financialStrategy)}
+            lead={leadForStrategy(valuesPhilosophy)}
             journey={capitalHistory.data}
             onStampWatch={(f, t) =>
               setInspectorSel({ kind: "stamps", fromToken: f, toToken: t })

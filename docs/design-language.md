@@ -529,8 +529,8 @@ A tab change that fails any of these is the old stack. Do not ship it.
    `AssetModal`, `RwaAssetCards`, `DisclosureSection` (and before them
    `BestYieldCard`, `SavingsLoopCard`) — is deleted. The Guardian card
    stack joined it: the `AgentTierStatus` component, `GuardianWDKStatus`,
-   the four-step `GuardianMobileWizard` (a second grant path — now the
-   change-only `GuardianPlanSwitcher`), `GuardianMarquee`,
+   the four-step `GuardianMobileWizard` (a second grant path — plan edits
+   route back to Shield's ring, not a Guardian-side switcher), `GuardianMarquee`,
    `GuardianProofTab`, `ActivityFeed`, `AdvisorMetrics`. "Total Savings"
    was retired with them — it summed projected `expectedSavings` as if
    they were realized money. Tokenized-asset (RWA) identity lives in
@@ -546,6 +546,19 @@ A tab change that fails any of these is the old stack. Do not ship it.
    competes for the transition slot by priority — it never stacks. All
    four tabs route their connected status through it (walletless keeps
    `UnconnectedStatusTier`); tests assert ≤3 slots on every tab.
+
+**The plan ring is a live constructor, not a picker.** Shield's flow is
+preview → adjust → commit, walletless throughout: a philosophy coin
+previews that philosophy's *starting mix* on the ring, editing reshapes it
+in place, and the commit writes the user's own exposure plan — explicit
+legs and weights, with the risk-floor dial as one way to shape them. The
+mix's origin and trade-off read at L0/L1 or in the inspector — never a
+feature card. Each state carries one CTA, and the two construction verbs
+("Use starting mix" → commit the previewed mix; "Shape this mix" → open
+the editor) are state transitions, never simultaneous competing primaries.
+Custom is an editor entry — not an eighth philosophy coin — and entering it
+seeds the editor from a named plan or existing holdings (a valid editable
+mix), never an empty canvas.
 
 **Lenses.** A lens is a state of the tab's existing object — same
 primitives, no new card — entered only through the transition slot and

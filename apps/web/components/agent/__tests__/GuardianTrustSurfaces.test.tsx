@@ -69,7 +69,7 @@ function boundsSheet(over: Partial<Parameters<typeof GuardianBoundsSheet>[0]> = 
     onRevoke: vi.fn(),
     onSetLimit: vi.fn(),
     vault: { vault: { strategy: "africapitalism" } } as never,
-    onChangeStrategy: vi.fn(),
+    onEditPlanInShield: vi.fn(),
     walletStableBalanceUSD: 40,
     isOnGrantEligibleChain: true,
     grantAvailable: true,
@@ -204,7 +204,7 @@ describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
       onRevoke: vi.fn(),
       onSetLimit: vi.fn(),
       vault: { vault: { strategy: "africapitalism" } } as never,
-      onChangeStrategy: vi.fn(),
+      onEditPlanInShield: vi.fn(),
       walletStableBalanceUSD: 40,
       isOnGrantEligibleChain: true,
       grantAvailable: true,
@@ -244,29 +244,90 @@ describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
     expect(screen.getByText(/Waiting for funds/)).toBeInTheDocument();
   });
 
-  it("plan drift: when Shield's plan differs, the sheet says so and offers one-tap Follow", () => {
+  it("plan drift: unsynced targets offer an explicit sync for measured review", () => {
     const onFollowShieldPlan = vi.fn();
-    boundsSheet({ shieldPlan: "buen_vivir", shieldPlanName: "Buen Vivir", onFollowShieldPlan });
-    expect(screen.getByTestId("guardian-plan-mismatch")).toHaveTextContent("Your Shield plan is Buen Vivir");
-    fireEvent.click(screen.getByRole("button", { name: "Follow Buen Vivir" }));
+    boundsSheet({ planSyncNeeded: true, shieldPlanName: "Buen Vivir", onFollowShieldPlan });
+    expect(screen.getByTestId("guardian-plan-unsynced")).toHaveTextContent("On this device — Shield plan: Buen Vivir");
+    fireEvent.click(screen.getByRole("button", { name: "Sync targets for measured review" }));
     expect(onFollowShieldPlan).toHaveBeenCalledTimes(1);
   });
 
-  it("a local Custom plan never offers Follow — Guardian keeps its server plan", () => {
+  it("a connected wallet with no server plan still gets the explicit sync", () => {
     const onFollowShieldPlan = vi.fn();
-    boundsSheet({ shieldPlan: "custom", shieldPlanName: "Custom", onFollowShieldPlan });
-    expect(screen.getByTestId("guardian-plan-custom-local")).toHaveTextContent(
-      "Guardian keeps following Africapitalism — Custom plans live on this device.",
-    );
-    expect(screen.queryByRole("button", { name: /^Follow/ })).not.toBeInTheDocument();
-    expect(screen.queryByTestId("guardian-plan-mismatch")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Change plan" })).toBeInTheDocument();
-    expect(onFollowShieldPlan).not.toHaveBeenCalled();
+    boundsSheet({
+      vault: { vault: null } as never,
+      planSyncNeeded: true,
+      shieldPlanName: "Buen Vivir",
+      onFollowShieldPlan,
+    });
+    expect(screen.getByText("None synced")).toBeInTheDocument();
+    expect(screen.getByTestId("guardian-plan-unsynced")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Sync targets for measured review" }));
+    expect(onFollowShieldPlan).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /plan in Shield/ })).not.toBeInTheDocument();
   });
 
-  it("no drift: no mismatch line, Change plan stays", () => {
-    boundsSheet({ shieldPlan: "africapitalism", shieldPlanName: "Africapitalism" });
-    expect(screen.queryByTestId("guardian-plan-mismatch")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Change plan" })).toBeInTheDocument();
+  it("a failed sync surfaces the vault error, not a synced claim", () => {
+    boundsSheet({
+      vault: { vault: { strategy: "africapitalism" }, error: "Failed to update strategy" } as never,
+      planSyncNeeded: true,
+      onFollowShieldPlan: vi.fn(),
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Failed to update strategy");
+    expect(screen.getByTestId("guardian-plan-unsynced")).toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-plan-synced")).not.toBeInTheDocument();
+  });
+
+  it("a synced plan says targets are synced for measured review, never followed", () => {
+    boundsSheet({ planSynced: true, shieldPlan: "africapitalism" });
+    expect(screen.getByTestId("guardian-plan-synced")).toHaveTextContent("Targets synced for measured review");
+    expect(screen.queryByRole("button", { name: /Sync targets/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Edit plan in Shield" })).toBeInTheDocument();
+  });
+
+  it("a synced custom mix is labeled by its own mix and values, not the named id", () => {
+    boundsSheet({ planSynced: true, shieldPlan: "custom", valuesPlanName: "Buen Vivir" });
+    expect(screen.getByText("Custom mix · Buen Vivir values")).toBeInTheDocument();
+    cleanup();
+    boundsSheet({ planSynced: true, shieldPlan: "custom" });
+    expect(screen.getByText("Custom mix")).toBeInTheDocument();
+    expect(screen.queryByText("africapitalism")).not.toBeInTheDocument();
+  });
+
+  it("an unsynced custom keeps the server plan name and a separate on-device line", () => {
+    boundsSheet({
+      planSyncNeeded: true,
+      shieldPlan: "custom",
+      shieldPlanName: "Custom",
+      onFollowShieldPlan: vi.fn(),
+    });
+    expect(screen.getByText("africapitalism")).toBeInTheDocument();
+    expect(screen.getByTestId("guardian-plan-unsynced")).toHaveTextContent(
+      "On this device — Shield plan: Custom",
+    );
+    expect(screen.queryByText(/Custom mix/)).not.toBeInTheDocument();
+  });
+
+  it("no drift and no sync state: the edit routes back to Shield", () => {
+    const props = boundsSheet({ shieldPlan: "africapitalism" });
+    expect(screen.queryByTestId("guardian-plan-unsynced")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-plan-synced")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Edit plan in Shield" }));
+    expect(props.onEditPlanInShield).toHaveBeenCalledTimes(1);
+  });
+
+  it("a true blank state — no vault, no local plan — still offers the Shield door", () => {
+    const props = boundsSheet({ vault: { vault: null } as never });
+    expect(screen.getByText("None synced")).toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-plan-unsynced")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-plan-synced")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Choose a plan in Shield" }));
+    expect(props.onEditPlanInShield).toHaveBeenCalledTimes(1);
+  });
+
+  it("no local plan offers 'Choose a plan in Shield' instead", () => {
+    boundsSheet({});
+    expect(screen.getByRole("button", { name: "Choose a plan in Shield" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Change plan|Use this plan/ })).not.toBeInTheDocument();
   });
 });

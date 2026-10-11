@@ -16,7 +16,7 @@ import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useBalanceVisibility } from "@/context/app/BalanceVisibilityContext";
-import { useProtectionProfile, consumeRetiredPhilosophyNotice } from "@/hooks/use-protection-profile";
+import { useProtectionProfile, consumeRetiredPhilosophyNotice, isNamedPhilosophy } from "@/hooks/use-protection-profile";
 import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { useLatestAdvice } from "@/hooks/use-agent-analysis";
 import { applyTilt, tiltLabel } from "@/lib/guardian-tilts";
@@ -30,6 +30,7 @@ import {
   sliceIndexForLeg,
   stepSlice,
 } from "@/lib/custom-plan";
+import { guardianPlanForShield, sameGuardianPlan } from "@/lib/plan-sync";
 import { useAdvisor } from "@/hooks/use-advisor";
 import { useFinancialStrategies, STRATEGIES } from "@/hooks/useFinancialStrategies";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -137,7 +138,7 @@ export default function ProtectionTab({
   });
 
   const { totalValue, chains } = activePortfolio;
-  const { config, currentGoalLabel, setRiskTolerance, setCustomPlan } = useProtectionProfile();
+  const { config, currentGoalLabel, setRiskTolerance, setMultipleConfig } = useProtectionProfile();
   const { anchorCurrency } = useAnchorCurrency(activePortfolio);
   const { riskData } = useCurrencyRisk();
   const { selectedStrategy, getStrategyById } = useFinancialStrategies();
@@ -294,6 +295,10 @@ export default function ProtectionTab({
   const [tiltPreview, setTiltPreview] = useState(false);
   // Custom plan being edited on the ring (not saved until "Save plan").
   const [customDraft, setCustomDraft] = useState<CustomPlan | null>(null);
+  const [customSeed, setCustomSeed] = useState<CustomPlan | null>(null);
+  const [customSeedLabel, setCustomSeedLabel] = useState<string | null>(null);
+  const [customSeededFromWallet, setCustomSeededFromWallet] = useState(false);
+  const [shapeResume, setShapeResume] = useState<string | null>(null);
   const [addingSlice, setAddingSlice] = useState(false);
   const walletHoldings = useMemo(
     () =>
@@ -322,7 +327,9 @@ export default function ProtectionTab({
     if (allocations.length > 0) return allocations;
     return resolvePlan({ customPlan: config.customPlan, strategy: config.philosophy, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
   }, [allocations, config.philosophy, config.riskTolerance, anchorCurrency, config.customPlan]);
-  const sleevePhilosophy = strategyKey ?? config.philosophy ?? null;
+  const sleevePhilosophy = isNamedPhilosophy(strategyKey)
+    ? strategyKey
+    : config.valuesPhilosophy ?? null;
   const planPctBySymbol = useMemo(
     () => Object.fromEntries(sleeveLegs.map((l) => [l.token, l.percent])),
     [sleeveLegs],
@@ -382,12 +389,18 @@ export default function ProtectionTab({
       // Custom never starts empty: with no saved plan it opens the editor
       // on the wallet's current exposures.
       if (strategyId === "custom" && !config.customPlan) {
-        const global = resolvePlan({ strategy: "global" });
+        const global = resolvePlan({ strategy: "global", anchorCurrency });
         setComparing(false);
         setFocusedPhilosophy(null);
         setPhilosophyDetailsOpen(false);
         setAddingSlice(false);
-        setCustomDraft(customFromHoldings(walletHoldings) ?? customFromLegs(global.legs, global.rules, "global"));
+        const draft = customFromHoldings(walletHoldings);
+        setCustomSeededFromWallet(Boolean(draft));
+        setCustomSeed(draft ?? customFromLegs(global.legs, {}, null));
+        setCustomSeedLabel(
+          `Starting from ${draft ? "your wallet" : "a global mix"} · you set targets`,
+        );
+        setCustomDraft(draft ?? customFromLegs(global.legs, {}, null));
         return;
       }
       if (strategyId === focusedPhilosophy) {
@@ -401,7 +414,7 @@ export default function ProtectionTab({
         source: hasPlan ? "shield_compare" : "shield_picker",
       });
     },
-    [focusedPhilosophy, hasPlan, config.customPlan, walletHoldings],
+    [focusedPhilosophy, hasPlan, config.customPlan, walletHoldings, anchorCurrency],
   );
   // While comparing, a slice tap only reads the previewed plan's leg —
   // the inspector stays on the philosophy, not the token.
@@ -778,11 +791,21 @@ export default function ProtectionTab({
     }
   }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy, followOnGuardian, isDemo, setDemoStrategy]);
 
-  // "Tweak this plan": a philosophy's (unshifted) plan becomes a Custom draft.
+  // "Shape this mix": the plan the ring actually shows (risk-adjusted,
+  // anchored legs) becomes a Custom draft; null seeds a standalone Global
+  // baseline with no named values.
   const startTweak = useCallback(
     (from: string | null) => {
-      if (!from) return;
-      const base = resolvePlan({ strategy: from, customPlan: config.customPlan });
+      const base = resolvePlan(
+        from
+          ? {
+              strategy: from,
+              customPlan: config.customPlan,
+              riskTolerance: config.riskTolerance,
+              anchorCurrency,
+            }
+          : { strategy: "global", anchorCurrency },
+      );
       if (base.legs.length === 0) return;
       setFocusedToken(null);
       setComparing(false);
@@ -791,14 +814,25 @@ export default function ProtectionTab({
       setTiltPreview(false);
       if (balance.isPreviewing) balance.cancel();
       setAddingSlice(false);
-      setCustomDraft(
-        from === "custom" && config.customPlan
-          ? config.customPlan
-          : customFromLegs(base.legs, base.rules, from),
+      const holdingsDraft = !from ? customFromHoldings(walletHoldings) : null;
+      const draft =
+        holdingsDraft ??
+        customFromLegs(
+          base.legs,
+          from ? base.rules : {},
+          from ? (from === "custom" ? config.customPlan?.from ?? null : from) : null,
+        );
+      setCustomSeed(draft);
+      setCustomSeededFromWallet(Boolean(holdingsDraft));
+      setCustomSeedLabel(
+        draft.from && STRATEGIES.some((s) => s.id === draft.from)
+          ? `Starting from ${STRATEGIES.find((s) => s.id === draft.from)?.name} · you set targets`
+          : `Starting from ${holdingsDraft ? "your wallet" : from === "custom" ? "your saved mix" : "a global mix"} · you set targets`,
       );
+      setCustomDraft(draft);
       haptics.tap();
     },
-    [config.customPlan, balance],
+    [config.customPlan, config.riskTolerance, anchorCurrency, balance, walletHoldings],
   );
   const draftPlan = useMemo(
     () => (customDraft ? resolvePlan({ strategy: "custom", customPlan: customDraft, anchorCurrency }) : null),
@@ -810,6 +844,9 @@ export default function ProtectionTab({
   );
   const cancelCustom = useCallback(() => {
     setCustomDraft(null);
+    setCustomSeed(null);
+    setCustomSeedLabel(null);
+    setCustomSeededFromWallet(false);
     setAddingSlice(false);
     setFocusedToken(null);
     haptics.tap();
@@ -820,14 +857,67 @@ export default function ProtectionTab({
       showToast("Sample only. Exit sample mode to save a custom plan.", "info");
       return;
     }
-    setCustomPlan(customDraft);
-    setFinancialStrategy("custom");
+    const valuesPhilosophy = isNamedPhilosophy(customDraft.from) ? customDraft.from : null;
+    setMultipleConfig({
+      customPlan: customDraft,
+      philosophy: "custom",
+      valuesPhilosophy,
+      riskTolerance: "Balanced",
+    });
     setCustomDraft(null);
+    setCustomSeed(null);
+    setCustomSeedLabel(null);
+    setCustomSeededFromWallet(false);
+    setShapeResume(null);
     setAddingSlice(false);
     setFocusedToken(null);
     haptics.confirm();
     showToast("Custom plan saved. Your holdings have not moved.", "success");
-  }, [customDraft, setCustomPlan, setFinancialStrategy, showToast, isDemo]);
+    if (address && getCachedWalletAuth(address)) {
+      const target = guardianPlanForShield({
+        planId: "custom",
+        valuesPhilosophy,
+        customPlan: customDraft,
+        riskTolerance: "Balanced",
+        anchorCurrency,
+      });
+      if (target) {
+        void vault.updateStrategy(address, target.strategy, target.allocationPlan).then((saved) => {
+          if (!saved) showToast('Plan saved on this device. Guardian targets could not be synced; use Limits & controls in Guardian.', 'warning');
+        }).catch(() => showToast('Guardian targets could not be synced.', 'warning'));
+      }
+    }
+  }, [customDraft, setMultipleConfig, showToast, isDemo, address, vault, anchorCurrency]);
+
+  // The walletless picker remounts when the shared editor closes — its
+  // useState initializer has already captured resumeFocus by then.
+  useEffect(() => {
+    if (!customDraft && shapeResume !== null) setShapeResume(null);
+  }, [customDraft, shapeResume]);
+
+  const guardianTarget = useMemo(
+    () =>
+      guardianPlanForShield({
+        planId: strategyKey,
+        valuesPhilosophy: config.valuesPhilosophy ?? null,
+        customPlan: config.customPlan,
+        riskTolerance: config.riskTolerance,
+        anchorCurrency,
+      }),
+    [strategyKey, config.valuesPhilosophy, config.customPlan, config.riskTolerance, anchorCurrency],
+  );
+  const guardianSynced = sameGuardianPlan(vault.vault, guardianTarget);
+  const [planSyncing, setPlanSyncing] = useState(false);
+  const syncPlanToGuardian = useCallback(() => {
+    if (!address || !guardianTarget || planSyncing) return;
+    setPlanSyncing(true);
+    void vault.updateStrategy(address, guardianTarget.strategy, guardianTarget.allocationPlan)
+      .then((saved) => {
+        if (!saved) showToast("Guardian targets could not be synced.", "warning");
+      })
+      .catch(() => showToast("Guardian targets could not be synced.", "warning"))
+      .finally(() => setPlanSyncing(false));
+  }, [address, guardianTarget, planSyncing, vault, showToast]);
 
   // Privacy switch — every dollar figure (gap CTA, slice inspector) renders
   // through formatMoney so the eye toggle masks it.
@@ -870,9 +960,11 @@ export default function ProtectionTab({
     haptics.tap();
   };
   const customName = customDraft
-    ? `Custom · from ${
-        customDraft.from ? STRATEGIES.find((s) => s.id === customDraft.from)?.name ?? "a plan" : "your wallet"
-      }`
+    ? customDraft.from
+      ? `Custom · from ${STRATEGIES.find((s) => s.id === customDraft.from)?.name ?? "a plan"}`
+      : customSeededFromWallet
+        ? "Custom · from your wallet"
+        : "Custom · your mix"
     : "";
   // "Tweak this plan" is subordinate to the commit CTA it sits beside, so it
   // wears the quiet link register rather than a third CTA hue (it was violet,
@@ -885,7 +977,7 @@ export default function ProtectionTab({
         onClick={() => startTweak(from)}
         className="link-quiet shrink-0"
       >
-        {from === "custom" ? "Edit custom plan" : "Tweak this plan"}
+        {from === "custom" ? "Edit custom plan" : "Shape this mix"}
       </button>
     ) : null;
 
@@ -911,8 +1003,16 @@ export default function ProtectionTab({
         floor={draftPlan.floor}
         controls={
           <div className="mt-3 space-y-2" data-testid="custom-plan-controls">
+            {customSeedLabel ? (
+              <p
+                data-testid="custom-provenance"
+                className="text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
+              >
+                {customSeedLabel}
+              </p>
+            ) : null}
             {draftLeg && draftSlice ? (
-              <div className="flex items-center justify-center gap-3" data-testid="custom-slice-stepper">
+              <div className="flex flex-wrap items-center justify-center gap-3" data-testid="custom-slice-stepper">
                 <button
                   type="button"
                   data-testid="custom-step-down"
@@ -936,6 +1036,32 @@ export default function ProtectionTab({
                 >
                   +{CUSTOM_STEP}
                 </button>
+                {(() => {
+                  const seedSlice = customSeed?.slices.find(
+                    (s) => s.exposure === draftSlice.exposure && (s.prefer ?? null) === (draftSlice.prefer ?? null),
+                  );
+                  const delta = !seedSlice
+                    ? "new slice"
+                    : seedSlice.target !== draftSlice.target
+                      ? `${seedSlice.target}% → ${draftSlice.target}%`
+                      : null;
+                  return delta ? (
+                    <span
+                      data-testid="custom-slice-delta"
+                      className="text-2xs font-semibold text-gray-500 dark:text-gray-400 tabular-nums"
+                    >
+                      {delta}
+                    </span>
+                  ) : null;
+                })()}
+                {draftLeg.why ? (
+                  <p
+                    data-testid="custom-slice-why"
+                    className="basis-full text-center text-2xs text-gray-500 dark:text-gray-400"
+                  >
+                    {draftLeg.why}
+                  </p>
+                ) : null}
               </div>
             ) : addingSlice ? (
               <div className="flex flex-wrap justify-center gap-1.5" data-testid="custom-add-options">
@@ -966,6 +1092,12 @@ export default function ProtectionTab({
                 + Add
               </button>
             ) : null}
+            <p
+              data-testid="custom-exact-note"
+              className="text-center text-2xs text-gray-500 dark:text-gray-400"
+            >
+              Saves as exact targets — the floor dial resets to Balanced.
+            </p>
             <div className="flex justify-center gap-2">
               <button
                 type="button"
@@ -1022,7 +1154,10 @@ export default function ProtectionTab({
             onSelect={handlePhilosophySelect}
             onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
           />
-          <FocusedPlanLine strategyId={focusedPhilosophy} />
+          <FocusedPlanLine
+            strategyId={focusedPhilosophy}
+            legs={focusedPhilosophy ? previewAllocations : undefined}
+          />
           {focusedPhilosophy && !philosophyDetailsOpen && (
             <div className="mt-1 flex justify-center gap-2">
               <button
@@ -1031,9 +1166,21 @@ export default function ProtectionTab({
                 onClick={commitFocusedPlan}
                 className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
               >
-                Use this plan
+                Use starting mix
               </button>
               {tweakButton(focusedPhilosophy, "picker-tweak")}
+            </div>
+          )}
+          {!isDemo && (
+            <div className="mt-1 flex justify-center">
+              <button
+                type="button"
+                data-testid="build-my-mix"
+                onClick={() => startTweak(null)}
+                className="link-quiet shrink-0"
+              >
+                Build my mix
+              </button>
             </div>
           )}
         </div>
@@ -1251,7 +1398,10 @@ export default function ProtectionTab({
                   onSelect={handlePhilosophySelect}
                   onTapPoint={(x, y) => ambient?.reportTapOrigin(x, y)}
                 />
-                <FocusedPlanLine strategyId={focusedPhilosophy ?? strategyKey} />
+                <FocusedPlanLine
+                  strategyId={focusedPhilosophy ?? strategyKey}
+                  legs={previewAllocations}
+                />
                 <div className="flex justify-center gap-2">
                   {focusedPhilosophy && focusedPhilosophy !== strategyKey && !philosophyDetailsOpen && !focusedToken && (
                     <button
@@ -1260,7 +1410,7 @@ export default function ProtectionTab({
                       onClick={commitFocusedPlan}
                       className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
                     >
-                      Use this plan
+                      Use starting mix
                     </button>
                   )}
                   {tweakButton(focusedPhilosophy ?? strategyKey, "compare-tweak")}
@@ -1417,6 +1567,11 @@ export default function ProtectionTab({
       cycleOpen={cycleOpen}
       onOpenCycle={() => openCycle("next")}
       sinceHint={alignmentSinceHint ?? undefined}
+      planSync={
+        address && guardianTarget && !isDemo
+          ? { synced: guardianSynced, syncing: planSyncing, onSync: syncPlanToGuardian }
+          : null
+      }
     />
   );
 
@@ -1429,6 +1584,10 @@ export default function ProtectionTab({
         status={isDemo ? <p className="text-xs text-ink-muted">Sample mode · no monitoring or execution</p> : undefined}
       />
     );
+  }
+
+  if (customDraft && draftPlan) {
+    return <InstrumentShell object={customEditor} />;
   }
 
   if (!address && !isDemo) {
@@ -1445,6 +1604,11 @@ export default function ProtectionTab({
         onOpenSleeve={() => setFocusedToken(SLEEVE_ID)}
         onCloseSleeve={() => setFocusedToken(null)}
         onOpenCycle={businessMorph ? () => openCycle("next") : undefined}
+        onShapePlan={(from) => {
+          setShapeResume(from);
+          startTweak(from);
+        }}
+        resumeFocus={shapeResume}
       />
     );
   }
