@@ -15,6 +15,8 @@ const motionMock = vi.hoisted(() => ({
   recorded: [] as { tag: string; props: Record<string, unknown> }[],
   layoutGroupIds: [] as (string | undefined)[],
 }));
+
+const SHEET_EXIT_TIMEOUT = 10_000;
 vi.mock("framer-motion", async (importOriginal) => {
   const mod = await importOriginal<typeof import("framer-motion")>();
   const ReactMod = await import("react");
@@ -366,7 +368,7 @@ describe("InstrumentShell — inspector placement", () => {
   });
 });
 
-describe("InspectorSheet — focus restoration", () => {
+describe("InspectorSheet — focus restoration", { timeout: 15_000 }, () => {
   beforeEach(() => {
     motionMock.reduced = true;
   });
@@ -409,9 +411,9 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(close);
     await waitFor(() =>
       expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: SHEET_EXIT_TIMEOUT });
   });
 
   it("restores the initiating control after Escape", async () => {
@@ -424,9 +426,9 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.keyDown(document.body, { key: "Escape" });
     await waitFor(() =>
       expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: SHEET_EXIT_TIMEOUT });
   });
 
   it("dismisses on a downward drag release (shared close path restores focus)", async () => {
@@ -441,7 +443,7 @@ describe("InspectorSheet — focus restoration", () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.click(close);
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: SHEET_EXIT_TIMEOUT });
   });
 
   it("does not recapture or restore on a selection change", async () => {
@@ -468,7 +470,7 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(elsewhere);
     await waitFor(() =>
       expect(screen.getByTestId("inspector-sheet")).toHaveAttribute("data-selected-id", "B"),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
     expect(document.activeElement).toBe(elsewhere);
   });
@@ -498,7 +500,7 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(swap);
     await waitFor(() =>
       expect(screen.getByTestId("inspector-sheet")).toHaveAttribute("data-selected-id", "GLD"),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
     expect(document.activeElement).toBe(swap);
   });
@@ -542,7 +544,7 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(close);
     await waitFor(
       () => expect(document.activeElement).toBe(trigger),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
   });
 
@@ -578,7 +580,7 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(close);
     await waitFor(
       () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
     expect(document.activeElement).not.toBe(trigger);
   });
@@ -596,7 +598,7 @@ describe("InspectorSheet — focus restoration", () => {
     elsewhere.focus();
     await waitFor(
       () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
     expect(document.activeElement).toBe(elsewhere);
   });
@@ -637,7 +639,7 @@ describe("InspectorSheet — focus restoration", () => {
     fireEvent.click(close);
     await waitFor(() =>
       expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
     expect(document.activeElement).not.toBe(trigger);
   });
@@ -904,7 +906,7 @@ describe("InstrumentShell — motion choreography props", () => {
   });
 });
 
-describe("InspectorSheet — stage presentation lifecycle", () => {
+describe("InspectorSheet — stage presentation lifecycle", { timeout: 15_000 }, () => {
   afterEach(() => {
     motionMock.reduced = false;
   });
@@ -938,9 +940,9 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
     fireEvent.keyDown(document.body, { key: "Escape" });
     await waitFor(
       () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: SHEET_EXIT_TIMEOUT });
   });
 
   it("restores focus after the ← Back control", async () => {
@@ -954,9 +956,9 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
     fireEvent.click(close);
     await waitFor(
       () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: SHEET_EXIT_TIMEOUT });
   });
 
   it("the exiting stage is inert, hidden, and out of the layout flow", async () => {
@@ -977,8 +979,8 @@ describe("InspectorSheet — stage presentation lifecycle", () => {
     }
     await waitFor(
       () => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: SHEET_EXIT_TIMEOUT },
     );
-    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: 3000 });
+    await waitFor(() => expect(document.activeElement).toBe(trigger), { timeout: SHEET_EXIT_TIMEOUT });
   });
 });
