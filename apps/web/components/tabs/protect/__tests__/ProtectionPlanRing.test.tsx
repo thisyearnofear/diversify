@@ -515,6 +515,72 @@ describe('ProtectionPlanRing — tokenized-asset lens', () => {
   });
 });
 
+describe('ProtectionPlanRing — teaser wedges', () => {
+  const emptyPortfolio = {
+    ...DEMO_PORTFOLIO,
+    totalValue: 0,
+    tokens: [],
+    chains: [],
+  } as unknown as MultichainPortfolio;
+
+  it('the Guardian suggestion is a ghost wedge on the object, not a chip', () => {
+    const onSelect = vi.fn();
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={emptyPortfolio}
+        selectedToken={null}
+        onSelectToken={onSelect}
+        suggestionTeaser="Guardian suggests +5 Euro"
+      />,
+    );
+    const wedge = screen.getByRole('button', { name: /Guardian suggests \+5 Euro/ });
+    fireEvent.click(wedge);
+    expect(onSelect).toHaveBeenCalledWith('guardian-tilt');
+  });
+
+  it('suggestion and sleeve wedges coexist — two doors, both unpoured metal', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={emptyPortfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        sleeveTeaser
+        suggestionTeaser="Guardian suggests +5 Euro"
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Guardian suggests \+5 Euro/ })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Tokenized assets — tap to look inside/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('no suggestion wedge without advice — and none while the lens is open', () => {
+    const { rerender } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={emptyPortfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Guardian suggests/ })).not.toBeInTheDocument();
+
+    rerender(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={emptyPortfolio}
+        selectedToken="sleeve"
+        onSelectToken={() => {}}
+        sleeveOpen
+        suggestionTeaser="Guardian suggests +5 Euro"
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Guardian suggests/ })).not.toBeInTheDocument();
+  });
+});
+
 describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
   it('flips the face — total to alignment — and never opens compare', async () => {
     const onHoleTap = vi.fn();

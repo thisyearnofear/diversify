@@ -208,6 +208,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
   );
   return {
     SLEEVE_ID: "sleeve",
+    TILT_ID: "guardian-tilt",
     VAULT_SLICE_PREFIX: "vault:",
     isSleeveSelection: (id: string | null | undefined) =>
       id === "sleeve" || Boolean(id?.startsWith("vault:")),
@@ -230,6 +231,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       ghostLegs,
       monitoring,
       sleeveTeaser,
+      suggestionTeaser,
     }: {
       strategyKey: string | null;
       selectedToken: string | null;
@@ -249,6 +251,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       ghostLegs?: { token: string; percent: number }[];
       monitoring?: boolean;
       sleeveTeaser?: boolean;
+      suggestionTeaser?: string;
     }) => {
       const archetypeId = strategyToArchetype(strategyKey);
       const name = archetypeId ? ARCHETYPES[archetypeId].name : "";
@@ -324,6 +327,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           "data-selected": selectedToken ?? "",
           "data-monitoring": String(Boolean(monitoring)),
           "data-sleeve-teaser": String(Boolean(sleeveTeaser)),
+          "data-suggestion-teaser": String(Boolean(suggestionTeaser)),
         },
         badge,
         hole,
@@ -343,6 +347,17 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           selectButton("cREAL", "ring-select-creal"),
           selectButton("cUSD", "ring-select-cusd"),
           selectButton("sleeve", "ring-select-sleeve"),
+          suggestionTeaser
+            ? React.createElement(
+                "button",
+                {
+                  type: "button",
+                  "data-testid": "ring-select-tilt",
+                  onClick: () => onSelectToken("guardian-tilt"),
+                },
+                suggestionTeaser,
+              )
+            : null,
         ),
         controls,
       );
@@ -1408,6 +1423,8 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
+    // The dial is a mode — the engraved floor affordance opens it.
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     const dial = screen.getByTestId("plan-floor-control");
     // Under the ring, above the status tier — inside the object column.
     expect(screen.getByTestId("protection-plan-ring").contains(dial)).toBe(true);
@@ -1462,6 +1479,7 @@ describe("ProtectionTab — instrument shapes", () => {
       "data-legs",
       JSON.stringify([["KESm", 48], ["cUSD", 40], ["cEUR", 12]]),
     );
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent(
       "Dollar reserve · 40%",
     );
@@ -1473,6 +1491,7 @@ describe("ProtectionTab — instrument shapes", () => {
     vi.mocked(useWalletContext).mockReturnValue({ address: "0xabc", chainId: 42220 } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More exposure" }));
     const ring = screen.getByTestId("protection-plan-ring");
     expect(ring).toHaveAttribute("data-balance-preview", "true");
@@ -1496,6 +1515,7 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
       "data-balance-preview",
@@ -1520,6 +1540,7 @@ describe("ProtectionTab — instrument shapes", () => {
       chainId: 42220,
     } as any);
     const { rerender } = render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
       "data-balance-preview",
@@ -1545,6 +1566,7 @@ describe("ProtectionTab — instrument shapes", () => {
     const { rerender } = render(
       <ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />,
     );
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
       "data-balance-preview",
@@ -1560,6 +1582,8 @@ describe("ProtectionTab — instrument shapes", () => {
       "data-balance-preview",
       "false",
     );
+    // The wallet switch resets the dial to its engraved affordance.
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     expect(screen.getByRole("radio", { name: "Balanced" })).toHaveAttribute(
       "aria-checked",
       "true",
@@ -1587,6 +1611,7 @@ describe("ProtectionTab — instrument shapes", () => {
     const { rerender } = render(
       <ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />,
     );
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
       "data-balance-preview",
@@ -1599,6 +1624,7 @@ describe("ProtectionTab — instrument shapes", () => {
       "data-balance-preview",
       "false",
     );
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     expect(screen.getByRole("radio", { name: "Balanced" })).toHaveAttribute(
       "aria-checked",
       "true",
@@ -1627,6 +1653,7 @@ describe("ProtectionTab — instrument shapes", () => {
     const savedSnapshot = window.localStorage.getItem(key);
     expect(savedSnapshot).not.toBeNull();
 
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(window.localStorage.getItem(key)).toBe(savedSnapshot);
     expect(mockSetRiskTolerance).not.toHaveBeenCalled();
@@ -1647,6 +1674,7 @@ describe("ProtectionTab — instrument shapes", () => {
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
       "data-balance-preview",
@@ -1671,7 +1699,9 @@ describe("ProtectionTab — instrument shapes", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
     fireEvent.click(screen.getByTestId("ring-hole"));
+    // Compare hides the floor entirely — affordance and dial both.
     expect(screen.queryByTestId("plan-floor-control")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("floor-affordance")).not.toBeInTheDocument();
 
     // First tap previews (delta rides in the hole); a second tap opens
     // the details sheet with the value chips.
@@ -1893,6 +1923,7 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
     expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("rwa-sleeve-back"));
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     // The preview keeps the provisional context line; the wedge rests.
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "false");
@@ -1909,6 +1940,7 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     };
     mockFinancialStrategy = "custom";
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "false");
     expect(screen.getByTestId("rwa-preview-context")).toHaveTextContent("Preview plan · tokenized PAXG");
@@ -1946,15 +1978,19 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
   });
 
   it("consumes the intent without focusing while a balance preview is open", () => {
-    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    const { rerender } = render(
+      <ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />,
+    );
 
-    // Arm the intent, then open the preview — the effect consumes on the
-    // same render without touching the draft's focus.
+    // Open the preview first — then the intent lands and the effect
+    // consumes it without touching the draft's focus.
+    fireEvent.click(screen.getByTestId("floor-affordance"));
+    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     navState.pendingIntent = {
       tab: "protect",
       intent: { source: "home", region: "Africa" },
     };
-    fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
+    rerender(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
 
     expect(mockConsumeIntent).toHaveBeenCalledTimes(1);
     expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-balance-preview", "true");
@@ -2030,8 +2066,13 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
     expect(prompt).toHaveTextContent("wallet holds 64% — try a stronger floor");
-    // The offer lives inside the control's caption, not a separate line.
-    expect(screen.getByTestId("plan-floor-control").contains(prompt)).toBe(true);
+    // The offer rides the same engraved line as the floor affordance —
+    // and again inside the dial's caption once the control is open.
+    expect(screen.getByTestId("floor-affordance-row").contains(prompt)).toBe(true);
+    fireEvent.click(screen.getByTestId("floor-affordance"));
+    expect(
+      screen.getByTestId("plan-floor-control").contains(screen.getByTestId("shield-floor-prompt")),
+    ).toBe(true);
     expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
   });
 
@@ -2048,12 +2089,14 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     profileState.riskTolerance = "Balanced";
 
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
     expect(screen.queryByTestId("shield-floor-prompt")).not.toBeInTheDocument();
   });
 
   it("a shilling-majority wallet keeps the dollar reserve — KES is only measured", () => {
     render(<ProtectionTab userRegion="USA" portfolio={underReserved} />);
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve · 25%");
     expect(screen.getByTestId("plan-floor-control")).not.toHaveTextContent(/Shilling/);
     // 30% dollars against a 25% dollar floor is under the 10-point surplus.
@@ -2076,6 +2119,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     const prompt = screen.getByTestId("shield-floor-prompt");
     expect(prompt).toHaveTextContent("wallet holds 40% — try a stronger floor");
     expect(prompt).not.toHaveTextContent(/KES/);
+    fireEvent.click(screen.getByTestId("floor-affordance"));
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve");
   });
 
@@ -2375,11 +2419,11 @@ describe("ProtectionTab — Guardian tilt on the ring", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     const ring = screen.getByTestId("protection-plan-ring");
     const saved = ring.getAttribute("data-legs");
-    const chip = screen.getByTestId("guardian-tilt-chip");
-    expect(chip.textContent).toContain("Guardian suggests +5 Euro");
+    const wedge = screen.getByTestId("ring-select-tilt");
+    expect(wedge.textContent).toContain("Guardian suggests +5 Euro");
     expect(ring.getAttribute("data-ghost-legs")).not.toBe("[]");
 
-    fireEvent.click(chip);
+    fireEvent.click(wedge);
     const previewRing = screen.getByTestId("protection-plan-ring");
     expect(previewRing.getAttribute("data-legs")).not.toBe(saved);
     expect(previewRing.getAttribute("data-ghost-legs")).toBe(saved);
@@ -2401,7 +2445,7 @@ describe("ProtectionTab — Guardian tilt on the ring", () => {
     mockLatestAdvice.current = advice("pan_caribbean");
     connected();
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
-    expect(screen.queryByTestId("guardian-tilt-chip")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("ring-select-tilt")).not.toBeInTheDocument();
     expect(screen.getByTestId("protection-plan-ring").getAttribute("data-ghost-legs")).toBe("[]");
   });
 });

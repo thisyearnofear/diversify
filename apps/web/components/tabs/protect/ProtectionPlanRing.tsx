@@ -39,6 +39,9 @@ import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 
 /** Selection id the parent uses for the tokenized-asset (RWA) lens. */
 export const SLEEVE_ID = 'sleeve';
+/** Selection id the parent uses for the Guardian-suggestion preview —
+ *  the tilt arrives as a ghost wedge, never a text chip. */
+export const TILT_ID = 'guardian-tilt';
 /** Selection prefix for an IXS vault row focused in the sleeve inspector. */
 export const VAULT_SLICE_PREFIX = 'vault:';
 /** Preview wedge weight when the ring holds no tokenized asset. */
@@ -47,6 +50,9 @@ const SLEEVE_PREVIEW_PCT = 15;
  *  tokenized-asset lens. Smaller than the open preview: the invite
  *  grows into the lens on tap. */
 const SLEEVE_TEASER_PCT = 8;
+/** Suggestion wedge weight — slimmer than the sleeve invite: advice is
+ *  lighter than an asset class. */
+const SUGGESTION_TEASER_PCT = 6;
 
 export function isSleeveSelection(id: string | null | undefined): boolean {
   return id === SLEEVE_ID || Boolean(id?.startsWith(VAULT_SLICE_PREFIX));
@@ -106,6 +112,11 @@ interface Props {
    *  of a status-tier text link carrying the action hue. The tap
    *  arrives as `onSelectToken(SLEEVE_ID)`; the parent opens the lens. */
   sleeveTeaser?: boolean;
+  /** Guardian suggestion arrives as a ghost wedge, not a chip — the
+   *  string is the wedge's label ("Guardian suggests +5 Euro"); the tap
+   *  arrives as `onSelectToken(TILT_ID)` and the parent opens the
+   *  suggestion preview. */
+  suggestionTeaser?: string;
   stilled?: boolean;
   balancePreview?: boolean;
   savedLegs?: PlanLeg[];
@@ -137,6 +148,7 @@ export function ProtectionPlanRing({
   sleeveOpen = false,
   monitoring = false,
   sleeveTeaser = false,
+  suggestionTeaser,
   stilled = false,
   balancePreview = false,
   savedLegs = [],
@@ -336,20 +348,31 @@ export function ProtectionPlanRing({
   const rwaPct = Math.round(rwaSlices.reduce((sum, s) => sum + s.percent, 0));
   const displaySlices = useMemo(() => {
     if (!sleeveOpen) {
-      // The teaser — one hatched wedge, quiet grey, never a plan share.
-      // The object offers the lens; a status link doesn't.
-      if (!sleeveTeaser) return ringSlicesForDisplay;
-      return [
-        ...ringSlicesForDisplay,
-        {
+      // Teasers — quiet ghost wedges for what is not yet poured: the
+      // Guardian suggestion (uncommitted advice) and the tokenized-asset
+      // invite (an asset class outside the plan). Never plan shares;
+      // the object offers the door, a status link doesn't.
+      const teasers: RingSlice[] = [];
+      if (suggestionTeaser) {
+        teasers.push({
+          id: TILT_ID,
+          label: suggestionTeaser,
+          percent: SUGGESTION_TEASER_PCT,
+          color: QUIET_GRAY,
+          material: 'ghost' as const,
+        });
+      }
+      if (sleeveTeaser) {
+        teasers.push({
           id: SLEEVE_ID,
           label: 'Tokenized assets — tap to look inside',
           percent: SLEEVE_TEASER_PCT,
           color: QUIET_GRAY,
           hatch: true,
           material: 'ghost' as const,
-        },
-      ];
+        });
+      }
+      return teasers.length > 0 ? [...ringSlicesForDisplay, ...teasers] : ringSlicesForDisplay;
     }
     // The lens etches every non-RWA leg — ghost material, not struck metal.
     const quiet = ringSlicesForDisplay.map((s) => (s.hatch ? s : { ...s, color: QUIET_GRAY, material: 'ghost' as const }));
@@ -365,7 +388,7 @@ export function ProtectionPlanRing({
         material: 'ghost' as const,
       },
     ];
-  }, [sleeveOpen, sleeveTeaser, ringSlicesForDisplay, rwaSlices.length, archetype]);
+  }, [sleeveOpen, sleeveTeaser, suggestionTeaser, ringSlicesForDisplay, rwaSlices.length, archetype]);
 
   useEffect(() => {
     if (showDust && (!needsDisclosure || dust.length === 0)) setShowDust(false);

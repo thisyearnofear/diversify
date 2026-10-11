@@ -55,6 +55,8 @@ import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype }
 import { shieldPatternFor } from "./protect/shield-pattern";
 import {
   compactPlanDelta,
+  floorPercent,
+  reserveLabel,
   resolvePlan,
   allocationPlanFromResolved,
   type CustomPlan,
@@ -86,7 +88,7 @@ import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { buildWalletPortfolioView, heldAsLine } from "@/lib/wallet-portfolio-view";
 import { rwaLegFor } from "./protect/rwa-assets";
-import { SLEEVE_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
+import { SLEEVE_ID, TILT_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
 import { useRwaMarket } from "@/hooks/use-rwa-market";
 import { useProofFeed } from "@/hooks/use-proof-feed";
@@ -181,6 +183,14 @@ export default function ProtectionTab({
     canCommit: !isDemo,
   });
   const handleMarqueeSelect = useCallback((token: string | null) => {
+    // The suggestion wedge is the tilt's door — tapping it previews the
+    // reshaped ring instead of focusing a slice.
+    if (token === TILT_ID) {
+      setFocusedToken(null);
+      setTiltPreview(true);
+      haptics.tap();
+      return;
+    }
     // Re-tapping a vault wedge steps back to the sleeve, not out of it.
     setFocusedToken((prev) =>
       token === null && prev?.startsWith(VAULT_SLICE_PREFIX) ? SLEEVE_ID : token,
@@ -356,6 +366,7 @@ export default function ProtectionTab({
   }, []);
   const toggleCompare = useCallback(() => {
     setFocusedToken(null);
+    setFloorOpen(false);
     setComparing((c) => !c);
     if (comparing) {
       setFocusedPhilosophy(null);
@@ -623,7 +634,14 @@ export default function ProtectionTab({
     [liveFeed, allocations],
   );
   const [acted, setActed] = useState(false);
-  useEffect(() => setActed(false), [address, strategyKey]);
+  // The floor dial is a mode, not standing furniture — the engraved
+  // affordance ("Dollar floor 25%") is the resting door; opening it
+  // morphs into the full control in place.
+  const [floorOpen, setFloorOpen] = useState(false);
+  useEffect(() => {
+    setActed(false);
+    setFloorOpen(false);
+  }, [address, strategyKey]);
   const gapCtaShowing =
     !comparing &&
     !balance.isPreviewing &&
@@ -1065,7 +1083,12 @@ export default function ProtectionTab({
             }
             sleeveOpen={sleeveOpen}
             monitoring={guardianState === "monitoring"}
-            sleeveTeaser={!businessMorph && !sleeveOpen && !comparing && !balance.isPreviewing}
+            sleeveTeaser={!businessMorph && !sleeveOpen && !comparing && !balance.isPreviewing && !tiltShowing}
+            suggestionTeaser={
+              guardianTilt && !tiltShowing && !comparing && !balance.isPreviewing
+                ? `Guardian suggests ${tiltLabel(guardianTilt.tilt)}`
+                : undefined
+            }
             stilled={acted}
             floor={comparing ? previewFloor : planFloor}
             controls={!comparing && tiltShowing && guardianTilt ? (
@@ -1093,59 +1116,93 @@ export default function ProtectionTab({
               </div>
             ) : !comparing ? (
               <div className="mt-3">
-                {guardianTilt && !balance.isPreviewing && (
-                  <button
-                    type="button"
-                    data-testid="guardian-tilt-chip"
-                    onClick={() => { setFocusedToken(null); setTiltPreview(true); haptics.tap(); }}
-                    className="mx-auto mb-2 flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-action dark:text-action"
+                {balance.isPreviewing || (floorOpen && !focusedToken) ? (
+                  <>
+                    <PlanFloorControl
+                      value={balance.risk}
+                      legs={balance.isPreviewing ? balanceAllocations : allocations}
+                      savedLegs={allocations}
+                      isPreviewing={balance.isPreviewing}
+                      onInteraction={() => setActed(true)}
+                      floor={planFloor}
+                      accent={(() => {
+                        const id = strategyToArchetype(strategyKey);
+                        return id ? ARCHETYPES[id].accent : undefined;
+                      })()}
+                      onChange={(risk) => {
+                        setFocusedToken(null);
+                        balance.select(risk);
+                        trackFunnelEvent('marquee_select', { source: 'shield_balance', selection: risk });
+                      }}
+                      onApply={isDemo ? undefined : () => {
+                        if (balance.commit()) {
+                          setFloorOpen(false);
+                          setFocusedToken(null);
+                          haptics.confirm();
+                          showToast('Balance saved. Your holdings have not moved.', 'success');
+                          if (address && strategyKey && strategyKey !== 'custom' && vault.vault && getCachedWalletAuth(address)) {
+                            const committed = allocationPlanFromResolved(resolvePlan({
+                              strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency,
+                            }));
+                            void vault.updateStrategy(address, strategyKey, committed).then((saved) => {
+                              if (!saved) showToast('Balance saved on this device. Guardian targets could not be synced; use Follow in Guardian.', 'warning');
+                            }).catch(() => showToast('Guardian targets could not be synced.', 'warning'));
+                          }
+                        }
+                      }}
+                      onCancel={() => { setFloorOpen(false); balance.cancel(); setFocusedToken(null); haptics.tap(); }}
+                      floorOffer={showFloorPrompt ? floorOffer : null}
+                      onFloorOffer={() => {
+                        if (!floorOffer) return;
+                        balance.select(floorOffer.next);
+                        haptics.tap();
+                        if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
+                      }}
+                    />
+                    {floorOpen && !balance.isPreviewing && (
+                      <button
+                        type="button"
+                        data-testid="floor-done"
+                        onClick={() => { setFloorOpen(false); haptics.tap(); }}
+                        className="mt-1 w-full text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                      >
+                        Done
+                      </button>
+                    )}
+                  </>
+                ) : !focusedToken ? (
+                  // The resting door — the floor is engraved beneath the
+                  // object like provenance, not mounted as a control. The
+                  // offer and the tweak ride the same quiet line.
+                  <div
+                    data-testid="floor-affordance-row"
+                    className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
                   >
-                    Guardian suggests {tiltLabel(guardianTilt.tilt)} →
-                  </button>
-                )}
-                <PlanFloorControl
-                  value={balance.risk}
-                  legs={balance.isPreviewing ? balanceAllocations : allocations}
-                  savedLegs={allocations}
-                  isPreviewing={balance.isPreviewing}
-                  onInteraction={() => setActed(true)}
-                  floor={planFloor}
-                  accent={(() => {
-                    const id = strategyToArchetype(strategyKey);
-                    return id ? ARCHETYPES[id].accent : undefined;
-                  })()}
-                  onChange={(risk) => {
-                    setFocusedToken(null);
-                    balance.select(risk);
-                    trackFunnelEvent('marquee_select', { source: 'shield_balance', selection: risk });
-                  }}
-                  onApply={isDemo ? undefined : () => {
-                    if (balance.commit()) {
-                      setFocusedToken(null);
-                      haptics.confirm();
-                      showToast('Balance saved. Your holdings have not moved.', 'success');
-                      if (address && strategyKey && strategyKey !== 'custom' && vault.vault && getCachedWalletAuth(address)) {
-                        const committed = allocationPlanFromResolved(resolvePlan({
-                          strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency,
-                        }));
-                        void vault.updateStrategy(address, strategyKey, committed).then((saved) => {
-                          if (!saved) showToast('Balance saved on this device. Guardian targets could not be synced; use Follow in Guardian.', 'warning');
-                        }).catch(() => showToast('Guardian targets could not be synced.', 'warning'));
-                      }
-                    }
-                  }}
-                  onCancel={() => { balance.cancel(); setFocusedToken(null); haptics.tap(); }}
-                  floorOffer={showFloorPrompt ? floorOffer : null}
-                  onFloorOffer={() => {
-                    if (!floorOffer) return;
-                    balance.select(floorOffer.next);
-                    haptics.tap();
-                    if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
-                  }}
-                />
-                {!balance.isPreviewing && !focusedToken && (
-                  <div className="mt-1 flex justify-center">{tweakButton(strategyKey, "custom-tweak")}</div>
-                )}
+                    <button
+                      type="button"
+                      data-testid="floor-affordance"
+                      onClick={() => { setFloorOpen(true); haptics.tap(); }}
+                      className="min-h-tap px-1 text-3xs font-semibold uppercase tracking-[0.18em] text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                    >
+                      {reserveLabel(planFloor)} floor {floorPercent(allocations, planFloor)}%
+                    </button>
+                    {showFloorPrompt && floorOffer && (
+                      <button
+                        type="button"
+                        data-testid="shield-floor-prompt"
+                        onClick={() => {
+                          balance.select(floorOffer.next);
+                          haptics.tap();
+                          if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
+                        }}
+                        className="min-h-tap px-1 text-3xs font-semibold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400"
+                      >
+                        wallet holds {floorOffer.heldFloor}% — try a stronger floor →
+                      </button>
+                    )}
+                    {tweakButton(strategyKey, "custom-tweak")}
+                  </div>
+                ) : null}
                 {!businessMorph && !sleeveOpen && !comparing && !focusedToken &&
                   balance.isPreviewing &&
                   (previewRwaSymbols.length > 0 || planRwaSymbols.length > 0 || walletOnlyRwaSymbols.length > 0) && (

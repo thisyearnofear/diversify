@@ -65,14 +65,29 @@ export function ShieldStatusTier({
   onOpenCycle,
   sinceHint,
 }: ShieldStatusTierProps) {
-  // The row is empty in the gap+biggestGap case — the CTA beneath the
-  // ring names the job. Monitoring adds nothing here: the badge is the
-  // door and the sentence is gone.
-  const statusRowEmpty =
+  // One resting row: badge · state text · [Set up Guardian] · sinceHint ·
+  // verified. A second row only exists while a mode needs it — the
+  // sleeve's back door or the compare exit. In the gap+biggestGap case
+  // the CTA beneath the ring names the job, so no text rides here.
+  const restingText =
+    sleeveOpen || comparing
+      ? null
+      : shape === "quiet"
+        ? "Plan aligned."
+        : shape === "gap"
+          ? !focusedToken && biggestGap
+            ? null
+            : "Tap a slice to close the gap."
+          : shape === "fund"
+            ? "Fund this plan to start protection."
+            : "Choose your protection philosophy.";
+
+  const showSetup =
     !comparing &&
-    shape === "gap" &&
-    !focusedToken &&
-    Boolean(biggestGap);
+    Boolean(address) &&
+    guardianState !== "monitoring" &&
+    !(shape === "gap" && !focusedToken && biggestGap) &&
+    (shape === "quiet" || (alignmentScore != null && alignmentScore >= 80));
 
   return isPreviewing ? (
     <StatusTier trust={<VerifiedEvidence />} />
@@ -114,7 +129,34 @@ export function ShieldStatusTier({
           ) : (
             <StatusBadge label="Choose a plan" tone="neutral" compact />
           )}
-          <VerifiedEvidence className="ml-auto" />
+          {restingText && (
+            <p
+              data-testid={shape === "quiet" ? "shield-quiet" : undefined}
+              className="text-xs text-gray-600 dark:text-gray-300"
+            >
+              {restingText}
+            </p>
+          )}
+          {showSetup && (
+            <button
+              type="button"
+              onClick={() => onSetUpGuardian()}
+              className="min-h-tap px-1 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+            >
+              Set up Guardian
+            </button>
+          )}
+          {!comparing && sinceHint && (
+            <span
+              data-testid="shield-since-last-visit"
+              className="ml-auto shrink-0 text-3xs font-medium text-gray-400 dark:text-gray-500 tabular-nums"
+            >
+              {sinceHint}
+            </span>
+          )}
+          <VerifiedEvidence
+            className={!comparing && sinceHint ? undefined : "ml-auto"}
+          />
         </div>
       }
       transition={
@@ -127,55 +169,18 @@ export function ShieldStatusTier({
           >
             ← Back to plan
           </button>
-        ) : statusRowEmpty && !sinceHint ? undefined : (
-          <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
-          {comparing ? (
-        <p data-testid="shield-compare-status">
-          Comparing philosophies against your wallet ·{" "}
-          <button
-            type="button"
-            onClick={exitCompare}
-            className="font-semibold text-blue-600 dark:text-blue-400"
-          >
-            Keep {planName}
-          </button>
-        </p>
-      ) : shape === "quiet" ? (
-        <p data-testid="shield-quiet">Plan aligned.</p>
-      ) : shape === "gap" && !focusedToken && biggestGap ? (
-        // The biggest-gap CTA beneath the ring names the job — no
-        // duplicate sentence here.
-        null
-      ) : (
-        <p>
-          {shape === "gap"
-            ? "Tap a slice to close the gap."
-            : shape === "fund"
-              ? "Fund this plan to start protection."
-              : "Choose your protection philosophy."}
-        </p>
-      )}
-      {!comparing && sinceHint && (
-        <span
-          data-testid="shield-since-last-visit"
-          className="ml-auto shrink-0 text-3xs font-medium text-gray-400 dark:text-gray-500 tabular-nums"
-        >
-          {sinceHint}
-        </span>
-      )}
-      {!comparing && address && guardianState !== "monitoring" &&
-        !(shape === "gap" && !focusedToken && biggestGap) &&
-        (shape === "quiet" || (alignmentScore != null && alignmentScore >= 80)) && (
-        <button
-          type="button"
-          onClick={() => onSetUpGuardian()}
-          className="min-h-tap px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-        >
-          Set up Guardian
-        </button>
-      )}
-          </div>
-        )
+        ) : comparing ? (
+          <p data-testid="shield-compare-status" className="text-xs text-gray-600 dark:text-gray-300">
+            Comparing philosophies against your wallet ·{" "}
+            <button
+              type="button"
+              onClick={exitCompare}
+              className="font-semibold text-blue-600 dark:text-blue-400"
+            >
+              Keep {planName}
+            </button>
+          </p>
+        ) : undefined
       }
       rail={
         // Business personas keep the plan-independent payment-cycle rail;
