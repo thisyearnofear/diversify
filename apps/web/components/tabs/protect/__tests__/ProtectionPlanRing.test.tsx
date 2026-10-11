@@ -1310,3 +1310,86 @@ describe('ProtectionPlanRing — idle face: one fact, dwell swap, privacy', () =
     }
   });
 });
+
+describe('ProtectionPlanRing — values identity vs plan composition', () => {
+  const customMix = {
+    from: 'buen_vivir' as string | null,
+    rules: {},
+    slices: [
+      { exposure: 'USD' as const, target: 60 },
+      { exposure: 'XAU' as const, target: 40 },
+    ],
+  };
+
+  const badgeProps = {
+    portfolio,
+    selectedToken: null,
+    onSelectToken: () => {},
+    onHoleTap: () => {},
+  };
+
+  it('a named plan keeps its own identity when the prop is absent', () => {
+    render(<ProtectionPlanRing strategyKey="africapitalism" {...badgeProps} />);
+    const badge = screen.getByTestId('plan-badge');
+    expect(badge.textContent).toContain('Africapitalism');
+    expect(badge).toHaveStyle('border-color: #d97706');
+  });
+
+  it('plan name and visual identity are separable on a named plan', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        identityStrategyKey="islamic"
+        {...badgeProps}
+      />,
+    );
+    const badge = screen.getByTestId('plan-badge');
+    expect(badge.textContent).toContain('Africapitalism');
+    expect(badge).toHaveStyle('border-color: #059669');
+  });
+
+  it('a Custom mix seeded from a named philosophy wears its values, named as a mix', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="custom"
+        customPlan={customMix}
+        identityStrategyKey="buen_vivir"
+        {...badgeProps}
+      />,
+    );
+    const badge = screen.getByTestId('plan-badge');
+    expect(badge.textContent).toContain('Custom · Buen Vivir values');
+    expect(badge).toHaveStyle('border-color: #0d9488');
+    expect(screen.getByText(/60% plan/)).toBeInTheDocument();
+    expect(screen.getByText(/40% plan/)).toBeInTheDocument();
+  });
+
+  it('a standalone Custom mix falls back to quiet gray, never the custom violet', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="custom"
+        customPlan={{ ...customMix, from: null }}
+        identityStrategyKey={null}
+        {...badgeProps}
+      />,
+    );
+    const badge = screen.getByTestId('plan-badge');
+    expect(badge.textContent).toContain('Custom');
+    expect(badge.textContent).not.toContain('values');
+    expect(badge).toHaveStyle('border-color: #64748b');
+    expect(badge).not.toHaveStyle('border-color: #7c3aed');
+  });
+
+  it('standalone ring usage without the prop keeps the legacy custom look', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="custom"
+        customPlan={{ ...customMix, from: null }}
+        {...badgeProps}
+      />,
+    );
+    const badge = screen.getByTestId('plan-badge');
+    expect(badge.textContent).toContain('Custom');
+    expect(badge).toHaveStyle('border-color: #7c3aed');
+  });
+});

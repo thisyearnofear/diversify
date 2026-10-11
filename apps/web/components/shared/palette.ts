@@ -30,6 +30,11 @@ export function strategyAccent(strategyKey: string | null | undefined): string {
   return DEFAULT_ACCENT;
 }
 
+export function identityAccent(strategyKey: string | null | undefined): string {
+  const archetypeId = strategyToArchetype(strategyKey);
+  return archetypeId && archetypeId !== 'custom' ? ARCHETYPES[archetypeId].accent : QUIET_GRAY;
+}
+
 /** Canonical per-token brand colors for rings, chips, and legend rows. */
 export const TOKEN_COLORS: Record<string, string> = {
   PAXG: '#f59e0b',

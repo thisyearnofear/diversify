@@ -231,6 +231,6 @@ export function useCurrencyMoment(
     /** Philosophy-aware accent + consequence, or null when no philosophy.
         The chosen archetype drives the moment's colour so the first viewport
         speaks the same values language as the rest of the protection plan. */
-    frame: momentFrameFor(profileConfig?.philosophy ?? null),
+    frame: momentFrameFor(profileConfig?.valuesPhilosophy ?? null),
   };
 }

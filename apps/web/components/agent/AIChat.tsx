@@ -284,7 +284,9 @@ export default function AIChat() {
 
   const mascotMood = activeGuardianReview ? 'alert' : isChatting ? 'thinking' : 'neutral';
   const archetypeId = strategyToArchetype(
-    demo?.demoMode.isActive ? demo.demoMode.previewStrategy ?? profileConfig.philosophy : profileConfig.philosophy,
+    demo?.demoMode.isActive && demo.demoMode.previewStrategy
+      ? demo.demoMode.previewStrategy
+      : profileConfig.valuesPhilosophy,
   );
   const starters = contextualStarters(activeTab as TabId, {
     currency: isDrawerOpen ? readSelectedCurrency() : null,

@@ -57,7 +57,7 @@ content fights the text.
 
 DiversiFi should feel alive, culturally recognizable, and empowering, not muted by default. The emotional goal is curiosity, recognition, and agency: the user understands their money and sees their values change the instrument.
 
-**One dominant story per screen.** Color, typography, material, and motion may extend across the object, its meaningful reading, selected controls, and primary action. They must reinforce the same decision. Unrelated content remains subordinate, never illegible. Expressiveness belongs in the instrument, not extra cards or competing decoration.
+**One dominant story per screen.** Color, typography, material, and motion may extend across the object, its meaningful reading, selected controls, and primary action. They must reinforce the same decision. Unrelated content remains subordinate, never illegible. Expressiveness belongs in the instrument, not extra cards or competing decoration. Identity and composition split cleanly: the named values philosophy owns the shared accent identity (across tabs, and under a Custom mix it seeded), while the active plan owns only the ring's proportions — token colors stay token colors, the action hue stays on actions, and semantic status colors keep their meaning.
 
 **Quiet means lower priority, not low readability.** Financial meaning, selectable labels, and next actions must remain readable at a glance. De-emphasize through placement, spacing, and weight before reducing contrast or type size. Never truncate philosophy names or shrink important language to accommodate decoration. Make the main reading stronger before making the background busier.
 

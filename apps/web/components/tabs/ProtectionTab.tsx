@@ -52,7 +52,8 @@ import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
 import { ProtectionPlanRing } from "./protect/ProtectionPlanRing";
 import { PhilosophyCoinRail, FocusedPlanLine } from "./protect/PhilosophyCoinRail";
 import { useAmbientOrigin } from "./protect/ProtectionAmbient";
-import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { ARCHETYPE_ORDER, archetypeToStrategy } from "@/components/protection-cards/tokens";
+import { identityAccent } from "@/components/shared/palette";
 import { shieldPatternFor } from "./protect/shield-pattern";
 import {
   compactPlanDelta,
@@ -564,11 +565,20 @@ export default function ProtectionTab({
     }
   }, [showToast]);
 
+  const identityKeyFor = useCallback(
+    (planKey: string | null | undefined) =>
+      planKey === "custom"
+        ? config.valuesPhilosophy ?? null
+        : isNamedPhilosophy(planKey)
+          ? planKey
+          : null,
+    [config.valuesPhilosophy],
+  );
   // Single source of truth: the pattern layer tints with the archetype's
   // own accent token — the same color the ring badge and plan cards use
   // (Sylva's "one palette, derived facets" discipline). Shared with the
   // unconnected morph via shieldPatternFor.
-  const pattern = useMemo(() => shieldPatternFor(strategyKey), [strategyKey]);
+  const pattern = useMemo(() => shieldPatternFor(identityKeyFor(strategyKey)), [strategyKey, identityKeyFor]);
 
   // Quiet memory: last session's alignment for this plan, so a returning
   // visitor sees the drift without anyone claiming fresh insight.
@@ -985,6 +995,7 @@ export default function ProtectionTab({
     <div data-testid="shield-custom-editor">
       <ProtectionPlanRing
         strategyKey="custom"
+        identityStrategyKey={isNamedPhilosophy(customDraft.from) ? customDraft.from : null}
         customPlan={customDraft}
         legs={draftPlan.legs}
         forcePlanLegs
@@ -1137,6 +1148,7 @@ export default function ProtectionTab({
               details, "Use this plan" commits. Nothing appends below. */}
           <ProtectionPlanRing
             strategyKey={previewKey ?? archetypeToStrategy(ARCHETYPE_ORDER[0])}
+            identityStrategyKey={identityKeyFor(previewKey ?? archetypeToStrategy(ARCHETYPE_ORDER[0]))}
             customPlan={config.customPlan}
             legs={previewAllocations}
             savedLegs={[]}
@@ -1194,6 +1206,7 @@ export default function ProtectionTab({
           >
           <ProtectionPlanRing
             strategyKey={previewKey}
+            identityStrategyKey={identityKeyFor(previewKey)}
             customPlan={config.customPlan}
             legs={
               comparing
@@ -1279,10 +1292,7 @@ export default function ProtectionTab({
                       isPreviewing={balance.isPreviewing}
                       onInteraction={() => setActed(true)}
                       floor={planFloor}
-                      accent={(() => {
-                        const id = strategyToArchetype(strategyKey);
-                        return id ? ARCHETYPES[id].accent : undefined;
-                      })()}
+                      accent={identityAccent(identityKeyFor(strategyKey))}
                       onChange={(risk) => {
                         setFocusedToken(null);
                         balance.select(risk);

@@ -30,6 +30,7 @@ const profileState = {
   riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
   anchorCurrency: null as string | null,
   customPlan: null as unknown,
+  valuesPhilosophy: null as string | null,
 };
 const mockSetRiskTolerance = vi.fn();
 const mockSetCustomPlan = vi.fn();
@@ -56,6 +57,7 @@ vi.mock("@/hooks/use-protection-profile", () => ({
       riskTolerance: profileState.riskTolerance,
       anchorCurrency: profileState.anchorCurrency,
       customPlan: profileState.customPlan,
+      valuesPhilosophy: profileState.valuesPhilosophy,
       timeHorizon: "medium",
       moneyPurpose: mockMoneyPurpose,
     },
@@ -166,6 +168,7 @@ vi.mock("@/context/app/StrategyContext", () => ({
   useStrategy: () => ({
     financialStrategy: mockFinancialStrategy,
     setFinancialStrategy: mockSetFinancialStrategy,
+    valuesPhilosophy: profileState.valuesPhilosophy,
   }),
 }));
 
@@ -237,8 +240,10 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       monitoring,
       sleeveTeaser,
       suggestionTeaser,
+      identityStrategyKey,
     }: {
       strategyKey: string | null;
+      identityStrategyKey?: string | null;
       selectedToken: string | null;
       onSelectToken: (token: string | null) => void;
       alignmentScore?: number | null;
@@ -333,6 +338,7 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           "data-monitoring": String(Boolean(monitoring)),
           "data-sleeve-teaser": String(Boolean(sleeveTeaser)),
           "data-suggestion-teaser": String(Boolean(suggestionTeaser)),
+          "data-identity": String(identityStrategyKey),
         },
         badge,
         hole,
@@ -573,6 +579,7 @@ describe("ProtectionTab — instrument shapes", () => {
     vi.clearAllMocks();
     mockFinancialStrategy = null;
     profileState.customPlan = null;
+    profileState.valuesPhilosophy = null;
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
     demoState.isActive = false;
@@ -2698,5 +2705,100 @@ describe("ProtectionTab — walletless editor round-trips", () => {
     expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("Dollar 25%");
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("Real 45%");
+  });
+});
+
+describe("ProtectionTab — values identity vs plan composition", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockFinancialStrategy = null;
+    profileState.customPlan = null;
+    profileState.valuesPhilosophy = null;
+    mockMoneyPurpose = "inflation_protection";
+    mockGuardianState = "idle";
+    demoState.isActive = false;
+    navState.pendingIntent = null;
+    mockRouterQuery = {};
+    mockSessionInfo.current = null;
+    mockVisibility.current = "quiet";
+    vi.mocked(useWalletContext).mockReturnValue({
+      address: "0xabc",
+      chainId: 42220,
+    } as any);
+  });
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  it("a committed Custom mix keeps its named values as the shell + ring identity", () => {
+    mockFinancialStrategy = "custom";
+    profileState.valuesPhilosophy = "buen_vivir";
+    profileState.customPlan = {
+      from: "buen_vivir",
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 60 },
+        { exposure: "XAU", target: 40 },
+      ],
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(
+      document.querySelector(".shields-pattern--buen_vivir"),
+    ).not.toBeNull();
+    expect(
+      document.querySelector(".shields-pattern--custom"),
+    ).toBeNull();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-identity",
+      "buen_vivir",
+    );
+  });
+
+  it("a standalone Custom mix carries no philosophy identity — no pattern, neutral ring", () => {
+    mockFinancialStrategy = "custom";
+    profileState.valuesPhilosophy = null;
+    profileState.customPlan = {
+      from: null,
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 60 },
+        { exposure: "XAU", target: 40 },
+      ],
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(document.querySelector(".shields-pattern-layer")).toBeNull();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-identity",
+      "null",
+    );
+  });
+
+  it("a named compare preview recolors only the ring — the shell keeps committed values", () => {
+    mockFinancialStrategy = "custom";
+    profileState.valuesPhilosophy = "buen_vivir";
+    profileState.customPlan = {
+      from: "buen_vivir",
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 60 },
+        { exposure: "XAU", target: 40 },
+      ],
+    };
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    fireEvent.click(screen.getByTestId("ring-hole"));
+    expect(screen.getByTestId("shield-ring")).toHaveAttribute(
+      "data-comparing",
+      "true",
+    );
+    fireEvent.click(screen.getByTestId("coin-africapitalism"));
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute(
+      "data-identity",
+      "africapitalism",
+    );
+    expect(
+      document.querySelector(".shields-pattern--buen_vivir"),
+    ).not.toBeNull();
+    expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 });

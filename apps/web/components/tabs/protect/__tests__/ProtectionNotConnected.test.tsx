@@ -11,6 +11,8 @@ const mockState = {
   userRegion: null as string | null,
   detectedRegion: "USA" as string,
   riskTolerance: "Balanced" as "Conservative" | "Balanced" | "Aggressive",
+  valuesPhilosophy: null as string | null,
+  customPlan: null as unknown,
   setFinancialStrategy: vi.fn(),
   setRiskTolerance: vi.fn(),
 };
@@ -28,6 +30,8 @@ vi.mock("@/hooks/use-protection-profile", () => ({
       philosophy: mockState.financialStrategy,
       userRegion: mockState.userRegion,
       riskTolerance: mockState.riskTolerance,
+      valuesPhilosophy: mockState.valuesPhilosophy,
+      customPlan: mockState.customPlan,
     },
     setRiskTolerance: mockState.setRiskTolerance,
   }),
@@ -742,5 +746,113 @@ describe("ProtectionNotConnected — shape-the-mix handoffs", () => {
     fireEvent.click(screen.getByTestId("build-my-mix"));
     expect(onShapePlan).toHaveBeenCalledWith(null);
     expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+  });
+});
+
+describe("ProtectionNotConnected — values identity vs plan composition", () => {
+  beforeEach(() => {
+    navState.pendingIntent = null;
+    mockState.financialStrategy = null;
+    mockState.valuesPhilosophy = null;
+    mockState.customPlan = null;
+  });
+
+  it("a committed Custom mix keeps its named values as shell pattern and ring badge", () => {
+    mockState.financialStrategy = "custom";
+    mockState.valuesPhilosophy = "buen_vivir";
+    mockState.customPlan = {
+      from: "buen_vivir",
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 60 },
+        { exposure: "XAU", target: 40 },
+      ],
+    };
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    expect(
+      document.querySelector(".shields-pattern--buen_vivir"),
+    ).not.toBeNull();
+    expect(document.querySelector(".shields-pattern--custom")).toBeNull();
+    const badge = screen.getByTestId("plan-badge");
+    expect(badge.textContent).toContain("Custom · Buen Vivir values");
+    expect(badge).toHaveStyle("border-color: #0d9488");
+  });
+
+  it("a standalone Custom mix is quiet — no pattern, neutral badge, no custom violet", () => {
+    mockState.financialStrategy = "custom";
+    mockState.valuesPhilosophy = null;
+    mockState.customPlan = {
+      from: null,
+      rules: {},
+      slices: [
+        { exposure: "USD", target: 60 },
+        { exposure: "XAU", target: 40 },
+      ],
+    };
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    expect(document.querySelector(".shields-pattern-layer")).toBeNull();
+    const badge = screen.getByTestId("plan-badge");
+    expect(badge.textContent).toContain("Custom");
+    expect(badge.textContent).not.toContain("values");
+    expect(badge).toHaveStyle("border-color: #64748b");
+  });
+
+  it("planless picker with nothing focused: the ghost ring names no plan", () => {
+    render(
+      <ProtectionNotConnected
+        experienceMode="simple"
+        sleeveOpen
+        onOpenSleeve={vi.fn()}
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("Africapitalism")).not.toBeInTheDocument();
+    expect(document.querySelector(".shields-pattern-layer")).toBeNull();
+  });
+
+  it("a focused coin preview recolors only the ring — the shell stays quiet until commit", () => {
+    const { rerender } = render(
+      <ProtectionNotConnected
+        experienceMode="simple"
+        onOpenSleeve={vi.fn()}
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    rerender(
+      <ProtectionNotConnected
+        experienceMode="simple"
+        sleeveOpen
+        onOpenSleeve={vi.fn()}
+        onCloseSleeve={vi.fn()}
+      />,
+    );
+    expect(
+      screen
+        .getAllByText("Buen Vivir")
+        .some((el) => el.style.borderColor === "rgb(13, 148, 136)"),
+    ).toBe(true);
+    expect(document.querySelector(".shields-pattern-layer")).toBeNull();
+    expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+  });
+
+  it("Caribbean values surface the honesty banner even while the plan is Custom", () => {
+    mockState.financialStrategy = "custom";
+    mockState.valuesPhilosophy = "pan_caribbean";
+    mockState.userRegion = "Caribbean";
+    try {
+      mockState.customPlan = {
+        from: "pan_caribbean",
+        rules: {},
+        slices: [
+          { exposure: "USD", target: 60 },
+          { exposure: "XAU", target: 40 },
+        ],
+      };
+      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      expect(screen.getByTestId("caribbean-banner")).toBeInTheDocument();
+    } finally {
+      mockState.userRegion = null;
+    }
   });
 });

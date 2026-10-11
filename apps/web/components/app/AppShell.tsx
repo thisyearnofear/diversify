@@ -19,7 +19,7 @@ import { WalletTutorial } from "@/components/wallet/WalletTutorial";
 import AppHeader from "@/components/app/AppHeader";
 import { TabDiscoveryProvider } from "@/hooks/use-tab-discovery";
 import { useStrategy } from "@/context/app/StrategyContext";
-import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { identityAccent } from "@/components/shared/palette";
 
 import TabContentRouter from "./TabContentRouter";
 import FloatingControls from "./FloatingControls";
@@ -129,15 +129,15 @@ function AppShellInner() {
 
   // Philosophy accent for the ambient backdrop (static, §5-compliant).
   const { valuesPhilosophy } = useStrategy();
-  const archetype = ARCHETYPES[strategyToArchetype(valuesPhilosophy) ?? 'custom'];
+  const accent = identityAccent(valuesPhilosophy);
   const shellPattern = shieldPatternFor(valuesPhilosophy);
   const shellIdentity = useMemo(
     () => ({
       pattern: shellPattern,
-      accent: shellPattern ? archetype.accent : null,
+      accent: shellPattern ? accent : null,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [shellPattern?.className, shellPattern?.color, archetype.accent],
+    [shellPattern?.className, shellPattern?.color, accent],
   );
 
   return (
@@ -153,7 +153,7 @@ function AppShellInner() {
         experienceMode={experienceMode}
       />
       <div className="max-w-md mx-auto lg:max-w-5xl">
-      <AppBackdrop accent={archetype.accent} patternClassName={shellPattern?.className ?? null} />
+      <AppBackdrop accent={accent} patternClassName={shellPattern?.className ?? null} />
       <FloatingControls
         openAdvisor={openAdvisor}
         unreadCount={unreadCount}

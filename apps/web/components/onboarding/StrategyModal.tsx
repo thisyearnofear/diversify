@@ -44,11 +44,11 @@ export default function StrategyModal({
     chainId,
 }: StrategyModalProps) {
     const { config, setMultipleConfig } = useProtectionProfile();
-    const { financialStrategy } = useStrategy();
+    const { valuesPhilosophy } = useStrategy();
     const { setActiveTab, navigateWithIntent } = useNavigation();
 
     // A selected philosophy personalizes the vault with a quiet tint
-    const archetypeId = strategyToArchetype(financialStrategy);
+    const archetypeId = strategyToArchetype(valuesPhilosophy);
     const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 
     // A11y: the onboarding IS the screen, so announce that state — give the

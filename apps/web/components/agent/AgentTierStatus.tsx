@@ -16,7 +16,7 @@ import { useSessionKey } from "../../hooks/use-session-key";
 import { useVault } from "../../hooks/use-vault";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useStrategy } from "@/context/app/StrategyContext";
-import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { identityAccent } from "@/components/shared/palette";
 // Deep leaf import — NOT the barrel — keeps the agent-status stack out of
 // first-load and avoids the no-restricted-imports lint warning.
 import { GUARDIAN_USER_COPY } from "@diversifi/shared/src/services/vault/guardian-tier-state";
@@ -92,8 +92,8 @@ export function GuardianStatusChip({
 }: GuardianStatusChipProps) {
   const { address, guardianState, copy, isActive, lastActivity } = useGuardianTierSnapshot();
   const { valuesPhilosophy } = useStrategy();
-  const archetype = useMemo(
-    () => ARCHETYPES[strategyToArchetype(valuesPhilosophy) ?? 'custom'],
+  const accent = useMemo(
+    () => identityAccent(valuesPhilosophy),
     [valuesPhilosophy],
   );
 
@@ -134,7 +134,7 @@ export function GuardianStatusChip({
     <div
       className={`rounded-2xl border p-4 bg-white dark:bg-gray-900 shadow-sm ${className}`}
       style={{
-        borderColor: `${archetype.accent}4d`,
+        borderColor: `${accent}4d`,
       }}
       role="status"
       aria-label={`Guardian: ${copy.headline}`}
@@ -158,10 +158,7 @@ export function GuardianStatusChip({
             {copy.description}
           </p>
           {isActive && lastActivity && (
-            <p
-              className="text-3xs font-semibold mt-1.5"
-              style={{ color: archetype.accent }}
-            >
+            <p className="text-3xs font-semibold mt-1.5 text-gray-600 dark:text-gray-300">
               Last action {timeAgo(lastActivity.timestamp)}
             </p>
           )}
@@ -171,10 +168,7 @@ export function GuardianStatusChip({
         <button
           type="button"
           onClick={handleCta}
-          className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors text-white"
-          style={{
-            background: archetype.accent,
-          }}
+          className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors text-white bg-action"
           onMouseEnter={(e) => {
             e.currentTarget.style.opacity = '0.85';
           }}

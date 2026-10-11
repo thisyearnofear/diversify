@@ -61,6 +61,7 @@ export function isSleeveSelection(id: string | null | undefined): boolean {
 interface Props {
   /** Effective strategy key (selected strategy overrides onboarding philosophy). */
   strategyKey: string | null;
+  identityStrategyKey?: string | null;
   portfolio: MultichainPortfolio;
   /** Controlled selection — the tab's focus state lives in ProtectionTab. */
   selectedToken: string | null;
@@ -128,10 +129,12 @@ interface Props {
   floor?: Exposure;
   /** The saved (or draft) Custom plan — `custom` resolves its legs and rules only from this. */
   customPlan?: CustomPlan | null;
+  suppressPlanBadge?: boolean;
 }
 
 export function ProtectionPlanRing({
   strategyKey,
+  identityStrategyKey,
   portfolio,
   selectedToken,
   onSelectToken,
@@ -159,9 +162,25 @@ export function ProtectionPlanRing({
   controls,
   floor = 'USD',
   customPlan = null,
+  suppressPlanBadge = false,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
+  const identityArchetypeId =
+    identityStrategyKey === undefined
+      ? archetypeId
+      : strategyToArchetype(identityStrategyKey);
+  const identityArchetype = identityArchetypeId
+    ? ARCHETYPES[identityArchetypeId]
+    : null;
+  const accent = identityArchetype?.accent ?? QUIET_GRAY;
+  const accentSoft = identityArchetype?.accentSoft ?? QUIET_GRAY;
+  const planBadge =
+    strategyKey === 'custom'
+      ? identityArchetype && identityArchetype.id !== 'custom'
+        ? `Custom · ${identityArchetype.name} values`
+        : 'Custom'
+      : archetype?.name ?? '';
   const allocations = useMemo(
     () => legs ?? resolvePlan({ strategy: archetypeId, customPlan }).legs,
     [legs, archetypeId, customPlan],
@@ -195,7 +214,7 @@ export function ProtectionPlanRing({
         percent: holding.percent,
         color:
           TOKEN_COLORS[holding.symbol] ??
-          (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
+          (i === 0 ? accent : i === 1 ? accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(holding.symbol)),
         material: foundryMaterialFor(holding.symbol),
         patina: patinaFor(holding.symbol),
@@ -207,12 +226,12 @@ export function ProtectionPlanRing({
       percent: a.percent,
         color:
           TOKEN_COLORS[a.token] ??
-          (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
+          (i === 0 ? accent : i === 1 ? accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(a.token)),
         material: foundryMaterialFor(a.token),
         patina: patinaFor(a.token),
     }));
-  }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs, sample]);
+  }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs, sample, accent, accentSoft]);
 
   // Selection derivations feed the count-up hook below — and every hook
   // must run before the early return (rules of hooks): the ring simply
@@ -397,12 +416,12 @@ export function ProtectionPlanRing({
         id: SLEEVE_ID,
         label: 'Tokenized assets — preview, not in your plan',
         percent: SLEEVE_PREVIEW_PCT,
-        color: archetype?.accent ?? QUIET_GRAY,
+        color: accent,
         hatch: true,
         material: 'ghost' as const,
       },
     ];
-  }, [sleeveOpen, sleeveTeaser, suggestionTeaser, ringSlicesForDisplay, rwaSlices.length, archetype]);
+  }, [sleeveOpen, sleeveTeaser, suggestionTeaser, ringSlicesForDisplay, rwaSlices.length, accent]);
 
   useEffect(() => {
     if (showDust && (!needsDisclosure || dust.length === 0)) setShowDust(false);
@@ -425,7 +444,7 @@ export function ProtectionPlanRing({
     id: a.token,
     label: `${a.label ?? displayToken(a.token)} — ${ghostLabel}`,
     percent: a.percent,
-    color: TOKEN_COLORS[a.token] ?? (i === 0 ? archetype?.accent : i === 1 ? archetype?.accentSoft : undefined) ?? QUIET_GRAY,
+    color: TOKEN_COLORS[a.token] ?? (i === 0 ? accent : i === 1 ? accentSoft : undefined) ?? QUIET_GRAY,
   }));
 
   const selectedLive = slices.find((slice) => slice.id === selectedToken) ?? null;
@@ -569,7 +588,7 @@ export function ProtectionPlanRing({
         {/* The committed-plan hallmark lives on the object itself — a
             strike punched into the rim, not a badge beside it. */}
         <div className="flex items-center gap-2">
-        {onHoleTap ? (
+        {!suppressPlanBadge && (onHoleTap ? (
           <motion.button
             key={archetype.id}
             type="button"
@@ -580,12 +599,12 @@ export function ProtectionPlanRing({
             onClick={() => { setHoleActed(true); onHoleTap?.(); }}
             whileTap={reducedMotion ? undefined : { ...press, transition: springPress }}
             className="text-sm font-semibold normal-case px-3 py-1 rounded-full border inline-flex items-center gap-1.5 min-h-tap min-w-tap text-ink hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
-            style={{ background: `${archetype.accent}18`, borderColor: archetype.accent }}
+            style={{ background: `${accent}18`, borderColor: accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={springPop}
           >
-            {archetype.name}
+            {planBadge}
             <span className="text-ink-muted font-semibold">
               {holeHintOverride ? " · Back" : " · Compare"}
             </span>
@@ -594,14 +613,14 @@ export function ProtectionPlanRing({
           <motion.span
             key={archetype.id}
             className="text-sm font-semibold normal-case px-3 py-1 rounded-full border inline-block text-ink"
-            style={{ background: `${archetype.accent}18`, borderColor: archetype.accent }}
+            style={{ background: `${accent}18`, borderColor: accent }}
             initial={reducedMotion ? false : { scale: 0.86, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={springPop}
           >
-            {archetype.name}
+            {planBadge}
           </motion.span>
-        )}
+        ))}
         </div>
       </div>
       )}
@@ -702,7 +721,7 @@ export function ProtectionPlanRing({
                           <motion.span
                             key={face}
                             className={`size-1 rounded-full ${active ? '' : 'bg-gray-300 dark:bg-white/20'}`}
-                            style={active ? { backgroundColor: archetype.accent } : undefined}
+                            style={active ? { backgroundColor: accent } : undefined}
                             animate={reducedMotion ? undefined : { scale: active ? 1 : 0.75, opacity: active ? 1 : 0.6 }}
                           />
                         );

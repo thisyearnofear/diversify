@@ -43,7 +43,8 @@ import { useAnchorCurrency } from "@/hooks/use-anchor-currency";
 import { PlanFloorControl } from "./PlanFloorControl";
 import { PhilosophyCoinRail, FocusedPlanLine } from "./PhilosophyCoinRail";
 import { useAmbientOrigin } from "./ProtectionAmbient";
-import { ARCHETYPE_ORDER, ARCHETYPES, archetypeToStrategy, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { ARCHETYPE_ORDER, archetypeToStrategy, strategyToArchetype } from "@/components/protection-cards/tokens";
+import { identityAccent } from "@/components/shared/palette";
 import {
   compactPlanDelta,
   resolvePlan,
@@ -103,18 +104,21 @@ export function ProtectionNotConnected({
   const { region: detectedRegion } = useUserRegion();
   // Identity travels with the morph: the moment a philosophy is chosen
   // (walletless commits work), the surface picks up its archetype tint.
-  const pattern = shieldPatternFor(financialStrategy ?? profileConfig.philosophy ?? null);
+  const ringKey = financialStrategy ?? profileConfig.philosophy ?? null;
+  const ringArchetype = ringKey != null ? strategyToArchetype(ringKey) : null;
+  const identityKey =
+    ringArchetype && ringArchetype !== "custom"
+      ? ringKey
+      : profileConfig.valuesPhilosophy ?? null;
+  const pattern = shieldPatternFor(identityKey);
   const showApacBanner = needsApacRailMessaging(
-    financialStrategy ?? profileConfig.philosophy,
+    identityKey,
     profileConfig.userRegion ?? detectedRegion,
   );
   const showCaribbeanBanner = needsCaribbeanRailMessaging(
-    financialStrategy ?? profileConfig.philosophy,
+    identityKey,
     profileConfig.userRegion ?? detectedRegion,
   );
-
-  const ringKey = financialStrategy ?? profileConfig.philosophy ?? null;
-  const ringArchetype = ringKey != null ? strategyToArchetype(ringKey) : null;
   const showRing = ringArchetype != null;
   const balance = usePlanBalancePreview({
     scopeKey: `walletless:${ringKey ?? 'none'}`,
@@ -249,6 +253,14 @@ export function ProtectionNotConnected({
         >
         <ProtectionPlanRing
           customPlan={customPlan}
+          identityStrategyKey={
+            (picking || comparing) && focusedArchetype && focusedArchetype !== "custom"
+              ? focusedPhilosophy
+              : picking
+                ? null
+                : identityKey
+          }
+          suppressPlanBadge={picking && !focusedPhilosophy}
           strategyKey={
             (picking ? focusedPhilosophy : ringKey) ??
             archetypeToStrategy(ARCHETYPE_ORDER[0])
@@ -320,7 +332,7 @@ export function ProtectionNotConnected({
                   isPreviewing={balance.isPreviewing}
                   onInteraction={() => setActed(true)}
                   floor={ringFloor}
-                  accent={ringArchetype ? ARCHETYPES[ringArchetype].accent : undefined}
+                  accent={identityAccent(identityKey)}
                   onChange={(risk) => {
                     setSelectedToken(null);
                     balance.select(risk);

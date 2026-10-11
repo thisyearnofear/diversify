@@ -7,7 +7,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { press, springPress, springSoft } from "@/lib/motion-tokens";
 import { haptics } from "@/lib/haptics";
-import { ARCHETYPES } from "@/components/protection-cards/tokens";
+import { identityAccent } from "@/components/shared/palette";
 import { useAgentStatus } from "../../hooks/use-agent-status";
 import { useAgentConfig } from "../../hooks/use-agent-config";
 import { useExperience } from "../../context/app/ExperienceContext";
@@ -417,7 +417,7 @@ function ConnectedAgent({
           <InstrumentWait
             label="Reading Guardian state"
             symbol="G"
-            color={ARCHETYPES.custom.accent}
+            color={identityAccent(profileConfig.valuesPhilosophy)}
           />
         ) : (
           <GuardianObject
