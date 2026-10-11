@@ -961,3 +961,12 @@ body {
     }
   }
 }
+
+/* The foundry — the hole numeral reads as struck into the plate, not
+   printed on it: a light catch on the cut's far edge, shade on the near. */
+.engraved-numeral {
+  text-shadow: 0 -1px 0 rgba(255, 255, 255, 0.65), 0 1.5px 2px rgba(15, 23, 42, 0.3);
+}
+.dark .engraved-numeral {
+  text-shadow: 0 -1.5px 2px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.1);
+}

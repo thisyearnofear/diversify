@@ -152,6 +152,11 @@ export default function AllocationRing({
                 <stop offset="0" stopColor="#BEC8D1" />
                 <stop offset="1" stopColor="#8B99A5" />
               </linearGradient>
+              {/* The selected leg sits proud of the plate — a lift off
+                  the die, not a color change. */}
+              <filter id={`proud-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
+                <feDropShadow dx="0" dy="2.5" stdDeviation="3" floodColor="#000" floodOpacity="0.45" />
+              </filter>
             </>
           )}
           {segments
@@ -218,8 +223,18 @@ export default function AllocationRing({
               : slice.color;
           const patina = foundry ? (slice.patina ?? 0) : 0;
           const dimOpacity = selectedId && !isSelected ? 0.4 : 1;
+          // Proud of the plate: a selected foundry leg lifts a few px along
+          // its own bisector and casts onto the plate beneath it.
+          const midRad = ((startDeg + (slice.percent / total) * 180) * Math.PI) / 180;
+          const liftPx = foundry && isSelected ? 4 : 0;
           return (
-            <React.Fragment key={slice.id}>
+            <motion.g
+              key={slice.id}
+              data-proud={liftPx > 0 || undefined}
+              filter={liftPx > 0 ? `url(#proud-${uid})` : undefined}
+              animate={{ x: Math.cos(midRad) * liftPx, y: Math.sin(midRad) * liftPx }}
+              transition={spring}
+            >
               <motion.circle
                 cx={size / 2}
                 cy={size / 2}
@@ -295,7 +310,7 @@ export default function AllocationRing({
                   style={{ transformOrigin: '50% 50%' }}
                 />
               )}
-            </React.Fragment>
+            </motion.g>
           );
         })}
         {(() => {

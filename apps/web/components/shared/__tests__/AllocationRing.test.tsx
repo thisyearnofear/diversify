@@ -134,6 +134,22 @@ describe('AllocationRing — the foundry variant', () => {
     expect(channel.getAttribute('stroke')).toContain('metal-ghost');
   });
 
+  it('the selected leg sits proud of the plate — lifted along its bisector', () => {
+    const { container } = render(
+      <AllocationRing slices={METALS} variant="foundry" selectedId="KESm" onSelect={() => {}} />,
+    );
+    const proud = container.querySelector('[data-proud]');
+    expect(proud).not.toBeNull();
+    expect(proud!.getAttribute('filter')).toContain('proud-');
+
+    cleanup();
+    const flat = render(
+      <AllocationRing slices={METALS} selectedId="KESm" onSelect={() => {}} />,
+    );
+    // Selection in the flat variant dims — it never lifts.
+    expect(flat.container.querySelector('[data-proud]')).toBeNull();
+  });
+
   it('punches hallmarks into the rim and engraves the maker\'s mark while monitoring', () => {
     render(
       <AllocationRing

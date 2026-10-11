@@ -638,6 +638,11 @@ export default function ProtectionTab({
   // affordance ("Dollar floor 25%") is the resting door; opening it
   // morphs into the full control in place.
   const [floorOpen, setFloorOpen] = useState(false);
+  // Commits seat the object — the die presses the new metal once.
+  const [seatNonce, setSeatNonce] = useState(0);
+  // The engraved affordance etches in once per mount — a graver's cut
+  // sweeping left to right, never a loop, never replayed.
+  const etchedRef = useRef(false);
   useEffect(() => {
     setActed(false);
     setFloorOpen(false);
@@ -759,6 +764,7 @@ export default function ProtectionTab({
     setFocusedToken(null);
     setComparing(false);
     setPhilosophyDetailsOpen(false);
+    setSeatNonce(Date.now());
     haptics.confirm();
     if (!isDemo) followOnGuardian(focusedPhilosophy);
     if (!isDemo && address && chainId) {
@@ -1090,6 +1096,7 @@ export default function ProtectionTab({
                 : undefined
             }
             stilled={acted}
+            seatNonce={seatNonce}
             floor={comparing ? previewFloor : planFloor}
             controls={!comparing && tiltShowing && guardianTilt ? (
               <div className="mt-3 space-y-2" data-testid="guardian-tilt-preview">
@@ -1138,6 +1145,7 @@ export default function ProtectionTab({
                         if (balance.commit()) {
                           setFloorOpen(false);
                           setFocusedToken(null);
+                          setSeatNonce(Date.now());
                           haptics.confirm();
                           showToast('Balance saved. Your holdings have not moved.', 'success');
                           if (address && strategyKey && strategyKey !== 'custom' && vault.vault && getCachedWalletAuth(address)) {
@@ -1173,10 +1181,15 @@ export default function ProtectionTab({
                 ) : !focusedToken ? (
                   // The resting door — the floor is engraved beneath the
                   // object like provenance, not mounted as a control. The
-                  // offer and the tweak ride the same quiet line.
-                  <div
+                  // offer and the tweak ride the same quiet line. The row
+                  // etches itself in once on mount — one graver's cut.
+                  <motion.div
                     data-testid="floor-affordance-row"
                     className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1"
+                    initial={etchedRef.current || reducedMotion ? false : { clipPath: "inset(-2px 100% -2px 0)" }}
+                    animate={{ clipPath: "inset(-2px 0% -2px 0)" }}
+                    transition={{ duration: 0.65, ease: [0.3, 0.8, 0.3, 1] }}
+                    onAnimationComplete={() => { etchedRef.current = true; }}
                   >
                     <button
                       type="button"
@@ -1201,7 +1214,7 @@ export default function ProtectionTab({
                       </button>
                     )}
                     {tweakButton(strategyKey, "custom-tweak")}
-                  </div>
+                  </motion.div>
                 ) : null}
                 {!businessMorph && !sleeveOpen && !comparing && !focusedToken &&
                   balance.isPreviewing &&

@@ -17,7 +17,7 @@
  * not stacked in the hole.
  */
 import React, { useEffect, useMemo, useState } from 'react';
-import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { motion, useReducedMotion, AnimatePresence, useAnimationControls } from 'framer-motion';
 import AllocationRing, { type RingMark, type RingSlice } from '@/components/shared/AllocationRing';
 import { foundryMaterialFor, patinaFor } from '@/lib/foundry';
 import { TokenIcon } from '@/components/shared/TokenIcon';
@@ -117,6 +117,9 @@ interface Props {
    *  arrives as `onSelectToken(TILT_ID)` and the parent opens the
    *  suggestion preview. */
   suggestionTeaser?: string;
+  /** Commits re-seat the object — each new value plays the settle once:
+   *  the die presses the metal home and releases. */
+  seatNonce?: number;
   stilled?: boolean;
   balancePreview?: boolean;
   savedLegs?: PlanLeg[];
@@ -149,6 +152,7 @@ export function ProtectionPlanRing({
   monitoring = false,
   sleeveTeaser = false,
   suggestionTeaser,
+  seatNonce = 0,
   stilled = false,
   balancePreview = false,
   savedLegs = [],
@@ -219,6 +223,16 @@ export function ProtectionPlanRing({
 
   const reducedMotion = useReducedMotion();
   const inspecting = useInstrumentInspection();
+  // The seat: a commit presses the object once — slight sink, overshoot,
+  // rest. Keyed on a nonce so consecutive commits each settle again.
+  const seatControls = useAnimationControls();
+  useEffect(() => {
+    if (!seatNonce || reducedMotion) return;
+    void seatControls.start({
+      scale: [0.965, 1.015, 1],
+      transition: { duration: 0.55, ease: 'easeOut', times: [0, 0.45, 1] },
+    });
+  }, [seatNonce, reducedMotion, seatControls]);
   const [holeActed, setHoleActed] = useState(false);
   const acted = holeActed || stilled || inspecting;
   const tilt = usePointerTilt(!reducedMotion && !acted);
@@ -602,6 +616,7 @@ export function ProtectionPlanRing({
           style={{ ...tilt.style, transformPerspective: 900 }}
           {...tilt.props}
         >
+          <motion.div animate={seatControls} className="relative">
           {/* The current plan's outline — a thin concentric track in its
               own colours at ~35% opacity just outside the ring edge,
               fading in/out with compare. */}
@@ -653,7 +668,7 @@ export function ProtectionPlanRing({
               const holeContent = (
                 <>
                   {hole.number != null && (
-                    <span className={`${hole.size ?? 'text-2xl'} font-black text-gray-900 dark:text-white tabular-nums`}>
+                    <span className={`${hole.size ?? 'text-2xl'} font-black text-gray-900 dark:text-white tabular-nums engraved-numeral`}>
                       {hole.number}
                     </span>
                   )}
@@ -734,6 +749,7 @@ export function ProtectionPlanRing({
               );
             })()}
           </AllocationRing>
+          </motion.div>
         </motion.div>
       </div>
 
