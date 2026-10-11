@@ -36,6 +36,7 @@ vi.mock('framer-motion', async () => {
 import RiveCoin from '../RiveCoin';
 import RiveNetPair from '../RiveNetPair';
 import RiveProtectionSeal from '../RiveProtectionSeal';
+import RiveAssayShield from '../RiveAssayShield';
 
 beforeEach(() => {
   reducedMotionState.on = false;
@@ -101,6 +102,39 @@ describe('RiveProtectionSeal', () => {
     const arc = container.querySelector('circle');
     expect(arc).toBeInTheDocument();
     expect(arc).toHaveAttribute('stroke-dasharray', expect.stringContaining('138'));
+  });
+});
+
+describe('RiveAssayShield', () => {
+  it('mounts the Rive canvas when motion is allowed', () => {
+    render(<RiveAssayShield size={160} />);
+    expect(screen.getByTestId('rive-canvas-stub')).toBeInTheDocument();
+  });
+
+  it('the static fallback keeps the material — patina, ghost channel, strike and the maker mark are appearance, not animation', () => {
+    reducedMotionState.on = true;
+    const { container } = render(
+      <RiveAssayShield size={160} patina={0.7} gapStart={0.7} struck monitoring />,
+    );
+    expect(screen.queryByTestId('rive-canvas-stub')).not.toBeInTheDocument();
+    const svg = screen.getByRole('img', { name: 'Protection plan' });
+    // Patina overlay rides the living-metal leg at bound opacity.
+    const verdigris = container.querySelector('path[stroke="#4E7D6E"]');
+    expect(verdigris).toBeInTheDocument();
+    expect(verdigris).toHaveAttribute('stroke-opacity', '0.7');
+    // The ghost channel renders as the leg not yet poured.
+    expect(container.querySelector('path[stroke-opacity="0.22"]')).toBeInTheDocument();
+    // The hallmark and the maker's mark are struck / set.
+    expect(container.querySelector('g')).toBeInTheDocument();
+    expect(container.querySelector('path[fill="#6B7280"]')).toBeInTheDocument();
+    expect(svg).toBeInTheDocument();
+  });
+
+  it('an unweathered plan carries no patina and an unanchored one no hallmark', () => {
+    reducedMotionState.on = true;
+    const { container } = render(<RiveAssayShield size={160} />);
+    expect(container.querySelector('path[stroke="#4E7D6E"]')).not.toBeInTheDocument();
+    expect(container.querySelector('g')).not.toBeInTheDocument();
   });
 });
 

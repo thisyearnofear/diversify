@@ -273,6 +273,47 @@ additions, neither counted against the ambient budget:
   acted surfaces count as never-seen — the funnel measures the craft
   read, not the arm state.
 
+### The foundry — one material system for every object
+
+Every expressive object in the product is struck from the same six
+materials. The foundry is what makes the coin, the beam, the mark, the
+seal and the shield read as one physical world instead of five
+one-offs — an object converts completely or not at all.
+
+**Materials.**
+
+| Material | Renders | Rule |
+|----------|---------|------|
+| Machined metal | reserve/stable value (USDm, the floor) | tight engraving, no patina — the calm surface |
+| Noble metal | PAXG, BTC | literal gold — the one material that never weathers |
+| Living metal | EM currencies (KESm, NGNm, GHSm…) | copper/bronze that patinas with drift — **time made visible** |
+| Ghost inlay | gaps, previews, Guardian suggestions | a polished empty channel where metal should be — the absence IS the affordance |
+| Strike mark | verified/committed facts | the hallmark, punched once, permanent |
+| Engraving | provenance, dates, the maker's mark | rim text — inscribed, never a furniture label |
+
+**Physics — three motion primitives, nothing else.** *Strike* (instant
+commit — hallmark punch, plan commit, swap settle, the held grant),
+*weather* (slow continuous drift — patina accrual, the beam's tilt),
+*settle* (the return to rest). A proposed fourth primitive must argue
+its way in.
+
+**The ceremony.** Every commitment in the app is a strike: sustained or
+deliberate intent → the mark lands → haptic → the metal stills.
+Learned once, it means "I made something permanent" everywhere.
+
+**The chronology.** Delight is the object getting older *with* the
+user: patina builds over weeks, strikes accumulate on the rim, a
+three-month shield is visibly aged next to a fresh blank. The newcomer
+sees polished potential; the returning user sees *their* object. This
+is the retention mechanic — honest history, not a streak.
+
+**Guardrails.** Patina is a whisper — desaturation and texture shift,
+never grime; if a user thinks the metal looks dirty it has failed.
+Touch may leave a trace (a rubbed coin buffs where it was touched) but
+nothing sparkles idle — the stillness contract owns delight too. And
+DOM stays authoritative: the foundry is material, the text beside it
+is truth.
+
 ### The density contract — depth layers, finite verbs, owned motifs
 
 Each new primitive is cheap; the risk is the sum. Three rules keep it:
