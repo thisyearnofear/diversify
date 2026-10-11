@@ -18,7 +18,8 @@
  */
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
-import AllocationRing, { type RingSlice } from '@/components/shared/AllocationRing';
+import AllocationRing, { type RingMark, type RingSlice } from '@/components/shared/AllocationRing';
+import { foundryMaterialFor, patinaFor } from '@/lib/foundry';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { useCountUp } from '@/hooks/use-count-up';
 import { usePointerTilt } from '@/hooks/use-pointer-tilt';
@@ -32,7 +33,6 @@ import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView, heldAsSymbol } from '@/lib/wallet-portfolio-view';
 import { useBalanceVisibility } from '@/context/app/BalanceVisibilityContext';
 import { QUIET_GRAY, TOKEN_COLORS } from '@/components/shared/palette';
-import RiveProtectionSeal from '@/components/shared/RiveProtectionSeal';
 import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 import { rwaLegFor } from './rwa-assets';
 import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
@@ -99,6 +99,8 @@ interface Props {
    * quiet; a ring with no tokenized asset gets one labelled preview wedge.
    */
   sleeveOpen?: boolean;
+  /** Guardian is watching — engraves the maker's mark in the plate. */
+  monitoring?: boolean;
   /** Walletless invite: append one faint hatched wedge for the
    *  tokenized-asset lens — the object advertises its own verb instead
    *  of a status-tier text link carrying the action hue. The tap
@@ -133,6 +135,7 @@ export function ProtectionPlanRing({
   holeOverride,
   holeActionLabel,
   sleeveOpen = false,
+  monitoring = false,
   sleeveTeaser = false,
   stilled = false,
   balancePreview = false,
@@ -178,6 +181,8 @@ export function ProtectionPlanRing({
           TOKEN_COLORS[holding.symbol] ??
           (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(holding.symbol)),
+        material: foundryMaterialFor(holding.symbol),
+        patina: patinaFor(holding.symbol),
       }));
     }
     return allocations.map((a, i) => ({
@@ -188,6 +193,8 @@ export function ProtectionPlanRing({
           TOKEN_COLORS[a.token] ??
           (i === 0 ? archetype.accent : i === 1 ? archetype.accentSoft : QUIET_GRAY),
         hatch: Boolean(rwaLegFor(a.token)),
+        material: foundryMaterialFor(a.token),
+        patina: patinaFor(a.token),
     }));
   }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs, sample]);
 
@@ -302,7 +309,7 @@ export function ProtectionPlanRing({
     if (!needsDisclosure) return slices;
     if (showDust) {
       const dustIds = new Set(dust.map((d) => d.slice.id));
-      return slices.map((s) => dustIds.has(s.id) ? s : { ...s, color: QUIET_GRAY });
+      return slices.map((s) => dustIds.has(s.id) ? s : { ...s, color: QUIET_GRAY, material: 'ghost' as const });
     }
     if (dust.length === 0) return slices;
     const primaryIds = new Set(primary.map((p) => p.slice.id));
@@ -340,10 +347,12 @@ export function ProtectionPlanRing({
           percent: SLEEVE_TEASER_PCT,
           color: QUIET_GRAY,
           hatch: true,
+          material: 'ghost' as const,
         },
       ];
     }
-    const quiet = ringSlicesForDisplay.map((s) => (s.hatch ? s : { ...s, color: QUIET_GRAY }));
+    // The lens etches every non-RWA leg — ghost material, not struck metal.
+    const quiet = ringSlicesForDisplay.map((s) => (s.hatch ? s : { ...s, color: QUIET_GRAY, material: 'ghost' as const }));
     if (rwaSlices.length > 0) return quiet;
     return [
       ...quiet,
@@ -353,6 +362,7 @@ export function ProtectionPlanRing({
         percent: SLEEVE_PREVIEW_PCT,
         color: archetype?.accent ?? QUIET_GRAY,
         hatch: true,
+        material: 'ghost' as const,
       },
     ];
   }, [sleeveOpen, sleeveTeaser, ringSlicesForDisplay, rwaSlices.length, archetype]);
@@ -369,6 +379,11 @@ export function ProtectionPlanRing({
 
   const ringSize = compact ? 130 : 200;
   const ringThickness = compact ? 16 : 24;
+  // A live, committed plan carries the hallmark — the strike punches once
+  // per plan (the mark key remounts), then holds. Previews stay unstruck.
+  const struck =
+    !compact && !balancePreview && !walletless && !sample && !forcePlanLegs;
+  const marks: RingMark[] = struck ? [{ deg: 0, id: `strike-${archetype.id}` }] : [];
   const ghostSlices: RingSlice[] = (ghostLegs ?? []).map((a, i) => ({
     id: a.token,
     label: `${a.label ?? displayToken(a.token)} — ${ghostLabel}`,
@@ -514,12 +529,9 @@ export function ProtectionPlanRing({
               ? 'Your holdings'
               : 'Plan preview'}
         </h3>
-        {/* Armed-state seal — stamps once per mount (keyed to the plan),
-            then holds. The §5 confirm artefact for committing a plan. */}
+        {/* The committed-plan hallmark lives on the object itself — a
+            strike punched into the rim, not a badge beside it. */}
         <div className="flex items-center gap-2">
-          {!balancePreview && !walletless && !sample && !forcePlanLegs && (
-            <RiveProtectionSeal key={`seal-${archetype.id}`} size={34} color={archetype.accent} armed />
-          )}
         {onHoleTap ? (
           <motion.button
             key={archetype.id}
@@ -609,6 +621,10 @@ export function ProtectionPlanRing({
             }
             size={ringSize}
             thickness={ringThickness}
+            variant="foundry"
+            marks={marks}
+            strike={struck}
+            monitoring={monitoring}
           >
             {(() => {
               const holeContent = (

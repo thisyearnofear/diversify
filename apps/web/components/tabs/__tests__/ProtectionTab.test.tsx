@@ -228,6 +228,8 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       compact,
       forcePlanLegs,
       ghostLegs,
+      monitoring,
+      sleeveTeaser,
     }: {
       strategyKey: string | null;
       selectedToken: string | null;
@@ -245,6 +247,8 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
       compact?: boolean;
       forcePlanLegs?: boolean;
       ghostLegs?: { token: string; percent: number }[];
+      monitoring?: boolean;
+      sleeveTeaser?: boolean;
     }) => {
       const archetypeId = strategyToArchetype(strategyKey);
       const name = archetypeId ? ARCHETYPES[archetypeId].name : "";
@@ -318,6 +322,8 @@ vi.mock("@/components/tabs/protect/ProtectionPlanRing", async () => {
           "data-legs": JSON.stringify((legs ?? []).map((l) => [l.token, l.percent])),
           "data-saved-legs": JSON.stringify((savedLegs ?? []).map((l) => [l.token, l.percent])),
           "data-selected": selectedToken ?? "",
+          "data-monitoring": String(Boolean(monitoring)),
+          "data-sleeve-teaser": String(Boolean(sleeveTeaser)),
         },
         badge,
         hole,
@@ -920,7 +926,13 @@ describe("ProtectionTab — instrument shapes", () => {
         }}
       />,
     );
-    expect(screen.getByTestId("shield-quiet")).toBeInTheDocument();
+    expect(screen.getByTestId("shield-quiet")).toHaveTextContent("Plan aligned.");
+    // One line, not three: the badge IS the activity door, the
+    // monitoring sentence is gone, the maker's mark rides the object.
+    expect(screen.queryByText(/Guardian is monitoring/)).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-monitoring", "true");
+    fireEvent.click(screen.getByTestId("guardian-activity"));
+    expect(mockNavigateToGuardian).toHaveBeenCalledTimes(1);
   });
 
   it("no meta-lectures: the pipeline footer and design-contract asides are gone (§3)", () => {
@@ -1002,7 +1014,7 @@ describe("ProtectionTab — instrument shapes", () => {
     // The CTA names the job — no duplicate sentence, no second CTA.
     expect(screen.queryByText("Tap a slice to close the gap.")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Set up Guardian" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Guardian activity" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-activity")).not.toBeInTheDocument();
 
     // Selecting it opens the inspector with that slice's CTA; the
     // object's CTA steps aside (the button says the job — §3).
@@ -1467,12 +1479,12 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(ring).toHaveAttribute("data-legs", JSON.stringify([["KESm", 72], ["cUSD", 10], ["cEUR", 18]]));
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve 25% → 10%");
     expect(screen.getByRole("radio", { name: "More exposure" })).toHaveAttribute("aria-checked", "true");
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(ring).toHaveAttribute("data-sleeve-teaser", "false");
     expect(mockSetRiskTolerance).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Keep current balance" }));
     expect(ring).toHaveAttribute("data-balance-preview", "false");
-    expect(screen.getByTestId("rwa-sleeve-entry")).toBeInTheDocument();
+    expect(ring).toHaveAttribute("data-sleeve-teaser", "true");
     expect(mockSetRiskTolerance).not.toHaveBeenCalled();
   });
 
@@ -1862,7 +1874,7 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     cleanup();
   });
 
-  it("labels tokenized assets by plan versus wallet instead of claiming wallet-only PAXG is planned", () => {
+  it("the sleeve wedge on the object is the door — no status-tier text link", () => {
     const withPaxg = {
       ...MOCK_PORTFOLIO,
       totalValue: 5100,
@@ -1873,17 +1885,17 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
       ],
     } as any;
     render(<ProtectionTab userRegion="USA" portfolio={withPaxg} />);
-    const entry = screen.getByTestId("rwa-sleeve-entry");
-    expect(screen.getByTestId("protection-plan-ring").contains(entry)).toBe(true);
-    expect(entry).toHaveTextContent("PAXG in your wallet, not the plan · Explore tokenized assets");
-    expect(entry).not.toHaveTextContent("PAXG in this plan");
+    const ring = screen.getByTestId("protection-plan-ring");
+    expect(ring).toHaveAttribute("data-sleeve-teaser", "true");
     expect(document.querySelector('[data-status-slot="rail"]')).toBeNull();
-    fireEvent.click(entry);
+    // The wedge's tap arrives as the sleeve selection — the lens opens.
+    fireEvent.click(screen.getByTestId("ring-select-sleeve"));
     expect(screen.getByTestId("rwa-vault-sleeve")).toBeInTheDocument();
     expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("rwa-sleeve-back"));
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    // The preview keeps the provisional context line; the wedge rests.
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "false");
     expect(screen.getByTestId("rwa-preview-context")).toHaveTextContent(
       "Preview plan · no tokenized assets · wallet holds PAXG",
     );
@@ -1897,10 +1909,8 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     };
     mockFinancialStrategy = "custom";
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
-    expect(screen.getByTestId("rwa-sleeve-entry")).toHaveTextContent("PAXG in this plan · Explore tokenized assets");
-    expect(screen.getByTestId("rwa-sleeve-entry")).not.toHaveTextContent("PAXG in your wallet, not the plan");
     fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "false");
     expect(screen.getByTestId("rwa-preview-context")).toHaveTextContent("Preview plan · tokenized PAXG");
     expect(mockSetRiskTolerance).not.toHaveBeenCalled();
     profileState.customPlan = null;
@@ -1913,12 +1923,12 @@ describe("ProtectionTab — status tier budget + treasury intent", () => {
     expect(document.querySelector('[data-status-slot="trust"]')).not.toBeNull();
   });
 
-  it("sleeve open: the back button owns the transition slot, the rail entry steps aside", () => {
+  it("sleeve open: the back button owns the transition slot, the teaser wedge rests", () => {
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
-    fireEvent.click(screen.getByTestId("rwa-sleeve-entry"));
+    fireEvent.click(screen.getByTestId("ring-select-sleeve"));
     const transition = document.querySelector('[data-status-slot="transition"]');
     expect(transition?.querySelector('[data-testid="rwa-sleeve-back"]')).not.toBeNull();
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "false");
   });
 
   it("region intent resolves to the in-region slice and consumes the intent", () => {
@@ -2019,9 +2029,9 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
   it("shows when the wallet's dollar share beats the plan floor by ≥10 points", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
-    expect(prompt).toHaveTextContent(
-      "Your wallet keeps 64% in dollars vs 25% in this plan — try a stronger floor",
-    );
+    expect(prompt).toHaveTextContent("wallet holds 64% — try a stronger floor");
+    // The offer lives inside the control's caption, not a separate line.
+    expect(screen.getByTestId("plan-floor-control").contains(prompt)).toBe(true);
     expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
   });
 
@@ -2064,7 +2074,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     };
     render(<ProtectionTab userRegion="USA" portfolio={shillingMajorityDollarSurplus} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
-    expect(prompt).toHaveTextContent("Your wallet keeps 40% in dollars vs 25% in this plan — try a stronger floor");
+    expect(prompt).toHaveTextContent("wallet holds 40% — try a stronger floor");
     expect(prompt).not.toHaveTextContent(/KES/);
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve");
   });
@@ -2244,10 +2254,10 @@ describe("ProtectionTab — business morph (shieldMorph: cycle)", () => {
     cleanup();
   });
 
-  it("connected: the status rail offers the cycle entry instead of the RWA rail", () => {
+  it("connected: the status rail offers the cycle entry instead of the sleeve wedge", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     expect(screen.getByTestId("cycle-entry")).toBeInTheDocument();
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "false");
   });
 
   it("the cycle entry opens the payment-cycle inspector in next mode", () => {
@@ -2261,10 +2271,10 @@ describe("ProtectionTab — business morph (shieldMorph: cycle)", () => {
     expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
   });
 
-  it("non-business personas keep the RWA rail", () => {
+  it("non-business personas keep the sleeve wedge", () => {
     adaptiveState.shieldMorph = "plan";
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
-    expect(screen.getByTestId("rwa-sleeve-entry")).toBeInTheDocument();
+    expect(screen.getByTestId("protection-plan-ring")).toHaveAttribute("data-sleeve-teaser", "true");
     expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
   });
 
@@ -2275,14 +2285,13 @@ describe("ProtectionTab — business morph (shieldMorph: cycle)", () => {
     expect(screen.getByTestId("cycle-entry")).toBeInTheDocument();
   });
 
-  it("walletless: the cycle entry replaces the tokenized-assets link", () => {
+  it("walletless: the cycle entry replaces the sleeve wedge", () => {
     vi.mocked(useWalletContext).mockReturnValue({
       address: null,
       chainId: null,
     } as any);
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     expect(screen.getByTestId("cycle-entry")).toBeInTheDocument();
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("cycle-entry"));
     expect(screen.getByTestId("payment-cycle-report")).toHaveAttribute(

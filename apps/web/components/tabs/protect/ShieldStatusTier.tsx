@@ -65,11 +65,11 @@ export function ShieldStatusTier({
   onOpenCycle,
   sinceHint,
 }: ShieldStatusTierProps) {
-  // The compare/quiet/monitoring row is empty in the gap+biggestGap case
-  // (the CTA beneath the ring names the job) — don't burn the slot on it.
+  // The row is empty in the gap+biggestGap case — the CTA beneath the
+  // ring names the job. Monitoring adds nothing here: the badge is the
+  // door and the sentence is gone.
   const statusRowEmpty =
     !comparing &&
-    guardianState !== "monitoring" &&
     shape === "gap" &&
     !focusedToken &&
     Boolean(biggestGap);
@@ -81,7 +81,32 @@ export function ShieldStatusTier({
       trust={
         <div className="flex flex-wrap items-center gap-2">
           {guardianState === "monitoring" ? (
-            <StatusBadge label="Guardian monitoring" tone="ready" compact />
+            // The badge IS the activity door — no separate link, no
+            // monitoring sentence beneath it.
+            address ? (
+              <button
+                type="button"
+                data-testid="guardian-activity"
+                aria-label="Guardian monitoring — view activity"
+                onClick={() => {
+                  // Carry the focused slice (or plan) so Guardian opens with
+                  // the user's context, not a generic status page.
+                  navigateToGuardian(
+                    focusedToken
+                      ? {
+                          summary: `${focusedToken} — ${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}`,
+                          prompt: `Guardian, what's the status on my ${focusedToken} holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}) for my ${planName} plan?`,
+                        }
+                      : undefined,
+                  );
+                }}
+                className="min-h-tap"
+              >
+                <StatusBadge label="Guardian monitoring" tone="ready" compact />
+              </button>
+            ) : (
+              <StatusBadge label="Guardian monitoring" tone="ready" compact />
+            )
           ) : shape === "fund" ? (
             <StatusBadge label="Wallet needs funds" tone="warning" compact />
           ) : shape === "gap" ? (
@@ -103,7 +128,6 @@ export function ShieldStatusTier({
             ← Back to plan
           </button>
         ) : statusRowEmpty && !sinceHint ? undefined : (
-          <>
           <div className="flex items-center justify-between gap-3 text-xs text-gray-600 dark:text-gray-300">
           {comparing ? (
         <p data-testid="shield-compare-status">
@@ -117,9 +141,7 @@ export function ShieldStatusTier({
           </button>
         </p>
       ) : shape === "quiet" ? (
-        <p data-testid="shield-quiet">Plan aligned. Guardian is monitoring.</p>
-      ) : guardianState === "monitoring" ? (
-        <p>Guardian is monitoring this plan.</p>
+        <p data-testid="shield-quiet">Plan aligned.</p>
       ) : shape === "gap" && !focusedToken && biggestGap ? (
         // The biggest-gap CTA beneath the ring names the job — no
         // duplicate sentence here.
@@ -133,25 +155,13 @@ export function ShieldStatusTier({
               : "Choose your protection philosophy."}
         </p>
       )}
-      {!comparing && address && guardianState === "monitoring" && (
-        <button
-          type="button"
-          onClick={() => {
-            // Carry the focused slice (or plan) so Guardian opens with
-            // the user's context, not a generic status page.
-            navigateToGuardian(
-              focusedToken
-                ? {
-                    summary: `${focusedToken} — ${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}`,
-                    prompt: `Guardian, what's the status on my ${focusedToken} holding (${selectedHeld.toFixed(0)}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}) for my ${planName} plan?`,
-                  }
-                : undefined,
-            );
-          }}
-          className="min-h-tap px-3 font-semibold text-blue-600 dark:text-blue-400 shrink-0"
+      {!comparing && sinceHint && (
+        <span
+          data-testid="shield-since-last-visit"
+          className="ml-auto shrink-0 text-3xs font-medium text-gray-400 dark:text-gray-500 tabular-nums"
         >
-          Guardian activity
-        </button>
+          {sinceHint}
+        </span>
       )}
       {!comparing && address && guardianState !== "monitoring" &&
         !(shape === "gap" && !focusedToken && biggestGap) &&
@@ -165,15 +175,6 @@ export function ShieldStatusTier({
         </button>
       )}
           </div>
-            {sinceHint && !comparing && (
-              <p
-                data-testid="shield-since-last-visit"
-                className="mt-1 text-3xs font-medium text-gray-400 dark:text-gray-500 tabular-nums"
-              >
-                {sinceHint}
-              </p>
-            )}
-          </>
         )
       }
       rail={

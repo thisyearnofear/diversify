@@ -781,7 +781,8 @@ describe('ProtectionPlanRing — balance preview', () => {
     expect(screen.queryByRole('button', { name: /preview target/ })).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /wallet holding/ }).length).toBeGreaterThan(0);
     expect(screen.getByText(/3-year path/)).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: 'Plan saved' })).toBeInTheDocument();
+    // A committed plan carries the hallmark struck into the rim.
+    expect(screen.getByTestId('ring-mark')).toBeInTheDocument();
   });
 
   it('selected slice answers preview vs saved — not a gap, not a holding', () => {

@@ -314,6 +314,13 @@ nothing sparkles idle — the stillness contract owns delight too. And
 DOM stays authoritative: the foundry is material, the text beside it
 is truth.
 
+*Carrier:* `AllocationRing variant="foundry"` renders the language in
+DOM/SVG on the Shield instrument — `lib/foundry.ts` classifies each
+leg's metal from the token (`machined`/`noble`/`living`/`ghost`) and
+scales patina from the curated 5yr depreciation record. Rive objects
+(`RiveAssayShield`, the seal) carry the same materials where the scene
+is fixed; the plan ring needs arbitrary-N legs, so SVG owns it.
+
 ### The density contract — depth layers, finite verbs, owned motifs
 
 Each new primitive is cheap; the risk is the sum. Three rules keep it:

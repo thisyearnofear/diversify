@@ -1064,6 +1064,8 @@ export default function ProtectionTab({
               comparing && focusedPhilosophy ? "under this plan" : undefined
             }
             sleeveOpen={sleeveOpen}
+            monitoring={guardianState === "monitoring"}
+            sleeveTeaser={!businessMorph && !sleeveOpen && !comparing && !balance.isPreviewing}
             stilled={acted}
             floor={comparing ? previewFloor : planFloor}
             controls={!comparing && tiltShowing && guardianTilt ? (
@@ -1133,47 +1135,28 @@ export default function ProtectionTab({
                     }
                   }}
                   onCancel={() => { balance.cancel(); setFocusedToken(null); haptics.tap(); }}
+                  floorOffer={showFloorPrompt ? floorOffer : null}
+                  onFloorOffer={() => {
+                    if (!floorOffer) return;
+                    balance.select(floorOffer.next);
+                    haptics.tap();
+                    if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
+                  }}
                 />
-                {showFloorPrompt && floorOffer && (
-                  <button
-                    type="button"
-                    data-testid="shield-floor-prompt"
-                    onClick={() => {
-                      balance.select(floorOffer.next);
-                      haptics.tap();
-                      if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
-                    }}
-                    className="min-h-tap text-left text-xs font-semibold text-blue-600 dark:text-blue-400"
-                  >
-                    Your wallet keeps {floorOffer.heldFloor}% in {planFloor === "USD" ? "dollars" : planFloor} vs {floorOffer.planFloor}% in this plan — try a stronger floor →
-                  </button>
-                )}
                 {!balance.isPreviewing && !focusedToken && (
                   <div className="mt-1 flex justify-center">{tweakButton(strategyKey, "custom-tweak")}</div>
                 )}
-                {!businessMorph && !sleeveOpen && !comparing && !focusedToken && (
-                  balance.isPreviewing ? (
-                    (previewRwaSymbols.length > 0 || planRwaSymbols.length > 0 || walletOnlyRwaSymbols.length > 0) && (
-                      <p data-testid="rwa-preview-context" className="mt-2 text-2xs text-ink-muted">
-                        Preview plan · {previewRwaSymbols.length > 0
-                          ? `tokenized ${previewRwaSymbols.join(" · ")}`
-                          : `no tokenized assets${walletOnlyRwaSymbols.length > 0 ? ` · wallet holds ${walletOnlyRwaSymbols.join(" · ")}` : ""}`}
-                      </p>
-                    )
-                  ) : (
-                    <button
-                      type="button"
-                      data-testid="rwa-sleeve-entry"
-                      onClick={() => setFocusedToken(SLEEVE_ID)}
-                      className="mt-2 min-h-tap text-left text-xs font-semibold text-blue-600 dark:text-blue-400"
-                    >
-                      {[
-                        planRwaSymbols.length > 0 && `${planRwaSymbols.join(" · ")} in this plan`,
-                        walletOnlyRwaSymbols.length > 0 && `${walletOnlyRwaSymbols.join(" · ")} in your wallet, not the plan`,
-                      ].filter(Boolean).join(" · ") || "Tokenized assets you could hold"} · Explore tokenized assets →
-                    </button>
-                  )
-                )}
+                {!businessMorph && !sleeveOpen && !comparing && !focusedToken &&
+                  balance.isPreviewing &&
+                  (previewRwaSymbols.length > 0 || planRwaSymbols.length > 0 || walletOnlyRwaSymbols.length > 0) && (
+                    <p data-testid="rwa-preview-context" className="mt-2 text-2xs text-ink-muted">
+                      Preview plan · {previewRwaSymbols.length > 0
+                        ? `tokenized ${previewRwaSymbols.join(" · ")}`
+                        : `no tokenized assets${walletOnlyRwaSymbols.length > 0 ? ` · wallet holds ${walletOnlyRwaSymbols.join(" · ")}` : ""}`}
+                    </p>
+                  )}
+                {/* The sleeve entry lives ON the object — the hatched
+                    teaser wedge is the door, not a link beneath it. */}
               </div>
             ) : undefined}
           />

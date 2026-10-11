@@ -89,3 +89,68 @@ describe('AllocationRing — shared plan ring primitive', () => {
     expect(screen.queryByRole('button', { name: /ZERO/ })).not.toBeInTheDocument();
   });
 });
+
+const METALS: RingSlice[] = [
+  { id: 'cUSD', percent: 50, color: '#0ea5e9', material: 'machined' },
+  { id: 'PAXG', percent: 30, color: '#f59e0b', material: 'noble' },
+  { id: 'KESm', percent: 20, color: '#14b8a6', material: 'living', patina: 0.5 },
+];
+
+describe('AllocationRing — the foundry variant', () => {
+  it('strikes the object: rim, plate, and metal legs — no foundry chrome in flat mode', () => {
+    render(<AllocationRing slices={METALS} variant="foundry" onSelect={() => {}} />);
+    expect(screen.getByTestId('foundry-rim')).toBeInTheDocument();
+    expect(screen.getByTestId('foundry-plate')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /cUSD: 50%/ })).toHaveAttribute('data-material', 'machined');
+    expect(screen.getByRole('button', { name: /PAXG: 30%/ })).toHaveAttribute('data-material', 'noble');
+    expect(screen.getByRole('button', { name: /KESm: 20%/ })).toHaveAttribute('data-material', 'living');
+
+    cleanup();
+    render(<AllocationRing slices={METALS} onSelect={() => {}} />);
+    expect(screen.queryByTestId('foundry-rim')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('foundry-plate')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('patina-KESm')).not.toBeInTheDocument();
+  });
+
+  it('patina overlays only the living leg and fades in after it lands', () => {
+    render(<AllocationRing slices={METALS} variant="foundry" onSelect={() => {}} />);
+    expect(screen.getByTestId('patina-KESm')).toBeInTheDocument();
+    expect(screen.queryByTestId('patina-cUSD')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('patina-PAXG')).not.toBeInTheDocument();
+  });
+
+  it('the gap is a recessed channel in ghost metal, not a tinted arc', () => {
+    render(
+      <AllocationRing
+        slices={METALS}
+        variant="foundry"
+        selectedId="KESm"
+        onSelect={() => {}}
+        ghost={{ id: 'KESm', extraPercent: 10 }}
+      />,
+    );
+    const channel = screen.getByTestId('ring-ghost');
+    expect(channel).toHaveAttribute('data-ghost-kind', 'grow');
+    expect(channel.getAttribute('stroke')).toContain('metal-ghost');
+  });
+
+  it('punches hallmarks into the rim and engraves the maker\'s mark while monitoring', () => {
+    render(
+      <AllocationRing
+        slices={METALS}
+        variant="foundry"
+        marks={[{ deg: 0, id: 'strike-1' }]}
+        strike
+        monitoring
+        onSelect={() => {}}
+      />,
+    );
+    expect(screen.getByTestId('ring-mark')).toBeInTheDocument();
+    expect(screen.getByTestId('maker-mark')).toBeInTheDocument();
+
+    cleanup();
+    render(<AllocationRing slices={METALS} variant="foundry" onSelect={() => {}} />);
+    expect(screen.queryByTestId('ring-mark')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('maker-mark')).not.toBeInTheDocument();
+  });
+});

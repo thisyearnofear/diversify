@@ -51,6 +51,13 @@ interface Props {
   onInteraction?: () => void;
   /** Reserve exposure (the anchor when the plan holds it); defaults to USD. */
   floor?: Exposure;
+  /**
+   * "Try a stronger floor" offer — the wallet holds more of the floor
+   * currency than the plan asks for. Rendered as a caption suffix on the
+   * control it acts on, never a separate prompt line.
+   */
+  floorOffer?: { next: RiskTolerance; heldFloor: number; planFloor: number } | null;
+  onFloorOffer?: () => void;
 }
 
 export function PlanFloorControl({
@@ -64,6 +71,8 @@ export function PlanFloorControl({
   onChange,
   onInteraction,
   floor: floorExposure = "USD",
+  floorOffer = null,
+  onFloorOffer,
 }: Props) {
   const reducedMotion = useReducedMotion();
   const selected = value ?? "Balanced";
@@ -171,6 +180,22 @@ export function PlanFloorControl({
         className="mt-2 text-sm text-gray-600 dark:text-gray-300"
       >
         {caption}
+        {floorOffer && onFloorOffer && (
+          <>
+            {" · "}
+            <button
+              type="button"
+              data-testid="shield-floor-prompt"
+              onClick={() => {
+                onInteraction?.();
+                onFloorOffer();
+              }}
+              className="font-semibold text-blue-600 dark:text-blue-400"
+            >
+              wallet holds {floorOffer.heldFloor}% — try a stronger floor →
+            </button>
+          </>
+        )}
       </p>
       {isPreviewing && (
         <div className="mt-2 space-y-1.5">
