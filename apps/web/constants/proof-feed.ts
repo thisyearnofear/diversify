@@ -39,6 +39,32 @@ const MAINNET_LEDGER_CHAIN_IDS = new Set([42220, 42161, 4663, 177, 16661, 5042])
  */
 export const PROOF_FEED_CHAIN_IDS = [42161, 42220, 4663, 177, 16661, 5042] as const;
 
+/**
+ * Testnet ledger rails. `421614` is the only testnet with a deployed
+ * `RecommendationLedger` AND a configured contract address (Celo Sepolia has
+ * no ledger entry in the service's chain registry at all).
+ */
+export const PROOF_FEED_TESTNET_CHAIN_IDS = [421614] as const;
+
+/**
+ * The read set for the global proof feed.
+ *
+ * Testnets are readable OUTSIDE PRODUCTION ONLY. They exist so the
+ * measurement → anchor → beat pipeline can be demonstrated end to end on free
+ * testnet gas; a play-money record must never be merged into the feed a real
+ * visitor sees, because `getLedgerProofTitle` would then hand it a "verified"
+ * headline. Production reads mainnet rails only — anchoring there is the
+ * separate, real-cost decision.
+ *
+ * Chains without a configured contract still drop out downstream (see
+ * `configuredProofFeedChains` in the ledger API route), so this list is safe
+ * to declare unconditionally.
+ */
+export function proofFeedChainIds(nodeEnv: string | undefined): number[] {
+  if (nodeEnv === 'production') return [...PROOF_FEED_CHAIN_IDS];
+  return [...PROOF_FEED_CHAIN_IDS, ...PROOF_FEED_TESTNET_CHAIN_IDS];
+}
+
 export interface ProofFeedRecommendationBase {
   id: number;
   timestamp: number;

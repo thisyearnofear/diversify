@@ -27,7 +27,7 @@
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { recommendationLedgerService } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import { recommendationLedgerService, getLedgerConfig } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
 import {
   FX_MOVE_DEFAULT_WINDOW_DAYS,
@@ -96,9 +96,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     rehearsal?: unknown;
     codes?: unknown;
     windowDays?: unknown;
+    chainId?: unknown;
   };
   const apply = body.apply === true;
   const rehearsal = body.rehearsal === true;
+
+  // Optional explicit ledger rail. Validated against the service's own chain
+  // registry, so a caller can target a testnet for a zero-cost rehearsal but
+  // can never point the anchor at an arbitrary chain.
+  let chainId: number | undefined;
+  if (body.chainId !== undefined) {
+    if (typeof body.chainId !== 'number' || !Number.isInteger(body.chainId)) {
+      return res.status(400).json({ error: 'chainId must be an integer' });
+    }
+    if (!getLedgerConfig(body.chainId)?.contractAddress) {
+      return res.status(400).json({ error: `No ledger configured for chainId ${body.chainId}` });
+    }
+    chainId = body.chainId;
+  }
   const windowDays =
     typeof body.windowDays === 'number' && Number.isFinite(body.windowDays) && body.windowDays > 0
       ? Math.min(90, Math.floor(body.windowDays))
@@ -142,6 +157,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       dryRun: true,
       rehearsal,
       windowDays,
+      chainId,
       measured: measurements.length,
       material: material.length,
       proposals: material.map((m) => ({
@@ -176,6 +192,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       evidenceCid: '',
       servingModel: 'fx-rate-monitor',
       confidence: 0,
+      ...(chainId !== undefined ? { chainId } : {}),
     });
 
     // The chain stores only the reasoning hash — echo the readable line

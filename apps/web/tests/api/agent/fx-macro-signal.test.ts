@@ -11,7 +11,7 @@
 
 // @vitest-environment node
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   read: vi.fn(),
@@ -24,9 +24,20 @@ vi.hoisted(() => {
   process.env.GUARDIAN_LOOP_SECRET = 'test-secret';
 });
 
-vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', () => ({
-  recommendationLedgerService: { recordRecommendation: mocks.anchor },
-}));
+// Partial mock: the anchor seam is stubbed, but `getLedgerConfig` stays real
+// so the route's chainId validation is exercised against the true registry.
+vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', async (importActual) => {
+  const actual = await importActual<
+    typeof import('@diversifi/shared/src/services/recommendation-ledger.service')
+  >();
+  return {
+    ...actual,
+    recommendationLedgerService: {
+      ...actual.recommendationLedgerService,
+      recordRecommendation: mocks.anchor,
+    },
+  };
+});
 
 // Only the network seam is mocked — the selector and the beat builders stay real.
 vi.mock('@diversifi/shared/src/services/guardian/fx-move-measurement', async (importActual) => ({
@@ -212,5 +223,43 @@ describe('/api/agent/fx-macro-signal', () => {
     expect(mocks.read).not.toHaveBeenCalled();
     expect(res.body.action).toBe('no_attributable_currency');
     expect(mocks.anchor).not.toHaveBeenCalled();
+  });
+
+  describe('explicit ledger rail', () => {
+    const SEPOLIA = 421614;
+    const original = process.env.ARBITRUM_LEDGER_CONTRACT;
+
+    beforeEach(() => {
+      // The registry reads env lazily on every call, so this is enough to make
+      // the testnet rail "configured" for this file.
+      process.env.ARBITRUM_LEDGER_CONTRACT = '0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996';
+    });
+
+    afterEach(() => {
+      if (original === undefined) delete process.env.ARBITRUM_LEDGER_CONTRACT;
+      else process.env.ARBITRUM_LEDGER_CONTRACT = original;
+    });
+
+    it('anchors to the requested configured rail and reports where it landed', async () => {
+      // The route reports the chain from the anchor RESULT, not the request —
+      // so it can never claim a rail it did not actually write to.
+      mocks.anchor.mockImplementation(async (params: { chainId?: number }) => ({
+        ...ANCHORED,
+        chainId: params.chainId ?? ANCHORED.chainId,
+      }));
+
+      const res = await post({ apply: true, chainId: SEPOLIA });
+      expect(mocks.anchor.mock.calls[0][0].chainId).toBe(SEPOLIA);
+      expect(res.body.anchored[0].chainId).toBe(SEPOLIA);
+    });
+
+    it('refuses an unconfigured or malformed chain — no arbitrary target', async () => {
+      for (const chainId of [999999, 1.5, '421614' as unknown as number]) {
+        const res = await post({ apply: true, chainId });
+        expect(res.statusCode).toBe(400);
+      }
+      expect(mocks.anchor).not.toHaveBeenCalled();
+      expect(mocks.read).not.toHaveBeenCalled();
+    });
   });
 });

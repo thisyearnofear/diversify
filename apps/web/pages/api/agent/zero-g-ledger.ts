@@ -13,7 +13,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { recommendationLedgerService, getLedgerContractAddress, getDefaultLedgerChainId, buildLedgerExplorerUrl, verifyLedgerTx, type LedgerRecommendation } from '@diversifi/shared/src/services/recommendation-ledger.service';
 import {
-  PROOF_FEED_CHAIN_IDS,
+  proofFeedChainIds,
   mergeProofFeedRecommendations,
 } from '@/constants/proof-feed';
 import {
@@ -53,7 +53,9 @@ function buildContractExplorerUrl(address: string, chainId: number): string {
 }
 
 function configuredProofFeedChains(): number[] {
-  return PROOF_FEED_CHAIN_IDS.filter((id) => !!getLedgerContractAddress(id));
+  // Testnet rails join the read set outside production only — see
+  // proofFeedChainIds(). Chains with no configured contract drop out here.
+  return proofFeedChainIds(process.env.NODE_ENV).filter((id) => !!getLedgerContractAddress(id));
 }
 
 async function fetchRecentGlobal(
