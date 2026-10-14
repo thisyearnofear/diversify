@@ -35,22 +35,45 @@ pnpm dev            # Next.js on http://localhost:3042
 - If you are presenting from the deployed app instead, run the same checks
   below against that URL. The checks matter more than where the app runs.
 
-### 1.2 A fresh, disconnected browser
+### 1.2 Two profiles: rehearsal and stage
 
-- Use a new browser profile or a private window with no wallet extension
-  signed in, no saved Privy session and no earlier DiversiFi tabs.
-- Turn off "Do Not Track" in that profile if you want analytics to emit
-  (see 1.6). The helper sends nothing when `navigator.doNotTrack === '1'`.
-- Set the window to the size you will project and zoom so the Home figure
-  and the story trail are readable from the back row.
-- Close every other tab. The headline link opens a new tab, and you want to
-  get back in one keystroke.
+You need two separate browser profiles (or two separate private windows that
+share nothing), both set up the same way:
 
-### 1.3 Walk the real controls once
+- No wallet extension signed in, no saved Privy session and no earlier
+  DiversiFi tabs or site data.
+- "Do Not Track" off if you want to see analytics emit in rehearsal (see
+  1.6). The helper sends nothing when `navigator.doNotTrack === '1'`.
+- The window size and zoom you will project, so the Home figure and the
+  story trail are readable from the back row.
+- Every other tab closed. The headline link opens a new tab, and you want
+  to get back in one keystroke.
 
-In a second throwaway profile set up the same way (keep the stage profile
-clean), tap through the whole path and confirm each label exists exactly as
-written:
+The two profiles have different jobs:
+
+- **Rehearsal profile (throwaway).** Every tap in 1.3 to 1.6 happens here:
+  `Explore app`, Home, the story, the news check, the Guardian ask, `Connect
+  Wallet` and the analytics check. Treat it as used up afterwards.
+- **Stage profile (untouched).** Open `http://localhost:3042/` in it, wait
+  until the welcome screen shows "Make a plan for your money." and the
+  `Explore app` button, and then stop. Do not click anything in it before
+  the clock starts.
+
+Why the stage profile must stay untouched: `Explore app` completes
+onboarding and saves that in the profile's local storage. From then on, the
+page opens straight into the app on every load. **Reloading the tab does not
+bring the welcome screen back**, so a stage profile that has been explored
+can no longer show the 0:00 cold open. If you touch it by mistake, throw it
+away and open a new fresh profile; do not try to reset it by hand.
+
+Right before you walk on, look at the stage profile once more: the welcome
+screen with `Explore app` must be visible. If it is not, swap in a new fresh
+profile.
+
+### 1.3 Walk the real controls once (rehearsal profile)
+
+In the rehearsal profile, tap through the whole path and confirm each label
+exists exactly as written:
 
 | Step | Control you should see |
 |---|---|
@@ -61,39 +84,38 @@ written:
 | Guardian | the chat opens with the NGN question already sent, and a `Close chat` button |
 | Header | `Connect Wallet` |
 
-If Home shows a different currency (because your network reports a country),
-the button reads `Story of the <code>`. Either present that currency, or pick
-Nigeria from the `Currency — …` control before going on stage. Do not switch
-on stage. Either way, note which of these two states the stage profile is in,
-because the 0:15 and 0:30 lines change with it:
+If Home shows a different currency (because your network reports a
+country), the button reads `Story of the <code>`. That is fine. Do not pick
+a currency in the stage profile to "fix" it, because that means exploring
+it. The script already has lines for both states, and you choose between
+them on stage at 0:15 from what the stage screen shows:
 
 - **Not detected:** the "Country not detected — showing Nigeria by default.
   Sample figures until you connect." line is on screen. Use the
   *not detected* lines.
-- **Detected or picked:** that line is absent. A detected country, or a
-  currency you picked yourself (even Nigeria), removes it. Use the
-  *detected or picked* lines, and say the currency name and code shown on
-  screen wherever the script says NGN or naira.
+- **Detected:** that line is absent. Use the *detected or picked* lines, and
+  say the currency name and code shown on screen wherever the script says
+  NGN or naira.
 
-Write down, from the screen, the three facts you will read aloud: the Home
-percentage and period, the currency's newest trail chip, and the trail's
-"checked" date. **Read numbers from the screen on the night. Do not memorise
-them from this document**, because the curated data and FX feed move.
-
-When you are done, leave the stage profile on the welcome screen with the
-story closed (after the news check in 1.5, **reload the tab**).
+What the rehearsal tells you is what to **expect**, not what the stage will
+show. The detected country, the figures, the trail's newest chip and its
+"checked" date can all differ by the time you present. **Read every number
+from the stage screen at the moment the script reaches it. Do not memorise
+them from rehearsal or from this document.**
 
 ### 1.4 Readiness: four separate services
 
 Each of these can be up or down on its own. Fixing one does not fix the
-others. Check each and circle the matching branch in the script.
+others. Check each in the rehearsal profile (or from a terminal) and note
+the branch you **expect**. On stage you still take the branch the screen
+shows.
 
 | Service | What it powers | How to check | If it is down |
 |---|---|---|---|
-| **Research (Tavily)** | "In the news" headlines in the story | `curl -s "http://localhost:3042/api/agent/currency-news?code=NGN"` and look at `items` | Branch B in 1:35 |
-| **Guardian AI** | The answer in the chat | Tap `Ask Guardian about the NGN →` in the rehearsal. An answer means ready. "Guardian is unavailable right now — no AI provider is configured…" means not ready | Branch B in 1:55 |
-| **Login (Privy)** | What `Connect Wallet` opens | Tap `Connect Wallet` in the rehearsal and see what appears | Branch B in 2:25 |
-| **Analytics emission** | Funnel counts of the walkthrough taps | Devtools → Network, filter `analytics/event`, then tap through | Not on stage. See 1.6 |
+| **Research (Tavily)** | "In the news" headlines in the story | `curl -s "http://localhost:3042/api/agent/currency-news?code=NGN"` and look at `items`; then open the story in the rehearsal profile | Branch B in 1:35 |
+| **Guardian AI** | The answer in the chat | Tap `Ask Guardian about the NGN →` in the rehearsal profile. An answer means ready. "Guardian is unavailable right now — no AI provider is configured…" means not ready | Branch B in 1:55 |
+| **Login (Privy)** | What `Connect Wallet` opens | Tap `Connect Wallet` in the rehearsal profile and see what appears | Branch B in 2:25 |
+| **Analytics emission** | Funnel counts of the walkthrough taps | In the rehearsal profile, Devtools → Network, filter `analytics/event`, then tap through | Not on stage. See 1.6 |
 
 Notes on the research check:
 
@@ -106,21 +128,23 @@ Notes on the research check:
 - `provider: null` with `items: []` means Tavily is not configured on this
   server. That is what an unconfigured local checkout returns.
 
-When the Guardian is configured, the rehearsal ask can use one of the
-visitor's daily Guardian questions in that profile (the chat shows "3 of 3
-questions left today"). That is one more reason to present from a fresh
-profile, not the one you rehearsed in.
+When the Guardian is configured, the rehearsal ask uses one of the visitor's
+daily Guardian questions in that profile (the chat shows "3 of 3 questions
+left today"). That is one more reason the rehearsal and stage profiles must
+be different.
 
 ### 1.5 Caches can fake either state
 
-Headlines can come from a cache instead of from Tavily. Before you call any
-run "the empty-news fallback" or "live headlines", confirm what the browser
-actually received in that run.
+Headlines can come from a cache instead of from Tavily, and the rehearsal
+result does not carry over to the stage profile. A news check in the
+rehearsal profile tells you what the server answered then; it guarantees
+nothing about what the stage profile will receive minutes later.
 
-- **In the open tab:** once a story has loaded non-empty headlines, the page
+- **In an open tab:** once a story has loaded non-empty headlines, the page
   keeps them in memory for the rest of that page load. Re-opening the story
   will not refetch. Empty results are not kept, so they are retried on the
-  next open. A reload clears this memory.
+  next open. This memory belongs to one tab, so the stage profile starts
+  without it.
 - **At the edge (deployed app):** a configured route answers with
   `Cache-Control: public, s-maxage=900, stale-while-revalidate=3600`. A CDN
   can serve the previous answer, full or empty, for up to 15 minutes, and a
@@ -128,19 +152,15 @@ actually received in that run.
 - **On the server:** the search service also caches Tavily results in its
   own short-lived cache.
 
-So: in the stage profile, go to Home and open the story once only, look at
-the Network response for `currency-news?code=NGN` and at the screen, and
-pick the branch from what you see there, not from what you expect. Close the
-story and reload before you go on.
-
-If a reload during the talk could change the answer (deployed app, edge
-cache near expiry), take the branch the screen shows at 1:35, not the one
-you noted. Both branches take the same 20 seconds.
+So the stage story makes its own request when you open it at 0:55. Choose
+the news branch at 1:35 from what the stage screen shows then: an "In the
+news" section means Branch A, no section means Branch B. Both branches take
+the same 20 seconds.
 
 ### 1.6 Analytics: emission, not storage
 
-The walkthrough emits these events through `trackFunnelEvent` to
-`POST /api/analytics/event`:
+Check this in the rehearsal profile only. The walkthrough emits these events
+through `trackFunnelEvent` to `POST /api/analytics/event`:
 
 | Tap | Event | Props |
 |---|---|---|
@@ -155,15 +175,19 @@ proves the event was **sent**, not that it was **stored**. Do not tell the
 audience the demo is being counted unless you have checked storage
 separately.
 
-### 1.7 Choose your branches
+### 1.7 Expected branches, chosen on stage
 
-Before you walk on, decide and note:
+From the rehearsal, note what you expect:
 
+- Currency state: **not detected** or **detected**.
 - Headlines: **A** (shown) or **B** (empty-news fallback).
 - Guardian: **A** (answers) or **B** (unavailable).
 - Login: **A** (Privy sign-in opens) or **B** (wallet guidance only).
 
-Every branch fits the same time slot, so the total stays 180 seconds.
+These notes only prepare you. On stage, each choice is made from the stage
+screen at its own time slot: currency state at 0:15, headlines at 1:35,
+Guardian at 1:55 and login at 2:25. Every branch fits the same time slot, so
+the total stays 180 seconds.
 
 ---
 
@@ -195,7 +219,7 @@ Screen: welcome screen, "Make a plan for your money."
 
 Click `Explore app`. The app lands on Shield. Click `HOME` in the dock.
 
-Say the line that matches the state you noted in 1.3.
+Say the line that matches what the stage screen shows now (see 1.3).
 
 *Not detected:*
 
