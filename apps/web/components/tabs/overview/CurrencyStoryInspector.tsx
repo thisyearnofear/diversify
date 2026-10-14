@@ -8,6 +8,7 @@
 import React, { useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { InspectorSheet } from '../../shared/InspectorSheet';
+import { DigitalDollarNote } from './DigitalDollarNote';
 import { useAdvisor } from '@/hooks/use-advisor';
 import { useProofFeed } from '@/hooks/use-proof-feed';
 import { useCurrencyNews } from '@/hooks/use-currency-news';
@@ -428,6 +429,7 @@ function CurrencyStoryBody({
           <p className="mt-1 text-3xs text-ink-subtle">Headlines via Tavily · last 30 days</p>
         </div>
       )}
+      <DigitalDollarNote code={entry.code} />
       {content && <MomentShareCard content={content} />}
       <button
         type="button"

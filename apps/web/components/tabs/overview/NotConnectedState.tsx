@@ -14,6 +14,7 @@ import { trackFunnelEvent } from "@/lib/analytics";
 import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { CurrencyStoryInspector } from "./CurrencyStoryInspector";
 import { CountryPicker } from "./CountryPicker";
+import { SignInPrimer } from "./SignInPrimer";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
@@ -132,6 +133,7 @@ export function NotConnectedState({
           variant={moment || inflationMoment ? "minimal" : "primary"}
           className="w-full"
         />
+        <SignInPrimer />
       </div>
       <CurrencyStoryInspector
         code={inspectedCurrency}
