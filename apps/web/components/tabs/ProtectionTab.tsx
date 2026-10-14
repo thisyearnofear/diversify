@@ -429,7 +429,7 @@ export default function ProtectionTab({
     amount?: string,
   ) => {
     if (isDemo) {
-      showToast("Connect your wallet to execute real swaps.", "info");
+      showToast("Sign in or connect a wallet to execute real swaps.", "info");
       return;
     }
 

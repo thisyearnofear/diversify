@@ -336,7 +336,7 @@ export function RwaVaultSleeve({
           <p className="text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
             Where a dollar reserve could earn through IXS — money-market, bond and credit
             vaults on Ethereum. KYC and deposits happen on IXS, not here.
-            {offApp === 'teaser' && ' Connect a wallet to look inside.'}
+            {offApp === 'teaser' && ' Sign in or connect a wallet to look inside.'}
             {philosophy === 'islamic' && ' None is Sharia-certified; all pay conventional interest.'}
           </p>
         </div>

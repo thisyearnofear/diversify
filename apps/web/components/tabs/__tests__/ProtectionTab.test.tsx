@@ -1147,7 +1147,7 @@ describe("ProtectionTab — instrument shapes", () => {
     // via the ?serv=1 deep link.
     expect(screen.queryByTestId("serv-rail")).not.toBeInTheDocument();
     expect(screen.queryByTestId("serv-enhance")).not.toBeInTheDocument();
-    expect(screen.getByText(/Connect a wallet to look inside/)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in or connect a wallet to look inside/)).toBeInTheDocument();
   });
 
   it("?sleeve=rwa alone opens the sleeve walletless with the teaser tier — SERV stays connected-only", () => {

@@ -581,7 +581,7 @@ export default function SwapTab({
                     Preview Mode
                   </p>
                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Connect your wallet to make real protection moves
+                    Sign in or connect a wallet to make real protection moves
                   </p>
                 </div>
               </div>
