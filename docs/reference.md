@@ -170,8 +170,10 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `HSP_API_KEY` | server | — | Required when `SETTLEMENT_NETWORK=HASHKEY` — same source as `HSP_COORDINATOR_URL`. |
 | `DATA_HUB_RECIPIENT_ADDRESS` | server | — | Merchant recipient for x402 settlement (required to activate Arc mainnet; default for `HASHKEY_PAY_RECIPIENT`). |
 | `SMOKE_BUYER_PRIVATE_KEY` | server/local | — | Funded buyer key required only when `pnpm run x402-mainnet-smoke … -- --apply` is used to submit a real payment (§4.2). Never needed for the read-only check. |
+| `CCTP_SIGNER_PRIVATE_KEY` | local/script | — | EOA that holds USDC on the source chain and pays source gas for `scripts/cctp-transfer.ts` (Arbitrum↔Arc funding; signs the destination mint unless `--forward`). Script dry-runs without `--apply`. |
 | `ZERO_G_MAINNET_LEDGER_CONTRACT` | server | — | Override for the 0G mainnet `RecommendationLedger` anchor address (§3.3). |
 | `ZERO_G_LEDGER_CONTRACT` | server | — | Override for the 0G Galileo evidence-mirror address (§3.3). |
+| `ARC_MAINNET_LEDGER_CONTRACT` | server | empty → anchors fall back to region chain | `RecommendationLedger` on Arc mainnet (5042); read in `recommendation-ledger.service.ts`, used by the x402 gateway only when `SETTLEMENT_NETWORK=ARC` + `SETTLEMENT_ENV=mainnet` (§3.4 deploy runbook). |
 | `ENTERPRISE_API_KEYS` | server | — | JSON array of enterprise API-key objects (`key`, `tenantId`, `tier`, `rateLimit`, `quotaUsd`, `audit`) — §6.5. |
 | `ONEINCH_API_KEY` | server | — | Server-only, never `NEXT_PUBLIC_` (`apps/web/.env.local`) — 1inch quotes/swaps on Arbitrum via `/api/swap/oneinch-proxy`. Without it, Arbitrum still routes via Uniswap V3 and LiFi. |
 | `UNISWAP_API_KEY` | server | — | Server-only — Uniswap Trading API (`trade-api.gateway.uniswap.org/v1`) via `/api/swap/uniswap/{quote,swap,check-approval}`; required for the API path (on-chain `UniswapV3Strategy` is separate). |
@@ -270,6 +272,7 @@ Stack). Deployed surfaces and configuration:
 | **Arbitrum Sepolia yield ledger** | chainId `421614`, [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) |
 | **0G Galileo evidence mirror** | chainId `16602`, [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
 | **Celo mainnet savings ledger** | chainId `42220`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://celoscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) |
+| **Arc mainnet ledger** | chainId `5042`, [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://explorer.arc.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) — deployed 2026-10-13, tx [`0xa809a284…553bd`](https://explorer.arc.io/tx/0xa809a284ff9d9916b90cbb618e4c69ab9a997c2b8f20e30a4a5eaf1a906553bd). Same address as the Arbitrum Sepolia ledger (same deployer+nonce → same CREATE address) on a different chain. Set via `ARC_MAINNET_LEDGER_CONTRACT`. |
 | **0G Mainnet RPC** | `https://evmrpc.0g.ai` |
 | **0G Mainnet Explorer** | `https://chainscan.0g.ai` |
 | **0G Galileo RPC / Explorer** | `https://evmrpc-testnet.0g.ai` / `https://chainscan-galileo.0g.ai` |
@@ -346,6 +349,74 @@ The 60-second `tx.wait(1, 60_000)` timeout is the right boundary: a network stal
 > signer, then verify the deployed gateway with the read-only smoke check in
 > §4.2. Do not infer production readiness from a configured key or a successful
 > RPC check alone.
+
+#### Deploying contracts to Arc mainnet (runbook, executed 2026-10-13)
+
+> **Done:** `RecommendationLedger` is live on Arc mainnet at
+> [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://explorer.arc.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996)
+> (deploy tx `0xa809a284…553bd`, deployer `0x8037…B8f2` =
+> `PRIVATE_KEY`/`LEDGER_PRIVATE_KEY`, ~4.96 USDC on Arc — no CCTP funding was
+> needed). Steps below are the recipe for the next Arc contract.
+
+Arc protocol facts that shape the deploy are in `architecture.md` § Arc —
+the load-bearing ones here: **no mainnet faucet exists**, the mempool
+**silently drops any tx under 20 Gwei** `maxFeePerGas` (live base fee is
+exactly 20 gwei), and gas is paid in native USDC (18-decimal accounting).
+
+1. **Toolchain.** Use Arc Foundry (`circlefin/arc-foundry` — `arc-forge`,
+   `arc-cast`, `arc-anvil`), not vanilla Foundry. Vanilla `forge` will
+   broadcast but cannot simulate Arc's protocol behavior, and vanilla `anvil`
+   runs a standard EVM. Install is manual per
+   docs.arc.io/arc/tutorials/install-arc-foundry: download the platform
+   archive from `github.com/circlefin/arc-foundry/releases`, extract, and
+   `mv` the binaries to `~/.local/bin` **renamed** `arc-forge`/`arc-cast`/
+   `arc-anvil` (they ship as `forge`/`cast`/`anvil` — renaming avoids
+   shadowing upstream Foundry). Verify with `arc-forge --version`.
+   macOS note (hit 2026-10-13): the binaries link
+   `/opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib`; with no arm64 Homebrew,
+   build libusb arm64 and repoint each binary with
+   `install_name_tool -change /opt/homebrew/opt/libusb/lib/libusb-1.0.0.dylib <path>` —
+   on this machine the dylib lives at `~/.local/lib/libusb-1.0.0.dylib`.
+   Also: export `PRIVATE_KEY` (a bare `VAR=…; cmd` doesn't reach forge; forge
+   otherwise falls back to the root `.env` key).
+2. **Fund the deployer.** Bridge real USDC Arbitrum → Arc with the repo's own
+   CCTP V2 script (dry-run by default, `--apply` broadcasts):
+   `npx tsx scripts/cctp-transfer.ts --from arbitrum --to arc --amount 5 --recipient <deployer> --forward --apply`.
+   Env: `CCTP_SIGNER_PRIVATE_KEY` — the EOA holding USDC on Arbitrum. The
+   `--forward` flag has Circle submit the destination mint, so the recipient
+   needs no Arc USDC to receive. ~5 USDC comfortably covers a deploy
+   (the mainnet ledger deploy was charged ≈ $0.07; the 20 gwei floor alone would be ≈ $0.02–0.04, so budget above it), ledger writes, and a rehearsal
+   settlement; the same funded wallet is also the `VAULT_PRIVATE_KEY`
+   settlement-signer candidate if it is the signer.
+3. **Deploy.** `scripts/DeployRecommendationLedger.s.sol` is chain-agnostic
+   and foundry.toml already aliases `arc = "${ARC_MAINNET_RPC_URL}"`:
+   `arc-forge script scripts/DeployRecommendationLedger.s.sol --rpc-url arc --broadcast`
+   (reads `PRIVATE_KEY` from env). No constructor args; deployer becomes owner
+   + authorized agent.
+4. **Verify on Blockscout.** `arc-forge verify-contract <addr>
+   contracts/RecommendationLedger.sol:RecommendationLedger --chain-id 5042
+   --verifier blockscout --verifier-url https://explorer.arc.io/api/`.
+   Confirmed 2026-10-13: `explorer.arc.io/api/` sits behind a Cloudflare
+   managed challenge, so programmatic verification fails outright
+   (independent of the known Arcscan API issues, circlefin/arc-node#84,
+   #210). Use the explorer UI:
+   `explorer.arc.io/address/<addr>/contract-verification`.
+   Verification is credibility, not a functional gate — the
+   `RecommendationLedger` on Arc is currently unverified.
+5. **Wire it.** Set `ARC_MAINNET_LEDGER_CONTRACT=<addr>` — the env slot is
+   already read in `recommendation-ledger.service.ts`; when
+   `SETTLEMENT_NETWORK=ARC` + `SETTLEMENT_ENV=mainnet`, the x402 gateway
+   anchors FX proof records to `getLedgerContractAddress(5042)` and falls
+   back to `FX_ANCHOR_CHAIN_BY_REGION` when the address is empty
+   (`x402-gateway.ts`). Then run one real paid research request and confirm
+   the settlement tx + ledger record resolve on `explorer.arc.io` and via
+   `GET /api/agent/zero-g-ledger?verify=<txHash>` before describing the rail
+   as live. **Done in production 2026-10-13:** the Hetzner gateway
+   (`api.diversifi.famile.xyz`) runs `ARC`/`mainnet` and anchors to the Arc
+   ledger — `fx_protection` purchase → settlement `0x79b28dda…8359`, anchor
+   `0xa4b30e64…90ae7` (record #2). Note: free-tier sources return a 200 quote
+   with `amount: '0.000'` — use `fx_protection` (`freeLimit: 0`) or exhaust a
+   free limit for a real 402.
 
 ### 3.5 StableFX (Circle) — business pilot plan
 
@@ -460,6 +531,8 @@ The following providers have been evaluated but not yet integrated. See [`plan.m
 | `/api/agent/business/cycle-monitor` | POST | Standalone cycle-aware proposal tick (same logic as guardian-loop inline step); enqueues without overwriting unrelated pending recommendations |
 | `/api/agent/fx-cycle-report` | POST | Free in-app FX drag scenario: current mid-market rate + historical stress context (USD targets only). Not a forecast or locked quote. |
 | `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
+| `/api/agent/web-search` | GET/POST | Cited web/news search (Tavily, else TinyFish); one result shape `{ title, url, snippet, source, date }`; per-IP rate limited |
+| `/api/agent/currency-news` | GET | `?code=NGN` — up to 3 cited headlines for a curated currency (Tavily, last 30 days, hype-guarded); public, read-only, query derived server-side from the code; `items: []` when unconfigured |
 | `/api/agent/rwa-allocation` | POST | RWA vault allocation (deterministic heuristic by default; SERV reasoning only on explicit opt-in — §5.3). Demo at `/?tab=protect&sleeve=rwa`; `/rwa-vaults` redirects there. |
 | `/api/agent/rwa-market` | GET | Tokenized-asset market figures for Shield's lens (keyless; §5.4) |
 | `/api/agent/memory` | GET/POST/DELETE | Guardian memory (opt-in; §4.4). `?providers=1` reports health-aware availability. |
@@ -531,8 +604,6 @@ server-side `VAULT_PRIVATE_KEY` settlement signer (§2: legacy variable name, no
 user-funds vault). For EIP-3009 mandates, the
 buyer-authorized USDC principal transfers directly to the configured merchant;
 the signer submits the transfer and pays Arc-native USDC gas. A mandate requires
-| `/api/agent/web-search` | GET/POST | Cited web/news search (Tavily, else TinyFish); one result shape `{ title, url, snippet, source, date }`; per-IP rate limited |
-| `/api/agent/currency-news` | GET | `?code=NGN` — up to 3 cited headlines for a curated currency (Tavily, last 30 days, hype-guarded); public, read-only, query derived server-side from the code; `items: []` when unconfigured |
 both a funded buyer and a signer with sufficient gas; this is distinct from any
 Circle Gateway-batched payment. A key or env flip alone does not prove successful
 production settlement. Before activation, verify the signer address and balance
@@ -777,6 +848,7 @@ no static fallback number. File:
 | **GoodDollar** | Daily G$ UBI claim + face verification on Celo via `@goodsdks/citizen-sdk` 1.2.7 (`gooddollar-service.ts`) — wallet client built with the account attached, wallet switched to Celo before claiming, `getWalletClaimStatus()` gates `claim()`; FV is a popup on desktop, redirect on mobile/embedded | — |
 | **SoSoValue** | LEGACY — crypto flash news + sentiment (off-thesis, disabled in chat UI); API is crypto-native with US-only macro events | Free tier + API key |
 | **Firecrawl** | Event-driven macro page monitoring (ECB, Fed, yield trackers) | 500 credits/month free |
+| **Tavily** | Cited web/news search — the currency story's "In the news" rows and the Guardian's region context; cached via `unifiedCache` (realtime for news) | API key; credits per search |
 | **Cognee** | Agent memory — cross-session persistent context (fallback) | Tenant API (REST) |
 | **Tablestore (Alibaba Cloud)** | Agent memory — persistent memory with vector search + automatic long-term extraction (preferred when configured) | Pay-as-you-go |
 | **DashScope (Alibaba Cloud)** | Qwen long-context LLM for memory consolidation | API key |
@@ -848,7 +920,6 @@ External Agent
 | `portfolio_optimization` | Portfolio rebalancing recommendations | ~$0.004 |
 | `risk_assessment` | Risk assessment for stablecoin holdings | ~$0.004 |
 
-| **Tavily** | Cited web/news search — the currency story's "In the news" rows and the Guardian's region context; cached via `unifiedCache` (realtime for news) | API key; credits per search |
 ### 6.4 Payment Flow
 
 #### Authentication

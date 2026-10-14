@@ -48,7 +48,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Grant tracks are closed (2026-10-03):** 0G Bridge, HashKey Horizon, Celo Prezenti, Arbitrum Open House, Future Caribbean, SERV Ed. 01, Qwen MemoryAgent, Enterprise B2B, TypeSafe Signal Lens. Their *machinery* stays live (0G anchoring, the HashKey ledger on chain 177, Celo/Arbitrum routing) but nothing here is on the plan. What each left behind and what is dormant: `docs/archive/tracks/CLOSED.md`. Never reintroduce a track narrative into a core doc — that is the specific failure that made these docs incoherent.
 - **Dated progress:** `docs/history/roadmap-log.md` is the history sink — waves, migrations, test counts. Don't paste progress notes into this file; add them to the log.
 - **Docs house rules** (full list: `docs/README.md` § House rules): one headline per product; track/event material goes to `docs/archive/`; dated progress to `docs/history/`; any claim of enforcement/verification/"live" needs a trace to code or a transaction, else it is written as intent; consolidation must never summarize away an env var, address, chain ID or runbook.
-- **Deployed:** `RecommendationLedger` at `0x3BCf…369C` on Celo, Arbitrum, and 0G mainnets; `AgenticID` ERC-721 at `0x6815…33D60` on 0G mainnet (token #1 = the Guardian). Verification: `GET /api/agent/zero-g-ledger?verify=<txHash>`.
+- **Deployed:** `RecommendationLedger` at `0x3BCf…369C` on Celo, Arbitrum, and 0G mainnets (Arc mainnet 5042 has its own ledger at `0xB393…2996`); `AgenticID` ERC-721 at `0x6815…33D60` on 0G mainnet (token #1 = the Guardian). Verification: `GET /api/agent/zero-g-ledger?verify=<txHash>`.
 
 ## Working Conventions (load-bearing, learned the hard way)
 
