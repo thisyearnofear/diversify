@@ -87,8 +87,16 @@ export function useAgentStatus() {
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to check status';
-      console.error("[useAgentStatus] Failed to initialize:", error);
+      const timedOut = error instanceof DOMException && error.name === 'AbortError';
+      const message = timedOut
+        ? 'Status check timed out'
+        : error instanceof Error
+          ? error.message
+          : 'Failed to check status';
+      // A slow status route is expected on a cold start; defaults already
+      // apply, so it must not surface as a runtime error overlay.
+      if (timedOut) console.warn('[useAgentStatus] Status check timed out; using defaults');
+      else console.error("[useAgentStatus] Failed to initialize:", error);
       setState(prev => ({
         ...prev,
         initialized: true,
