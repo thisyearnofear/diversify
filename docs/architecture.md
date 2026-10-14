@@ -445,6 +445,14 @@ What Arc does NOT do:
 - **No EM consumer stables.** Arc's fiat roster (EURC plus Circle Partner Stablecoins — AUD, BRL, CAD, CHF, EUR, GBP, JPY, KRW, MXN, SEK, TRY, ZAR per Circle's supported-currencies page, checked 2026-09-28) is institutional corridor coverage. It has no NGN, GHS, KES, XOF, COP or PHP — complementary to Mento, not a replacement.
 - **No swap surface.** Arc is excluded from the swap-executable set (`ChainDetectionService.isSupported`) by design. The wallet may switch to Arc for one purpose only — signing the Arc-arrival burn — and is parked back on Arbitrum right after. (The StableFX business pilot below would be the first trading exception, and only for KYB'd business users.)
 
+**Protocol differences that matter to our code** (Arc EVM-differences reference, checked 2026-10-13; several live-verified against `rpc.mainnet.arc.io`):
+
+- **USDC gas floor is 20 Gwei — under-priced txs die silently.** Arc's mempool enforces a minimum `maxFeePerGas` of 20 Gwei; a transaction below it is dropped with no error and never reaches a block. Live-verified 2026-10-13: `eth_gasPrice` returned 20.000001 gwei, `eth_feeHistory` baseFee exactly 20 gwei. Dynamic fee reads (ethers `feeData`) land on the floor automatically — the risk is any hardcoded gas price. At ~1–2M gas a contract deploy costs ≈ $0.02–0.04 USDC.
+- **Two interfaces, one balance.** Native USDC accounting is 18 decimals; the ERC-20 predeploy `0x3600…0000` is 6 decimals. A zero `balanceOf` does **not** mean a zero balance — the ERC-20 view truncates sub-USDC fractions while the funds remain on-chain. Never reconcile balances across both interfaces.
+- **Value-transfer rules don't exist on standard EVM.** Value-bearing sends to `address(0)` revert (`"Zero address not allowed"`); burning via `SELFDESTRUCT` variants reverts; a USDC-blocklist check runs at runtime — a tx that reverts on it consumes gas and produces no receipt; a call that forwards native value to a contract can revert. `RecommendationLedger` deploys clean under these rules (no `payable`, no value transfers, `constructor() Ownable(msg.sender)`).
+- **No onchain randomness, no blob txs.** `PREVRANDAO` always returns `0`; the EIP-4788 beacon-roots contract is omitted (reads return `0x`); type-3 blob transactions are rejected at the mempool. Baseline is the Osaka hard fork (EIP-7702 included) plus early Amsterdam features — EIP-7708 emits standard `Transfer` logs for native USDC movements, so native transfers are ERC-20-indexable.
+- **Toolchain is Arc Foundry, not vanilla Foundry.** Circle maintains `circlefin/arc-foundry` (`arc-forge`, `arc-cast`, `arc-anvil`) for Arc's protocol differences; vanilla `anvil` simulates a standard EVM and cannot reproduce them (`arc-forge test --network arc` / `arc-anvil --network arc` are the Arc-aware paths). Deploy/verify runbook is in `reference.md` § 3.4.
+
 ### StableFX — business execution venue (under evaluation, 2026-09-28)
 
 StableFX went live on Arc mainnet on 2026-09-22 (Arc blog). What it is, from Circle's docs and public OpenAPI spec:
@@ -1182,7 +1190,7 @@ Every AI recommendation traces through the full 0G pipeline:
 | **0G mainnet** | Evidence mirror | [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://chainscan.0g.ai/address/0x3BCf7dFd68ce98880618c89A351168960724369C) | Live (Wave 3) |
 | **HashKey mainnet (177)** | APAC savings decisions of record | `0x3BCf7dFd68ce98880618c89A351168960724369C` | Live — see [§ HashKey — the APAC rail](#hashkey--the-apac-rail) § Implementation status |
 | **Robinhood Chain mainnet (4663)** | RWA / stock-token decisions of record | `0x3BCf7dFd68ce98880618c89A351168960724369C` (env: `ROBINHOOD_MAINNET_LEDGER_CONTRACT`) | Env-gated |
-| **Arc mainnet (5042)** | Settlement-rail decisions of record (x402 gateway on ARC) | `0x3BCf…369C` (env: `ARC_MAINNET_LEDGER_CONTRACT`) | Env-gated |
+| **Arc mainnet (5042)** | Settlement-rail decisions of record (x402 gateway on ARC) | [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://explorer.arc.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) (env: `ARC_MAINNET_LEDGER_CONTRACT`) | Live on the x402 gateway; own deployment, not `0x3BCf…369C` |
 
 The canonical fan-out is `PROOF_FEED_CHAIN_IDS` (`apps/web/constants/proof-feed.ts`): Arbitrum, Celo, Robinhood, HashKey, 0G, Arc. Chains without a configured contract drop out automatically.
 
@@ -1395,7 +1403,7 @@ flowchart TD
         LEDGER_C["RecommendationLedger<br/>Celo mainnet · 0x3BCf…369C<br/>savings decisions of record"]
         LEDGER_A["RecommendationLedger<br/>Arbitrum mainnet · 0x3BCf…369C<br/>yield decisions of record"]
         LEDGER_0G["RecommendationLedger<br/>0G mainnet · 0x3BCf…369C<br/>evidence anchor"]
-        LEDGER_R["Region ledgers<br/>HashKey 177 · Robinhood 4663 · Arc 5042<br/>same 0x3BCf…369C, env-gated"]
+        LEDGER_R["Region ledgers<br/>HashKey 177 · Robinhood 4663 · Arc 5042<br/>HashKey/Robinhood 0x3BCf…369C · Arc 0xB393…2996, env-gated"]
         ZG_STORAGE["0G Storage<br/>evidence CID<br/>encrypted prompt + reasoning + sources"]
         ZG_SNAP["0G Storage snapshot<br/>verifiable Guardian state"]
         RECEIPT["User receipt<br/>in-app proof feed<br/>explorer links + anchor status"]
