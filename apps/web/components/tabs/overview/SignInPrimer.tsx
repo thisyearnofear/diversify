@@ -30,7 +30,7 @@ export function SignInPrimer() {
     },
     {
       title: 'Nothing moves without you',
-      body: 'Guardian proposes. You approve each move yourself before anything happens.',
+      body: 'Guardian proposes moves for you to approve. It can act automatically only if you explicitly grant scoped permissions; those permissions bound what it can do.',
     },
     {
       title: 'What you chose here comes with you',

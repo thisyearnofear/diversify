@@ -309,7 +309,7 @@ curl -s -X POST https://evmrpc-testnet.0g.ai \
 curl -s https://api.diversifi.famile.xyz/api/agent/zero-g-ledger | python3 -m json.tool
 ```
 
-Public verification of any record: `GET /api/agent/zero-g-ledger?verify=<txHash>`.
+Public verification of any record: `GET /api/agent/zero-g-ledger?verify=<txHash>&chainId=<chainId>` — pass the network the record was anchored on (for example `chainId=5042` for Arc); omitting it or passing the wrong chain can produce a false "not found".
 
 #### Anchor observability
 
@@ -410,7 +410,7 @@ exactly 20 gwei), and gas is paid in native USDC (18-decimal accounting).
    back to `FX_ANCHOR_CHAIN_BY_REGION` when the address is empty
    (`x402-gateway.ts`). Then run one real paid research request and confirm
    the settlement tx + ledger record resolve on `explorer.arc.io` and via
-   `GET /api/agent/zero-g-ledger?verify=<txHash>` before describing the rail
+   `GET /api/agent/zero-g-ledger?verify=<txHash>&chainId=5042` before describing the rail
    as live. **Done in production 2026-10-13:** the Hetzner gateway
    (`api.diversifi.famile.xyz`) runs `ARC`/`mainnet` and anchors to the Arc
    ledger — `fx_protection` purchase → settlement `0x79b28dda…8359`, anchor

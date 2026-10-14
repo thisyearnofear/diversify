@@ -169,7 +169,7 @@ through `trackFunnelEvent` to `POST /api/analytics/event`:
 | `Ask Guardian about the NGN →` | `ask_guardian_tapped` | `currency: NGN`, `source: currency_story` |
 | Header `Sign in` / `Connect Wallet` while disconnected | `walletless_connect_tapped` | `source: wallet_button`, `attempt: primary` (or `retry` from `Try again`) |
 | `What happens when I sign in?` | `sign_in_primer_opened` | `source: home_walletless` |
-| The story's `The dollar side` note appears (non-USD currencies) | `digital_dollar_note_viewed` | `currency: NGN` |
+| The story's `The dollar side` note is ≥50% on screen while the tab is in the foreground, once per story opening (non-USD currencies — a view count, not read comprehension) | `digital_dollar_note_viewed` | `currency: NGN` |
 
 No address, question text, headline, URL or balance is sent. The endpoint
 always answers `204`, including when no database is configured, so a `204`
@@ -333,7 +333,7 @@ Point at it, then close it. Do not sign in on stage.
 Point at "You can keep exploring without connecting." Click the ✕
 (`Dismiss wallet guidance`).
 
-> **"And nothing moves without your signature. Not tonight, not ever."**
+> **"By default, you approve each move. Automation needs separate, explicit permission."**
 
 ### 2:45–3:00 — Close (15 s)
 

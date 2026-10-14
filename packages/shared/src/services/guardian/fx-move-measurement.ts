@@ -80,13 +80,15 @@ function shiftDays(isoDate: string, days: number): string {
 async function fetchUsdTable(
   isoDate: string,
   fetcher: typeof fetch,
-): Promise<Record<string, number> | null> {
+): Promise<{ date: string; table: Record<string, number>; sourceUrl: string } | null> {
   for (const url of datasetUrls(isoDate)) {
     try {
       const res = await fetcher(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) });
       if (!res.ok) continue;
-      const body = (await res.json()) as { usd?: Record<string, number> };
-      if (body?.usd) return body.usd;
+      const body = (await res.json()) as { date?: unknown; usd?: Record<string, number> };
+      if (body?.date === isoDate && body.usd && typeof body.usd === 'object' && !Array.isArray(body.usd)) {
+        return { date: isoDate, table: body.usd, sourceUrl: url };
+      }
     } catch {
       // timeout or network error — try the next mirror
     }
@@ -101,11 +103,11 @@ async function fetchUsdTable(
 async function resolveTable(
   isoDate: string,
   fetcher: typeof fetch,
-): Promise<{ date: string; table: Record<string, number> } | null> {
+): Promise<{ date: string; table: Record<string, number>; sourceUrl: string } | null> {
   let probe = isoDate;
   for (let i = 0; i <= MAX_LOOKBACK_DAYS && probe >= DATASET_MIN_DATE; i++) {
     const table = await fetchUsdTable(probe, fetcher);
-    if (table) return { date: probe, table };
+    if (table) return table;
     probe = shiftDays(probe, 1);
   }
   return null;
@@ -130,7 +132,7 @@ export async function readFxMoveMeasurements(
   const now = options.now ?? Date.now();
   const windowDays = options.windowDays ?? FX_MOVE_DEFAULT_WINDOW_DAYS;
   if (!Number.isFinite(now) || now <= 0) throw new Error('Invalid measurement time');
-  if (!Number.isFinite(windowDays) || windowDays <= 0) throw new Error('Invalid measurement window');
+  if (!Number.isInteger(windowDays) || windowDays <= 0) throw new Error('Invalid measurement window');
 
   const toIso = new Date(now).toISOString().slice(0, 10);
   const fromIso = shiftDays(toIso, windowDays);
@@ -140,6 +142,8 @@ export async function readFxMoveMeasurements(
     resolveTable(fromIso, fetcher),
   ]);
   if (!to || !from) throw new Error('Independent FX dataset unavailable');
+  const measuredWindowDays = (Date.parse(to.date) - Date.parse(from.date)) / 86_400_000;
+  if (measuredWindowDays <= 0) throw new Error('Invalid FX measurement interval');
 
   const retrievedAt = new Date(now).toISOString();
   const seen = new Set<string>();
@@ -164,7 +168,7 @@ export async function readFxMoveMeasurements(
     out.push({
       kind: 'fx_move',
       code,
-      windowDays,
+      windowDays: measuredWindowDays,
       fromDate: from.date,
       toDate: to.date,
       fromPerUsd,
@@ -172,7 +176,7 @@ export async function readFxMoveMeasurements(
       movePercent,
       thresholdPercent: FX_MOVE_THRESHOLD_PERCENT,
       material: Math.abs(movePercent) > FX_MOVE_THRESHOLD_PERCENT + 1e-9,
-      sourceUrl: datasetUrls(to.date)[0],
+      sourceUrl: to.sourceUrl,
       retrievedAt,
       executionEligibility: 'observation_only',
     });
