@@ -121,7 +121,7 @@ describe('rememberLedgerReasoning', () => {
         action: 'MACRO_SIGNAL:RATE_CUT',
         reasoning: 'Copom cut 50bp.',
       }),
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
   });
 });
 

@@ -31,9 +31,9 @@ export async function rememberLedgerReasoning(input: {
   action: string;
   targetToken?: string;
   reasoning?: string;
-}): Promise<void> {
+}): Promise<boolean> {
   const text = input.reasoning?.trim();
-  if (!text) return;
+  if (!text) return false;
   const hasRecordIdentity =
     !!input.chainId && input.recordId != null && input.recordId >= 1;
 
@@ -45,7 +45,7 @@ export async function rememberLedgerReasoning(input: {
   }
 
   // Nothing to key on at all — not worth a write.
-  if (!hasRecordIdentity && !reasoningHash) return;
+  if (!hasRecordIdentity && !reasoningHash) return false;
 
   try {
     await dbConnect();
@@ -71,7 +71,7 @@ export async function rememberLedgerReasoning(input: {
       if (reasoningHash) {
         await LedgerReasoning.deleteOne({ kind: 'pending', reasoningHash });
       }
-      return;
+      return true;
     }
 
     await LedgerReasoning.updateOne(
@@ -91,8 +91,10 @@ export async function rememberLedgerReasoning(input: {
       },
       { upsert: true },
     );
+    return true;
   } catch (err: any) {
     console.warn('[LedgerReasoning] echo write failed:', err?.message ?? err);
+    return false;
   }
 }
 

@@ -146,7 +146,8 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `NEXT_PUBLIC_ARC_ARRIVAL` | client | off in production | Gates the Arc arrival path (`lib/arc-arrival.ts` → `hooks/use-arc-arrival.ts`). Tests and prod never hit Arc RPC by default; flip only after a real mainnet rehearsal (§3.4). |
 | `NEXT_PUBLIC_ENABLE_ARC` | — | **removed** | The old Arc-research flag was never read and is gone; rail selection is `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`. |
 | `MONGODB_URI` | server | — | MongoDB connection. Required for the Caribbean FX netting demo — hosts the intent pool so intents match across users and time (free Atlas tier; shape in `.env.example`). |
-| `GUARDIAN_LOOP_SECRET` | server | — | Protects the `/api/agent/guardian-loop` cron endpoint (server-to-server only). |
+| `GUARDIAN_LOOP_SECRET` | server | — | Protects POST calls to `/api/agent/guardian-loop` and `/api/agent/fx-macro-signal` (server-to-server only). |
+| `CRON_SECRET` | server | — | Vercel Cron bearer secret for the scheduled `GET /api/agent/fx-macro-signal` tick; requests must send `Authorization: Bearer $CRON_SECRET`. |
 | `HETZNER_EDGE_SECRET` | server | — | **Planned, not wired:** nothing reads it yet (no header on the `next.config.js` rewrites, no nginx check). Reserved for the direct-host allowlist in §7.5. |
 | `FIRECRAWL_WEBHOOK_SECRET` | server | — | Authenticates incoming Firecrawl macro-signal webhooks (`/api/agent/firecrawl-webhook`). |
 | `TAVILY_API_KEY` | server | — | Cited web/news search (`tavily-search.service.ts`). Preferred over TinyFish when set; unset falls back to TinyFish, and the currency-story headlines render nothing. Never `NEXT_PUBLIC_`. |
@@ -172,6 +173,7 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `SMOKE_BUYER_PRIVATE_KEY` | server/local | — | Funded buyer key required only when `pnpm run x402-mainnet-smoke … -- --apply` is used to submit a real payment (§4.2). Never needed for the read-only check. |
 | `CCTP_SIGNER_PRIVATE_KEY` | local/script | — | EOA that holds USDC on the source chain and pays source gas for `scripts/cctp-transfer.ts` (Arbitrum↔Arc funding; signs the destination mint unless `--forward`). Script dry-runs without `--apply`. |
 | `ZERO_G_MAINNET_LEDGER_CONTRACT` | server | — | Override for the 0G mainnet `RecommendationLedger` anchor address (§3.3). |
+| `ARBITRUM_MAINNET_LEDGER_CONTRACT` | server | — | `RecommendationLedger` on Arbitrum One (42161); default rail for measured FX moves and other non-Celo/Robinhood anchors. |
 | `ZERO_G_LEDGER_CONTRACT` | server | — | Override for the 0G Galileo evidence-mirror address (§3.3). |
 | `ARC_MAINNET_LEDGER_CONTRACT` | server | empty → anchors fall back to region chain | `RecommendationLedger` on Arc mainnet (5042); read in `recommendation-ledger.service.ts`, used by the x402 gateway only when `SETTLEMENT_NETWORK=ARC` + `SETTLEMENT_ENV=mainnet` (§3.4 deploy runbook). |
 | `ENTERPRISE_API_KEYS` | server | — | JSON array of enterprise API-key objects (`key`, `tenantId`, `tier`, `rateLimit`, `quotaUsd`, `audit`) — §6.5. |
@@ -269,6 +271,7 @@ Stack). Deployed surfaces and configuration:
 | Field | Value |
 |-------|-------|
 | **0G Mainnet evidence anchor** | chainId `16661`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://chainscan.0g.ai/address/0x3BCf7dFd68ce98880618c89A351168960724369C) (overridable via `ZERO_G_MAINNET_LEDGER_CONTRACT`) |
+| **Arbitrum One general ledger** | chainId `42161`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://arbiscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) (set via `ARBITRUM_MAINNET_LEDGER_CONTRACT`; default for measured FX moves) |
 | **Arbitrum Sepolia yield ledger** | chainId `421614`, [`0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996`](https://sepolia.arbiscan.io/address/0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996) |
 | **0G Galileo evidence mirror** | chainId `16602`, [`0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED`](https://chainscan-galileo.0g.ai/address/0xFADc8a7220Fa152eBE3Dfc5f7828Be289559D4ED) (overridable via `ZERO_G_LEDGER_CONTRACT`) |
 | **Celo mainnet savings ledger** | chainId `42220`, [`0x3BCf7dFd68ce98880618c89A351168960724369C`](https://celoscan.io/address/0x3BCf7dFd68ce98880618c89A351168960724369C) |
@@ -531,6 +534,7 @@ The following providers have been evaluated but not yet integrated. See [`plan.m
 | `/api/agent/business/cycle-monitor` | POST | Standalone cycle-aware proposal tick (same logic as guardian-loop inline step); enqueues without overwriting unrelated pending recommendations |
 | `/api/agent/fx-cycle-report` | POST | Free in-app FX drag scenario: current mid-market rate + historical stress context (USD targets only). Not a forecast or locked quote. |
 | `/api/agent/firecrawl-webhook` | POST | Receives Firecrawl Monitor macro signal webhooks |
+| `/api/agent/fx-macro-signal` | POST/GET | Measured FX-move macro producer: secret-authenticated POST supports dry-run/rehearsal/`apply`; Vercel Cron GET applies the daily tick with `Authorization: Bearer $CRON_SECRET`. Anchors are deduplicated by local claim plus authoritative on-chain `reasoningHash`; aggregate failures are reported, not hidden. |
 | `/api/agent/web-search` | GET/POST | Cited web/news search (Tavily, else TinyFish); one result shape `{ title, url, snippet, source, date }`; per-IP rate limited |
 | `/api/agent/currency-news` | GET | `?code=NGN` — up to 3 cited headlines for a curated currency (Tavily, last 30 days, hype-guarded); public, read-only, query derived server-side from the code; `items: []` when unconfigured |
 | `/api/agent/rwa-allocation` | POST | RWA vault allocation (deterministic heuristic by default; SERV reasoning only on explicit opt-in — §5.3). Demo at `/?tab=protect&sleeve=rwa`; `/rwa-vaults` redirects there. |
@@ -693,7 +697,8 @@ signal ingestion → permission validation → chain-aware execution → evidenc
 | Guardian Memory Smoke | `scripts/smoke-guardian-memory.ts` | Ephemeral-wallet add/list/delete/forget per provider |
 
 Endpoint security:
-- `GUARDIAN_LOOP_SECRET` protects the cron endpoint (server-to-server only).
+- `GUARDIAN_LOOP_SECRET` protects server-to-server POSTs to the Guardian loop and FX macro producer.
+- `CRON_SECRET` protects Vercel Cron's GET tick on the FX macro producer.
 - `FIRECRAWL_WEBHOOK_SECRET` authenticates incoming Firecrawl webhooks.
 - User's permission bounds are always enforced (daily limit, allowed tokens, expiry). **Enforcement is app-layer**, not on-chain, on the production Celo/Mento path — see `docs/guardian.md`.
 - `GUARDIAN_CONFIDENCE_THRESHOLD` (default 0.6) prevents low-confidence auto-execution.

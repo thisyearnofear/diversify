@@ -24,6 +24,8 @@ const JUDGE_SAFE_SOURCE_LABELS: Record<string, string> = {
   '0.015000': 'Arc Research Bundle',
 };
 
+const PER_REPORT_SOURCE_IDS = new Set(['fx_protection']);
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -37,7 +39,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     priceUSDC: parseFloat(source.price),
   }));
 
-  const maxPerActionPrice = sourcePricing.reduce((max, item) => Math.max(max, item.priceUSDC), 0);
+  const perActionPricing = sourcePricing.filter((item) => !PER_REPORT_SOURCE_IDS.has(item.sourceId));
+  const perReportExceptions = sourcePricing.filter((item) => PER_REPORT_SOURCE_IDS.has(item.sourceId));
+  const maxPerActionPrice = perActionPricing.reduce((max, item) => Math.max(max, item.priceUSDC), 0);
 
   // Agent wallet info — lets judges verify the on-chain settlement address.
   // Buyer settlement stats no longer require the agent key: they scan
@@ -135,7 +139,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     },
     pricing: {
       maxPerActionPriceUSDC: Number(maxPerActionPrice.toFixed(6)),
-      allSourcesAtOrBelowOneCent: maxPerActionPrice <= 0.01,
+      allMicroSourcesAtOrBelowOneCent: maxPerActionPrice <= 0.01,
+      allSourcesAtOrBelowOneCent: sourcePricing.every((item) => item.priceUSDC <= 0.01),
+      perReportPricingExceptions: perReportExceptions,
       sourcePricing,
     },
     settlement: settlementPayload,

@@ -13,6 +13,7 @@ const mockWithTimeout = vi.fn();
 vi.mock('@diversifi/shared/src/utils/arc-research-sources', () => ({
   listArcResearchSources: () => [
     { id: 'macro', label: 'Macro source', price: '0.004' },
+    { id: 'fx_protection', label: 'FX Protection Insight', price: '1.000' },
   ],
 }));
 vi.mock('@diversifi/shared/src/utils/x402-analytics', () => ({
@@ -91,6 +92,24 @@ describe('GET /api/agent/x402-metrics', () => {
     expect(res.body).toMatchObject({
       zeroGIntegratedLedger: { totalRecommendations: 42, isDeployed: true },
       settlement: { network: 'ARBITRUM', agentAddress: null },
+    });
+  });
+
+  it('keeps per-report pricing out of the micro-action cap', async () => {
+    const res = makeRes();
+
+    await handler({ method: 'GET' } as never, res as never);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toMatchObject({
+      pricing: {
+        maxPerActionPriceUSDC: 0.004,
+        allMicroSourcesAtOrBelowOneCent: true,
+        allSourcesAtOrBelowOneCent: false,
+        perReportPricingExceptions: [
+          { sourceId: 'fx_protection', priceUSDC: 1 },
+        ],
+      },
     });
   });
 
