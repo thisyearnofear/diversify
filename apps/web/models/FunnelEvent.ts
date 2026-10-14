@@ -98,6 +98,10 @@ export const FUNNEL_EVENTS = [
   'currency_headline_tapped',
   'ask_guardian_tapped',
   'walletless_connect_tapped',
+  // Grounding beats: the sign-in primer opened, and "The dollar side" note
+  // shown under a currency story. Props: fixed source / currency code only.
+  'sign_in_primer_opened',
+  'digital_dollar_note_viewed',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

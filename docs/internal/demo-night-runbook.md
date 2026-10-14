@@ -168,6 +168,8 @@ through `trackFunnelEvent` to `POST /api/analytics/event`:
 | A headline (only when headlines show) | `currency_headline_tapped` | `currency: NGN`, `source: currency_story` |
 | `Ask Guardian about the NGN →` | `ask_guardian_tapped` | `currency: NGN`, `source: currency_story` |
 | Header `Sign in` / `Connect Wallet` while disconnected | `walletless_connect_tapped` | `source: wallet_button`, `attempt: primary` (or `retry` from `Try again`) |
+| `What happens when I sign in?` | `sign_in_primer_opened` | `source: home_walletless` |
+| The story's `The dollar side` note appears (non-USD currencies) | `digital_dollar_note_viewed` | `currency: NGN` |
 
 No address, question text, headline, URL or balance is sent. The endpoint
 always answers `204`, including when no database is configured, so a `204`

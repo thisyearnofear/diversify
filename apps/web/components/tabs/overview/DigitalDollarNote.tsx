@@ -8,10 +8,15 @@
  */
 import React from 'react';
 import { provenanceFor } from '@diversifi/shared/src/constants/token-provenance';
+import { trackFunnelEvent } from '@/lib/analytics';
 
 export function DigitalDollarNote({ code }: { code: string }) {
   const usdc = provenanceFor('USDC');
-  if (code === 'USD' || !usdc) return null;
+  const shown = code !== 'USD' && Boolean(usdc);
+  React.useEffect(() => {
+    if (shown) trackFunnelEvent('digital_dollar_note_viewed', { currency: code });
+  }, [shown, code]);
+  if (!shown || !usdc) return null;
   return (
     <div className="mt-3 text-left" data-testid="digital-dollar-note">
       <p className="text-2xs font-semibold text-ink-muted">The dollar side</p>

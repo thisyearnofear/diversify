@@ -35,6 +35,8 @@ describe('FUNNEL_EVENTS allowlist', () => {
       'currency_headline_tapped',
       'ask_guardian_tapped',
       'walletless_connect_tapped',
+      'sign_in_primer_opened',
+      'digital_dollar_note_viewed',
       'marquee_select',
       'share_open',
     ]) {
