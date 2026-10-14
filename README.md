@@ -90,6 +90,7 @@ material: [`docs/reference.md`](./docs/reference.md). Docs index:
 | [`docs/architecture.md`](./docs/architecture.md) | System, chains and settlement rails, the 0G evidence stack |
 | [`docs/plan.md`](./docs/plan.md) | What we're building now, in priority order |
 | [`docs/reference.md`](./docs/reference.md) | Setup, env vars, endpoints, deploy, demo capture |
+| [`docs/internal/demo-night-runbook.md`](./docs/internal/demo-night-runbook.md) | The timed 3-minute walletless demo, with preflight and fallbacks |
 | [`docs/design-language.md`](./docs/design-language.md) | Surface contract for any user-facing work |
 | [`docs/history/roadmap-log.md`](./docs/history/roadmap-log.md) | Dated record of what shipped |
 | [`docs/archive/`](./docs/archive/) | Closed grant tracks and past submissions — reference, not roadmap |

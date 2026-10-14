@@ -10,6 +10,7 @@ import { usePortfolio } from '@/context/app/PortfolioContext';
 import { walletNeedsFunds } from '@/lib/wallet/wallet-nudge';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
+import { trackFunnelEvent } from '@/lib/analytics';
 
 // FarCaster Mini App supported chains (as of 2025)
 // Source: https://github.com/farcasterxyz/miniapps/discussions/240
@@ -145,7 +146,8 @@ export default function WalletButton({
     prevAddressRef.current = address;
   }, [address, onConnect, showToast]);
 
-  const handleConnect = async () => {
+  const handleConnect = async (attempt: 'primary' | 'retry') => {
+    trackFunnelEvent('walletless_connect_tapped', { source: 'wallet_button', attempt });
     setHasAttemptedConnect(false);
     try {
       await connect();
@@ -499,7 +501,7 @@ export default function WalletButton({
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={handleConnect}
+        onClick={() => handleConnect('primary')}
         className={`relative flex items-center justify-center px-3 sm:px-5 py-2 min-h-tap rounded-full font-medium text-sm sm:text-base transition-colors duration-300 overflow-hidden ${getVariantClasses()} ${className}`}
         title={connectTooltip}
       >
@@ -566,7 +568,7 @@ export default function WalletButton({
           </div>
           <button
             type="button"
-            onClick={handleConnect}
+            onClick={() => handleConnect('retry')}
             className="mt-3 min-h-tap w-full rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white hover:bg-blue-700 transition-colors"
           >
             Try again

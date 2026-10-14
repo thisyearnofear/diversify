@@ -73,11 +73,17 @@ export function NotConnectedState({
             onAmountChange={setSavingsAmount}
             onChangeCountry={onChangeCountry}
             frame={frame}
-            onInspectCurrency={() =>
+            onInspectCurrency={() => {
+              if (inspectedCurrency !== moment.currencyCode) {
+                trackFunnelEvent("currency_story_opened", {
+                  currency: moment.currencyCode,
+                  source: "home_walletless",
+                });
+              }
               setInspectedCurrency((prev) =>
                 prev === moment.currencyCode ? null : moment.currencyCode,
-              )
-            }
+              );
+            }}
             currencySelected={inspectedCurrency === moment.currencyCode}
             viewingShared={viewingShared}
             onClearSharedView={clearSharedView}
