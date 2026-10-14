@@ -10,7 +10,7 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, corridorSignalForCurrency, pairWhatIfFor, liveOneYearOverlay } from '../corridor-context';
@@ -859,6 +859,17 @@ describe('corridor return-visit lead', () => {
 
   const readStored = () => JSON.parse(window.localStorage.getItem(KEY) ?? 'null');
 
+  // The lead depends on which curated events sit inside the 14-day window,
+  // so the suite runs on a fixed instant (before the Oct 27 FOMC is
+  // imminent). Nested useFakeTimers() calls are no-ops while this is active.
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-09-29T12:00:00Z'));
+  });
+  afterEach(() => {
+    cleanup();
+    vi.useRealTimers();
+  });
   afterEach(() => window.localStorage.removeItem(KEY));
 
   it('a snapshot younger than 6h is not a return — no lead', () => {
