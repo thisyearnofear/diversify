@@ -196,10 +196,29 @@ export function selectMaterialFxMoves(
  * The one-line beat. Deliberately short — the reader caps a beat at 110
  * chars — and deliberately past-tense: it states what the provider measured,
  * not where the currency is going.
+ *
+ * Phrased in the product's own money grammar rather than an analyst's. The
+ * beat rotates on the same `LiveLine` as `corridor-voice`'s beats ("la TRM:
+ * the peso lost ~17% to the dollar in 5 years"), so it uses the same
+ * register: the money's plain name, its own verb for the move, and the
+ * benchmark spoken as "the dollar". Two beats describing one currency in two
+ * narrators reads as two apps.
+ *
+ * `subject` is how the host supplies that name (`moneyNameFor`, "the peso").
+ * This adapter owns no currency-name registry and must not grow one — with no
+ * subject the ISO code stands in, which is plainer but never wrong.
+ *
+ * The as-of date stays even though the beat's dateline also carries a date:
+ * the dateline is the *record's* timestamp, so a run that anchors just after
+ * midnight would otherwise label one day's measurement as the next day's.
+ * This is the only place the measurement's own date is stated as a fact.
  */
-export function fxMoveOneLiner(m: FxMoveMeasurement): string {
-  const verb = m.movePercent <= 0 ? 'weakened' : 'strengthened';
-  return `${m.code} ${verb} ${Math.abs(m.movePercent).toFixed(1)}% vs USD over ${m.windowDays} days (measured mid-market, as of ${m.toDate})`;
+export function fxMoveOneLiner(m: FxMoveMeasurement, subject?: string): string {
+  const verb = m.movePercent <= 0 ? 'lost' : 'gained';
+  // Mirrors corridor-voice's templates: "lost … to the dollar" /
+  // "gained … on the dollar".
+  const particle = m.movePercent <= 0 ? 'to' : 'on';
+  return `${subject ?? m.code} ${verb} ${Math.abs(m.movePercent).toFixed(1)}% ${particle} the dollar over ${m.windowDays} days (measured mid-market, as of ${m.toDate})`;
 }
 
 /**
@@ -207,9 +226,9 @@ export function fxMoveOneLiner(m: FxMoveMeasurement): string {
  * `. Source:` as the beat, so the measured rates land after it — readable in
  * the off-chain echo for audit, out of the ticket's way.
  */
-export function fxMoveReasoning(m: FxMoveMeasurement): string {
+export function fxMoveReasoning(m: FxMoveMeasurement, subject?: string): string {
   return (
-    `${fxMoveOneLiner(m)}. Source: ${m.sourceUrl} — ` +
+    `${fxMoveOneLiner(m, subject)}. Source: ${m.sourceUrl} — ` +
     `1 USD bought ${m.fromPerUsd} ${m.code} on ${m.fromDate} and ${m.toPerUsd} ${m.code} on ${m.toDate}. ` +
     'Measured mid-market move, not a forecast, a direction call, or a trade instruction.'
   );

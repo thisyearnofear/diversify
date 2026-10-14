@@ -166,7 +166,11 @@ describe('/api/agent/fx-macro-signal', () => {
     );
 
     expect(signal).not.toBeNull();
-    expect(signal!.text).toBe('NGN weakened 3.1% vs USD over 7 days (measured mid-market, as of 2026-10-14)');
+    // Rendered in the product's money register — the same narrator as the
+    // corridor-voice beats this line rotates beside ("la TRM: the peso lost
+    // ~17% to the dollar in 5 years"), not an analyst's "vs USD".
+    expect(signal!.text).toBe('the naira lost 3.1% to the dollar over 7 days (measured mid-market, as of 2026-10-14)');
+    expect(signal!.text).not.toContain('vs USD');
     expect(signal!.dateLabel).toMatch(/[A-Z][a-z]{2} \d{1,2}/);
   });
 

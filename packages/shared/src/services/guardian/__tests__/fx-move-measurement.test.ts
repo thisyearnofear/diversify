@@ -167,21 +167,43 @@ describe('selectMaterialFxMoves', () => {
 describe('beat text', () => {
   it('states a measured past move and stays inside the reader’s 110-char cap', () => {
     const line = fxMoveOneLiner(measurement());
-    expect(line).toBe('NGN weakened 3.1% vs USD over 7 days (measured mid-market, as of 2026-10-14)');
+    expect(line).toBe('NGN lost 3.1% to the dollar over 7 days (measured mid-market, as of 2026-10-14)');
     expect(line.length).toBeLessThanOrEqual(110);
     // Past tense, no forecast vocabulary.
     expect(line).not.toMatch(/will|expect|forecast|should|target/i);
   });
 
-  it('says strengthened for a positive move', () => {
-    expect(fxMoveOneLiner(measurement({ movePercent: 2.4 }))).toContain('strengthened 2.4%');
+  it('speaks the money’s own name when the host supplies one — the corridor-voice register', () => {
+    const line = fxMoveOneLiner(measurement(), 'the naira');
+    expect(line).toBe('the naira lost 3.1% to the dollar over 7 days (measured mid-market, as of 2026-10-14)');
+    // The name is the only difference from the code fallback.
+    expect(line).toBe(fxMoveOneLiner(measurement()).replace(/^NGN/, 'the naira'));
+  });
+
+  it('keeps the measurement’s own date as a fact, not only the record’s dateline', () => {
+    // The beat's dateline is the record timestamp (the anchor), so a run that
+    // anchors after midnight would otherwise misdate the measurement.
+    expect(fxMoveOneLiner(measurement(), 'the naira')).toContain('as of 2026-10-14');
+  });
+
+  it('stays inside the cap even for the longest money name', () => {
+    const longest = 'the CFA franc';
+    const line = fxMoveOneLiner(measurement({ windowDays: 90 }), longest);
+    expect(line.startsWith(`${longest} lost 3.1% to the dollar over 90 days`)).toBe(true);
+    expect(line.length).toBeLessThanOrEqual(110);
+  });
+
+  it('says gained for a positive move, in the voice’s own particle', () => {
+    const line = fxMoveOneLiner(measurement({ movePercent: 2.4 }), 'the real');
+    expect(line).toContain('the real gained 2.4% on the dollar');
+    expect(line).not.toContain('strengthened');
   });
 
   it('keeps the measured rates after the `. Source:` marker the reader splits on', () => {
-    const text = fxMoveReasoning(measurement());
+    const text = fxMoveReasoning(measurement(), 'the naira');
     // The reader renders everything before the first `. Source:` as the beat…
     const beat = text.split('. Source:')[0];
-    expect(beat).toBe(fxMoveOneLiner(measurement()));
+    expect(beat).toBe(fxMoveOneLiner(measurement(), 'the naira'));
     // …and the evidence stays in the echo, after it.
     expect(text).toContain('. Source: https://cdn.jsdelivr.net/');
     expect(text).toContain('1 USD bought 1500 NGN on 2026-10-07 and 1547.6 NGN on 2026-10-14');

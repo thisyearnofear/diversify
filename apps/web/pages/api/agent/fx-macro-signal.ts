@@ -37,7 +37,7 @@ import {
   type FxMoveMeasurement,
 } from '@diversifi/shared/src/services/guardian/fx-move-measurement';
 import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
-import { corridorTokenForCurrency } from '@/lib/corridor-context';
+import { corridorTokenForCurrency, moneyNameFor } from '@/lib/corridor-context';
 import { CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import {
   REHEARSAL_LABEL,
@@ -47,6 +47,16 @@ import { GUARDIAN_AGENT_ADDRESS } from '../../../constants/guardian-identity';
 
 /** The reader-facing action a real measured move anchors under. */
 export const FX_MOVE_SIGNAL_ACTION = 'MACRO_SIGNAL:FX_MOVE';
+
+/**
+ * The beat text, in the same register as the corridor-voice beats it rotates
+ * beside on the live line — "the peso lost 2.9% to the dollar over 30 days".
+ * The name comes from the app's own registry; the adapter stays
+ * registry-free and falls back to the code.
+ */
+function beatTextFor(m: FxMoveMeasurement): string {
+  return fxMoveReasoning(m, moneyNameFor(m.code));
+}
 
 /** Bound on ledger writes per run — a tick surfaces the largest moves, not all. */
 const MAX_ANCHORS = 5;
@@ -166,7 +176,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         movePercent: m.movePercent,
         fromDate: m.fromDate,
         toDate: m.toDate,
-        line: fxMoveReasoning(m),
+        line: beatTextFor(m),
       })),
       anchored: [],
       usersUpdated: 0,
@@ -182,7 +192,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!targetToken) continue;
 
     const action = rehearsal ? REHEARSAL_SIGNAL_ACTION : FX_MOVE_SIGNAL_ACTION;
-    const reasoning = rehearsal ? `${REHEARSAL_LABEL} ${fxMoveReasoning(m)}` : fxMoveReasoning(m);
+    const line = beatTextFor(m);
+    const reasoning = rehearsal ? `${REHEARSAL_LABEL} ${line}` : line;
 
     const anchor = await recommendationLedgerService.recordRecommendation({
       user: GUARDIAN_AGENT_ADDRESS,
