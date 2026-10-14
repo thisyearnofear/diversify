@@ -26,7 +26,7 @@ import { buildCurrencyNewsContext } from "../advisor-core";
 const RESULTS = {
   results: [
     {
-      title: "Central bank holds rates",
+      title: "Nigeria central bank holds rates",
       url: "https://example.com/a",
       content: "…",
       source: "Example Wire",

@@ -38,6 +38,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.status(200).json({
     code: code.toUpperCase(),
     provider: 'tavily',
-    items: toCurrencyNewsItems(result.results),
+    items: toCurrencyNewsItems(result.results, 3, code),
   });
 }

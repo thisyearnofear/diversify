@@ -11,6 +11,14 @@ import { WALLET_FEATURES } from '../../../config/features';
 
 export function SignInPrimer() {
   const [open, setOpen] = React.useState(false);
+  const sheetRef = React.useRef<HTMLDivElement>(null);
+  // The sheet opens below the link, usually under the dock on a phone —
+  // bring it into the viewport so the tap visibly answers.
+  React.useEffect(() => {
+    if (!open) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    sheetRef.current?.scrollIntoView?.({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+  }, [open]);
   const emailAvailable = Boolean(WALLET_FEATURES.PRIVY_ENABLED && WALLET_FEATURES.PRIVY_APP_ID);
   const points: Array<{ title: string; body: string }> = [
     {
@@ -41,6 +49,7 @@ export function SignInPrimer() {
       >
         What happens when I sign in?
       </button>
+      <div ref={sheetRef}>
       <InspectorSheet
         selectedId={open ? 'sign-in' : null}
         onClose={() => setOpen(false)}
@@ -55,6 +64,7 @@ export function SignInPrimer() {
           ))}
         </ul>
       </InspectorSheet>
+      </div>
     </>
   );
 }

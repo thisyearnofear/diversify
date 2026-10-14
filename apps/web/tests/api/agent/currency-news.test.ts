@@ -61,7 +61,7 @@ function req(over: Record<string, unknown> = {}) {
 const raw = (over: Record<string, unknown> = {}) => ({
   title: 'A headline',
   url: 'https://reuters.com/a',
-  snippet: 'x',
+  snippet: 'Nigeria naira exchange rate',
   score: 0.9,
   source: 'reuters.com',
   ...over,
@@ -112,7 +112,7 @@ describe('/api/agent/currency-news', () => {
     expect(res.headers['Cache-Control']).toContain('s-maxage=900');
     // the query is derived from the code server-side, never from the caller
     expect(mocks.search).toHaveBeenCalledWith(
-      expect.stringContaining('NGN'),
+      expect.stringContaining('Nigeria naira'),
       expect.objectContaining({ topic: 'news', timeRange: 'month' }),
     );
   });

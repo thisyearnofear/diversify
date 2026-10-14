@@ -25,6 +25,7 @@ import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tab
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import { tavilySearch, tavilySearchService } from '@diversifi/shared/src/services/tavily-search.service';
 import { currencyNewsQuery, toCurrencyNewsItems } from '@/lib/currency-news';
+import { CURRENCY_NAME_ALIASES } from '@/lib/currency-names';
 import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
 
 // The model answers with labels as often as ids ("the Shield tab") — map
@@ -599,19 +600,6 @@ export function formatViewContext(view?: ConversationRequest['view']): string {
 const FACTS_MAX_CURRENCIES = 3;
 const FACTS_MAX_LINES = 15;
 
-/** Colloquial currency names → ISO code. Only names that map to exactly
- *  one currency in our coverage — 'peso', 'pound', 'rupee' and 'real'
- *  are ambiguous (or plain English) and stay out on purpose. */
-const CURRENCY_NAME_ALIASES: Record<string, string> = {
-  naira: 'NGN', cedi: 'GHS', cedis: 'GHS',
-  shilling: 'KES', rand: 'ZAR',
-  lira: 'TRY', hryvnia: 'UAH', gourde: 'HTG',
-  ruble: 'RUB', rouble: 'RUB',
-  rupiah: 'IDR', baht: 'THB', dong: 'VND',
-  euro: 'EUR', euros: 'EUR',
-  dollar: 'USD', dollars: 'USD',
-};
-
 /** Extra country names not covered verbatim by `countryName`. */
 const COUNTRY_NAME_ALIASES: Record<string, string> = {
   'united states': 'USD', 'usa': 'USD',
@@ -762,7 +750,7 @@ export async function buildCurrencyNewsContext(
   if (!query) return '';
   try {
     const result = await tavilySearch(query, { topic: 'news', timeRange: 'month', maxResults: 6 });
-    const items = toCurrencyNewsItems(result.results);
+    const items = toCurrencyNewsItems(result.results, 3, code);
     if (items.length === 0) return '';
     const lines = items.map(
       (n, i) => `${i + 1}. ${n.title} (${n.source}${n.date ? `, ${n.date}` : ''})`,
