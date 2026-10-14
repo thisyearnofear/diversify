@@ -62,9 +62,18 @@ written:
 | Header | `Connect Wallet` |
 
 If Home shows a different currency (because your network reports a country),
-the button reads `Story of the <code>`. Either present that currency with the
-same script, or pick Nigeria from the `Currency — …` control before going on
-stage. Do not switch on stage.
+the button reads `Story of the <code>`. Either present that currency, or pick
+Nigeria from the `Currency — …` control before going on stage. Do not switch
+on stage. Either way, note which of these two states the stage profile is in,
+because the 0:15 and 0:30 lines change with it:
+
+- **Not detected:** the "Country not detected — showing Nigeria by default.
+  Sample figures until you connect." line is on screen. Use the
+  *not detected* lines.
+- **Detected or picked:** that line is absent. A detected country, or a
+  currency you picked yourself (even Nigeria), removes it. Use the
+  *detected or picked* lines, and say the currency name and code shown on
+  screen wherever the script says NGN or naira.
 
 Write down, from the screen, the three facts you will read aloud: the Home
 percentage and period, the currency's newest trail chip, and the trail's
@@ -186,21 +195,46 @@ Screen: welcome screen, "Make a plan for your money."
 
 Click `Explore app`. The app lands on Shield. Click `HOME` in the dock.
 
+Say the line that matches the state you noted in 1.3.
+
+*Not detected:*
+
 > **"Explore app, then Home. Home is one reading about one currency. It
 > guessed Nigeria because it can't see my country, and it says so."**
 
 Point at "Country not detected — showing Nigeria by default."
 
+*Detected or picked:*
+
+> **"Explore app, then Home. Home is one reading about one currency, here
+> [currency on screen]."**
+
+Point at the currency control. Do not say the app guessed or detected
+anything unless the screen says so.
+
 ### 0:30–0:55 — The reading (25 s)
 
-Point at the big figure and the line under it. Read them exactly as shown.
+Point at the big figure and the line under it. Read them exactly as shown,
+including whether buying power fell, rose or held steady, and the benchmark
+named on screen.
 
-> **"Over [period on screen] against the US dollar, naira buying power fell
-> [figure on screen]. Notice the line above it: sample figures until you
-> connect. The amount is illustrative. The drop is the currency's, not
+*Not detected:*
+
+> **"[Period on screen] against [benchmark on screen], naira buying power
+> [fell / rose / held steady, as shown] [figure on screen]. Notice the line
+> above it: sample figures until you connect. The amount is illustrative.
+> The change is the currency's, not mine."**
+
+*Detected or picked:*
+
+> **"[Period on screen] against [benchmark on screen], [currency on screen]
+> buying power [fell / rose / held steady, as shown] [figure on screen].
+> The amount is one you can change. The change is the currency's, not
 > mine."**
 
-Do not change the amount, period or benchmark. Every extra tap costs time.
+In the detected or picked state there is no "sample figures" line on
+screen, so do not point at one. Both versions fit the same 25 seconds. Do
+not change the amount, period or benchmark. Every extra tap costs time.
 
 ### 0:55–1:35 — The story (40 s)
 
