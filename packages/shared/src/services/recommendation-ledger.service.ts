@@ -833,6 +833,47 @@ export async function getUserRecommendations(
     }
 }
 
+export async function findRecommendationByReasoningHash(params: {
+    user: string;
+    chainId: number;
+    reasoningHash: string;
+    action?: string;
+    targetToken?: string;
+    pageSize?: number;
+}): Promise<LedgerRecommendation | null> {
+    const contract = getReadOnlyContract(params.chainId);
+    const wantedHash = params.reasoningHash.toLowerCase();
+    const wantedAction = params.action?.toLowerCase();
+    const wantedToken = params.targetToken?.toLowerCase();
+    const total = Number(await contract.getUserRecommendationCount(params.user));
+    const pageSize = Math.max(1, Math.min(200, params.pageSize ?? 100));
+
+    for (let offset = 0; offset < total; offset += pageSize) {
+        const limit = Math.min(pageSize, total - offset);
+        const [results] = await contract.getUserRecommendations(params.user, offset, limit);
+        for (let i = 0; i < results.length; i++) {
+            const r = results[i];
+            if (String(r.reasoningHash).toLowerCase() !== wantedHash) continue;
+            if (wantedAction && String(r.action).toLowerCase() !== wantedAction) continue;
+            if (wantedToken && String(r.targetToken).toLowerCase() !== wantedToken) continue;
+            return {
+                id: offset + i + 1,
+                user: r.user,
+                action: r.action,
+                targetToken: r.targetToken,
+                reasoningHash: r.reasoningHash,
+                evidenceCid: r.evidenceCid,
+                servingModel: r.servingModel,
+                settlementTxHash: r.settlementTxHash,
+                timestamp: Number(r.timestamp),
+                confidence: Number(r.confidence) / 10000,
+            };
+        }
+    }
+
+    return null;
+}
+
 /**
  * Get recommendation ledger stats
  */
@@ -996,6 +1037,7 @@ export const recommendationLedgerService = {
     getRecommendation,
     getUserRecommendationIds,
     getUserRecommendations,
+    findRecommendationByReasoningHash,
     getLedgerStats,
     getTotalRecommendations,
     setLedgerContractAddress,

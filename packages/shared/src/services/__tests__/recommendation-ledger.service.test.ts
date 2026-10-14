@@ -9,6 +9,8 @@ const mockContract = {
         parseLog: vi.fn().mockReturnValue(null),
     },
     totalRecommendations: vi.fn().mockResolvedValue(42),
+    getUserRecommendationCount: vi.fn(),
+    getUserRecommendations: vi.fn(),
 };
 
 vi.mock('ethers6', () => {
@@ -580,5 +582,68 @@ describe('getLedgerGasRunways — gas runway per write chain', () => {
         const { getLedgerGasRunways } = await import('../recommendation-ledger.service');
         const rows = await getLedgerGasRunways();
         expect(rows.find((r) => r.chainId === 42220)!.status).toBe('unknown');
+    });
+});
+
+describe('findRecommendationByReasoningHash', () => {
+    const ORIGINAL_ENV = process.env;
+    const user = '0x' + 'ab'.repeat(20);
+    const recommendation = {
+        user,
+        action: 'MACRO_SIGNAL:FX_MOVE',
+        targetToken: 'NGNm',
+        reasoningHash: '0x' + '99'.repeat(32),
+        evidenceCid: '',
+        servingModel: 'fx-rate-monitor',
+        settlementTxHash: '',
+        timestamp: 123,
+        confidence: 0,
+    };
+
+    beforeEach(() => {
+        vi.resetModules();
+        process.env = ORIGINAL_ENV;
+        mockContract.getUserRecommendationCount = vi.fn().mockResolvedValue(2);
+        mockContract.getUserRecommendations = vi.fn().mockResolvedValue([[recommendation, { ...recommendation, action: 'OTHER' }], 2]);
+    });
+
+    afterEach(() => {
+        process.env = ORIGINAL_ENV;
+    });
+
+    it('returns the matching on-chain record id', async () => {
+        const { findRecommendationByReasoningHash } = await import('../recommendation-ledger.service');
+        const found = await findRecommendationByReasoningHash({
+            user,
+            chainId: 16602,
+            reasoningHash: recommendation.reasoningHash,
+            action: 'OTHER',
+            targetToken: 'NGNm',
+        });
+
+        expect(found).toMatchObject({ id: 2, action: 'OTHER', targetToken: 'NGNm' });
+        expect(mockContract.getUserRecommendations).toHaveBeenCalledWith(user, 0, 2);
+    });
+
+    it('returns null when no record matches and lets lookup failures fail closed', async () => {
+        mockContract.getUserRecommendations.mockResolvedValue([[recommendation], 2]);
+        const { findRecommendationByReasoningHash } = await import('../recommendation-ledger.service');
+
+        await expect(
+            findRecommendationByReasoningHash({
+                user,
+                chainId: 16602,
+                reasoningHash: '0x' + '00'.repeat(32),
+            }),
+        ).resolves.toBeNull();
+
+        mockContract.getUserRecommendationCount.mockRejectedValue(new Error('RPC down'));
+        await expect(
+            findRecommendationByReasoningHash({
+                user,
+                chainId: 16602,
+                reasoningHash: recommendation.reasoningHash,
+            }),
+        ).rejects.toThrow('RPC down');
     });
 });

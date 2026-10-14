@@ -17,6 +17,10 @@ const mocks = vi.hoisted(() => ({
   read: vi.fn(),
   anchor: vi.fn(),
   echo: vi.fn(),
+  connect: vi.fn(),
+  claim: vi.fn(),
+  settle: vi.fn(),
+  existing: vi.fn(),
 }));
 
 // The route reads the secret at module load.
@@ -36,6 +40,7 @@ vi.mock('@diversifi/shared/src/services/recommendation-ledger.service', async (i
       ...actual.recommendationLedgerService,
       recordRecommendation: mocks.anchor,
     },
+    findRecommendationByReasoningHash: mocks.existing,
   };
 });
 
@@ -46,6 +51,11 @@ vi.mock('@diversifi/shared/src/services/guardian/fx-move-measurement', async (im
 }));
 
 vi.mock('@/lib/ledger-reasoning-store', () => ({ rememberLedgerReasoning: mocks.echo }));
+vi.mock('@/lib/mongodb', () => ({ default: mocks.connect }));
+vi.mock('@/lib/fx-macro-signal-store', () => ({
+  claimMacroSignalAnchor: mocks.claim,
+  settleMacroSignalAnchorClaim: mocks.settle,
+}));
 
 import handler from '@/pages/api/agent/fx-macro-signal';
 import { corridorSignalForCurrency } from '@/lib/corridor-context';
@@ -74,12 +84,16 @@ function measurement(over: Partial<FxMoveMeasurement> = {}): FxMoveMeasurement {
 type ResMock = {
   statusCode?: number;
   body?: any;
+  headers: Record<string, string>;
+  setHeader: (name: string, value: string) => ResMock;
   status: (code: number) => ResMock;
   json: (b: unknown) => ResMock;
 };
 
 function makeRes(): ResMock {
   return {
+    headers: {},
+    setHeader(name, value) { this.headers[name] = value; return this; },
     status(code) { this.statusCode = code; return this; },
     json(b) { this.body = b; return this; },
   };
@@ -107,13 +121,20 @@ describe('/api/agent/fx-macro-signal', () => {
     vi.clearAllMocks();
     mocks.read.mockResolvedValue([measurement()]);
     mocks.anchor.mockResolvedValue(ANCHORED);
-    mocks.echo.mockResolvedValue(undefined);
+    mocks.echo.mockResolvedValue(true);
+    mocks.connect.mockResolvedValue(undefined);
+    mocks.claim.mockImplementation(async (input: Record<string, unknown>) => ({
+      claimed: true,
+      record: { ...input, status: 'pending' },
+    }));
+    mocks.settle.mockResolvedValue(true);
+    mocks.existing.mockResolvedValue(null);
   });
 
-  it('is POST-only and secret-authenticated', async () => {
-    const get = makeRes();
-    await handler(req({ method: 'GET' }), get as never);
-    expect(get.statusCode).toBe(405);
+  it('rejects unsupported methods and secret-authenticates POST', async () => {
+    const put = makeRes();
+    await handler(req({ method: 'PUT' }), put as never);
+    expect(put.statusCode).toBe(405);
 
     const unauth = makeRes();
     await handler(req({ headers: { 'x-guardian-secret': 'wrong' }, body: {} }), unauth as never);
@@ -121,6 +142,45 @@ describe('/api/agent/fx-macro-signal', () => {
 
     expect(mocks.read).not.toHaveBeenCalled();
     expect(mocks.anchor).not.toHaveBeenCalled();
+  });
+
+  it('requires Vercel Cron bearer auth for scheduled GET ticks', async () => {
+    const original = process.env.CRON_SECRET;
+    process.env.CRON_SECRET = 'test-cron-secret';
+    try {
+      const unauth = makeRes();
+      await handler(req({ method: 'GET', headers: {} }), unauth as never);
+      expect(unauth.statusCode).toBe(401);
+      expect(mocks.read).not.toHaveBeenCalled();
+
+      const res = makeRes();
+      await handler(
+        req({ method: 'GET', headers: { authorization: 'Bearer test-cron-secret' } }),
+        res as never,
+      );
+      expect(res.statusCode).toBe(200);
+      expect(res.body.action).toBe('fx_moves_recorded');
+      expect(mocks.read).toHaveBeenCalledTimes(1);
+      expect(mocks.anchor).toHaveBeenCalledTimes(1);
+    } finally {
+      if (original === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = original;
+    }
+  });
+
+  it('fails a scheduled GET closed when CRON_SECRET is absent', async () => {
+    const original = process.env.CRON_SECRET;
+    delete process.env.CRON_SECRET;
+    try {
+      const res = makeRes();
+      await handler(req({ method: 'GET', headers: { authorization: 'Bearer anything' } }), res as never);
+      expect(res.statusCode).toBe(503);
+      expect(mocks.read).not.toHaveBeenCalled();
+      expect(mocks.anchor).not.toHaveBeenCalled();
+    } finally {
+      if (original === undefined) delete process.env.CRON_SECRET;
+      else process.env.CRON_SECRET = original;
+    }
   });
 
   it('writes nothing by default — dry-run reports the proposal only', async () => {
@@ -220,6 +280,116 @@ describe('/api/agent/fx-macro-signal', () => {
     const res = await post({ apply: true });
     expect(res.body.anchored[0].status).toBe('failed');
     expect(mocks.echo).not.toHaveBeenCalled();
+  });
+
+  it('skips a signal that already exists on-chain, even without a local claim', async () => {
+    mocks.existing.mockResolvedValue({ id: 77 });
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({
+      ok: true,
+      action: 'fx_moves_already_recorded',
+      summary: { duplicates: 1, attempted: 0 },
+    });
+    expect(res.body.anchored[0]).toMatchObject({ duplicate: true, status: 'anchored', recordId: 77 });
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.anchor).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the authoritative duplicate lookup cannot run', async () => {
+    mocks.existing.mockRejectedValue(new Error('ledger rpc down'));
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({
+      ok: false,
+      action: 'fx_moves_failed',
+      summary: { lookupFailed: 1, attempted: 0 },
+    });
+    expect(res.body.anchored[0].status).toBe('lookup_failed');
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.anchor).not.toHaveBeenCalled();
+  });
+
+  it('skips an identical recorded signal instead of writing a duplicate', async () => {
+    mocks.claim.mockResolvedValue({
+      claimed: false,
+      record: {
+        status: 'anchored',
+        chainId: 42220,
+        recordId: 77,
+        txHash: '0xalready',
+      },
+    });
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({
+      ok: true,
+      action: 'fx_moves_already_recorded',
+      summary: { duplicates: 1, attempted: 0 },
+    });
+    expect(res.body.anchored[0]).toMatchObject({ duplicate: true, status: 'anchored', recordId: 77 });
+    expect(mocks.anchor).not.toHaveBeenCalled();
+    expect(mocks.echo).not.toHaveBeenCalled();
+  });
+
+  it('fails closed before anchoring when the idempotency store is unavailable', async () => {
+    mocks.connect.mockRejectedValue(new Error('mongo down'));
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({ ok: false, action: 'idempotency_unavailable', error: 'mongo down' });
+    expect(mocks.claim).not.toHaveBeenCalled();
+    expect(mocks.anchor).not.toHaveBeenCalled();
+  });
+
+  it('reports a partial aggregate instead of ok when one anchor fails', async () => {
+    mocks.read.mockResolvedValue([
+      measurement(),
+      measurement({ code: 'BRL', movePercent: 2.4 }),
+    ]);
+    mocks.anchor
+      .mockResolvedValueOnce(ANCHORED)
+      .mockResolvedValueOnce({ status: 'failed', chainId: 42220, error: 'ledger down' });
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({
+      ok: false,
+      action: 'fx_moves_partial_failure',
+      error: 'ledger down',
+      summary: { attempted: 2, anchored: 1, failed: 1 },
+    });
+    expect(res.body.anchored.map((item: any) => item.status)).toEqual(['anchored', 'failed']);
+    expect(mocks.echo).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports a failed aggregate when every claimed anchor fails', async () => {
+    mocks.anchor.mockResolvedValue({ status: 'failed', chainId: 42220, error: 'ledger down' });
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({
+      ok: false,
+      action: 'fx_moves_failed',
+      summary: { attempted: 1, anchored: 0, pending: 0, failed: 1 },
+    });
+    expect(mocks.echo).not.toHaveBeenCalled();
+  });
+
+  it('does not call an anchor successful when its readable echo cannot be stored', async () => {
+    mocks.echo.mockResolvedValue(false);
+
+    const res = await post({ apply: true });
+
+    expect(res.body).toMatchObject({
+      ok: false,
+      action: 'fx_moves_partial_failure',
+      summary: { anchored: 1, echoFailed: 1 },
+    });
+    expect(res.body.anchored[0].echoStatus).toBe('failed');
   });
 
   it('only ever speaks about curated, attributable currencies', async () => {

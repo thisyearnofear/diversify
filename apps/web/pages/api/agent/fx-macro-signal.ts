@@ -1,5 +1,5 @@
 /**
- * POST /api/agent/fx-macro-signal — the measured FX-move macro producer.
+ * POST/GET /api/agent/fx-macro-signal — the measured FX-move macro producer.
  *
  * Why this exists: the `LiveLine` beats (Home / Guardian / Shield) and the
  * corridor dateline render `MACRO_SIGNAL:*` records that are fresh,
@@ -23,11 +23,20 @@
  *   - dry-run by default: `apply: true` is required to write anything.
  *
  * Auth mirrors the Firecrawl webhook's server-to-server contract
- * (`x-guardian-secret`, from `GUARDIAN_LOOP_SECRET`).
+ * (`x-guardian-secret`, from `GUARDIAN_LOOP_SECRET`) for POST, and Vercel
+ * Cron's bearer-token contract (`Authorization: Bearer $CRON_SECRET`) for GET.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { recommendationLedgerService, getLedgerConfig } from '@diversifi/shared/src/services/recommendation-ledger.service';
+import {
+  computeReasoningHash,
+  findRecommendationByReasoningHash,
+  getLedgerChainForAction,
+  getLedgerConfig,
+  recommendationLedgerService,
+  type AnchorResult,
+  type LedgerRecommendation,
+} from '@diversifi/shared/src/services/recommendation-ledger.service';
 import { constantTimeEqual } from '@diversifi/shared/src/utils/security';
 import {
   FX_MOVE_DEFAULT_WINDOW_DAYS,
@@ -37,6 +46,11 @@ import {
   type FxMoveMeasurement,
 } from '@diversifi/shared/src/services/guardian/fx-move-measurement';
 import { rememberLedgerReasoning } from '@/lib/ledger-reasoning-store';
+import {
+  claimMacroSignalAnchor,
+  settleMacroSignalAnchorClaim,
+} from '@/lib/fx-macro-signal-store';
+import connectDB from '@/lib/mongodb';
 import { corridorTokenForCurrency, moneyNameFor } from '@/lib/corridor-context';
 import { CURRENCY_RISK_DATA } from '@/constants/currency-risk';
 import {
@@ -60,6 +74,8 @@ function beatTextFor(m: FxMoveMeasurement): string {
 
 /** Bound on ledger writes per run — a tick surfaces the largest moves, not all. */
 const MAX_ANCHORS = 5;
+
+export const config = { maxDuration: 60 };
 
 const SECRET = (() => {
   const secret = process.env.GUARDIAN_LOOP_SECRET;
@@ -91,9 +107,23 @@ function attributableCodes(): string[] {
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+  const isCronGet = req.method === 'GET';
+  if (req.method !== 'POST' && !isCronGet) {
+    res.setHeader('Allow', 'POST, GET');
+    return res.status(405).json({ error: 'POST or authenticated cron GET only' });
+  }
 
-  if (SECRET) {
+  if (isCronGet) {
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      return res.status(503).json({ error: 'CRON_SECRET not configured' });
+    }
+    const provided = req.headers.authorization;
+    const expected = `Bearer ${cronSecret}`;
+    if (typeof provided !== 'string' || !constantTimeEqual(provided, expected)) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+  } else if (SECRET) {
     const provided = req.headers['x-guardian-secret'] ?? req.body?.secret;
     const normalized = Array.isArray(provided) ? provided[0] : provided;
     if (typeof normalized !== 'string' || !constantTimeEqual(normalized, SECRET)) {
@@ -101,7 +131,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   }
 
-  const body = (req.body ?? {}) as {
+  const body = (isCronGet ? { apply: true } : req.body ?? {}) as {
     apply?: unknown;
     rehearsal?: unknown;
     codes?: unknown;
@@ -184,33 +214,181 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   }
 
+  if (material.length === 0) {
+    return res.status(200).json({
+      ok: true,
+      action: 'no_material_moves',
+      ...(rehearsal ? { rehearsal: true } : {}),
+      measured: measurements.length,
+      material: 0,
+      anchored: [],
+      usersUpdated: 0,
+      executionEligibility: 'observation_only',
+    });
+  }
+
+  try {
+    await connectDB();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'idempotency store unavailable';
+    return res.status(200).json({
+      ok: false,
+      action: 'idempotency_unavailable',
+      error: message,
+      measured: measurements.length,
+      material: material.length,
+      anchored: [],
+      usersUpdated: 0,
+      executionEligibility: 'observation_only',
+    });
+  }
+
   const anchored: Array<Record<string, unknown>> = [];
+  const summary = {
+    requested: material.length,
+    duplicates: 0,
+    attempted: 0,
+    anchored: 0,
+    pending: 0,
+    failed: 0,
+    claimFailed: 0,
+    lookupFailed: 0,
+    persistFailed: 0,
+    echoesWritten: 0,
+    echoFailed: 0,
+  };
+
   for (const m of material) {
     const targetToken = corridorTokenForCurrency(m.code);
-    // Re-checked per item: attributableCodes() already guarantees it, but a
-    // record with no corridor token would be an unattributable claim on-chain.
     if (!targetToken) continue;
 
     const action = rehearsal ? REHEARSAL_SIGNAL_ACTION : FX_MOVE_SIGNAL_ACTION;
     const line = beatTextFor(m);
     const reasoning = rehearsal ? `${REHEARSAL_LABEL} ${line}` : line;
+    const resolvedChainId = chainId ?? getLedgerChainForAction(action, targetToken);
+    const reasoningHash = computeReasoningHash(reasoning);
+    const dedupeKey = `${resolvedChainId}:${action}:${targetToken}:${reasoningHash}`;
 
-    const anchor = await recommendationLedgerService.recordRecommendation({
-      user: GUARDIAN_AGENT_ADDRESS,
-      action,
-      targetToken,
-      reasoning,
-      evidenceCid: '',
-      servingModel: 'fx-rate-monitor',
-      confidence: 0,
-      ...(chainId !== undefined ? { chainId } : {}),
-    });
+    let existingAnchor: LedgerRecommendation | null;
+    try {
+      existingAnchor = await findRecommendationByReasoningHash({
+        user: GUARDIAN_AGENT_ADDRESS,
+        chainId: resolvedChainId,
+        reasoningHash,
+        action,
+        targetToken,
+      });
+    } catch (error) {
+      summary.lookupFailed += 1;
+      anchored.push({
+        code: m.code,
+        targetToken,
+        movePercent: m.movePercent,
+        action,
+        status: 'lookup_failed',
+        chainId: resolvedChainId,
+        error: error instanceof Error ? error.message : 'ledger lookup failed',
+      });
+      continue;
+    }
 
-    // The chain stores only the reasoning hash — echo the readable line
-    // off-chain so the beats engine can render words. Best-effort: a missed
-    // echo degrades to hash-only, which the reader correctly skips.
+    if (existingAnchor) {
+      summary.duplicates += 1;
+      anchored.push({
+        code: m.code,
+        targetToken,
+        movePercent: m.movePercent,
+        action,
+        status: 'anchored',
+        duplicate: true,
+        chainId: resolvedChainId,
+        recordId: existingAnchor.id,
+      });
+      continue;
+    }
+
+    let claim;
+    try {
+      claim = await claimMacroSignalAnchor({
+        dedupeKey,
+        action,
+        targetToken,
+        reasoningHash,
+        chainId: resolvedChainId,
+      });
+    } catch (error) {
+      summary.claimFailed += 1;
+      anchored.push({
+        code: m.code,
+        targetToken,
+        movePercent: m.movePercent,
+        action,
+        status: 'claim_failed',
+        error: error instanceof Error ? error.message : 'idempotency claim failed',
+      });
+      continue;
+    }
+
+    if (!claim.claimed) {
+      summary.duplicates += 1;
+      anchored.push({
+        code: m.code,
+        targetToken,
+        movePercent: m.movePercent,
+        action,
+        status: claim.record.status,
+        duplicate: true,
+        chainId: claim.record.chainId,
+        txHash: claim.record.txHash,
+        recordId: claim.record.recordId,
+      });
+      continue;
+    }
+
+    summary.attempted += 1;
+    let anchor: AnchorResult;
+    try {
+      anchor = await recommendationLedgerService.recordRecommendation({
+        user: GUARDIAN_AGENT_ADDRESS,
+        action,
+        targetToken,
+        reasoning,
+        evidenceCid: '',
+        servingModel: 'fx-rate-monitor',
+        confidence: 0,
+        ...(chainId !== undefined ? { chainId } : {}),
+      });
+    } catch (error) {
+      anchor = {
+        status: 'failed' as const,
+        error: error instanceof Error ? error.message : 'anchor failed',
+        chainId: resolvedChainId,
+      };
+    }
+
+    let idempotencyPersisted = false;
+    let idempotencyError: string | undefined;
+    try {
+      idempotencyPersisted = await settleMacroSignalAnchorClaim({
+        dedupeKey,
+        status: anchor.status,
+        chainId: anchor.chainId,
+        recordId: anchor.status === 'anchored' ? anchor.id : undefined,
+        txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
+        error: anchor.status === 'failed' ? anchor.error : undefined,
+      });
+    } catch (error) {
+      idempotencyError = error instanceof Error ? error.message : 'idempotency update failed';
+    }
+    if (!idempotencyPersisted) summary.persistFailed += 1;
+
+    if (anchor.status === 'anchored') summary.anchored += 1;
+    else if (anchor.status === 'pending') summary.pending += 1;
+    else summary.failed += 1;
+
+    let echoStatus = 'not_required';
     if (anchor.status !== 'failed') {
-      await rememberLedgerReasoning({
+      const echoWritten = await rememberLedgerReasoning({
         chainId: anchor.chainId,
         recordId: anchor.status === 'anchored' ? anchor.id : undefined,
         txHash: anchor.txHash,
@@ -218,6 +396,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         targetToken,
         reasoning,
       });
+      if (echoWritten) {
+        summary.echoesWritten += 1;
+        echoStatus = 'written';
+      } else {
+        summary.echoFailed += 1;
+        echoStatus = 'failed';
+      }
     }
 
     anchored.push({
@@ -226,22 +411,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       movePercent: m.movePercent,
       action,
       status: anchor.status,
-      chainId: anchor.status === 'failed' ? undefined : anchor.chainId,
+      chainId: anchor.chainId,
       txHash: anchor.status === 'failed' ? undefined : anchor.txHash,
       recordId: anchor.status === 'anchored' ? anchor.id : undefined,
       error: anchor.status === 'failed' ? anchor.error : undefined,
+      idempotencyPersisted,
+      ...(idempotencyError ? { idempotencyError } : {}),
+      echoStatus,
     });
   }
 
+  const hasFailure =
+    summary.failed > 0 ||
+    summary.claimFailed > 0 ||
+    summary.lookupFailed > 0 ||
+    summary.persistFailed > 0 ||
+    summary.echoFailed > 0;
+  const completed = summary.anchored + summary.pending + summary.duplicates;
+  const action = hasFailure
+    ? completed > 0
+      ? rehearsal ? 'rehearsal_partial_failure' : 'fx_moves_partial_failure'
+      : rehearsal ? 'rehearsal_failed' : 'fx_moves_failed'
+    : summary.attempted === 0
+      ? rehearsal ? 'rehearsal_already_recorded' : 'fx_moves_already_recorded'
+      : rehearsal ? 'rehearsal_recorded' : 'fx_moves_recorded';
+  const firstError = anchored.find((item) => typeof item.error === 'string')?.error
+    ?? anchored.find((item) => typeof item.idempotencyError === 'string')?.idempotencyError;
+
   return res.status(200).json({
-    ok: true,
-    action: rehearsal ? 'rehearsal_recorded' : 'fx_moves_recorded',
+    ok: !hasFailure,
+    action,
     ...(rehearsal ? { rehearsal: true } : {}),
+    ...(hasFailure && firstError ? { error: firstError } : {}),
     measured: measurements.length,
     material: material.length,
+    summary,
     anchored,
-    // No queueing, no Guardian state, no memory: an observation is not a
-    // portfolio action, and this route cannot authorize one.
     usersUpdated: 0,
     executionEligibility: 'observation_only',
   });

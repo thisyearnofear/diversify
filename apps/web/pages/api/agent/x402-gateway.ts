@@ -130,24 +130,37 @@ interface UserState {
 // --- State Management ---
 class UserManager {
     private static users = new Map<string, UserState>();
+    private static userLoads = new Map<string, Promise<UserState>>();
     private static store = getClientStore();
 
     static async getUser(clientKey: string): Promise<UserState> {
         const cached = this.users.get(clientKey);
         if (cached) return cached;
-        const stored = await this.store.get(clientKey);
-        const user: UserState = stored
-            ? { ...stored, clientKey }
-            : {
-                  clientKey,
-                  creditBalanceMicros: 0,
-                  requestCount: 0,
-                  windowStart: Date.now(),
-                  nonces: {},
-                  usageHistory: {},
-              };
-        this.users.set(clientKey, user);
-        return user;
+
+        const pending = this.userLoads.get(clientKey);
+        if (pending) return pending;
+
+        const load = (async () => {
+            try {
+                const stored = await this.store.get(clientKey);
+                const user: UserState = stored
+                    ? { ...stored, clientKey }
+                    : {
+                          clientKey,
+                          creditBalanceMicros: 0,
+                          requestCount: 0,
+                          windowStart: Date.now(),
+                          nonces: {},
+                          usageHistory: {},
+                      };
+                this.users.set(clientKey, user);
+                return user;
+            } finally {
+                this.userLoads.delete(clientKey);
+            }
+        })();
+        this.userLoads.set(clientKey, load);
+        return load;
     }
 
     static persist(user: UserState): void {
