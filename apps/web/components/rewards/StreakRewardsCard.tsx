@@ -148,7 +148,7 @@ export function StreakRewardsCard({ onSaveClick, onDismiss }: StreakRewardsCardP
       <InsightCard
         icon="💚"
         title="Celo Welcome Bonus"
-        description="Connect your wallet to earn free G$ tokens daily on Celo"
+        description="Sign in or connect a wallet to earn free G$ tokens daily on Celo"
         variant="default"
       />
     );

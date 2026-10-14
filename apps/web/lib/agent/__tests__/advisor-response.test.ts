@@ -81,6 +81,12 @@ vi.mock("@/lib/vault/guardian-state", () => ({
   appendDecisionLog: mockAppendDecision,
 }));
 
+// Chat never reaches Tavily in these tests.
+vi.mock("@diversifi/shared/src/services/tavily-search.service", () => ({
+  tavilySearch: vi.fn(async () => ({ results: [] })),
+  tavilySearchService: { isConfigured: () => false },
+}));
+
 import {
   runAdvisorConversation,
   runAdvisorConversationStream,

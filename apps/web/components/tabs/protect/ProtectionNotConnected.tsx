@@ -354,7 +354,6 @@ export function ProtectionNotConnected({
                   <WalletButton
                     variant="primary"
                     className="w-full mt-3"
-                    connectLabel="Connect wallet"
                   />
                 )}
               </div>
@@ -465,7 +464,7 @@ export function ProtectionNotConnected({
       {/* The one CTA — attaches to the object, no card wrapper. While
           comparing, "Use this plan" is the one CTA instead. */}
       {!showRing && !comparing && !balance.isPreviewing && !sleeveOpen && (
-        <WalletButton variant="minimal" className="w-full" connectLabel="Connect wallet" />
+        <WalletButton variant="minimal" className="w-full" />
       )}
     </div>
   );

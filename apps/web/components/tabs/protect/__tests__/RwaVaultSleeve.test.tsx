@@ -178,7 +178,7 @@ describe('RwaVaultSleeve — IXS off-app section', () => {
       />,
     );
     expect(screen.getByTestId('rwa-offapp')).toBeInTheDocument();
-    expect(screen.getByText(/Connect a wallet to look inside/)).toBeInTheDocument();
+    expect(screen.getByText(/Sign in or connect a wallet to look inside/)).toBeInTheDocument();
     expect(screen.queryByTestId(/^vault-row-/)).not.toBeInTheDocument();
     expect(screen.queryByTestId('serv-rail')).not.toBeInTheDocument();
     expect(screen.queryByTestId('serv-enhance')).not.toBeInTheDocument();

@@ -8,8 +8,11 @@
 import React, { useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { InspectorSheet } from '../../shared/InspectorSheet';
+import { DigitalDollarNote } from './DigitalDollarNote';
 import { useAdvisor } from '@/hooks/use-advisor';
 import { useProofFeed } from '@/hooks/use-proof-feed';
+import { useCurrencyNews } from '@/hooks/use-currency-news';
+import type { CurrencyNewsItem } from '@/lib/currency-news';
 import { useLiveCurrencyRisk } from '@/components/swap/CorridorContext';
 import { corridorSignalForCurrency } from '@/lib/corridor-context';
 import { Coin } from '@/components/shared/FloatingCoins';
@@ -289,6 +292,16 @@ function EventButton({
   );
 }
 
+/** Cited headlines handed to Guardian as sources to attribute — never as
+ *  a forecast. Empty when there is nothing to cite. */
+function newsContext(news: CurrencyNewsItem[]): string {
+  if (news.length === 0) return '';
+  const lines = news.map(
+    (n, i) => `${i + 1}. ${n.title} (${n.source}${n.date ? `, ${n.date}` : ''})`,
+  );
+  return `\n\nRecent headlines, for context only. Cite them by source if you use them, and do not predict from them:\n${lines.join('\n')}`;
+}
+
 /** Sheet body — mounts only while the sheet is open, so the advisor
  *  hook never fires (or requires a provider) for a resting coin. */
 function CurrencyStoryBody({
@@ -308,6 +321,7 @@ function CurrencyStoryBody({
   const live = useLiveCurrencyRisk(code);
   const { data: feed } = useProofFeed();
   const signal = corridorSignalForCurrency(feed?.recent, code);
+  const news = useCurrencyNews(entry ? code : null);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
   if (!entry) return null;
   const eventKeys = trail.map((ev, i) => `${ev.year}-${i}`);
@@ -391,13 +405,38 @@ function CurrencyStoryBody({
           ) : null}
         </div>
       )}
+      {news.length > 0 && (
+        <div className="mt-3 text-left" data-testid="currency-news">
+          <p className="text-2xs font-semibold text-ink-muted">In the news</p>
+          <ul className="mt-1">
+            {news.map((item) => (
+              <li key={item.url}>
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex min-h-tap flex-col justify-center py-1 text-2xs leading-snug text-ink underline decoration-line underline-offset-2"
+                >
+                  <span>{item.title} ↗</span>
+                  <span className="text-3xs text-ink-subtle no-underline">
+                    {item.source}
+                    {item.date ? ` · ${item.date}` : ''}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1 text-3xs text-ink-subtle">Headlines via Tavily · last 30 days</p>
+        </div>
+      )}
+      <DigitalDollarNote code={entry.code} />
       {content && <MomentShareCard content={content} />}
       <button
         type="button"
         onClick={() => {
           onClose();
           askAdvisor(
-            `Tell me the story of the ${entry.code} (${entry.countryName}): what has happened to this currency — devaluations, pegs, central-bank events — and what does its history mean for someone saving in it?`,
+            `Tell me the story of the ${entry.code} (${entry.countryName}): what has happened to this currency — devaluations, pegs, central-bank events — and what does its history mean for someone saving in it?${newsContext(news)}`,
           );
         }}
         className="mt-3 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"

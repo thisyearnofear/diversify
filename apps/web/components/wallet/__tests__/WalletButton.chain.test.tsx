@@ -171,7 +171,10 @@ describe("WalletButton — connect feedback ownership", () => {
 
     mockWalletFeatures.PRIVY_APP_ID = "test-app-id";
     const { unmount: u2 } = render(<WalletButton />);
-    expect(screen.getByRole("button", { name: /connect/i })).toHaveAttribute(
+    // With social login configured and no injected wallet the label is
+    // "Sign in" (most visitors have no wallet) — the tooltip still names the
+    // path actually configured.
+    expect(screen.getByRole("button", { name: /sign in/i })).toHaveAttribute(
       "title",
       "Connect with email, social login, or a supported wallet",
     );

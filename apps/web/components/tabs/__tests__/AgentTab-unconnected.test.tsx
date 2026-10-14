@@ -125,8 +125,18 @@ describe("AgentTab — unconnected morph", () => {
     ).toBeInTheDocument();
   });
 
-  it("makes the Guardian itself the object, with the connect CTA attached", () => {
+  it("opens on the labelled example — the Guardian demonstrates itself, connect CTA attached", () => {
     render(<AgentTab />);
+
+    expect(screen.getByTestId("guardian-example")).toHaveTextContent("Example decision · not live");
+    expect(screen.getByTestId("guardian-example-mark")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
+    expect(mockEnableDemo).not.toHaveBeenCalled();
+  });
+
+  it("makes the Guardian itself the intro object, with the connect CTA attached", () => {
+    render(<AgentTab />);
+    fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
 
     expect(screen.getByTestId("guardian-mascot")).toBeInTheDocument();
     // Gaze surface: the mascot renders at hero size (not the 82px chat size,
@@ -135,12 +145,13 @@ describe("AgentTab — unconnected morph", () => {
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
     ).toBeInTheDocument();
-    // Two buttons total: the connect CTA + the demo text link — nothing else.
+    // Two buttons total: the connect CTA + the example link — nothing else.
     expect(screen.getAllByRole("button").length).toBe(2);
   });
 
   it("drops the marketing stack — no how-it-works, no hero copy", () => {
     render(<AgentTab />);
+    fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
 
     expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
     expect(screen.queryByText("Guardian watches")).not.toBeInTheDocument();
@@ -149,7 +160,6 @@ describe("AgentTab — unconnected morph", () => {
 
   it("tapping the mark walks three decisions the Guardian performs, in the third person", async () => {
     render(<AgentTab />);
-    fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
     const mark = screen.getByTestId("guardian-example-mark");
     expect(mark).toHaveAccessibleName("Next example decision, 1 of 3");
     expect(screen.getByTestId("guardian-example")).toHaveTextContent("Example decision · not live");
@@ -179,11 +189,8 @@ describe("AgentTab — unconnected morph", () => {
     expect(mockEnableDemo).not.toHaveBeenCalled();
   });
 
-  it("keeps trust as a quiet status-tier line and teaches via a labeled example", async () => {
+  it("keeps trust as a quiet status-tier line on the intro and teaches via a labeled example", async () => {
     render(<AgentTab />);
-
-    expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
 
     const example = screen.getByTestId("guardian-example");
     expect(example).toHaveTextContent("Example decision · not live");
@@ -206,6 +213,9 @@ describe("AgentTab — unconnected morph", () => {
     fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
     expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
+    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
   });
 
   it("replays the visitor's own currency's sharpest month, labelled past data", async () => {
@@ -215,7 +225,6 @@ describe("AgentTab — unconnected morph", () => {
     };
     try {
       render(<AgentTab />);
-      fireEvent.click(screen.getByRole("button", { name: "Replay NGN's sharpest drop" }));
       const replay = screen.getByTestId("guardian-example");
       expect(replay).toHaveTextContent("Replay · NGN vs USD · past data");
       expect(replay).toHaveTextContent("Nov 2025");

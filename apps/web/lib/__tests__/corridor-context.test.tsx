@@ -10,7 +10,7 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { render, screen, cleanup, fireEvent, act, within } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { corridorFor, corridorSideFor, goodsEquivalentFor, corridorSignalsFor, corridorSignalForCurrency, pairWhatIfFor, liveOneYearOverlay } from '../corridor-context';
@@ -859,7 +859,17 @@ describe('corridor return-visit lead', () => {
 
   const readStored = () => JSON.parse(window.localStorage.getItem(KEY) ?? 'null');
 
-  afterEach(() => window.localStorage.removeItem(KEY));
+  // Pinned: scheduled events enter the 14-day "imminent" window as the real
+  // date advances, so an unpinned clock makes these assertions rot.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    window.localStorage.removeItem(KEY);
+  });
 
   it('a snapshot younger than 6h is not a return — no lead', () => {
     seed(3 * 3_600_000, { beatKeys: ['story'], imminent: [] });
@@ -929,7 +939,9 @@ describe('corridor return-visit lead', () => {
   });
 
   it('the prefix appears only on the first shown beat, then rotation is plain', () => {
+    vi.useRealTimers();
     vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-01T12:00:00Z'));
     try {
       seed(3 * DAY, { beatKeys: ['story'], imminent: [] });
       render(

@@ -23,6 +23,9 @@ import { fallbackUsdRate } from '@/lib/anchor-currency';
 import { appendDecisionLog } from '@/lib/vault/guardian-state';
 import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tabs';
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
+import { tavilySearch, tavilySearchService } from '@diversifi/shared/src/services/tavily-search.service';
+import { currencyNewsQuery, toCurrencyNewsItems } from '@/lib/currency-news';
+import { CURRENCY_NAME_ALIASES } from '@/lib/currency-names';
 import { corridorFor, corridorSideFor, currencyRiskAsOfLabel, pairWhatIfFor, whatIfSentence } from '@/lib/corridor-context';
 
 // The model answers with labels as often as ids ("the Shield tab") — map
@@ -597,19 +600,6 @@ export function formatViewContext(view?: ConversationRequest['view']): string {
 const FACTS_MAX_CURRENCIES = 3;
 const FACTS_MAX_LINES = 15;
 
-/** Colloquial currency names → ISO code. Only names that map to exactly
- *  one currency in our coverage — 'peso', 'pound', 'rupee' and 'real'
- *  are ambiguous (or plain English) and stay out on purpose. */
-const CURRENCY_NAME_ALIASES: Record<string, string> = {
-  naira: 'NGN', cedi: 'GHS', cedis: 'GHS',
-  shilling: 'KES', rand: 'ZAR',
-  lira: 'TRY', hryvnia: 'UAH', gourde: 'HTG',
-  ruble: 'RUB', rouble: 'RUB',
-  rupiah: 'IDR', baht: 'THB', dong: 'VND',
-  euro: 'EUR', euros: 'EUR',
-  dollar: 'USD', dollars: 'USD',
-};
-
 /** Extra country names not covered verbatim by `countryName`. */
 const COUNTRY_NAME_ALIASES: Record<string, string> = {
   'united states': 'USD', 'usa': 'USD',
@@ -740,6 +730,38 @@ export async function buildCurrencyFacts(
     `${lines.join('\n')}\n` +
     `Rules: quote these figures as labelled (live vs curated snapshot); if the user asks a number the FACTS don't carry, say it's unavailable — never estimate.\n`
   );
+}
+
+const NEWSY_QUESTION =
+  /\b(news|latest|recent|lately|today|this (week|month)|happening|happened|why (is|did|has)|crisis|devalu\w*|election|central bank|announce\w*)\b/i;
+
+/** Cited headlines for the one currency a news-flavoured question is about.
+ *  Empty when Tavily is unconfigured, the question isn't about recent events,
+ *  the hand-off already carried headlines, or nothing came back — never
+ *  fabricated. Headlines are sources to attribute, not a forecast. */
+export async function buildCurrencyNewsContext(
+  message: string,
+  pair?: { from?: unknown; to?: unknown },
+): Promise<string> {
+  if (!NEWSY_QUESTION.test(message ?? '') || /Recent headlines/i.test(message)) return '';
+  if (!tavilySearchService.isConfigured()) return '';
+  const [code] = detectMentionedCurrencies(message, pair);
+  const query = currencyNewsQuery(code);
+  if (!query) return '';
+  try {
+    const result = await tavilySearch(query, { topic: 'news', timeRange: 'month', maxResults: 6 });
+    const items = toCurrencyNewsItems(result.results, 3, code);
+    if (items.length === 0) return '';
+    const lines = items.map(
+      (n, i) => `${i + 1}. ${n.title} (${n.source}${n.date ? `, ${n.date}` : ''})`,
+    );
+    return (
+      `\nRECENT HEADLINES for ${code} (via Tavily, last 30 days — context only):\n${lines.join('\n')}\n` +
+      `Rules: cite a headline by its source if you use it; never predict prices or rates from headlines; if they don't answer the question, say so.\n`
+    );
+  } catch {
+    return '';
+  }
 }
 
 function getPortfolioContext(portfolio?: ConversationRequest['portfolio']): string {
@@ -969,7 +991,9 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
-  const factsContext = await buildCurrencyFacts(message, input.pairContext);
+  const factsContext =
+    (await buildCurrencyFacts(message, input.pairContext)) +
+    (await buildCurrencyNewsContext(message, input.pairContext));
 
   // Opt-in memory: facts the user asked Guardian to remember (device or
   // cloud provider), never implicit interaction history.
@@ -1156,7 +1180,9 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
-  const factsContext = await buildCurrencyFacts(message, input.pairContext);
+  const factsContext =
+    (await buildCurrencyFacts(message, input.pairContext)) +
+    (await buildCurrencyNewsContext(message, input.pairContext));
 
   const memory = await resolveMemoryContext(input);
   const memoryContext = memory.context;

@@ -106,7 +106,10 @@ export default function AgentTab({
   // — renders once as a context card, then clears so it can't go stale.
   const { guardianContext, clearGuardianContext } = useNavigation();
   const [dismissError, setDismissError] = useState(false);
-  const [example, setExample] = useState(false);
+  // Walletless visitors open on the labelled example (or their own
+  // currency's replay): the object demonstrates the Guardian instead of
+  // describing it. Connecting resets it below.
+  const [example, setExample] = useState(() => !address);
   const [exampleDetails, setExampleDetails] = useState(false);
   const [step, setStep] = useState(0);
   const reducedMotion = useReducedMotion();

@@ -12,10 +12,12 @@ let mockLive: {
   series: { dates: string[]; values: number[] } | null;
 } | null = null;
 let mockSignal: { text: string; dateLabel: string } | null = null;
+let mockNews: Array<{ title: string; url: string; source: string; date: string | null }> = [];
 
 vi.mock("@/components/swap/CorridorContext", () => ({
   useLiveCurrencyRisk: () => mockLive,
 }));
+vi.mock("@/hooks/use-currency-news", () => ({ useCurrencyNews: () => mockNews }));
 vi.mock("@/hooks/use-proof-feed", () => ({ useProofFeed: () => ({ data: null }) }));
 vi.mock("@/hooks/use-advisor", () => ({
   useAdvisor: () => ({ askAdvisor: mockAskAdvisor }),
@@ -29,6 +31,7 @@ afterEach(() => {
   cleanup();
   mockLive = null;
   mockSignal = null;
+  mockNews = [];
   mockAskAdvisor.mockClear();
 });
 
@@ -229,5 +232,43 @@ describe("CurrencyStoryInspector — actions", () => {
     const worn = Number(screen.getByTestId('moment-share-coin').getAttribute('data-worn'));
     expect(worn).toBeGreaterThanOrEqual(0.45);
     expect(worn).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("CurrencyStoryInspector — cited news", () => {
+  it("renders nothing when there are no headlines", () => {
+    renderStory("NGN");
+    expect(screen.queryByTestId("currency-news")).toBeNull();
+    expect(screen.queryByText(/Headlines via Tavily/)).toBeNull();
+  });
+
+  it("lists cited headlines as external links with source and date", () => {
+    mockNews = [
+      { title: "Naira steadies", url: "https://reuters.com/a", source: "reuters.com", date: "2026-10-13" },
+      { title: "CBN holds rate", url: "https://ft.com/b", source: "ft.com", date: null },
+    ];
+    renderStory("NGN");
+    const link = screen.getByRole("link", { name: /Naira steadies/ });
+    expect(link).toHaveAttribute("href", "https://reuters.com/a");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", expect.stringContaining("noopener"));
+    expect(screen.getByText("reuters.com · 2026-10-13")).toBeInTheDocument();
+    expect(screen.getByText("ft.com")).toBeInTheDocument();
+    expect(screen.getByText(/Headlines via Tavily/)).toBeInTheDocument();
+  });
+
+  it("hands the headlines to Guardian as sources to cite, not forecasts", () => {
+    mockNews = [{ title: "Naira steadies", url: "https://reuters.com/a", source: "reuters.com", date: "2026-10-13" }];
+    renderStory("NGN");
+    fireEvent.click(screen.getByRole("button", { name: /Ask Guardian about the NGN/ }));
+    const prompt = mockAskAdvisor.mock.calls[0][0] as string;
+    expect(prompt).toContain("1. Naira steadies (reuters.com, 2026-10-13)");
+    expect(prompt).toMatch(/do not predict/);
+  });
+
+  it("leaves the Guardian prompt unchanged without headlines", () => {
+    renderStory("NGN");
+    fireEvent.click(screen.getByRole("button", { name: /Ask Guardian about the NGN/ }));
+    expect(mockAskAdvisor.mock.calls[0][0]).not.toContain("Recent headlines");
   });
 });

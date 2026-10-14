@@ -466,6 +466,9 @@ export default function WalletButton({
   // Detect if user likely has an injected wallet
   const hasInjectedWallet = typeof window !== 'undefined' && !!(window as typeof window & { ethereum?: unknown }).ethereum;
 
+  // Most visitors have no wallet; email/social sign-in is the real first door for them.
+  const emailFirst = socialAvailable && !hasInjectedWallet;
+
   const connectTooltip = hasInjectedWallet
     ? "Connect with MetaMask/Coinbase or other browser wallet"
     : socialAvailable
@@ -518,8 +521,8 @@ export default function WalletButton({
           <span>{connectLabel}</span>
         ) : (
           <>
-            <span className="sm:hidden">Connect</span>
-            <span className="hidden sm:inline">Connect Wallet</span>
+            <span className="sm:hidden">{emailFirst ? "Sign in" : "Connect"}</span>
+            <span className="hidden sm:inline">{emailFirst ? "Sign in" : "Connect Wallet"}</span>
           </>
         )}
       </motion.button>
