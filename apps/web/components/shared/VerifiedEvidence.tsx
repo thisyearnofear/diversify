@@ -7,12 +7,14 @@
  * not a chain banner. Respects docs/design-language.md §7 Chain-agnostic trust.
  */
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   LEDGER_ADDRESS,
+  ARC_LEDGER_ADDRESS,
   AGENTIC_ID_ADDRESS,
   TRUST_CHAINS,
+  VERIFICATION_CHAINS,
   VERIFY_HASH_PATTERN,
   LEDGER_VERIFY_PATH,
 } from "@/constants/guardian-identity";
@@ -38,21 +40,30 @@ function shortHex(hash: string): string {
 export function VerifiedEvidence({ className = "" }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [hash, setHash] = useState("");
+  const [network, setNetwork] = useState<number>(VERIFICATION_CHAINS[0].chainId);
   const [verify, setVerify] = useState<VerifyState>({ kind: "idle" });
+  const requestSeq = useRef(0);
   const reducedMotion = useReducedMotion();
 
   const trimmed = hash.trim();
   const hashValid = VERIFY_HASH_PATTERN.test(trimmed);
 
+  const invalidateVerify = () => {
+    requestSeq.current += 1;
+    setVerify((v) => (v.kind === "idle" ? v : { kind: "idle" }));
+  };
+
   const runVerify = async () => {
     if (!hashValid || verify.kind === "loading") return;
+    const seq = ++requestSeq.current;
     setVerify({ kind: "loading" });
     try {
       const res = await fetch(
-        `${LEDGER_VERIFY_PATH}?verify=${encodeURIComponent(trimmed)}`,
+        `${LEDGER_VERIFY_PATH}?verify=${encodeURIComponent(trimmed)}&chainId=${network}`,
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (seq !== requestSeq.current) return;
       setVerify({
         kind: "result",
         verified: Boolean(data.verified),
@@ -61,6 +72,7 @@ export function VerifiedEvidence({ className = "" }: Props) {
         chainId: Number(data.chainId || 0),
       });
     } catch {
+      if (seq !== requestSeq.current) return;
       setVerify({
         kind: "error",
         message: "Couldn't reach the verification service. Try again.",
@@ -111,6 +123,12 @@ export function VerifiedEvidence({ className = "" }: Props) {
               <div className="font-mono text-2xs text-gray-700 dark:text-gray-300 break-all">
                 {LEDGER_ADDRESS}
               </div>
+              <div className="flex items-baseline gap-1.5">
+                <span className="shrink-0 text-3xs text-gray-500 dark:text-gray-400">Arc ledger</span>
+                <span className="font-mono text-2xs text-gray-700 dark:text-gray-300 break-all">
+                  {ARC_LEDGER_ADDRESS}
+                </span>
+              </div>
 
               <div className="flex items-center gap-1.5 text-2xs text-gray-600 dark:text-gray-300">
                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-md bg-slate-900 text-white text-3xs font-black">G</span>
@@ -122,13 +140,28 @@ export function VerifiedEvidence({ className = "" }: Props) {
               {/* Working verify: paste a tx hash, check it against the chain
                   RPC receipt (verifyLedgerTx), link out to the explorer. */}
               <div className="pt-1 space-y-1.5">
+                <select
+                  value={network}
+                  onChange={(e) => {
+                    setNetwork(Number(e.target.value));
+                    invalidateVerify();
+                  }}
+                  aria-label="Ledger network"
+                  className="block w-full min-h-tap rounded-lg border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] px-2 py-1.5 text-2xs text-gray-700 dark:text-gray-300 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-400"
+                >
+                    {VERIFICATION_CHAINS.map((c) => (
+                      <option key={c.chainId} value={c.chainId}>
+                        {c.label}
+                      </option>
+                    ))}
+                </select>
                 <div className="flex items-center gap-1.5">
                   <input
                     type="text"
                     value={hash}
                     onChange={(e) => {
                       setHash(e.target.value);
-                      if (verify.kind !== "idle") setVerify({ kind: "idle" });
+                      invalidateVerify();
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && hashValid) void runVerify();

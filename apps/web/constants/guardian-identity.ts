@@ -39,6 +39,19 @@ export const TRUST_CHAINS = [
   { label: 'Robinhood', color: '#ccff00' },
 ] as const;
 
+export const ARC_LEDGER_ADDRESS =
+  process.env.NEXT_PUBLIC_ARC_MAINNET_LEDGER_CONTRACT ||
+  '0xB393Fb70BE3DDE41e3238339E69A27A01Caa2996';
+
+export const VERIFICATION_CHAINS = [
+  { chainId: 42161, label: 'Arbitrum' },
+  { chainId: 42220, label: 'Celo' },
+  { chainId: 16661, label: '0G' },
+  { chainId: 177, label: 'HashKey' },
+  { chainId: 4663, label: 'Robinhood' },
+  { chainId: 5042, label: 'Arc' },
+] as const;
+
 /** Full EVM transaction hash — what ?verify= accepts. */
 export const VERIFY_HASH_PATTERN = /^0x[0-9a-fA-F]{64}$/;
 

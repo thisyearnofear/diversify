@@ -108,6 +108,147 @@ describe("VerifiedEvidence", () => {
     );
   });
 
+  it("passes the explicitly chosen network to the verify check — Arc included", async () => {
+    mockFetch((input) => {
+      const url = String(input);
+      const requested = Number(new URL(url, "http://x").searchParams.get("chainId"));
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({ ...verifyOk, chainId: requested }),
+          { status: 200 },
+        ),
+      );
+    });
+    render(<VerifiedEvidence />);
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    const select = screen.getByLabelText(/ledger network/i);
+    fireEvent.change(select, { target: { value: "5042" } });
+    fireEvent.change(screen.getByLabelText(/transaction hash/i), {
+      target: { value: TX_HASH },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
+    );
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining(`verify=${TX_HASH}&chainId=5042`),
+    );
+
+    for (const chainId of ["42220", "16661", "177", "4663"]) {
+      (global.fetch as ReturnType<typeof vi.fn>).mockClear();
+      fireEvent.change(select, { target: { value: chainId } });
+      fireEvent.change(screen.getByLabelText(/transaction hash/i), {
+        target: { value: TX_HASH },
+      });
+      fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`&chainId=${chainId}`),
+      );
+    }
+  });
+
+  it("defaults the network to Arbitrum (42161)", async () => {
+    mockFetch(() =>
+      Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
+    );
+    render(<VerifiedEvidence />);
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    expect(screen.getByLabelText(/ledger network/i)).toHaveValue("42161");
+    fireEvent.change(screen.getByLabelText(/transaction hash/i), {
+      target: { value: TX_HASH },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("&chainId=42161"),
+      ),
+    );
+  });
+
+  it("clears a confirmed result when the network changes", async () => {
+    mockFetch(() =>
+      Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
+    );
+    render(<VerifiedEvidence />);
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    fireEvent.change(screen.getByLabelText(/transaction hash/i), {
+      target: { value: TX_HASH },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
+    );
+    fireEvent.change(screen.getByLabelText(/ledger network/i), {
+      target: { value: "16661" },
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("ignores a stale response after the network changed mid-flight", async () => {
+    let resolveFirst!: (r: Response) => void;
+    mockFetch(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+    render(<VerifiedEvidence />);
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    fireEvent.change(screen.getByLabelText(/transaction hash/i), {
+      target: { value: TX_HASH },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    fireEvent.change(screen.getByLabelText(/ledger network/i), {
+      target: { value: "5042" },
+    });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    resolveFirst(new Response(JSON.stringify(verifyOk), { status: 200 }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("&chainId=5042"),
+      ),
+    );
+  });
+
+  it("ignores a stale response after the hash changed mid-flight", async () => {
+    const otherHash = "0x" + "cd".repeat(32);
+    let resolveFirst!: (r: Response) => void;
+    mockFetch(
+      () =>
+        new Promise<Response>((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+    render(<VerifiedEvidence />);
+    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    const input = screen.getByLabelText(/transaction hash/i);
+    fireEvent.change(input, { target: { value: TX_HASH } });
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    fireEvent.change(input, { target: { value: otherHash } });
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    resolveFirst(new Response(JSON.stringify(verifyOk), { status: 200 }));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    mockFetch(() =>
+      Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
+    );
+    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
+    await waitFor(() =>
+      expect(global.fetch).toHaveBeenLastCalledWith(
+        expect.stringContaining(`verify=${otherHash}`),
+      ),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
+    );
+  });
+
   it("shows an error state when the verification service is unreachable", async () => {
     mockFetch(() => Promise.reject(new Error("network down")));
     render(<VerifiedEvidence />);

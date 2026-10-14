@@ -18,7 +18,7 @@ function tableFetcher(tables: Record<string, Record<string, number>>): typeof fe
     const match = String(url).match(/@(\d{4}-\d{2}-\d{2})\//);
     const usd = match ? tables[match[1]] : undefined;
     if (!usd) return { ok: false, status: 404, json: async () => ({}) };
-    return { ok: true, status: 200, json: async () => ({ usd }) };
+    return { ok: true, status: 200, json: async () => ({ date: match![1], usd }) };
   }) as unknown as typeof fetch;
 }
 
@@ -93,6 +93,51 @@ describe('readFxMoveMeasurements', () => {
     expect(m.windowDays).toBe(30);
     expect(m.fromDate).toBe('2026-09-14');
     expect(m.toDate).toBe('2026-10-14');
+  });
+
+  it('states the actual interval when the latest table needs a fallback day', async () => {
+    const [m] = await readFxMoveMeasurements(['NGN'], {
+      fetcher: tableFetcher({ '2026-09-14': { ngn: 1500 }, '2026-10-13': { ngn: 1600 } }),
+      now: NOW,
+    });
+    expect(m).toMatchObject({ fromDate: '2026-09-14', toDate: '2026-10-13', windowDays: 29 });
+    expect(fxMoveOneLiner(m)).toContain('over 29 days');
+  });
+
+  it('states the actual interval when the earlier table needs a fallback day', async () => {
+    const [m] = await readFxMoveMeasurements(['NGN'], {
+      fetcher: tableFetcher({ '2026-09-12': { ngn: 1500 }, '2026-10-14': { ngn: 1600 } }),
+      now: NOW,
+    });
+    expect(m).toMatchObject({ fromDate: '2026-09-12', toDate: '2026-10-14', windowDays: 32 });
+    expect(fxMoveOneLiner(m)).toContain('over 32 days');
+  });
+
+  it.each(['2026-01-01', '2026-10-15', 'invalid', undefined])('rejects an unexpected provider date %s', async (date) => {
+    const fetcher = (async () => ({ ok: true, json: async () => ({ date, usd: { ngn: 1500 } }) })) as unknown as typeof fetch;
+    await expect(readFxMoveMeasurements(['NGN'], { fetcher, now: NOW })).rejects.toThrow(/unavailable/i);
+  });
+
+  it('rejects collapsed fallback endpoints', async () => {
+    const fetcher = tableFetcher({ '2026-10-13': { ngn: 1500 } });
+    await expect(readFxMoveMeasurements(['NGN'], { fetcher, now: NOW, windowDays: 1 })).rejects.toThrow(/interval/i);
+  });
+
+  it('attributes a successful fallback mirror rather than a failed primary URL', async () => {
+    const fetcher = (async (url: string) => {
+      const date = String(url).match(/https:\/\/(\d{4}-\d{2}-\d{2})\.currency-api/)?.[1];
+      return {
+        ok: Boolean(date),
+        json: async () => ({ date, usd: { ngn: date === '2026-10-14' ? 1600 : 1500 } }),
+      };
+    }) as unknown as typeof fetch;
+    const [m] = await readFxMoveMeasurements(['NGN'], { fetcher, now: NOW });
+    expect(m.sourceUrl).toBe('https://2026-10-14.currency-api.pages.dev/v1/currencies/usd.min.json');
+  });
+
+  it('rejects fractional windows before fetching', async () => {
+    await expect(readFxMoveMeasurements(['NGN'], { fetcher: tableFetcher({}), now: NOW, windowDays: 0.5 }))
+      .rejects.toThrow(/invalid measurement window/i);
   });
 
   it('omits a code the dataset cannot resolve — never a placeholder', async () => {
