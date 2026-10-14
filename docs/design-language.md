@@ -380,7 +380,9 @@ its copy never says Guardian moves money on its own; "Let Guardian act
 for you" (ERC-7715 cap + GUARDIAN re-sign at the same, read-only limit)
 is the only place autonomy is granted and the only copy allowed to say
 Guardian acts without asking. Shield never signs — it hands off here.
-Walletless Guardian can morph into an explicitly labeled, three-step
+Walletless Guardian opens on that labelled example by default (a visitor
+with no wallet has no decisions to show; "← Back to Guardian" returns to the
+intro). It is an explicitly labeled, three-step
 example decision performed by the mark: stand down on missing data,
 propose for user approval, then show what evidence a real decision carries.
 When the visitor's own currency has a real fall (≥2% between two

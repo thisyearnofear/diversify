@@ -16,7 +16,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const rl = rateLimit(`currency-news:${getClientIp(req)}`, 20, 60_000);
+  // Generous per-IP: a venue or office shares one address. Upstream cost is
+  // already bounded — the query comes from a finite code set and Tavily
+  // results are cached — so this limit only guards against floods.
+  const rl = rateLimit(`currency-news:${getClientIp(req)}`, 120, 60_000);
   if (!rl.allowed) {
     res.setHeader('Retry-After', String(rl.retryAfterSec));
     return res.status(429).json({ error: 'Too many requests' });
