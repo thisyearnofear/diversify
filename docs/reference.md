@@ -149,6 +149,7 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `GUARDIAN_LOOP_SECRET` | server | — | Protects the `/api/agent/guardian-loop` cron endpoint (server-to-server only). |
 | `HETZNER_EDGE_SECRET` | server | — | **Planned, not wired:** nothing reads it yet (no header on the `next.config.js` rewrites, no nginx check). Reserved for the direct-host allowlist in §7.5. |
 | `FIRECRAWL_WEBHOOK_SECRET` | server | — | Authenticates incoming Firecrawl macro-signal webhooks (`/api/agent/firecrawl-webhook`). |
+| `TAVILY_API_KEY` | server | — | Cited web/news search (`tavily-search.service.ts`). Preferred over TinyFish when set; unset falls back to TinyFish, and the currency-story headlines render nothing. Never `NEXT_PUBLIC_`. |
 | `GUARDIAN_CONFIDENCE_THRESHOLD` | server | `0.6` | Prevents low-confidence auto-execution. |
 | `GUARDIAN_SESSION_PRIVATE_KEY` | server | — | Dedicated ERC-4337 session-signer key; its address is what users grant Advanced Permissions to (autonomy path, §1.6). |
 | `AA_BUNDLER_URL` / `AA_BUNDLER_URL_<chainId>` | server | — | Per-autonomy-chain ERC-4337 bundler for redeeming ERC-7715 delegations. |
@@ -530,6 +531,8 @@ server-side `VAULT_PRIVATE_KEY` settlement signer (§2: legacy variable name, no
 user-funds vault). For EIP-3009 mandates, the
 buyer-authorized USDC principal transfers directly to the configured merchant;
 the signer submits the transfer and pays Arc-native USDC gas. A mandate requires
+| `/api/agent/web-search` | GET/POST | Cited web/news search (Tavily, else TinyFish); one result shape `{ title, url, snippet, source, date }`; per-IP rate limited |
+| `/api/agent/currency-news` | GET | `?code=NGN` — up to 3 cited headlines for a curated currency (Tavily, last 30 days, hype-guarded); public, read-only, query derived server-side from the code; `items: []` when unconfigured |
 both a funded buyer and a signer with sufficient gas; this is distinct from any
 Circle Gateway-batched payment. A key or env flip alone does not prove successful
 production settlement. Before activation, verify the signer address and balance
@@ -845,6 +848,7 @@ External Agent
 | `portfolio_optimization` | Portfolio rebalancing recommendations | ~$0.004 |
 | `risk_assessment` | Risk assessment for stablecoin holdings | ~$0.004 |
 
+| **Tavily** | Cited web/news search — the currency story's "In the news" rows and the Guardian's region context; cached via `unifiedCache` (realtime for news) | API key; credits per search |
 ### 6.4 Payment Flow
 
 #### Authentication
