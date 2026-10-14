@@ -586,7 +586,6 @@ describe("InspectorSheet — focus restoration", { timeout: 15_000 }, () => {
   });
 
   it("never steals when focus moved elsewhere during the exit", async () => {
-    motionMock.reduced = false;
     render(<Harness />);
     const trigger = screen.getByTestId("trigger");
     trigger.focus();
@@ -594,6 +593,8 @@ describe("InspectorSheet — focus restoration", { timeout: 15_000 }, () => {
     const close = await screen.findByLabelText("Close inspector");
     close.focus();
     fireEvent.click(close);
+    const closing = screen.getByTestId("inspector-sheet");
+    expect(closing).toHaveAttribute("aria-hidden", "true");
     const elsewhere = screen.getByTestId("elsewhere");
     elsewhere.focus();
     await waitFor(
