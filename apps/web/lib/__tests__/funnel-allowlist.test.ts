@@ -28,6 +28,21 @@ function* sourceFiles(dir: string): Generator<string> {
 }
 
 describe('FUNNEL_EVENTS allowlist', () => {
+  it('accepts the walletless walkthrough events and still rejects unknown names', () => {
+    const allowed = FUNNEL_EVENTS as readonly string[];
+    for (const event of [
+      'currency_story_opened',
+      'currency_headline_tapped',
+      'ask_guardian_tapped',
+      'walletless_connect_tapped',
+      'marquee_select',
+      'share_open',
+    ]) {
+      expect(allowed).toContain(event);
+    }
+    expect(allowed).not.toContain('walkthrough_unknown_event');
+  });
+
   it('covers every trackFunnelEvent literal fired in the app', () => {
     const missing: string[] = [];
     for (const dir of SCAN_DIRS) {

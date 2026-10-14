@@ -6,6 +6,8 @@ import React from "react";
 import { CurrencyStoryInspector } from "../CurrencyStoryInspector";
 
 const mockAskAdvisor = vi.fn();
+const mockTrack = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics", () => ({ trackFunnelEvent: mockTrack }));
 let mockLive: {
   depreciation1yr: number | null;
   asOf: string | null;
@@ -33,7 +35,11 @@ afterEach(() => {
   mockSignal = null;
   mockNews = [];
   mockAskAdvisor.mockClear();
+  mockTrack.mockClear();
 });
+
+const walkthroughCalls = (event: string) =>
+  mockTrack.mock.calls.filter(([name]) => name === event);
 
 const FIXTURE = (overrides: Partial<{ dates: string[]; values: number[] }> = {}) => ({
   dates: ["2026-01-01", "2026-01-02", "2026-01-11"],
@@ -264,6 +270,50 @@ describe("CurrencyStoryInspector — cited news", () => {
     const prompt = mockAskAdvisor.mock.calls[0][0] as string;
     expect(prompt).toContain("1. Naira steadies (reuters.com, 2026-10-13)");
     expect(prompt).toMatch(/do not predict/);
+  });
+
+  it("tracks a headline tap once with only the currency and a fixed source, leaving the link to navigate", () => {
+    mockNews = [
+      { title: "Naira steadies", url: "https://reuters.com/a", source: "reuters.com", date: "2026-10-13" },
+      { title: "CBN holds rate", url: "https://ft.com/b", source: "ft.com", date: null },
+    ];
+    const { rerender } = render(<CurrencyStoryInspector code="NGN" onClose={vi.fn()} />);
+    rerender(<CurrencyStoryInspector code="NGN" onClose={vi.fn()} />);
+    expect(walkthroughCalls("currency_headline_tapped")).toHaveLength(0);
+
+    const link = screen.getByRole("link", { name: /Naira steadies/ });
+    const click = new MouseEvent("click", { bubbles: true, cancelable: true });
+    link.dispatchEvent(click);
+    expect(click.defaultPrevented).toBe(false);
+
+    expect(walkthroughCalls("currency_headline_tapped")).toEqual([
+      ["currency_headline_tapped", { currency: "NGN", source: "currency_story" }],
+    ]);
+    expect(link).toHaveAttribute("href", "https://reuters.com/a");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(JSON.stringify(mockTrack.mock.calls)).not.toMatch(/reuters|Naira steadies/);
+  });
+
+  it("tracks the story Ask Guardian tap once, without the question, keeping close-before-ask", () => {
+    mockNews = [{ title: "Naira steadies", url: "https://reuters.com/a", source: "reuters.com", date: "2026-10-13" }];
+    const onClose = vi.fn();
+    const { rerender } = render(<CurrencyStoryInspector code="NGN" onClose={onClose} />);
+    rerender(<CurrencyStoryInspector code="NGN" onClose={onClose} />);
+    expect(walkthroughCalls("ask_guardian_tapped")).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ask Guardian about the NGN/ }));
+    expect(walkthroughCalls("ask_guardian_tapped")).toEqual([
+      ["ask_guardian_tapped", { currency: "NGN", source: "currency_story" }],
+    ]);
+    expect(onClose.mock.invocationCallOrder[0]).toBeLessThan(
+      mockAskAdvisor.mock.invocationCallOrder[0],
+    );
+    expect(mockAskAdvisor.mock.calls[0][0]).toContain("Tell me the story of the NGN");
+    expect(JSON.stringify(mockTrack.mock.calls)).not.toMatch(/Tell me|Naira|reuters/);
+
+    fireEvent.click(screen.getByRole("button", { name: /Ask Guardian about the NGN/ }));
+    expect(walkthroughCalls("ask_guardian_tapped")).toHaveLength(2);
   });
 
   it("leaves the Guardian prompt unchanged without headlines", () => {

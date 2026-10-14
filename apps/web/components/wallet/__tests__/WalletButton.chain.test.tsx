@@ -30,8 +30,16 @@ vi.mock("../../onramp", () => ({
   SmartSellCryptoButton: () => null,
 }));
 vi.mock("@/components/shared/StatusBadge", () => ({ default: () => null }));
+const mockTrack = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics", () => ({ trackFunnelEvent: mockTrack }));
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  mockTrack.mockClear();
+});
+
+const connectTaps = () =>
+  mockTrack.mock.calls.filter(([name]) => name === "walletless_connect_tapped");
 
 function mockWallet(overrides: Partial<ReturnType<typeof useWalletContext>> = {}) {
   vi.mocked(useWalletContext).mockReturnValue({
@@ -248,6 +256,63 @@ describe("WalletButton — connect feedback ownership", () => {
     expect(panels).toHaveLength(1);
     expect(panels[0]).toHaveTextContent("Choose a wallet to continue");
     expect(connectB).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("WalletButton — walletless connect tracking", () => {
+  it("tracks each disconnected primary and retry tap once, with fixed props only, and still connects", async () => {
+    const connect = vi.fn().mockResolvedValue(undefined);
+    mockUnconnected("No wallet found.", connect);
+    const { rerender } = render(
+      <React.StrictMode>
+        <WalletButton />
+      </React.StrictMode>,
+    );
+    rerender(
+      <React.StrictMode>
+        <WalletButton />
+      </React.StrictMode>,
+    );
+    expect(connectTaps()).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole("button", { name: /connect/i }));
+    expect(connectTaps()).toEqual([
+      ["walletless_connect_tapped", { source: "wallet_button", attempt: "primary" }],
+    ]);
+    expect(connect).toHaveBeenCalledTimes(1);
+
+    await screen.findByRole("status");
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(connectTaps()).toEqual([
+      ["walletless_connect_tapped", { source: "wallet_button", attempt: "primary" }],
+      ["walletless_connect_tapped", { source: "wallet_button", attempt: "retry" }],
+    ]);
+    expect(connect).toHaveBeenCalledTimes(2);
+    await screen.findByRole("status");
+
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss wallet guidance" }));
+    expect(connectTaps()).toHaveLength(2);
+  });
+
+  it("connection success and connected menu, network and disconnect actions never count", async () => {
+    const onConnect = vi.fn();
+    const disconnect = vi.fn().mockResolvedValue(undefined);
+    const switchNetwork = vi.fn().mockResolvedValue(undefined);
+    mockUnconnected(null);
+    const { rerender } = render(<WalletButton onConnect={onConnect} />);
+    mockWallet({ disconnect, switchNetwork });
+    rerender(<WalletButton onConnect={onConnect} />);
+    expect(onConnect).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /Wallet menu/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Switch to Testnet/i }));
+    await waitFor(() => expect(switchNetwork).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("button", { name: /Wallet menu/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Disconnect wallet" }));
+    await waitFor(() => expect(disconnect).toHaveBeenCalled());
+
+    expect(mockTrack).not.toHaveBeenCalled();
+    expect(JSON.stringify(mockTrack.mock.calls)).not.toMatch(/0x1234/);
   });
 });
 
