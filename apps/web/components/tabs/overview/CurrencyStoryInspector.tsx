@@ -415,6 +415,12 @@ function CurrencyStoryBody({
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() =>
+                    trackFunnelEvent('currency_headline_tapped', {
+                      currency: entry.code,
+                      source: 'currency_story',
+                    })
+                  }
                   className="flex min-h-tap flex-col justify-center py-1 text-2xs leading-snug text-ink underline decoration-line underline-offset-2"
                 >
                   <span>{item.title} ↗</span>
@@ -434,6 +440,10 @@ function CurrencyStoryBody({
       <button
         type="button"
         onClick={() => {
+          trackFunnelEvent('ask_guardian_tapped', {
+            currency: entry.code,
+            source: 'currency_story',
+          });
           onClose();
           askAdvisor(
             `Tell me the story of the ${entry.code} (${entry.countryName}): what has happened to this currency — devaluations, pegs, central-bank events — and what does its history mean for someone saving in it?${newsContext(news)}`,

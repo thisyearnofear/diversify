@@ -8,6 +8,7 @@
 import React from 'react';
 import { InspectorSheet } from '../../shared/InspectorSheet';
 import { WALLET_FEATURES } from '../../../config/features';
+import { trackFunnelEvent } from '@/lib/analytics';
 
 export function SignInPrimer() {
   const [open, setOpen] = React.useState(false);
@@ -44,7 +45,10 @@ export function SignInPrimer() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          trackFunnelEvent('sign_in_primer_opened', { source: 'home_walletless' });
+          setOpen(true);
+        }}
         className="link-quiet mx-auto mt-2 block min-h-tap"
       >
         What happens when I sign in?

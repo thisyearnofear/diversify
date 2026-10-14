@@ -364,6 +364,12 @@ export function ConnectedOverview({
         moment
           ? () => {
               handleDialSelect(null);
+              if (inspectedCurrency !== moment.currencyCode) {
+                trackFunnelEvent("currency_story_opened", {
+                  currency: moment.currencyCode,
+                  source: "home_connected",
+                });
+              }
               setInspectedCurrency((prev) =>
                 prev === moment.currencyCode ? null : moment.currencyCode,
               );

@@ -819,6 +819,28 @@ describe("ConnectedOverview — currency story inspector", () => {
     }
   });
 
+  it("tracks currency_story_opened only on a closed → open tap", () => {
+    mockMoment = GHANA_MOMENT;
+    mockTrackFunnelEvent.mockClear();
+    const opened = () =>
+      mockTrackFunnelEvent.mock.calls.filter(([name]) => name === "currency_story_opened");
+    renderOverview();
+    expect(opened()).toHaveLength(0);
+
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    expect(opened()).toEqual([
+      ["currency_story_opened", { currency: "GHS", source: "home_connected" }],
+    ]);
+    // A tap on the already-open story is not a new open.
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    expect(opened()).toHaveLength(1);
+
+    fireEvent.click(screen.getByLabelText("Close inspector"));
+    expect(opened()).toHaveLength(1);
+    fireEvent.click(screen.getByTestId("inspect-currency"));
+    expect(opened()).toHaveLength(2);
+  });
+
   it("closing the sheet un-flips the coin", () => {
     mockMoment = GHANA_MOMENT;
     renderOverview();

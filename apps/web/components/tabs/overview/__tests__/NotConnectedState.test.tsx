@@ -119,6 +119,9 @@ vi.mock("@/components/wallet/WalletButton", () => ({
   ),
 }));
 
+const mockTrack = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/analytics", () => ({ trackFunnelEvent: mockTrack }));
+
 const navState = {
   navigateWithIntent: vi.fn(),
 };
@@ -338,6 +341,40 @@ describe("NotConnectedState — Home's unconnected morph", () => {
       "true",
     );
     await vi.waitFor(() => expect(document.activeElement).toBe(storyButton));
+  });
+
+  it("tracks currency_story_opened once per actual open — never on mount, rerender, or close", async () => {
+    mockTrack.mockClear();
+    const opened = () =>
+      mockTrack.mock.calls.filter(([name]) => name === "currency_story_opened");
+    const { rerender } = render(
+      <React.StrictMode>
+        <NotConnectedState onEnableDemo={vi.fn()} />
+      </React.StrictMode>,
+    );
+    rerender(
+      <React.StrictMode>
+        <NotConnectedState onEnableDemo={vi.fn()} />
+      </React.StrictMode>,
+    );
+    expect(opened()).toHaveLength(0);
+
+    const storyButton = screen.getByRole("button", { name: "Story of the currency" });
+    fireEvent.click(storyButton);
+    await screen.findByTestId("inspector-sheet");
+    expect(opened()).toEqual([
+      ["currency_story_opened", { currency: "NGN", source: "home_walletless" }],
+    ]);
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    await vi.waitFor(() =>
+      expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument(),
+    );
+    expect(opened()).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Story of the currency" }));
+    await screen.findByTestId("inspector-sheet");
+    expect(opened()).toHaveLength(2);
   });
 });
 
