@@ -20,7 +20,7 @@
  * Per the Core Principles:
  *   - PERFORMANT: writes to sessionStorage, no fetches, no re-renders on
  *     unrelated state changes.
- *   - DRY: single source of truth for tab-discovery state used by TabNavHint
+ *   - DRY: single source of truth for tab-discovery state used by TabNavigation
  *     and potentially other surfaces.
  *   - CLEAN: pure hook, no side effects beyond localStorage.
  */

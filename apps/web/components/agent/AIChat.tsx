@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { spring } from "@/lib/motion-tokens";
+import { trackFunnelEvent } from "@/lib/analytics";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from "@/constants/tabs";
@@ -774,7 +775,10 @@ export default function AIChat() {
                       {starters.map(({ id, question, prompt, badge }) => (
                         <motion.button
                           key={id}
-                          onClick={() => submitPrompt(prompt)}
+                          onClick={() => {
+                          trackFunnelEvent('starter_tapped', { starter: id, tab: String(activeTab) });
+                          submitPrompt(prompt);
+                        }}
                           title={`${badge} tier`}
                           className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full border border-blue-200 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors"
                         >
@@ -1044,7 +1048,10 @@ export default function AIChat() {
                     {starters.map(({ id, question, prompt }) => (
                       <button
                         key={id}
-                        onClick={() => submitPrompt(prompt)}
+                        onClick={() => {
+                          trackFunnelEvent('starter_tapped', { starter: id, tab: String(activeTab) });
+                          submitPrompt(prompt);
+                        }}
                         className="px-2.5 py-1 text-3xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 rounded-full border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                       >
                         {question}

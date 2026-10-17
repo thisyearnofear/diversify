@@ -1154,6 +1154,9 @@ The `useProactiveAgent` monitoring loop is mounted once at the app root via `com
 | `share_open` | `source` | A share line is tapped (`pair_card` / `moment_card` / `plan_card`) |
 | `share_landed` | `source` | A `?src=…_card` deep link arrives — once per session, demo-gated |
 | `share_settled` | `source` | A receipt settles the shared pair, or the shared plan is committed |
+| `shield_cue_used` | — | The first-use dot on the Shield dock button is tapped (shown while Home is active and Shield is unvisited) |
+| `philosophy_details_opened` | `strategy` | The second tap on an already-previewed Shield coin opens that plan's details |
+| `starter_tapped` | `starter`, `tab` | An Ask Guardian starter prompt is tapped in the empty state or the compact row |
 
 Lenses: `home:concentration`, `protect:floor`, `exchange:decision_window`.
 

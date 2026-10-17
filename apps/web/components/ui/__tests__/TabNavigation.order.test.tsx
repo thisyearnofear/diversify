@@ -11,6 +11,8 @@ import React from "react";
 
 const m = vi.hoisted(() => ({
   adaptiveConfig: null as unknown,
+  showHint: false,
+  visitedTabs: [] as string[],
 }));
 
 vi.mock("framer-motion", () => {
@@ -42,17 +44,14 @@ vi.mock("@/hooks/use-tab-discovery", () => ({
     recordTabVisit: vi.fn(),
     recordTabBar: vi.fn(),
     recordSwipe: vi.fn(),
-    showHint: false,
+    showHint: m.showHint,
+    visitedTabs: m.visitedTabs,
     dismiss: vi.fn(),
   }),
 }));
 
 vi.mock("@/lib/haptics", () => ({
   haptics: { tap: vi.fn() },
-}));
-
-vi.mock("../TabNavHint", () => ({
-  TabNavHint: () => React.createElement("div", null),
 }));
 
 vi.mock("@/components/shared/StreakNavBadge", () => ({
@@ -78,6 +77,8 @@ const BUSINESS_CONFIG = {
 afterEach(() => {
   cleanup();
   m.adaptiveConfig = null;
+  m.showHint = false;
+  m.visitedTabs = [];
 });
 
 describe("TabNavigation — fixed dock order", () => {
@@ -93,6 +94,22 @@ describe("TabNavigation — fixed dock order", () => {
     render(<TabNavigation activeTab="protect" setActiveTab={vi.fn()} experienceMode="full" />);
     const labels = screen.getAllByRole("tab").map((t) => t.textContent);
     expect(labels).toEqual(["Shield", "Home", "Exchange", "Guardian"]);
+  });
+
+  it("shows the first-use cue on Shield while Home is active and Shield is unvisited, even after the tab bar was used", () => {
+    m.showHint = false;
+    render(<TabNavigation activeTab="overview" setActiveTab={vi.fn()} experienceMode="full" />);
+    const shield = screen.getByRole("tab", { name: /Shield/ });
+    expect(shield.querySelector('[data-testid="shield-first-use-cue"]')).not.toBeNull();
+    expect(shield).toHaveAttribute("title", "Explore protection");
+    expect(screen.getByRole("tab", { name: /Home/ }).querySelector('[data-testid="shield-first-use-cue"]')).toBeNull();
+  });
+
+  it("drops the Shield cue once Shield has been visited", () => {
+    m.showHint = true;
+    m.visitedTabs = ["protect"];
+    render(<TabNavigation activeTab="overview" setActiveTab={vi.fn()} experienceMode="full" />);
+    expect(document.querySelector('[data-testid="shield-first-use-cue"]')).toBeNull();
   });
 
   it("simple clips to three tabs in the same order", () => {

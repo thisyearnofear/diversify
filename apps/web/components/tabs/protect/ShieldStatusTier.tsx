@@ -81,8 +81,8 @@ export function ShieldStatusTier({
             ? null
             : "Tap a slice to close the gap."
           : shape === "fund"
-            ? "Fund this plan to start protection."
-            : "Choose your protection philosophy.";
+            ? "Add funds to start. Nothing moves without your approval."
+            : "Pick a plan to see what it would hold.";
 
   const showSetup =
     !comparing &&

@@ -14,6 +14,20 @@ vi.mock("framer-motion", async (importOriginal) => {
   };
 });
 
+describe("FocusedPlanLine — second-tap cue", () => {
+  it("names the details verb beneath a previewed coin while the cue is armed", () => {
+    render(<FocusedPlanLine strategyId="africapitalism" detailsCue />);
+    expect(screen.getByTestId("philosophy-details-cue")).toHaveTextContent("Tap again for details");
+  });
+
+  it("shows no cue once the details are open or nothing is previewed", () => {
+    const { rerender } = render(<FocusedPlanLine strategyId="africapitalism" />);
+    expect(screen.queryByTestId("philosophy-details-cue")).not.toBeInTheDocument();
+    rerender(<FocusedPlanLine strategyId={null} detailsCue />);
+    expect(screen.queryByTestId("philosophy-details-cue")).not.toBeInTheDocument();
+  });
+});
+
 describe("FocusedPlanLine — the reading names the actual mix", () => {
   it("shows the resolved starting mix, not the tagline", () => {
     render(

@@ -153,6 +153,31 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     expect(mockState.setFinancialStrategy).toHaveBeenCalledWith("buen_vivir");
   });
 
+  it("the planless instruction leaves once a coin has been previewed", () => {
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    expect(screen.getByTestId("picker-instruction")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    expect(screen.queryByTestId("picker-instruction")).not.toBeInTheDocument();
+  });
+
+  it("a previewed coin opens a sample outcome that closes back to the plan without committing", async () => {
+    mockState.setFinancialStrategy.mockClear();
+    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    expect(screen.queryByTestId("walletless-outcome-open")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("coin-buen_vivir"));
+    fireEvent.click(screen.getByTestId("walletless-outcome-open"));
+    expect(screen.getByText(/· sample outcome/)).toBeInTheDocument();
+    expect(screen.getByText("Example savings amount")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Back to plan" }));
+    // The sheet leaves through its exit animation; wait for it to unmount.
+    await waitFor(() =>
+      expect(screen.queryByText("Example savings amount")).not.toBeInTheDocument(),
+    );
+    expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+  });
+
   it("a committed plan at rest offers one quiet bridge to Guardian's walletless example", () => {
     mockState.financialStrategy = "africapitalism";
     try {

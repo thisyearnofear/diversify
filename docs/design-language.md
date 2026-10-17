@@ -63,7 +63,7 @@ DiversiFi should feel alive, culturally recognizable, and empowering, not muted 
 
 **Every tab has an emotional job.** Home makes the stakes land; Shield makes the plan feel like yours; Exchange makes the choice tangible; Guardian makes the agent present and accountable. Each retains its owned motif and a recognizable silhouette. Shared structure must not produce identical expression.
 
-**Every interactive object advertises its verb.** Inspection, selection, preview, and commitment have distinct visible treatments. Motion reinforces an affordance; it never substitutes for one. First-use teaching stays local to the relevant object, disappears after use, and never covers a different control.
+**Every interactive object advertises its verb.** Inspection, selection, preview, and commitment have distinct visible treatments. Motion reinforces an affordance; it never substitutes for one. First-use teaching stays local to the relevant object, disappears after use, and never covers a different control. Shipped instances: the Shield dock button carries a static dot while Home is active and Shield is unvisited (ends at the first Shield visit); a previewed Shield coin shows "Tap again for details" until its details sheet opens; a walletless previewed coin offers "See a sample outcome" (inspect only — its calculator CTA is "Back to plan", never a second commit).
 
 **Celebrate understanding and ownership, not moving more money.** Honest historical/live/projected/sample labels, explicit consent, one primary action per state, readable evidence, and reduced-motion support are unchanged. No fabricated activity, artificial urgency, transaction rewards, or celebrations encouraging real-money trading.
 

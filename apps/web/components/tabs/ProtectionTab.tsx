@@ -405,6 +405,7 @@ export default function ProtectionTab({
         return;
       }
       if (strategyId === focusedPhilosophy) {
+        trackFunnelEvent("philosophy_details_opened", { strategy: strategyId });
         setPhilosophyDetailsOpen(true);
         return;
       }
@@ -1169,6 +1170,7 @@ export default function ProtectionTab({
           <FocusedPlanLine
             strategyId={focusedPhilosophy}
             legs={focusedPhilosophy ? previewAllocations : undefined}
+            detailsCue={Boolean(focusedPhilosophy) && !philosophyDetailsOpen}
           />
           {focusedPhilosophy && !philosophyDetailsOpen && (
             <div className="mt-1 flex justify-center gap-2">
@@ -1411,6 +1413,7 @@ export default function ProtectionTab({
                 <FocusedPlanLine
                   strategyId={focusedPhilosophy ?? strategyKey}
                   legs={previewAllocations}
+                  detailsCue={Boolean(focusedPhilosophy) && !philosophyDetailsOpen}
                 />
                 <div className="flex justify-center gap-2">
                   {focusedPhilosophy && focusedPhilosophy !== strategyKey && !philosophyDetailsOpen && !focusedToken && (

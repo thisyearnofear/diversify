@@ -57,10 +57,15 @@ export function PhilosophyCoinRail({
 export function FocusedPlanLine({
   strategyId,
   legs,
+  detailsCue = false,
 }: {
   strategyId: string | null;
   /** The resolved legs the ring is previewing — the line's only numbers. */
   legs?: PlanLeg[];
+  /** Shows the second-tap verb beneath a previewed coin. Callers pass it
+   *  only while the details sheet is closed, so the cue disappears once
+   *  the user has used it. */
+  detailsCue?: boolean;
 }) {
   const reducedMotion = useReducedMotion();
   const strategy = useMemo(
@@ -96,6 +101,14 @@ export function FocusedPlanLine({
               <span className="block text-sm font-medium text-ink-muted whitespace-normal">
                 {mixLine ?? strategy.tagline}
               </span>
+              {detailsCue && (
+                <span
+                  data-testid="philosophy-details-cue"
+                  className="block pt-1 text-xs font-semibold text-action"
+                >
+                  Tap again for details
+                </span>
+              )}
             </>
           ) : (
             /* Not an instruction. The ring's hole already says "Choose a

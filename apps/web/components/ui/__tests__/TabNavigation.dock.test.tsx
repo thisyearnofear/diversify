@@ -59,10 +59,6 @@ vi.mock("@/lib/haptics", () => ({
   haptics: { tap: vi.fn() },
 }));
 
-vi.mock("../TabNavHint", () => ({
-  TabNavHint: () => React.createElement("div", null),
-}));
-
 vi.mock("@/components/shared/StreakNavBadge", () => ({
   StreakNavBadge: () => React.createElement("div", { "data-testid": "streak-nav-badge-mock" }),
 }));

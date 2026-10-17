@@ -58,6 +58,17 @@ import { motion } from "framer-motion";
 import { LiveLine } from "@/components/shared/LiveLine";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
+import { InspectorSheet } from "../../shared/InspectorSheet";
+import { ProtectionCalculator } from "../../inflation/ProtectionCalculator";
+import { FALLBACK_INFLATION_DATA } from "@/constants/inflation";
+import { exampleSavingsFor } from "@/constants/currency-risk";
+import {
+  localInflationRate,
+  mixFromLegs,
+  mixLabelFor,
+  seriesFor,
+  type InflationRates,
+} from "@/lib/learn/protection-calculator";
 import { useNavigation } from "@/context/app/NavigationContext";
 
 interface Props {
@@ -183,6 +194,35 @@ export function ProtectionNotConnected({
   const focusedFloor = resolvePlan({ strategy: focusedArchetype, customPlan, anchorCurrency }).floor;
   const focusedName =
     STRATEGIES.find((s) => s.id === focusedPhilosophy)?.name ?? "";
+
+  // Walletless sample outcome: the same calculator Shield's inspector uses,
+  // run on the previewed mix with an example amount. Nothing is read from a
+  // wallet and nothing is saved until the user commits the plan.
+  const [outcomeOpen, setOutcomeOpen] = React.useState(false);
+  const [outcomeAmount, setOutcomeAmount] = React.useState<number | null>(null);
+  const [outcomeYear, setOutcomeYear] = React.useState(5);
+  const outcomeMix = React.useMemo(() => mixFromLegs(focusedLegs), [focusedLegs]);
+  const outcomeRates = React.useMemo<InflationRates>(() => {
+    const byRegion: Record<string, number> = {};
+    for (const [region, entry] of Object.entries(FALLBACK_INFLATION_DATA)) {
+      byRegion[region] = entry.avgRate;
+    }
+    const local = localInflationRate(detectedRegion, byRegion);
+    return {
+      local,
+      usd: byRegion.USA ?? 4.1,
+      eur: byRegion.Europe ?? 6.8,
+      africa: byRegion.Africa ?? local,
+      latam: byRegion.LatAm ?? local,
+      asia: byRegion.Asia ?? local,
+      europe: byRegion.Europe ?? 6.8,
+    };
+  }, [detectedRegion]);
+  const outcomeAmountUsd = outcomeAmount ?? exampleSavingsFor("USD");
+  const outcomeSeries = React.useMemo(
+    () => seriesFor(outcomeAmountUsd, outcomeMix, outcomeRates, 5),
+    [outcomeAmountUsd, outcomeMix, outcomeRates],
+  );
 
   const picking = !showRing;
   const ringCompact = comparing || picking;
@@ -387,7 +427,7 @@ export function ProtectionNotConnected({
                 : `From your ${intentContext.currencyCode} reading`}
             </p>
           )}
-          {picking && (
+          {picking && !focusedPhilosophy && (
             <p
               data-testid="picker-instruction"
               className="text-center text-xs font-semibold text-gray-600 dark:text-gray-300"
@@ -418,6 +458,44 @@ export function ProtectionNotConnected({
             strategyId={focusedPhilosophy ?? ringKey}
             legs={focusedPhilosophy ? focusedLegs : ringLegs}
           />
+          {focusedPhilosophy && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                data-testid="walletless-outcome-open"
+                onClick={() => {
+                  setOutcomeOpen(true);
+                  haptics.tap();
+                }}
+                className="link-quiet"
+              >
+                See a sample outcome
+              </button>
+              <InspectorSheet
+                selectedId={outcomeOpen ? focusedPhilosophy : null}
+                onClose={() => setOutcomeOpen(false)}
+                title={`${focusedName} · sample outcome`}
+              >
+                <ProtectionCalculator
+                  amount={outcomeAmountUsd}
+                  onAmountChange={setOutcomeAmount}
+                  amountLabel="Example savings amount"
+                  currencyCode="USD"
+                  series={outcomeSeries}
+                  selectedYear={outcomeYear}
+                  years={5}
+                  mixLabel={mixLabelFor(
+                    focusedPhilosophy as FinancialStrategy,
+                    outcomeMix,
+                    focusedName || undefined,
+                  )}
+                  onSelectYear={setOutcomeYear}
+                  onProtect={() => setOutcomeOpen(false)}
+                  ctaLabel="Back to plan"
+                />
+              </InspectorSheet>
+            </div>
+          )}
           {focusedPhilosophy && focusedPhilosophy !== ringKey && (
             <div className="flex justify-center gap-2">
               <button

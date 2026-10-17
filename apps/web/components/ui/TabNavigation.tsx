@@ -3,8 +3,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { TabId } from "@/constants/tabs";
 import { getVisibleTabIds, TAB_LABELS } from "@/constants/tabs";
 import type { UserExperienceMode } from "@/context/app/types";
-import { TabNavHint } from "./TabNavHint";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
+import { trackFunnelEvent } from "@/lib/analytics";
 import { preloadTab } from "@/lib/tab-preload";
 import { haptics } from "@/lib/haptics";
 import { spring } from "@/lib/motion-tokens";
@@ -69,7 +69,11 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
   const visibleTabs = TABS.filter((t) => visibleTabIds.includes(t.id));
 
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const { recordTabVisit, recordTabBar } = useTabDiscovery();
+  const { recordTabVisit, recordTabBar, visitedTabs = [] } = useTabDiscovery();
+  // First-use cue: a static dot on the Shield button, shown while Home is
+  // active and Shield is still unvisited. It is not tied to the tab-bar hint:
+  // a new visitor reaches Home by tapping the bar, which ends that hint.
+  const showShieldCue = activeTab === "overview" && !visitedTabs.includes("protect");
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent, currentIndex: number) => {
     const tabCount = visibleTabs.length;
@@ -103,7 +107,6 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
   return (
     <>
       <div className="lg:hidden">
-        <TabNavHint activeTab={activeTab} />
         <div
           role="tablist"
           aria-label="Main navigation"
@@ -128,12 +131,14 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
               onPointerDown={() => preloadTab(tab.id)}
               onClick={() => {
                 haptics.tap();
+                if (tab.id === "protect" && showShieldCue) trackFunnelEvent("shield_cue_used");
                 setActiveTab(tab.id);
                 recordTabBar();
                 recordTabVisit(tab.id);
               }}
               onKeyDown={(e) => handleKeyDown(e, index)}
               whileTap={{ scale: 0.9 }}
+              title={tab.id === "protect" && showShieldCue ? "Explore protection" : undefined}
               className={`flex-1 min-w-0 py-2 px-1 min-h-[64px] text-center flex flex-col items-center justify-center transition-all duration-200 relative ${                  isActive
                     ? "text-blue-600 dark:text-blue-400"
                     : "text-gray-600 hover:text-gray-800 dark:text-gray-300 dark:hover:text-gray-100"
@@ -154,6 +159,13 @@ export default function TabNavigation({ activeTab, setActiveTab, badges = {}, ex
                 <div className="[&>svg]:size-5 [&>svg]:sm:size-6 [&>svg]:mb-0.5 [&>svg]:sm:mb-1">
                   {tab.icon}
                 </div>
+                {tab.id === "protect" && showShieldCue && (
+                  <span
+                    data-testid="shield-first-use-cue"
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -right-1 size-2 rounded-full bg-action"
+                  />
+                )}
                 {hasBadge && (
                   <motion.span
                     initial={{ scale: 0 }}

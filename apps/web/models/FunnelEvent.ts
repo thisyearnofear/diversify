@@ -102,6 +102,12 @@ export const FUNNEL_EVENTS = [
   // shown under a currency story. Props: fixed source / currency code only.
   'sign_in_primer_opened',
   'digital_dollar_note_viewed',
+  // First-use verbs: the Shield dock dot used, the second coin tap that opens
+  // a plan's details, and an Ask Guardian starter tapped. Props: fixed ids
+  // and tab names only.
+  'shield_cue_used',
+  'philosophy_details_opened',
+  'starter_tapped',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 
