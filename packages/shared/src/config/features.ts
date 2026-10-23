@@ -27,7 +27,7 @@ export const AI_FEATURES = {
   CHAT: !!(process.env.VENICE_API_KEY || process.env.GEMINI_API_KEY),
 
   /** Real-time web / news / research search — Tavily, TinyFish (free) or Venice web-enrich */
-  WEB_SEARCH: !!(process.env.TAVILY_API_KEY || process.env.TINYFISH_API_KEY || process.env.VENICE_API_KEY),
+  WEB_SEARCH: !!(process.env.TAVILY_API_KEY || process.env.SANDBASE_API_KEY || process.env.TINYFISH_API_KEY || process.env.VENICE_API_KEY),
 
   /**
    * Optional advisory-only structured review of public macro-source changes.

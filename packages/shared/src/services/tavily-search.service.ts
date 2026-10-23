@@ -11,13 +11,31 @@
  * show", never to invented text.
  *
  * API: POST https://api.tavily.com/search with `Authorization: Bearer <key>`.
+ * SandBase fallback route: POST {SANDBASE_BASE_URL}/v1/api/tavily/search with
+ * the same request body — free during SandBase's API Free Week. Route order
+ * comes from SEARCH_ROUTE_ORDER (`native,sandbase` default, or
+ * `sandbase,native`); keyless routes are skipped.
  */
 
 import { unifiedCache } from '../utils/unified-cache-service';
 
 const TAVILY_SEARCH_URL = 'https://api.tavily.com/search';
+const SANDBASE_BASE_URL = () =>
+  (process.env.SANDBASE_BASE_URL || 'https://api.sandbase.ai').replace(/\/+$/, '');
 const REQUEST_TIMEOUT_MS = 12_000;
 const API_KEY = () => process.env.TAVILY_API_KEY || '';
+const SANDBASE_API_KEY = () => process.env.SANDBASE_API_KEY || '';
+
+type SearchRoute = 'native' | 'sandbase';
+
+/** Ordered route list for a call: keyless routes dropped. */
+function routeOrder(): SearchRoute[] {
+  const order =
+    (process.env.SEARCH_ROUTE_ORDER || '').trim().toLowerCase() === 'sandbase,native'
+      ? (['sandbase', 'native'] as const)
+      : (['native', 'sandbase'] as const);
+  return order.filter((r) => (r === 'native' ? !!API_KEY() : !!SANDBASE_API_KEY()));
+}
 
 export type TavilyTopic = 'general' | 'news';
 export type TavilyTimeRange = 'day' | 'week' | 'month' | 'year';
@@ -52,10 +70,12 @@ export interface TavilySearchResponse {
   query: string;
   results: TavilyResult[];
   fromCache: boolean;
+  /** Which route served the result — 'native' (Tavily) or 'sandbase'. */
+  provider?: 'native' | 'sandbase';
 }
 
 function isConfigured(): boolean {
-  return typeof window === 'undefined' && !!API_KEY();
+  return typeof window === 'undefined' && !!(API_KEY() || SANDBASE_API_KEY());
 }
 
 function hostOf(url: string): string {
@@ -101,26 +121,56 @@ export async function tavilySearch(
         if (options.timeRange) body.time_range = options.timeRange;
         if (options.country && topic === 'general') body.country = options.country;
 
-        const res = await fetch(TAVILY_SEARCH_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${API_KEY()}` },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-        });
-        if (!res.ok) throw new Error(`Tavily search ${res.status}`);
+        const routes = routeOrder();
+        let lastErr: unknown = new Error('no search route configured');
+        for (const route of routes) {
+          const maxResults =
+            route === 'sandbase'
+              ? Math.min(20, Math.max(1, body.max_results as number))
+              : body.max_results;
+          const url =
+            route === 'sandbase'
+              ? `${SANDBASE_BASE_URL()}/v1/api/tavily/search`
+              : TAVILY_SEARCH_URL;
+          const key = route === 'sandbase' ? SANDBASE_API_KEY() : API_KEY();
+          try {
+            const res = await fetch(url, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+              body: JSON.stringify({ ...body, max_results: maxResults }),
+              signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+            });
+            if (!res.ok) throw new Error(`${route} search ${res.status}`);
 
-        const json = (await res.json()) as { results?: Array<Record<string, any>> };
-        const results: TavilyResult[] = (json.results ?? [])
-          .filter((r) => typeof r.url === 'string' && r.url && typeof r.title === 'string')
-          .map((r) => ({
-            title: r.title,
-            url: r.url,
-            snippet: typeof r.content === 'string' ? r.content : '',
-            score: typeof r.score === 'number' ? r.score : 0,
-            publishedDate: typeof r.published_date === 'string' ? r.published_date : undefined,
-            source: hostOf(r.url),
-          }));
-        return { data: { query, results, fromCache: false }, source: 'tavily' };
+            const json = (await res.json()) as Record<string, any>;
+            // SandBase wraps the native Tavily response: {status:"completed", output:{...}}.
+            const payload: Record<string, any> | undefined =
+              route === 'sandbase'
+                ? json?.status === 'completed' && json.output && typeof json.output === 'object'
+                  ? (json.output as Record<string, any>)
+                  : undefined
+                : json;
+            if (!payload) throw new Error('sandbase response not completed');
+
+            const results: TavilyResult[] = ((payload.results ?? []) as Array<Record<string, any>>)
+              .filter((r) => typeof r.url === 'string' && r.url && typeof r.title === 'string')
+              .map((r) => ({
+                title: r.title,
+                url: r.url,
+                snippet: typeof r.content === 'string' ? r.content : '',
+                score: typeof r.score === 'number' ? r.score : 0,
+                publishedDate: typeof r.published_date === 'string' ? r.published_date : undefined,
+                source: hostOf(r.url),
+              }));
+            return {
+              data: { query, results, fromCache: false, provider: route },
+              source: route === 'sandbase' ? 'sandbase-tavily' : 'tavily',
+            };
+          } catch (err) {
+            lastErr = err;
+          }
+        }
+        throw lastErr;
       },
       category,
     );
