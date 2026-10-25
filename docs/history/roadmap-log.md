@@ -1,5 +1,18 @@
 # Roadmap Log — historical waves & file deltas
 
+### Stellar testnet adapter, unsigned (2026-10-25)
+
+Developer B's Gate 1 slice of the [HackMeridian execution plan](../archive/tracks/hackmeridian-2026-10-execution-plan.md). The adapter can quote and prepare a classic testnet conversion. It has not signed or submitted one. A live receipt is still Gate 2.
+
+- **Boundary.** Types and integer parsing live in `packages/shared/src/types/stellar.ts` with no SDK import. `@stellar/stellar-sdk@16.3.0` and `@stellar/freighter-api@6.0.1` are pinned in `@diversifi/web` only. The browser leaf is `apps/web/lib/stellar/`. There is no EVM chain id, no Celo token fallback, and no six-decimal USDC assumption. Circle testnet USDC stays 7 decimals, issuer `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
+- **What a quote is.** Strict-send only, same account, allowlisted XLM → Circle testnet USDC. Missing trustline, unfunded account, or no path returns a typed error and no price. A payment is a separate object: same asset, reviewed destination, equal amounts. A failed conversion does not become a send.
+- **What a signature is.** Freighter is called with `networkPassphrase` only. The signed hash and operation body must match the reviewed proposal. Wallet rejection is `cancelled`. A timed-out submit is looked up by hash. Confirmed output is decoded from the path-payment result, not copied from the quote. `reasoningEvidence` is `"none"`.
+- **Fixtures for A5.** `apps/web/lib/stellar/fixtures.ts` exports `notConnected`, `disabled`, `readyAccount`, `trustlineRequired`, `quote`, `paymentQuote`, `prepared`, `rejected`, `pending`, and `confirmed`. Public builds do not render these as a receipt.
+- **Not done.** No Freighter session was opened, no trustline was created, and no transaction was signed or submitted. Smart Account Kit was not installed. Voice still has no Stellar command; A5 binds the review control to `sign()`.
+
+**Verification:** 17 focused tests passed (`packages/shared/src/types/__tests__/stellar.test.ts`, `apps/web/lib/stellar/__tests__/adapter.test.ts`). A read-only Horizon probe is `pnpm check-stellar-routes`. It does not sign.
+
+
 > Extracted from roadmap.md during the doc consolidation. Advisory log of what shipped per wave; **not** the forward plan — see [roadmap.md](../plan.md).
 
 ### Contextual Guardian controls and voice lifecycle (2026-10-25)

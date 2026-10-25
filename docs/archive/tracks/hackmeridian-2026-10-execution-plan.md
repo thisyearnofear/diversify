@@ -368,11 +368,11 @@ Estimates are engineering budgets, not guarantees. Both developers start immedia
 
 | ID | Work / primary files | Dependency | Pass condition | Budget |
 |---|---|---|---|---|
-| B1 | Proposed `packages/shared/src/types/stellar.ts`, `config/stellar.ts`, `services/stellar/*`; proposed browser wallet bridge under `apps/web/lib/stellar/` | G0 | Classic Freighter account/network, exact assets, readiness, quote fixtures, fresh real quote | 2 h |
-| B2 | Prepare/sign/submit/verify implementation in those leaves; server routes only where needed | B1 | One actual testnet conversion and decoded receipt; reviewed transaction body survives signing unchanged | 3 h |
-| B3 | Expiry, changed-account/network, reserve/trustline, duplicated submission, RPC timeout and no-route behavior | B2 | Typed failures and recovery match §7; no blind resubmission | 2 h |
+| B1 | `packages/shared/src/types/stellar.ts`, `config/stellar.ts`, browser adapter under `apps/web/lib/stellar/` | G0 | Types, fixtures, and a read-only 10 XLM quote landed 2026-10-25. A Freighter session was not opened. | 2 h |
+| B2 | Prepare/sign/submit/verify implementation in those leaves; server routes only where needed | B1 | Prepare, sign, submit, and result decode are implemented and unit-tested. No testnet conversion has been signed. | 3 h |
+| B3 | Expiry, changed-account/network, reserve/trustline, duplicated submission, RPC timeout and no-route behavior | B2 | Typed failures are unit-tested. A live account, trustline, and timeout rehearsal are still open. | 2 h |
 | B4 | Adapter integration support and production/testnet gate review | A5/B3 | End-to-end UI receives real results; disabled environment fails closed; no EVM fallback | 1.5 h |
-| B5 | Focused tests, README/run instructions, deployment configuration, rehearsal evidence | B3/B4 | Reviewer can reproduce with test funds; exact package/config assumptions documented | 1.5 h |
+| B5 | Focused tests, README/run instructions, deployment configuration, rehearsal evidence | B3/B4 | 17 focused tests, env rows, and `pnpm check-stellar-routes` are in. A reviewer still needs test funds to sign. | 1.5 h |
 | B6 | Optional direct token-transfer spending policy spike | G3 complete | Allowed transfer plus scoped over-limit denial; no unrestricted rule fallback | ≤2 h |
 
 **Ownership edges:** A owns all existing UI, navigation, voice, AI intent, and interpretation tests. B owns new Stellar services/types/config/tests, wallet bridge, dependency files, and a proposed read-only route-health script. A and B jointly review changes to shared receipt types; A applies those edits. Neither changes the legacy EVM execution path without a concrete integration need and its required verification.

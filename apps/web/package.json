@@ -21,6 +21,8 @@
     "@selfxyz/agent-sdk": "0.2.1",
     "@selfxyz/qrcode": "1.0.24",
     "@stable-station/mento-utils": "workspace:*",
+    "@stellar/freighter-api": "6.0.1",
+    "@stellar/stellar-sdk": "16.3.0",
     "@tanstack/react-query": "5.90.21",
     "@vercel/og": "0.8.6",
     "assert": "2.1.0",

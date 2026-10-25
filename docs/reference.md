@@ -144,6 +144,9 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `PRIVY_APP_SECRET` | server | — | Privy server SDK (session signer execution). Second minimum var. |
 | `NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS` | client | unset → "Let Guardian act for you" hidden | Public address of the session signer keyed by `GUARDIAN_SESSION_PRIVATE_KEY`; ERC-7715/7710 autonomy path (§1.6). |
 | `NEXT_PUBLIC_ARC_ARRIVAL` | client | off in production | Gates the Arc arrival path (`lib/arc-arrival.ts` → `hooks/use-arc-arrival.ts`). Tests and prod never hit Arc RPC by default; flip only after a real mainnet rehearsal (§3.4). |
+| `NEXT_PUBLIC_STELLAR_TESTNET` | client | off | Gates the classic Freighter testnet adapter (`apps/web/lib/stellar/`). Exactly `true` enables it. Not a mainnet rail and not an EVM chain. No signer key. |
+| `STELLAR_HORIZON_URL` | server/script | `https://horizon-testnet.stellar.org` | Read-only path and account endpoint. Must stay on the public testnet host. |
+| `STELLAR_RPC_URL` | server/script | `https://soroban-testnet.stellar.org` | Recorded for later verification. P0 classic reads do not use it. |
 | `NEXT_PUBLIC_ENABLE_ARC` | — | **removed** | The old Arc-research flag was never read and is gone; rail selection is `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`. |
 | `MONGODB_URI` | server | — | MongoDB connection. Required for the Caribbean FX netting demo — hosts the intent pool so intents match across users and time (free Atlas tier; shape in `.env.example`). |
 | `GUARDIAN_LOOP_SECRET` | server | — | Protects POST calls to `/api/agent/guardian-loop` and `/api/agent/fx-macro-signal` (server-to-server only). |
@@ -241,7 +244,9 @@ Celo venue rules (from `AGENTS.md`, kept here for operational reference): Mento 
 via `UniswapV3Strategy` (SwapRouter02, 7-field `exactInputSingle`, QuoterV2 quotes, fee tier
 100, >3% price impact rejected as `no-route` so the ticket offers via-USDm). LiFi on Celo
 can't route CELO. `pnpm check-swap-routes` is the live read-only route health check; run it
-after touching routing.
+after touching Celo routing. `pnpm check-stellar-routes` is the separate read-only
+Stellar testnet probe (10 XLM → Circle testnet USDC). It does not sign, and it is
+not coverage for the EVM routes.
 
 ### Uniswap Trading API — fee / bridge / chain notes (researched 2026-10-03)
 
