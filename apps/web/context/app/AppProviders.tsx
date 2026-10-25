@@ -11,6 +11,7 @@ import { PortfolioProvider } from './PortfolioContext';
 import { AgentChatProvider } from './AgentChatContext';
 import { GuardianVisibilityProvider } from './GuardianVisibilityContext';
 import { BalanceVisibilityProvider } from './BalanceVisibilityContext';
+import { GuardianVoiceProvider } from './GuardianVoiceContext';
 
 /**
  * AppProviders
@@ -52,7 +53,9 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
                             must sit above every surface that formats money
                             (the header toggle included). */}
                         <BalanceVisibilityProvider>
-                          <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                          <GuardianVoiceProvider>
+                            <MotionConfig reducedMotion="user">{children}</MotionConfig>
+                          </GuardianVoiceProvider>
                         </BalanceVisibilityProvider>
                       </GuardianVisibilityProvider>
                     </AgentChatProvider>

@@ -7,6 +7,8 @@
  * REFACTORED: Now includes confidence scoring and AI fallback for ambiguous inputs.
  */
 
+import { discoverInteraction, type InteractionContext } from './guardian-interaction';
+
 export type AppTab = 'overview' | 'protect' | 'exchange' | 'earn' | 'info' | 'agent';
 
 export type AppIntent =
@@ -40,6 +42,11 @@ export const CONFIDENCE_THRESHOLDS = {
 } as const;
 
 export class IntentDiscoveryService {
+    /** View-only commands share a strict vocabulary across voice and typing. */
+    static discoverInteraction(text: string, context: InteractionContext) {
+        return discoverInteraction(text, context);
+    }
+
     /**
      * Parse raw text to discover the primary user intent with confidence scoring
      */
@@ -297,7 +304,12 @@ export class IntentDiscoveryService {
         // 1. Navigation Shortcuts
         if (r.includes("swap") || r.includes("exchange") || r.includes("convert")) {
             // Check for deeper swap shortcut (e.g. "Swap 100 USDm to Gold")
-            const amountMatch = text.match(/\d+(\.\d+)?/);
+            const amounts = text.match(/[+-]?\d[\d,eE.+-]*/g) ?? [];
+            const amount = amounts[0]?.replace(/\.$/, '');
+            if (amounts.length > 1 || (amount && (!/^\d+(?:\.\d+)?$/.test(amount) || /^0+(?:\.0+)?$/.test(amount)))) {
+                return { intent: { type: 'UNKNOWN' }, confidence: 0, source: 'regex', matchedPatterns: ['ambiguous-amount'], originalText: text };
+            }
+            const amountMatch = amount ? [amount] : null;
             const tokens = this.extractTokens(r);
             
             if (tokens.length > 0 || amountMatch) {
@@ -484,8 +496,11 @@ export class IntentDiscoveryService {
      * Extract token symbols from text
      */
     private static extractTokens(text: string): string[] {
-        const commonTokens = ["usdm", "eurm", "paxg", "usdc", "usdt", "kesm", "brlm", "copm", "phpm"];
-        return commonTokens.filter(t => text.includes(t)).map(t => t.toUpperCase());
+        const commonTokens = ["USDm", "EURm", "PAXG", "USDC", "USDT", "KESm", "BRLm", "COPm", "PHPm"];
+        // Source/destination follow the utterance, not registry order.
+        // Preserve canonical casing and never match a token inside a word.
+        const matches = text.match(new RegExp(`\\b(${commonTokens.join('|')})\\b`, 'gi')) ?? [];
+        return [...new Set(matches.map(match => commonTokens.find(token => token.toLowerCase() === match.toLowerCase())!))];
     }
 
     /**

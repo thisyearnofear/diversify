@@ -52,6 +52,19 @@ describe('promise-utils', () => {
     expect((init.headers as Record<string, string>).accept).toBe('application/json');
   });
 
+  it('honors user cancellation instead of replacing the parent signal with only a timeout', async () => {
+    const parent = new AbortController();
+    const remove = vi.spyOn(parent.signal, 'removeEventListener');
+    global.fetch = vi.fn((_url, init) => new Promise((_resolve, reject) => {
+      init.signal.addEventListener('abort', () => reject(new DOMException('Cancelled', 'AbortError')));
+    })) as typeof fetch;
+    const pending = fetchWithTimeout('https://example.com', { signal: parent.signal });
+    const assertion = expect(pending).rejects.toThrow('Cancelled');
+    parent.abort();
+    await assertion;
+    expect(remove).toHaveBeenCalledWith('abort', expect.any(Function));
+  });
+
   it('withTimeout rejects with the custom message once the deadline passes', async () => {
     vi.useFakeTimers();
     const never = new Promise<never>(() => {});

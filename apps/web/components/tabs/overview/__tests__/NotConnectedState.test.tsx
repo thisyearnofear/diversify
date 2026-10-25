@@ -16,7 +16,11 @@ const hookState = vi.hoisted(() => ({
 }));
 
 vi.mock("@/hooks/use-currency-moment", () => ({
-  useCurrencyMoment: () => ({
+  useCurrencyMoment: () => {
+    const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
+    return ({
+    inspectedCurrency,
+    setInspectedCurrency,
     moment: hookState.moment,
     inflationMoment: hookState.inflationMoment,
     isLoading: hookState.isLoading,
@@ -29,7 +33,7 @@ vi.mock("@/hooks/use-currency-moment", () => ({
     setSavingsAmount: vi.fn(),
     onChangeCountry: hookState.onChangeCountry,
     frame: null,
-  }),
+  }); },
 }));
 
 vi.mock("@/components/tabs/overview/CurrencyMomentCard", () => ({

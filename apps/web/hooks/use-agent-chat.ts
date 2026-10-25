@@ -1,6 +1,7 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useContext, useRef, useState } from "react";
 import { useAIConversationOptional } from "../context/AIConversationContext";
 import { useWalletContext } from "../components/wallet/WalletProvider";
+import { DemoModeContext } from "../context/app/DemoModeContext";
 import { getPersistedStrategy } from "./useFinancialStrategies";
 import { useAgentConfig } from "./use-agent-config";
 import { useSharedMultichainBalances } from "../context/app/PortfolioContext";
@@ -11,7 +12,6 @@ import { useAgentChatContext } from "../context/app/AgentChatContext";
 // synchronously; recordRecommendation pulls ethers and is dynamically
 // imported at its async call site below.
 import { IntentDiscoveryService, type AppIntent, type ResponseFormat } from "@diversifi/shared/src/services/ai/intent-discovery.service";
-import { AgentActionService } from "@diversifi/shared/src/services/ai/agent-action.service";
 import { useX402Payment } from "./use-x402-payment";
 import { useAgentActivities } from "./use-agent-activities";
 import { useCredits } from "./use-credits";
@@ -19,6 +19,7 @@ import { reportAllowance } from "./use-allowance";
 import { useResearchPaymentSettings } from "./use-research-account";
 import { trackFunnelEvent } from "../lib/analytics";
 import { addDeviceFacts } from "../lib/guardian-memory";
+import { getDemoToken } from "../lib/demo-session";
 import { getWalletAuthHeaders } from "../lib/wallet-auth";
 import { buildWalletPortfolioView } from "../lib/wallet-portfolio-view";
 import { useGuardianVisibilityOptional } from "../context/app/GuardianVisibilityContext";
@@ -41,6 +42,9 @@ import type {
 } from "./agent-types";
 import type { ResearchQuote } from "@diversifi/shared/src/types/research-billing";
 import type { SwapPrefill } from "../context/app/types";
+import { useGuardianInteraction } from './use-guardian-interaction';
+import { useGuardianVoice } from '../context/app/GuardianVoiceContext';
+import { useBalanceVisibility } from '../context/app/BalanceVisibilityContext';
 
 /**
  * Detect whether the user's input is a question (not a command).
@@ -85,12 +89,18 @@ export function useAgentChat({
   generateSpeech,
 }: AgentChatDependencies): AgentChatState & AgentChatActions {
   const globalConversation = useAIConversationOptional();
+  const interaction = useGuardianInteraction();
+  const voice = useGuardianVoice();
+  const { hidden: balancesHidden } = useBalanceVisibility();
   const { chainId, address, signMessage } = useWalletContext();
   const { config } = useAgentConfig();
   const portfolio = useSharedMultichainBalances(address, config.goal);
   const { fetchPaidSource, quoteResearch } = useX402Payment();
   const { addActivity } = useAgentActivities();
-  useCredits(); // mounts the allowance fetch tap (x-demo-mode + 429 broadcast)
+  useCredits(); // mounts the allowance fetch tap (429 broadcast)
+  // Soft read — sample mode sends the server-minted demo token instead of
+  // the old spoofable header.
+  const demoMode = useContext(DemoModeContext)?.demoMode;
   const { settings: paymentSettings } = useResearchPaymentSettings();
   const visibilityCtx = useGuardianVisibilityOptional();
 
@@ -174,12 +184,46 @@ export function useAgentChat({
         /** What the user's screen is showing — current tab + live pair.
          *  Rendered server-side as "User is viewing …" so answers can
          *  reference the surface in front of them. */
-        view?: { tab?: string; pair?: { from: string; to: string } };
+        view?: { tab?: string; pair?: { from: string; to: string }; currency?: import('@diversifi/shared/src/services/ai/guardian-interaction').CurrencyView };
         /** Opt-in Guardian memory for this request (device → facts;
          *  cloud → provider, keyed server-side by the verified wallet). */
         memory?: { mode: 'off' | 'device' | 'cloud'; provider?: string; facts?: string[] };
       },
     ) => {
+      const requestView = { ...interaction.getView(), ...options?.view };
+      voice?.stop();
+      const voiceEpoch = voice?.getEpoch();
+      const respondWithVoice = async (text: string) => {
+        if (!voice || voice.getEpoch() !== voiceEpoch) return;
+        const generator = capabilities.voiceOutput && !balancesHidden ? generateSpeech : undefined;
+        voice.reportReply(text, generator);
+        if (config.voiceResponsesEnabled && generator) await voice.speak(text, generator);
+      };
+      let localIntent = interaction.discover(content);
+      interaction.consumeClarification();
+      if (!localIntent && capabilities.chat) {
+        updateChatState({ isChatting: true, thinkingStep: 'Understanding your request…' });
+        try {
+          localIntent = await interaction.interpret(content, apiBase);
+        } finally {
+          updateChatState({ isChatting: false, thinkingStep: '' });
+        }
+        if (voice && voice.getEpoch() !== voiceEpoch) return;
+      }
+      const previousAction = [...messages].reverse().find(message => message.role === 'assistant')?.action?.type;
+      // Keep the existing paid-research confirmation contract. These local
+      // commands can only change views/drafts; they have no signer.
+      const researchConfirmation = localIntent?.kind === 'review_proposal'
+        && (previousAction === 'confirm_research' || previousAction === 'guardian_review');
+      if (localIntent && !researchConfirmation) {
+        const result = interaction.apply(localIntent);
+        if (result) {
+          addMessage({ role: 'assistant', content: result.message, timestamp: new Date(), type: 'text' });
+          if (result.revealSurface) globalConversation?.setDrawerOpen(false);
+          await respondWithVoice(result.message);
+          return;
+        }
+      }
       // Legibility preference flips are a fixed utterance class handled
       // locally — zero LLM cost, works offline, and the confirmation names
       // where to reverse it. Inert when no visibility provider is mounted.
@@ -422,7 +466,8 @@ export function useAgentChat({
       // Never fast-path ONBOARDING questions or QUERY — those go to the LLM so
       // the user gets a real answer instead of canned marketing copy.
       const isUnambiguousCommand =
-        !contentIncludesQuestion(effectiveContent) && (
+        !contentIncludesQuestion(effectiveContent)
+        && !/\b(?:don't|dont|do not|never|if|unless|instead|about|roughly|around)\b/i.test(effectiveContent) && (
         intent.type === 'NAVIGATE' ||
         intent.type === 'SWAP_SHORTCUT' ||
         intent.type === 'SEND_TO_PHONE' ||
@@ -438,38 +483,47 @@ export function useAgentChat({
 
       switch (effectiveIntent.type) {
         case 'NAVIGATE':
-          fastPathResponse = `Taking you to ${effectiveIntent.tab.toUpperCase()}... 🚀`;
+          fastPathResponse = "Open the requested screen below.";
           break;
         case 'SWAP_SHORTCUT':
-          fastPathResponse = "Preparing your swap hub... 💱";
+          fastPathResponse = effectiveIntent.fromToken && effectiveIntent.toToken && effectiveIntent.amount
+            ? `Review ${effectiveIntent.amount} ${effectiveIntent.fromToken} → ${effectiveIntent.toToken} in Exchange. A fresh quote and wallet approval are still required.`
+            : "Which source asset, destination asset, and amount should I prepare?";
           break;
         case 'SEND_TO_PHONE':
-          fastPathResponse = `Resolving ${effectiveIntent.phoneNumber} via SocialConnect... 📱`;
+          fastPathResponse = "Choose a verified recipient in Exchange. A phone number alone does not establish a wallet destination.";
           break;
         case 'GOODDOLLAR':
-          fastPathResponse = "Checking G$ UBI eligibility... 🪙";
+          fastPathResponse = "Use the claim control below to check G$ eligibility.";
           break;
         case 'WDK_ACTION':
-          fastPathResponse = "Switching your Guardian infrastructure to WDK settlement... 🌌";
+          fastPathResponse = "Review your wallet infrastructure in Guardian.";
           break;
         case 'ONBOARDING':
-          fastPathResponse = "Entering Demo Mode... 🎮";
+          fastPathResponse = "Open Home to explore the sample experience.";
           break;
         case 'YIELD_EARN':
-          fastPathResponse = "Scanning for high-yield opportunities... 📈";
+          fastPathResponse = "Explore the available instruments on Shield.";
           break;
       }
 
       if (fastPathResponse) {
         updateChatState({ isChatting: true, thinkingStep: "Executing action..." });
 
-        // Execute background side-effects (SocialConnect resolution, etc.) via consolidated service
-        await AgentActionService.execute(intent, effectiveContent, {});        // Determine the action for the UI component (AIChat) to execute. The
+        // Create an actual review action. Parsing never signs, resolves a
+        // payee, or announces a state change without a UI handler. The
         // button now applies its own transition; carriers no longer set a
         // `delay` (the field was carried but never read by the consumer).
         let navAction: AIMessage["action"] | undefined;
         if (intent.type === "NAVIGATE") {
           navAction = { type: "navigate", tab: intent.tab };
+        } else if (intent.type === 'SWAP_SHORTCUT' && intent.fromToken && intent.toToken && intent.amount) {
+          navAction = {
+            type: 'review_in_exchange',
+            prefill: { fromToken: intent.fromToken, toToken: intent.toToken, amount: intent.amount, reason: 'Your requested exchange' },
+          };
+        } else if (intent.type === 'WDK_ACTION') {
+          navAction = { type: 'navigate', tab: 'agent' };
         } else if (intent.type === "YIELD_EARN") {
           // Yield/earn content lives on the Shield tab (the RWA vault
           // sleeve) — there is no standalone "earn" tab.
@@ -492,21 +546,7 @@ export function useAgentChat({
         };
         addMessage(assistantMessage);
 
-        // Handle auto-speech if enabled
-        if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
-          try {
-            const speechBlob = await generateSpeech(fastPathResponse!);
-            if (speechBlob) {
-              const url = URL.createObjectURL(speechBlob);
-              const audio = new Audio(url);
-              audio.play().catch((playError) => {
-                console.warn("[useAgentChat] Fast-path audio playback failed:", playError);
-              });
-            }
-          } catch (e) {
-            console.warn("[useAgentChat] Fast-path speech failed:", e);
-          }
-        }
+        await respondWithVoice(fastPathResponse);
 
         updateChatState({ isChatting: false, thinkingStep: "" });
         return;
@@ -668,6 +708,8 @@ export function useAgentChat({
           ? localStorage.getItem("diversifi_user_gemini_key") || ""
           : "";
 
+        const demoToken = demoMode?.isActive ? await getDemoToken() : undefined;
+
         const response = await fetch(`${apiBase}/api/agent/advisor`, {
           method: "POST",
           headers: {
@@ -686,13 +728,15 @@ export function useAgentChat({
             macroData: Object.keys(macroData).length > 0 ? macroData : undefined,
             contextRecords: options?.decisionRef ? [{ ...options.decisionRef }] : undefined,
             pairContext: options?.pair ? { from: options.pair.from, to: options.pair.to } : undefined,
-            view: options?.view
+            view: requestView.tab
               ? {
-                  ...(options.view.tab ? { tab: options.view.tab } : {}),
-                  ...(options.view.pair ? { pair: { from: options.view.pair.from, to: options.view.pair.to } } : {}),
+                  tab: requestView.tab,
+                  ...(requestView.pair ? { pair: { from: requestView.pair.from, to: requestView.pair.to } } : {}),
+                  ...(requestView.currency ? { currency: requestView.currency } : {}),
                 }
               : undefined,
             memory: options?.memory,
+            ...(demoToken ? { demoToken } : {}),
           }),
         });
 
@@ -989,20 +1033,7 @@ export function useAgentChat({
             }
           }
 
-          if (config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
-            try {
-              const speechBlob = await generateSpeech(result.response);
-              if (speechBlob) {
-                const url = URL.createObjectURL(speechBlob);
-                const audio = new Audio(url);
-                audio.play().catch((playError) => {
-                  console.warn("[useAgentChat] Audio playback failed:", playError);
-                });
-              }
-            } catch (speechError) {
-              console.warn("[useAgentChat] Auto-speech failed:", speechError);
-            }
-          }
+          await respondWithVoice(result.response);
         } else {
           const errorData = await response
             .json()
@@ -1026,8 +1057,11 @@ export function useAgentChat({
         console.error("[useAgentChat] Chat failed:", error);
         trackFunnelEvent('chat_error', { reason: String(error instanceof Error ? error.message : 'unknown') });
 
-        const errorContent =
-          "⚠️ **Response Interrupted**\n\nThe AI provider could not finish this response. Please try again.";
+        // A TypeError from fetch() means the request never completed (CORS,
+        // offline, DNS) — blaming the AI provider would be a lie.
+        const errorContent = error instanceof TypeError
+          ? "⚠️ **Couldn't reach the Guardian service**\n\nCheck your connection and try again."
+          : "⚠️ **Response Interrupted**\n\nThe AI provider could not finish this response. Please try again.";
         if (pendingAssistant) {
           patchMessage(pendingAssistant, { content: errorContent, provider: undefined });
         } else {
@@ -1052,15 +1086,9 @@ export function useAgentChat({
       capabilities.voiceOutput,
       chainId,
       config.voiceResponsesEnabled,
+      demoMode?.isActive,
       generateSpeech,
-      portfolio.allTokens,
-      portfolio.chainCount,
-      portfolio.errors,
-      portfolio.isLoading,
-      portfolio.isStale,
-      portfolio.hasEstimates,
-      portfolio.chains,
-      portfolio.totalValue,
+      portfolio,
       messages,
       addMessage,
       addActivity,
@@ -1070,6 +1098,10 @@ export function useAgentChat({
       patchMessage,
       updateChatState,
       visibilityCtx,
+      interaction,
+      globalConversation,
+      voice,
+      balancesHidden,
       paymentSettings.autoPayEnabled,
       paymentSettings.autoPayMaxUSDC,
     ],

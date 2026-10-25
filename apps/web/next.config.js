@@ -177,6 +177,9 @@ const nextConfig = {
     return [
       { source: '/api/agent/status', destination: `${hetznerBase}/api/agent/status` },
       { source: '/api/agent/advisor', destination: `${hetznerBase}/api/agent/advisor` },
+      { source: '/api/agent/interaction', destination: `${hetznerBase}/api/agent/interaction` },
+      { source: '/api/agent/speak', destination: `${hetznerBase}/api/agent/speak` },
+      { source: '/api/agent/transcribe', destination: `${hetznerBase}/api/agent/transcribe` },
       { source: '/api/agent/deep-analyze', destination: `${hetznerBase}/api/agent/deep-analyze` },
       { source: '/api/agent/x402-gateway', destination: `${hetznerBase}/api/agent/x402-gateway` },
       { source: '/api/vault/:path*', destination: `${hetznerBase}/api/vault/:path*` },

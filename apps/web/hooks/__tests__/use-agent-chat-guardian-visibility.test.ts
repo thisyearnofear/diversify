@@ -6,6 +6,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
+import { NavigationProvider, useNavigation } from '../../context/app/NavigationContext';
 
 const mocks = vi.hoisted(() => ({
   visibility: null as null | {
@@ -75,6 +76,38 @@ describe('useAgentChat — Guardian visibility plumbing', () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
+  });
+
+  it('applies currency commands and their follow-ups through the chat entry point without a model', async () => {
+    const { result } = renderHook(() => ({ chat: useAgentChat(DEPS), navigation: useNavigation() }), { wrapper: NavigationProvider });
+    await act(() => result.current.chat.sendChatMessage('Could you please show me the naira’s story?'));
+    expect(result.current.navigation.activeTab).toBe('overview');
+    expect(result.current.navigation.currencyView?.currencyCode).toBe('NGN');
+    await act(() => result.current.chat.sendChatMessage('Compare that with euros over five years'));
+    expect(result.current.navigation.currencyView).toEqual({ currencyCode: 'NGN', benchmark: 'EUR', horizon: '5yr', story: false });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('sends the selected currency into an ordinary contextual follow-up', async () => {
+    const { result } = renderHook(() => ({ chat: useAgentChat(DEPS), navigation: useNavigation() }), { wrapper: NavigationProvider });
+    await act(() => result.current.chat.sendChatMessage('Show me the naira’s story'));
+    await act(() => result.current.chat.sendChatMessage('Why is it vulnerable?'));
+    const advisor = fetchMock.mock.calls.find(call => String(call[0]).includes('/api/agent/advisor'));
+    expect(advisor).toBeDefined();
+    expect(JSON.parse(advisor![1].body).view.currency).toEqual({
+      currencyCode: 'NGN', benchmark: 'USD', horizon: '1yr', story: true,
+    });
+  });
+
+  it('resolves a clarification with a currency name, then forgets the pending choice', async () => {
+    const { result } = renderHook(() => ({ chat: useAgentChat(DEPS), navigation: useNavigation() }), { wrapper: NavigationProvider });
+    await act(() => result.current.chat.sendChatMessage('Show me the peso’s story'));
+    expect(result.current.navigation.currencyView).toBeNull();
+    expect(result.current.navigation.currencyClarification).toMatchObject({ story: true });
+    await act(() => result.current.chat.sendChatMessage('Philippine peso'));
+    expect(result.current.navigation.currencyView).toEqual({ currencyCode: 'PHP', benchmark: 'USD', horizon: '1yr', story: true });
+    expect(result.current.navigation.currencyClarification).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('flips the preference locally with a reversible-by-name confirmation, no network call', async () => {

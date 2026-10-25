@@ -94,12 +94,11 @@ export function ConnectedOverview({
   const { askAdvisor } = useAdvisor();
   const { experienceMode, setExperienceMode } = useExperience();
   const [focusedRegion, setFocusedRegion] = React.useState<string | null>(null);
-  const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
   const { navigateToCompare, navigateWithIntent, navigateToGuardian, lastSettlement, consumeSettlement } = useNavigation();
   const [sealedRegion, setSealedRegion] = React.useState<string | null>(null);
   // The concentration lens is a state of the coin object — preview-only,
   // entered through the transition slot, left via the in-object ←.
-  const handleDialSelect = useCallback((region: string | null) => {
+  const handleDialSelect = (region: string | null) => {
     // One selection at a time — a region pick closes the currency sheet.
     setInspectedCurrency(null);
     setFocusedRegion(region);
@@ -107,7 +106,7 @@ export function ConnectedOverview({
     if (region) {
       trackFunnelEvent("marquee_select", { region, source: "home_theater" });
     }
-  }, []);
+  };
 
   // Settlement seal: only when refreshed balances actually show the
   // destination token — the receipt's word is never taken on faith.
@@ -136,6 +135,8 @@ export function ConnectedOverview({
 
   const {
     moment,
+    inspectedCurrency,
+    setInspectedCurrency,
     inflationMoment,
     benchmarks,
     horizons,

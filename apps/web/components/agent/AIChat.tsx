@@ -48,6 +48,8 @@ import { useSharedMultichainBalances } from "@/context/app/PortfolioContext";
 import { useToast } from "../ui/Toast";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { DemoModeContext } from "@/context/app/DemoModeContext";
+import { useGuardianVoice } from '@/context/app/GuardianVoiceContext';
+import { GuardianVoiceControls } from './GuardianVoiceControls';
 import { ARCHETYPES, strategyToArchetype } from "@/components/protection-cards/tokens";
 
 const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
@@ -55,11 +57,6 @@ const IntelligenceHistory = dynamic(() => import("./IntelligenceHistory"), {
 });
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
-
-// Track user-message count to distinguish "new message added" from "drawer closed"
-function useUserMessageCount(messages: { role: string }[]) {
-  return messages.filter(m => m.role === "user").length;
-}
 
 /**
  * AIChat - Global Bottom Sheet Drawer ("Ask Guardian").
@@ -69,6 +66,7 @@ function useUserMessageCount(messages: { role: string }[]) {
  * ai-chat-helpers, and the BYO-key sheet in ModelSettingsModal.
  */
 export default function AIChat() {
+  const voiceSession = useGuardianVoice();
   const {
     messages,
     isDrawerOpen,
@@ -90,7 +88,7 @@ export default function AIChat() {
     generateSpeech,
   });
   const { claimReward } = useCredits();
-  const { activeTab, setActiveTab, navigateToSwap, navigateToNetting, navigateWithIntent, setFocusedCycleId } = useNavigation();
+  const { activeTab, setActiveTab, navigateToSwap, navigateToNetting, navigateWithIntent, setFocusedCycleId, currencyView, currencyReading } = useNavigation();
   const { address, signMessage } = useWalletContext();
   const memory = useGuardianMemory(address, signMessage);
   const { showToast } = useToast();
@@ -136,6 +134,7 @@ export default function AIChat() {
     activeTab === 'exchange' && typeof sessionStorage !== 'undefined'
       ? readExchangePair()
       : null;
+  const selectedCurrency = currencyView ?? currencyReading;
   const advisorView = {
     tab: activeTab,
     ...(exchangePair
@@ -143,7 +142,10 @@ export default function AIChat() {
       : {}),
   };
   const contextLine = `Looking at: ${tabLabel}${
-    exchangePair ? ` · ${exchangePair.fromToken} → ${exchangePair.toToken}` : ''
+    exchangePair ? ` · ${exchangePair.fromToken} → ${exchangePair.toToken}`
+      : activeTab === 'overview' && selectedCurrency
+        ? ` · ${selectedCurrency.currencyCode} / ${selectedCurrency.benchmark} · ${selectedCurrency.horizon[0]} ${selectedCurrency.horizon === '1yr' ? 'year' : 'years'}`
+        : ''
   }`;
 
   const submitPrompt = (prompt: string) => {
@@ -152,6 +154,16 @@ export default function AIChat() {
     sendChatMessage(prompt, { view: advisorView, memory: memory.requestPayload() });
     setInputValue("");
   };
+
+  const voicePhase = voiceSession?.phase;
+  const stopVoice = voiceSession?.stop;
+  const wasDrawerOpen = useRef(isDrawerOpen);
+  useEffect(() => {
+    if (wasDrawerOpen.current && !isDrawerOpen && (voicePhase === 'listening' || voicePhase === 'requesting_permission' || voicePhase === 'transcribing')) {
+      stopVoice?.();
+    }
+    wasDrawerOpen.current = isDrawerOpen;
+  }, [isDrawerOpen, voicePhase, stopVoice]);
 
   const submitResearchConfirmation = () => {
     if (isChatting) return;
@@ -163,11 +175,6 @@ export default function AIChat() {
   // The proactive monitoring loop is mounted at the app root
   // (ProactiveAgentRunner in _app.tsx), not here, so it survives the
   // chat surface being closed.
-
-  // Track user-message count via ref so the auto-open effect only fires when
-  // a NEW user message is added — not when the user simply closes the drawer.
-  const prevUserMsgCountRef = useRef(useUserMessageCount(messages));
-  const currentUserMsgCount = useUserMessageCount(messages);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,15 +233,8 @@ export default function AIChat() {
     };
   }, [isDrawerOpen]);
 
-  // Only auto-open the drawer when a NEW user message is added.
-  // Using a ref to track the previous count prevents re-opening when the user
-  // manually closes the drawer (closing doesn't change currentUserMsgCount).
-  useEffect(() => {
-    if (currentUserMsgCount > prevUserMsgCountRef.current) {
-      prevUserMsgCountRef.current = currentUserMsgCount;
-      setDrawerOpen(true);
-    }
-  }, [currentUserMsgCount, setDrawerOpen]);
+  // Entry points open the drawer explicitly. Reopening on every user message
+  // would hide the instrument immediately after a voice navigation command.
 
   // Mascot beat: one 300ms nod when a reply completes — never a loop.
   useEffect(() => {
@@ -290,7 +290,7 @@ export default function AIChat() {
       : profileConfig.valuesPhilosophy,
   );
   const starters = contextualStarters(activeTab as TabId, {
-    currency: isDrawerOpen ? readSelectedCurrency() : null,
+    currency: selectedCurrency?.currencyCode ?? (isDrawerOpen ? readSelectedCurrency() : null),
     planName: archetypeId ? ARCHETYPES[archetypeId].name : null,
     pair: exchangePair,
     upcomingPayment: profileConfig.moneyPurpose === 'upcoming_payment',
@@ -1120,10 +1120,6 @@ export default function AIChat() {
               />
               <VoiceButton
                 size="sm"
-                variant="embedded"
-                tooltipPlacement="top"
-                showFirstVisitHint={false}
-                showSuggestions={false}
                 onTranscription={(t) => {
                   submitPrompt(t);
                 }}
@@ -1137,6 +1133,7 @@ export default function AIChat() {
                 </button>
               )}
             </form>
+            <GuardianVoiceControls onTranscription={submitPrompt} />
             {/* Memory mode footnote — one quiet line naming where Guardian
                 memory lives (or that it's off), with Change opening the
                 in-drawer memory view. */}

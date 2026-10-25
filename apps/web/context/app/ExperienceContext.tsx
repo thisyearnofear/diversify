@@ -112,3 +112,7 @@ export function useExperience(): ExperienceContextValue {
   if (!ctx) throw new Error('useExperience must be used within ExperienceProvider');
   return ctx;
 }
+
+export function useExperienceOptional(): ExperienceContextValue | undefined {
+  return useContext(ExperienceContext);
+}

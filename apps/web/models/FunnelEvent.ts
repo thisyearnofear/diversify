@@ -21,6 +21,7 @@ export const FUNNEL_EVENTS = [
   'chat_send',
   'chat_error',
   'chat_done',
+  'guardian_interaction',
   // Waitlist — self-selecting interest in the future business FX feature
   'business_hint_expanded',
   'waitlist_joined',

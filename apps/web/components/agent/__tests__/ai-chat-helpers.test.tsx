@@ -8,8 +8,8 @@ describe('Guardian contextual starters', () => {
     localStorage.setItem('user-country-code', 'NG');
     expect(readSelectedCurrency()).toBe('NGN');
     const starter = contextualStarters('overview', { currency: 'NGN' }).find((item) => item.id === 'currency');
-    expect(starter?.question).toBe('What could move NGN?');
-    expect(starter?.prompt).toContain('distinguishing dated history from current evidence');
+    expect(starter?.question).toBe('Show me NGN’s story');
+    expect(starter?.prompt).toBe('Show me the story of NGN');
   });
 
   it('explains a selected pair without instructing a trade', () => {

@@ -32,6 +32,8 @@ export function NotConnectedState({
   onEnableDemo,
 }: NotConnectedStateProps) {
   const {
+    inspectedCurrency,
+    setInspectedCurrency,
     moment,
     inflationMoment,
     isLoading,
@@ -48,7 +50,6 @@ export function NotConnectedState({
     clearSharedView,
   } = useCurrencyMoment({ fallbackCountryCode: 'NG' });
   const { navigateWithIntent } = useNavigation();
-  const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
 
   const selectBenchmark = (b: Benchmark) => {
     setBenchmark(b);

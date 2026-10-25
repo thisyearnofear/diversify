@@ -121,7 +121,11 @@ vi.mock("@/hooks/use-currency-risk", () => ({
 // The Home opening artifact hook — driven by mockMoment so tests can choose
 // between the legacy hero (null) and the currency-moment hero (a moment).
 vi.mock("@/hooks/use-currency-moment", () => ({
-  useCurrencyMoment: () => ({
+  useCurrencyMoment: () => {
+    const [inspectedCurrency, setInspectedCurrency] = React.useState<string | null>(null);
+    return ({
+    inspectedCurrency,
+    setInspectedCurrency,
     moment: mockMoment,
     inflationMoment: null,
     isLoading: false,
@@ -136,7 +140,7 @@ vi.mock("@/hooks/use-currency-moment", () => ({
     onChangeCountry: vi.fn(),
     countryCode: mockMoment?.iso2 ?? null,
     frame: null,
-  }),
+  }); },
 }));
 
 vi.mock("@/hooks/use-advisor", () => ({

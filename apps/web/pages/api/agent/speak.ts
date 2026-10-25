@@ -2,15 +2,16 @@
  * POST /api/agent/speak — text-to-speech for the Advisor's voice responses.
  *
  * Bridges the client `useAgentVoice().generateSpeech()` to the server-side
- * AI speech orchestrator (Venice → ElevenLabs fallback). Returns raw audio
+ * AI speech orchestrator. Returns raw audio
  * bytes (audio/mpeg) so the client can play the Blob directly.
  *
- * Requires VENICE_API_KEY or (ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID).
+ * Requires ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID.
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { generateSpeech } from '@diversifi/shared/src/services/ai/ai-service';
 import { rateLimit, getClientIp } from '../../../lib/rate-limit';
+import { elevenLabsCapabilities } from '@diversifi/shared/src/services/ai/providers/elevenlabs-provider';
 
 const MAX_TEXT_LENGTH = 1200;
 // Unauthenticated paid TTS (Venice/ElevenLabs). Per-IP throttle so one caller
@@ -30,20 +31,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(429).json({ error: 'Too many requests — slow down' });
   }
 
-  const hasVenice = !!process.env.VENICE_API_KEY;
-  const hasElevenLabs = !!process.env.ELEVENLABS_API_KEY && !!process.env.ELEVENLABS_VOICE_ID;
-  if (!hasVenice && !hasElevenLabs) {
-    return res.status(503).json({ error: 'Voice output not configured (VENICE_API_KEY or ELEVENLABS_API_KEY + ELEVENLABS_VOICE_ID)' });
+  const capabilities = elevenLabsCapabilities({
+    elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
+    elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+    elevenlabsTtsModel: process.env.GUARDIAN_TTS_MODEL,
+  });
+  if (!capabilities.speech) {
+    return res.status(503).json({ error: 'Voice output is not configured' });
   }
 
   const { text, voice } = req.body ?? {};
   if (typeof text !== 'string' || text.trim().length === 0) {
     return res.status(400).json({ error: 'text is required' });
   }
+  if (text.length > MAX_TEXT_LENGTH) {
+    return res.status(400).json({ error: 'Spoken responses must be short enough to read in full' });
+  }
 
   try {
     const result = await generateSpeech({
-      text: text.slice(0, MAX_TEXT_LENGTH),
+      text,
       voice: typeof voice === 'string' ? voice : undefined,
     });
 

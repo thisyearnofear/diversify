@@ -1,6 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isTabId, LEGACY_TAB_MAP, type TabId } from '@/constants/tabs';
 import type { NavigationState, SwapPrefill, TreasuryIntentSource } from './types';
+import type { CurrencyView, CurrencyClarification } from '@diversifi/shared/src/services/ai/guardian-interaction';
+
+export type CurrencyReading = CurrencyView & { explanation: string };
 
 export type { TreasuryIntentSource } from './types';
 
@@ -61,6 +64,13 @@ export interface GuardianDecisionRef {
 }
 
 type NavigationContextValue = NavigationState & {
+  /** Session-only exploration: never changes country, savings, or policy. */
+  currencyView: CurrencyView | null;
+  currencyClarification: CurrencyClarification | null;
+  setCurrencyClarification: (choice: CurrencyClarification | null) => void;
+  setCurrencyView: (view: CurrencyView | null) => void;
+  currencyReading: CurrencyReading | null;
+  publishCurrencyReading: (reading: CurrencyReading | null) => void;
   setActiveTab: (tab: TabId) => void;
   setChainId: (chainId: number | null) => void;
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
@@ -107,6 +117,12 @@ type NavigationContextValue = NavigationState & {
 const NavigationContext = createContext<NavigationContextValue | undefined>(undefined);
 
 export function NavigationProvider({ children }: { children: React.ReactNode }) {
+  const [currencyView, setCurrencyView] = useState<CurrencyView | null>(null);
+  const [currencyClarification, setCurrencyClarification] = useState<CurrencyClarification | null>(null);
+  const [currencyReading, setCurrencyReading] = useState<CurrencyReading | null>(null);
+  const publishCurrencyReading = useCallback((reading: CurrencyReading | null) => {
+    setCurrencyReading(previous => JSON.stringify(previous) === JSON.stringify(reading) ? previous : reading);
+  }, []);
   const [state, setState] = useState<NavigationState>({
     activeTab: 'protect' satisfies TabId,
     visitedTabs: [],
@@ -254,6 +270,12 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const value = useMemo<NavigationContextValue>(
     () => ({
       ...state,
+      currencyView,
+      currencyClarification,
+      setCurrencyClarification,
+      setCurrencyView,
+      currencyReading,
+      publishCurrencyReading,
       setActiveTab,
       setChainId,
       setSwapPrefill,
@@ -274,7 +296,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       focusedCycleId,
       setFocusedCycleId,
     }),
-    [state, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
+    [state, currencyView, currencyClarification, currencyReading, publishCurrencyReading, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
   );
 
   // The consuming surface (PaymentCycleReport) already auto-clears the
@@ -291,4 +313,9 @@ export function useNavigation(): NavigationContextValue {
   const ctx = useContext(NavigationContext);
   if (!ctx) throw new Error('useNavigation must be used within NavigationProvider');
   return ctx;
+}
+
+/** Standalone hooks/tests can operate without an application shell. */
+export function useNavigationOptional(): NavigationContextValue | undefined {
+  return useContext(NavigationContext);
 }

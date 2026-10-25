@@ -414,15 +414,15 @@ export interface AgentVoiceDependencies {
 }
 
 export interface AgentVoiceActions {
-  generateSpeech: (text: string) => Promise<Blob | null>;
-  transcribeAudio: (audioBlob: Blob) => Promise<string | null>;
+  generateSpeech: (text: string, signal?: AbortSignal) => Promise<Blob | null>;
+  transcribeAudio: (audioBlob: Blob, signal?: AbortSignal) => Promise<string | null>;
 }
 
 export interface AgentChatDependencies {
   apiBase: string;
   capabilities: AICapabilities;
   useGlobalConversation?: boolean;
-  generateSpeech?: (text: string) => Promise<Blob | null>;
+  generateSpeech?: (text: string, signal?: AbortSignal) => Promise<Blob | null>;
 }
 
 export interface AgentChatState {
@@ -451,7 +451,7 @@ export interface AgentChatActions {
     options?: {
       decisionRef?: import("../context/app/NavigationContext").GuardianDecisionRef;
       pair?: { from: string; to: string };
-      view?: { tab?: string; pair?: { from: string; to: string } };
+      view?: { tab?: string; pair?: { from: string; to: string }; currency?: import('@diversifi/shared/src/services/ai/guardian-interaction').CurrencyView };
       /** Opt-in Guardian memory context for this request — 'device' carries
        *  the facts; 'cloud' names the provider (server keys it by the
        *  verified wallet). 'off'/absent sends nothing. */

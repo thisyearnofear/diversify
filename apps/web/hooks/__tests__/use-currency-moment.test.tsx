@@ -7,6 +7,8 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, cleanup } from '@testing-library/react';
+import React from 'react';
+import { NavigationProvider, useNavigation } from '@/context/app/NavigationContext';
 import { CURRENCY_BY_CODE } from '@/constants/currency-risk';
 import { writeMomentBenchmark, writeMomentHorizon } from '@/constants/moment-horizon';
 
@@ -75,6 +77,26 @@ beforeEach(() => {
 });
 
 afterEach(() => cleanup());
+
+describe('useCurrencyMoment — Guardian view-only control', () => {
+  it('carries voice selection and comparison without changing country or remembering a visit', () => {
+    const { result } = renderHook(() => ({ moment: useCurrencyMoment(), navigation: useNavigation() }), { wrapper: NavigationProvider });
+    act(() => result.current.navigation.setCurrencyView({ currencyCode: 'NGN', benchmark: 'EUR', horizon: '5yr', story: true }));
+    expect(result.current.moment.moment?.currencyCode).toBe('NGN');
+    expect(result.current.moment.benchmark).toBe('EUR');
+    expect(result.current.moment.horizon).toBe('5yr');
+    expect(result.current.moment.inspectedCurrency).toBe('NGN');
+    expect(result.current.moment.viewingShared).toBe(true);
+    expect(mocks.setCountryOverride).not.toHaveBeenCalled();
+    expect(localStorage.getItem('user-country-code')).toBeNull();
+    expect(result.current.navigation.currencyReading?.explanation).toContain('Curated historical data');
+    act(() => result.current.moment.setBenchmark('XAU'));
+    expect(result.current.navigation.currencyView?.benchmark).toBe('XAU');
+    act(() => result.current.moment.clearSharedView());
+    expect(result.current.moment.moment?.currencyCode).toBe('KES');
+    expect(result.current.moment.inspectedCurrency).toBeNull();
+  });
+});
 
 describe('useCurrencyMoment — onboarding continuity', () => {
   it('continues the same currency, benchmark, and horizon into Home', () => {

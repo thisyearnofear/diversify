@@ -79,7 +79,7 @@ export function useAppShell() {
   const { isTutorialOpen, openTutorial: openWalletTutorial, closeTutorial } = useWalletTutorial();
 
   // ── Voice ──
-  const { handleTranscription } = useVoiceIntent({ onOpenWalletTutorial: openWalletTutorial });
+  const { handleTranscription } = useVoiceIntent();
 
   return {
     // Navigation

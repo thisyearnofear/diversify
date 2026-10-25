@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { AIService } from '@diversifi/shared/src/services/ai/ai-service';
 import { getGuardianRunHealth } from '../../../lib/guardian-run-status';
 import { getMacroSignalReceipt } from '../../../lib/macro-signal-receipt';
+import { elevenLabsCapabilities } from '@diversifi/shared/src/services/ai/providers/elevenlabs-provider';
 
 /**
  * Agent Status API Endpoint
@@ -42,6 +43,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const veniceStatus = aiStatus.venice ?? { available: false, initialized: false };
     const geminiStatus = aiStatus.gemini ?? { available: false, initialized: false };
     const elevenLabsStatus = aiStatus.elevenLabs ?? { available: false, initialized: false };
+    const voiceCapabilities = elevenLabsCapabilities({
+        elevenlabsApiKey: process.env.ELEVENLABS_API_KEY,
+        elevenlabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+        elevenlabsTtsModel: process.env.GUARDIAN_TTS_MODEL,
+    });
 
     // Guardian cron liveness: last loop/heartbeat run, age, and whether the
     // run actually worked. A 5-min cron that silently died for an hour shows
@@ -100,10 +106,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             },
             // Venice TTS is not implemented (provider throws "not yet implemented").
             // Only ElevenLabs provides speech today.
-            speech: elevenLabsStatus.available,
+            speech: voiceCapabilities.speech,
             speechProviders: {
                 venice: false,
-                elevenLabs: elevenLabsStatus.available,
+                elevenLabs: voiceCapabilities.speech,
             },
             webSearch: veniceStatus.available, // Venice-only feature
         },

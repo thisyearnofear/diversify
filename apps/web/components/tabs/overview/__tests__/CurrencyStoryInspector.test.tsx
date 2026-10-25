@@ -15,6 +15,8 @@ let mockLive: {
 } | null = null;
 let mockSignal: { text: string; dateLabel: string } | null = null;
 let mockNews: Array<{ title: string; url: string; source: string; date: string | null }> = [];
+let mockGeo: string | null = null;
+vi.mock('@/hooks/use-geo-country', () => ({ useGeoCountry: () => mockGeo }));
 
 vi.mock("@/components/swap/CorridorContext", () => ({
   useLiveCurrencyRisk: () => mockLive,
@@ -34,8 +36,28 @@ afterEach(() => {
   mockLive = null;
   mockSignal = null;
   mockNews = [];
+  mockGeo = null;
   mockAskAdvisor.mockClear();
   mockTrack.mockClear();
+});
+
+describe('Currency story wording', () => {
+  it('lets people choose a local phrase without assuming it from the currency', () => {
+    const { rerender } = render(<CurrencyStoryInspector code="NGN" onClose={vi.fn()} />);
+    expect(screen.queryByRole('heading', { name: 'japa math' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Local phrase' }));
+    expect(screen.getByRole('heading', { name: 'japa math' })).toBeInTheDocument();
+    rerender(<CurrencyStoryInspector code="BRL" onClose={vi.fn()} />);
+    expect(screen.queryByRole('heading', { name: 'custo Brasil' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Local phrase' }));
+    expect(screen.getByRole('heading', { name: 'custo Brasil' })).toBeInTheDocument();
+  });
+
+  it('withdraws promotional wording where the thesis gate denies it', () => {
+    mockGeo = 'GB';
+    render(<CurrencyStoryInspector code="NGN" onClose={vi.fn()} />);
+    expect(screen.queryByRole('button', { name: 'Local phrase' })).toBeNull();
+  });
 });
 
 const walkthroughCalls = (event: string) =>

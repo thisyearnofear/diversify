@@ -23,6 +23,7 @@ import { fallbackUsdRate } from '@/lib/anchor-currency';
 import { appendDecisionLog } from '@/lib/vault/guardian-state';
 import { isTabId, LEGACY_TAB_MAP, TAB_LABELS, type TabId } from '@/constants/tabs';
 import { CURRENCY_BY_CODE, CURRENCY_RISK_DATA } from '@/constants/currency-risk';
+import { validateInteraction } from '@diversifi/shared/src/services/ai/guardian-interaction';
 import { tavilySearch, tavilySearchService } from '@diversifi/shared/src/services/tavily-search.service';
 import { currencyNewsQuery, toCurrencyNewsItems } from '@/lib/currency-news';
 import { CURRENCY_NAME_ALIASES } from '@/lib/currency-names';
@@ -83,7 +84,7 @@ type ConversationRequest = {
   /** What the user's screen is showing — tab id + live pair. Symbols and
    *  tab names are re-validated server-side; anything unrecognized is
    *  dropped rather than echoed into the prompt. */
-  view?: { tab?: unknown; pair?: { from?: unknown; to?: unknown } };
+  view?: { tab?: unknown; pair?: { from?: unknown; to?: unknown }; currency?: unknown };
   /** Opt-in Guardian memory. 'device' carries the user's facts with the
    *  request (browser-stored, sanitised here); 'cloud' recalls from the
    *  chosen provider keyed by `verifiedAddress` — never the unauthenticated
@@ -567,6 +568,11 @@ export function formatPairFacts(pair?: { from?: unknown; to?: unknown }): string
 // re-validated here — a hallucinated tab id or symbol is dropped, never
 // echoed into the prompt.
 
+function validatedViewCurrency(view?: ConversationRequest['view']) {
+  const parsed = validateInteraction({ kind: 'currency', view: view?.currency }, { currencies: Object.keys(CURRENCY_BY_CODE) });
+  return parsed?.kind === 'currency' ? parsed.view : null;
+}
+
 export function formatViewContext(view?: ConversationRequest['view']): string {
   if (!view || typeof view !== 'object') return '';
 
@@ -580,12 +586,14 @@ export function formatViewContext(view?: ConversationRequest['view']): string {
   const pairFrom = canonicalPairSymbol(view.pair?.from);
   const pairTo = canonicalPairSymbol(view.pair?.to);
   const hasPair = Boolean(pairFrom && pairTo && pairFrom !== pairTo);
+  const currency = validatedViewCurrency(view);
 
-  if (!tab && !hasPair) return '';
+  if (!tab && !hasPair && !currency) return '';
 
   const parts: string[] = [];
   if (tab) parts.push(`the ${TAB_LABELS[tab]} tab`);
   if (hasPair) parts.push(`the ${pairFrom} → ${pairTo} pair`);
+  if (currency) parts.push(`${currency.currencyCode} against ${currency.benchmark}, ${currency.horizon}, ${currency.story ? 'currency story' : 'historical comparison'} (view only; not a holding, nationality or settlement asset)`);
   return `\nUSER'S CURRENT VIEW: ${parts.join(' · ')} — if the question is about what's on screen, answer against this surface.\n`;
 }
 
@@ -987,7 +995,7 @@ export async function runAdvisorConversation(input: ConversationRequest) {
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
-  const factsContext = await buildCurrencyFacts(message, input.pairContext);
+  const factsContext = await buildCurrencyFacts(`${message}\n${validatedViewCurrency(input.view)?.currencyCode ?? ''}`, input.pairContext);
   const newsEvidence = await buildCurrencyNewsContext(message, input.pairContext);
 
   // Opt-in memory: facts the user asked Guardian to remember (device or
@@ -1177,7 +1185,7 @@ export async function* runAdvisorConversationStream(input: ConversationRequest):
     : '';
   const portfolioContext = getPortfolioContext(portfolio);
   const brightDataContext = extractBrightDataContext(input.macroData);
-  const factsContext = await buildCurrencyFacts(message, input.pairContext);
+  const factsContext = await buildCurrencyFacts(`${message}\n${validatedViewCurrency(input.view)?.currencyCode ?? ''}`, input.pairContext);
   const newsEvidence = await buildCurrencyNewsContext(message, input.pairContext);
 
   const memory = await resolveMemoryContext(input);

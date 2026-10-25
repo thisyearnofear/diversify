@@ -80,8 +80,8 @@ export function contextualStarters(tab: TabId, context: StarterContext) {
       question = `What changes with ${pair}?`;
       prompt = `Explain the currency exposure and issuer risks of ${pair}, using dated sources. This is a comparison, not a request to trade.`;
     } else if (id === "currency" && context.currency) {
-      question = `What could move ${context.currency}?`;
-      prompt = `Explain risks affecting ${context.currency}, distinguishing dated history from current evidence.`;
+      question = tab === 'overview' ? `Show me ${context.currency}’s story` : `What could move ${context.currency}?`;
+      prompt = tab === 'overview' ? `Show me the story of ${context.currency}` : `Explain risks affecting ${context.currency}, distinguishing dated history from current evidence.`;
     } else if (id === "plan" && context.planName) {
       question = `Why this ${context.planName} allocation?`;
       prompt = `Explain the ${context.planName} allocation and its trade-offs. A selected plan is not a funded position or permission to move money.`;
@@ -89,7 +89,9 @@ export function contextualStarters(tab: TabId, context: StarterContext) {
       question = "What can I explore without a wallet?";
       prompt = "Explain what I can explore without a wallet. Do not infer holdings or active protection.";
     }
-    if (context.sample) prompt = `I am exploring sample mode, not my real holdings. ${prompt}`;
+    if (context.sample && !(tab === 'overview' && id === 'currency' && context.currency)) {
+      prompt = `I am exploring sample mode, not my real holdings. ${prompt}`;
+    }
     return { ...original, question, prompt };
   });
 }
@@ -106,28 +108,14 @@ export function readSelectedCurrency(): string | null {
 // Per-tab greeting for the empty state — one line, keyed to the surface the
 // user was on when they opened the drawer.
 export const GREETING_BY_TAB: Partial<Record<TabId, string>> = {
-  overview: "Ask about your savings picture",
+  overview: "Explore a currency with Guardian",
   protect: "Ask about your protection plan",
   exchange: "Ask about a swap or a payment",
   agent: "Ask about a decision or review",
 };
 export const DEFAULT_GREETING = "Ask Guardian for a clear next action";
 
-export const EXCHANGE_PAIR_KEY = "diversifi.exchange.pair";
-
-export function readExchangePair(): { fromToken: string; toToken: string } | null {
-  try {
-    const raw = sessionStorage.getItem(EXCHANGE_PAIR_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (typeof parsed?.fromToken === "string" && typeof parsed?.toToken === "string" && parsed.fromToken !== parsed.toToken) {
-      return { fromToken: parsed.fromToken, toToken: parsed.toToken };
-    }
-  } catch {
-    /* opaque — fall back to the tab label alone */
-  }
-  return null;
-}
+export { EXCHANGE_PAIR_KEY, readExchangePair } from '@/lib/exchange-view';
 
 /** Desktop = lg breakpoint and up (1024px), same as Tailwind `lg:`. */
 export function useIsDesktop(): boolean {

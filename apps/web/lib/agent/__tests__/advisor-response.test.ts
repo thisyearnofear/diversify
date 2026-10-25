@@ -270,6 +270,12 @@ describe("FACTS grounding", () => {
 });
 
 describe("view context", () => {
+  it('carries a currency follow-up without accepting invented facts or identity', () => {
+    const view = { tab: 'overview', currency: { currencyCode: 'NGN', benchmark: 'EUR', horizon: '5yr', story: false } };
+    expect(formatViewContext(view)).toContain('NGN against EUR, 5yr');
+    expect(formatViewContext(view)).toContain('not a holding, nationality or settlement asset');
+    expect(formatViewContext({ currency: { ...view.currency, amount: 500, country: 'invented' } })).toBe('');
+  });
   it("renders a validated tab + pair as 'User is viewing'", async () => {
     await runAdvisorConversation({
       message: "what should I do here?",

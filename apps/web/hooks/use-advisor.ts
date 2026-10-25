@@ -8,6 +8,8 @@ import { useAgentConfig } from './use-agent-config';
 // gemini, ethers, lifi…) stays out of the app's first-load bundle.
 import { saveVoiceInsight } from '@diversifi/shared/src/services/ai/voice-insights-history';
 import type { AIMessage } from './agent-types';
+import { useGuardianVoice } from '../context/app/GuardianVoiceContext';
+import { useBalanceVisibility } from '../context/app/BalanceVisibilityContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -15,6 +17,8 @@ export function useAdvisor() {
   const { addMessage, addUserMessage, setDrawerOpen, markAsRead, unreadCount, addGuardianUpdate, dismissGuardianUpdate, markGuardianUpdateRead, snoozeGuardianUpdate, muteGuardianUpdateType, guardianUpdates, setActiveGuardianReview } = useAIConversation();
   const { capabilities } = useAgentStatus();
   const { config } = useAgentConfig();
+  const voiceSession = useGuardianVoice();
+  const { hidden: balancesHidden } = useBalanceVisibility();
   const { generateSpeech } = useAgentVoice({ apiBase: API_BASE, capabilities });
   const { sendChatMessage } = useAgentChat({
     apiBase: API_BASE,
@@ -28,6 +32,8 @@ export function useAdvisor() {
       message: string,
       options?: {
         includeVoiceInsights?: boolean;
+        /** Compact voice turns keep the current instrument visible. */
+        openDrawer?: boolean;
         /** Journaled Guardian record attached for a grounded drill-down. */
         decisionRef?: import('../context/app/NavigationContext').GuardianDecisionRef;
         /** The pair being asked about — symbols only, facts are
@@ -36,8 +42,8 @@ export function useAdvisor() {
       },
     ) => {
       addUserMessage(message);
-      setDrawerOpen(true);
-      sendChatMessage(
+      if (options?.openDrawer !== false) setDrawerOpen(true);
+      await sendChatMessage(
         message,
         options?.decisionRef || options?.pair
           ? { ...(options.decisionRef ? { decisionRef: options.decisionRef } : {}), ...(options.pair ? { pair: options.pair } : {}) }
@@ -129,22 +135,11 @@ export function useAdvisor() {
         });
       }
 
-      if (speak && config.voiceResponsesEnabled && capabilities.voiceOutput && generateSpeech) {
-        try {
-          const speechBlob = await generateSpeech(content);
-          if (speechBlob) {
-            const url = URL.createObjectURL(speechBlob);
-            const audio = new Audio(url);
-            audio.play().catch((playError) => {
-              console.warn("[useAdvisor] Audio playback failed:", playError);
-            });
-          }
-        } catch (err) {
-          console.warn("[useAdvisor] Failed to generate proactive speech:", err);
-        }
+      if (speak && !balancesHidden && config.voiceResponsesEnabled && capabilities.voiceOutput) {
+        await voiceSession?.speak(content, generateSpeech);
       }
     },
-    [addMessage, capabilities.voiceOutput, config.voiceResponsesEnabled, generateSpeech, setDrawerOpen, addGuardianUpdate],
+    [addMessage, capabilities.voiceOutput, config.voiceResponsesEnabled, generateSpeech, setDrawerOpen, addGuardianUpdate, voiceSession, balancesHidden],
   );
 
   const openAdvisor = useCallback(() => {

@@ -90,7 +90,7 @@ function AppShellInner() {
     activeTab, setActiveTab,
     experienceMode,
     address, isWhitelisted, isFarcaster, walletChainId,
-    connectWallet, openAdvisor, unreadCount,
+    connectWallet, openAdvisor, unreadCount, handleTranscription,
     guardianUpdates, openGuardianReview, dismissGuardianUpdate, snoozeGuardianUpdate, muteGuardianUpdateType,
     isMiniPay,
     openWalletTutorial, closeTutorial, isTutorialOpen,
@@ -155,6 +155,7 @@ function AppShellInner() {
       <div className="max-w-md mx-auto lg:max-w-5xl">
       <AppBackdrop accent={accent} patternClassName={shellPattern?.className ?? null} />
       <FloatingControls
+        onTranscription={handleTranscription}
         openAdvisor={openAdvisor}
         unreadCount={unreadCount}
         guardianUpdates={guardianUpdates}

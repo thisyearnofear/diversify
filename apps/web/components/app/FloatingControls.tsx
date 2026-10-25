@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 
-import { useAIConversation } from "@/context/AIConversationContext";
+import { useAIConversationOptional } from "@/context/AIConversationContext";
 
 import TourTrigger from "@/components/tour/TourTrigger";
 import { GuardianMascot } from "@/components/shared/GuardianMascot";
@@ -13,12 +13,15 @@ import GuardianUpdates from "@/components/agent/GuardianUpdates";
 import { ASK_GUARDIAN_LABEL } from "@/constants/guardian-copy";
 import type { UserExperienceMode } from "@/context/app/types";
 import type { GuardianUpdate } from "@/context/AIConversationContext";
+import { useGuardianVoice } from '@/context/app/GuardianVoiceContext';
+import { GuardianVoiceControls } from '@/components/agent/GuardianVoiceControls';
 
 const GuidedTour = dynamic(() => import("@/components/tour/GuidedTour"), {
   ssr: false,
 });
 
 export interface FloatingControlsProps {
+  onTranscription?: (text: string) => void | Promise<void>;
   openAdvisor: () => void;
   unreadCount: number;
   experienceMode?: UserExperienceMode;
@@ -30,6 +33,7 @@ export interface FloatingControlsProps {
 }
 
 export default function FloatingControls({
+  onTranscription,
   openAdvisor,
   unreadCount,
   experienceMode,
@@ -39,15 +43,11 @@ export default function FloatingControls({
   onSnoozeGuardianUpdate,
   onMuteGuardianUpdateType,
 }: FloatingControlsProps) {
+  const voice = useGuardianVoice();
   // The FAB morphs into the desktop docked panel via a shared layoutId —
   // while the drawer is open the pill folds away. Read the context
   // defensively so isolated tests outside the provider still render the FAB.
-  let isDrawerOpen = false;
-  try {
-    isDrawerOpen = useAIConversation().isDrawerOpen;
-  } catch {
-    isDrawerOpen = false;
-  }
+  const isDrawerOpen = useAIConversationOptional()?.isDrawerOpen ?? false;
   const reducedMotion = useReducedMotion();
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
@@ -58,7 +58,8 @@ export default function FloatingControls({
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
-  const showGuardianFab = !isDrawerOpen;
+  const showVoice = !isDrawerOpen && voice?.active && onTranscription;
+  const showGuardianFab = !isDrawerOpen && !showVoice;
   // Active (non-dismissed, non-expired) updates stay in the tray for review.
   const activeUpdates = guardianUpdates.filter(
     (u) => !u.dismissed && u.expiresAt.getTime() > Date.now(),
@@ -80,6 +81,11 @@ export default function FloatingControls({
   return (
     <>
       <TourTrigger />
+      {showVoice && (
+        <div className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] left-3 right-3 lg:left-auto lg:w-80 z-40">
+          <GuardianVoiceControls compact onTranscription={onTranscription!} onOpenChat={openAdvisor} />
+        </div>
+      )}
 
       <AnimatePresence>
         <GuidedTour />

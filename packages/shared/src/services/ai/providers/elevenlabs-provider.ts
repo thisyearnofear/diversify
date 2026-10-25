@@ -4,12 +4,22 @@
  */
 
 import { BaseAIProvider } from './base-ai-provider';
-import { 
+import {
   TTSOptions, 
   TTSResult, 
   TranscriptionResult,
   AIProviderConfig
 } from '../types';
+
+const TTS_MODELS = ['eleven_flash_v2_5', 'eleven_multilingual_v2'] as const;
+export function elevenLabsCapabilities(config: AIProviderConfig) {
+  const model = config.elevenlabsTtsModel || 'eleven_flash_v2_5';
+  return {
+    transcription: Boolean(config.elevenlabsApiKey),
+    speech: Boolean(config.elevenlabsApiKey && config.elevenlabsVoiceId && TTS_MODELS.some(id => id === model)),
+    model,
+  };
+}
 
 export class ElevenLabsProvider extends BaseAIProvider {
   private apiKey: string | undefined;
@@ -26,13 +36,10 @@ export class ElevenLabsProvider extends BaseAIProvider {
     if (!this.apiKey) {
       throw new Error('ElevenLabs API key is required');
     }
-    if (!this.voiceId) {
-      throw new Error('ElevenLabs voice ID is required');
-    }
   }
 
   isAvailable(): boolean {
-    return !!this.apiKey && !!this.voiceId;
+    return !!this.apiKey;
   }
 
   // ElevenLabs doesn't currently support chat completion in this implementation
@@ -43,7 +50,7 @@ export class ElevenLabsProvider extends BaseAIProvider {
   async generateSpeech(
     options: TTSOptions
   ): Promise<TTSResult> {
-    if (!this.isAvailable()) {
+    if (!elevenLabsCapabilities(this.config).speech) {
       throw new Error('ElevenLabs provider not available for TTS');
     }
 
@@ -59,7 +66,7 @@ export class ElevenLabsProvider extends BaseAIProvider {
         },
         body: JSON.stringify({
           text: options.text,
-          model_id: 'eleven_multilingual_v2',
+          model_id: elevenLabsCapabilities(this.config).model,
           voice_settings: { stability: 0.5, similarity_boost: 0.75 },
         }),
       }
@@ -72,8 +79,8 @@ export class ElevenLabsProvider extends BaseAIProvider {
 
     const audioBuffer = Buffer.from(await response.arrayBuffer());
     return {
-      // base64 so the result stays JSON-serializable through the caching layer;
-      // the /api/agent/speak route decodes it back to audio bytes.
+      // The /api/agent/speak route decodes the provider result to audio bytes.
+      // Private spoken responses are deliberately not placed in shared cache.
       data: audioBuffer.toString('base64'),
       provider: 'elevenlabs',
       voiceId,
@@ -91,10 +98,14 @@ export class ElevenLabsProvider extends BaseAIProvider {
     }
 
     const fs = require('fs') as typeof import('fs');
+    const { extname } = require('path') as typeof import('path');
     const audio = fs.readFileSync(filePath);
     const form = new FormData();
-    form.append('file', new Blob([audio]), 'audio.webm');
-    form.append('model_id', 'scribe_v1');
+    const extension = extname(filePath) || '.webm';
+    const mime = extension === '.m4a' || extension === '.mp4' ? 'audio/mp4'
+      : extension === '.ogg' ? 'audio/ogg' : extension === '.wav' ? 'audio/wav' : 'audio/webm';
+    form.append('file', new Blob([audio], { type: mime }), `audio${extension}`);
+    form.append('model_id', 'scribe_v2');
 
     const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
       method: 'POST',

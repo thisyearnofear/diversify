@@ -13,7 +13,9 @@
  * fake currency-vs-benchmark delta.
  */
 import { readMomentBenchmark, readMomentHorizon } from '../constants/moment-horizon';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useNavigationOptional } from '../context/app/NavigationContext';
+import { explainCurrencyReading } from '@diversifi/shared/src/services/ai/guardian-interaction';
 import { useRouter } from 'next/router';
 import { useCurrencyRisk } from './use-currency-risk';
 import { regionForCountry } from './use-user-region';
@@ -43,6 +45,8 @@ import {
 } from '@/constants/currency-risk';
 
 export interface UseCurrencyMomentReturn {
+  inspectedCurrency: string | null;
+  setInspectedCurrency: Dispatch<SetStateAction<string | null>>;
   moment: NarrativeMoment | null;
   /** Honest inflation-only fallback for uncovered currencies. null when a
       real currency moment exists or no region/inflation data is available. */
@@ -86,12 +90,33 @@ export function useCurrencyMoment(
   options?: UseCurrencyMomentOptions,
 ): UseCurrencyMomentReturn {
   const risk = useCurrencyRisk();
+  const navigation = useNavigationOptional();
+  const exploration = navigation?.currencyView;
+  const setExploration = navigation?.setCurrencyView;
+  const publishReading = navigation?.publishCurrencyReading;
   const { inflationData, dataSource, getDataFreshness } = useInflationData();
   const { config: profileConfig } = useProtectionProfile();
-  const [benchmark, setBenchmark] = useState<Benchmark>('USD');
+  const [localBenchmark, setLocalBenchmark] = useState<Benchmark>('USD');
+  const benchmark = exploration?.benchmark ?? localBenchmark;
   // Continue onboarding's horizon for this session so Home doesn't contradict
   // the number the visitor just read (constants/moment-horizon).
-  const [horizon, setHorizon] = useState<Horizon>(() => readMomentHorizon() ?? '1yr');
+  const [localHorizon, setLocalHorizon] = useState<Horizon>(() => readMomentHorizon() ?? '1yr');
+  const horizon = exploration?.horizon ?? localHorizon;
+  const setBenchmark = useCallback((value: Benchmark) => {
+    setLocalBenchmark(value);
+    if (exploration) setExploration?.({ ...exploration, benchmark: value, story: false });
+  }, [exploration, setExploration]);
+  const setHorizon = useCallback((value: Horizon) => {
+    setLocalHorizon(value);
+    if (exploration) setExploration?.({ ...exploration, horizon: value, story: false });
+  }, [exploration, setExploration]);
+  const [localInspectedCurrency, setLocalInspectedCurrency] = useState<string | null>(null);
+  const inspectedCurrency = exploration ? (exploration.story ? exploration.currencyCode : null) : localInspectedCurrency;
+  const setInspectedCurrency = useCallback<Dispatch<SetStateAction<string | null>>>((next) => {
+    const code = typeof next === 'function' ? next(inspectedCurrency) : next;
+    setLocalInspectedCurrency(code);
+    if (exploration) setExploration?.({ ...exploration, story: code !== null });
+  }, [exploration, inspectedCurrency, setExploration]);
   const [savingsAmount, setSavingsAmount] = useState(10000);
   // Re-seed whenever the effective country changes (detection resolved OR a
   // diaspora visitor overrides their country). Benchmark-currency visitors
@@ -119,7 +144,8 @@ export function useCurrencyMoment(
   useEffect(() => {
     if (viewCode && risk.currencyCode === viewCode) setViewCode(null);
   }, [viewCode, risk.currencyCode]);
-  const viewEntry = viewCode ? CURRENCY_BY_CODE[viewCode] ?? null : null;
+  const selectedViewCode = exploration?.currencyCode ?? viewCode;
+  const viewEntry = selectedViewCode ? CURRENCY_BY_CODE[selectedViewCode] ?? null : null;
   // Geo failed entirely (no detected country, no override, detection
   // finished): the object still renders — seeded with the caller's
   // display-only default country. Nothing is persisted: the country
@@ -142,7 +168,7 @@ export function useCurrencyMoment(
     if (seededFor === code) return;
     const remembered = readMomentBenchmark(code);
     const continuedBenchmark = remembered && selectableBenchmarks(code).includes(remembered) ? remembered : null;
-    setBenchmark(
+    setLocalBenchmark(
       viewEntry
         ? momentBenchmarkFor(code)
         : continuedBenchmark ?? (risk.isBenchmarkCurrency || isDefaultComparisonInert(activeEntry)
@@ -167,6 +193,22 @@ export function useCurrencyMoment(
       dataAsOf: risk.dataAsOf,
     });
   }, [activeEntry, viewEntry, risk.liveDepreciation1yr, risk.isLive1yr, risk.dataAsOf, benchmark, horizon, savingsAmount]);
+
+  // Publish the same reading Home renders, excluding savings amounts and
+  // other personal data. "Explain that number" never needs to infer a rate.
+  useEffect(() => {
+    if (!moment) {
+      publishReading?.(null);
+      return;
+    }
+    publishReading?.({
+      currencyCode: moment.currencyCode,
+      benchmark: moment.benchmark,
+      horizon: moment.horizon,
+      story: inspectedCurrency !== null,
+      explanation: explainCurrencyReading(moment),
+    });
+  }, [moment, inspectedCurrency, publishReading]);
 
   // Honest fallback for uncovered currencies: an inflation-only moment.
   // We never fake a currency-vs-benchmark delta the visitor's currency
@@ -205,6 +247,8 @@ export function useCurrencyMoment(
   ]);
 
   return {
+    inspectedCurrency,
+    setInspectedCurrency,
     moment,
     inflationMoment,
     isLoading: risk.isLoading,
@@ -220,6 +264,8 @@ export function useCurrencyMoment(
         moment (diaspora override). Writes user-country-code and re-seeds.
         A deliberate country pick also leaves any shared view. */
     onChangeCountry: (code: string) => {
+      setExploration?.(null);
+      setLocalInspectedCurrency(null);
       setViewCode(null);
       risk.setCountryOverride(code);
     },
@@ -227,7 +273,11 @@ export function useCurrencyMoment(
     countryCode: risk.countryCode,
     countryIsDefault,
     viewingShared: Boolean(viewEntry),
-    clearSharedView: () => setViewCode(null),
+    clearSharedView: () => {
+      setExploration?.(null);
+      setLocalInspectedCurrency(null);
+      setViewCode(null);
+    },
     /** Philosophy-aware accent + consequence, or null when no philosophy.
         The chosen archetype drives the moment's colour so the first viewport
         speaks the same values language as the rest of the protection plan. */

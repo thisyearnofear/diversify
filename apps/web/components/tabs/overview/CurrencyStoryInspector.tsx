@@ -14,7 +14,10 @@ import { useProofFeed } from '@/hooks/use-proof-feed';
 import { useCurrencyNews } from '@/hooks/use-currency-news';
 import type { CurrencyNewsItem } from '@/lib/currency-news';
 import { useLiveCurrencyRisk } from '@/components/swap/CorridorContext';
-import { corridorSignalForCurrency } from '@/lib/corridor-context';
+import { corridorSignalForCurrency, moneyNameFor } from '@/lib/corridor-context';
+import { voiceFor } from '@/lib/corridor-voice';
+import { useGeoCountry } from '@/hooks/use-geo-country';
+import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import { Coin } from '@/components/shared/FloatingCoins';
 import { BENCHMARK_COLORS } from '@/components/shared/palette';
 import FlickScrollRow, { useDidDrag } from '@/components/shared/FlickScrollRow';
@@ -323,6 +326,9 @@ function CurrencyStoryBody({
   const signal = corridorSignalForCurrency(feed?.recent, code);
   const news = useCurrencyNews(entry ? code : null);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [localPhrase, setLocalPhrase] = useState(false);
+  const reducedMotion = useReducedMotion();
+  const phrase = featureDenied('thesis', useGeoCountry()) ? null : voiceFor(code);
   if (!entry) return null;
   const eventKeys = trail.map((ev, i) => `${ev.year}-${i}`);
   const effectiveKey =
@@ -342,9 +348,33 @@ function CurrencyStoryBody({
       <div className="flex justify-center">
         <Coin size={72} symbol={entry.code} color={BENCHMARK_COLORS.USD} />
       </div>
-      <p className="mt-2 text-sm font-bold text-gray-900 dark:text-white">
-        {entry.countryName} · {entry.code}
-      </p>
+      <motion.h3
+        key={localPhrase && phrase ? 'phrase' : 'name'}
+        initial={reducedMotion ? false : { opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reducedMotion ? { duration: 0 } : reveal}
+        className="mt-2 text-xl font-semibold text-ink"
+      >
+        {localPhrase && phrase ? phrase.epithet : moneyNameFor(entry.code)}
+      </motion.h3>
+      {phrase && (
+        <div role="group" aria-label="Currency story wording" className="inline-flex items-center gap-1 text-xs">
+          {[
+            { selected: false, label: 'Currency name' },
+            { selected: true, label: 'Local phrase' },
+          ].map(option => (
+            <button
+              key={option.label}
+              type="button"
+              aria-pressed={localPhrase === option.selected}
+              onClick={() => setLocalPhrase(option.selected)}
+              className={`min-h-tap px-3 rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${localPhrase === option.selected ? 'font-semibold text-ink underline underline-offset-4' : 'text-ink-muted hover:text-ink'}`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
       {live?.series ? (
         <StorySparkline key={code} code={code} series={live.series} asOf={live.asOf} />
       ) : (
