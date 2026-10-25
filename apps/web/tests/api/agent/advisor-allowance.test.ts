@@ -29,9 +29,11 @@ vi.mock('@/models/AgentUsage', async (importActual) => {
 });
 
 import handler from '@/pages/api/agent/advisor';
+import { mintDemoToken } from '@/lib/demo-token';
 
 const WALLET = '0xABC0000000000000000000000000000000000001';
 const RESETS = '2026-01-02T00:00:00.000Z';
+const DEMO_MOCK_ADDRESS = '0xDemo1234567890123456789012345678901234';
 
 type ResMock = {
   statusCode?: number;
@@ -129,14 +131,60 @@ describe('advisor daily-question gate', () => {
     expect(mocks.runStream).not.toHaveBeenCalled();
   });
 
-  it('skips counting for demo-mode requests', async () => {
+  it('consumes the demo bucket (not the real allowance) for a minted demo token', async () => {
+    const mint = mintDemoToken('7.7.7.7');
+    expect(mint).not.toBeNull();
     const res = makeRes();
     await handler(
-      req({ message: 'hi', address: '0xDemo1234567890123456789012345678901234' }),
+      req({ message: 'hi', address: DEMO_MOCK_ADDRESS, demoToken: mint!.token }),
       res as never,
     );
-    expect(mocks.consumeQuestion).not.toHaveBeenCalled();
+    expect(mocks.consumeQuestion).toHaveBeenCalledTimes(1);
+    expect(mocks.consumeQuestion).toHaveBeenCalledWith('demo:7.7.7', 'demo');
     expect(mocks.runConversation).toHaveBeenCalled();
+    expect(res.statusCode).toBe(200);
+  });
+
+  it('no longer skips counting for the mock 0xDemo address alone', async () => {
+    const res = makeRes();
+    await handler(req({ message: 'hi', address: DEMO_MOCK_ADDRESS }), res as never);
+    expect(mocks.consumeQuestion).toHaveBeenCalledWith('ip:7.7.7.7', 'ip');
+  });
+
+  it('no longer honors the client-asserted demo header or body flag', async () => {
+    const res = makeRes();
+    await handler(req({ message: 'hi', demo: true }), res as never);
+    expect(mocks.consumeQuestion).toHaveBeenCalledWith('ip:7.7.7.7', 'ip');
+  });
+
+  it('falls back to the real gate for a forged or expired demo token', async () => {
+    const res = makeRes();
+    await handler(req({ message: 'hi', demoToken: `${Date.now() + 86400000}.deadbeef` }), res as never);
+    expect(mocks.consumeQuestion).toHaveBeenCalledWith('ip:7.7.7.7', 'ip');
+  });
+
+  it('returns the sample-mode 429 when the demo bucket is spent', async () => {
+    mocks.consumeQuestion.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      limit: 20,
+      resetsAt: RESETS,
+    });
+    const mint = mintDemoToken('7.7.7.7')!;
+    const res = makeRes();
+    await handler(req({ message: 'hi', demoToken: mint.token }), res as never);
+    expect(res.statusCode).toBe(429);
+    expect((res.body as any).message).toMatch(/Sample questions/);
+    expect(mocks.runConversation).not.toHaveBeenCalled();
+  });
+
+  it('a demo request falls through to the IP gate when the demo bucket store errors', async () => {
+    mocks.consumeQuestion.mockRejectedValueOnce(new Error('mongo down'));
+    const mint = mintDemoToken('7.7.7.7')!;
+    const res = makeRes();
+    await handler(req({ message: 'hi', demoToken: mint.token }), res as never);
+    expect(mocks.consumeQuestion).toHaveBeenCalledTimes(2);
+    expect(mocks.consumeQuestion).toHaveBeenNthCalledWith(2, 'ip:7.7.7.7', 'ip');
     expect(res.statusCode).toBe(200);
   });
 
@@ -219,14 +267,15 @@ describe('advisor allowance echo', () => {
     expect(done.allowance).toEqual({ remaining: 4, limit: 10, resetsAt: RESETS });
   });
 
-  it('sends no allowance for demo requests', async () => {
+  it('echoes the demo bucket allowance for token-verified demo requests', async () => {
+    const mint = mintDemoToken('7.7.7.7')!;
     const res = makeRes();
-    await handler(
-      req({ message: 'hi', address: '0xDemo1234567890123456789012345678901234' }),
-      res as never,
-    );
+    await handler(req({ message: 'hi', demoToken: mint.token }), res as never);
     expect(res.statusCode).toBe(200);
-    expect('allowance' in (res.body as any)).toBe(false);
+    expect(res.body).toMatchObject({
+      allowance: { remaining: 4, limit: 10, resetsAt: RESETS },
+    });
+    expect(mocks.consumeQuestion).toHaveBeenCalledWith('demo:7.7.7', 'demo');
   });
 
   it('sends no allowance when the gate fails open', async () => {

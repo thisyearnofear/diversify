@@ -37,6 +37,14 @@ export const REQUIRES_PROOF: RewardActionKey[] = ['blog_post', 'youtube_video', 
 export const WALLET_DAILY_QUESTIONS = 10;
 export const ANON_DAILY_QUESTIONS = 3;
 
+/**
+ * Sample-mode bucket. Demo status is proven by a server-minted token
+ * (lib/demo-token), never a client flag — the cap is generous because the
+ * answers gate real spend, tight enough that minted tokens can't fund a
+ * scraping operation.
+ */
+export const DEMO_DAILY_QUESTIONS = 20;
+
 /** UTC day key 'YYYY-MM-DD' — the allowance period boundary. */
 export function utcDayKey(now: Date = new Date()): string {
   return now.toISOString().slice(0, 10);

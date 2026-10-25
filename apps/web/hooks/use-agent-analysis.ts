@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { usePrivy } from '@/context/PrivyProvider';
 import { useWalletContext } from "../components/wallet/WalletProvider";
+import { DemoModeContext } from "../context/app/DemoModeContext";
+import { getDemoToken } from "../lib/demo-session";
 // Deep leaf imports — NOT the barrel — keeps the portfolio-analysis + strategy stacks out of first-load.
 import { analyzePortfolio, type PortfolioAnalysis } from "@diversifi/shared/src/utils/portfolio-analysis";
 import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
@@ -100,6 +102,8 @@ export function useAgentAnalysis({
   const { user } = usePrivy();
   const { address, signMessage } = useWalletContext();
   const { showToast } = useToast();
+  const demoMode = useContext(DemoModeContext)?.demoMode;
+  const demoModeActive = demoMode?.isActive === true;
   const [state, setState] = useState<AnalysisStoreState>(cachedState);
 
   useEffect(() => {
@@ -249,6 +253,7 @@ export function useAgentAnalysis({
         // Long-running synthesis (World Bank / IMF / DefiLlama) — keep the
         // original 30s budget so the rotating thinkingStep messages don't
         // give up before the LLM finishes.
+        const demoToken = demoModeActive ? await getDemoToken() : undefined;
         const response = await fetchWithTimeout(
           `${apiBase}/api/agent/advisor`,
           {
@@ -270,6 +275,7 @@ export function useAgentAnalysis({
               userRegion: userRegion,
               strategyPrompt: strategyPrompt || getStrategyPrompt(),
               planContext,
+              ...(demoToken ? { demoToken } : {}),
             }),
           },
           ADVISOR_ANALYSIS_TIMEOUT_MS,
@@ -400,7 +406,7 @@ export function useAgentAnalysis({
         }
       }
     },
-    [apiBase, capabilities.analysis, config, addActivity, addMessage, showToast, address],
+    [apiBase, capabilities.analysis, config, addActivity, addMessage, showToast, address, demoModeActive],
   );
 
   const analyze = useCallback(

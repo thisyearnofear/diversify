@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { runAdvisorAnalysis, runAdvisorConversation, runAdvisorConversationStream } from '@/lib/agent/advisor-core';
 import { requireWalletAuth } from '@/lib/require-wallet-auth';
-import { consumeQuestion, resolveSubject } from '../../../models/AgentUsage';
+import { consumeQuestion, resolveSubject, type SubjectKind } from '../../../models/AgentUsage';
+import { verifyDemoToken, demoSubject } from '../../../lib/demo-token';
 
 // In-memory per-IP rate limiter. The advisor calls paid LLM providers, so an
 // unauthenticated, unthrottled endpoint is an open spend faucet. Mirrors the
@@ -39,37 +40,51 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // ── Daily question allowance (server-enforced) ──────────────────────
     // Subject = the wallet address in the request when well-formed, else the
-    // client IP. Demo-mode requests (flagged by the client, or the mock
-    // 0xDemo… address) skip counting entirely.
-    const isDemoRequest =
-      req.body?.demo === true ||
-      req.headers['x-demo-mode'] === '1' ||
-      (typeof req.body?.address === 'string' && /^0xdemo/i.test(req.body.address));
+    // client IP. Sample mode gets its own bucket only when the request
+    // carries a demo token this server minted (lib/demo-token) — client-
+    // asserted demo flags were spoofable into unlimited paid calls.
+    const demoProven = verifyDemoToken(req.body?.demoToken, clientIp);
+    const ipSubject = resolveSubject(req.body?.address, clientIp);
+    const gateTargets: Array<{ subject: string; kind: SubjectKind }> = demoProven
+      ? [{ subject: demoSubject(clientIp), kind: 'demo' }, ipSubject]
+      : [ipSubject];
 
     // Echoed back on success so the client can refresh its allowance
     // mirror without a second fetch — only set when the gate consumed.
     let allowance: { remaining: number; limit: number; resetsAt: string } | undefined;
 
-    if (!isDemoRequest) {
-      try {
-        const { subject, kind } = resolveSubject(req.body?.address, clientIp);
-        const gate = await consumeQuestion(subject, kind);
-        if (!gate.allowed) {
-          return res.status(429).json({
-            error: 'daily_questions_exhausted',
-            message: 'Daily questions used up — earn more below',
-            remaining: 0,
-            limit: gate.limit,
-            resetsAt: gate.resetsAt,
-          });
+    try {
+      let gate: Awaited<ReturnType<typeof consumeQuestion>> | undefined;
+      for (const target of gateTargets) {
+        try {
+          gate = await consumeQuestion(target.subject, target.kind);
+          break;
+        } catch (err) {
+          // Demo bucket unreachable — fall through to the real gate so the
+          // request is still counted; a token never buys the old uncounted
+          // free pass.
+          if (target === gateTargets[gateTargets.length - 1]) throw err;
         }
-        allowance = { remaining: gate.remaining, limit: gate.limit, resetsAt: gate.resetsAt };
-      } catch (gateError) {
-        // Allowance store unavailable — fail open so a Mongo outage can't
-        // silence the advisor; the per-minute limiter above still bounds
-        // spend.
-        console.warn('[Advisor API] allowance check failed open:', (gateError as Error).message);
       }
+      if (gate && !gate.allowed) {
+        return res.status(429).json({
+          error: 'daily_questions_exhausted',
+          message: gateTargets[0].kind === 'demo'
+            ? 'Sample questions used up for today — connect your wallet to keep exploring'
+            : 'Daily questions used up — earn more below',
+          remaining: 0,
+          limit: gate.limit,
+          resetsAt: gate.resetsAt,
+        });
+      }
+      if (gate) {
+        allowance = { remaining: gate.remaining, limit: gate.limit, resetsAt: gate.resetsAt };
+      }
+    } catch (gateError) {
+      // Allowance store unavailable — fail open so a Mongo outage can't
+      // silence the advisor; the per-minute limiter above still bounds
+      // spend.
+      console.warn('[Advisor API] allowance check failed open:', (gateError as Error).message);
     }
 
     // Cloud Guardian memory is keyed by the signature-verified address only

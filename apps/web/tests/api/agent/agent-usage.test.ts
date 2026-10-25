@@ -45,6 +45,13 @@ describe('resolveSubject', () => {
     expect(dailyLimitFor('wallet')).toBe(10);
     expect(dailyLimitFor('ip')).toBe(3);
   });
+
+  it('gives verified demo subjects their own 20-question bucket', () => {
+    expect(dailyLimitFor('demo')).toBe(20);
+    // resolveSubject never hands out the demo kind — only the server-side
+    // token gate does.
+    expect(resolveSubject('0xDemo1234', '1.1.1.1').kind).not.toBe('demo');
+  });
 });
 
 describe('consumeQuestion', () => {
@@ -74,6 +81,22 @@ describe('consumeQuestion', () => {
     expect(r.allowed).toBe(false);
     expect(r.remaining).toBe(0);
     expect(inc).not.toHaveBeenCalled();
+  });
+
+  it('counts demo subjects against the demo cap in their own day doc', async () => {
+    const find = vi.spyOn(AgentUsage, 'findOneAndUpdate').mockResolvedValue({
+      _id: 'x', subject: 'demo:203.0.113', day: utcDayKey(), questions: 19, bonus: 0,
+    } as never);
+    vi.spyOn(AgentUsage, 'updateOne').mockResolvedValue({ modifiedCount: 1 } as never);
+    const r = await consumeQuestion('demo:203.0.113', 'demo');
+    expect(find).toHaveBeenCalledWith(
+      { subject: 'demo:203.0.113', day: utcDayKey() },
+      { $setOnInsert: { subject: 'demo:203.0.113', day: utcDayKey() } },
+      { upsert: true, new: true },
+    );
+    expect(r.allowed).toBe(true);
+    expect(r.limit).toBe(20);
+    expect(r.remaining).toBe(0);
   });
 
   it('earned bonus raises the same day\u2019s cap', async () => {

@@ -15,6 +15,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import dbConnect from '../lib/mongodb';
 import {
   ANON_DAILY_QUESTIONS,
+  DEMO_DAILY_QUESTIONS,
   WALLET_DAILY_QUESTIONS,
   REWARD_ACTIONS,
   utcDayKey,
@@ -51,7 +52,7 @@ export const AgentUsage =
 
 // ── Allowance helpers (server-only) ──────────────────────────────────────
 
-export type SubjectKind = 'wallet' | 'ip';
+export type SubjectKind = 'wallet' | 'ip' | 'demo';
 
 const WALLET_ADDRESS_RE = /^0x[a-f0-9]{40}$/i;
 
@@ -60,6 +61,9 @@ const WALLET_ADDRESS_RE = /^0x[a-f0-9]{40}$/i;
  * address wins the wallet allowance; anything else (missing, malformed,
  * or a non-address string like an IP passed as `subject`) falls back to
  * the caller's IP so a query param can't claim the higher limit.
+ *
+ * Never returns the `demo` kind — a demo subject is only ever derived
+ * server-side from a verified demo token (see lib/demo-token).
  */
 export function resolveSubject(
   address: unknown,
@@ -72,6 +76,7 @@ export function resolveSubject(
 }
 
 export function dailyLimitFor(kind: SubjectKind): number {
+  if (kind === 'demo') return DEMO_DAILY_QUESTIONS;
   return kind === 'wallet' ? WALLET_DAILY_QUESTIONS : ANON_DAILY_QUESTIONS;
 }
 

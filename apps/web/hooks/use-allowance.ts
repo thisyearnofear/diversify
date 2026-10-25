@@ -45,12 +45,11 @@ export interface EarnAction {
 }
 
 // ── Global fetch tap ─────────────────────────────────────────────────────
-// use-agent-chat owns the advisor fetch and can't be edited from here, so
-// this module installs one lightweight interceptor: it tags advisor calls
-// with the demo header while demo mode is active, and watches for the
-// gate's 429 so every mounted hook instance snaps to exhausted without a
-// poll. Installed once, process-wide.
-let demoModeActive = false;
+// use-agent-chat owns the advisor fetch, so this module installs one
+// lightweight interceptor: it watches for the gate's 429 so every mounted
+// hook instance snaps to exhausted without a poll. Installed once,
+// process-wide. (Demo mode no longer rides here — it proves itself with a
+// server-minted token in the request body; see lib/demo-session.ts.)
 let fetchPatched = false;
 
 function ensureFetchPatched() {
@@ -62,13 +61,7 @@ function ensureFetchPatched() {
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const isAdvisor = url.includes('/api/agent/advisor');
-    let nextInit = init;
-    if (isAdvisor && demoModeActive) {
-      const headers = new Headers(init?.headers);
-      headers.set('x-demo-mode', '1');
-      nextInit = { ...init, headers };
-    }
-    const res = await original(input, nextInit);
+    const res = await original(input, init);
     if (isAdvisor && res.status === 429) {
       res.clone().json()
         .then((detail) => window.dispatchEvent(new CustomEvent(EXHAUSTED_EVENT, { detail })))
@@ -195,11 +188,10 @@ export function useAllowance() {
     };
   }, [refresh]);
 
-  // Install the fetch tap and keep the demo flag current.
+  // Install the fetch tap (idempotent, process-wide).
   useEffect(() => {
-    demoModeActive = isDemo;
     ensureFetchPatched();
-  }, [isDemo]);
+  }, []);
 
   const grant = useCallback(async (action: RewardActionKey, proof?: string) => {
     if (isDemo) return { success: true, granted: 0 };
