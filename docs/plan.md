@@ -440,3 +440,16 @@ exactly what these providers exist for.
 
 Compliance posture per provider + dated regulatory backdrop:
 [`archive/compliance-competitors-2026-10.md`](./archive/compliance-competitors-2026-10.md).
+## 11 · Future work — build phase (Airwallex integration)
+
+This section is the **build-phase plan for the Airwallex integration**, not a product commitment. The current code defaults to 0G / Arc / Arbitrum / HashKey / Caribbean as settlement rails; Airwallex is the new rail to add during the build phase (Oct 27 – Nov 13), and it is the work described in the hackathon submission.
+
+| # | Future work | Where it lives | Success criterion |
+|---|---|---|---|
+| 1 | **Wire Airwallex global accounts + FX + virtual cards behind the Guardian spend bounds** | `apps/web/`, `packages/shared/`, `config/` | An Airwallex payout API call is made only when the existing `VaultService`/`guardian-loop` caps pass. |
+| 2 | **Enforce per-agent capability credentials on-chain via ERC-7710** | `contracts/`, `packages/shared/` | Supplier/agent credentials become on-chain policy, so a compromised agent cannot spend even inside an ambiguous mandate. |
+| 3 | **Multi-agent treasury demo** — 3 agents, 1 Airwallex account, limit rebalancing on supplier cost spikes | `apps/web/` demo flow | Uncredentialed agents stop; credentialed agents keep spending after a cost spike. |
+| 4 | **Refresh demo-night runbook** to include the Airwallex settlement step | `docs/internal/demo-night-runbook.md` | Demo shows payee credential check → Airwallex FX/card gate → on-chain receipt. |
+
+**Submission framing:** this is a future-work section for the hackathon idea phase. The demo and submission describe the plan; the incremental Airwallex integration is the build-phase deliverable that turns the existing bounded-autonomy agent into a multi-rail settlement product.
+

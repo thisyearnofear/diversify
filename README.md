@@ -108,3 +108,5 @@ material: [`docs/reference.md`](./docs/reference.md). Docs index:
   stablecoin deviations use dated independent prices. Broader source coverage
   and deployed on-chain venue/plan policy remain work in
   [`docs/plan.md`](./docs/plan.md).
+- Build phase (Oct 27 – Nov 13) — Airwallex integration: wire global accounts + FX + virtual cards behind the Guardian spend bounds, and enforce per-agent capability credentials on-chain via ERC-7710 (see [`docs/plan.md` §11](./docs/plan.md)). This is the build-phase target described in the hackathon submission; the demo and idea-phase deliverable is the plan above.
+

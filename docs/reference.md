@@ -199,6 +199,11 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `DASHSCOPE_BASE_URL` | server | `https://dashscope.aliyuncs.com/compatible-mode/v1` | OpenAI-compatible Qwen endpoint; can point at a custom MaaS endpoint (`https://<workspace>.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1`). |
 | `DASHSCOPE_MODEL` | server | `qwen-plus` | `qwen-long` (1M-token context) for large memory pools; `qwen-max` for highest quality. |
 | `ENABLE_TYPESAFE_SIGNAL_LENS` | server (backend) | — | When `true`, the TypeSafe Signal Lens advisory layer runs on every macro event (§8.3 substrate; feeds the `guardian-telemetry` signalLens agreement stat). |
+| `OPENAI_API_KEY` | server | unset → transcription falls back to ElevenLabs | Whisper transcription for `/api/agent/transcribe` (primary). |
+| `ELEVENLABS_API_KEY` | server | — | ElevenLabs Scribe v2 transcription fallback and TTS (`/api/agent/speak`). Never `NEXT_PUBLIC_`. |
+| `ELEVENLABS_VOICE_ID` | server | unset → voice output reports unavailable; input still works | Voice ID for TTS. Speech availability also requires a supported `GUARDIAN_TTS_MODEL`. |
+| `GUARDIAN_TTS_MODEL` | server | `eleven_flash_v2_5` | ElevenLabs TTS model for the existing HTTP transport. Accepted values: `eleven_flash_v2_5`, `eleven_multilingual_v2`; other values (e.g. the WebSocket-transport `eleven_v4_turbo`) make speech report unavailable. |
+| `DEMO_TOKEN_SECRET` | server | dev fallback key | HMAC secret for server-minted demo session tokens (`POST /api/agent/demo-token`). Required in production; unset falls back to normal IP gating. |
 
 Scope rule: only `NEXT_PUBLIC_*` rows are client-exposed; everything else is server-only. Never put a signer key in a `NEXT_PUBLIC_` var. One common key is **not** an env var: a user's own Gemini API key is pasted in the ⚙️ chat settings modal, stored in `localStorage`, and forwarded via the `x-gemini-key` header — never persisted server-side (§5.1).
 
@@ -542,6 +547,10 @@ The following providers have been evaluated but not yet integrated. See [`plan.m
 | `/api/agent/memory` | GET/POST/DELETE | Guardian memory (opt-in; §4.4). `?providers=1` reports health-aware availability. |
 | `/api/agent/enterprise/audit` | GET | Enterprise tenant/wallet-scoped verifiable recommendation export (§6.5) |
 | `/api/agent/guardian-telemetry` | GET | Live telemetry incl. `signalLens.agreement` (§8.3) |
+| `/api/agent/interaction` | POST | Bounded view-only intent interpretation for typed/voice commands (currency view, navigation, explain, clarify). Server-owned currency catalogue + exact-key validation; IP or verified-demo allowance; no signer, no memory, no recommendation evidence. |
+| `/api/agent/demo-token` | POST | Mints an HMAC-signed demo session token (IP-bound) proving sample mode for the `demo` allowance bucket. Requires `DEMO_TOKEN_SECRET` in production. |
+| `/api/agent/speak` | POST | TTS readback (audio/mpeg). Requires `ELEVENLABS_API_KEY` + `ELEVENLABS_VOICE_ID` + supported `GUARDIAN_TTS_MODEL`; rejects over-length text rather than truncating an amount. |
+| `/api/agent/transcribe` | POST | STT for voice input (multipart audio upload; Whisper → Scribe v2 fallback). |
 | `/api/swap/oneinch-proxy` | — | 1inch quotes/swaps on Arbitrum (server proxy; `ONEINCH_API_KEY`) |
 | `/api/swap/uniswap/{quote,swap,check-approval}` | — | Uniswap Trading API proxies (`UNISWAP_API_KEY`) |
 | `/api/fx-netting/intent` | POST/GET | Wallet-authenticated FX intent creation for the hosted CARICOM FX pool. POST validates + normalizes + **persists** an intent (sellCurrency, sellAmount, buyCurrency, buyAmountMin?, deadline?) — `participantId` derived from the signed message, never the body. GET lists the caller's own pool intents. |
