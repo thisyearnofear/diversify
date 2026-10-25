@@ -29,6 +29,7 @@ const mocks = vi.hoisted(() => {
     messages: [] as Array<Record<string, unknown>>,
   };
   const nav = { activeTab: 'overview' as string };
+  const profile = { config: {} as Record<string, unknown> };
   const memory = {
     pref: { mode: 'off' as 'off' | 'device' | 'cloud', provider: undefined as string | undefined },
     facts: [] as Array<{ id: string; text: string; createdAt: string }>,
@@ -44,6 +45,7 @@ const mocks = vi.hoisted(() => {
     conversation,
     nav,
     memory,
+    profile,
     navigateWithIntent: vi.fn(),
     navigateToSwap: vi.fn(),
     setFocusedCycleId: vi.fn(),
@@ -137,7 +139,7 @@ vi.mock('@/hooks/use-credits', () => ({
 }));
 
 vi.mock('@/hooks/use-protection-profile', () => ({
-  useProtectionProfile: () => ({ config: {} }),
+  useProtectionProfile: () => ({ config: mocks.profile.config }),
 }));
 
 vi.mock('@/hooks/claim-flow-context', () => ({
@@ -354,6 +356,7 @@ describe('AIChat — desktop docked panel', () => {
     mocks.conversation.isDrawerOpen = true;
     mocks.conversation.messages = [];
     mocks.nav.activeTab = 'overview';
+    mocks.profile.config = {};
     mocks.memory.pref = { mode: 'off', provider: undefined };
     mocks.memory.facts = [];
     mocks.memory.providers = null;
@@ -363,6 +366,39 @@ describe('AIChat — desktop docked panel', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     sessionStorage.clear();
+  });
+
+  it('closing the drawer returns focus to whatever opened it', () => {
+    setViewport(true);
+    mocks.conversation.isDrawerOpen = false;
+    const { rerender } = render(
+      <>
+        <button type="button" data-testid="origin-door">Open Guardian</button>
+        <AIChat />
+      </>,
+    );
+    const origin = screen.getByTestId('origin-door');
+    origin.focus();
+    expect(document.activeElement).toBe(origin);
+
+    // Open: the origin is captured, then the desktop composer takes focus.
+    mocks.conversation.isDrawerOpen = true;
+    rerender(
+      <>
+        <button type="button" data-testid="origin-door">Open Guardian</button>
+        <AIChat />
+      </>,
+    );
+    expect(document.activeElement).not.toBe(origin);
+
+    mocks.conversation.isDrawerOpen = false;
+    rerender(
+      <>
+        <button type="button" data-testid="origin-door">Open Guardian</button>
+        <AIChat />
+      </>,
+    );
+    expect(document.activeElement).toBe(origin);
   });
 
   it('renders the docked panel without a scrim on desktop', () => {
@@ -447,6 +483,31 @@ describe('AIChat — desktop docked panel', () => {
     setViewport(true);
     render(<AIChat />);
     expect(screen.getByText('Looking at: Home')).toBeInTheDocument();
+  });
+
+  it('names the saved plan on Shield — a custom plan labels itself, not the persona', () => {
+    setViewport(true);
+    mocks.nav.activeTab = 'protect';
+    mocks.profile.config = { philosophy: 'africapitalism' };
+    const { unmount } = render(<AIChat />);
+    expect(screen.getByText('Looking at: Shield · Africapitalism')).toBeInTheDocument();
+    unmount();
+
+    // A custom plan with a persona keeps the accurate "Custom" label —
+    // the saved philosophy wins over valuesPhilosophy.
+    mocks.profile.config = { philosophy: 'custom', valuesPhilosophy: 'buen_vivir' };
+    render(<AIChat />);
+    expect(screen.getByText('Looking at: Shield · Custom')).toBeInTheDocument();
+    mocks.profile.config = {};
+  });
+
+  it('the context line is the way back — it closes the drawer without sending anything', () => {
+    setViewport(true);
+    render(<AIChat />);
+    fireEvent.click(screen.getByRole('button', { name: 'Return to Home' }));
+    expect(mocks.setDrawerOpen).toHaveBeenCalledWith(false);
+    expect(mocks.sendChatMessage).not.toHaveBeenCalled();
+    expect(mocks.addUserMessage).not.toHaveBeenCalled();
   });
 
   it('appends the stored Exchange pair to the context line', () => {

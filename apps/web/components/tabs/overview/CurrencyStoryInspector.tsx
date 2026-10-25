@@ -6,9 +6,8 @@
  * as the corridor inspector, newest first.
  */
 import React, { useId, useState } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from 'framer-motion';
 import { InspectorSheet } from '../../shared/InspectorSheet';
-import { DigitalDollarNote } from './DigitalDollarNote';
 import { useAdvisor } from '@/hooks/use-advisor';
 import { useProofFeed } from '@/hooks/use-proof-feed';
 import { useCurrencyNews } from '@/hooks/use-currency-news';
@@ -21,15 +20,14 @@ import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import { Coin } from '@/components/shared/FloatingCoins';
 import { BENCHMARK_COLORS } from '@/components/shared/palette';
 import FlickScrollRow, { useDidDrag } from '@/components/shared/FlickScrollRow';
-import { press, reveal, springPress } from '@/lib/motion-tokens';
+import { controlMotion, press, reveal, springPress } from '@/lib/motion-tokens';
 import { haptics } from '@/lib/haptics';
 import {
   CURRENCY_BY_CODE,
   riskEventAge,
   riskTrailCheckedAt,
 } from '@/constants/currency-risk';
-import { momentCardContent, type MomentCardContent } from '@/lib/moment-card';
-import { useCountUp } from '@/hooks/use-count-up';
+import { momentCardContent } from '@/lib/moment-card';
 import { trackFunnelEvent } from '@/lib/analytics';
 
 /** The currency's story is public knowledge — shareable via a card whose
@@ -65,70 +63,6 @@ function MomentShareLine({ code }: { code: string }) {
       {copied ? 'Link copied' : "Share this currency's story ↗"}
     </button>
   );
-}
-
-/** The share card, played once before it's shared: the coin wears down
- *  by the card's own curated 5y delta while the figure counts to it, then
- *  the newest dated event lands. Same numbers the /moment card renders —
- *  nothing here a crawler couldn't derive from the code. Tap replays. */
-function MomentShareCard({ content }: { content: MomentCardContent }) {
-  const reduceMotion = useReducedMotion();
-  const [run, setRun] = useState(0);
-  const worn = Math.max(0.45, 1 + Math.min(content.delta, 0) / 100);
-  const STORY_S = 1.2;
-  return (
-    <div className="mt-3 flex flex-col items-center">
-      <button
-        type="button"
-        data-testid="moment-share-card"
-        aria-label={`${content.headline}. Replay`}
-        onClick={() => setRun((r) => r + 1)}
-        className="w-full max-w-[260px] rounded-2xl bg-[#0b0b12] px-4 py-4 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-      >
-        <span key={run} className="flex flex-col items-center" aria-hidden="true">
-          <span className="flex h-16 items-center justify-center gap-3">
-            <motion.span
-              data-testid="moment-share-coin"
-              data-worn={worn.toFixed(2)}
-              className="flex size-14 items-center justify-center rounded-full border-2 border-[#3a3a48] bg-[#23232e] text-xs font-bold text-white"
-              initial={reduceMotion ? false : { scale: 1, filter: 'saturate(1)' }}
-              animate={{ scale: worn, filter: `saturate(${worn.toFixed(2)})` }}
-              transition={reduceMotion ? { duration: 0 } : { duration: STORY_S, ease: 'easeInOut', delay: 0.2 }}
-            >
-              {content.code}
-            </motion.span>
-            <span className="text-2xl font-extrabold tabular-nums text-white">
-              <CountUpFigure key={run} delta={content.delta} />
-            </span>
-            <span className="flex size-10 items-center justify-center rounded-full border-2 border-[#3a3a48] bg-[#23232e] text-3xs font-bold text-white">
-              {content.benchmark === 'XAU' ? 'Gold' : content.benchmark}
-            </span>
-          </span>
-          {content.event && (
-            <motion.span
-              className="mt-2 line-clamp-2 text-2xs text-[#8b8b9a]"
-              initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={reduceMotion ? { duration: 0 } : { ...reveal, delay: STORY_S + 0.2 }}
-            >
-              {content.event}
-            </motion.span>
-          )}
-          <span className="mt-1 text-3xs text-[#8b8b9a]">5 years vs {content.benchmarkName} · {content.asOf}</span>
-        </span>
-      </button>
-      <MomentShareLine code={content.code} />
-    </div>
-  );
-}
-
-/** Counts 0 → the card's own delta; remounted (keyed) on each replay. */
-function CountUpFigure({ delta }: { delta: number }) {
-  const figure = useCountUp(delta, {
-    duration: 1.2,
-    format: (n) => `${n < 0 ? '−' : n > 0 ? '+' : ''}${Math.abs(Math.round(n))}%`,
-  });
-  return <motion.span>{figure}</motion.span>;
 }
 
 /** The currency's real 12-month path vs USD, drawn from the live feed's
@@ -266,10 +200,14 @@ function StorySparkline({
 function EventButton({
   pressed,
   onSelect,
+  accessibleLabel,
   children,
 }: {
   pressed: boolean;
   onSelect: () => void;
+  /** Full event name — the button's accessible name when the visible
+   *  label is just a year (same-year events stay distinct to AT). */
+  accessibleLabel?: string;
   children: React.ReactNode;
 }) {
   const didDragRef = useDidDrag();
@@ -278,6 +216,8 @@ function EventButton({
     <motion.button
       type="button"
       aria-pressed={pressed}
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
       onClick={() => {
         if (didDragRef.current) return;
         onSelect();
@@ -326,10 +266,13 @@ function CurrencyStoryBody({
   const signal = corridorSignalForCurrency(feed?.recent, code);
   const news = useCurrencyNews(entry ? code : null);
   const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
+  const [view, setView] = useState<'moments' | 'path' | 'news'>('moments');
+  const storyGroupId = useId();
   const [localPhrase, setLocalPhrase] = useState(false);
   const reducedMotion = useReducedMotion();
   const phrase = featureDenied('thesis', useGeoCountry()) ? null : voiceFor(code);
   if (!entry) return null;
+  if (view === 'news' && news.length === 0) setView('moments');
   const eventKeys = trail.map((ev, i) => `${ev.year}-${i}`);
   const effectiveKey =
     selectedEvent === 'latest' && signal
@@ -346,14 +289,14 @@ function CurrencyStoryBody({
   return (
     <div className="text-center">
       <div className="flex justify-center">
-        <Coin size={72} symbol={entry.code} color={BENCHMARK_COLORS.USD} />
+        <Coin size={56} symbol={entry.code} color={BENCHMARK_COLORS.USD} />
       </div>
       <motion.h3
         key={localPhrase && phrase ? 'phrase' : 'name'}
         initial={reducedMotion ? false : { opacity: 0, y: 4 }}
         animate={{ opacity: 1, y: 0 }}
         transition={reducedMotion ? { duration: 0 } : reveal}
-        className="mt-2 text-xl font-semibold text-ink"
+        className="mt-2 text-2xl font-semibold tracking-tight text-ink"
       >
         {localPhrase && phrase ? phrase.epithet : moneyNameFor(entry.code)}
       </motion.h3>
@@ -375,100 +318,171 @@ function CurrencyStoryBody({
           ))}
         </div>
       )}
-      {live?.series ? (
-        <StorySparkline key={code} code={code} series={live.series} asOf={live.asOf} />
-      ) : (
-        <p className="mb-2 text-2xs text-gray-400 dark:text-gray-500">
-          Historical path unavailable
-        </p>
-      )}
-      {/* The dated trail — what geopolitics has already done to this
-          currency, newest first. Curated events, not a feed. */}
-      {(trail.length > 0 || signal) && (
-        <div className="mt-3 text-left">
-          <FlickScrollRow
-            className="gap-2 pb-1"
-            chevrons={false}
-            role="group"
-            aria-label="Currency events"
-          >
-            {signal && (
-              <EventButton
-                pressed={effectiveKey === 'latest'}
-                onSelect={() => chooseEvent('latest')}
-              >
-                Latest
-              </EventButton>
-            )}
-            {trail.map((ev, i) => (
-              <EventButton
-                key={`${ev.year}-${i}`}
-                pressed={effectiveKey === `${ev.year}-${i}`}
-                onSelect={() => chooseEvent(`${ev.year}-${i}`)}
-              >
-                {ev.year} · {ev.event}
-              </EventButton>
-            ))}
-          </FlickScrollRow>
-          {effectiveKey === 'latest' && signal ? (
-            <p className="mt-1.5 text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
-              <span className="mr-1 text-[9px] font-semibold tracking-wider text-emerald-600 dark:text-emerald-400">
-                live
-              </span>
-              {signal.text} · {signal.dateLabel}
-            </p>
-          ) : selected ? (
-            <p className="mt-1.5 text-2xs text-gray-500 dark:text-gray-400 leading-relaxed">
-              {selected.year} ({riskEventAge(selected.year)}): {selected.event} — {selected.impact}
-            </p>
-          ) : null}
-          {/* Freshness is disclosed, not implied — same provenance
-              grammar as the corridor trail. */}
-          {effectiveKey === 'latest' && signal ? (
-            <p className="mt-1 text-3xs text-gray-400 dark:text-gray-500">
-              Live signal · {signal.dateLabel}
-            </p>
-          ) : trail.length > 0 ? (
-            <p className="mt-1 text-3xs text-gray-400 dark:text-gray-500">
-              Curated history · checked {riskTrailCheckedAt(entry)}
-            </p>
-          ) : null}
-        </div>
-      )}
-      {news.length > 0 && (
-        <div className="mt-3 text-left" data-testid="currency-news">
-          <p className="text-2xs font-semibold text-ink-muted">In the news</p>
-          <ul className="mt-1">
-            {news.map((item) => (
-              <li key={item.url}>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={() =>
-                    trackFunnelEvent('currency_headline_tapped', {
-                      currency: entry.code,
-                      source: 'currency_story',
-                    })
-                  }
-                  className="flex min-h-tap flex-col justify-center py-1 text-2xs leading-snug text-ink underline decoration-line underline-offset-2"
+      {/* One stage, three views — Moments / 1Y path / Headlines replace
+          each other instead of piling. */}
+      {(() => {
+        const views: { id: 'moments' | 'path' | 'news'; label: string }[] = [
+          { id: 'moments', label: 'Moments' },
+          { id: 'path', label: '1Y path' },
+          ...(news.length > 0 ? [{ id: 'news' as const, label: 'Headlines' }] : []),
+        ];
+        return (
+          <div role="group" aria-label="Story view" className="mt-3 inline-flex rounded-full bg-gray-100 dark:bg-gray-800 p-0.5">
+            <LayoutGroup id={storyGroupId}>
+              {views.map((v) => {
+                const isSel = view === v.id;
+                return (
+                  <motion.button
+                    key={v.id}
+                    type="button"
+                    aria-pressed={isSel}
+                    onClick={() => {
+                      if (isSel) return;
+                      haptics.tap();
+                      setView(v.id);
+                    }}
+                    {...controlMotion(Boolean(reducedMotion))}
+                    className={`relative isolate min-h-tap px-4 rounded-full text-xs font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+                      isSel ? 'text-white' : 'text-gray-500 dark:text-gray-400'
+                    }`}
+                  >
+                    {isSel &&
+                      (reducedMotion ? (
+                        <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-blue-600" />
+                      ) : (
+                        <motion.span
+                          aria-hidden="true"
+                          layoutId="story-view-selection"
+                          transition={springPress}
+                          className="absolute inset-0 -z-10 rounded-full bg-blue-600"
+                        />
+                      ))}
+                    {v.label}
+                  </motion.button>
+                );
+              })}
+            </LayoutGroup>
+          </div>
+        );
+      })()}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={view}
+          initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, transition: { duration: 0 } }}
+          transition={reducedMotion ? { duration: 0 } : reveal}
+          className="mt-3 min-h-48 text-left"
+        >
+          {view === 'moments' && (
+            trail.length > 0 || signal ? (
+              <div>
+                <FlickScrollRow
+                  className="gap-2 pb-1"
+                  chevrons={false}
+                  role="group"
+                  aria-label="Currency events"
                 >
-                  <span>{item.title} ↗</span>
-                  <span className="text-3xs text-ink-subtle no-underline">
-                    {item.source}
-                    {item.date ? ` · ${item.date}` : ''}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-1 text-3xs text-ink-subtle">Headlines via Tavily · last 30 days</p>
-        </div>
-      )}
-      <DigitalDollarNote code={entry.code} />
-      {content && <MomentShareCard content={content} />}
-      <button
+                  {signal && (
+                    <EventButton
+                      pressed={effectiveKey === 'latest'}
+                      accessibleLabel={`Latest · ${signal.text}`}
+                      onSelect={() => chooseEvent('latest')}
+                    >
+                      Latest
+                    </EventButton>
+                  )}
+                  {trail.map((ev, i) => (
+                    <EventButton
+                      key={`${ev.year}-${i}`}
+                      pressed={effectiveKey === `${ev.year}-${i}`}
+                      accessibleLabel={`${ev.year} · ${ev.event}`}
+                      onSelect={() => chooseEvent(`${ev.year}-${i}`)}
+                    >
+                      {ev.year}
+                    </EventButton>
+                  ))}
+                </FlickScrollRow>
+                {effectiveKey === 'latest' && signal ? (
+                  <article className="mt-1.5">
+                    <p className="text-3xs font-semibold tracking-wider text-emerald-600 dark:text-emerald-400">
+                      live · {signal.dateLabel}
+                    </p>
+                    <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {signal.text}
+                    </p>
+                  </article>
+                ) : selected ? (
+                  <article className="mt-1.5">
+                    <p className="text-3xs font-semibold tracking-wider text-ink-muted">
+                      {selected.year} · {riskEventAge(selected.year)}
+                    </p>
+                    <h4 className="mt-0.5 text-xl font-bold text-ink">{selected.event}</h4>
+                    <p className="mt-1 text-base text-gray-700 dark:text-gray-300 leading-relaxed">
+                      {selected.impact}
+                    </p>
+                  </article>
+                ) : null}
+                {effectiveKey === 'latest' && signal ? (
+                  <p className="mt-1 text-3xs text-gray-400 dark:text-gray-500">
+                    Live signal · {signal.dateLabel}
+                  </p>
+                ) : trail.length > 0 ? (
+                  <p className="mt-1 text-3xs text-gray-400 dark:text-gray-500">
+                    Curated history · checked {riskTrailCheckedAt(entry)}
+                  </p>
+                ) : null}
+              </div>
+            ) : (
+              <p className="py-8 text-center text-sm text-gray-400">
+                No dated events for this currency yet.
+              </p>
+            )
+          )}
+          {view === 'path' && (
+            live?.series ? (
+              <StorySparkline key={code} code={code} series={live.series} asOf={live.asOf} />
+            ) : (
+              <p className="py-8 text-center text-sm text-gray-400">
+                Historical path unavailable
+              </p>
+            )
+          )}
+          {view === 'news' && news.length > 0 && (
+            <div data-testid="currency-news">
+              <ul className="divide-y divide-line">
+                {news.map((item) => (
+                  <li key={item.url}>
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() =>
+                        trackFunnelEvent('currency_headline_tapped', {
+                          currency: entry.code,
+                          source: 'currency_story',
+                        })
+                      }
+                      className="flex min-h-tap flex-col justify-center py-1.5 text-sm leading-snug text-ink underline decoration-line underline-offset-2"
+                    >
+                      <span>{item.title} ↗</span>
+                      <span className="text-xs text-ink-subtle no-underline">
+                        {item.source}
+                        {item.date ? ` · ${item.date}` : ''}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1 text-3xs text-ink-subtle">Headlines via Tavily · last 30 days</p>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+      {content && <MomentShareLine code={content.code} />}
+      <motion.button
         type="button"
+        {...controlMotion(Boolean(reducedMotion))}
         onClick={() => {
           trackFunnelEvent('ask_guardian_tapped', {
             currency: entry.code,
@@ -482,7 +496,7 @@ function CurrencyStoryBody({
         className="mt-3 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors"
       >
         Ask Guardian about the {entry.code} →
-      </button>
+      </motion.button>
     </div>
   );
 }

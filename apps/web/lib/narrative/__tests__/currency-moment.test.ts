@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  benchmarkBuyingPower,
   buildCurrencyMoment,
   momentStateFromDelta,
   selectableBenchmarks,
@@ -9,6 +10,26 @@ import {
   flagEmojiForIso2,
 } from '../currency-moment';
 import { CURRENCY_RISK_DATA_AS_OF, type CurrencyRiskEntry } from '@/constants/currency-risk';
+
+describe('benchmark buying power — unchanged local-currency amount', () => {
+  it.each([
+    [-63, 37, 'less'],
+    [-73, 27, 'less'],
+    [7, 107, 'more'],
+    [0, 100, 'same'],
+    [-0.01, 100, 'same'],
+    [-99.9, 0.1, 'less'],
+    [-100, 0, 'less'],
+    [150, 250, 'more'],
+  ] as const)('maps %s percent to 100 → %s benchmark units', (delta, end, direction) => {
+    expect(benchmarkBuyingPower(delta)).toEqual({ start: 100, end, direction });
+  });
+
+  it.each([NaN, Infinity, -Infinity, -100.1, Number.MAX_VALUE])(
+    'withholds an invalid comparison (%s)',
+    (delta) => expect(benchmarkBuyingPower(delta)).toBeNull(),
+  );
+});
 
 const GHS: CurrencyRiskEntry = {
   code: 'GHS',

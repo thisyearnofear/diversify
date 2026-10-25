@@ -32,3 +32,14 @@ export const STAGGER_STEP_S = 0.05;
 export const press = { scale: 0.97 } as const;
 
 export const comparisonSettle = { duration: 0.6, ease: "easeOut" } as const;
+
+/**
+ * One tactile press grammar for controls across the journey — the same
+ * spring + scale on tap, inert under reduced motion. Spread onto
+ * motion.button/motion.* elements; never wraps a logic delay.
+ */
+export function controlMotion(reducedMotion: boolean | null) {
+  return reducedMotion
+    ? { whileTap: undefined, transition: { duration: 0 } }
+    : { whileTap: press, transition: springPress };
+}

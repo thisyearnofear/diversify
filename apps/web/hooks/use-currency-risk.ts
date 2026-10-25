@@ -31,6 +31,7 @@ import {
   type RiskTolerance,
 } from '../components/protection-cards/plan-preview';
 import type { ArchetypeId } from '../components/protection-cards/tokens';
+import { countryNameFor } from '@diversifi/shared/src/constants/countries';
 
 interface LiveDepreciationResponse {
   currency: string;
@@ -146,7 +147,7 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
   };
 
   const currencyCode = riskData?.code ?? null;
-  const countryName = riskData?.countryName ?? detectedCountryName ?? null;
+  const countryName = riskData?.countryName ?? countryNameFor(effectiveCountryCode) ?? detectedCountryName ?? null;
 
   // ── Live depreciation enrichment ─────────────────────────────────
   // Fetches live 1yr depreciation from the fawazahmed0 dataset via the

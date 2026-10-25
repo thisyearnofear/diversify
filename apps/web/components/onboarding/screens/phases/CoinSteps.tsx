@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import { useReducedMotion } from 'framer-motion';
 import { Coin } from '../../../shared/FloatingCoins';
 import type { Phase } from './phase-config';
-import { springPop } from "@/lib/motion-tokens";
+import { springPop, controlMotion } from "@/lib/motion-tokens";
 
 export const STEPS: { id: Phase; label: string }[] = [
   { id: 'detect', label: 'You' },
@@ -38,13 +38,18 @@ export function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p:
                   className="h-full w-full origin-left rounded-full bg-gradient-to-r from-amber-500 to-amber-300"
                   initial={false}
                   animate={{ scaleX: i <= idx ? 1 : 0 }}
-                  transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                  transition={
+                    reducedMotion
+                      ? { duration: 0 }
+                      : { duration: 0.4, ease: [0.16, 1, 0.3, 1] }
+                  }
                 />
               </div>
             )}
-            <button
+            <motion.button
               type="button"
               onClick={() => isDone && onNavigate(s.id)}
+              {...controlMotion(Boolean(reducedMotion))}
               disabled={!isDone}
               aria-current={isActive ? 'step' : undefined}
               aria-label={isDone ? `Go back to step ${i + 1}: ${s.label}` : `Step ${i + 1}: ${s.label}`}
@@ -53,16 +58,12 @@ export function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p:
               }`}
             >
               <span className="relative w-8 h-8 flex items-center justify-center">
-                {isActive && !reducedMotion && (
-                  <motion.span
-                    className="absolute -inset-1 rounded-full border-2 border-amber-400/60"
-                    animate={{ scale: [1, 1.25, 1], opacity: [0.7, 0, 0.7] }}
-                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-                  />
+                {isActive && (
+                  <span className="absolute -inset-1 rounded-full border-2 border-amber-300" />
                 )}
                 {isDone ? (
                   <motion.span
-                    initial={{ scale: 0, rotate: -90 }}
+                    initial={reducedMotion ? false : { scale: 0, rotate: -90 }}
                     animate={{ scale: 1, rotate: 0 }}
                     transition={springPop}
                     className="w-7 h-7 rounded-full bg-emerald-500 text-white text-xs font-black flex items-center justify-center shadow-sm"
@@ -84,12 +85,12 @@ export function CoinSteps({ phase, onNavigate }: { phase: Phase; onNavigate: (p:
                     ? 'text-amber-500'
                     : isDone
                     ? 'text-emerald-500'
-                    : 'text-gray-300 dark:text-gray-600'
+                    : 'text-slate-300'
                 }`}
               >
                 {s.label}
               </span>
-            </button>
+            </motion.button>
           </React.Fragment>
         );
       })}

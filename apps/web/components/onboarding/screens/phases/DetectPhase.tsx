@@ -8,17 +8,36 @@
  * container — never add overflow-y-auto or justify-center here.
  */
 
-import { useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useEffect, useId, useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion, LayoutGroup } from 'framer-motion';
 import { NETWORKS } from '../../../../config';
 import { useWalletContext } from '../../../wallet/WalletProvider';
 import { showTestnetUi, optIntoTestnetUi } from '../../../../constants/testnet';
 import { ShimmerText } from '../../../shared/ShimmerText';
+import { Coin } from '../../../shared/FloatingCoins';
 import { phaseVariants, staggerChild } from './phase-config';
-import { BENCHMARKS, type Benchmark } from '../../../../constants/currency-risk';
-import { spring } from "@/lib/motion-tokens";
+import { springPress, controlMotion } from "@/lib/motion-tokens";
+import { haptics } from '@/lib/haptics';
 import { MONEY_PURPOSES, type MoneyPurpose } from '@/constants/money-purpose';
-import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
+import { CountryPickerSheet } from '../../../tabs/overview/CountryPicker';
+import type { CountryOption } from '@/constants/country-options';
+
+// The purpose picker's coin marks — abstract verbs, not currency glyphs.
+const PURPOSE_GLYPH: Record<MoneyPurpose, string> = {
+  everyday_buffer: '≈',
+  long_term_savings: '↗',
+  upcoming_payment: '⇄',
+};
+const PURPOSE_HEADING: Record<MoneyPurpose, string> = {
+  everyday_buffer: 'A little breathing room.',
+  long_term_savings: 'Your money. Your next chapter.',
+  upcoming_payment: 'Your next payment. In perspective.',
+};
+const PURPOSE_CAPTION: Record<MoneyPurpose, string> = {
+  everyday_buffer: 'Keep everyday needs within reach.',
+  long_term_savings: 'Make room for the future you have in mind.',
+  upcoming_payment: 'See the currency exposure behind your next invoice.',
+};
 
 interface DetectPhaseProps {
   riskLoading: boolean;
@@ -27,19 +46,22 @@ interface DetectPhaseProps {
   setShowCountryPicker: (open: boolean) => void;
   manualCountrySearch: string;
   setManualCountrySearch: (q: string) => void;
-  filteredCountries: Array<{ iso2: string; flag: string; countryName: string; code: string }>;
+  filteredCountries: CountryOption[];
   setCountryOverride: (iso2: string) => void;
-  countryRequestCountry: string;
-  setCountryRequestCountry: (v: string) => void;
-  countryRequestStatus: 'idle' | 'submitting' | 'success' | 'error';
-  setCountryRequestError: (v: string | null) => void;
-  countryRequestError: string | null;
-  handleCountryRequest: () => void;
+  /** The effective country — may differ from riskData when it has no
+   *  researched currency history. */
+  selectedCountry: CountryOption | null;
   onAdvance: () => void;
   moneyPurpose: MoneyPurpose | null;
   setMoneyPurpose: (purpose: MoneyPurpose) => void;
   /** Kept for callers; the modal's "Explore app" pill is the one exit now. */
   onSkip?: () => void;
+  /** Phase travel direction (+1 forward, −1 back) — drives the phaseVariants
+   *  custom transition. */
+  direction?: number;
+  /** Fires once when the phase mounts — WelcomeScreen moves focus to the
+   *  phase heading and resets the screen's scroll. */
+  onEntered?: () => void;
 }
 
 export function DetectPhase({
@@ -51,32 +73,20 @@ export function DetectPhase({
   setManualCountrySearch,
   filteredCountries,
   setCountryOverride,
-  countryRequestCountry,
-  setCountryRequestCountry,
-  countryRequestStatus,
-  setCountryRequestError,
-  countryRequestError,
-  handleCountryRequest,
+  selectedCountry,
   onAdvance,
   moneyPurpose,
   setMoneyPurpose,
+  direction = 1,
+  onEntered,
 }: DetectPhaseProps) {
+  useEffect(() => { onEntered?.(); }, [onEntered]);
   const { switchNetwork, isConnected } = useWalletContext();
   const reducedMotion = useReducedMotion();
-  useDismissibleLayer(showCountryPicker, () => setShowCountryPicker(false));
+  const purposeGroupId = useId();
   const [isSwitching, setIsSwitching] = useState(false);
   const [switchDone, setSwitchDone] = useState(false);
   const [showTestDetails, setShowTestDetails] = useState(false);
-  // A manual pick is an explicit answer — advance straight to the numbers
-  // once the chosen country's data resolves, instead of asking for a
-  // second "Show me the numbers" tap (onboarding lost ~89% here).
-  const [advanceOnPick, setAdvanceOnPick] = useState<string | null>(null);
-  useEffect(() => {
-    if (advanceOnPick && riskData?.code === advanceOnPick && !riskLoading) {
-      setAdvanceOnPick(null);
-      onAdvance();
-    }
-  }, [advanceOnPick, riskData, riskLoading, onAdvance]);
 
   const handleSwitchToTestnet = async () => {
     if (isSwitching) return;
@@ -93,14 +103,20 @@ export function DetectPhase({
   return (
     <motion.div
       key="phase-detect"
+      custom={direction}
       variants={reducedMotion ? undefined : phaseVariants}
       initial={reducedMotion ? false : "initial"}
       animate="animate"
       exit="exit"
-      className="w-full max-w-sm"
+      className="journey-phase"
     >
-      <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
-        {moneyPurpose === 'upcoming_payment' ? 'Plan your next supplier payment.' : 'Make a plan for your money.'}
+      <motion.h2
+        variants={staggerChild}
+        data-phase-heading="detect"
+        tabIndex={-1}
+        className="journey-title text-white mb-3 focus:outline-none"
+      >
+        {PURPOSE_HEADING[moneyPurpose ?? 'long_term_savings']}
       </motion.h2>
       <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-5">
         {moneyPurpose === 'upcoming_payment' ? 'Start with the currency you earn.' : 'Start with the currency you use.'}
@@ -110,8 +126,9 @@ export function DetectPhase({
         <p id="money-purpose-label" className="text-xs font-semibold text-slate-200 mb-2">
           What is this money for?
         </p>
+        <LayoutGroup id={purposeGroupId}>
         <div
-          className="grid grid-cols-3 gap-1 rounded-xl bg-slate-800 p-1"
+          className="grid grid-cols-3 gap-2"
           role="radiogroup"
           aria-labelledby="money-purpose-label"
           onKeyDown={(event) => {
@@ -120,212 +137,144 @@ export function DetectPhase({
             const index = Math.max(0, MONEY_PURPOSES.findIndex((purpose) => purpose.value === moneyPurpose));
             const next = event.key === 'Home' ? 0 : event.key === 'End' ? MONEY_PURPOSES.length - 1
               : (index + (event.key === 'ArrowRight' ? 1 : -1) + MONEY_PURPOSES.length) % MONEY_PURPOSES.length;
-            setMoneyPurpose(MONEY_PURPOSES[next].value);
+            if (MONEY_PURPOSES[next].value !== moneyPurpose) {
+              haptics.tap();
+              setMoneyPurpose(MONEY_PURPOSES[next].value);
+            }
             event.currentTarget.querySelectorAll<HTMLButtonElement>('button')[next]?.focus();
           }}
         >
-          {MONEY_PURPOSES.map((purpose) => (
-            <button
-              key={purpose.value}
-              type="button"
-              role="radio"
-              aria-checked={moneyPurpose === purpose.value}
-              tabIndex={moneyPurpose === purpose.value || (!moneyPurpose && purpose === MONEY_PURPOSES[0]) ? 0 : -1}
-              onClick={() => setMoneyPurpose(purpose.value)}
-              className={`min-h-tap rounded-lg px-2 py-2 text-xs font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
-                moneyPurpose === purpose.value ? 'bg-action text-white' : 'text-slate-200 hover:bg-slate-700'
-              }`}
-            >
-              {purpose.value === 'everyday_buffer' ? 'Buffer' : purpose.value === 'long_term_savings' ? 'Long term' : 'Supplier payment'}
-            </button>
-          ))}
+          {MONEY_PURPOSES.map((purpose) => {
+            const selected = moneyPurpose === purpose.value;
+            return (
+              <motion.button
+                key={purpose.value}
+                type="button"
+                role="radio"
+                aria-checked={selected}
+                tabIndex={selected || (!moneyPurpose && purpose === MONEY_PURPOSES[0]) ? 0 : -1}
+                onClick={() => {
+                  if (purpose.value === moneyPurpose) return;
+                  haptics.tap();
+                  setMoneyPurpose(purpose.value);
+                }}
+                {...controlMotion(Boolean(reducedMotion))}
+                className="journey-purpose text-xs sm:text-sm font-semibold"
+              >
+                {/* One shared plate slides to the pick — the same selection
+                    choreography the risk period control uses. */}
+                {selected &&
+                  (reducedMotion ? (
+                    <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-[inherit] bg-blue-700" />
+                  ) : (
+                    <motion.span
+                      aria-hidden="true"
+                      layoutId="purpose-selection"
+                      transition={springPress}
+                      className="absolute inset-0 -z-10 rounded-[inherit] bg-blue-700"
+                    />
+                  ))}
+                <span aria-hidden="true">
+                  <Coin
+                    variant="asset"
+                    size={30}
+                    symbol={PURPOSE_GLYPH[purpose.value]}
+                    color={selected ? '#bfdbfe' : '#f59e0b'}
+                  />
+                </span>
+                {purpose.value === 'everyday_buffer' ? 'Buffer' : purpose.value === 'long_term_savings' ? 'Long term' : 'Supplier payment'}
+              </motion.button>
+            );
+          })}
         </div>
+        </LayoutGroup>
+        <p aria-live="polite" className="journey-purpose-caption text-center">
+          {PURPOSE_CAPTION[moneyPurpose ?? 'long_term_savings']}
+        </p>
       </motion.div>
 
-      {/* Detected country card */}
+      {/* Detected country card — onboarding is intentionally a night
+          vault: solid slate, light text, whatever the app theme says. */}
       <motion.div variants={staggerChild}>
         {riskLoading ? (
-          <div className="bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-2xl p-6 mb-4 overflow-hidden">
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mx-auto mb-2"
-              style={{ animation: 'pulse 1.5s ease-in-out infinite' }} />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3 mx-auto"
-              style={{ animation: 'pulse 1.5s ease-in-out 0.2s infinite' }} />
+          <div className="bg-slate-900 border border-slate-600 rounded-2xl p-4 mb-4">
+            <div className="h-5 bg-slate-700 rounded w-1/2 mx-auto mb-2" />
+            <div className="h-4 bg-slate-800 rounded w-2/3 mx-auto" />
+            <p role="status" className="mt-3 text-xs text-slate-400">
+              Finding your currency…
+            </p>
           </div>
-        ) : riskData ? (
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-5 mb-4">
-            <p className="text-xs text-blue-600 dark:text-blue-400 font-bold mb-2">Your country</p>
-            <div className="text-4xl mb-2">{riskData.flag}</div>
-            <p className="text-lg font-black text-gray-900 dark:text-white">{riskData.countryName}</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Currency: {riskData.code}</p>
-            <button
-              onClick={() => setShowCountryPicker(!showCountryPicker)}
-              className="mt-2 text-xs text-blue-500 hover:text-blue-600 font-bold"
-            >
-              Change country
-            </button>
+        ) : selectedCountry ? (
+          <div className="bg-slate-900 border border-slate-600 rounded-2xl p-4 mb-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0 text-left">
+                <span className="text-3xl" aria-hidden="true">{selectedCountry.flag}</span>
+                <div className="min-w-0">
+                  <p className="text-base font-black text-white leading-tight">{selectedCountry.countryName}</p>
+                  {riskData ? (
+                    <p className="text-xs text-slate-400">Currency: {riskData.code}</p>
+                  ) : (
+                    <p className="text-xs text-slate-400">Currency history isn&apos;t available here yet. You can still explore plans.</p>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCountryPicker(!showCountryPicker)}
+                className="min-h-tap px-2 shrink-0 text-xs text-blue-300 hover:text-blue-200 font-bold focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 rounded"
+              >
+                Change country
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-2xl p-5 mb-4">
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2.5">
-              We&apos;ll measure your currency against the world&apos;s hardest benchmarks:
+          <div className="bg-slate-900 border border-slate-600 rounded-2xl p-4 mb-4">
+            <p className="text-sm text-slate-300 mb-4">
+              A clear view of your currency against dollars, euros and gold.
             </p>
-            {/* Concrete preview of the free check — the actual draw */}
-            <div className="flex items-center justify-center gap-1.5 mb-4">
-              {(['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => (
-                <span
-                  key={bench}
-                  className="inline-flex items-center gap-1 text-2xs font-bold px-2.5 py-1 rounded-full bg-white/70 dark:bg-gray-900/40 border border-blue-100 dark:border-blue-900/40 text-gray-700 dark:text-gray-200"
-                >
-                  <span>{BENCHMARKS[bench].flag}</span>
-                  {BENCHMARKS[bench].label}
-                </span>
-              ))}
-            </div>
-            <button
+            <motion.button
+              type="button"
               onClick={() => setShowCountryPicker(true)}
-              className="w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-sm font-black rounded-xl shadow-sm active:scale-[0.97] transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+              {...controlMotion(Boolean(reducedMotion))}
+              className="journey-action w-full px-6 bg-blue-600 hover:bg-blue-700 text-white text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
             >
-              Choose your country →
-            </button>
+              Choose your country
+              <span className="journey-action-arrow" aria-hidden="true">→</span>
+            </motion.button>
           </div>
         )}
       </motion.div>
 
-      {/* Country picker — an in-dialog sheet keeps discovery focused
-          without turning the first phase into a long directory. */}
-      <AnimatePresence>
-        {showCountryPicker && (
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            transition={reducedMotion ? { duration: 0 } : spring}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Choose your country"
-            className="absolute inset-x-0 top-0 z-20 rounded-3xl border border-white/20 bg-slate-950/95 p-4 text-left shadow-2xl backdrop-blur-xl"
-          >
-            <div className="flex items-start justify-between gap-3 mb-4">
-              <div>
-                <p className="text-sm font-black text-white">Choose your country</p>
-                <p className="text-xs text-slate-400 mt-0.5">We’ll use it to frame the comparison in your currency.</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowCountryPicker(false)}
-                className="size-8 rounded-full bg-white/10 text-white hover:bg-white/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                aria-label="Close country picker"
-              >
-                ×
-              </button>
-            </div>
-            <input
-              type="text"
-              placeholder="Search country or currency"
-              value={manualCountrySearch}
-              onChange={(e) => setManualCountrySearch(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setShowCountryPicker(false);
-              }}
-              className="w-full px-3 py-3 mb-3 text-sm rounded-xl border border-white/15 bg-white/10 text-white placeholder:text-slate-400 focus:border-blue-400 focus:ring-2 focus:ring-blue-400/30 outline-none"
-            />
-            <p className="text-3xs uppercase tracking-widest font-black text-slate-500 mb-2">
-              {manualCountrySearch ? 'Matches' : 'Suggested countries'}
-            </p>
-            {manualCountrySearch && filteredCountries.length === 0 ? (
-              // No-match search: never a blank grid. Honest copy + two ways
-              // out — clear the search, or drop to the request flow that
-              // sits one scroll below the sheet.
-              <div className="rounded-xl border border-white/10 bg-white/5 p-3 text-center">
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  No country matches “{manualCountrySearch}”. Try a country
-                  name or a 3-letter currency code (e.g. “JMD”).
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setManualCountrySearch('')}
-                  className="mt-2 px-3 py-1.5 text-2xs font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/60"
-                >
-                  ← Clear search
-                </button>
-                {/* Requesting a missing country lives exactly where the
-                    visitor discovers it's missing — not on the first screen. */}
-      {countryRequestStatus === 'success' ? (
-        <p className="text-3xs text-emerald-400 font-bold text-center py-2">
-          ✓ Request sent — we&apos;ll add it soon.
-        </p>
-      ) : (
-        <div className="mt-2 pt-2 border-t border-white/10">
-          <p className="text-3xs text-slate-400 text-center mb-1.5">
-            Don&apos;t see your country?
-          </p>
-          <div className="flex items-center justify-center gap-2">
-            <input
-              type="text"
-              maxLength={2}
-              placeholder="UA"
-              value={countryRequestCountry}
-              onChange={(e) => {
-                setCountryRequestCountry(e.target.value);
-                setCountryRequestError(null);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleCountryRequest();
-              }}
-              className="w-12 px-2 py-1.5 text-3xs font-bold text-center rounded-lg border border-white/10 bg-white/5 text-white placeholder:text-slate-500 focus:border-blue-400 focus:ring-1 focus:ring-blue-400/30 outline-none uppercase"
-            />
-            <button
-              type="button"
-              onClick={handleCountryRequest}
-              disabled={countryRequestStatus === 'submitting'}
-              className="px-3 py-1.5 text-3xs font-bold text-blue-400 hover:text-blue-300 transition-colors rounded-lg border border-blue-400/20 hover:border-blue-400/40 disabled:opacity-50"
-            >
-              {countryRequestStatus === 'submitting' ? 'Sending…' : 'Request'}
-            </button>
-          </div>
-          {countryRequestError && (
-            <p className="text-[9px] text-rose-400 text-center mt-1">{countryRequestError}</p>
-          )}
-        </div>
-      )}
+      {/* The shared picker sheet — full ISO directory, honest
+          "history unavailable" rows, keyboard focus kept inside. */}
+      <CountryPickerSheet
+        isOpen={showCountryPicker}
+        onClose={() => { setShowCountryPicker(false); setManualCountrySearch(''); }}
+        onSelect={(iso2) => {
+          haptics.tap();
+          setCountryOverride(iso2);
+          setShowCountryPicker(false);
+          setManualCountrySearch('');
+        }}
+        options={filteredCountries}
+        selectedIso2={selectedCountry?.iso2 ?? null}
+        query={manualCountrySearch}
+        onQueryChange={setManualCountrySearch}
+        hasQuery={manualCountrySearch.trim().length > 0}
+        tone="vault"
+      />
 
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                {filteredCountries.map((c) => (
-                  <button
-                    key={c.iso2}
-                    onClick={() => {
-                      setCountryOverride(c.iso2);
-                      setShowCountryPicker(false);
-                      setManualCountrySearch('');
-                      setAdvanceOnPick(c.code);
-                    }}
-                    className="min-h-11 flex items-center gap-2 p-2.5 rounded-xl border border-white/10 hover:border-blue-400/70 bg-white/5 hover:bg-blue-500/10 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                  >
-                    <span className="text-lg">{c.flag}</span>
-                    <div>
-                      <div className="text-xs font-bold text-white">{c.countryName}</div>
-                      <div className="text-3xs text-slate-400">{c.code}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {riskData && (
+      {selectedCountry && (
         <motion.button
           variants={staggerChild}
           onClick={onAdvance}
-          className="w-full px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-base font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
-          whileHover={reducedMotion ? undefined : { y: -2 }}
-          whileTap={reducedMotion ? undefined : { scale: 0.97 }}
+          className="journey-action w-full px-8 bg-blue-600 hover:bg-blue-700 text-white text-base shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
+          {...controlMotion(Boolean(reducedMotion))}
         >
-          <ShimmerText>{moneyPurpose === 'upcoming_payment' ? 'Review a payment →' : 'Show me the numbers →'}</ShimmerText>
+          <ShimmerText>
+            {riskData
+              ? moneyPurpose === 'upcoming_payment' ? 'Review a payment →' : 'Show me the numbers →'
+              : 'Explore plans →'}
+          </ShimmerText>
         </motion.button>
       )}
 

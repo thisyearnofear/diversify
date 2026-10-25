@@ -5,26 +5,26 @@
  * GBP moment, but the savings they care about are GHS. Detection is location,
  * risk is personal. This quiet control lets them re-point the moment at the
  * country where their savings live, writing the same user-country-code the
- * onboarding picker does (single source of truth). Always shows the current
- * country first so an uncovered country is never blank, then the curated
- * set alphabetically.
+ * onboarding picker does (single source of truth).
  *
- * Same props as the native `<select>` this replaces
- * (CountryOverrideSelect, deleted) — the OS-rendered dialog matched nothing
- * in the product while Exchange opened a bottom sheet for the same job. The
- * modal chrome is PickerSheetShell, shared with TokenPickerSheet, so both
- * tabs open the same picker. Rows use the coin motif (currency code coin +
- * country name), never flag emoji.
+ * The list is the full ISO country directory (COUNTRY_OPTIONS), not just the
+ * curated histories — a country with no researched currency is still a real
+ * choice, honestly labeled "history unavailable". The modal chrome is
+ * PickerSheetShell, shared with TokenPickerSheet.
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  CURRENCY_RISK_DATA,
-  type CurrencyRiskEntry,
-} from '@/constants/currency-risk';
 import { haptics } from "@/lib/haptics";
 import { PickerSheetShell } from "../../shared/PickerSheetShell";
 import { TokenIcon } from "../../shared/TokenIcon";
+import { Coin } from "../../shared/FloatingCoins";
+import { motion, useReducedMotion } from "framer-motion";
+import { controlMotion } from "@/lib/motion-tokens";
+import {
+  COUNTRY_OPTIONS,
+  filterCountryOptions,
+  type CountryOption,
+} from "@/constants/country-options";
 
 interface CountryPickerProps {
   /** The country the moment is currently about (ISO2). */
@@ -34,22 +34,6 @@ interface CountryPickerProps {
   label?: string;
   placeholder?: string;
   className?: string;
-}
-
-interface CountryOption {
-  iso2: string;
-  countryName: string;
-  code: string;
-}
-
-function toOption(c: CurrencyRiskEntry): CountryOption {
-  return { iso2: c.iso2, countryName: c.countryName, code: c.code };
-}
-
-function sortedCurated(): CountryOption[] {
-  return [...CURRENCY_RISK_DATA]
-    .sort((a, b) => a.countryName.localeCompare(b.countryName))
-    .map(toOption);
 }
 
 export function CountryPicker({
@@ -67,51 +51,24 @@ export function CountryPicker({
     if (isOpen) setQuery("");
   }, [isOpen]);
 
-  const inDataset = CURRENCY_RISK_DATA.some((c) => c.iso2 === currentCountryCode);
-  const currentEntry = CURRENCY_RISK_DATA.find((c) => c.iso2 === currentCountryCode);
-
-  // The trigger names the current choice (or the placeholder when blank) —
-  // a real button with a chevron and a dialog behind it, not a select whose
-  // OS dialog matches nothing in the product.
+  const current = COUNTRY_OPTIONS.find((o) => o.iso2 === currentCountryCode);
   const display = currentCountryCode
-    ? `${currentEntry?.countryName ?? currentCountryName ?? currentCountryCode} (${currentEntry?.code ?? currentCountryCode})`
+    ? `${current?.countryName ?? currentCountryName ?? currentCountryCode} (${current?.code ?? currentCountryCode})`
     : placeholder;
 
-  // Always surface the current country first — even when it isn't in the
-  // curated set (e.g. an uncovered country on the inflation fallback) the
-  // list must not render blank. Then the curated set, alphabetical.
-  const options = useMemo<CountryOption[]>(() => {
-    if (!currentCountryCode) return sortedCurated();
-    if (inDataset) return sortedCurated();
-    return [
-      {
-        iso2: currentCountryCode,
-        countryName: currentCountryName || currentCountryCode,
-        code: currentCountryCode,
-      },
-      ...sortedCurated(),
-    ];
-  }, [currentCountryCode, currentCountryName, inDataset]);
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return options;
-    return options.filter(
-      (o) =>
-        o.countryName.toLowerCase().includes(q) ||
-        o.code.toLowerCase().includes(q) ||
-        o.iso2.toLowerCase().includes(q),
-    );
-  }, [options, query]);
+  const filtered = useMemo(() => filterCountryOptions(query), [query]);
+  // Selected country first when the list is unsearched — one instance,
+  // remaining alphabetical.
+  const options = useMemo(() => {
+    if (query.trim() || !current) return filtered;
+    return [current, ...filtered.filter((o) => o.iso2 !== current.iso2)];
+  }, [filtered, current, query]);
 
   const select = (iso2: string) => {
     haptics.tap();
     onChange(iso2);
     setIsOpen(false);
   };
-
-  // Rows use the coin motif (currency code coin + country name) — identity
-  // lives in coins everywhere else on Home, so no flag emoji here.
 
   return (
     <>
@@ -137,7 +94,7 @@ export function CountryPicker({
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
         onSelect={select}
-        options={filtered}
+        options={options}
         selectedIso2={currentCountryCode}
         query={query}
         onQueryChange={setQuery}
@@ -147,18 +104,20 @@ export function CountryPicker({
   );
 }
 
-interface CountryPickerSheetProps {
+export interface CountryPickerSheetProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (iso2: string) => void;
   options: CountryOption[];
-  selectedIso2: string;
+  selectedIso2: string | null;
   query: string;
   onQueryChange: (query: string) => void;
   hasQuery: boolean;
+  /** 'vault' renders the sheet inside dark tokens for the night onboarding. */
+  tone?: 'default' | 'vault';
 }
 
-function CountryPickerSheet({
+export function CountryPickerSheet({
   isOpen,
   onClose,
   onSelect,
@@ -167,17 +126,21 @@ function CountryPickerSheet({
   query,
   onQueryChange,
   hasQuery,
+  tone = 'default',
 }: CountryPickerSheetProps) {
+  const reducedMotion = useReducedMotion();
   return (
     <PickerSheetShell
       isOpen={isOpen}
       onClose={onClose}
-      title="Choose a country"
+      title="Where is your money?"
       query={query}
       onQueryChange={onQueryChange}
       searchPlaceholder="Search country or currency"
       searchAriaLabel="Search countries"
       closeButtonAriaLabel="Close country picker"
+      tone={tone}
+      panelClassName="sm:max-w-xl"
     >
       {options.length === 0 && (
         <p className="py-8 text-center text-sm text-gray-400">
@@ -187,25 +150,32 @@ function CountryPickerSheet({
       {options.map((o) => {
         const isSelected = o.iso2 === selectedIso2;
         return (
-          <button
+          <motion.button
             key={o.iso2}
             type="button"
+            {...controlMotion(Boolean(reducedMotion))}
             onClick={() => onSelect(o.iso2)}
             aria-pressed={isSelected}
-            aria-label={`${o.countryName} (${o.code})${isSelected ? ", selected" : ""}`}
-            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+            aria-label={`${o.countryName}${o.code ? ` (${o.code})` : ''}${isSelected ? ", selected" : ""}`}
+            className={`w-full flex items-center gap-3 px-3 min-h-14 rounded-xl transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
               isSelected
                 ? "bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800"
                 : "border border-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
-            <TokenIcon symbol={o.code} size={36} className="shrink-0" />
+            {o.code ? (
+              <TokenIcon symbol={o.code} size={36} className="shrink-0" />
+            ) : (
+              <span aria-hidden="true" className="shrink-0 opacity-70">
+                <Coin size={36} symbol={o.iso2} color="#64748b" variant="ambient" />
+              </span>
+            )}
             <span className="flex-1 min-w-0">
               <span className="block text-sm font-bold text-gray-900 dark:text-gray-100 truncate">
                 {o.countryName}
               </span>
               <span className="block text-xs text-gray-400 dark:text-gray-500 truncate">
-                {o.code}
+                {o.code ?? 'Explore plans · history unavailable'}
               </span>
             </span>
             {isSelected && (
@@ -213,7 +183,7 @@ function CountryPickerSheet({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
               </svg>
             )}
-          </button>
+          </motion.button>
         );
       })}
       {!hasQuery && (

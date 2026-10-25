@@ -379,7 +379,11 @@ export function ShellCoinField({ accent = null, className = '' }: ShellCoinField
               // The hero coin takes the richer selection treatment (gloss +
               // full ring) — this IS the hero moment the variant reserves.
               variant={c.hero ? 'selection' : 'ambient'}
-              shine={c.hero && !reducedMotion ? 'once' : false}
+              // Reduced-motion suppression lives in CSS (the final
+              // globals.css override) — gating here too would double the
+              // switch and re-introduce the hydration mismatch the CSS
+              // rule was added to fix.
+              shine={c.hero ? 'once' : false}
               // Sweep starts as the coin lands: settle delay + the
               // springSoft settle (~0.6s to visually come to rest).
               shineDelay={c.hero ? settleDelay + 0.6 : 0}

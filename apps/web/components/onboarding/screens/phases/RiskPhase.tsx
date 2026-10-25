@@ -1,386 +1,260 @@
 /**
- * RiskPhase — onboarding phase 2: the "aha" risk card.
+ * RiskPhase — onboarding phase 2: one before/after object.
  *
- * JSX extracted verbatim from WelcomeScreen; state stays with the
- * orchestrator and arrives as props.
+ * The same amount of local currency, measured in benchmark units at the
+ * start of the period and at the horizon. Coin AREAS correspond to
+ * units bought — an illustrative exchange-rate comparison, never a
+ * wallet balance, CPI, or investment return.
  *
  * Scroll rule: this phase renders inside the dialog's single scroll
  * container — never add overflow-y-auto or justify-center here.
  */
 
-import { motion, AnimatePresence } from 'framer-motion';
-import { AnimatedNumber } from '../../../shared/AnimatedNumber';
-import { ShimmerText } from '../../../shared/ShimmerText';
+import { useEffect, useId } from 'react';
+import { motion, useReducedMotion, LayoutGroup } from 'framer-motion';
 import { Coin } from '../../../shared/FloatingCoins';
-import { QUIET_GRAY, GOLD_METAL } from '../../../shared/palette';
-import { RiskSparkline } from './RiskSparkline';
-import { phaseVariants, staggerChild, type Horizon } from './phase-config';
+import { useCountUp } from '../../../../hooks/use-count-up';
+import { benchmarkBuyingPower } from '../../../../lib/narrative/currency-moment';
 import {
-  BENCHMARKS,
   CURRENCY_RISK_DATA_AS_OF,
   HORIZONS,
-  type Benchmark,
+  isCurrencyRiskDatasetStale,
 } from '../../../../constants/currency-risk';
-import { trackFunnelEvent } from '../../../../lib/analytics';
-import { springPop } from "@/lib/motion-tokens";
+import { phaseVariants, staggerChild, type Horizon } from './phase-config';
+import { comparisonSettle, controlMotion } from '@/lib/motion-tokens';
+import { haptics } from '@/lib/haptics';
+
+type RiskBenchmark = 'USD' | 'EUR';
+type Comparison = NonNullable<ReturnType<typeof benchmarkBuyingPower>>;
 
 interface RiskPhaseProps {
   riskData: { flag: string; countryName: string; code: string } | null;
-  benchmarkRows: Array<{ bench: Benchmark; value: number }>;
-  heroRow: { bench: Benchmark; value: number } | null;
-  otherRows: Array<{ bench: Benchmark; value: number }>;
-  maxAbs: number;
+  benchmark: RiskBenchmark;
+  delta: number | null;
   selectedHorizon: Horizon;
   setSelectedHorizon: (h: Horizon) => void;
-  liveSeries: { values: number[] } | null;
-  isLive1yr: boolean;
+  isLive: boolean;
   dataAsOf: string;
-  xauPreserved: number;
-  localExample: number;
-  localPrefix: string;
-  riskEvents: Array<{ year: number; event: string; impact: string }>;
-  openEventKey: string | null;
-  setOpenEventKey: (key: string | null) => void;
-  showBusinessContextOpen: boolean;
-  setShowBusinessContextOpen: (open: boolean) => void;
-  waitlistEmail: string;
-  setWaitlistEmail: (v: string) => void;
-  waitlistStatus: 'idle' | 'submitting' | 'success' | 'error';
-  setWaitlistStatus: (s: 'idle' | 'submitting' | 'success' | 'error') => void;
-  waitlistError: string | null;
-  setWaitlistError: (v: string | null) => void;
-  handleJoinWaitlist: () => void;
-  countryCode: string | null;
+  /** Phase travel direction (+1 forward, −1 back) — drives the phaseVariants
+   *  custom transition. */
+  direction?: number;
   onAdvance: () => void;
+  /** Fires once when the phase mounts — WelcomeScreen moves focus to the
+   *  phase heading and resets the screen's scroll. */
+  onEntered?: () => void;
+}
+
+/**
+ * The before/after stage — mounted only when a real comparison exists, so
+ * useCountUp and the scale tweens never run conditionally.
+ */
+function PurchasingPowerStage({
+  comparison,
+  benchmark,
+  selectedHorizon,
+}: {
+  comparison: Comparison;
+  benchmark: RiskBenchmark;
+  selectedHorizon: Horizon;
+}) {
+  const reducedMotion = useReducedMotion();
+  const unit = benchmark === 'USD' ? 'US$' : '€';
+  const format = (n: number) => `${unit}${n.toLocaleString('en-US', { maximumFractionDigits: 1 })}`;
+  const displayed = useCountUp(comparison.end, {
+    initialValue: comparison.end,
+    duration: comparisonSettle.duration,
+    format,
+  });
+  // Coin areas carry the ratio — scale by sqrt so AREA ∝ units bought.
+  const largest = Math.max(comparison.start, comparison.end);
+  const startScale = Math.sqrt(comparison.start / largest);
+  const endScale = Math.sqrt(comparison.end / largest);
+  const scaleTransition = reducedMotion ? { duration: 0 } : comparisonSettle;
+  const symbol = benchmark === 'USD' ? '$' : '€';
+
+  const stageCoin = (scale: number, color: string) => (
+    <div className="relative w-28 h-28 shrink-0 flex items-center justify-center" aria-hidden="true">
+      {/* Neutral gauge circle behind every coin — the reference, not a bar. */}
+      <span className="absolute inset-0 rounded-full border-2 border-slate-600" />
+      <motion.span
+        className="inline-flex"
+        initial={false}
+        animate={{ scale }}
+        transition={scaleTransition}
+      >
+        <Coin size={96} symbol={symbol} color={color} variant="asset" />
+      </motion.span>
+    </div>
+  );
+
+  return (
+    <dl
+      aria-live="polite"
+      aria-atomic="true"
+      className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 max-w-md mx-auto"
+    >
+      <div className="flex flex-col items-center gap-3">
+        <dt className="order-2 text-xs text-slate-300">Start of period</dt>
+        <dd className="flex flex-col items-center gap-3">
+          <span className="text-4xl sm:text-5xl font-black tabular-nums text-white">
+            {format(comparison.start)}
+          </span>
+          {stageCoin(startScale, '#94a3b8')}
+        </dd>
+      </div>
+      <span aria-hidden="true" className="text-2xl text-slate-500">→</span>
+      <div className="flex flex-col items-center gap-3">
+        <dt className="order-2 text-xs text-slate-300">{HORIZONS[selectedHorizon].label} later</dt>
+        <dd className="flex flex-col items-center gap-3">
+          <span className="text-4xl sm:text-5xl font-black tabular-nums text-blue-300">
+            <motion.span aria-hidden="true">{displayed}</motion.span>
+            <span className="sr-only">{format(comparison.end)}</span>
+          </span>
+          {stageCoin(endScale, '#60a5fa')}
+        </dd>
+      </div>
+    </dl>
+  );
 }
 
 export function RiskPhase({
   riskData,
-  benchmarkRows,
-  heroRow,
-  otherRows,
-  maxAbs,
+  benchmark,
+  delta,
   selectedHorizon,
   setSelectedHorizon,
-  liveSeries,
-  isLive1yr,
+  isLive,
   dataAsOf,
-  xauPreserved,
-  localExample,
-  localPrefix,
-  riskEvents,
-  openEventKey,
-  setOpenEventKey,
-  showBusinessContextOpen,
-  setShowBusinessContextOpen,
-  waitlistEmail,
-  setWaitlistEmail,
-  waitlistStatus,
-  setWaitlistStatus,
-  waitlistError,
-  handleJoinWaitlist,
-  countryCode,
+  direction = 1,
   onAdvance,
+  onEntered,
 }: RiskPhaseProps) {
+  const reducedMotion = useReducedMotion();
+  const periodGroupId = useId();
+  // riskData can arrive after mount — re-report so the heading (which only
+  // exists once data lands) is the element that takes focus.
+  useEffect(() => { onEntered?.(); }, [onEntered, riskData?.code]);
+
   if (!riskData) return null;
+
+  const comparison = delta === null ? null : benchmarkBuyingPower(delta);
+  const benchmarkName = benchmark === 'USD' ? 'US dollars' : 'euros';
+  const headline = !comparison
+    ? 'See your currency more clearly.'
+    : comparison.direction === 'less'
+      ? 'Same money. Less buying power.'
+      : comparison.direction === 'more'
+        ? 'Same money. More buying power.'
+        : 'Same money. Similar buying power.';
+  const provenance = isLive
+    ? `Historical FX · as of ${dataAsOf}`
+    : `Approximate history · reviewed ${CURRENCY_RISK_DATA_AS_OF}${isCurrencyRiskDatasetStale() ? ' · review overdue' : ''}`;
 
   return (
     <motion.div
       key="phase-risk"
-      variants={phaseVariants}
-      initial="initial"
+      custom={direction}
+      variants={reducedMotion ? undefined : phaseVariants}
+      initial={reducedMotion ? false : 'initial'}
       animate="animate"
       exit="exit"
-      className="w-full max-w-sm text-center"
+      className="journey-phase text-center"
     >
-      {/* No subtitle — the card footer carries the honesty line
-          ("history, not advice.") exactly once. */}
-      <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-4 leading-tight">
-        Your <span className="text-blue-300">{riskData.flag} {riskData.code}</span> in context
+      <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-2">
+        {riskData.flag} {riskData.countryName} · {riskData.code}
+      </motion.p>
+      <motion.h2
+        variants={staggerChild}
+        data-phase-heading="risk"
+        tabIndex={-1}
+        className="journey-title text-white mb-3 focus:outline-none"
+      >
+        {headline}
       </motion.h2>
+      <motion.p variants={staggerChild} className="text-sm text-slate-300 mb-5">
+        What the same amount of {riskData.code} could buy in {benchmarkName}.
+      </motion.p>
 
-      <motion.div variants={staggerChild} className="bg-slate-900 text-white rounded-2xl p-4 mb-3 shadow-lg">
-        <p className="sr-only">
-          {riskData.countryName}&apos;s {riskData.code} moved {benchmarkRows
-            .map((row) => `${row.value}% against the ${BENCHMARKS[row.bench].label}`)
-            .join(', ')} over {HORIZONS[selectedHorizon].label}.
-        </p>
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <div className="flex rounded-lg bg-white/10 p-0.5" role="group" aria-label="Comparison period">
-            {(['1yr', '3yr', '5yr'] as Horizon[]).map((horizon) => (
-              <button
-                key={horizon}
-                type="button"
-                onClick={() => setSelectedHorizon(horizon)}
-                aria-pressed={selectedHorizon === horizon}
-                className={`px-2 min-h-tap py-1 rounded-md text-3xs font-black transition-colors ${
-                  selectedHorizon === horizon ? 'bg-amber-400 text-slate-950' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                {HORIZONS[horizon].short}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Hero — the benchmark with the largest movement at this
-            horizon, as the single focal number. */}
-        {heroRow ? (
-          <div className="mb-3">
-            <AnimatedNumber
-              value={heroRow.value}
-              decimals={0}
-              suffix="%"
-              duration={0.8}
-              className={`text-4xl font-black tracking-tight ${heroRow.value < 0 ? 'text-amber-300' : 'text-emerald-300'}`}
-            />
-            <p className="mt-1 text-xs font-semibold text-slate-400">
-              vs {BENCHMARKS[heroRow.bench].flag} {BENCHMARKS[heroRow.bench].label} · {HORIZONS[selectedHorizon].label} — your {riskData.code} bought {Math.abs(heroRow.value)}% {heroRow.value < 0 ? 'less' : 'more'}
-            </p>
-          </div>
+      {/* One surface: the before/after object and its period control. */}
+      <motion.div variants={staggerChild} className="bg-slate-900 rounded-3xl p-4 sm:p-6 mb-3">
+        {comparison ? (
+          <PurchasingPowerStage
+            comparison={comparison}
+            benchmark={benchmark}
+            selectedHorizon={selectedHorizon}
+          />
         ) : (
-          <p className="mb-3 text-sm font-bold text-slate-300">
-            Roughly stable against all three benchmarks over {HORIZONS[selectedHorizon].label}.
+          <p className="py-8 text-sm font-semibold text-slate-300">
+            This comparison is unavailable. You can still explore a plan.
           </p>
         )}
 
-        {/* Live 12-month path — only at the 1Y horizon, only when
-            the feed has a real series; 3Y/5Y stay on the bars
-            (the curated set has three points, not a path). */}
-        {selectedHorizon === '1yr' && liveSeries && (
-          <RiskSparkline values={liveSeries.values} code={riskData.code} />
-        )}
-
-        {/* Comparison bars — only at the 1Y horizon where the
-            sparkline carries the path; 3Y/5Y are three points and
-            a bars chart would just repeat the hero number twice.
-            The whole bar block is centred (max-w) so the bars
-            unit reads as one object, not a left-pinned chart. */}
-        {selectedHorizon === '1yr' && otherRows.length > 0 && (
-          <div className="space-y-2.5 mb-3 mx-auto max-w-[280px]">
-            {otherRows.map((row) => {
-              const b = BENCHMARKS[row.bench];
-              const pct = Math.max(4, Math.round((Math.abs(row.value) / maxAbs) * 100));
-              return (
-                <div key={row.bench} className="flex items-center gap-2">
-                  <span className="w-[64px] flex-shrink-0 text-2xs font-bold text-slate-300 whitespace-nowrap text-left">
-                    {b.flag} {b.label}
-                  </span>
-                  <div className="flex-1 h-1.5 rounded-full bg-white/10 overflow-hidden">
-                    <motion.div
-                      className="h-full w-full origin-left rounded-full bg-white/40"
-                      initial={{ scaleX: 0 }}
-                      animate={{ scaleX: Math.min(100, Math.max(0, pct)) / 100 }}
-                      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  </div>
-                  <span className="w-11 flex-shrink-0 text-xs font-black text-slate-200">
-                    {row.value > 0 ? '+' : row.value < 0 ? '-' : ''}{Math.abs(row.value)}%
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Counterfactual — a split you can see: five parts of the
-            example savings, one minted in gold, and the amount it
-            would have kept. The coins carry the "20%"; the number
-            carries the payoff. Stacked (coins above text) so the
-            whole block centres as one unit. */}
-        {xauPreserved > 0 && (
-          <div
-            className="mb-3 rounded-xl bg-amber-400/10 border border-amber-400/20 px-3 py-3 flex flex-col items-center gap-2"
-            aria-label={`If 20% of ${localPrefix}${localExample.toLocaleString()} had followed gold: ${localPrefix}${Math.round(xauPreserved).toLocaleString()} more kept.`}
-          >
-            <div className="flex items-center gap-1" aria-hidden="true">
-              {[0, 1, 2, 3].map((i) => (
-                <span key={i} className="opacity-45">
-                  <Coin size={20} symbol={riskData.flag} color={QUIET_GRAY} variant="asset" />
-                </span>
-              ))}
-              <motion.span
-                initial={{ scale: 0.6, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ ...springPop, delay: 0.5 }}
-                className="drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
-              >
-                <Coin size={24} symbol={BENCHMARKS.XAU.flag} color={GOLD_METAL} variant="asset" />
-              </motion.span>
+        <div className="mt-5 flex justify-center">
+          <LayoutGroup id={periodGroupId}>
+            <div className="flex rounded-full bg-white/10 p-1" role="group" aria-label="Comparison period">
+              {(['1yr', '3yr', '5yr'] as Horizon[]).map((horizon) => {
+                const selected = selectedHorizon === horizon;
+                return (
+                  <motion.button
+                    key={horizon}
+                    type="button"
+                    onClick={() => {
+                      if (horizon === selectedHorizon) return;
+                      haptics.tap();
+                      setSelectedHorizon(horizon);
+                    }}
+                    aria-pressed={selected}
+                    {...controlMotion(Boolean(reducedMotion))}
+                    className={`relative isolate min-h-tap px-4 rounded-full text-xs font-black ${
+                      selected ? 'text-white' : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    {selected &&
+                      (reducedMotion ? (
+                        <span aria-hidden="true" className="absolute inset-0 -z-10 rounded-full bg-blue-600" />
+                      ) : (
+                        <motion.span
+                          aria-hidden="true"
+                          layoutId="risk-period-selection"
+                          transition={comparisonSettle}
+                          className="absolute inset-0 -z-10 rounded-full bg-blue-600"
+                        />
+                      ))}
+                    <span className="relative">{HORIZONS[horizon].short}</span>
+                  </motion.button>
+                );
+              })}
             </div>
-            <p className="text-2xs leading-snug text-amber-200">
-              20% in gold:{' '}
-              <AnimatedNumber
-                value={xauPreserved}
-                decimals={0}
-                prefix={localPrefix}
-                duration={1}
-                className="font-black text-amber-300"
-              />{' '}
-              more kept.
-            </p>
-          </div>
-        )}
-
-        {/* Context events — collapsed to a single quiet line in
-            the data footer. Tapping expands a stacked year list
-            with the explanation for each. Stays inside the card
-            so the whole data story (numbers, why, provenance)
-            is one object. */}
-        {riskEvents.length > 0 && (
-          <div className="pt-2 border-t border-white/10">
-            <button
-              type="button"
-              onClick={() => setOpenEventKey(openEventKey === '__events__' ? null : '__events__')}
-              aria-expanded={openEventKey === '__events__'}
-              className="w-full min-h-[28px] flex items-center justify-center gap-1.5 text-3xs text-slate-400 hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
-            >
-              <span>
-                Context: {riskEvents.map((ev) => ev.year).join(', ')}
-              </span>
-              <span className="text-slate-500">{openEventKey === '__events__' ? '−' : '+'}</span>
-            </button>
-            <AnimatePresence initial={false}>
-              {openEventKey === '__events__' && (
-                <motion.ul
-                  key="events"
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  className="overflow-hidden text-left space-y-1 pt-1.5"
-                >
-                  {riskEvents.map((ev) => (
-                    <li key={`${ev.year}-${ev.event}`} className="text-2xs leading-relaxed text-slate-300">
-                      <span className="font-black text-slate-100">{ev.year}</span>
-                      <span className="text-slate-500"> · </span>
-                      <span className="text-slate-400">{ev.event}</span>
-                      <span className="block text-slate-400/80">{ev.impact}</span>
-                    </li>
-                  ))}
-                </motion.ul>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
-
-        <div className="pt-2 border-t border-white/10 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
-          {/* The label names the data behind the number on screen: only
-              1Y vs USD is live; everything else is the curated set, so a
-              "Live" dot next to a 5Y figure would overclaim. */}
-          {selectedHorizon === '1yr' && isLive1yr ? (
-            <span className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider">
-              ● Live · as of {dataAsOf}
-            </span>
-          ) : (
-            <span className="text-[9px] text-amber-400 font-bold uppercase tracking-wider">
-              Curated history · reviewed {CURRENCY_RISK_DATA_AS_OF}
-            </span>
-          )}
-          <span className="text-[9px] text-slate-500">·</span>
-          <span className="text-[9px] text-slate-500">history, not advice.</span>
-
-          </div>
+          </LayoutGroup>
+        </div>
       </motion.div>
 
-      {/* One quiet line — the how-it-works diagram is moved to the
-          Phase 3 (philosophy) stage, so this tier is just the
-          business sub-disclosure. Tap once for context, tap again
-          for the email capture. */}
-      <motion.div variants={staggerChild} className="mb-4">
-        <p className="text-2xs leading-relaxed text-slate-300">
-          DiversiFi never holds your fiat — buy stablecoins anywhere you trust, we allocate from there.
-        </p>
-        <button
-          type="button"
-          onClick={() => {
-            const opening = !showBusinessContextOpen;
-            setShowBusinessContextOpen(opening);
-            if (opening) {
-              trackFunnelEvent('business_hint_expanded', countryCode ? { country: countryCode } : undefined);
-            }
-          }}
-          className="mt-1 text-2xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 rounded"
-        >
-          {showBusinessContextOpen ? '− Hide business context' : '+ How this can affect a business'}
-        </button>
-        <AnimatePresence initial={false}>
-          {showBusinessContextOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-2 bg-white/70 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 rounded-xl p-3">
-                <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400">
-                  When costs and sales settle in different currencies, exchange-rate changes can affect the margin between restocks.
-                </p>
-                {/* The business doorway: /fx-drag-calculator redirects into
-                    Shield's payment-cycle inspector ("Last cycle" mode) — no
-                    wallet, real rates, then "Track your next payment" flips
-                    to the forward report. */}
-                <a
-                  href="/fx-drag-calculator"
-                  onClick={() => trackFunnelEvent('business_hint_expanded', { action: 'calculator', ...(countryCode ? { country: countryCode } : {}) })}
-                  className="mt-2 flex min-h-tap items-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
-                >
-                  See what FX timing costs your business →
-                </a>
-                <div className="mt-2 space-y-2">
-                  {waitlistStatus === 'success' ? (
-                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                      ✓ You&apos;re on the list — we&apos;ll email you when it&apos;s ready.
-                    </p>
-                  ) : (
-                    <>
-                      <p className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                        Want early access to automatic cycle protection?
-                      </p>
-                      <div className="flex gap-2">
-                        <input
-                          type="email"
-                          inputMode="email"
-                          autoComplete="email"
-                          aria-label="Email address for waitlist"
-                          placeholder="you@business.com"
-                          value={waitlistEmail}
-                          onChange={(e) => { setWaitlistEmail(e.target.value); if (waitlistStatus === 'error') setWaitlistStatus('idle'); }}
-                          onKeyDown={(e) => { if (e.key === 'Enter' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)) handleJoinWaitlist(); }}
-                          disabled={waitlistStatus === 'submitting'}
-                          className="flex-1 min-w-0 min-h-tap rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-xs text-gray-900 dark:text-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleJoinWaitlist}
-                          disabled={waitlistStatus === 'submitting' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(waitlistEmail)}
-                          className="shrink-0 min-h-tap rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 px-3 py-2 text-xs font-bold text-white transition-colors"
-                        >
-                          {waitlistStatus === 'submitting' ? 'Joining…' : 'Join waitlist'}
-                        </button>
-                      </div>
-                      {waitlistStatus === 'error' && waitlistError && (
-                        <p className="text-2xs font-semibold text-red-500">{waitlistError}</p>
-                      )}
-                      <p className="text-3xs leading-relaxed text-gray-400 dark:text-gray-500">
-                        We&apos;ll only use this to invite you to early access when automatic cycle protection launches — no other emails, ever. You can ask us to delete it anytime.
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+      <motion.p variants={staggerChild} className="text-xs text-slate-300 mb-3">
+        {provenance}
+      </motion.p>
+
+      <motion.div variants={staggerChild} className="mb-5 text-left">
+        <details className="rounded-xl">
+          <summary className="group min-h-tap inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 cursor-pointer rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400">
+            How to read this
+            <span aria-hidden="true" className="text-slate-500 group-open:hidden">+</span>
+            <span aria-hidden="true" className="text-slate-500 hidden group-open:inline">−</span>
+          </summary>
+          <p className="mt-2 text-sm leading-relaxed text-slate-300 max-w-prose">
+            Same {riskData.code} amount, priced in {benchmarkName} at two
+            points in history — not a bank balance or a forecast.
+          </p>
+        </details>
       </motion.div>
 
       <motion.button
         variants={staggerChild}
         onClick={onAdvance}
-        className="w-full px-6 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
-        whileHover={{ y: -2 }}
-        whileTap={{ scale: 0.97 }}
+        {...controlMotion(Boolean(reducedMotion))}
+        className="journey-action w-full px-6 bg-blue-600 hover:bg-blue-700 text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 focus-visible:ring-offset-2"
       >
-        <ShimmerText>Choose your plan →</ShimmerText>
+        Explore my options
+        <span className="journey-action-arrow" aria-hidden="true">→</span>
       </motion.button>
     </motion.div>
   );

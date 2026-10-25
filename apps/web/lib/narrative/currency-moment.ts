@@ -17,6 +17,23 @@ import {
 
 export type MomentState = 'calm' | 'watch' | 'review';
 
+/**
+ * Benchmark units bought by an unchanged local-currency amount.
+ * The starting amount is chosen to buy 100 benchmark units; this is an
+ * illustrative FX comparison, not a wallet balance, CPI, or investment return.
+ * A -63% change therefore buys 37 units, while +7% buys 107.
+ */
+export function benchmarkBuyingPower(delta: number): {
+  start: number;
+  end: number;
+  direction: 'less' | 'more' | 'same';
+} | null {
+  if (!Number.isFinite(delta) || delta < -100) return null;
+  const end = Math.round((100 + delta) * 10) / 10;
+  if (!Number.isFinite(end)) return null;
+  return { start: 100, end, direction: end < 100 ? 'less' : end > 100 ? 'more' : 'same' };
+}
+
 export interface NarrativeMoment {
   currencyCode: string;
   countryName: string;

@@ -495,6 +495,17 @@ body {
   }
 }
 
+/* Final reduced-motion override for the shine — declared AFTER the
+   animation rules so it wins the cascade (the earlier media block sits
+   before .coin-shine/.coin-shine-once and loses to them). */
+@media (prefers-reduced-motion: reduce) {
+  .coin-shine rect,
+  .coin-shine-once rect {
+    animation: none !important;
+    opacity: 0;
+  }
+}
+
 /* ── Lens coin motif (Phase 3 value-lens selector) ─────────────────
    Every coin has a soft accent-coloured underglow in its own colour so
    it reads as a polished medallion sitting on a coloured cushion, not
@@ -969,4 +980,91 @@ body {
 }
 .dark .engraved-numeral {
   text-shadow: 0 -1.5px 2px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ── Journey (onboarding → first run) ─────────────────────────────── */
+/* Sculptural instruments: one dominant story per screen, generous
+   readable typography, coin-chosen purpose controls. */
+.journey-title {
+  font-size: clamp(2rem, 4.4vw, 3.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.045em;
+  font-weight: 900;
+  text-wrap: balance;
+}
+.journey-phase {
+  width: 100%;
+  max-width: 36rem;
+}
+.journey-action {
+  min-height: 3.25rem;
+  border-radius: 1rem;
+  font-weight: 700;
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+.journey-action-arrow {
+  display: inline-block;
+  margin-left: 0.5rem;
+  transition: transform 180ms ease;
+}
+.journey-action:hover .journey-action-arrow,
+.journey-action:focus-visible .journey-action-arrow {
+  transform: translateX(3px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey-action-arrow,
+  .journey-action:hover .journey-action-arrow,
+  .journey-action:focus-visible .journey-action-arrow {
+    transition: none;
+    transform: none;
+  }
+}
+.journey-purpose {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 6.25rem;
+  padding: 0.75rem 0.375rem;
+  border-radius: 1rem;
+  border: 1px solid #475569;
+  background: #17243b;
+  color: #e2e8f0;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.journey-purpose[aria-checked="true"] {
+  /* The shared selection plate (bg-blue-700) slides underneath — the
+     button's own background stays transparent so the plate shows. */
+  background: transparent;
+  border-color: #93c5fd;
+  color: #fff;
+}
+.journey-purpose:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+.journey-purpose-caption {
+  min-height: 2.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: #cbd5e1;
+}
+
+/* ── Currency theater (Home opening object) ─────────────────────────
+   The reading carries the object accent; dark mode lifts it toward
+   white so the numeral keeps its legibility on the vault. */
+.currency-theater {
+  --reading-ink: var(--reading-color);
+}
+.dark .currency-theater {
+  --reading-ink: color-mix(in srgb, var(--reading-color) 65%, white);
+}
+.currency-reading {
+  font-size: clamp(2.75rem, 6vw, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
 }

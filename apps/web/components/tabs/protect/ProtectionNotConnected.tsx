@@ -54,7 +54,8 @@ import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { shieldBeats } from "@/lib/live-lines";
 import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { controlMotion } from "@/lib/motion-tokens";
 import { LiveLine } from "@/components/shared/LiveLine";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
@@ -70,6 +71,7 @@ import {
   type InflationRates,
 } from "@/lib/learn/protection-calculator";
 import { useNavigation } from "@/context/app/NavigationContext";
+import { useAIConversationOptional } from "@/context/AIConversationContext";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -104,6 +106,10 @@ export function ProtectionNotConnected({
 }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const { pendingIntent, consumeIntent, navigateToGuardian } = useNavigation();
+  // The contextual Guardian door — present only where a conversation
+  // provider exists; opening it is always an explicit tap, never a send.
+  const conversation = useAIConversationOptional();
+  const reducedMotion = useReducedMotion();
   const ambient = useAmbientOrigin();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
   // holdings, no loading shimmer. Fresh instance per mount — never a
@@ -285,6 +291,20 @@ export function ProtectionNotConnected({
       onPointerDownCapture={() => setActed(true)}
       onFocusCapture={() => setActed(true)}
     >
+      {!inspectorOpen && !sleeveOpen && !balance.isPreviewing && (
+        <div className="text-center space-y-1">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">
+            {picking || comparing
+              ? "Your values. Your starting mix."
+              : "A plan you can make your own."}
+          </h2>
+          {picking && (
+            <p className="text-sm text-ink-muted">
+              Choose a philosophy. Watch the mix take shape.
+            </p>
+          )}
+        </div>
+      )}
       <div data-testid="shield-ring" data-walletless data-comparing={comparing || undefined}>
         <motion.div
           data-testid="beat-impulse"
@@ -395,6 +415,19 @@ export function ProtectionNotConnected({
                     variant="primary"
                     className="w-full mt-3"
                   />
+                )}
+                {!balance.isPreviewing && !sleeveOpen && !comparing && !picking && conversation && (
+                  <motion.button
+                    type="button"
+                    className="link-quiet mt-2"
+                    {...controlMotion(Boolean(reducedMotion))}
+                    onClick={() => {
+                      setActed(true);
+                      conversation.setDrawerOpen(true);
+                    }}
+                  >
+                    Explore this plan with Guardian
+                  </motion.button>
                 )}
               </div>
             ) : undefined
@@ -537,12 +570,6 @@ export function ProtectionNotConnected({
             </div>
           )}
         </div>
-      )}
-
-      {/* The one CTA — attaches to the object, no card wrapper. While
-          comparing, "Use this plan" is the one CTA instead. */}
-      {!showRing && !comparing && !balance.isPreviewing && !sleeveOpen && (
-        <WalletButton variant="minimal" className="w-full" />
       )}
     </div>
   );

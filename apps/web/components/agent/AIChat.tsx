@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { spring } from "@/lib/motion-tokens";
+import { spring, controlMotion } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useAIConversation } from "../../context/AIConversationContext";
 import { useNavigation } from "../../context/app/NavigationContext";
@@ -135,6 +135,13 @@ export default function AIChat() {
       ? readExchangePair()
       : null;
   const selectedCurrency = currencyView ?? currencyReading;
+  // The plan the header names: the saved philosophy wins so a custom plan
+  // shows its own label; the demo preview names the sample instead.
+  const archetypeId = strategyToArchetype(
+    demo?.demoMode.isActive && demo.demoMode.previewStrategy
+      ? demo.demoMode.previewStrategy
+      : profileConfig.philosophy ?? profileConfig.valuesPhilosophy,
+  );
   const advisorView = {
     tab: activeTab,
     ...(exchangePair
@@ -146,7 +153,7 @@ export default function AIChat() {
       : activeTab === 'overview' && selectedCurrency
         ? ` · ${selectedCurrency.currencyCode} / ${selectedCurrency.benchmark} · ${selectedCurrency.horizon[0]} ${selectedCurrency.horizon === '1yr' ? 'year' : 'years'}`
         : ''
-  }`;
+  }${activeTab === 'protect' && archetypeId ? ` · ${ARCHETYPES[archetypeId].name}` : ''}`;
 
   const submitPrompt = (prompt: string) => {
     if (!prompt.trim() || isChatting) return;
@@ -274,6 +281,20 @@ export default function AIChat() {
     return () => document.removeEventListener('keydown', onKeyDown);
   }, [isDrawerOpen, setDrawerOpen, menuOpen, showClearConfirm]);
 
+  // The drawer is a door, not a destination — closing it returns focus to
+  // whatever the visitor was touching (the coin, the door button, …).
+  // Declared BEFORE the input-focus effect so `origin` is captured before
+  // that effect moves focus into the composer.
+  useEffect(() => {
+    if (!isDrawerOpen) return;
+    const origin = document.activeElement;
+    return () => {
+      if (origin instanceof HTMLElement && origin.isConnected) {
+        origin.focus({ preventScroll: true });
+      }
+    };
+  }, [isDrawerOpen]);
+
   useEffect(() => {
     if (isDrawerOpen && isDesktop) {
       inputRef.current?.focus();
@@ -284,11 +305,6 @@ export default function AIChat() {
   // No auto-triggers — no tab switches, no claim popups, no navigation.
 
   const mascotMood = activeGuardianReview ? 'alert' : isChatting ? 'thinking' : 'neutral';
-  const archetypeId = strategyToArchetype(
-    demo?.demoMode.isActive && demo.demoMode.previewStrategy
-      ? demo.demoMode.previewStrategy
-      : profileConfig.valuesPhilosophy,
-  );
   const starters = contextualStarters(activeTab as TabId, {
     currency: selectedCurrency?.currencyCode ?? (isDrawerOpen ? readSelectedCurrency() : null),
     planName: archetypeId ? ARCHETYPES[archetypeId].name : null,
@@ -424,10 +440,10 @@ export default function AIChat() {
       {isDrawerOpen && (
         <motion.div
           layoutId={isDesktop && !reducedMotion ? "ask-guardian" : undefined}
-          initial={isDesktop ? (reducedMotion ? { opacity: 0 } : false) : { y: "100%" }}
-          animate={isDesktop ? { opacity: 1 } : { y: 0 }}
-          exit={isDesktop ? { opacity: 0 } : { y: "100%" }}
-          transition={spring}
+          initial={reducedMotion ? { opacity: 0 } : isDesktop ? false : { y: "100%" }}
+          animate={isDesktop || reducedMotion ? { opacity: 1 } : { y: 0 }}
+          exit={isDesktop || reducedMotion ? { opacity: 0 } : { y: "100%" }}
+          transition={reducedMotion ? { duration: 0 } : spring}
           className={
             isDesktop
               ? "fixed right-4 bottom-4 z-[50] isolate bg-white dark:bg-gray-900 rounded-3xl shadow-2xl w-[340px] xl:w-[420px] h-[min(720px,calc(100dvh-2rem))] flex flex-col pointer-events-auto border border-gray-200 dark:border-white/10 overflow-hidden"
@@ -513,18 +529,24 @@ export default function AIChat() {
               transition={{ duration: 0.3 }}
               className="shrink-0"
             >
-              <GuardianMascot size={32} mood={mascotMood} />
+              <GuardianMascot size={40} mood={mascotMood} />
             </motion.div>
             <div className="min-w-0">
               <h3 className="font-black text-blue-950 dark:text-blue-100 tracking-tight text-sm leading-tight">
                 Guardian
               </h3>
-              <p className="truncate text-xs text-blue-600/80 dark:text-blue-300/80">
-                {contextLine}
-              </p>
+              <motion.button
+                type="button"
+                aria-label={`Return to ${tabLabel}`}
+                {...controlMotion(Boolean(reducedMotion))}
+                onClick={() => setDrawerOpen(false)}
+                className="min-h-tap text-left text-xs text-blue-600/80 dark:text-blue-300/80 hover:text-blue-800 dark:hover:text-blue-200 transition-colors rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
+              >
+                <span aria-hidden="true">← </span>{contextLine}
+              </motion.button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {/* Secondary controls live in one menu — settings, view toggle,
                 new thread. Esc closes it (handled by the drawer keydown). */}
             <div className="relative">
@@ -533,7 +555,7 @@ export default function AIChat() {
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
                 aria-label="More options"
-                className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base leading-none"
+                className="size-tap flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-base leading-none"
               >
                 ⋯
               </button>
@@ -568,7 +590,7 @@ export default function AIChat() {
             </div>
             <button
               onClick={() => setDrawerOpen(false)}
-              className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/30 transition-colors"
+              className="size-tap flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200/50 dark:border-gray-700/30 transition-colors"
               aria-label="Close chat"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -755,35 +777,43 @@ export default function AIChat() {
 
                 {messages.length === 0 && !isChatting && !activeGuardianReview && (
                   <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
+                    initial={reducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="h-full flex flex-col items-center justify-center text-center space-y-5"
+                    transition={{ duration: reducedMotion ? 0 : 0.5 }}
+                    className="h-full w-full flex flex-col items-start justify-center text-left space-y-5"
                   >
                     <div className="space-y-2">
+                      <p className="text-xs font-bold uppercase tracking-widest text-ink-muted">
+                        Let’s make sense of it
+                      </p>
                       {/* One greeting line keyed to the tab — the header mascot
                           is the only mascot; no second hero mark here. */}
                       <MaskedReveal
                         as="p"
                         lines={[greeting]}
                         delay={0.15}
-                        lineClassName="text-base font-bold text-blue-900 dark:text-blue-100"
+                        lineClassName="text-2xl sm:text-3xl font-bold tracking-tight text-blue-900 dark:text-blue-100"
                       />
                     </div>
 
-                    <div className="flex flex-wrap justify-center gap-2 max-w-[320px]">
-                      {starters.map(({ id, question, prompt, badge }) => (
+                    <div className="w-full flex flex-col divide-y divide-line">
+                      {starters.map(({ id, question, prompt, badge }, i) => (
                         <motion.button
                           key={id}
+                          {...controlMotion(Boolean(reducedMotion))}
                           onClick={() => {
                           trackFunnelEvent('starter_tapped', { starter: id, tab: String(activeTab) });
                           submitPrompt(prompt);
                         }}
                           title={`${badge} tier`}
-                          className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 rounded-full border border-blue-200 dark:border-blue-700/40 hover:bg-blue-100 dark:hover:bg-blue-800/40 transition-colors"
+                          className="min-h-[64px] w-full rounded-lg px-2 py-3 text-left text-sm font-semibold flex items-center gap-3 text-blue-900 dark:text-blue-100 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400"
                         >
-                          <span>{question}</span>
+                          <span aria-hidden="true" className="text-xs font-bold tabular-nums text-ink-muted">
+                            {String(i + 1).padStart(2, '0')}
+                          </span>
+                          <span className="flex-1">{question}</span>
                           <span className="sr-only">({badge} tier)</span>
+                          <span aria-hidden="true" className="text-ink-muted">→</span>
                         </motion.button>
                       ))}
                     </div>
@@ -1114,7 +1144,13 @@ export default function AIChat() {
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                placeholder="Ask about your savings…"
+                placeholder={
+                  activeTab === 'overview'
+                    ? 'Ask about this currency…'
+                    : activeTab === 'protect'
+                      ? 'Ask about this plan…'
+                      : 'Ask about your savings…'
+                }
                 aria-label="Ask your Guardian a question"
                 className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-gray-900 dark:text-white pr-10"
               />

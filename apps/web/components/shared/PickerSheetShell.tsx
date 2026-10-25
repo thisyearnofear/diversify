@@ -35,6 +35,10 @@ interface PickerSheetShellProps {
   searchPlaceholder: string;
   searchAriaLabel: string;
   closeButtonAriaLabel: string;
+  /** 'vault' scopes dark tokens for the always-night onboarding surface. */
+  tone?: 'default' | 'vault';
+  /** Extra classes on the dialog panel (e.g. sm:max-w-xl for wider lists). */
+  panelClassName?: string;
   children: React.ReactNode;
 }
 
@@ -47,9 +51,13 @@ export function PickerSheetShell({
   searchPlaceholder,
   searchAriaLabel,
   closeButtonAriaLabel,
+  tone = 'default',
+  panelClassName = '',
   children,
 }: PickerSheetShellProps) {
   const searchRef = useRef<HTMLInputElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const originRef = useRef<HTMLElement | null>(null);
   const reducedMotion = useReducedMotion();
   const dragControls = useDragControls();
   const detent = useDismissDetent();
@@ -58,11 +66,39 @@ export function PickerSheetShell({
   useDismissibleLayer(isOpen, onClose);
 
   // Focus search shortly after open — the sheet is a picking task, and the
-  // keyboard is the fastest path through a long list.
+  // keyboard is the fastest path through a long list. Capture the opener
+  // first so closing restores it, and keep Tab cycling inside the dialog.
   useEffect(() => {
     if (!isOpen) return;
+    originRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const t = setTimeout(() => searchRef.current?.focus(), 50);
-    return () => clearTimeout(t);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const focusables = panel.querySelectorAll<HTMLElement>(
+        'input, button:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener('keydown', onKeyDown);
+      const origin = originRef.current;
+      originRef.current = null;
+      if (origin?.isConnected) origin.focus({ preventScroll: true });
+    };
   }, [isOpen]);
 
   // Lock body scroll while open
@@ -77,7 +113,7 @@ export function PickerSheetShell({
 
   if (typeof document === "undefined") return null;
   return createPortal(
-    <>
+    <div className={tone === 'vault' ? 'dark' : undefined}>
       {/* Scrim is a sibling, not a child: nested, its fixed z-[49]
           would paint above the panel (z-auto) and swallow its clicks. */}
       {isOpen && <Scrim intensity="light" onClick={onClose} />}
@@ -95,11 +131,12 @@ export function PickerSheetShell({
             transition={{ duration: 0.15 }}
           >
           <motion.div
+            ref={panelRef}
             initial={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
             animate={reducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
             exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: 48 }}
             transition={spring}
-            className="relative w-full sm:max-w-md max-h-[80dvh] bg-surface rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden"
+            className={`relative w-full sm:max-w-md max-h-[80dvh] bg-surface rounded-t-3xl sm:rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 flex flex-col overflow-hidden ${panelClassName}`}
             onClick={(e) => e.stopPropagation()}
             // Bottom sheet tracks the finger from its header; a long drag
             // or a downward flick dismisses, anything else springs back.
@@ -175,7 +212,7 @@ export function PickerSheetShell({
           </motion.div>
         )}
       </AnimatePresence>
-    </>,
+    </div>,
     document.body,
   );
 }

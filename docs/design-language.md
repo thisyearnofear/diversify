@@ -98,9 +98,16 @@ and `FloatingCoins`. Rule: **the coins do work**. Readable labels and visible se
   `LensCoinSelector` — five flickable coins, each with a per-lens accent;
   one tap opens its archetypes with a consistent coin-to-panel transition.
   Approach taps preview locally; only **Use this plan** persists a plan.
-- The segmented control (1Y/3Y/5Y in the risk card) is the *same
-  control* used for money purpose (Buffer/Long term/Supplier payment) at country selection.
-  Users learn a control once; the design loans that learning forward.
+- The segmented control (1Y/3Y/5Y on the risk stage; Moments/1Y
+  path/Headlines in the currency story) and the purpose radios
+  (Buffer/Long term/Supplier payment) share one grammar: a sliding
+  selection plate over touch targets (`controlMotion` press/spring,
+  plate static under reduced motion). Users learn a control once; the
+  design loans that learning forward.
+- The country selector is the shared `PickerSheetShell` (same chrome as
+  the token picker): a searchable sheet/dialog over the full ISO
+  directory. Countries without a researched currency history select
+  honestly and route to plans — the directory is identity, not coverage.
 
 Supplier payment goes directly to Shield's payment stage, without a values-plan prerequisite.
 Payment scenarios compute before any wallet prompt. Saving a payment and enabling monitoring
@@ -139,8 +146,9 @@ the bundle):
 - **Origami fold** (`rotateX` from `transformOrigin: top`): the reveal
   IS the transition — no fade-through-a-middle-state. `InspectorSheet`
   uses this when a selection opens.
-- **Blur-swap** (`phaseVariants`/`staggerChild` in onboarding): content
-  swaps through a 6px blur, never a y-jump.
+- **Directional slide** (`phaseVariants`/`staggerChild` in onboarding):
+  phases travel ±16px with the direction of movement (forward rises, back
+  falls), children stagger in on `staggerChild`; exits take 0.12s.
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
 - **Flick scroll row** (`FlickScrollRow`, powered by `useDragToScroll`): the ONLY sanctioned horizontal scroll row — new rows compose the primitive instead of re-rolling `overflow-x-auto`. Native touch, pointer drag with momentum on mouse/pen, chevron buttons; `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Interactive children guard with `useDidDrag()` inside a child component (a body-level call reads the never-drag default and silently no-ops); drag-release swallows exactly one click, a new press revokes the trap. Live users: philosophy picker, Home holdings coins, BestYield chain toolbar, onboarding ArchetypeStrip.
 
@@ -950,8 +958,12 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `StampSheet`, `StampPostcard` | `apps/web/components/swap/StampSheet.tsx` | the L2 stamp inspector + postcard face (press/lift/share) |
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts` | curated token logos w/ branded coin fallback on missing or failed logos; add verified assets to the registry, never leave broken images |
-| `phaseVariants`, `staggerChild` | onboarding screens | blur-swap transitions |
-| segmented control | risk card + money purpose | period/purpose selector |
+| `phaseVariants`, `staggerChild` | onboarding screens | directional phase transitions |
+| `controlMotion` | `apps/web/lib/motion-tokens.ts` | one press grammar for all controls |
+| `PickerSheetShell` / `CountryPicker` | `apps/web/components/shared/PickerSheetShell.tsx`, `apps/web/components/tabs/overview/CountryPicker.tsx` | searchable picker sheet/dialog (country + token); focus-trapped, origin restored |
+| `benchmarkBuyingPower` | `apps/web/lib/narrative/currency-moment.ts` | onboarding before/after reading (100 benchmark units → end) |
+| `onboarding-draft` | `apps/web/components/onboarding/onboarding-draft.ts` | session-only draft recovery; validated, never a commit |
+| segmented control | risk stage + money purpose + story views | sliding selection plate |
 | `.scrollbar-hide` | `globals.css` | horizontal chip strips |
 | currency-risk data | `apps/web/constants/currency-risk.ts` | depreciation, counterfactuals, events |
 

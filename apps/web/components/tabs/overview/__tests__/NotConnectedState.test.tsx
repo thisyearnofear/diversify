@@ -298,7 +298,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
       name: /Change the country where your savings live/,
     });
     fireEvent.click(trigger);
-    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Where is your money?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Jamaica \(JMD\)/ }));
     expect(hookState.onChangeCountry).toHaveBeenCalledWith("JM");
   });
@@ -383,7 +383,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
 });
 
 describe("CountryPicker — no-country placeholder state", () => {
-  it("renders the curated list in the shared sheet behind a placeholder when no country is known", () => {
+  it("renders the full country directory in the shared sheet behind a placeholder when no country is known", () => {
     render(
       <CountryPicker
         currentCountryCode=""
@@ -400,7 +400,7 @@ describe("CountryPicker — no-country placeholder state", () => {
         name: /Change the country where your savings live/,
       }),
     );
-    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Where is your money?' })).toBeInTheDocument();
     // Curated corridors present (Caribbean + Africa + benchmarks).
     expect(
       screen.getByRole("button", { name: /Jamaica \(JMD\)/ }),
@@ -410,6 +410,15 @@ describe("CountryPicker — no-country placeholder state", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Ghana \(GHS\)/ }),
+    ).toBeInTheDocument();
+    // The directory is the full ISO list, not only curated corridors —
+    // a country with no researched history still appears, honestly
+    // labeled by name alone (no invented currency code).
+    expect(
+      screen.getByRole("button", { name: "Afghanistan" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/\d+ countries · detection is location, risk is personal/),
     ).toBeInTheDocument();
   });
 
@@ -430,7 +439,7 @@ describe("CountryPicker — no-country placeholder state", () => {
     // Dismiss via the close button without choosing anything.
     fireEvent.click(screen.getByRole('button', { name: 'Close country picker' }));
     expect(onChange).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(), { timeout: 3000 });
     // A real row commits its ISO2 and closes the sheet.
     fireEvent.click(
       screen.getByRole('button', {
@@ -439,6 +448,6 @@ describe("CountryPicker — no-country placeholder state", () => {
     );
     fireEvent.click(screen.getByRole('button', { name: /Jamaica \(JMD\)/ }));
     expect(onChange).toHaveBeenCalledWith("JM");
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(), { timeout: 3000 });
   });
 });

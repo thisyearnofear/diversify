@@ -17,7 +17,8 @@ vi.mock('@/context/app/NavigationContext', () => ({
 }));
 vi.mock('@/hooks/use-dismissible-layer', () => ({ useDismissibleLayer: vi.fn() }));
 vi.mock('@/components/onboarding/screens/WelcomeScreen', () => ({
-  WelcomeScreen: ({ onComplete }: { onComplete: (region: string | null, selection?: OnboardingSelection) => void }) => <>
+  WelcomeScreen: ({ onComplete, onPhaseEntered }: { onComplete: (region: string | null, selection?: OnboardingSelection) => void; onPhaseEntered?: () => void }) => <>
+    <button onClick={() => onPhaseEntered?.()}>Phase entered</button>
     <button onClick={() => onComplete('Africa')}>Explore sample</button>
     <button onClick={() => onComplete('Africa', { philosophy: 'africapitalism', moneyPurpose: 'long_term_savings' })}>Use this plan</button>
     <button onClick={() => onComplete('Africa', { moneyPurpose: 'upcoming_payment' })}>Plan payment</button>
@@ -43,6 +44,21 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 const profile = () => JSON.parse(localStorage.getItem(KEY) ?? '{}');
+
+describe('onboarding phase entry', () => {
+  it('resets the screen scroll to top each time a phase reports entry', () => {
+    const { container } = mount();
+    const screenEl = container.querySelector<HTMLElement>('.custom-scrollbar');
+    expect(screenEl).not.toBeNull();
+    screenEl!.scrollTop = 120;
+    fireEvent.click(screen.getByRole('button', { name: 'Phase entered' }));
+    expect(screenEl!.scrollTop).toBe(0);
+    // A second entry resets again — the callback is stable, not one-shot.
+    screenEl!.scrollTop = 80;
+    fireEvent.click(screen.getByRole('button', { name: 'Phase entered' }));
+    expect(screenEl!.scrollTop).toBe(0);
+  });
+});
 
 describe('onboarding completion persistence', () => {
   it('keeps the saved strategy and purpose when exploring a sample', () => {

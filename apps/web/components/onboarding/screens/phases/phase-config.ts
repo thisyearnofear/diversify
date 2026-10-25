@@ -9,31 +9,24 @@
 import type { Variants } from 'framer-motion';
 import type { ArchetypeId } from '../../../protection-cards/tokens';
 import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
-import { reveal, STAGGER_STEP_S } from '@/lib/motion-tokens';
+import { reveal, springSoft } from '@/lib/motion-tokens';
 
 // ── Animation variants ─────────────────────────────────────────────────
-// One quiet phase transition; material motion belongs to the selected coin.
+// Directional phase travel: forward slides in from below-right, back slides
+// in from above-left; the outgoing screen lifts a bounded 0.12s.
 
 export const phaseVariants: Variants = {
-  initial: {
-    opacity: 0,
-    scale: 0.98,
-  },
+  initial: (direction: number = 1) => ({ opacity: 0, y: direction * 16 }),
   animate: {
     opacity: 1,
-    scale: 1,
-    transition: {
-      ...reveal,
-      staggerChildren: STAGGER_STEP_S,
-    },
+    y: 0,
+    transition: { ...springSoft, staggerChildren: 0.035 },
   },
-  exit: {
+  exit: (direction: number = 1) => ({
     opacity: 0,
-    scale: 1.02,
-    transition: {
-      ...reveal,
-    },
-  },
+    y: direction * -12,
+    transition: { duration: 0.12, ease: 'easeIn' },
+  }),
 };
 
 export const staggerChild: Variants = {

@@ -374,9 +374,11 @@ describe('ProtectionPlanRing — projections shape', () => {
       screen.queryByText(/Your holdings|Plan preview|Preview allocation/),
     ).not.toBeInTheDocument();
     expect(screen.queryByText(/\d+% held/)).not.toBeInTheDocument();
-    const hole = screen.getByTestId('ring-hole');
-    expect(hole).toHaveTextContent('Buen Vivir');
-    expect(hole).toHaveTextContent('+15% PAXG');
+    // The hole keeps its compare-preview readout, but as a static div —
+    // no explicit holeActionLabel/holeHintOverride, so no tappable door.
+    expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
+    expect(screen.getByText('Buen Vivir')).toBeInTheDocument();
+    expect(screen.getByText('+15% PAXG')).toBeInTheDocument();
   });
 
   it('shows Add funds in the hole when the wallet is empty', () => {
@@ -398,7 +400,7 @@ describe('ProtectionPlanRing — projections shape', () => {
     expect(screen.getByText('Add funds')).toBeInTheDocument();
   });
 
-  it('walletless hole states the plan reserve — no connect copy, no repeated plan name', () => {
+  it('walletless hole states the plan reserve — no connect copy, no repeated plan name, no compare hole', () => {
     const empty = {
       ...DEMO_PORTFOLIO,
       totalValue: 0,
@@ -416,13 +418,17 @@ describe('ProtectionPlanRing — projections shape', () => {
         onHoleTap={() => {}}
       />,
     );
-    const hole = screen.getByTestId('ring-hole');
+    // The badge is the one compare entry — an unfunded center stays a
+    // static readout, not a second clickable door.
+    expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
+    const hole = screen.getByText('dollar reserve').closest('div')!;
     expect(within(hole).getByText('dollar reserve')).toBeInTheDocument();
     expect(within(hole).getByText(/^\d+%$/)).toBeInTheDocument();
     expect(within(hole).queryByText(/connect/i)).not.toBeInTheDocument();
     // The plan name lives once, in the badge.
     expect(screen.getAllByText(/Africapitalism/)).toHaveLength(1);
     expect(screen.queryByText('Add funds')).not.toBeInTheDocument();
+    expect(screen.getByTestId('plan-badge')).toHaveAttribute('aria-label', 'Compare philosophies');
   });
 });
 
@@ -717,7 +723,7 @@ describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
     expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
   });
 
-  it('withholds the 3xs compare kicker while the hole flips — the badge is compare', () => {
+  it('never renders a compare kicker in the hole — the badge is the one compare entry', () => {
     const empty = {
       ...DEMO_PORTFOLIO,
       totalValue: 0,
@@ -737,7 +743,8 @@ describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
     expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
     expect(screen.getByTestId('plan-badge')).toHaveAttribute('aria-label', 'Compare philosophies');
 
-    // Unfunded: the hole can't flip, so the kicker earns its 3xs again.
+    // Unfunded: the hole stays a static readout — no duplicate compare
+    // affordance and no kicker.
     rerender(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -748,9 +755,11 @@ describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
         onHoleTap={() => {}}
       />,
     );
-    expect(screen.getByText('Compare plans ▾')).toBeInTheDocument();
+    expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('ring-hole')).not.toBeInTheDocument();
 
-    // Compare preview ("under this plan") → the affordance steps aside.
+    // Compare preview ("under this plan") → the explicit exit affordance
+    // keeps the hole tappable.
     rerender(
       <ProtectionPlanRing
         strategyKey="africapitalism"
@@ -764,6 +773,7 @@ describe('ProtectionPlanRing — hole tap (the flip verb)', () => {
     );
     expect(screen.queryByText('Compare plans ▾')).not.toBeInTheDocument();
     expect(screen.getByText('under this plan')).toBeInTheDocument();
+    expect(screen.getByTestId('ring-hole')).toBeInTheDocument();
   });
 
   it('holeHintOverride replaces the idle hint', () => {

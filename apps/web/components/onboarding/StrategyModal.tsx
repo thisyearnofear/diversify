@@ -16,6 +16,7 @@ import { useProtectionProfile, deriveProfileFromPhilosophy } from '@/hooks/use-p
 import { useStrategy } from '@/context/app/StrategyContext';
 import { useNavigation } from '@/context/app/NavigationContext';
 import { dismissFirstRunTour } from '@/constants/onboarding';
+import { clearOnboardingDraft } from './onboarding-draft';
 import {
   ARCHETYPES,
   strategyToArchetype,
@@ -52,19 +53,28 @@ export default function StrategyModal({
     const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
 
     // A11y: the onboarding IS the screen, so announce that state — give the
-    // document an onboarding title and move focus into the screen container.
+    // document an onboarding title. Focus belongs to the phase: each phase's
+    // heading takes it on entry (see WelcomeScreen's enterPhase), so the
+    // container must not steal it back on mount.
     const screenRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
         if (!isOpen) return;
         const prevTitle = document.title;
         document.title = 'DiversiFi — Set up your protection';
-        screenRef.current?.focus();
         return () => {
             document.title = prevTitle;
         };
     }, [isOpen]);
 
+    // Phase entry (forward or back) starts the screen at the top — the
+    // incoming phase's heading takes focus instead of the whole page
+    // being re-announced.
+    const handlePhaseEntered = useCallback(() => {
+        if (screenRef.current) screenRef.current.scrollTop = 0;
+    }, []);
+
     const finish = useCallback((region?: string | null, selection?: OnboardingSelection) => {
+        clearOnboardingDraft();
         const profileUpdates = selection?.philosophy
             ? { ...deriveProfileFromPhilosophy(selection.philosophy, region ?? null), riskTolerance: config.riskTolerance ?? ('Balanced' as const) }
             : region ? { userRegion: region } : {};
@@ -106,11 +116,8 @@ export default function StrategyModal({
                         grain. The coin field lives on WelcomeScreen itself,
                         phase-tinted; we don't double it here. */}
                     <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
-                        <div className="absolute -top-1/4 -left-1/4 w-3/4 h-3/4 rounded-full bg-sky-500/20 blur-[100px] aurora-drift" />
-                        <div
-                            className="absolute -bottom-1/4 -right-1/4 hidden md:block w-3/4 h-3/4 rounded-full bg-amber-400/15 blur-[100px] aurora-drift"
-                            style={{ animationDelay: '-9s' }}
-                        />
+                        <div className="absolute -top-1/4 -left-1/4 w-3/4 h-3/4 rounded-full bg-sky-500/20 blur-[100px]" />
+                        <div className="absolute -bottom-1/4 -right-1/4 hidden md:block w-3/4 h-3/4 rounded-full bg-amber-400/15 blur-[100px]" />
                         {archetype && (
                             <div
                                 className="absolute inset-0"
@@ -142,12 +149,12 @@ export default function StrategyModal({
                     <div
                         ref={screenRef}
                         tabIndex={-1}
-                        aria-live="polite"
                         className="absolute inset-0 overflow-y-auto overscroll-contain custom-scrollbar focus:outline-none"
                     >
                         <div className="flex min-h-full flex-col">
                             <WelcomeScreen
                                 onContinue={() => { /* WelcomeScreen drives its own phase */ }}
+                                onPhaseEntered={handlePhaseEntered}
                                 onSkip={() => finish(null)}
                                 onConnectWallet={onConnectWallet}
                                 onComplete={finish}

@@ -132,14 +132,16 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     expect(
       screen.getByText("Tap a philosophy coin to preview its plan"),
     ).toBeInTheDocument();
-    const connect = screen.getByRole("button", { name: "Connect wallet" });
-    expect(connect).toHaveAttribute("data-variant", "minimal");
-    // Two buttons total besides coins: the connect CTA + the demo
-    // text link. No other actions exist.
+    // Choosing a plan is the next action — no extra Connect in the object
+    // (the header Connect remains the wallet door).
+    expect(
+      screen.queryByRole("button", { name: "Connect wallet" }),
+    ).not.toBeInTheDocument();
+    // One button besides coins: the demo text link.
     const buttons = screen
       .getAllByRole("button")
       .filter((b) => !b.getAttribute("data-testid")?.startsWith("coin-"));
-    expect(buttons.length).toBe(2);
+    expect(buttons.length).toBe(1);
   });
 
   it("planless: the first coin tap only previews — 'Use starting mix' is the primary commit", () => {
@@ -189,7 +191,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
         expect.objectContaining({ example: true }),
       );
 
-      fireEvent.click(screen.getByTestId("ring-hole"));
+      fireEvent.click(screen.getByTestId("plan-badge"));
       expect(screen.queryByTestId("guardian-plan-link")).not.toBeInTheDocument();
     } finally {
       mockState.financialStrategy = null;
@@ -325,7 +327,11 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       // Empty-hole morph states the plan's reserve; the connect ask lives
       // only on the button and the plan name only on the badge.
       expect(within(ring).getByText("dollar reserve")).toBeInTheDocument();
-      expect(within(screen.getByTestId("ring-hole")).queryByText(/connect/i)).not.toBeInTheDocument();
+      const holeText = within(ring).getByText("dollar reserve").closest("div")!;
+      expect(within(holeText).queryByText(/connect/i)).not.toBeInTheDocument();
+      // The unfunded center is a static readout — the badge is the one
+      // compare entry, not a second door in the hole.
+      expect(within(ring).queryByTestId("ring-hole")).not.toBeInTheDocument();
       // One mention only — the badge ("Africapitalism ▾").
       expect(within(ring).getAllByText(/Africapitalism/)).toHaveLength(1);
       expect(within(ring).getByTestId("plan-badge")).toHaveTextContent("Africapitalism");
@@ -340,9 +346,10 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       expect(within(ring).getByText("Dollar")).toBeInTheDocument();
       expect(within(ring).queryByText("cUSD")).not.toBeInTheDocument();
 
-      // The plan badge is the morph control — the compare affordance.
+      // The plan badge is the morph control — the compare affordance; the
+      // resting hole stays a static readout (no second compare door).
       expect(within(ring).getByTestId("plan-badge")).toBeInTheDocument();
-      expect(within(ring).getByTestId("ring-hole")).toBeInTheDocument();
+      expect(within(ring).queryByTestId("ring-hole")).not.toBeInTheDocument();
       fireEvent.click(within(ring).getByTestId("plan-badge"));
       // Compare transforms the same ring — it goes compact and stays
       // mounted, the coin rail slides in beneath.
@@ -358,16 +365,28 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
-  it("the hole tap enters compare; a coin previews and 'Use starting mix' commits", async () => {
+  it("the badge enters compare; a coin previews, the hole exits, 'Use starting mix' commits", async () => {
     mockState.financialStrategy = "africapitalism";
     mockState.setFinancialStrategy.mockClear();
     try {
       render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
 
-      fireEvent.click(screen.getByTestId("ring-hole"));
+      fireEvent.click(screen.getByTestId("plan-badge"));
       expect(await screen.findByTestId("philosophy-coin-rail")).toBeInTheDocument();
 
-      // ← Your plan returns without committing.
+      // The explicit exit affordance keeps the hole tappable — tapping it
+      // leaves compare without committing.
+      const hole = screen.getByTestId("ring-hole");
+      expect(hole).toHaveAccessibleName("Exit compare");
+      fireEvent.click(hole);
+      expect(screen.getByTestId("shield-ring")).not.toHaveAttribute(
+        "data-comparing",
+        "true",
+      );
+      expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
+
+      // ← Your plan is the other exit, also without committing.
+      fireEvent.click(screen.getByTestId("plan-badge"));
       fireEvent.click(screen.getByTestId("back-to-plan"));
       expect(screen.getByTestId("shield-ring")).not.toHaveAttribute(
         "data-comparing",
@@ -376,7 +395,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
 
       // A coin tap only previews — nothing commits until the CTA.
-      fireEvent.click(screen.getByTestId("ring-hole"));
+      fireEvent.click(screen.getByTestId("plan-badge"));
       fireEvent.click(await screen.findByTestId("coin-buen_vivir"));
       expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
       expect(screen.getByTestId("ring-hole")).toHaveTextContent("Buen Vivir");
@@ -437,7 +456,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       );
       expect(screen.getByTestId("plan-badge")).toHaveTextContent("Africapitalism");
 
-      fireEvent.click(screen.getByTestId("ring-hole"));
+      fireEvent.click(screen.getByTestId("plan-badge"));
       fireEvent.click(await screen.findByTestId("coin-buen_vivir"));
       expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
       fireEvent.click(screen.getByTestId("walletless-commit"));

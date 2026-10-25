@@ -39,6 +39,7 @@ import { homeBeats } from "@/lib/live-lines";
 import { LiveLine } from "@/components/shared/LiveLine";
 import {
   comparisonSettle,
+  controlMotion,
   press,
   reveal,
   springPop,
@@ -47,6 +48,7 @@ import {
 } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { useInstrumentInspection } from "@/components/shared/InstrumentShell";
+import { useAIConversationOptional } from "@/context/AIConversationContext";
 import { useLiveCurrencyRisk } from "@/components/swap/CorridorContext";
 import {
   clampIndex,
@@ -155,8 +157,8 @@ function DeltaNumber({
        legible without its own window. */
     <div className="flex items-baseline justify-center gap-1.5">
       <div
-        className="text-5xl sm:text-6xl tracking-tight font-black tabular-nums"
-        style={{ color: accent }}
+        className="currency-reading tabular-nums font-black"
+        style={{ color: `var(--reading-ink, ${accent})` }}
       >
         <motion.span>{value}</motion.span>
       </div>
@@ -255,7 +257,7 @@ function MoneyConsequence({
       <motion.span
         aria-hidden={true}
         className="tabular-nums"
-        style={{ color: accent }}
+        style={{ color: `var(--reading-ink, ${accent})` }}
       >
         {value}
       </motion.span>
@@ -310,6 +312,9 @@ export function CurrencyMomentCard({
   const [acted, setActed] = React.useState(false);
   React.useEffect(() => setActed(false), [moment.currencyCode]);
   const act = React.useCallback(() => setActed(true), []);
+  // The contextual Guardian door — only rendered where a conversation
+  // provider exists, opened only by an explicit tap (never a request).
+  const conversation = useAIConversationOptional();
   // The stage leans toward the cursor — Sylva's pointer-responsive scene,
   // damped through a spring. Dead under reduced motion.
   const tilt = usePointerTilt(!reducedMotion && !acted && !inspecting);
@@ -503,7 +508,10 @@ export function CurrencyMomentCard({
   ].join(":");
 
   return (
-    <div className={`text-center ${className}`}>
+    <div
+      className={`currency-theater text-center ${className}`}
+      style={{ "--reading-color": accent } as React.CSSProperties}
+    >
       {/* Whose story this is — the visitor's own currency. A shared-card
           view gets an in-object return instead of a second line. */}
       {/* Whose savings — diaspora override. Detection is location, risk is
@@ -604,7 +612,7 @@ export function CurrencyMomentCard({
           <div>
             {/* The stage — local coin vs benchmark coin. It notices the pointer. */}
             <motion.div
-              className="mx-auto grid max-w-[440px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-5"
+              className="mx-auto grid max-w-[560px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:gap-5"
               style={{ ...tilt.style, transformPerspective: 900 }}
               {...tilt.props}
             >
@@ -616,12 +624,8 @@ export function CurrencyMomentCard({
                   color: accent,
                 })}
                 data-scrubbing={reading ? "true" : undefined}
-                // In goods the emptied sacks carry the loss — no double shrink.
-                animate={{
-                  scale:
-                    reducedMotion || effectiveUnit === "goods" ? 1 : coinScale,
-                }}
-                transition={reading ? { duration: 0.12 } : comparisonSettle}
+                // The scale is applied to the coin face below — the wrapper
+                // (tap target, "Story ↗" label) never shrinks with the loss.
                 className="w-full justify-self-end text-right [&_svg]:max-w-full [&_svg]:h-auto"
                 style={{
                   maxWidth: COIN_BASE_PX,
@@ -708,12 +712,37 @@ export function CurrencyMomentCard({
                       aria-label={`Story of the ${moment.currencyCode}`}
                       aria-pressed={currencySelected}
                       title="Currency story"
-                      className="rounded-full ring-1 ring-line transition-shadow hover:ring-2 hover:ring-ink/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                      className="flex min-h-tap min-w-tap flex-col items-center justify-center gap-2 focus-visible:outline-none [&:focus-visible_.coin-ring]:ring-2 [&:focus-visible_.coin-ring]:ring-blue-500"
                     >
-                      {face}
+                      {/* Only the financial object scales with the loss —
+                          the control surface and its label stay full size. */}
+                      <motion.span
+                        className="coin-ring inline-flex rounded-full ring-1 ring-line transition-shadow hover:ring-2 hover:ring-ink/30"
+                        animate={{
+                          scale:
+                            reducedMotion || effectiveUnit === "goods" ? 1 : coinScale,
+                        }}
+                        transition={reading ? { duration: 0.12 } : comparisonSettle}
+                      >
+                        {face}
+                      </motion.span>
+                      {!currencySelected && (
+                        <span className="text-xs font-semibold text-ink-muted whitespace-nowrap">
+                          Story ↗
+                        </span>
+                      )}
                     </motion.button>
                   ) : (
-                    face
+                    <motion.span
+                      className="inline-flex"
+                      animate={{
+                        scale:
+                          reducedMotion || effectiveUnit === "goods" ? 1 : coinScale,
+                      }}
+                      transition={reading ? { duration: 0.12 } : comparisonSettle}
+                    >
+                      {face}
+                    </motion.span>
                   );
                 })()}
                 </motion.div>
@@ -767,7 +796,7 @@ export function CurrencyMomentCard({
             )}
             <h2
               data-testid="home-reading"
-              className="mt-2 text-xl sm:text-2xl font-bold text-ink"
+              className="mt-3 text-2xl sm:text-3xl font-bold tracking-tight text-ink"
             >
               {Math.abs(shownDelta) < 0.05
                 ? `${moment.currencyCode} buying power held steady`
@@ -986,13 +1015,14 @@ export function CurrencyMomentCard({
 
       {/* The one action */}
       {onProtect && (
-        <button
+        <motion.button
           type="button"
           onClick={onProtect}
-          className="mt-4 min-h-tap w-full rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
+          {...controlMotion(Boolean(reducedMotion))}
+          className="journey-action mt-4 max-w-lg mx-auto block w-full bg-blue-600 hover:bg-blue-700 text-white text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400"
         >
           {protectLabel ?? "Review protection plan"}
-        </button>
+        </motion.button>
       )}
 
       {/* Quiet provenance — data honesty stays, but it whispers. The
@@ -1038,6 +1068,22 @@ export function CurrencyMomentCard({
           </>
         )}
       </p>
+
+      {/* The quiet Guardian door — a door, not a request: tapping opens the
+          drawer with this reading already in context; nothing is sent. */}
+      {conversation && (
+        <motion.button
+          type="button"
+          className="link-quiet mt-2"
+          {...controlMotion(Boolean(reducedMotion))}
+          onClick={() => {
+            act();
+            conversation.setDrawerOpen(true);
+          }}
+        >
+          Ask Guardian about this reading
+        </motion.button>
+      )}
     </div>
   );
 }

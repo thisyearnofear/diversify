@@ -703,14 +703,8 @@ export function ProtectionPlanRing({
                       {hole.hint}
                     </span>
                   ) : null}
-                  {/* The hole is the compare entry only when it can't flip
-                      (unfunded / unscored) — then the kicker earns its
-                      3xs. With the flip, the badge above is compare. */}
-                  {onHoleTap && !holeHintOverride && !holeOverride && !flipAvailable && (
-                    <span className="text-3xs uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      Compare plans ▾
-                    </span>
-                  )}
+                  {/* The badge above is the single compare entry — the hole
+                      carries no second "compare" affordance. */}
                   {/* Face dots teach the flip — the lit dot tracks which
                       face the hole is showing. */}
                   {flipAvailable && (
@@ -741,7 +735,7 @@ export function ProtectionPlanRing({
                   >
                     {holeContent}
                   </button>
-                ) : onHoleTap && !selectedToken ? (
+                ) : onHoleTap && !selectedToken && (holeActionLabel !== undefined || holeHintOverride !== undefined) ? (
                   <button
                     type="button"
                     data-testid="ring-hole"

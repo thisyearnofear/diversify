@@ -1,8 +1,8 @@
 /**
  * WelcomeScreen — the onboarding orchestrator.
  *
- * Owns the shared state (currency risk, philosophy selection, waitlist,
- * money purpose) and renders the phase for the current step. The phase
+ * Owns the shared state (currency risk, philosophy selection, money
+ * purpose) plus the session-scoped onboarding draft. and renders the phase for the current step. The phase
  * JSX lives in `phases/` (DetectPhase / RiskPhase / PhilosophyPhase);
  * shared variants, copy, and types live in `phases/phase-config`.
  *
@@ -12,7 +12,7 @@
  */
 
 import { readMomentHorizon, writeMomentBenchmark, writeMomentHorizon } from '@/constants/moment-horizon';
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { OnboardingScreenProps } from './types';
 import { useCurrencyRisk } from '../../../hooks/use-currency-risk';
@@ -26,9 +26,18 @@ import {
 import {
   CURRENCY_RISK_DATA,
   exampleSavingsFor,
-  type Benchmark,
 } from '../../../constants/currency-risk';
 import { useProtectionProfile } from '../../../hooks/use-protection-profile';
+import { getCurrencyRisk } from '../../../constants/currency-risk';
+import {
+  COUNTRY_OPTIONS,
+  filterCountryOptions,
+} from '@/constants/country-options';
+import {
+  readOnboardingDraft,
+  writeOnboardingDraft,
+  clearOnboardingDraft,
+} from '../onboarding-draft';
 import type { MoneyPurpose } from '../../../constants/money-purpose';
 import type { FinancialStrategy } from '@diversifi/shared/src/types/strategy';
 
@@ -68,21 +77,21 @@ interface WelcomeScreenProps extends OnboardingScreenProps {
     onContinue?: () => void;
     chainId?: number;
     onComplete?: (region: string | null, selection?: OnboardingSelection) => void;
+    /** The scroll container (StrategyModal) resets to top each time a
+     *  phase's heading mounts — forward or back. */
+    onPhaseEntered?: () => void;
 }
 
-export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
+export function WelcomeScreen({ onSkip, onComplete, onPhaseEntered }: WelcomeScreenProps) {
     const {
       riskData,
       isLoading: riskLoading,
       countryCode,
       setCountryOverride,
       getDepreciation,
-      calculateCounterfactual,
-      riskEvents,
       getPlanPreview: getPlanPreviewFor,
       dataAsOf,
       isLive1yr,
-      liveSeries,
     } = useCurrencyRisk();
     const { config: profileConfig } = useProtectionProfile();
     const { enableDemoMode, setDemoStrategy } = useDemoMode();
@@ -104,20 +113,89 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
         setSelectedHorizonState(h);
     }, []);
     useEffect(() => { writeMomentHorizon(selectedHorizon); }, [selectedHorizon]);
-    const [showBusinessContextOpen, setShowBusinessContextOpen] = useState(false);
-    const [openEventKey, setOpenEventKey] = useState<string | null>(null);
-    const [waitlistEmail, setWaitlistEmail] = useState('');
-    const [waitlistStatus, setWaitlistStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-    const [waitlistError, setWaitlistError] = useState<string | null>(null);
     const [moneyPurpose, setMoneyPurpose] = useState<MoneyPurpose | null>('long_term_savings');
-    const [countryRequestCountry, setCountryRequestCountry] = useState('');
-    const [countryRequestStatus, setCountryRequestStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
-    const [countryRequestError, setCountryRequestError] = useState<string | null>(null);
 
     // Local step state — user taps to advance (no auto-advance on detect).
     const [step, setStep] = useState<Phase>('detect');
+    // +1 forward, −1 back — every path into a phase goes through
+    // changePhase so the transition direction and the tap feel stay
+    // consistent no matter which control moves the visitor.
+    const [phaseDirection, setPhaseDirection] = useState(1);
+    const changePhase = useCallback((next: Phase) => {
+      if (next === step) return;
+      const order: Phase[] = ['detect', 'risk', 'philosophy'];
+      setPhaseDirection(order.indexOf(next) > order.indexOf(step) ? 1 : -1);
+      haptics.tap();
+      setStep(next);
+    }, [step]);
+
+    // Draft resilience — a reload/remount (idle tab, HMR, navigation away
+    // and back) restores where the visitor actually was instead of
+    // restarting them at step 1 while keeping their country. sessionStorage
+    // only; nothing here commits anything.
+    const [draftReady, setDraftReady] = useState(false);
+    const finishedRef = useRef(false);
+    useEffect(() => {
+      const draft = readOnboardingDraft();
+      if (draft) {
+        setStep(draft.phase);
+        setMoneyPurpose(draft.moneyPurpose);
+        setSelectedLens(draft.selectedLens);
+        setSelectedArchetype(draft.selectedArchetype);
+        setShowAllApproaches(draft.showAllApproaches);
+        // If the stored country no longer matches the effective country,
+        // the visitor changed it elsewhere — never clobber the newer
+        // choice. The saved override wins over the first-render IP guess:
+        // useCurrencyRisk applies the override in an effect, so reading
+        // `countryCode` here would race it.
+        let storedCountry: string | null = null;
+        try { storedCountry = localStorage.getItem('user-country-code')?.toUpperCase() ?? null; } catch { /* best effort */ }
+        const draftCountry = draft.countryCode?.toUpperCase() ?? null;
+        const restoredCountry = storedCountry ?? draftCountry ?? countryCode;
+        if (draftCountry && storedCountry && draftCountry !== storedCountry) {
+          setStep('detect');
+        } else if (draft.phase === 'risk' && restoredCountry && !getCurrencyRisk(restoredCountry)) {
+          setStep('detect');
+        }
+      }
+      setDraftReady(true);
+      // Mount-only restore; deps intentionally excluded.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    // Persist on real changes only after restore — first-render defaults
+    // must never overwrite the recovered draft.
+    useEffect(() => {
+      if (!draftReady || finishedRef.current) return;
+      writeOnboardingDraft({
+        version: 1,
+        phase: step,
+        moneyPurpose,
+        selectedLens,
+        selectedArchetype,
+        showAllApproaches,
+        countryCode,
+      });
+    }, [draftReady, step, moneyPurpose, selectedLens, selectedArchetype, showAllApproaches, countryCode]);
 
     const phase: Phase = step;
+
+    // Phase entry: once per phase, focus the incoming heading (it
+    // announces the step) and let the scroll container reset. Within-phase
+    // state (horizon, coin, country) never re-triggers it.
+    const phaseRef = useRef<HTMLDivElement>(null);
+    const enteredPhaseRef = useRef<Phase | null>(null);
+    const enterPhase = useCallback(() => {
+      if (enteredPhaseRef.current === phase) return;
+      // Scoped to the entering phase's own heading — during a mode="wait"
+      // transition the outgoing phase is still mounted, and focusing its
+      // heading would latch `enteredPhaseRef` on the wrong screen.
+      const heading = phaseRef.current?.querySelector<HTMLElement>(`[data-phase-heading="${phase}"]`);
+      if (!heading) return;
+      enteredPhaseRef.current = phase;
+      onPhaseEntered?.();
+      heading.focus({ preventScroll: true });
+    }, [phase, onPhaseEntered]);
+    useEffect(() => { enterPhase(); }, [enterPhase]);
 
     // Cold-start funnel: one event per phase view so we learn where
     // legitimacy-check visitors drop off. Anonymous + fire-and-forget.
@@ -131,41 +209,9 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
       setSelectedArchetype(id);
     };
 
-    const handleJoinWaitlist = async () => {
-      if (waitlistStatus === 'submitting' || waitlistStatus === 'success') return;
-      setWaitlistStatus('submitting');
-      setWaitlistError(null);
-      try {
-        const res = await fetch('/api/waitlist/join', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: waitlistEmail,
-            feature: 'sme_fx',
-            source: 'onboarding_business_hint',
-            userRegion: countryCode ? regionForCountry(countryCode) ?? undefined : undefined,
-            consentAcknowledged: true,
-          }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          setWaitlistError(data.error || "Couldn't join the waitlist — please try again.");
-          setWaitlistStatus('error');
-          return;
-        }
-        setWaitlistStatus('success');
-        setWaitlistEmail('');
-        trackFunnelEvent('waitlist_joined', {
-          feature: 'sme_fx',
-          ...(countryCode ? { country: countryCode } : {}),
-        });
-      } catch {
-        setWaitlistError("Couldn't join the waitlist — please try again.");
-        setWaitlistStatus('error');
-      }
-    };
-
     const handleFinish = (selection?: OnboardingSelection) => {
+      finishedRef.current = true;
+      clearOnboardingDraft();
       const region = countryCode ? regionForCountry(countryCode) ?? null : null;
       onComplete?.(region, selection);
     };
@@ -199,76 +245,32 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
       handleFinish();
     };
 
-    const handleCountryRequest = async () => {
-      if (countryRequestStatus === 'submitting' || countryRequestStatus === 'success') return;
-      const code = countryRequestCountry.trim().toUpperCase();
-      if (!code || code.length !== 2) {
-        setCountryRequestError('Enter a 2-letter country code (e.g. UA).');
-        return;
-      }
-      setCountryRequestStatus('submitting');
-      setCountryRequestError(null);
-      try {
-        const res = await fetch('/api/country-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ country: code, source: 'onboarding' }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || data?.success === false) {
-          setCountryRequestError(data.error || "Couldn't send the request — try again.");
-          setCountryRequestStatus('error');
-          return;
-        }
-        setCountryRequestStatus('success');
-        setCountryRequestCountry('');
-        trackFunnelEvent('country_request_requested', {
-          country: code,
-          ...(countryCode ? { detected_country: countryCode } : {}),
-        });
-      } catch {
-        setCountryRequestError("Couldn't send the request — try again.");
-        setCountryRequestStatus('error');
-      }
-    };
 
-    const filteredCountries = useMemo(() => {
-      if (!manualCountrySearch) return CURRENCY_RISK_DATA.slice(0, 12);
-      const q = manualCountrySearch.toLowerCase();
-      return CURRENCY_RISK_DATA.filter(
-        (c) =>
-          c.countryName.toLowerCase().includes(q) ||
-          c.code.toLowerCase().includes(q) ||
-          c.iso2.toLowerCase().includes(q),
-      );
-    }, [manualCountrySearch]);
-
-    // Precompute counterfactual for the risk card, denominated in the
-    // visitor's own currency so no mental FX is required.
-    const localExample = riskData ? exampleSavingsFor(riskData.code) : 10000;
-    const localPrefix = riskData && riskData.code !== 'USD' ? `${riskData.code} ` : '$';
-
-    // Hero + comparison bars — the benchmark with the largest |depreciation|
-    // at the selected horizon becomes the single focal number; the rest
-    // render as bars scaled to the hero's magnitude, so bar length alone
-    // tells the comparison story.
-    const benchmarkRows = riskData
-      ? (['USD', 'EUR', 'XAU'] as Benchmark[]).map((bench) => ({
-          bench,
-          value: getDepreciation(bench, selectedHorizon),
-        })).filter((row) => row.value !== 0)
-      : [];
-    const heroRow = benchmarkRows.reduce(
-      (worst, row) => (!worst || Math.abs(row.value) > Math.abs(worst.value) ? row : worst),
-      null as { bench: Benchmark; value: number } | null,
+    const filteredCountries = useMemo(
+      () => filterCountryOptions(manualCountrySearch),
+      [manualCountrySearch],
     );
-    const otherRows = heroRow ? benchmarkRows.filter((row) => row.bench !== heroRow.bench) : [];
-    const maxAbs = heroRow ? Math.abs(heroRow.value) : 1;
+    const selectedCountry =
+      COUNTRY_OPTIONS.find((c) => c.iso2 === countryCode) ?? null;
+    // The picker is the directory; riskData only exists for researched
+    // countries — never let a stale comparison pose as the new pick.
+    const matchingRiskData =
+      selectedCountry && riskData && selectedCountry.hasHistory && selectedCountry.code === riskData.code
+        ? riskData
+        : null;
 
-    // Counterfactual, horizon-aware and in the visitor's own money.
-    const xauPreserved = riskData
-      ? calculateCounterfactual(localExample, 20, 'XAU', selectedHorizon)
-      : 0;
+    // Precompute the savings example for the plan preview, denominated in
+    // the visitor's own currency so no mental FX is required.
+    const localExample = matchingRiskData ? exampleSavingsFor(matchingRiskData.code) : 10000;
+    const localPrefix = matchingRiskData && matchingRiskData.code !== 'USD' ? `${matchingRiskData.code} ` : 'US$ ';
+
+    // One before/after object on the risk step: same local amount, measured
+    // in benchmark units at period start vs horizon. USD self-comparison
+    // never happens — a US visitor sees euros instead. Only the 1yr USD
+    // reading can carry live feed data; everything else is curated.
+    const riskBenchmark: 'USD' | 'EUR' = riskData?.code === 'USD' ? 'EUR' : 'USD';
+    const riskDelta = riskData ? getDepreciation(riskBenchmark, selectedHorizon) : null;
+    const riskUsesLive = riskBenchmark === 'USD' && selectedHorizon === '1yr' && isLive1yr && riskDelta !== null && Number.isFinite(riskDelta);
 
     // The lens currently open in the phase-3 stage (null in the coin view).
     const activeLens = selectedLens
@@ -335,12 +337,14 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
       return { initial: false, animate: { opacity: 1 }, transition: { duration: 0 } };
     };
 
+    if (!draftReady) return null;
+
     return (
         // Scrolling lives on the parent dialog (single scroll container).
         // justify-center is gone — with it, overflowing content extended above
         // the scrollable area and could never be reached. The my-auto wrapper
         // below centers short content and top-aligns tall content instead.
-        <div className="flex-1 flex flex-col items-center p-6 md:p-10 text-center relative">
+        <div className="flex-1 flex flex-col items-center pt-20 pb-8 px-5 sm:px-8 text-center relative">
             {/* Ambient backdrop — phase-tinted wash + drifting coin motifs */}
             <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none" aria-hidden="true">
                 <AnimatePresence>
@@ -365,35 +369,30 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
             {/* Brand lockup — the Guardian and promise read as one identity, not
                 as separate decorations above the task. */}
             <motion.div
-                className="mb-5 relative mt-4 md:mt-2"
+                className="mb-4 relative mt-4 md:mt-2"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={springSoft}
             >
                 {phase === 'detect' ? (
-                  <div className="flex items-center justify-center gap-3 text-left">
+                  <div className="flex items-center justify-center gap-3">
                     <GuardianMascot
-                      size={72}
+                      size={56}
                       mood={selectedArchetype ? 'happy' : 'neutral'}
                       gaze="pointer"
                       className="shrink-0"
                     />
-                    <div className="max-w-[210px]">
-                      <div className="flex items-center gap-1.5 mb-1">
-                          <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
-                              <span className="text-white text-xs font-black">D</span>
-                          </div>
-                          <span className="text-xs font-black text-white uppercase tracking-widest">DiversiFi</span>
-                      </div>
-                      <p className="text-xs font-semibold text-slate-300 leading-snug">
-                        Understand your currency. Choose your next move.
-                      </p>
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-5 h-5 bg-blue-600 rounded-md flex items-center justify-center shadow-sm">
+                            <span className="text-white text-xs font-black">D</span>
+                        </div>
+                        <span className="text-xs font-black text-white uppercase tracking-widest">DiversiFi</span>
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-center gap-2 mb-2">
                       <GuardianMascot
-                        size={40}
+                        size={32}
                         mood={phase === 'risk' ? 'alert' : selectedArchetype ? 'happy' : 'thinking'}
                       />
                       <div className="flex items-center gap-1.5">
@@ -406,73 +405,59 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
                 )}
             </motion.div>
 
-            <CoinSteps phase={phase} onNavigate={(p) => setStep(p)} />
+            <CoinSteps phase={phase} onNavigate={changePhase} />
 
-            <AnimatePresence mode="wait">
+            <div ref={phaseRef} className="w-full flex flex-col items-center">
+            <AnimatePresence mode="wait" custom={phaseDirection}>
               {phase === 'detect' && (
                 <DetectPhase
                   key="phase-detect"
-                  riskLoading={riskLoading}
-                  riskData={riskData}
+                  direction={phaseDirection}
+                  riskLoading={riskLoading && !selectedCountry}
+                  riskData={matchingRiskData}
                   showCountryPicker={showCountryPicker}
                   setShowCountryPicker={setShowCountryPicker}
                   manualCountrySearch={manualCountrySearch}
                   setManualCountrySearch={setManualCountrySearch}
                   filteredCountries={filteredCountries}
                   setCountryOverride={setCountryOverride}
-                  countryRequestCountry={countryRequestCountry}
-                  setCountryRequestCountry={setCountryRequestCountry}
-                  countryRequestStatus={countryRequestStatus}
-                  setCountryRequestError={setCountryRequestError}
-                  countryRequestError={countryRequestError}
-                  handleCountryRequest={handleCountryRequest}
+                  selectedCountry={selectedCountry}
                   moneyPurpose={moneyPurpose}
                   setMoneyPurpose={setMoneyPurpose}
                   onAdvance={() => {
+                    if (!matchingRiskData) {
+                      // No researched history — the plan is still explorable.
+                      changePhase('philosophy');
+                      return;
+                    }
                     if (moneyPurpose === 'upcoming_payment') {
-                      if (riskData?.code) seedPaymentCycleDraft({ localCurrency: riskData.code });
+                      seedPaymentCycleDraft({ localCurrency: matchingRiskData.code });
                       handleFinish({ moneyPurpose });
                     } else {
-                      setStep('risk');
+                      changePhase('risk');
                     }
                   }}
                   onSkip={onSkip}
+                  onEntered={enterPhase}
                 />
               )}
 
               {phase === 'risk' && (
                 <RiskPhase
                   key="phase-risk"
-                  riskData={riskData}
-                  benchmarkRows={benchmarkRows}
-                  heroRow={heroRow}
-                  otherRows={otherRows}
-                  maxAbs={maxAbs}
+                  riskData={matchingRiskData}
+                  benchmark={riskBenchmark}
+                  delta={riskDelta}
                   selectedHorizon={selectedHorizon}
                   setSelectedHorizon={setSelectedHorizon}
-                  liveSeries={liveSeries}
-                  isLive1yr={isLive1yr}
+                  isLive={riskUsesLive}
                   dataAsOf={dataAsOf}
-                  xauPreserved={xauPreserved}
-                  localExample={localExample}
-                  localPrefix={localPrefix}
-                  riskEvents={riskEvents}
-                  openEventKey={openEventKey}
-                  setOpenEventKey={setOpenEventKey}
-                  showBusinessContextOpen={showBusinessContextOpen}
-                  setShowBusinessContextOpen={setShowBusinessContextOpen}
-                  waitlistEmail={waitlistEmail}
-                  setWaitlistEmail={setWaitlistEmail}
-                  waitlistStatus={waitlistStatus}
-                  setWaitlistStatus={setWaitlistStatus}
-                  waitlistError={waitlistError}
-                  setWaitlistError={setWaitlistError}
-                  handleJoinWaitlist={handleJoinWaitlist}
-                  countryCode={countryCode}
+                  direction={phaseDirection}
                   onAdvance={() => {
-                    if (riskData && heroRow) writeMomentBenchmark(riskData.code, heroRow.bench);
-                    setStep('philosophy');
+                    if (riskData) writeMomentBenchmark(riskData.code, riskBenchmark);
+                    changePhase('philosophy');
                   }}
+                  onEntered={enterPhase}
                 />
               )}
 
@@ -499,10 +484,13 @@ export function WelcomeScreen({ onSkip, onComplete }: WelcomeScreenProps) {
                   handleUsePlan={handleUsePlan}
                   handleExploreDemo={handleExploreDemo}
                   riskData={riskData}
-                  onBackToRisk={() => setStep('risk')}
+                  direction={phaseDirection}
+                  onBackToRisk={() => changePhase('risk')}
+                  onEntered={enterPhase}
                 />
               )}
             </AnimatePresence>
+            </div>
             </div>
         </div>
     );

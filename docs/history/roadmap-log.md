@@ -1,5 +1,61 @@
 # Roadmap Log — historical waves & file deltas
 
+### First-session journey rework — onboarding → Home → Shield → Guardian (2026-10-27)
+
+The onboarding → first-run surfaces were rebuilt around "same money, less
+buying power" as one before/after object, replacing the dense multi-benchmark
+risk card. Reviewed against `docs/design-language.md`; no financial logic,
+approval boundaries, or provenance claims changed.
+
+- **Risk phase is one object.** An unchanged local amount priced in benchmark
+  units (US$100 → US$37) with coin areas proportional to units bought
+  (`benchmarkBuyingPower` in `lib/narrative/currency-moment.ts` — pure, tested
+  at the boundary: +7 → 107, −100 → 0, NaN → withheld). The gold
+  counterfactual, sparkline, comparison bars, event list, business waitlist,
+  and funding line all left this step. "How to read this" is a one-sentence
+  closed disclosure; live vs curated provenance is one gated line.
+- **Directional phase transitions + shared press grammar.** `phaseVariants`
+  slides ±y by travel direction via `changePhase`; `controlMotion` in
+  `lib/motion-tokens.ts` gives every control the same `press`/`springPress`
+  tap and zero-motion under reduced motion; haptics fire once per real change.
+- **Phase entry resets scroll and focuses the incoming heading**
+  (`data-phase-heading` scoped to the entering phase — `AnimatePresence
+  mode="wait"` keeps the outgoing heading mounted). The modal container no
+  longer steals focus on mount or carries `aria-live`.
+- **Onboarding drafts survive reload/remount** in sessionStorage
+  (`onboarding-draft.ts`, version-gated, validated, cleared on finish).
+  A saved `user-country-code` beats the first-render IP guess during restore.
+- **Country picker is the full ISO directory.** `packages/shared/src/
+  constants/countries.ts` holds the IANA iso3166 list (identity only — no
+  eligibility or currency claim); `constants/country-options.ts` joins it to
+  the curated histories. Countries without a researched comparison select
+  honestly and route to plans. The shared `PickerSheetShell` gains focus
+  capture/restore, an in-dialog Tab trap, and a `vault` tone.
+- **Shield walletless:** one compare entry (the plan badge); the unfunded
+  ring hole is a static readout. Home: `currency-theater` reading scale, a
+  coin "Story ↗" label that never scales with the delta, and an explicit
+  "Ask Guardian about this reading" door. Guardian drawer: plan-aware
+  context line that is the way back, numbered starter prompts, per-tab
+  placeholders, focus restoration to the opener on close.
+- **Allocation detail morphs in place.** `PlanPreviewCard` chips rewrite the
+  header into the selected currency's object (share, region, verbatim `why`,
+  one risk line, "Preview only"); `InspectorSheet` no longer hides the
+  source behind a generic header. Home's currency story is one stage with
+  a `Moments / 1Y path / Headlines` selector; event pills are year-only with
+  full aria-labels.
+- **Reduced-motion hydration fixed:** `ShellCoinField` keeps `shine="once"`
+  stable server/client; CSS (a final `!important` media rule after the
+  keyframes) owns suppression.
+
+**Verification:** ~500 focused tests across the touched files pass
+(onboarding, risk, plan preview, country options, currency story, Guardian
+chat, ring/not-connected suites); `pnpm --filter @diversifi/web typecheck`
+clean; changed-file lint clean. Browser passes at 390×844 and 1440×960 —
+real pointer clicks through detect → risk → plan → Shield → Home → Guardian
+drawer, reload-restores-draft, 125 s idle stability, reduced-motion reload
+with no hydration errors. Not exercised: real wallets, AI replies,
+production build.
+
 ### Stellar testnet adapter, unsigned (2026-10-25)
 
 Developer B's Gate 1 slice of the [HackMeridian execution plan](../archive/tracks/hackmeridian-2026-10-execution-plan.md). The adapter can quote and prepare a classic testnet conversion. It has not signed or submitted one. A live receipt is still Gate 2.

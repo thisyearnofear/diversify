@@ -48,7 +48,7 @@ describe('InflationMomentCard — honest fallback hero', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     expect(screen.getByText('Currency')).toBeInTheDocument();
     fireEvent.click(trigger);
-    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Where is your money?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Ghana \(GHS\)/ }));
     expect(onChangeCountry).toHaveBeenCalledWith('GH');
   });

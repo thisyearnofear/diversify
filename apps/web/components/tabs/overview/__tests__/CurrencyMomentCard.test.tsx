@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   stale: false,
   feed: { data: null as { recent: unknown[] } | null },
   live: null as { series: { dates: string[]; values: number[] } | null } | null,
+  /** The Guardian door only exists where a conversation provider is mounted. */
+  conversation: null as { setDrawerOpen: (open: boolean) => void } | null,
 }));
 
 vi.mock('@/components/swap/CorridorContext', () => ({
@@ -29,6 +31,10 @@ vi.mock('@/constants/currency-risk', async (importOriginal) => {
 
 vi.mock('@/hooks/use-proof-feed', () => ({
   useProofFeed: () => ({ data: mocks.feed.data }),
+}));
+
+vi.mock('@/context/AIConversationContext', () => ({
+  useAIConversationOptional: () => mocks.conversation,
 }));
 
 vi.mock('framer-motion', async (importOriginal) => {
@@ -77,6 +83,7 @@ afterEach(() => {
   mocks.reduced = false;
   mocks.stale = false;
   mocks.live = null;
+  mocks.conversation = null;
 });
 
 describe('CurrencyMomentCard — Home opening artifact', () => {
@@ -96,7 +103,7 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       '[class*="grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]"]',
     );
     expect(row).not.toBeNull();
-    expect(row!.className).toContain('max-w-[440px]');
+    expect(row!.className).toContain('max-w-[560px]');
     expect(row!.className).toContain('mx-auto');
     const context = await screen.findByText(/Over 1 year against US Dollar/);
     expect(row!.contains(context)).toBe(false);
@@ -150,6 +157,27 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.getByRole('button', { name: /Compare against US Dollar/ })).toHaveAttribute('aria-pressed', 'true');
   });
 
+  it('the Guardian door is explicit: absent without a provider, open-only on tap', () => {
+    // No conversation provider → no door at all.
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(
+      screen.queryByRole('button', { name: 'Ask Guardian about this reading' }),
+    ).not.toBeInTheDocument();
+    cleanup();
+
+    // With a provider the door renders but only opens on an explicit tap —
+    // mounting must never open the drawer on its own.
+    const setDrawerOpen = vi.fn();
+    mocks.conversation = { setDrawerOpen };
+    render(<CurrencyMomentCard {...baseProps} />);
+    expect(setDrawerOpen).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ask Guardian about this reading' }),
+    );
+    expect(setDrawerOpen).toHaveBeenCalledWith(true);
+    expect(setDrawerOpen).toHaveBeenCalledTimes(1);
+  });
+
   it('lets the visitor change the amount and protects on the one CTA', () => {
     const onAmountChange = vi.fn();
     const onProtect = vi.fn();
@@ -190,12 +218,16 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.queryByText('Whose savings?')).not.toBeInTheDocument();
     expect(screen.queryByText(/Ghana · GHS/)).not.toBeInTheDocument();
     fireEvent.click(trigger);
-    expect(screen.getByRole('dialog', { name: 'Choose a country' })).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: 'Where is your money?' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Kenya \(KES\)/ }));
     expect(onChangeCountry).toHaveBeenCalledWith('KE');
     // Choosing closes the sheet — selection commits, nothing lingers
-    // (the exit animation unmounts a beat later, so wait for it).
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    // (the exit animation unmounts a beat later, and the full ISO
+    // directory is a heavy subtree to tear down, so wait generously).
+    await waitFor(
+      () => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+      { timeout: 3000 },
+    );
   });
 
   it('keeps the static country heading when no change handler exists', () => {
@@ -245,7 +277,11 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       screen.queryByText(/Preserving buying power is a trust/),
     ).not.toBeInTheDocument();
     const headline = (await screen.findByText('−18%')).closest('div')!;
-    expect(headline).toHaveStyle({ color: frame.accent });
+    // The accent now flows through the theater's CSS variable — the root
+    // declares it once and the reading/consequence consume --reading-ink.
+    const theater = document.querySelector('.currency-theater') as HTMLElement;
+    expect(theater.style.getPropertyValue('--reading-color')).toBe(frame.accent);
+    expect(headline.style.color).toContain('var(--reading-ink');
   });
 
   it('frames an appreciating currency as buying more, not less', () => {

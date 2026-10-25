@@ -19,7 +19,7 @@ import { PlanPreviewCard } from '../../../protection-cards/PlanPreviewCard';
 import type { PlanPreview } from '../../../protection-cards/plan-preview';
 import { ArchetypeStrip } from './ArchetypeStrip';
 import { VALUES_LENSES, staggerChild, phaseVariants, type ValuesLens } from './phase-config';
-import { springPress } from "@/lib/motion-tokens";
+import { springPress, controlMotion } from "@/lib/motion-tokens";
 
 export interface PanelEntrance {
   initial: TargetAndTransition;
@@ -52,7 +52,13 @@ interface PhilosophyPhaseProps {
   handleUsePlan: () => void;
   handleExploreDemo: () => void;
   riskData: { flag: string } | null;
+  /** Phase travel direction (+1 forward, −1 back) — drives the phaseVariants
+   *  custom transition. */
+  direction?: number;
   onBackToRisk: () => void;
+  /** Fires once when the phase mounts — WelcomeScreen moves focus to the
+   *  phase heading and resets the screen's scroll. */
+  onEntered?: () => void;
 }
 
 export function PhilosophyPhase({
@@ -76,24 +82,33 @@ export function PhilosophyPhase({
   handleUsePlan,
   handleExploreDemo,
   riskData,
+  direction = 1,
   onBackToRisk,
+  onEntered,
 }: PhilosophyPhaseProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => { onEntered?.(); }, [onEntered]);
   useEffect(() => {
     if (activeLens) panelRef.current?.focus();
   }, [activeLens]);
   return (
     <motion.div
       key="phase-philosophy"
+      custom={direction}
       variants={reduceMotion ? undefined : phaseVariants}
       initial={reduceMotion ? false : "initial"}
       animate="animate"
       exit="exit"
-      className="w-full max-w-md"
+      className="journey-phase"
     >
-      <motion.h2 variants={staggerChild} className="text-xl md:text-2xl font-black text-white mb-2 leading-tight">
+      <motion.h2
+        variants={staggerChild}
+        data-phase-heading="philosophy"
+        tabIndex={-1}
+        className="journey-title text-white mb-5 focus:outline-none"
+      >
         Make this plan{' '}
-        <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 to-teal-300">
+        <span className="text-amber-300">
           yours.
         </span>
       </motion.h2>
@@ -176,21 +191,23 @@ export function PhilosophyPhase({
                 </div>
                 <div className="flex items-center gap-1 flex-shrink-0 pt-0.5">
                   {!showAllApproaches && (
-                    <button
+                    <motion.button
                       type="button"
                       onClick={() => setShowAllApproaches(true)}
+                      {...controlMotion(Boolean(reduceMotion))}
                       className="min-h-tap px-1 text-xs font-semibold text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 rounded"
                     >
                       All plans →
-                    </button>
+                    </motion.button>
                   )}
-                  <button
+                  <motion.button
                     type="button"
                     onClick={handleBackToCoins}
+                    {...controlMotion(Boolean(reduceMotion))}
                     className="min-h-tap px-2 rounded-lg text-xs font-semibold text-slate-300 hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60"
                   >
                     ← Values
-                  </button>
+                  </motion.button>
                 </div>
               </motion.div>
 
@@ -242,12 +259,12 @@ export function PhilosophyPhase({
           <motion.button
             initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={reduceMotion ? { duration: 0 } : springPress}
             onClick={handleUsePlan}
-            className="min-h-tap w-full px-6 py-4 bg-action hover:bg-action-hover text-white font-bold rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
-            whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+            className="journey-action w-full px-6 bg-blue-600 hover:bg-blue-700 text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2"
+            {...controlMotion(Boolean(reduceMotion))}
           >
-            Use this plan →
+            Use this plan
+            <span className="journey-action-arrow" aria-hidden="true">→</span>
           </motion.button>
         )}
         <button
@@ -257,12 +274,14 @@ export function PhilosophyPhase({
           Explore a sample →
         </button>
         {riskData && (
-          <button
+          <motion.button
+            type="button"
             onClick={onBackToRisk}
-            className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 rounded-lg"
+            {...controlMotion(Boolean(reduceMotion))}
+            className="w-full min-h-tap py-2 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400/60 rounded-lg"
           >
             ← Back to risk data
-          </button>
+          </motion.button>
         )}
       </motion.div>
     </motion.div>
