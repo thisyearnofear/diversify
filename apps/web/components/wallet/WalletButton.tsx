@@ -11,6 +11,8 @@ import { walletNeedsFunds } from '@/lib/wallet/wallet-nudge';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 import { trackFunnelEvent } from '@/lib/analytics';
+import { useNavigationOptional } from '@/context/app/NavigationContext';
+import { stellarTestnetEnabled } from '@diversifi/shared/src/config/stellar';
 
 // FarCaster Mini App supported chains (as of 2025)
 // Source: https://github.com/farcasterxyz/miniapps/discussions/240
@@ -177,35 +179,41 @@ export default function WalletButton({
     }
   };
 
-  // Network helpers
-  const isTestnet = isTestnetChain(chainId);
-  const networkName = chainId ? 
-    Object.values(NETWORKS || {}).find(n => n.chainId === chainId)?.name || 'Unknown' : 
-    'Not Connected';
-  
-  // Get the opposite network for toggling
-  const getToggleNetwork = () => {
-    if (isTestnet) {
-      // Switch to mainnet (Celo or Arbitrum)
-      return NETWORKS.CELO_MAINNET.chainId;
-    } else {
-      // Switch to Robinhood testnet (showcase stock tokenization)
-      return NETWORKS.RH_TESTNET.chainId;
-    }
-  };
+  // Network helpers — Stellar mode is a separate account family surfaced
+  // through Exchange's exchangeNetwork selection, not an EVM chain switch.
+  const navigation = useNavigationOptional();
+  const stellarMode = navigation?.exchangeNetwork === 'stellar:testnet';
+  const stellarOn = stellarTestnetEnabled();
+  const isTestnet = stellarMode || isTestnetChain(chainId);
+  const networkName = stellarMode ? 'Stellar' : (chainId ?
+    Object.values(NETWORKS || {}).find(n => n.chainId === chainId)?.name || 'Unknown' :
+    'Not Connected');
 
   const handleToggleNetwork = async () => {
+    // Stellar is the only user-visible testnet: mainnet → Stellar routes to
+    // the Exchange surface; Stellar/EVM-testnet → back to wallet networks.
+    if (stellarMode) {
+      navigation?.setExchangeNetwork('evm');
+      showToast("Back on wallet networks", "success");
+      setShowDropdown(false);
+      return;
+    }
+    if (stellarOn && !isTestnetChain(chainId)) {
+      navigation?.setExchangeNetwork('stellar:testnet');
+      navigation?.setActiveTab('exchange');
+      showToast("Stellar testnet — connect Freighter in Exchange", "success");
+      setShowDropdown(false);
+      return;
+    }
     try {
-      const targetChain = getToggleNetwork();
-      const targetName = isTestnet ? 'Mainnet' : 'Testnet';
-      
-      showToast(`Requesting ${targetName}...`, "info");
+      const targetChain = NETWORKS.CELO_MAINNET.chainId;
+      showToast(`Requesting Mainnet...`, "info");
       await switchNetwork(targetChain);
       
       // Wait a moment and check if actually switched
       setTimeout(() => {
         if (chainId === targetChain) {
-          showToast(`Switched to ${targetName}`, "success");
+          showToast(`Switched to Mainnet`, "success");
         } else {
           showToast(`Please confirm the network switch in your wallet`, "info");
         }
@@ -591,34 +599,20 @@ interface ChainSelectorProps {
 }
 
 function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSelectorProps) {
-  const [showChainlistHelp, setShowChainlistHelp] = useState<number | null>(null);
-  
   const mainnetChains = [
     { id: NETWORKS.CELO_MAINNET.chainId, name: 'Celo', icon: '🌱', desc: 'Low fees, mobile-first' },
     { id: NETWORKS.ARBITRUM_ONE.chainId, name: 'Arbitrum', icon: '🔷', desc: 'Deep liquidity, RWAs' },
   ];
   
-  const testnetChains = [
-    { id: NETWORKS.ARC_TESTNET.chainId, name: 'Arc', icon: '⚡', desc: 'Circle L1 — USDC gas (testnet)' },
-    { id: NETWORKS.RH_TESTNET.chainId, name: 'Robinhood', icon: '📈', desc: 'Stock tokenization' },
-    { id: NETWORKS.CELO_SEPOLIA.chainId, name: 'Celo Sepolia', icon: '🧪', desc: 'Celo testnet' },
-  ];
+  const navigation = useNavigationOptional();
+  const stellarMode = navigation?.exchangeNetwork === 'stellar:testnet';
+  const stellarOn = stellarTestnetEnabled();
 
   const handleChainClick = (chainId: number) => {
+    navigation?.setExchangeNetwork('evm'); // picking a wallet chain always exits Stellar mode
     onSelectChain(chainId);
   };
 
-  const openChainlist = (chainId: number) => {
-    const chainNames: Record<number, string> = {
-      [NETWORKS.ARC_TESTNET.chainId]: 'arc-testnet',
-      [NETWORKS.RH_TESTNET.chainId]: 'robinhood-testnet',
-      [NETWORKS.CELO_SEPOLIA.chainId]: 'celo-sepolia',
-    };
-    const chainName = chainNames[chainId];
-    if (chainName) {
-      window.open(`https://chainlist.org/?search=${chainName}`, '_blank');
-    }
-  };
 
   return (
     <div className="space-y-2">
@@ -661,81 +655,38 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
               <div className="font-medium">{chain.name}</div>
               <div className="text-xs opacity-70">{chain.desc}</div>
             </div>
-            {chainId === chain.id && <span>✓</span>}
+            {chainId === chain.id && !stellarMode && <span>✓</span>}
           </button>
         ))}
       </div>
-      
-      {/* Testnet Chains */}
+
+      {/* Testnet — one entry: Stellar, a separate account family routed
+          through Exchange. Arc / Robinhood / Celo Sepolia stay supported
+          under the hood but are no longer user-visible here. */}
+      {stellarOn && (
       <div className="space-y-1 pt-2 border-t border-gray-100 dark:border-gray-700">
         <span className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase">Testnet</span>
-        {testnetChains.map((chain) => {
-          const isSupported = CHAIN_METADATA[chain.id]?.farcasterSupported;
-          const isDisabled = isFarcaster && !isSupported;
-          
-          return (
-            <div key={chain.id} className="relative">
-              <button
-                onClick={() => isDisabled ? null : handleChainClick(chain.id)}
-                disabled={isDisabled}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
-                  chainId === chain.id 
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300' 
-                    : isDisabled
-                      ? 'opacity-50 cursor-not-allowed text-gray-400'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
-                }`}
-              >
-                <span>{chain.icon}</span>
-                <div className="flex-1 text-left">
-                  <div className="font-medium flex items-center gap-1">
-                    {chain.name}
-                    {isDisabled && (
-                      <span className="text-xs bg-gray-200 dark:bg-gray-700 px-1 rounded">FarCaster</span>
-                    )}
-                  </div>
-                  <div className="text-xs opacity-70">{chain.desc}</div>
-                </div>
-                {chainId === chain.id && <span>✓</span>}
-                {/* Help icon for adding network */}
-                {!isDisabled && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowChainlistHelp(showChainlistHelp === chain.id ? null : chain.id);
-                    }}
-                    className="ml-auto p-1 text-gray-400 hover:text-blue-500 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title="Network not in wallet?"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  </button>
-                )}
-              </button>
-              
-              {/* Chainlist Help Tooltip */}
-              {showChainlistHelp === chain.id && (
-                <div className="absolute z-10 right-0 top-full mt-1 w-48 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg">
-                  <p className="mb-1">Network not in wallet?</p>
-                  <button
-                    onClick={() => openChainlist(chain.id)}
-                    className="text-blue-300 hover:text-blue-200 underline"
-                  >
-                    Add via Chainlist →
-                  </button>
-                  <button 
-                    onClick={() => setShowChainlistHelp(null)}
-                    className="absolute top-1 right-1 text-gray-400 hover:text-white"
-                  >
-                    ×
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        <button
+          onClick={() => {
+            navigation?.setExchangeNetwork('stellar:testnet');
+            navigation?.setActiveTab('exchange');
+            onClose();
+          }}
+          className={`w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg transition-colors ${
+            stellarMode
+              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+              : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+          }`}
+        >
+          <span>✦</span>
+          <div className="flex-1 text-left">
+            <div className="font-medium">Stellar</div>
+            <div className="text-xs opacity-70">XLM → USDC · Freighter wallet</div>
+          </div>
+          {stellarMode && <span>✓</span>}
+        </button>
       </div>
+      )}
       
       {/* Chainlist Footer */}
       <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
