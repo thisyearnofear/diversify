@@ -12,29 +12,27 @@
  * (hash on-chain, text off-chain — the EVM convention), recorded under the
  * same agent identity that signed the transfer.
  *
- * Env:   STELLAR_AGENT_SECRET   — the Guardian agent key (smart-account signer)
- *        STELLAR_FEE_SECRET     — fee-payer account (testnet)
- *        STELLAR_SMART_ACCOUNT  — the C-address smart account (holds the XLM)
- * Flags: --amount-xlm <n>       — corridor action size (default 0.5)
+ * Env (optional — the stellar keyring is the default source):
+ *        STELLAR_AGENT_SECRET   — overrides --agent-alias for signing
+ *        STELLAR_FEE_SECRET     — overrides --fee-alias for fees
+ *        STELLAR_SMART_ACCOUNT  — overrides the deployed account address
+ * Flags: --agent-alias <name>   — keyring alias for the Guardian agent key
+ *                                (default guardian-agent)
+ *        --fee-alias <name>     — keyring alias for the fee payer
+ *                                (default testnet-user)
+ *        --amount-xlm <n>       — corridor action size (default 0.5)
  *        --recipient <G...>     — corridor counterparty
  *        --reasoning "<text>"   — the decision's reasoning (hashed on-chain)
- *        --agent-alias <name>   — stellar keyring alias for the agent key
- *                                (default: guardian-agent; its address must
- *                                match STELLAR_AGENT_SECRET — the ledger must
- *                                record the identity that actually executed)
  *        --no-record            — skip the ledger anchor
  *
  * Run:
- *   STELLAR_AGENT_SECRET=$(stellar keys secret guardian-agent) \
- *   STELLAR_FEE_SECRET=$(stellar keys secret testnet-user) \
- *   STELLAR_SMART_ACCOUNT=CBH5NT2HEIQGBMTABOPRPRUJKDNHU3HFIY6STSN7QZSCX7WXSLCOAVC2 \
  *   pnpm stellar-guardian-execute --recipient GDFEW... \
  *     --reasoning "kept corridor exposure bounded: within daily cap"
+ *   (env vars and aliases only needed when keyring names differ)
  */
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { Keypair } from "@stellar/stellar-sdk";
 import {
   LEDGER_CONTRACT,
   ensureSpendingLimitRule,
@@ -56,13 +54,13 @@ function flagValue(flag: string): string | undefined {
 const explorer = (hash: string) => `https://stellar.expert/explorer/testnet/tx/${hash}`;
 
 async function main(): Promise<void> {
-  const ctx = smartAccountContext();
+  const agentAlias = flagValue("--agent-alias") ?? "guardian-agent";
+  const ctx = smartAccountContext({ agentAlias, feeAlias: flagValue("--fee-alias") });
   const amountXlm = Number(flagValue("--amount-xlm") ?? "0.5");
   if (!Number.isFinite(amountXlm) || amountXlm <= 0) throw new Error("--amount-xlm must be a positive number");
   const amountStroops = BigInt(Math.round(amountXlm * XLM_STROOPS));
   const recipient = flagValue("--recipient") ?? DEFAULT_RECIPIENT;
   const reasoning = flagValue("--reasoning") ?? `corridor action: ${amountXlm} XLM to ${recipient.slice(0, 8)}…`;
-  const agentAlias = flagValue("--agent-alias") ?? "guardian-agent";
   const doRecord = !process.argv.includes("--no-record");
 
   console.log(JSON.stringify({
@@ -106,11 +104,11 @@ async function main(): Promise<void> {
   // signed the execution — verify the keyring alias really is that key.
   let ledger: Record<string, unknown> | null = null;
   if (doRecord) {
-    const agentPublic = Keypair.fromSecret(process.env.STELLAR_AGENT_SECRET!).publicKey();
+    const agentPublic = ctx.agent.address;
     const aliasAddress = execFileSync("stellar", ["keys", "address", agentAlias], { encoding: "utf8" }).trim();
     if (aliasAddress !== agentPublic) {
       throw new Error(
-        `--agent-alias ${agentAlias} resolves to ${aliasAddress} but STELLAR_AGENT_SECRET is ${agentPublic} — ` +
+        `--agent-alias ${agentAlias} resolves to ${aliasAddress} but the signing agent is ${agentPublic} — ` +
         `the ledger must record the identity that executed.`,
       );
     }

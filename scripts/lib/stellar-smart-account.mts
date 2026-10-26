@@ -26,6 +26,7 @@ import {
   scValToNative,
   xdr,
 } from "@stellar/stellar-sdk";
+import { execFileSync } from "node:child_process";
 import {
   Ed25519Signer,
   computeEntryAuthDigest,
@@ -41,6 +42,8 @@ export const XLM_SAC = "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC
 export const SPENDING_POLICY = "CABXBYJNZ7IUW4G3D6BND5YCAQF3ASSDMDAOKQQ63UYFSO7WUU2TIP5G";
 export const ED25519_VERIFIER = "CAAVTMCBXEIBPR64EAASKFXERVPYFZA2JYP5A3BG6PESWEFUJX5IHKN4";
 export const LEDGER_CONTRACT = "CDQUT55ICBFEC6JGMZDJEHA47ECWQOAYHLNFHO2ULFLDQVIDNMKL4WT6";
+/** Deployed policy-bound account (reference.md §4.6). Public info, not a secret. */
+export const DEFAULT_SMART_ACCOUNT = "CBH5NT2HEIQGBMTABOPRPRUJKDNHU3HFIY6STSN7QZSCX7WXSLCOAVC2";
 
 export interface SmartAccountContext {
   server: rpc.Server;
@@ -50,17 +53,25 @@ export interface SmartAccountContext {
   account: string;
 }
 
-export function smartAccountContext(): SmartAccountContext {
-  const required = ["STELLAR_AGENT_SECRET", "STELLAR_FEE_SECRET", "STELLAR_SMART_ACCOUNT"] as const;
-  for (const k of required) {
-    if (!process.env[k]) throw new Error(`missing env ${k}`);
-  }
+/**
+ * Resolve signing material: explicit env secrets win; otherwise read the
+ * stellar keyring by alias so secrets never sit in env files. The account
+ * address is public and defaults to the deployed one.
+ */
+export function smartAccountContext(opts: { agentAlias?: string; feeAlias?: string } = {}): SmartAccountContext {
+  const keyringSecret = (alias: string): string =>
+    execFileSync("stellar", ["keys", "secret", alias], { encoding: "utf8" }).trim();
+  const agentSecret = process.env.STELLAR_AGENT_SECRET
+    ?? keyringSecret(opts.agentAlias ?? "guardian-agent");
+  const feeSecret = process.env.STELLAR_FEE_SECRET
+    ?? keyringSecret(opts.feeAlias ?? "testnet-user");
+  const account = process.env.STELLAR_SMART_ACCOUNT ?? DEFAULT_SMART_ACCOUNT;
   return {
     server: new rpc.Server(RPC_URL),
     horizon: new Horizon.Server(HORIZON_URL),
-    agent: Ed25519Signer.fromSecret(process.env.STELLAR_AGENT_SECRET!, ED25519_VERIFIER),
-    feePayer: Keypair.fromSecret(process.env.STELLAR_FEE_SECRET!),
-    account: process.env.STELLAR_SMART_ACCOUNT!,
+    agent: Ed25519Signer.fromSecret(agentSecret, ED25519_VERIFIER),
+    feePayer: Keypair.fromSecret(feeSecret),
+    account,
   };
 }
 
