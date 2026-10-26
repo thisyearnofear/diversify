@@ -41,7 +41,8 @@
     "sep24-discovery": "npx tsx scripts/sep24-anchor-discovery.ts",
     "stellar-claimable-demo": "npx tsx scripts/stellar-claimable-balance.ts",
     "stellar-ledger-record": "npx tsx scripts/stellar-ledger-record.mts",
-    "stellar-policy-demo": "npx tsx scripts/stellar-smart-account-policy.mts"
+    "stellar-policy-demo": "npx tsx scripts/stellar-smart-account-policy.mts",
+    "stellar-guardian-execute": "npx tsx scripts/stellar-guardian-execute.mts"
   },
   "devDependencies": {
     "@circle-fin/x402-batching": "3.5.0",

@@ -1,5 +1,24 @@
 # Roadmap Log — historical waves & file deltas
 
+### Stellar depth layer wired (2026-10-26)
+
+- `scripts/lib/stellar-smart-account.mts` extracts the OZ smart-account auth
+  machinery (AuthPayload signing, resimulate-assemble, context-rule listing,
+  policy install, SAC balance/transfer) so scripts share one implementation.
+- `scripts/stellar-guardian-execute.mts` (`pnpm stellar-guardian-execute`) is
+  the wired path, not a demo: a Guardian corridor decision executes as a
+  bounded XLM transfer THROUGH the policy-bound smart account — the
+  spending-limit policy on `CallContract(XLM SAC)` enforces the cap
+  on-chain, so over-cap rejects at the contract, never at the app. On
+  success, `sha256(reasoning)` anchors on the Soroban `RecommendationLedger`
+  under the same agent identity (the script verifies the keyring alias
+  matches `STELLAR_AGENT_SECRET` before recording).
+- Constraint documented in reference.md: the policy scope admits only
+  `CallContract` — `createClaimableBalance` is a classic op and cannot route
+  through the account, so the claimable-balance corridor stays a separate
+  classic-op demo. The policy demo (`stellar-smart-account-policy.mts`)
+  remains the self-contained both-legs repro.
+
 ### Session + logout correctness (2026-10-26, shared push — lower half)
 
 - `PrivyProvider` not-ready `logout()` was a silent no-op — it now delegates

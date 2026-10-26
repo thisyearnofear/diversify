@@ -895,6 +895,16 @@ Owner-only tools take `walletAuth { message, signature }` — the signed
 - `smart-account-kit` is a devDependency (0.8.0) and ESM-only — demo scripts
   are `.mts`. Build toolchain needs
   `RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin` on this machine.
+- **Guardian execution path** — `scripts/lib/stellar-smart-account.mts` holds
+  the shared auth machinery (AuthPayload signing, resimulate-assemble,
+  context-rule install); `pnpm stellar-guardian-execute` runs a real
+  decision end to end: bounded XLM transfer through the policy-bound account
+  → on-chain policy enforcement (over-cap rejects, never the app) →
+  reasoning commitment anchored on the Soroban ledger under the same agent
+  identity that signed the execution. Policy scope is `CallContract(XLM
+  SAC)` — a bounded transfer is the only executable action; classic ops
+  (e.g. `createClaimableBalance`) cannot go through it, so the
+  claimable-balance corridor remains a separate classic-op demo.
 
 ## 5. AI providers & data sources
 
