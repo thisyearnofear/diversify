@@ -144,7 +144,7 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `PRIVY_APP_SECRET` | server | — | Privy server SDK (session signer execution). Second minimum var. |
 | `NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS` | client | unset → "Let Guardian act for you" hidden | Public address of the session signer keyed by `GUARDIAN_SESSION_PRIVATE_KEY`; ERC-7715/7710 autonomy path (§1.6). |
 | `NEXT_PUBLIC_ARC_ARRIVAL` | client | off in production | Gates the Arc arrival path (`lib/arc-arrival.ts` → `hooks/use-arc-arrival.ts`). Tests and prod never hit Arc RPC by default; flip only after a real mainnet rehearsal (§3.4). |
-| `NEXT_PUBLIC_STELLAR_TESTNET` | client | off | Gates the classic Freighter testnet adapter (`apps/web/lib/stellar/`). Exactly `true` enables it. Not a mainnet rail and not an EVM chain. No signer key. |
+| `NEXT_PUBLIC_STELLAR_TESTNET` | client | off | Gates the Stellar testnet adapter (`apps/web/lib/stellar/`). Exactly `true` enables it. Not a mainnet rail and not an EVM chain. No signer key. |
 | `STELLAR_HORIZON_URL` | server/script | `https://horizon-testnet.stellar.org` | Path/account/ledger reads and signed transaction submission. Config rejects any other host — no mainnet or custom override. |
 | `STELLAR_RPC_URL` | server/script | `https://soroban-testnet.stellar.org` | Recorded for later verification. P0 classic reads do not use it. Same fixed-endpoint rule. |
 | `NEXT_PUBLIC_ENABLE_ARC` | — | **removed** | The old Arc-research flag was never read and is gone; rail selection is `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`. |
@@ -869,6 +869,12 @@ Owner-only tools take `walletAuth { message, signature }` — the signed
   17,280 ledgers). Proven: within-limit spend accepted, over-limit rejected
   (#3221). Repro: `pnpm stellar-policy-demo`.
 - Contract IDs and evidence txs are tabulated in `README.md` → HackMeridian.
+- **Wallet layer** — `lib/stellar/wallet.ts`: `createWalletsKitBridge`
+  (StellarWalletsKit 2.5 auth modal — Freighter, LOBSTR, xBull, Albedo,
+  Hana, Rabet) is the default; `createFreighterBridge` (direct
+  `@stellar/freighter-api`) remains as the degraded fallback when the kit
+  chunk can't load. WalletConnect-based wallets (mobile LOBSTR) are not
+  wired — they need a WalletConnect project id env.
 - `smart-account-kit` is a devDependency (0.8.0) and ESM-only — demo scripts
   are `.mts`. Build toolchain needs
   `RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin` on this machine.

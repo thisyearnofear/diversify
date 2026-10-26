@@ -165,8 +165,12 @@ export class StellarTestnetAdapter {
 
   private async walletBridge(): Promise<WalletBridge> {
     if (this.wallet) return this.wallet;
-    const { createFreighterBridge } = await import("./wallet");
-    return createFreighterBridge();
+    const { createWalletsKitBridge, createFreighterBridge } = await import("./wallet");
+    const kit = createWalletsKitBridge();
+    // The kit's picker covers Freighter + LOBSTR + more; if the heavy kit
+    // chunk can't load, degrade to the direct Freighter path rather than
+    // dead-ending the connect control.
+    return (await kit.isAvailable()) ? kit : createFreighterBridge();
   }
 
   /** Latest ledger reserve and fee. Missing or malformed is a network error, never a default. */

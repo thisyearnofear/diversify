@@ -12,6 +12,7 @@
   "dependencies": {
     "@0gfoundation/0g-storage-ts-sdk": "1.2.9",
     "@celo/identity": "5.1.2",
+    "@creit.tech/stellar-wallets-kit": "2.5.0",
     "@diversifi/shared": "workspace:*",
     "@diversifi/shared-0g": "workspace:*",
     "@farcaster/miniapp-sdk": "0.2.1",

@@ -1,5 +1,17 @@
 # Roadmap Log — historical waves & file deltas
 
+### Multi-wallet Stellar connect (2026-10-26)
+
+- `lib/stellar/wallet.ts` gains `createWalletsKitBridge` — the
+  StellarWalletsKit 2.5 auth modal (`@creit.tech/stellar-wallets-kit`,
+  dynamically imported like the freighter-api leaf) covering Freighter,
+  LOBSTR, xBull, Albedo, Hana and Rabet. `adapter.walletBridge()` prefers
+  the kit and degrades to the direct Freighter bridge only if the kit
+  chunk fails to load. Signing contract unchanged: prepared XDR +
+  testnet passphrase in, `signedTxXdr` out.
+- WalletConnect wallets (mobile LOBSTR) stay out until a WalletConnect
+  project id exists — documented in reference.md §4.6.
+
 ### Stellar UX polish (2026-10-26)
 
 - Unfunded Stellar accounts now get a real action, not a dead end:
