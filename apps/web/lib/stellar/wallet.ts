@@ -4,9 +4,9 @@
  *
  * Two backends:
  * - `createWalletsKitBridge` (default): StellarWalletsKit's auth modal — one
- *   picker covering Freighter, LOBSTR, xBull, Albedo, Hana and Rabet.
- *   Dynamically imported; WalletConnect-based wallets (mobile LOBSTR) need a
- *   WalletConnect project id — not wired yet.
+ *   picker covering Freighter, LOBSTR, xBull, Albedo, Hana and Rabet, plus
+ *   WalletConnect (mobile wallets pairing by QR) when
+ *   `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is set. Dynamically imported.
  * - `createFreighterBridge`: direct @stellar/freighter-api path, kept for
  *   tests and as the degraded fallback if the kit fails to load.
  *
@@ -57,16 +57,37 @@ async function ensureKit(): Promise<WalletsKitModule> {
     import("@creit.tech/stellar-wallets-kit/modules/hana"),
     import("@creit.tech/stellar-wallets-kit/modules/rabet"),
   ]);
+  const modules: import("@creit.tech/stellar-wallets-kit/types").ModuleInterface[] = [
+    new SwkFreighterModule(),
+    new LobstrModule(),
+    new xBullModule(),
+    new AlbedoModule(),
+    new HanaModule(),
+    new RabetModule(),
+  ];
+  // WalletConnect is how mobile wallets (LOBSTR app, Freighter mobile)
+  // reach a desktop browser session — only when a project id is configured.
+  const wcProjectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
+  if (wcProjectId) {
+    const { WalletConnectModule, WalletConnectTargetChain } = await import(
+      "@creit.tech/stellar-wallets-kit/modules/wallet-connect"
+    );
+    modules.push(
+      new WalletConnectModule({
+        projectId: wcProjectId,
+        metadata: {
+          name: "DiversiFi",
+          description: "DiversiFi — Guardian-guarded currency protection",
+          url: "https://diversifiapp.vercel.app",
+          icons: [],
+        },
+        allowedChains: [WalletConnectTargetChain.TESTNET],
+      }),
+    );
+  }
   kit.StellarWalletsKit.init({
     network: kit.Networks.TESTNET,
-    modules: [
-      new SwkFreighterModule(),
-      new LobstrModule(),
-      new xBullModule(),
-      new AlbedoModule(),
-      new HanaModule(),
-      new RabetModule(),
-    ],
+    modules,
   });
   kitReady = true;
   return kit;

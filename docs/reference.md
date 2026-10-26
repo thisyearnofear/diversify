@@ -147,6 +147,7 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `NEXT_PUBLIC_STELLAR_TESTNET` | client | off | Gates the Stellar testnet adapter (`apps/web/lib/stellar/`). Exactly `true` enables it. Not a mainnet rail and not an EVM chain. No signer key. |
 | `STELLAR_HORIZON_URL` | server/script | `https://horizon-testnet.stellar.org` | Path/account/ledger reads and signed transaction submission. Config rejects any other host — no mainnet or custom override. |
 | `STELLAR_RPC_URL` | server/script | `https://soroban-testnet.stellar.org` | Recorded for later verification. P0 classic reads do not use it. Same fixed-endpoint rule. |
+| `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | client | unset → WalletConnect module off | WalletConnect Cloud project id (public, not a secret). Enables the WalletConnect module in the Stellar picker — how mobile wallets (LOBSTR app, Freighter mobile) pair to a desktop session. Testnet chain only (`stellar:testnet`). |
 | `NEXT_PUBLIC_ENABLE_ARC` | — | **removed** | The old Arc-research flag was never read and is gone; rail selection is `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`. |
 | `MONGODB_URI` | server | — | MongoDB connection. Required for the Caribbean FX netting demo — hosts the intent pool so intents match across users and time (free Atlas tier; shape in `.env.example`). |
 | `GUARDIAN_LOOP_SECRET` | server | — | Protects POST calls to `/api/agent/guardian-loop` and `/api/agent/fx-macro-signal` (server-to-server only). |
@@ -873,8 +874,9 @@ Owner-only tools take `walletAuth { message, signature }` — the signed
   (StellarWalletsKit 2.5 auth modal — Freighter, LOBSTR, xBull, Albedo,
   Hana, Rabet) is the default; `createFreighterBridge` (direct
   `@stellar/freighter-api`) remains as the degraded fallback when the kit
-  chunk can't load. WalletConnect-based wallets (mobile LOBSTR) are not
-  wired — they need a WalletConnect project id env.
+  chunk can't load. With `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` set, the
+  WalletConnect module joins the picker — mobile wallets pair via QR
+  (`stellar:testnet` only).
 - `smart-account-kit` is a devDependency (0.8.0) and ESM-only — demo scripts
   are `.mts`. Build toolchain needs
   `RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin` on this machine.

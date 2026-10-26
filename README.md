@@ -117,7 +117,7 @@ XDR rejected), and recovers pending submissions durably.
 | Piece | Where |
 |---|---|
 | Stellar adapter (Horizon isolation, strict validation, pending recovery) | `apps/web/lib/stellar/` |
-| Wallet (StellarWalletsKit picker — Freighter/LOBSTR/xBull/Albedo/Hana/Rabet; direct-Freighter fallback) | `apps/web/lib/stellar/wallet.ts` |
+| Wallet (StellarWalletsKit picker — Freighter/LOBSTR/xBull/Albedo/Hana/Rabet + WalletConnect mobile; direct-Freighter fallback) | `apps/web/lib/stellar/wallet.ts` |
 | Exchange flow + receipt | `apps/web/components/swap/StellarExchange.tsx`, `PairStage.tsx` |
 | Home/Shield honest Stellar surface | `apps/web/components/stellar/StellarModePanel.tsx` |
 | Agent intent (`open_stellar` — navigation only, never signing) | `use-agent-chat.ts`, `guardian-interaction.ts` |

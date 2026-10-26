@@ -9,8 +9,9 @@
   the kit and degrades to the direct Freighter bridge only if the kit
   chunk fails to load. Signing contract unchanged: prepared XDR +
   testnet passphrase in, `signedTxXdr` out.
-- WalletConnect wallets (mobile LOBSTR) stay out until a WalletConnect
-  project id exists — documented in reference.md §4.6.
+- WalletConnect wallets (mobile LOBSTR, Freighter mobile) join the picker
+  when `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is set — `allowedChains`
+  pinned to `stellar:testnet`; the id is public metadata, not a secret.
 
 ### Stellar UX polish (2026-10-26)
 
