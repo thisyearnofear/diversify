@@ -110,6 +110,15 @@ vi.mock("@/context/app/BalanceVisibilityContext", () => ({
   useBalanceVisibility: () => ({ hidden: balanceHidden.value }),
 }));
 const balanceHidden = vi.hoisted(() => ({ value: false }));
+const friendbot = vi.hoisted(() => ({
+  fund: vi.fn(async (): Promise<{ ok: true } | { ok: false; reason: string }> => ({ ok: true })),
+}));
+vi.mock("@/lib/stellar/friendbot", () => ({ fundWithFriendbot: friendbot.fund }));
+const beats = vi.hoisted(() => ({ publish: vi.fn() }));
+vi.mock("@/lib/beat-impulse", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/beat-impulse")>();
+  return { ...actual, publishBeat: beats.publish };
+});
 
 class MemStorage {
   private m = new Map<string, string>();
@@ -323,6 +332,63 @@ describe("StellarExchange", () => {
     expect(screen.getByRole("alert").textContent).toContain("expired without being recorded");
     // Failed recovery is resolved — a fresh Connect/Review path is usable.
     expect(screen.queryByText(/Check transaction/)).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it("an unfunded account offers Get test XLM — friendbot funds, then balances refresh", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    // Both loads report unfunded — the refresh hasn't landed the new
+    // balance yet, so the confirmation line stays visible.
+    fake.getBalances.mockResolvedValue({ ok: true, value: accountState({ unfunded: true }) });
+    renderStellar();
+    fireEvent.click(screen.getByTestId("stellar-primary")); // Connect Freighter
+    await act(async () => {});
+
+    const btn = screen.getByTestId("stellar-friendbot");
+    expect(btn.textContent).toContain("Get test XLM");
+    fireEvent.click(btn);
+    await act(async () => {});
+
+    expect(friendbot.fund).toHaveBeenCalledWith(ACCOUNT);
+    // refresh() picks the account up again after funding
+    expect(fake.getBalances).toHaveBeenCalledTimes(2);
+    expect(screen.getByText(/Test XLM requested/)).toBeTruthy();
+    vi.unstubAllEnvs();
+  });
+
+  it("a failed friendbot call reports honestly — never claims funded", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    friendbot.fund.mockResolvedValueOnce({ ok: false, reason: "request_failed" });
+    fake.getBalances.mockResolvedValue({ ok: true, value: accountState({ unfunded: true }) });
+    renderStellar();
+    fireEvent.click(screen.getByTestId("stellar-primary"));
+    await act(async () => {});
+
+    fireEvent.click(screen.getByTestId("stellar-friendbot"));
+    await act(async () => {});
+    expect(screen.getByTestId("stellar-friendbot").textContent).toContain("Funding failed");
+    expect(screen.queryByText(/Test XLM requested/)).toBeNull();
+    vi.unstubAllEnvs();
+  });
+
+  it("a confirmed settlement publishes a settle beat keyed by the tx hash", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    fake.getBalances.mockResolvedValue({ ok: true, value: accountState() });
+    fake.quote.mockResolvedValue({ ok: true, value: (preparedTx() as Extract<PreparedStellarAction, { kind: "transaction" }>).quote });
+    fake.prepare.mockResolvedValue({ ok: true, value: preparedTx() });
+    fake.sign.mockResolvedValue({ ok: true, value: { signedXdr: "S", signer: ACCOUNT } });
+    fake.submit.mockResolvedValue({ ok: true, value: confirmed });
+
+    renderStellar();
+    fireEvent.click(screen.getByTestId("stellar-primary")); // Connect
+    await act(async () => {});
+    fireEvent.change(screen.getByTestId("stellar-amount"), { target: { value: "10" } });
+    fireEvent.click(screen.getByTestId("stellar-primary")); // Review exchange
+    await act(async () => {});
+    fireEvent.click(screen.getByTestId("stellar-primary")); // Sign exchange
+    await act(async () => {});
+
+    expect(beats.publish).toHaveBeenCalledWith({ surface: "exchange", key: `settle-stellar-${HASH}` });
     vi.unstubAllEnvs();
   });
 });
