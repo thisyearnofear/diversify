@@ -6,9 +6,12 @@
  * Never shows fabricated holdings.
  */
 
-import React from "react";
+import React, { useCallback, useState } from "react";
 import { useNavigationOptional } from "@/context/app/NavigationContext";
+import { useAIConversationOptional } from "@/context/AIConversationContext";
 import { formatAmountUnits } from "@diversifi/shared/src/types/stellar";
+import { ASK_GUARDIAN_LABEL } from "@/constants/guardian-copy";
+import { fundWithFriendbot } from "@/lib/stellar/friendbot";
 
 const SURFACE_COPY: Record<string, { title: string; body: string }> = {
   home: {
@@ -27,8 +30,22 @@ function shortAccount(account: string): string {
 
 export function StellarModePanel({ surface }: { surface: "home" | "shield" }) {
   const navigation = useNavigationOptional();
+  const conversation = useAIConversationOptional();
   const account = navigation?.stellarAccount ?? null;
   const copy = SURFACE_COPY[surface] ?? SURFACE_COPY.home;
+
+  // A connected account with no XLM is one action away — friendbot funds
+  // any testnet address; the user should never have to leave to find it.
+  const nativeEmpty = Boolean(
+    account && !account.balances.some((b) => b.asset.kind === "native" && b.balanceUnits !== "0"),
+  );
+  const [funding, setFunding] = useState<"idle" | "busy" | "done" | "failed">("idle");
+  const fund = useCallback(async () => {
+    if (!account) return;
+    setFunding("busy");
+    const result = await fundWithFriendbot(account.account);
+    setFunding(result.ok ? "done" : "failed");
+  }, [account]);
 
   return (
     <div className="mx-auto max-w-md px-4 py-16 text-center">
@@ -52,6 +69,24 @@ export function StellarModePanel({ surface }: { surface: "home" | "shield" }) {
               </li>
             ))}
           </ul>
+          {nativeEmpty && (
+            <p className="mt-2 text-2xs text-ink-muted">
+              No test XLM yet.{" "}
+              {funding === "done" ? (
+                <span className="text-ink">Requested — it lands when the ledger closes.</span>
+              ) : (
+                <button
+                  type="button"
+                  data-testid="stellar-panel-friendbot"
+                  onClick={() => void fund()}
+                  disabled={funding === "busy"}
+                  className="text-blue-600 font-semibold hover:underline dark:text-blue-400 disabled:opacity-50"
+                >
+                  {funding === "busy" ? "Requesting…" : funding === "failed" ? "Funding failed — retry" : "Get test XLM"}
+                </button>
+              )}
+            </p>
+          )}
         </div>
       ) : (
         <p className="mt-3 text-sm text-ink-muted">Connect Freighter in Exchange to see the account here.</p>
@@ -64,6 +99,13 @@ export function StellarModePanel({ surface }: { surface: "home" | "shield" }) {
           className="min-h-tap rounded-full bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700"
         >
           Open Exchange
+        </button>
+        <button
+          type="button"
+          onClick={() => conversation?.setDrawerOpen(true)}
+          className="min-h-tap px-4 py-2 text-sm font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        >
+          {ASK_GUARDIAN_LABEL} — walk me through Stellar
         </button>
         <button
           type="button"

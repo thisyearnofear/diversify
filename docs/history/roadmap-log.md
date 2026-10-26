@@ -1,5 +1,20 @@
 # Roadmap Log — historical waves & file deltas
 
+### Stellar UX polish (2026-10-26)
+
+- Unfunded Stellar accounts now get a real action, not a dead end:
+  `lib/stellar/friendbot.ts` funds any testnet G-address; "Get test XLM"
+  surfaces in `StellarExchange` (issues → action → refresh) and
+  `StellarModePanel` (empty-account state). No external-link detour.
+- Delight: a confirmed Stellar settlement publishes
+  `settle-stellar-<txHash>` to the beat bus — the mascot plays the settle
+  posture once per tx, same physics as instrument beats.
+- `StellarModePanel` gains an "{Ask Guardian} — walk me through Stellar"
+  hand-off (opens the advisor drawer) — the panel is honest *and* guided.
+- Perf: `FloatingControls` vault/session/tier hooks moved into
+  `GuardianFabButton`, which mounts only when the desktop FAB can render —
+  mobile no longer pays the guardian-state fetches for a hidden button.
+
 ### Stellar depth layer — contracts, policy enforcement, anchors (2026-10-26)
 
 - **Soroban RecommendationLedger** (`contracts-stellar/`, soroban-sdk 26):

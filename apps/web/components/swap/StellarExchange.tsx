@@ -6,7 +6,7 @@
  * ExchangeTab wrapper) owns that gate.
  */
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { InspectorSheet } from "../shared/InspectorSheet";
@@ -25,6 +25,8 @@ import {
   stellarTestnetUsdc,
 } from "@diversifi/shared/src/types/stellar";
 import { MONEY_MASK } from "@/lib/money-format";
+import { publishBeat } from "@/lib/beat-impulse";
+import { fundWithFriendbot } from "@/lib/stellar/friendbot";
 import PairStage, { type PairReceipt } from "./PairStage";
 
 function short(address: string): string {
@@ -69,6 +71,24 @@ export default function StellarExchange({
   const nativeSpendable = account?.balances.find((balance) => balance.asset.kind === "native")?.spendableUnits;
   const isTrustlineReview = prepared?.kind === "trustline";
   const confirmed = settlement?.status === "confirmed" ? settlement : null;
+
+  // A confirmed settlement is a beat: the mascot plays the settle posture
+  // once per tx (keyed by hash — replays are the tx landing, not a loop).
+  const confirmedHash = confirmed?.txHash ?? null;
+  useEffect(() => {
+    if (confirmedHash) publishBeat({ surface: "exchange", key: `settle-stellar-${confirmedHash}` });
+  }, [confirmedHash]);
+
+  // Unfunded accounts get a real action, not a dead end — friendbot funds
+  // any testnet address, then a refresh picks up the new balance.
+  const [funding, setFunding] = useState<"idle" | "busy" | "done" | "failed">("idle");
+  const fund = useCallback(async () => {
+    if (!account) return;
+    setFunding("busy");
+    const result = await fundWithFriendbot(account.account);
+    setFunding(result.ok ? "done" : "failed");
+    if (result.ok) void exchange.refresh();
+  }, [account, exchange]);
 
   const stellarReceipt: PairReceipt | null = confirmed
     ? {
@@ -236,17 +256,22 @@ export default function StellarExchange({
                 </p>
               )}
               {account.issues.includes("account_unfunded") && (
-                <p className="mt-1 text-2xs text-ink-muted">
-                  This account is unfunded. Fund it with test XLM, then refresh.{" "}
-                  <a
-                    href="https://laboratory.stellar.org/#account-creator?network=test"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline dark:text-blue-400"
-                  >
-                    Open the testnet account creator ↗
-                  </a>
-                </p>
+                <div className="mt-1 text-2xs text-ink-muted">
+                  <p>This account has no test XLM yet.</p>
+                  {funding === "done" ? (
+                    <p className="mt-0.5 text-ink">Test XLM requested — balances update when the ledger closes.</p>
+                  ) : (
+                    <button
+                      type="button"
+                      data-testid="stellar-friendbot"
+                      onClick={() => void fund()}
+                      disabled={funding === "busy"}
+                      className="mt-1 text-blue-600 font-semibold hover:underline dark:text-blue-400 disabled:opacity-50"
+                    >
+                      {funding === "busy" ? "Requesting test XLM…" : funding === "failed" ? "Funding failed — try again" : "Get test XLM"}
+                    </button>
+                  )}
+                </div>
               )}
               {account.issues.includes("trustline_unauthorized") && (
                 <p className="mt-1 text-2xs text-ink-muted">

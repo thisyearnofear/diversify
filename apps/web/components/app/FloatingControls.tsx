@@ -1,5 +1,10 @@
 /**
  * FloatingControls — Guardian FAB, proactive updates, tour triggers.
+ *
+ * Perf note: the FAB is desktop-only (`hidden lg:flex`), so everything the
+ * mascot needs — vault/session state, tier mood, beat posture — lives in
+ * `GuardianFabButton`, which mounts only when the button can actually
+ * render. Mobile pays none of it.
  */
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
@@ -43,6 +48,105 @@ export interface FloatingControlsProps {
   onMuteGuardianUpdateType: (type: GuardianUpdate['type']) => void;
 }
 
+function GuardianFabButton({
+  onPress,
+  badgeCount,
+  canTalk,
+  reducedMotion,
+  layoutId,
+}: {
+  onPress: () => void;
+  badgeCount: number;
+  canTalk: boolean;
+  reducedMotion: boolean;
+  layoutId?: string;
+}) {
+  // The mascot carries the real Guardian tier (idle → monitoring), not
+  // just the badge — same derivation the Guardian tab's object reads.
+  const vault = useVault();
+  const { signedPermission, sessionInfo, deriveGuardianState } = useSessionKey();
+  const { guardianState } = useGuardianTierSnapshotFrom(vault, {
+    signedPermission,
+    sessionInfo,
+    deriveGuardianState,
+  });
+  const chatting = useAgentChatContext()?.chatState.isChatting ?? false;
+  // Beat posture: a beat landing on any instrument's LiveLine pulses the
+  // mascot the same way GuardianObject reacts — once per key, ~2.4s,
+  // dead under reduced motion.
+  const [beatMood, setBeatMood] = useState<"alert" | "thinking" | null>(null);
+  const playedBeats = useRef(new Set<string>());
+  useEffect(() => {
+    if (reducedMotion) return;
+    return subscribeBeats(({ key }) => {
+      if (playedBeats.current.has(key)) return;
+      const next = GUARDIAN_BEAT_MOOD[beatImpulseForKey(key) ?? "settle"];
+      if (!next) return;
+      playedBeats.current.add(key);
+      setBeatMood(next);
+      setTimeout(() => setBeatMood((m) => (m === next ? null : m)), 2400);
+    });
+  }, [reducedMotion]);
+
+  const [prevBadge, setPrevBadge] = useState(badgeCount);
+  const [bounceKey, setBounceKey] = useState(0);
+  useEffect(() => {
+    if (badgeCount > prevBadge) setBounceKey((k) => k + 1);
+    setPrevBadge(badgeCount);
+  }, [badgeCount, prevBadge]);
+
+  // Alert wins; a landed beat outranks the resting state mood; a live
+  // chat turn narrows the eyes; otherwise the tier's own mood.
+  const mood =
+    badgeCount > 0
+      ? "alert"
+      : (beatMood ?? (chatting ? "thinking" : MOOD_BY_STATE[guardianState]));
+
+  return (
+    <motion.button
+      key={bounceKey}
+      layoutId={layoutId}
+      onClick={onPress}
+      aria-label={canTalk ? "Ask Guardian — tap to speak" : `${ASK_GUARDIAN_LABEL} — ask about your protection`}
+      title={ASK_GUARDIAN_LABEL}
+      initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      whileHover={reducedMotion ? undefined : { scale: 1.04 }}
+      whileTap={reducedMotion ? undefined : { scale: 0.94 }}
+      transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
+      className="hidden lg:flex fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-12 pl-2.5 pr-4 rounded-2xl bg-white dark:bg-gray-900 text-blue-950 dark:text-blue-100 shadow-lg shadow-blue-900/20 border border-blue-200 dark:border-blue-800/60 items-center gap-2"
+    >
+      {/* Inner content fades out fast — the layout morph only reshapes the
+          shared container; without this the pill's text stretches into the
+          panel mid-flight. (Reduced motion keeps the plain fade above.) */}
+      <motion.span
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.08 }}
+        className="flex items-center gap-2"
+      >
+      <GuardianMascot
+        size={30}
+        mood={mood}
+        className="shrink-0"
+      />
+      <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">{ASK_GUARDIAN_LABEL}</span>
+      {badgeCount > 0 && (
+        <motion.span
+          key={`badge-${bounceKey}`}
+          initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
+          animate={{ scale: reducedMotion ? 1 : [0.6, 1.2, 1], opacity: 1 }}
+          transition={{ duration: reducedMotion ? 0 : 0.25, ease: "easeOut" }}
+          className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
+        >
+          {badgeCount > 9 ? "9+" : badgeCount}
+        </motion.span>
+      )}
+      </motion.span>
+    </motion.button>
+  );
+}
+
 export default function FloatingControls({
   onTranscription,
   openAdvisor,
@@ -57,33 +161,6 @@ export default function FloatingControls({
   const voice = useGuardianVoice();
   const { capabilities } = useAgentStatus();
   const { transcribeAudio } = useAgentVoice({ apiBase: API_BASE, capabilities });
-  // The mascot carries the real Guardian tier (idle → monitoring), not
-  // just the badge — same derivation the Guardian tab's object reads.
-  const vault = useVault();
-  const { signedPermission, sessionInfo, deriveGuardianState } = useSessionKey();
-  const { guardianState } = useGuardianTierSnapshotFrom(vault, {
-    signedPermission,
-    sessionInfo,
-    deriveGuardianState,
-  });
-  const chatting = useAgentChatContext()?.chatState.isChatting ?? false;
-  // Beat posture: a beat landing on any instrument's LiveLine pulses the
-  // mascot the same way GuardianObject reacts — once per key, ~2.4s,
-  // dead under reduced motion.
-  const reducedMotion = useReducedMotion();
-  const [beatMood, setBeatMood] = useState<"alert" | "thinking" | null>(null);
-  const playedBeats = useRef(new Set<string>());
-  useEffect(() => {
-    if (reducedMotion) return;
-    return subscribeBeats(({ key }) => {
-      if (playedBeats.current.has(key)) return;
-      const next = GUARDIAN_BEAT_MOOD[beatImpulseForKey(key) ?? "settle"];
-      if (!next) return;
-      playedBeats.current.add(key);
-      setBeatMood(next);
-      setTimeout(() => setBeatMood((m) => (m === next ? null : m)), 2400);
-    });
-  }, [reducedMotion]);
   // The FAB morphs into the desktop docked panel via a shared layoutId —
   // while the drawer is open the pill folds away. Read the context
   // defensively so isolated tests outside the provider still render the FAB.
@@ -91,7 +168,12 @@ export default function FloatingControls({
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia?.("(min-width: 1024px)");
-    if (!mq) return;
+    // No matchMedia (jsdom, ancient browsers): render the FAB anyway — CSS
+    // still hides it below lg, and every real mobile browser has the API.
+    if (!mq) {
+      setIsDesktop(true);
+      return;
+    }
     const update = () => setIsDesktop(mq.matches);
     update();
     mq.addEventListener("change", update);
@@ -108,22 +190,6 @@ export default function FloatingControls({
   const unreadUpdates = activeUpdates.filter((u) => !u.read);
   const badgeCount = Math.max(unreadCount, unreadUpdates.length);
 
-  const [prevBadge, setPrevBadge] = useState(badgeCount);
-  const [bounceKey, setBounceKey] = useState(0);
-  useEffect(() => {
-    if (badgeCount > prevBadge) {
-      setBounceKey((k) => k + 1);
-    }
-    setPrevBadge(badgeCount);
-  }, [badgeCount, prevBadge]);
-
-  // Alert wins; a landed beat outranks the resting state mood; a live
-  // chat turn narrows the eyes; otherwise the tier's own mood.
-  const mood =
-    badgeCount > 0
-      ? "alert"
-      : (beatMood ?? (chatting ? "thinking" : MOOD_BY_STATE[guardianState]));
-
   // Tap = talk when voice is actually available — same start path as
   // VoiceButton (one session, one recorder). Otherwise tap just opens
   // the advisor.
@@ -136,6 +202,8 @@ export default function FloatingControls({
       void voice.start(transcribeAudio, (text) => onTranscription(text));
     }
   };
+
+  const reducedMotion = useReducedMotion() ?? false;
 
   return (
     <>
@@ -159,48 +227,14 @@ export default function FloatingControls({
       />
 
       <AnimatePresence>
-      {showGuardianFab && (
-      <motion.button
-        key={bounceKey}
-        layoutId={isDesktop && !reducedMotion ? "ask-guardian" : undefined}
-        onClick={handleFabPress}
-        aria-label={canTalk ? "Ask Guardian — tap to speak" : `${ASK_GUARDIAN_LABEL} — ask about your protection`}
-        title={ASK_GUARDIAN_LABEL}
-        initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        whileHover={reducedMotion ? undefined : { scale: 1.04 }}
-        whileTap={reducedMotion ? undefined : { scale: 0.94 }}
-        transition={{ duration: reducedMotion ? 0 : 0.2, ease: "easeOut" }}
-        className="hidden lg:flex fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-40 h-12 pl-2.5 pr-4 rounded-2xl bg-white dark:bg-gray-900 text-blue-950 dark:text-blue-100 shadow-lg shadow-blue-900/20 border border-blue-200 dark:border-blue-800/60 items-center gap-2"
-      >
-        {/* Inner content fades out fast — the layout morph only reshapes the
-            shared container; without this the pill's text stretches into the
-            panel mid-flight. (Reduced motion keeps the plain fade above.) */}
-        <motion.span
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.08 }}
-          className="flex items-center gap-2"
-        >
-        <GuardianMascot
-          size={30}
-          mood={mood}
-          className="shrink-0"
+      {showGuardianFab && isDesktop && (
+        <GuardianFabButton
+          onPress={handleFabPress}
+          badgeCount={badgeCount}
+          canTalk={canTalk}
+          reducedMotion={reducedMotion}
+          layoutId={!reducedMotion ? "ask-guardian" : undefined}
         />
-        <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">{ASK_GUARDIAN_LABEL}</span>
-        {badgeCount > 0 && (
-          <motion.span
-            key={`badge-${bounceKey}`}
-            initial={reducedMotion ? false : { scale: 0.6, opacity: 0 }}
-            animate={{ scale: reducedMotion ? 1 : [0.6, 1.2, 1], opacity: 1 }}
-            transition={{ duration: reducedMotion ? 0 : 0.25, ease: "easeOut" }}
-            className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs font-bold min-w-[16px] h-4 px-1 rounded-full flex items-center justify-center shadow-sm"
-          >
-            {badgeCount > 9 ? "9+" : badgeCount}
-          </motion.span>
-        )}
-        </motion.span>
-      </motion.button>
       )}
       </AnimatePresence>
     </>
