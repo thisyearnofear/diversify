@@ -234,6 +234,21 @@ describe("StellarExchange", () => {
     vi.unstubAllEnvs();
   });
 
+  it("a chain record that contradicts the review offers an explicit discard", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx() }));
+    fake.getSettlement.mockResolvedValue({ ok: false, code: "proposal_mismatch", message: "The ledger record does not match the reviewed proposal.", retry: "none" });
+    renderStellar();
+    await act(async () => {});
+    await act(async () => {});
+    expect(screen.getByRole("alert").textContent).toContain("does not match");
+    fireEvent.click(screen.getByTestId("stellar-clear-invalid"));
+    await act(async () => {});
+    expect(localStorage.getItem("diversifi.stellar.pending.v1")).toBeNull();
+    expect(screen.getByTestId("stellar-primary").textContent).toContain("Connect Freighter");
+    vi.unstubAllEnvs();
+  });
+
 
   it("quote expiry swaps Sign for Refresh quote and re-issues a review", async () => {
     vi.useFakeTimers();

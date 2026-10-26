@@ -114,6 +114,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   /** Single transition owner for recovery, Check status, and submit. */
   const applySettlement = useCallback((found: StellarSettlement) => {
     setSettlement(found);
+    setCanDiscardInvalidPending(false);
     if (found.status === "confirmed") {
       unresolvedRef.current = false;
       setPhaseSync("receipt");
@@ -134,9 +135,15 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
       unresolvedRef.current = false;
       setPreparedSync(null);
       setPhaseSync(accountRef.current ? "ready" : "connect");
+      const code: StellarFailure["code"] =
+        found.code === "expired_unseen"
+          ? "quote_expired"
+          : found.code === "tx_bad_seq" || found.code === "below_minimum"
+            ? found.code
+            : "settlement_rejected";
       setError({
         ok: false,
-        code: "tx_bad_seq",
+        code,
         message: found.code === "expired_unseen"
           ? "This transaction expired without being recorded. Review a new quote."
           : `Transaction failed: ${found.code}. Review a new quote.`,
@@ -225,8 +232,16 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
         }
         const found = await adapter.getSettlement(pending.prepared.transactionHash, validated.value);
         if (!live(generation)) return;
-        if (found.ok) applySettlement(found.value);
-        else setError(found);
+        if (found.ok) {
+          applySettlement(found.value);
+        } else {
+          setError(found);
+          // A chain record that contradicts the review can never resolve —
+          // offer the same explicit discard as an invalid record.
+          setCanDiscardInvalidPending(
+            found.code === "proposal_mismatch" || found.code === "unexpected_operation",
+          );
+        }
       } catch (cause) {
         if (live(generation)) setError(asError(cause));
       } finally {
@@ -400,6 +415,9 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
       if (!live(generation)) return;
       if (!found.ok) {
         setError(found);
+        setCanDiscardInvalidPending(
+          found.code === "proposal_mismatch" || found.code === "unexpected_operation",
+        );
         return;
       }
       applySettlement(found.value);

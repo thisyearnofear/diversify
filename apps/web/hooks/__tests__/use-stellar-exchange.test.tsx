@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useStellarExchange } from "../use-stellar-exchange";
+import { readPendingStellar } from "@/lib/stellar/pending";
 import { stellarNativeAsset, stellarTestnetUsdc } from "@diversifi/shared/src/types/stellar";
 import type { PreparedStellarAction, StellarAccountState } from "@diversifi/shared/src/types/stellar";
 
@@ -378,5 +379,44 @@ describe("useStellarExchange", () => {
     expect(fake.getSettlement).toHaveBeenCalledWith(HASH, preparedTx);
     expect(fake.sign).not.toHaveBeenCalled();
     expect(fake.submit).not.toHaveBeenCalled();
+  });
+
+  it("a failed settlement carries an honest code, not a blanket tx_bad_seq", async () => {
+    localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx }));
+    fake.getSettlement.mockResolvedValue({
+      ok: true,
+      value: { status: "failed", proposalId: "q1", txHash: HASH, code: "op_no_trust", retry: "requote" },
+    });
+    const { result, unmount } = renderHook(() => useStellarExchange(true));
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(result.current.error?.code).toBe("settlement_rejected");
+    expect(result.current.phase).toBe("connect");
+    unmount();
+
+    fake.getSettlement.mockResolvedValue({
+      ok: true,
+      value: { status: "failed", proposalId: "q1", txHash: HASH, code: "expired_unseen", retry: "requote" },
+    });
+    const again = renderHook(() => useStellarExchange(true));
+    await waitFor(() => expect(again.result.current.error).not.toBeNull());
+    expect(again.result.current.error?.code).toBe("quote_expired");
+  });
+
+  it("a chain record that contradicts the review offers an explicit discard", async () => {
+    localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx }));
+    fake.getSettlement.mockResolvedValue({
+      ok: false,
+      code: "proposal_mismatch",
+      message: "The ledger record does not match the reviewed proposal.",
+      retry: "none",
+    });
+    const { result } = renderHook(() => useStellarExchange(true));
+    await waitFor(() => expect(result.current.error).not.toBeNull());
+    expect(result.current.phase).toBe("pending");
+    expect(result.current.canDiscardInvalidPending).toBe(true);
+    await act(async () => { result.current.clearInvalidPending(); });
+    expect(readPendingStellar()).toBeNull();
+    expect(result.current.phase).toBe("connect");
+    expect(result.current.canDiscardInvalidPending).toBe(false);
   });
 });

@@ -10,6 +10,7 @@ import {
   STELLAR_DECIMALS,
   STELLAR_DEFAULT_SLIPPAGE_BPS,
   STELLAR_INT64_MAX,
+  STELLAR_MAX_SLIPPAGE_BPS,
   STELLAR_QUOTE_TTL_MS,
   STELLAR_TESTNET,
   STELLAR_TESTNET_PASSPHRASE,
@@ -1058,6 +1059,12 @@ export class StellarTestnetAdapter {
       if (path.length !== record.path.length) return fail("invalid_asset", "The path includes an asset outside the allowlist.", "none");
       const implied = slippageBpsOf(expected, minimum);
       if (implied === null) return fail("invalid_amount", "Could not bind slippage to the quoted output.", "requote");
+      // Integer flooring can push the implied bps above the reviewed
+      // maximum on dust-sized outputs — such a quote could never be
+      // prepared, so fail the input here instead of at sign time.
+      if (implied > STELLAR_MAX_SLIPPAGE_BPS) {
+        return fail("invalid_amount", "The converted amount is too small to hold the reviewed slippage floor in whole units. Increase the amount.", "none");
+      }
       return {
         ok: true,
         value: {
@@ -1353,12 +1360,4 @@ function horizonResultCodes(error: unknown): { transaction?: string; operations:
     transaction: typeof record.transaction === "string" ? record.transaction : undefined,
     operations: Array.isArray(record.operations) ? record.operations.filter((code): code is string => typeof code === "string") : [],
   };
-}
-
-function errorBody(error: unknown): string {
-  if (typeof error === "object" && error !== null && "response" in error) {
-    const data = (error as { response?: { data?: { extras?: { result_codes?: unknown } } } }).response?.data;
-    return JSON.stringify(data?.extras?.result_codes ?? data ?? "");
-  }
-  return error instanceof Error ? error.message : "";
 }

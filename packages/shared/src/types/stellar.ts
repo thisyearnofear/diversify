@@ -241,6 +241,7 @@ export type StellarFailureCode =
   | "tx_bad_seq"
   | "below_minimum"
   | "unexpected_operation"
+  | "settlement_rejected"
   | "submission_pending"
   | "storage_unavailable"
   | "network_error";

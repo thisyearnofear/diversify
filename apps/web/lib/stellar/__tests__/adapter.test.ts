@@ -742,6 +742,17 @@ describe("Stellar testnet adapter", () => {
     clearPendingStellar(prepared.transactionHash);
   });
 
+  it("rejects a dust conversion whose floored slippage exceeds the reviewed maximum", async () => {
+    // 150-unit output: min = floor(150*0.99)=148, implied = floor(2*10000/150)=133bps > 100.
+    // Failing here beats emitting a quote prepare() would reject as mismatched.
+    const server = horizon({
+      strictSendPaths: vi.fn(() => ({
+        call: async () => ({ records: [{ destination_amount: "0.0000150", source_amount: "10.0000000", path: [] }] }),
+      })),
+    });
+    await expect(adapter(server).quote(conversion)).resolves.toMatchObject({ ok: false, code: "invalid_amount" });
+  });
+
   it("rejects a path quote whose source amount does not match the request", async () => {
     const mismatched = horizon({ strictSendPaths: vi.fn(() => ({ call: async () => ({ records: [{ destination_amount: "8.7094750", source_amount: "9.0000000", path: [] }] }) })) });
     await expect(adapter(mismatched).quote(conversion)).resolves.toMatchObject({ ok: false, code: "no_route" });
