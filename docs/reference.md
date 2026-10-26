@@ -901,10 +901,18 @@ Owner-only tools take `walletAuth { message, signature }` — the signed
   decision end to end: bounded XLM transfer through the policy-bound account
   → on-chain policy enforcement (over-cap rejects, never the app) →
   reasoning commitment anchored on the Soroban ledger under the same agent
-  identity that signed the execution. Policy scope is `CallContract(XLM
+  identity that signed the execution. Zero env setup on a machine with the
+  stellar keyring: `--agent-alias`/`--fee-alias` (default
+  `guardian-agent`/`testnet-user`) resolve secrets via `stellar keys
+  secret`; `STELLAR_*` envs remain as overrides and `STELLAR_SMART_ACCOUNT`
+  defaults to the deployed address. Policy scope is `CallContract(XLM
   SAC)` — a bounded transfer is the only executable action; classic ops
   (e.g. `createClaimableBalance`) cannot go through it, so the
-  claimable-balance corridor remains a separate classic-op demo.
+  claimable-balance corridor remains a separate classic-op demo. Verified
+  2026-10-26: signer registration matches the `guardian-agent` key
+  (`GDGS…OO5N`), and a 0.1 XLM run rejected `Auth InvalidAction` — the
+  current period cap was already consumed, the refusal emitted by the
+  contract itself.
 
 ## 5. AI providers & data sources
 

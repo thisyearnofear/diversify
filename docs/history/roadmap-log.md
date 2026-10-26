@@ -18,6 +18,14 @@
   through the account, so the claimable-balance corridor stays a separate
   classic-op demo. The policy demo (`stellar-smart-account-policy.mts`)
   remains the self-contained both-legs repro.
+- Follow-up (same day): zero-env run — secrets resolve from the stellar
+  keyring (`--agent-alias`/`--fee-alias`, defaults `guardian-agent` /
+  `testnet-user`); `STELLAR_*` envs are overrides and `STELLAR_SMART_ACCOUNT`
+  defaults to the deployed address. Live-verified end to end: the rule's
+  registered signer decodes to the `guardian-agent` key (`GDGS…OO5N`), and
+  a 0.1 XLM execution rejected with `Auth InvalidAction` — the ~1-day
+  spending window was already consumed; the policy refused at the contract,
+  which is the enforcement evidence itself.
 
 ### Session + logout correctness (2026-10-26, shared push — lower half)
 

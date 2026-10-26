@@ -170,10 +170,14 @@ something weaker.
   external Ed25519 agent key, with an on-chain spending-limit policy
   installed on a `CallContract` context rule. The agent can only move funds
   inside the period cap; over-limit transfers are rejected by the policy
-  contract, not by app code. Evidence and repro:
-  `scripts/stellar-smart-account-policy.mts`, artifacts in the README's
-  HackMeridian section. App-level ERC-7715 integration on Stellar remains a
-  later milestone — this is a demonstrated primitive, not wired to a user flow.
+  contract, not by app code. `pnpm stellar-guardian-execute` is the wired
+  decision path: a bounded corridor action executes through the account,
+  then the reasoning commitment anchors on the Soroban ledger under the
+  same agent identity (`scripts/lib/stellar-smart-account.mts` holds the
+  auth machinery; `scripts/stellar-smart-account-policy.mts` remains the
+  self-contained both-legs repro). Policy scope is `CallContract(XLM SAC)`
+  — a bounded transfer is the only executable action. App-level ERC-7715
+  integration on Stellar remains a later milestone.
 - **Per-chain routing in the executor:**
   - Celo chains → Mento SDK v3 (`mento-sdk.service.ts`): `approve(tokenIn → Mento Router)` + the SDK-built Router swap (multi-hop in one call), 1% slippage.
   - Other eligible chains → LI.FI HTTP quote (`https://li.quest/v1/quote`);
