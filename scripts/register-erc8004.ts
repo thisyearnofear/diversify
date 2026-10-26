@@ -18,7 +18,7 @@
  * Requires:
  *   - PRIVATE_KEY or VAULT_PRIVATE_KEY in .env.local (funded with gas)
  *   - The registration file hosted at the AGENT_URI env var
- *     (defaults to https://diversifiapp.vercel.app/.well-known/erc8004.json)
+ *     (defaults to https://diversifi.persidian.com/.well-known/erc8004.json)
  */
 
 import { createWalletClient, http, parseAbi, publicActions, type Chain } from "viem";
@@ -103,7 +103,7 @@ async function main() {
 
   const agentURI =
     process.env.AGENT_URI ||
-    "https://diversifiapp.vercel.app/.well-known/erc8004.json";
+    "https://diversifi.persidian.com/.well-known/erc8004.json";
 
   const account = privateKeyToAccount(privateKey as `0x${string}`);
 

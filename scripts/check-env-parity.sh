@@ -149,6 +149,26 @@ if [ "$VERCEL_OK" = "true" ]; then
     fi
 fi
 
+# ── 3b. Signer keys must never sit on Vercel ─────────────────────────────────
+# The signer belongs to the runtime that writes on-chain (the Hetzner box).
+# A Vercel function is immutable, fans out across regions, and re-deploys on
+# every push — a key parked there is pure exposure with no upside. Fail the
+# deploy if one reappears (2026-10-26: VAULT_PRIVATE_KEY and
+# ARC_AGENT_PRIVATE_KEY were removed from Vercel for exactly this reason).
+#
+# Names mirror packages/shared/src/utils/signer-env-keys.ts, plus
+# ARC_AGENT_PRIVATE_KEY (a real Arc agent signer that list does not cover).
+SIGNER_KEYS="VAULT_PRIVATE_KEY LEDGER_PRIVATE_KEY AGENT_PRIVATE_KEY ARC_AGENT_PRIVATE_KEY GUARDIAN_PRIVATE_KEY DEPLOYER_PRIVATE_KEY MAINNET_DEPLOYER_KEY FIREBLOCKS_PRIVATE_KEY TURNKEY_PRIVATE_KEY BUYER_PRIVATE_KEY SIGNER_PRIVATE_KEY SESSION_PRIVATE_KEY"
+
+signers_on_vercel=""
+if [ "$VERCEL_OK" = "true" ]; then
+    for key in $SIGNER_KEYS; do
+        if grep -qx "$key" "$TMP_LISTS/vercel.txt"; then
+            signers_on_vercel="$signers_on_vercel $key"
+        fi
+    done
+fi
+
 # Recommended tier — warn either direction, never fatal
 while IFS= read -r key; do
     [ -z "$key" ] && continue
@@ -158,8 +178,13 @@ while IFS= read -r key; do
     fi
 done < <(jq -r '.recommended[]?' "$CONFIG_FILE" 2>/dev/null)
 
+if [ -n "$signers_on_vercel" ]; then
+    err "signer key(s) present in the Vercel environment:$signers_on_vercel"
+    err "the signer belongs to the runtime that writes on-chain — remove it from Vercel"
+    exit 1
+fi
 if [ "$missing_required" -gt 0 ]; then
     err "env parity failed: $missing_required required key(s) missing on server"
     exit 1
 fi
-ok "env parity check complete (server has all required names)"
+ok "env parity check complete (server has all required names, no signer keys on Vercel)"

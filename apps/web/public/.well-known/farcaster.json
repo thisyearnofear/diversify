@@ -7,10 +7,10 @@
   "miniapp": {
     "version": "1",
     "name": "DiversiFi",
-    "iconUrl": "https://diversifiapp.vercel.app/icon.png",
-    "homeUrl": "https://diversifiapp.vercel.app",
-    "splashImageUrl": "https://diversifiapp.vercel.app/splash.png",
+    "iconUrl": "https://diversifi.persidian.com/icon.png",
+    "homeUrl": "https://diversifi.persidian.com",
+    "splashImageUrl": "https://diversifi.persidian.com/splash.png",
     "splashBackgroundColor": "#8B5CF6",
-    "webhookUrl": "https://diversifiapp.vercel.app/api/farcaster-webhook"
+    "webhookUrl": "https://diversifi.persidian.com/api/farcaster-webhook"
   }
 }

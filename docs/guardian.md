@@ -444,7 +444,7 @@ and the agentId is written back into `public/.well-known/erc8004.json`.
 If the agent's metadata changes (new services, updated description), update
 `public/.well-known/erc8004.json` and call `setAgentURI(agentId, newURI)` on
 the registry. The registration file is served via the live app at
-`https://diversifiapp.vercel.app/.well-known/erc8004.json`.
+`https://diversifi.persidian.com/.well-known/erc8004.json`.
 
 ---
 
@@ -548,4 +548,4 @@ list, auth shape and plumbing: `docs/reference.md` §4.5.
 |---|---|
 | `PRIVATE_KEY` or `VAULT_PRIVATE_KEY` | Used by `register-erc8004.ts` to pay gas for the mint transaction. |
 | `AGENT_PRIVATE_KEY` | The Self Protocol agent's signing key. Used by `self-agent-service.ts` to sign outbound requests. Store securely — never commit to the repo. |
-| `AGENT_URI` | URL where the ERC-8004 registration file is hosted. Defaults to `https://diversifiapp.vercel.app/.well-known/erc8004.json`. |
+| `AGENT_URI` | URL where the ERC-8004 registration file is hosted. Defaults to `https://diversifi.persidian.com/.well-known/erc8004.json`. |

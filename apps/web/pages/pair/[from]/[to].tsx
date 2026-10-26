@@ -24,7 +24,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   req,
 }) => {
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const records = await fetchLedgerRecords(baseUrl);
   const content = pairCardContent(
     params?.from as string | undefined,
@@ -55,7 +55,7 @@ export default function PairPage({ content, deepLink, ogImageUrl, pageUrl }: Pro
   }, [router, deepLink]);
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const description = [content.epithet, content.beat, content.whatIf]
     .filter(Boolean)
     .join(' — ');

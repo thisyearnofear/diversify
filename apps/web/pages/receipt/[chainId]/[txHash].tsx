@@ -58,9 +58,9 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
     const host = req.headers.host;
     const origin = host
         ? `${proto}://${host}`
-        : process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+        : process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
     const publicBase =
-        process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+        process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
 
     const empty = (): { props: Props } => {
         res.statusCode = 404;

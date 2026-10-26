@@ -24,7 +24,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   if (!content) return { notFound: true };
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const deepLink = `/?tab=overview&currency=${content.code}&src=moment_card`;
   return {
     props: {
@@ -45,7 +45,7 @@ export default function MomentPage({ content, deepLink, ogImageUrl, pageUrl }: P
   }, [router, deepLink]);
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const description = [content.event, `Curated data to ${content.asOf}`]
     .filter(Boolean)
     .join(' — ');

@@ -4,7 +4,7 @@ import { useWalletContext } from "../components/wallet/WalletProvider";
 import AppShell from "../components/app/AppShell";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 
-const ogImageUrl = "https://diversifiapp.vercel.app/embed-image.png";
+const ogImageUrl = "https://diversifi.persidian.com/embed-image.png";
 
 const farcasterMeta = {
   version: "1",
@@ -13,8 +13,8 @@ const farcasterMeta = {
     title: "Open DiversiFi",
     action: {
       name: "DiversiFi",
-      url: "https://diversifiapp.vercel.app",
-      splashImageUrl: "https://diversifiapp.vercel.app/splash.png",
+      url: "https://diversifi.persidian.com",
+      splashImageUrl: "https://diversifi.persidian.com/splash.png",
       splashBackgroundColor: "#8B5CF6",
     },
   },

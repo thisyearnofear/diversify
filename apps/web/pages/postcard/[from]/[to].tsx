@@ -40,7 +40,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   query,
 }) => {
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const from = canonicalPairSymbol(params?.from as string | undefined);
   const to = canonicalPairSymbol(params?.to as string | undefined);
   const mode: StampMode = query.m === 'watching' ? 'watching' : 'moved';

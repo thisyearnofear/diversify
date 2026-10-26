@@ -5,9 +5,9 @@
   "description": "DiversiFi is an FX-risk intelligence layer with a constrained agent. The Guardian detects a visitor's country/currency, quantifies their real FX risk against dollars, euros or gold, lets them choose a values-aligned protection plan, and then watches that plan. By default the Guardian only PROPOSES moves — the user signs each one in their own wallet. Autonomous execution exists only where the user has granted an ERC-7715 permission that their own smart account enforces on-chain (Celo, Celo Sepolia, Arbitrum); unconfigured or ineligible chains fail closed to one-tap proposals. There is no custody: savings stay in the user's wallet. Every decision is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage, with a readable reasoning echo whose hash matches the on-chain commitment. Businesses that earn in one currency and buy in another get per-payment-cycle FX drag quantification. The values system (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, Custom) shapes the plan, never the authority: data → deterministic risk calculation → constrained strategy → AI explanation → user approval → on-chain execution.",
   "author": "thisyearnofear",
   "version": "1.1.0",
-  "homepage": "https://diversifiapp.vercel.app",
-  "icon": "https://diversifiapp.vercel.app/icon.png",
-  "banner": "https://diversifiapp.vercel.app/preview.png",
+  "homepage": "https://diversifi.persidian.com",
+  "icon": "https://diversifi.persidian.com/icon.png",
+  "banner": "https://diversifi.persidian.com/preview.png",
   "category": "DeFi / AI Agents",
   "agent_type": "constrained-guardian",
   "capabilities": [
@@ -48,7 +48,7 @@
     }
   ],
   "api": {
-    "base_url": "https://diversifiapp.vercel.app/api/agent",
+    "base_url": "https://diversifi.persidian.com/api/agent",
     "endpoints": {
       "advisor": "/advisor",
       "status": "/status",
@@ -63,7 +63,7 @@
       "x402_gateway": "/x402-gateway",
       "enterprise_audit": "/enterprise/audit"
     },
-    "mcp": "https://diversifiapp.vercel.app/api/mcp"
+    "mcp": "https://diversifi.persidian.com/api/mcp"
   },
   "networks": [
     {
@@ -98,9 +98,9 @@
     }
   ],
   "platforms": {
-    "web": "https://diversifiapp.vercel.app",
-    "minipay": "https://diversifiapp.vercel.app",
-    "farcaster": "https://diversifiapp.vercel.app"
+    "web": "https://diversifi.persidian.com",
+    "minipay": "https://diversifi.persidian.com",
+    "farcaster": "https://diversifi.persidian.com"
   },
   "license": "MIT"
 }

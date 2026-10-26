@@ -1,0 +1,20 @@
+# DiversiFi — public crawl policy.
+#
+# The legal drafts (/terms, /privacy, /risk, /fees) stay out of the index
+# until counsel approves them (NEXT_PUBLIC_LEGAL_APPROVED). Disallow here
+# stops the crawl; the X-Robots-Tag header set in next.config.js is what
+# actually deindexes them, so it holds for crawlers that ignore this file.
+
+User-agent: *
+Allow: /
+
+# Draft legal pages — not approved yet, and not in effect.
+Disallow: /terms
+Disallow: /privacy
+Disallow: /risk
+Disallow: /fees
+Disallow: /restricted
+
+# Dev-only exercise pages.
+Disallow: /rive-test
+Disallow: /stamps-test

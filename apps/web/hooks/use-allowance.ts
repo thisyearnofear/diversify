@@ -229,7 +229,7 @@ export function useAllowance() {
   }, [address, applyServer, showToast, isDemo]);
 
   const shareApp = useCallback(async () => {
-    const url = 'https://diversifiapp.vercel.app';
+    const url = 'https://diversifi.persidian.com';
     const text = 'Protecting my savings from inflation with DiversiFi 🌍 — AI-powered portfolio diversification for emerging markets. Try it free:';
     try {
       if (navigator.share) {

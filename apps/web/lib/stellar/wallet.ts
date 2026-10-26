@@ -100,7 +100,7 @@ async function ensureKit(): Promise<WalletsKitModule> {
         metadata: {
           name: "DiversiFi",
           description: "DiversiFi — Guardian-guarded currency protection",
-          url: "https://diversifiapp.vercel.app",
+          url: "https://diversifi.persidian.com",
           icons: [],
         },
         allowedChains: [WalletConnectTargetChain.TESTNET],

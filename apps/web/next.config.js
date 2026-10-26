@@ -205,7 +205,34 @@ const nextConfig = {
 
   // Configure headers
   async headers() {
+    // Legal drafts stay out of the index until counsel approves them
+    // (NEXT_PUBLIC_LEGAL_APPROVED). The pages carry their own `noindex`
+    // meta, but `_app` gates the page render behind a `ready` flag, so the
+    // served HTML is the boot shell and never contains a per-page head —
+    // the meta only appears after hydration, for crawlers that execute JS.
+    // This header is the server-side half of the same contract, so it holds
+    // for every crawler. Dev-only pages are grouped in: they are not content.
+    const legalApproved = process.env.NEXT_PUBLIC_LEGAL_APPROVED === 'true';
+    const noindexRules = legalApproved
+      ? []
+      : [
+          {
+            source:
+              "/(terms|privacy|risk|fees|restricted|rive-test|stamps-test)",
+            headers: [
+              { key: "X-Robots-Tag", value: "noindex, nofollow" },
+            ],
+          },
+          {
+            source: "/receipt/:path*",
+            headers: [
+              { key: "X-Robots-Tag", value: "noindex, nofollow" },
+            ],
+          },
+        ];
+
     return [
+      ...noindexRules,
       {
         source: "/(.*)",
         headers: [

@@ -24,7 +24,7 @@ export const getServerSideProps: GetServerSideProps<Props> = async ({
   if (!content) return { notFound: true };
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const deepLink = `/?tab=protect&plan=${content.id}&src=plan_card`;
   return {
     props: {
@@ -46,7 +46,7 @@ export default function PlanPage({ content, deepLink, ogImageUrl, pageUrl }: Pro
   }, [router, deepLink]);
 
   const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifiapp.vercel.app';
+    process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
   const targetLine = content.targets
     .map((t) => `${t.ideal}% ${t.region}`)
     .join(' · ');

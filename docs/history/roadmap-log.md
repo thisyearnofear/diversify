@@ -1,5 +1,79 @@
 # Roadmap Log — historical waves & file deltas
 
+### Vercel cleanup — Vercel becomes frontend-only (2026-10-26)
+
+**The name is the hazard here.** The repo and the Vercel project are
+`diversify` (with a y); the production domain is `diversifi.persidian.com`
+(without one), and the `*.vercel.app` alias is `diversifiapp.vercel.app`.
+Three spellings, one product — and the code had the alias hard-coded in
+~50 places.
+
+What was actually broken: `diversifi.persidian.com` (the canonical custom
+domain) was serving all along — a Vercel custom domain is exempt from SSO
+under `all_except_custom_domains`. But `diversifiapp.vercel.app` — the alias
+the **code** hard-codes — pointed at a **deleted deployment** and returned
+`DEPLOYMENT_NOT_FOUND`. So the agent identity manifests
+(`public/.well-known/agent.json`, `erc8004.json`), the Farcaster embed
+metadata, the Privy logo URL, the OG image, the Stellar wallet `url` and
+`docs/guardian.md` all pointed at a URL that did not resolve, while the
+working domain was named nowhere in the source.
+
+What changed:
+
+- **Alias re-pointed** at the current production deployment, and the canonical
+  host is now `diversifi.persidian.com` everywhere in source and docs:
+  the `.well-known` manifests, `pages/index.tsx` OG + Farcaster metadata,
+  `privy-host.tsx`, `use-allowance.ts`, `lib/stellar/wallet.ts`, the
+  share/receipt/postcard page fallbacks, `StoryCard`, the two `register-*`
+  scripts, `README.md` and `docs/guardian.md`.
+  `NEXT_PUBLIC_APP_URL` was set to `https://diversifi.persidian.com` on
+  production, preview and development (it was the alias). The deployed client
+  bundle carried **4** references to the alias and **0** to the canonical
+  before this change.
+  The video capture records under `videos/**` were left alone — they are
+  what was actually recorded, and rewriting them would falsify the capture.
+- **SSO protection** → `{ deploymentType: "preview" }`. Production is public
+  on both hosts; previews stay team-only. Under the old
+  `all_except_custom_domains` the `*.vercel.app` alias was team-gated, so
+  the hard-coded URL would have 302'd to `vercel.com/sso-api` for anyone
+  outside the team even after the alias was fixed.
+- **Signer keys removed from Vercel** — `VAULT_PRIVATE_KEY` and
+  `ARC_AGENT_PRIVATE_KEY` deleted from production, preview and development.
+  The signer belongs to the runtime that writes on-chain; shipping it inside
+  serverless functions was the largest unnecessary exposure in the project.
+- **The macro tick moved to the VPS**: `CRON_SECRET` generated on the box and
+  added to the runtime `.env`; `/home/deploy/bin/diversifi-macro-cron.sh`
+  (mode 700) reads the secret from the env at run time rather than inlining
+  it in the crontab; crontab entry `0 6 * * *`. Verified end to end — an
+  unauthenticated `GET` returns `401`, the authenticated `GET` returns
+  `fx_moves_recorded` and wrote 2 new anchors on Celo while correctly
+  detecting 2 duplicates. The `crons` block was removed from `vercel.json`,
+  so there is exactly one scheduler.
+- **Legal pages are now deindexed server-side.** `_app.tsx` gates the page
+  render behind a `ready` flag, so the served HTML for every route is the boot
+  shell — the pages' own `noindex` meta never reached a crawler. Added
+  `X-Robots-Tag: noindex, nofollow` for the draft legal pages, `/restricted`,
+  the dev pages and `/receipt/*` in `next.config.js` `headers()` (gated on
+  `NEXT_PUBLIC_LEGAL_APPROVED`), plus `apps/web/public/robots.txt`.
+
+What was found and is **not** yet fixed:
+
+- **The API origin has no geo-block.** The VPS nginx has no `geoip2` module,
+  no `451`, no sanctioned list, and `api.diversifi.famile.xyz` is a bare A
+  record to the box. Because the client already calls the VPS directly for
+  most API traffic, the sanctioned-location gate is bypassed for the API
+  today — not only for the rewritten routes. `proxy.ts` gates the pages only.
+  Documented in reference.md §7.5; the fix (Cloudflare `cf-ipcountry` or
+  MaxMind GeoIP2 at the API origin) is still open.
+- **~85 API routes still execute as Vercel lambdas.** Nine rewrite entries
+  cover the proxied set; the other routes run serverless (17 MB each). The
+  client splits between `NEXT_PUBLIC_API_BASE_URL` (→ VPS) and ~19 files
+  that still fetch relative `/api/…` (→ Vercel). Next step: one shared
+  `apiUrl()` helper, convert the 19, and a lint rule so it can't regress.
+- The next Vercel build has to be a **cache miss** for `NEXT_PUBLIC_APP_URL`
+  to reach the client bundle — the variable is inlined at build time, and
+  several recent deployments replayed a turbo cache hit for the web build.
+
 ### Stellar depth layer wired (2026-10-26)
 
 - `scripts/lib/stellar-smart-account.mts` extracts the OZ smart-account auth

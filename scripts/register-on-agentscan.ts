@@ -46,7 +46,7 @@ async function main() {
     process.env.ARC_AGENT_PRIVATE_KEY || process.env.PRIVATE_KEY;
   const manifestUrl =
     process.env.AGENT_MANIFEST_URL ||
-    "https://diversifiapp.vercel.app/.well-known/agent.json";
+    "https://diversifi.persidian.com/.well-known/agent.json";
   const isMainnet = process.env.NETWORK === "mainnet";
 
   if (!privateKey) {

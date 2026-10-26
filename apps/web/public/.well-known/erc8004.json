@@ -2,24 +2,24 @@
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "DiversiFi Guardian",
   "description": "FX-risk intelligence with a constrained agent. You set the rules, the Guardian operates within them, and every decision is explainable and verifiable: data → deterministic risk calculation → constrained strategy → AI explanation → user approval → on-chain execution. By default the Guardian only proposes moves the user signs in their own wallet; autonomous execution exists only under a user-signed ERC-7715 permission enforced on-chain by the user's own smart account (Celo, Celo Sepolia, Arbitrum). No custody. Serves emerging-market savers protecting purchasing power and businesses that earn in one currency and pay in another (per-cycle FX drag). Values-aligned plans (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, Custom). Every decision is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage; read-only intelligence is also exposed as MCP tools.",
-  "image": "https://diversifiapp.vercel.app/icon.png",
+  "image": "https://diversifi.persidian.com/icon.png",
   "services": [
     {
       "name": "web",
-      "endpoint": "https://diversifiapp.vercel.app/"
+      "endpoint": "https://diversifi.persidian.com/"
     },
     {
       "name": "A2A",
-      "endpoint": "https://diversifiapp.vercel.app/.well-known/agent.json",
+      "endpoint": "https://diversifi.persidian.com/.well-known/agent.json",
       "version": "0.3.0"
     },
     {
       "name": "x402",
-      "endpoint": "https://diversifiapp.vercel.app/api/agent/x402-gateway"
+      "endpoint": "https://diversifi.persidian.com/api/agent/x402-gateway"
     },
     {
       "name": "MCP",
-      "endpoint": "https://diversifiapp.vercel.app/api/mcp",
+      "endpoint": "https://diversifi.persidian.com/api/mcp",
       "version": "2025-03-26"
     }
   ],

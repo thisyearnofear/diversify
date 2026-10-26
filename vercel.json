@@ -1,10 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "outputDirectory": "apps/web/.next",
-  "crons": [
-    {
-      "path": "/api/agent/fx-macro-signal",
-      "schedule": "0 6 * * *"
-    }
-  ]
+  "outputDirectory": "apps/web/.next"
 }

@@ -280,7 +280,7 @@ export function StoryCard({
             letterSpacing: '0.04em',
           }}
         >
-          diversifiapp.vercel.app
+          diversifi.persidian.com
         </span>
         <span
           style={{

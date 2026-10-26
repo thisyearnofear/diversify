@@ -78,7 +78,7 @@ function PrivyHost({ appId, onChange }: PrivyHostProps) {
                 appearance: {
                     theme: 'light',
                     accentColor: '#3B82F6',
-                    logo: 'https://diversifiapp.vercel.app/icon.png',
+                    logo: 'https://diversifi.persidian.com/icon.png',
                 },
                 // Smart wallets: Safe accounts on Celo + configured L2s
                 // Each user gets a Safe smart contract account controlled by their Privy embedded signer.

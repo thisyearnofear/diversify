@@ -10,7 +10,7 @@ you can check it. The AI is the interface. The bounds are the trust model.
 > trust the thing doing it? — everything else in this repo exists to answer
 > those three.
 
-**Live app:** [https://diversifiapp.vercel.app](https://diversifiapp.vercel.app) · Positioning: [`docs/product.md`](./docs/product.md) · Trust model: [`docs/guardian.md`](./docs/guardian.md)
+**Live app:** [https://diversifi.persidian.com](https://diversifi.persidian.com) · Positioning: [`docs/product.md`](./docs/product.md) · Trust model: [`docs/guardian.md`](./docs/guardian.md)
 
 ---
 
@@ -133,7 +133,7 @@ XDR rejected), and recovers pending submissions durably.
 | Claimable-balance corridor (bounded proposal claimable only by the counterparty) | create [`ffde38e3…`](https://stellar.expert/explorer/testnet/tx/ffde38e3238fb261de75136946e669f991dbfb2dac5c4257cea0363f94b49f05), claim [`0b8927b8…`](https://stellar.expert/explorer/testnet/tx/0b8927b83827f855e6b46a392017b8cce97cf50253737930879c66bc0a52ae07) — `scripts/stellar-claimable-balance.ts` |
 | SEP-24 anchor discovery (read-only: which assets an anchor advertises; not a redemption claim) | `scripts/sep24-anchor-discovery.ts` — testanchor.stellar.org advertises USDC deposit + withdraw |
 
-Demo: https://diversifiapp.vercel.app (wallet picker → Stellar testnet →
+Demo: https://diversifi.persidian.com (wallet picker → Stellar testnet →
 Exchange). Video walkthrough covers one success and one refusal (a spoken
 commit being declined — voice never signs).
 
