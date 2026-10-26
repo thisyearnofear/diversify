@@ -58,6 +58,7 @@ const navState = {
 };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => navState,
+  useNavigationOptional: () => navState,
 }));
 
 vi.mock("@/components/wallet/WalletButton", () => ({

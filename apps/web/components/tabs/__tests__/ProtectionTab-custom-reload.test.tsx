@@ -31,6 +31,12 @@ vi.mock("@/context/app/NavigationContext", () => ({
     pendingIntent: null,
     consumeIntent: vi.fn(),
   }),
+  useNavigationOptional: () => ({
+    navigateToSwap: vi.fn(),
+    navigateToGuardian: vi.fn(),
+    pendingIntent: null,
+    consumeIntent: vi.fn(),
+  }),
 }));
 vi.mock("@/components/agent/AgentTierStatus", () => ({
   GuardianStatusChip: () => null,

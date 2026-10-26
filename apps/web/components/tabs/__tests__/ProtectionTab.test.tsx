@@ -162,6 +162,12 @@ vi.mock("@/context/app/NavigationContext", () => ({
     pendingIntent: navState.pendingIntent,
     consumeIntent: mockConsumeIntent,
   }),
+  useNavigationOptional: () => ({
+    navigateToSwap: mockNavigateToSwap,
+    navigateToGuardian: mockNavigateToGuardian,
+    pendingIntent: navState.pendingIntent,
+    consumeIntent: mockConsumeIntent,
+  }),
 }));
 
 vi.mock("@/context/app/StrategyContext", () => ({

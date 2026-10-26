@@ -82,6 +82,9 @@ type NavigationContextValue = NavigationState & {
    *  `stellar:testnet` is accepted only while the testnet flag is on. */
   exchangeNetwork: ExchangeNetwork;
   setExchangeNetwork: (network: ExchangeNetwork) => void;
+  /** Live Freighter account while Exchange holds it — null when unmounted/disconnected. */
+  stellarAccount: import('@diversifi/shared/src/types/stellar').StellarAccountState | null;
+  setStellarAccount: (account: import('@diversifi/shared/src/types/stellar').StellarAccountState | null) => void;
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
@@ -152,6 +155,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // always the default; a saved Stellar selection hydrates only when the
   // flag is on, and EVM swap hand-offs force it back.
   const [exchangeNetwork, setExchangeNetworkState] = useState<ExchangeNetwork>('evm');
+  const [stellarAccount, setStellarAccountState] = useState<import('@diversifi/shared/src/types/stellar').StellarAccountState | null>(null);
+  const setStellarAccount = useCallback((a: typeof stellarAccount) => setStellarAccountState(a), []);
   // Transient settlement echo — Home seals the destination region coin
   // once refreshed balances show the token. Not persisted.
   const [lastSettlement, setLastSettlement] = useState<{ toToken: string; settledAt: number } | null>(null);
@@ -196,6 +201,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
 
   // Every EVM exchange hand-off forces the EVM branch back on.
   const forceEvm = useCallback(() => {
+    setStellarAccountState(null);
     setExchangeNetworkState('evm');
     try { window.sessionStorage.removeItem(EXCHANGE_NETWORK_KEY); } catch { /* ignore */ }
   }, []);
@@ -207,6 +213,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       else window.sessionStorage.removeItem(EXCHANGE_NETWORK_KEY);
     } catch { /* ignore */ }
     setExchangeNetworkState(next);
+    if (next === 'evm') setStellarAccountState(null);
     // Entering Stellar clears any stale EVM prefill so Cancel can't target it.
     if (next === 'stellar:testnet') {
       setState((prev) => (prev.swapPrefill ? { ...prev, swapPrefill: null } : prev));
@@ -317,6 +324,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       ...state,
       exchangeNetwork,
       setExchangeNetwork,
+      stellarAccount,
+      setStellarAccount,
       currencyView,
       currencyClarification,
       setCurrencyClarification,
@@ -343,7 +352,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       focusedCycleId,
       setFocusedCycleId,
     }),
-    [state, exchangeNetwork, setExchangeNetwork, currencyView, currencyClarification, currencyReading, publishCurrencyReading, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
+    [state, exchangeNetwork, setExchangeNetwork, stellarAccount, setStellarAccount, currencyView, currencyClarification, currencyReading, publishCurrencyReading, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
   );
 
   // The consuming surface (PaymentCycleReport) already auto-clears the

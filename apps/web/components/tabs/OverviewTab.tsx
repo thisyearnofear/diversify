@@ -2,6 +2,8 @@ import React, { useEffect } from "react";
 import type { MultichainPortfolio } from "@/hooks/use-multichain-balances";
 import type { Region } from "@/hooks/use-user-region";
 import { useWalletContext } from "@/components/wallet/WalletProvider";
+import { useNavigationOptional } from "@/context/app/NavigationContext";
+import { StellarModePanel } from "@/components/stellar/StellarModePanel";
 import { useDemoMode } from "@/context/app/DemoModeContext";
 import { DEMO_PORTFOLIO } from "../../lib/demo-data";
 import { NotConnectedState } from "@/components/tabs/overview/NotConnectedState";
@@ -46,6 +48,7 @@ export default function OverviewTab({
 }: OverviewTabProps) {
   const { address, chainId } = useWalletContext();
   const { demoMode, disableDemoMode, enableDemoMode } = useDemoMode();
+  const stellarMode = useNavigationOptional()?.exchangeNetwork === 'stellar:testnet';
 
   const isDemo = demoMode.isActive;
   const hasHoldings = (portfolio?.totalValue ?? 0) > 0;
@@ -68,6 +71,12 @@ export default function OverviewTab({
   }, [demoMode.isActive, hasHoldings, disableDemoMode]);
 
   const activePortfolio = isDemo ? DEMO_PORTFOLIO : portfolio;
+
+  // Stellar mode owns the network surface — Home defers to the honest
+  // account panel rather than rendering the wallet-chain portfolio.
+  if (stellarMode) {
+    return <StellarModePanel surface="home" />;
+  }
 
   if (address && !balancesSettled) {
     return <OverviewSkeleton />;

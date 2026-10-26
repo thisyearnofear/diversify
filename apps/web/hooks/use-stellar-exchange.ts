@@ -17,6 +17,7 @@ import {
 } from "@diversifi/shared/src/types/stellar";
 import type { StellarTestnetAdapter } from "@/lib/stellar/adapter";
 import { clearPendingStellar, readPendingStellar } from "@/lib/stellar/pending";
+import { useNavigationOptional } from "@/context/app/NavigationContext";
 
 export type StellarExchangePhase =
   | "connect"
@@ -81,6 +82,14 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   enabledRef.current = enabled;
   const accountRef = useRef(account);
   accountRef.current = account;
+  // Publish the live Freighter account so surfaces outside Exchange (wallet
+  // button, Home, Shield) can render honest Stellar state. Cleared on
+  // unmount — an account only exists while Exchange holds it.
+  const navigation = useNavigationOptional();
+  useEffect(() => {
+    navigation?.setStellarAccount(account);
+    return () => navigation?.setStellarAccount(null);
+  }, [navigation, account]);
   const amountRef = useRef(amount);
   amountRef.current = amount;
   const preparedRef = useRef(prepared);

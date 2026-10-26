@@ -275,10 +275,13 @@ export default function WalletButton({
       ? (typeof privy.user.email === 'string' ? privy.user.email : privy.user.email.address)
       : null;
 
-    const displayText = privyEmail || formatAddress(address);
-    const displayIcon = privyEmail ? '📧' : '🔗';
-    const chainIcon = chainId ? CHAIN_METADATA[chainId]?.icon : undefined;
-    const chainShort = chainId ? CHAIN_SHORT_NAME[chainId] ?? networkName : undefined;
+    const stellarAccount = navigation?.stellarAccount ?? null;
+    const displayText = stellarMode
+      ? (stellarAccount ? `${stellarAccount.account.slice(0, 4)}…${stellarAccount.account.slice(-4)}` : 'Stellar')
+      : privyEmail || formatAddress(address);
+    const displayIcon = stellarMode ? '✦' : (privyEmail ? '📧' : '🔗');
+    const chainIcon = stellarMode ? '✦' : (chainId ? CHAIN_METADATA[chainId]?.icon : undefined);
+    const chainShort = stellarMode ? 'Stellar' : (chainId ? CHAIN_SHORT_NAME[chainId] ?? networkName : undefined);
 
     return (
       <div className="relative" ref={wrapperRef}>

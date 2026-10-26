@@ -1,5 +1,19 @@
 # Roadmap Log — historical waves & file deltas
 
+### Stellar first-class network mode (2026-10-26)
+
+- Wallet picker: Stellar is the only user-visible testnet row; selecting it
+  sets `exchangeNetwork` and lands on Exchange (no fake EVM chain switch).
+  Mainnet/Testnet toggle routes to Stellar in both directions; Arc,
+  Robinhood and Celo Sepolia stay supported but hidden from the picker.
+- `NavigationContext.stellarAccount`: session-scoped Freighter account
+  published by `useStellarExchange` (cleared on disconnect/unmount/EVM).
+- `StellarModePanel`: honest Stellar-mode surface for Home and Shield —
+  real G-address and XLM/USDC balances when connected, Exchange hand-off
+  otherwise. Wallet button face shows `G…` account under Stellar mode.
+- Guardian: `getView` carries `network: 'stellar:testnet'` so advisor
+  answers acknowledge the mode.
+
 ### Stellar testnet adapter hardening + Exchange integration (2026-10-25)
 
 - Adapter/types: ledger-derived reserve/fee, strict account parsing,

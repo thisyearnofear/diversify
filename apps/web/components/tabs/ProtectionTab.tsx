@@ -10,6 +10,8 @@ import React, { useState, useMemo, useCallback, useEffect, useRef } from "react"
 import type { Region } from "@/hooks/use-user-region";
 import type { MultichainPortfolio, TokenBalance } from "@/hooks/use-multichain-balances";
 import { useWalletContext } from "../wallet/WalletProvider";
+import { useNavigationOptional } from "@/context/app/NavigationContext";
+import { StellarModePanel } from "@/components/stellar/StellarModePanel";
 import { NETWORK_TOKENS, NETWORKS } from "@/config";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { useAdaptiveContext } from "@/context/app/AdaptiveContext";
@@ -116,6 +118,7 @@ export default function ProtectionTab({
   refreshBalances,
 }: ProtectionTabProps) {
   const { address, chainId, isMiniPay } = useWalletContext();
+  const stellarMode = useNavigationOptional()?.exchangeNetwork === 'stellar:testnet';
   const { navigateToSwap, navigateToGuardian } = useNavigation();
   const { demoMode, enableDemoMode, setDemoStrategy } = useDemoMode();
   const { experienceMode } = useExperience();
@@ -1587,6 +1590,12 @@ export default function ProtectionTab({
       }
     />
   );
+
+  // Stellar mode owns the network surface — strategies run on wallet chains,
+  // so Shield shows the honest account panel instead of the EVM object.
+  if (stellarMode) {
+    return <StellarModePanel surface="shield" />;
+  }
 
   // A payment intent transforms the primary stage, with or without a wallet
   // or plan. The ring returns only when the user leaves the cycle.

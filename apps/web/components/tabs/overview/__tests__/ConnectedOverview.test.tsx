@@ -100,6 +100,15 @@ vi.mock("@/context/app/NavigationContext", () => ({
     lastSettlement: navState.lastSettlement,
     consumeSettlement: mockConsumeSettlement,
   }),
+  useNavigationOptional: () => ({
+    navigateToSwap: vi.fn(),
+    navigateToCompare: mockNavigateToCompare,
+    navigateToNetting: mockNavigateToNetting,
+    navigateWithIntent: mockNavigateWithIntent,
+    navigateToGuardian: mockNavigateToGuardian,
+    lastSettlement: navState.lastSettlement,
+    consumeSettlement: mockConsumeSettlement,
+  }),
 }));
 
 vi.mock("@/lib/market-regime", () => ({

@@ -38,6 +38,14 @@ vi.mock("@/context/app/NavigationContext", () => ({
     exchangeNetwork: navOverrides.exchangeNetwork,
     setExchangeNetwork: navOverrides.setExchangeNetwork ?? vi.fn(),
   }),
+  useNavigationOptional: () => ({
+    swapPrefill: null,
+    setSwapPrefill: vi.fn(),
+    pendingIntent: navState.pendingIntent,
+    consumeIntent: mockConsumeIntent,
+    exchangeNetwork: navOverrides.exchangeNetwork,
+    setExchangeNetwork: navOverrides.setExchangeNetwork ?? vi.fn(),
+  }),
 }));
 
 // Stub the lazy Stellar surface so flag tests don't load the real leaf.

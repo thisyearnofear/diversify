@@ -43,6 +43,23 @@ vi.mock("@/context/app/NavigationContext", () => ({
     navigateToSwap: vi.fn(),
     recordSettlement: vi.fn(),
   }),
+  useNavigationOptional: () => ({
+    swapPrefill: mockSwapPrefill,
+    setSwapPrefill: mockSetSwapPrefill,
+    clearSwapPrefill: () => {
+      mockSwapPrefill = null;
+    },
+    activeTab: "exchange",
+    visitedTabs: ["exchange"],
+    chainId: mockWalletChainId,
+    setActiveTab: vi.fn(),
+    setChainId: vi.fn(),
+    initializeFromStorage: vi.fn(),
+    focusedCycleId: null,
+    setFocusedCycleId: vi.fn(),
+    navigateToSwap: vi.fn(),
+    recordSettlement: vi.fn(),
+  }),
   FOCUS_HIGHLIGHT_MS: 1500,
 }));
 

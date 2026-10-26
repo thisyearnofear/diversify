@@ -137,6 +137,7 @@ export function useGuardianInteraction() {
     const pair = navigation.activeTab === 'exchange' && navigation.exchangeNetwork !== 'stellar:testnet' ? readExchangePair() : null;
     return {
       tab: navigation.activeTab,
+      ...(navigation.exchangeNetwork === 'stellar:testnet' ? { network: 'stellar:testnet' as const } : {}),
       ...(pair ? { pair: { from: pair.fromToken, to: pair.toToken } } : {}),
       ...(navigation.activeTab === 'overview' && current ? {
         currency: { currencyCode: current.currencyCode, benchmark: current.benchmark, horizon: current.horizon, story: current.story },

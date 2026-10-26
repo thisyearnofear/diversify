@@ -28,6 +28,7 @@ vi.mock("@/context/app/GuardianVisibilityContext", () => ({
 }));
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => ({ navigateToGuardian: mocks.navigateToGuardian }),
+  useNavigationOptional: () => ({ navigateToGuardian: mocks.navigateToGuardian }),
 }));
 vi.mock("@/hooks/use-guardian-session-info", () => ({
   useGuardianSessionInfo: (enabled: boolean) => (enabled ? mocks.sessionInfo : null),

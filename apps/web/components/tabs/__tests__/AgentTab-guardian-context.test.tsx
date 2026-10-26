@@ -50,6 +50,11 @@ vi.mock("@/context/app/NavigationContext", () => ({
     clearGuardianContext: mockClearGuardianContext,
     navigateToGuardian: vi.fn(),
   }),
+  useNavigationOptional: () => ({
+    guardianContext: mockGuardianContext,
+    clearGuardianContext: mockClearGuardianContext,
+    navigateToGuardian: vi.fn(),
+  }),
 }));
 vi.mock("@/components/wallet/WalletButton", () => ({
   default: () => <button type="button">Connect wallet</button>,

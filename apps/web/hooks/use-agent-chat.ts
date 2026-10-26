@@ -731,6 +731,7 @@ export function useAgentChat({
             view: requestView.tab
               ? {
                   tab: requestView.tab,
+                  ...(requestView.network ? { network: requestView.network } : {}),
                   ...(requestView.pair ? { pair: { from: requestView.pair.from, to: requestView.pair.to } } : {}),
                   ...(requestView.currency ? { currency: requestView.currency } : {}),
                 }

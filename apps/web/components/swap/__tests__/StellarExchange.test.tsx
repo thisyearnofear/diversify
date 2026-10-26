@@ -103,7 +103,8 @@ vi.mock("@/context/app/DemoModeContext", () => ({
   useDemoMode: () => ({ demoMode: { isActive: demoState.active }, disableDemoMode: demoState.disableDemoMode }),
 }));
 vi.mock("@/context/app/NavigationContext", () => ({
-  useNavigation: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet" }),
+  useNavigation: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet", setStellarAccount: vi.fn() }),
+  useNavigationOptional: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet", setStellarAccount: vi.fn() }),
 }));
 vi.mock("@/context/app/BalanceVisibilityContext", () => ({
   useBalanceVisibility: () => ({ hidden: balanceHidden.value }),

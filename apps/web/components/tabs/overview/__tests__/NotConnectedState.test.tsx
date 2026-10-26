@@ -131,6 +131,7 @@ const navState = {
 };
 vi.mock("@/context/app/NavigationContext", () => ({
   useNavigation: () => navState,
+  useNavigationOptional: () => navState,
 }));
 vi.mock("@/components/shared/TabComponents", () => ({
   Card: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
