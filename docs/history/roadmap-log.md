@@ -56,20 +56,67 @@ What changed:
   the dev pages and `/receipt/*` in `next.config.js` `headers()` (gated on
   `NEXT_PUBLIC_LEGAL_APPROVED`), plus `apps/web/public/robots.txt`.
 
-What was found and is **not** yet fixed:
+Follow-ups landed the same day, in priority order:
 
-- **The API origin has no geo-block.** The VPS nginx has no `geoip2` module,
-  no `451`, no sanctioned list, and `api.diversifi.famile.xyz` is a bare A
-  record to the box. Because the client already calls the VPS directly for
-  most API traffic, the sanctioned-location gate is bypassed for the API
-  today — not only for the rewritten routes. `proxy.ts` gates the pages only.
-  Documented in reference.md §7.5; the fix (Cloudflare `cf-ipcountry` or
-  MaxMind GeoIP2 at the API origin) is still open.
-- **~85 API routes still execute as Vercel lambdas.** Nine rewrite entries
-  cover the proxied set; the other routes run serverless (17 MB each). The
-  client splits between `NEXT_PUBLIC_API_BASE_URL` (→ VPS) and ~19 files
-  that still fetch relative `/api/…` (→ Vercel). Next step: one shared
-  `apiUrl()` helper, convert the 19, and a lint rule so it can't regress.
+- **The runtime stopped faking evidence.** `DIVERSIFI_DEV_FALLBACK=enabled` on
+  the box meant a failed 0G Storage upload returned a *random* CID and the
+  ledger recorded it as `evidenceUploaded: true` — a fake anchor presented as
+  a real one. Now `disabled`: a failed upload throws, the CID stays empty, and
+  surfaces say "anchor recorded WITHOUT evidence CID". The 0G signer
+  (`0x8037…B8F2`) still has no balance on mainnet (chain 16661), so the runtime
+  anchors nothing right now — and now says so instead of inventing a CID.
+- **The API origin got a sanctioned-location gate.** It had none — no
+  `geoip2`, no `451`, no list — and the client called it directly for most
+  API traffic, so the gate was bypassed for the API, not just for the
+  rewritten routes. `scripts/nginx-diversifi-geo.conf` (a `map` on Cloudflare's
+  `cf-ipcountry`) plus the vhost's `set_real_ip_from` + 451 close the
+  country-level half. Verified live: `CU`/`IR`/`KP`/`SY` → 451, everything
+  else 200, declines recorded in the access log. The origin lockdown
+  (`scripts/nginx-diversifi-cf-only.conf`) is staged and **not** enabled — it
+  goes live only after the Cloudflare record is proxied, which is also what
+  makes `cf-ipcountry` unforgeable. Sub-national (UA) subdivisions stay
+  page-path only.
+- **~85 API routes stopped being Vercel lambdas.** The rewrite was an
+  `afterFiles` array, which Next checks *after* the filesystem — so a
+  non-dynamic API page could win. It is now a `beforeFiles` catch-all
+  (`/api` and `/api/:path*`), applied **only on Vercel** (`VERCEL=1`): the
+  Hetzner runtime *is* the API origin, and a rewrite there would loop on
+  itself. A locally built artifact — what `deploy-to-hetzner.sh` ships —
+  carries no rewrite, verified in `routes-manifest.json`. A Vercel build
+  without `HETZNER_API_URL` now **fails the build** instead of quietly
+  serving the API from lambdas, which is how the heavy routes stopped being
+  proxied once already.
+- **The client stopped asking the page origin for the API.** Every client
+  call now goes through `apiUrl()` (`apps/web/lib/api-url.ts`, 44 call sites
+  across 30 files) instead of splitting between `NEXT_PUBLIC_API_BASE_URL`
+  and relative `/api/…` fetches. A tripwire test
+  (`apps/web/lib/__tests__/api-url-guard.test.ts`) fails the build if a
+  relative fetch reappears — verified by injecting one and watching it fail.
+  The Auth0 OAuth `redirect_uri` is deliberately left on the page origin: it
+  is a browser redirect, Auth0 has it registered, and the callback must land
+  where the session cookie is.
+- **The on-chain agent identity was repointed.** agentId 9654 on the Celo
+  ERC-8004 Identity Registry still held
+  `agentURI = https://diversifiapp.vercel.app/.well-known/erc8004.json` — a
+  deployment-scoped alias. The registered owner turned out to be
+  `ARC_AGENT_PRIVATE_KEY` on the runtime box (`0x3542916a…`), so the update
+  ran from there: tx
+  [`0xd981abb3…ff01f0`](https://explorer.celo.org/tx/0xd981abb3f1359b63a4316301a56c14d57f758364e8ea9a974a8e8d5cb3ff01f0),
+  status 1, now `https://diversifi.persidian.com/.well-known/erc8004.json`.
+  Worth noting: that same key was on Vercel until it was removed — the
+  exposure was the agent registry owner, not just a settlement signer.
+  The AgenticID ERC-721 on 0G needs nothing: token #1's metadata is a
+  content-addressed CID with no host reference.
+
+What is **not** yet fixed:
+
+- **The Cloudflare DNS record is still grey.** The gate is armed and tested,
+  but `api.diversifi.famile.xyz` is a plain A record to the box, so
+  `cf-ipcountry` is absent on direct-origin traffic and the origin IP stays
+  reachable (and forgeable). One dashboard toggle on the `famile.xyz` zone
+  (grey → orange) closes both, and unlocks the origin lockdown.
+- The 0G signer still needs funding on mainnet (chain 16661). Until then the
+  runtime anchors nothing — honestly, but nothing.
 - The next Vercel build has to be a **cache miss** for `NEXT_PUBLIC_APP_URL`
   to reach the client bundle — the variable is inlined at build time, and
   several recent deployments replayed a turbo cache hit for the web build.

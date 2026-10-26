@@ -1313,13 +1313,37 @@ One sentence: **Vercel serves pages; the Hetzner runtime serves the API, runs th
 | Surface | Where | Notes |
 |---|---|---|
 | Frontend (pages, static assets) | **Vercel** | Canonical URL `https://diversifi.persidian.com/` (secondary alias `https://diversifiapp.vercel.app/`). Project `diversify` (`prj_mCjdTiyigVoxYh0ZEJlEu2i2E8WK`), org `papas-projects-5b188431`. |
-| Edge geo-block (`apps/web/proxy.ts`) | **Vercel** | 451 → `/restricted` on sanctioned locations; sets the `dfi-cc` cookie. Vercel-only — it reads `x-vercel-ip-country`. |
+| Edge geo-block (`apps/web/proxy.ts`) | **Vercel** | 451 → `/restricted` on sanctioned locations; sets the `dfi-cc` cookie. Vercel-only — it reads `x-vercel-ip-country` / `x-vercel-ip-country-region`. |
+| API geo-block | **Hetzner** | 451 on the country deny-list, from Cloudflare's `cf-ipcountry` (`scripts/nginx-diversifi-geo.conf` + the vhost). Armed and tested; armed-and-effective once the Cloudflare record is proxied. Country-level only — the UA sub-national list stays page-path only. See §7.5. |
 | Every `/api/*` route | **Hetzner** | `api.diversifi.famile.xyz` → nginx → `127.0.0.1:6174` → `diversifi-api` (Next.js standalone). |
 | Guardian loop + heartbeats | **Hetzner** | crontab, `*/5` for the loop, per-rail heartbeats on their own cadence. |
 | FX macro signal tick | **Hetzner** | `0 6 * * *` → `/home/deploy/bin/diversifi-macro-cron.sh` (reads `CRON_SECRET` from the runtime `.env`; the secret is **not** in the crontab). |
 | Firecrawl macro webhook | **Hetzner** | `/api/agent/firecrawl-webhook?secret=…` — already pointed at the VPS, not Vercel. |
+| ERC-8004 agent identity | **Hetzner** (key) → Celo chain | agentId **9654** on the Celo Identity Registry (`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`); `agentURI` → `https://diversifi.persidian.com/.well-known/erc8004.json` (updated 2026-10-26, tx [`0xd981abb3…ff01f0`](https://explorer.celo.org/tx/0xd981abb3f1359b63a4316301a56c14d57f758364e8ea9a974a8e8d5cb3ff01f0)). |
 
-**Vercel carries no secrets and no schedule.** `VAULT_PRIVATE_KEY` and `ARC_AGENT_PRIVATE_KEY` were removed from all three Vercel environments on 2026-10-26 — the signer belongs to the runtime that writes on-chain. `CRON_SECRET` moved to the runtime `.env` with the tick. The `crons` block was removed from `vercel.json` so there is exactly **one** scheduler; a second Vercel cron would race the box.
+**How the client reaches the API.** Every client-side call goes through
+`apiUrl()` (`apps/web/lib/api-url.ts`), which prefixes
+`NEXT_PUBLIC_API_BASE_URL` — the Hetzner host. A relative `/api/...` fetch
+would go to the *page* origin, i.e. a Vercel lambda; a tripwire test
+(`apps/web/lib/__tests__/api-url-guard.test.ts`) fails the build if one
+reappears. On Vercel, `next.config.js` also rewrites `/api/*` to the runtime
+as a **backstop** — a `beforeFiles` rewrite, so the filesystem can never win
+a route — and that rewrite is applied **only on Vercel** (`VERCEL=1`), because
+the Hetzner runtime *is* the API origin and pointing it at itself would loop.
+A locally built artifact (what `deploy-to-hetzner.sh` ships) carries no
+rewrite. A Vercel build without `HETZNER_API_URL` **fails the build** rather
+than silently serving the API from lambdas — that silent fallback is how the
+heavy routes stopped being proxied once already.
+
+**Vercel carries no secrets and no schedule.** `VAULT_PRIVATE_KEY` and `ARC_AGENT_PRIVATE_KEY` were removed from all three Vercel environments on 2026-10-26 — the signer belongs to the runtime that writes on-chain. `scripts/check-env-parity.sh` now fails a deploy if a signer key reappears on Vercel. `CRON_SECRET` moved to the runtime `.env` with the tick. The `crons` block was removed from `vercel.json` so there is exactly **one** scheduler; a second Vercel cron would race the box.
+
+**The runtime does not fake evidence.** `DIVERSIFI_DEV_FALLBACK=disabled` on
+the box (2026-10-26). With it enabled, a failed 0G Storage upload returned a
+*random* CID and the ledger recorded it as `evidenceUploaded: true` — a fake
+anchor presented as a real one. Disabled, a failed upload throws, the CID
+stays empty, and surfaces say "anchor recorded WITHOUT evidence CID". The
+0G signer still needs funding on mainnet (chain 16661) — until then the
+runtime anchors nothing, and says so.
 
 **Vercel deployment protection** is `ssoProtection: { deploymentType: "preview" }` — production is public (the canonical `vercel.app` alias is SSO-gated otherwise, because a `*.vercel.app` subdomain is not a custom domain), previews stay team-only.
 
@@ -1555,25 +1579,41 @@ The canonical backend deploy is `./scripts/deploy-to-hetzner.sh` (tracked, not g
 #### Hetzner edge parity (geo-block)
 
 `proxy.ts` runs on Vercel only. It gates **Vercel-served paths** — the pages.
-Heavy routes rewritten to `HETZNER_API_URL` (`next.config.js`: `/api/agent/status`,
-`/advisor`, `/deep-analyze`, `/x402-gateway`, `/api/vault/*`, `/api/streaks/*`)
-bypass it when called against the Hetzner host directly — so the Hetzner nginx
-(`scripts/nginx-diversifi-api.conf`) must enforce the same block. Until then,
-do not claim edge-blocking covers vault routes.
+It reads `x-vercel-ip-country` and `x-vercel-ip-country-region`, so the page
+path blocks both the country list and the UA sub-national subdivisions.
 
-**Verified 2026-10-26:** the VPS nginx has **no** geo enforcement at all — no
-`geoip2` module, no `451`, no sanctioned list. `api.diversifi.famile.xyz` is a
-bare A record to the box, and the client already calls it directly for most
-API traffic (`NEXT_PUBLIC_API_BASE_URL`), so the sanctioned-location gate is
-**bypassed for the API today**, not just for the rewrites. The front door is
-open for the API origin; only the pages are gated.
+**The API origin had no gate at all** — no `geoip2`, no `451`, no sanctioned
+list — and the client called it directly for most API traffic
+(`NEXT_PUBLIC_API_BASE_URL`), so the sanctioned-location gate was bypassed for
+the API, not only for the rewritten routes. Closed on 2026-10-26:
 
-The fix is the one the section below already names: enforce the same list at
-the API origin — a `map` on Cloudflare's `cf-ipcountry` header (with
-`set_real_ip_from` the Cloudflare ranges so the header can be trusted), or
-MaxMind GeoIP2 against the list in `packages/shared/src/config/jurisdictions.ts`.
-Until one lands, treat "sanctioned locations are blocked" as a **pages-only**
-claim.
+- `scripts/nginx-diversifi-geo.conf` → `/etc/nginx/conf.d/` (http context) —
+  a `map` on Cloudflare's `cf-ipcountry` to the same country list
+  (`CU`, `IR`, `KP`, `SY` — mirrors `SANCTIONED_COUNTRIES`).
+- `scripts/nginx-diversifi-api.conf` — the vhost sets `set_real_ip_from` for
+  the Cloudflare ranges with `real_ip_header CF-Connecting-IP`, and returns
+  **451** when the map matches. Declines are recorded in the access log; no
+  IP is logged.
+- `scripts/nginx-diversifi-cf-only.conf` → `/etc/nginx/snippets/` — the
+  origin lockdown to Cloudflare ranges. **Staged, not enabled**: the DNS
+  record for `api.diversifi.famile.xyz` is still a plain A record to the
+  box, so enabling it early would cut off every direct client including the
+  VPS cron. Enable it (uncomment the `include` in the vhost) *after* the
+  Cloudflare record is proxied — that is also what makes `cf-ipcountry`
+  trustworthy rather than forgeable against the raw origin.
+
+**What is and is not covered.** Country-level blocking now exists at both
+origins. Sub-national subdivisions (UA: Crimea, Sevastopol, Donetsk,
+Luhansk) are **page-path only** — Cloudflare's free tier sends a country
+code and nothing finer. Do not claim region-level coverage at the API
+origin; closing it needs GeoLite2 City plus the `geoip2` nginx module
+(not installed, licence key required).
+
+Until the Cloudflare record is proxied, `cf-ipcountry` is absent on
+direct-origin traffic and the map returns "" — the gate is present and
+armed, but the origin's own IP is still reachable. That is the one step
+left, and it is a Cloudflare dashboard toggle on the `famile.xyz` zone
+(`api.diversifi.famile.xyz`, grey → orange cloud).
 
 The proxy also forwards `x-vercel-ip-country` into the `dfi-cc` cookie so
 surfaces can self-gate (`lib/geo.ts`, `useGeoCountry` — e.g. the `thesis`
