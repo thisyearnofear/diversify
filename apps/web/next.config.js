@@ -164,27 +164,48 @@ const nextConfig = {
     },
   },
 
-  // Route heavy/slow API routes to Hetzner (always-on, no cold starts, no 15s timeout)
+  // Route every API request to Hetzner (always-on, no cold starts, no 15s
+  // timeout, and the signer that writes on-chain lives there).
+  //
+  // PHASE MATTERS. `rewrites()` used to return a bare array, which Next
+  // applies as `afterFiles` — checked AFTER the filesystem, so a
+  // non-dynamic API page can win on a self-hosted `next start`. `beforeFiles`
+  // is checked BEFORE the filesystem, so `/api/*` can never be served by a
+  // Vercel lambda. See node_modules/next/dist/docs/.../rewrites.md — the
+  // order is headers → redirects → proxy → beforeFiles → filesystem →
+  // afterFiles → dynamic routes → fallback.
+  //
+  // VERCEL-ONLY. The VPS *is* the API origin; pointing it at itself would
+  // loop. The rewrite is therefore applied only when building on Vercel
+  // (VERCEL=1). A locally built artifact — which is what
+  // scripts/deploy-to-hetzner.sh ships — carries no rewrite.
   async rewrites() {
     const hetznerBase = process.env.HETZNER_API_URL;
-    if (!hetznerBase) {
-      // Build-time warning so a stripped/missing env never silently disables
-      // the Hetzner proxy again (2026-09-11: turbo dropped the var, heavy
-      // routes served as Vercel lambdas with no signal in the build log).
-      console.warn('[rewrites] HETZNER_API_URL unset — heavy API routes will serve from Vercel lambdas instead of Hetzner. Production builds must pass it via turbo.json globalEnv.');
-      return [];
+    const isVercel = process.env.VERCEL === '1';
+
+    if (isVercel && !hetznerBase) {
+      // A stripped or missing env must NOT silently fall back to serving the
+      // API from serverless functions — that is exactly how the heavy routes
+      // quietly stopped being proxied once already (2026-09-11). Fail the
+      // build instead of shipping a lambda.
+      throw new Error(
+        '[rewrites] HETZNER_API_URL is required for a Vercel build — without it every ' +
+          '/api/* route would serve from a Vercel lambda instead of the Hetzner runtime.',
+      );
     }
-    return [
-      { source: '/api/agent/status', destination: `${hetznerBase}/api/agent/status` },
-      { source: '/api/agent/advisor', destination: `${hetznerBase}/api/agent/advisor` },
-      { source: '/api/agent/interaction', destination: `${hetznerBase}/api/agent/interaction` },
-      { source: '/api/agent/speak', destination: `${hetznerBase}/api/agent/speak` },
-      { source: '/api/agent/transcribe', destination: `${hetznerBase}/api/agent/transcribe` },
-      { source: '/api/agent/deep-analyze', destination: `${hetznerBase}/api/agent/deep-analyze` },
-      { source: '/api/agent/x402-gateway', destination: `${hetznerBase}/api/agent/x402-gateway` },
-      { source: '/api/vault/:path*', destination: `${hetznerBase}/api/vault/:path*` },
-      { source: '/api/streaks/:path*', destination: `${hetznerBase}/api/streaks/:path*` },
-    ];
+
+    if (!hetznerBase || !isVercel) {
+      return { beforeFiles: [], afterFiles: [], fallback: [] };
+    }
+
+    return {
+      beforeFiles: [
+        { source: '/api', destination: `${hetznerBase}/api` },
+        { source: '/api/:path*', destination: `${hetznerBase}/api/:path*` },
+      ],
+      afterFiles: [],
+      fallback: [],
+    };
   },
 
   // Configure redirects
