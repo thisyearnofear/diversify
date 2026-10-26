@@ -27,6 +27,7 @@ import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from '@/hooks/use
 import { Hallmark } from '@/components/shared/Hallmark';
 import { goodsEquivalentFor } from '@/lib/corridor-context';
 import { explorerTxUrl, chainDisplayName } from '@/lib/explorer-url';
+import { explorerTxUrl as stellarExplorerTxUrl } from '@diversifi/shared/src/types/stellar';
 import { useNavigation } from '@/context/app/NavigationContext';
 import type { HandoffOrigin } from '@/context/app/types';
 import { stampsForPair } from '@/lib/stamps';
@@ -54,20 +55,46 @@ export function draftAmountFor(balance: string, fraction: number): string {
   return Number.isFinite(n) ? String(Number(n.toFixed(decimals))) : '0';
 }
 
-/** What the ticket hands back to the pair on settlement — a snapshot of
- *  the swap as it was quoted, never the modal's invented numbers. */
-export type PairReceipt = {
+type PairReceiptBase = {
   fromToken: string;
   toToken: string;
   amountIn: string;
-  quotedOut: string | null;
-  txHash: string | null;
-  chainId: number;
   settledAt: number;
   /** The hand-off that sent the user here — only when the settled pair
    *  matches the prefilled one, so the receipt can lead back honestly. */
   origin?: HandoffOrigin;
 };
+
+/** What the ticket hands back to the pair on settlement — a snapshot of
+ *  the swap as it was quoted (EVM) or settled on Stellar testnet, never
+ *  invented numbers. */
+export type PairReceipt =
+  | (PairReceiptBase & {
+      quotedOut: string | null;
+      txHash: string | null;
+      chainId: number;
+      settlement?: never;
+    })
+  | (PairReceiptBase & {
+      quotedOut: null;
+      txHash: string;
+      chainId?: never;
+      settlement: {
+        family: 'stellar';
+        network: 'stellar:testnet';
+        /** Exact settled output, decimal-formatted 7dp. */
+        actualOut: string;
+        /** Exact fee paid, XLM decimal. */
+        feePaidXlm: string;
+        ledger: number;
+      };
+    });
+
+export function isStellarReceipt(
+  receipt: PairReceipt | null | undefined,
+): receipt is PairReceipt & { settlement: { family: 'stellar' } } {
+  return receipt?.settlement?.family === 'stellar';
+}
 
 /** One end of the beam — the coin drops in on mount, then its wrapper
  *  counter-rotates against the beam so the flag stays upright. */
@@ -82,6 +109,7 @@ function BeamCoin({
   onSealStamp,
   teaching = false,
   draft,
+  readOnly = false,
 }: {
   symbol: string;
   layoutId: string;
@@ -99,6 +127,8 @@ function BeamCoin({
   /** Drag the coin along the beam to draft a share of the balance — a
    *  preview: it fills the ticket, the CTA still commits. */
   draft?: { balance: string; onDraft(amount: string): void };
+  /** Settled non-EVM receipts: static coin, no provenance/flag affordances. */
+  readOnly?: boolean;
 }) {
   const reduced = useReducedMotion();
   const [fraction, setFraction] = useState<number | null>(null);
@@ -132,7 +162,7 @@ function BeamCoin({
         },
       }
     : {};
-  const provenance = provenanceFor(symbol);
+  const provenance = readOnly ? null : provenanceFor(symbol);
   const flag = provenance?.origin.flag ?? corridorSideFor(symbol)?.flag;
   // The mint-mark lives outside the coin's flip button so a ✓-as-button
   // never nests inside it — same absolute spot, separate hit target.
@@ -357,8 +387,9 @@ export function PairStage({
   // change resets to the resting 5y view.
   const [horizon, setHorizon] = useState<Horizon>('5yr');
   useEffect(() => setHorizon('5yr'), [fromToken, toToken]);
-  const corridor = corridorFor(fromToken, toToken, horizon);
-  const whatIf = pairWhatIfFor(fromToken, toToken, horizon);
+  const stellarSettled = isStellarReceipt(receipt);
+  const corridor = stellarSettled ? null : corridorFor(fromToken, toToken, horizon);
+  const whatIf = stellarSettled ? null : pairWhatIfFor(fromToken, toToken, horizon);
   const drift = corridor?.drift ?? null;
   // Square-root curve: 8pts ≈ 4°, 38pts ≈ 8.6°, 57pts ≈ 10.6°, capped 14°.
   // The weaker side sits lower: left/from weaker → negative rotation.
@@ -375,7 +406,7 @@ export function PairStage({
     entry: StampEntry;
     ids?: string[];
   } | null>(null);
-  const stampable = stampsForPair(fromToken, toToken).length > 0;
+  const stampable = !stellarSettled && stampsForPair(fromToken, toToken).length > 0;
 
   // Teach the seal door once per device: after the travel + seal confirm,
   // rings bloom around the ✓ and a caption fades in under the coin for
@@ -459,12 +490,14 @@ export function PairStage({
   const canDraft =
     !receipt && onDraft && fromBalance && Number.parseFloat(fromBalance) > 0;
 
-  const fromProvenance = provenanceFor(fromToken);
-  const toProvenance = provenanceFor(toToken);
+  const fromProvenance = stellarSettled ? null : provenanceFor(fromToken);
+  const toProvenance = stellarSettled ? null : provenanceFor(toToken);
 
   // Receipt copy — the quote is quoted, never presented as settled.
   const receiptTitle =
-    receipt && fromProvenance && toProvenance
+    stellarSettled
+      ? `Moved ${receipt?.fromToken} → ${receipt?.toToken} on Stellar testnet`
+      : receipt && fromProvenance && toProvenance
       ? `Moved from ${fromProvenance.phrase} to ${toProvenance.phrase}`
       : receipt
         ? `Moved ${receipt.fromToken} → ${receipt.toToken}`
@@ -477,11 +510,13 @@ export function PairStage({
       : s;
   };
   const receiptAmounts = receipt
-    ? receipt.quotedOut
-      ? `${fmtAmount(receipt.amountIn)} ${receipt.fromToken} → ≈ ${fmtAmount(receipt.quotedOut)} ${receipt.toToken} at quote`
-      : `${fmtAmount(receipt.amountIn)} ${receipt.fromToken} → ${receipt.toToken}`
+    ? isStellarReceipt(receipt)
+      ? `${receipt.amountIn} ${receipt.fromToken} → ${receipt.settlement.actualOut} ${receipt.toToken}`
+      : receipt.quotedOut
+        ? `${fmtAmount(receipt.amountIn)} ${receipt.fromToken} → ≈ ${fmtAmount(receipt.quotedOut)} ${receipt.toToken} at quote`
+        : `${fmtAmount(receipt.amountIn)} ${receipt.fromToken} → ${receipt.toToken}`
     : null;
-  const receiptGoods = receipt?.quotedOut
+  const receiptGoods = !isStellarReceipt(receipt) && receipt?.quotedOut
     ? goodsEquivalentFor(receipt.toToken, Number.parseFloat(receipt.quotedOut))
     : null;
 
@@ -544,6 +579,7 @@ export function PairStage({
               index={0}
               flipped={flipped === 'from'}
               onFlip={() => { setActed(true); setFlipped(flipped === 'from' ? null : 'from'); }}
+              readOnly={stellarSettled}
               draft={canDraft ? { balance: fromBalance, onDraft } : undefined}
             />
           </motion.div>
@@ -560,21 +596,27 @@ export function PairStage({
                   : { ...BEAM_SETTLE, delay: landed.current ? 0 : 0.25 }
               }
             >
-              <motion.button
-                type="button"
-                layoutId={reduced ? undefined : 'pair-pivot'}
-                onClick={() => {
-                  haptics.tap();
-                  setActed(true);
-                  onSwitch();
-                }}
-                whileTap={reduced ? undefined : { ...press, transition: springPress }}
-                aria-label="Switch tokens"
-                title="Switch tokens"
-                className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
-              >
-                <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine={!reduced && alive} shineDuration={5.5} />
-              </motion.button>
+              {stellarSettled ? (
+                <span aria-hidden className="flex min-h-tap min-w-tap items-center justify-center">
+                  <Coin size={40} symbol="→" color={QUIET_GRAY} variant="asset" shine={false} />
+                </span>
+              ) : (
+                <motion.button
+                  type="button"
+                  layoutId={reduced ? undefined : 'pair-pivot'}
+                  onClick={() => {
+                    haptics.tap();
+                    setActed(true);
+                    onSwitch();
+                  }}
+                  whileTap={reduced ? undefined : { ...press, transition: springPress }}
+                  aria-label="Switch tokens"
+                  title="Switch tokens"
+                  className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
+                >
+                  <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine={!reduced && alive} shineDuration={5.5} />
+                </motion.button>
+              )}
             </motion.div>
           </div>
           <motion.div
@@ -590,6 +632,7 @@ export function PairStage({
               index={1}
               flipped={flipped === 'to'}
               onFlip={() => { setActed(true); setFlipped(flipped === 'to' ? null : 'to'); }}
+              readOnly={stellarSettled}
               sealed={Boolean(receipt)}
               onSealStamp={
                 receipt && stampable
@@ -617,19 +660,27 @@ export function PairStage({
 
         {/* Labels — under each coin, outside the beam so they never tilt. */}
         <div className="mt-1 flex items-start justify-between px-2">
-          <StageLabel
-            symbol={fromToken}
-            flipped={flipped === 'from'}
-            provenance={fromProvenance}
-            onOpenPicker={() => { setActed(true); setPickerSide('from'); }}
-          />
+          {stellarSettled ? (
+            <span className="px-2 py-1 text-xs font-bold text-gray-700 dark:text-gray-300">{fromToken}</span>
+          ) : (
+            <StageLabel
+              symbol={fromToken}
+              flipped={flipped === 'from'}
+              provenance={fromProvenance}
+              onOpenPicker={() => { setActed(true); setPickerSide('from'); }}
+            />
+          )}
           <div className="w-10 shrink-0" aria-hidden />
-          <StageLabel
-            symbol={toToken}
-            flipped={flipped === 'to'}
-            provenance={toProvenance}
-            onOpenPicker={() => { setActed(true); setPickerSide('to'); }}
-          />
+          {stellarSettled ? (
+            <span className="px-2 py-1 text-xs font-bold text-gray-700 dark:text-gray-300">{toToken}</span>
+          ) : (
+            <StageLabel
+              symbol={toToken}
+              flipped={flipped === 'to'}
+              provenance={toProvenance}
+              onOpenPicker={() => { setActed(true); setPickerSide('to'); }}
+            />
+          )}
         </div>
       </div>
       </div>
@@ -658,21 +709,38 @@ export function PairStage({
             </p>
           )}
           <p className="mt-0.5 text-2xs text-gray-500 dark:text-gray-400">
-            {receipt.txHash && (
-              <Hallmark size={10} className="mr-1 align-[-1px] opacity-70" />
-            )}
-            Settled on {chainDisplayName(receipt.chainId)}
-            {receipt.txHash && (
+            {isStellarReceipt(receipt) ? (
               <>
+                Settled on Stellar testnet · ledger {receipt.settlement.ledger} · fee {receipt.settlement.feePaidXlm} XLM
                 {' · '}
                 <a
-                  href={explorerTxUrl(receipt.chainId, receipt.txHash)}
+                  href={stellarExplorerTxUrl(receipt.txHash ?? '') ?? '#'}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:underline dark:text-blue-400"
                 >
                   View transaction ↗
                 </a>
+              </>
+            ) : (
+              <>
+                {receipt.txHash && (
+                  <Hallmark size={10} className="mr-1 align-[-1px] opacity-70" />
+                )}
+                Settled on {chainDisplayName(receipt.chainId)}
+                {receipt.txHash && (
+                  <>
+                    {' · '}
+                    <a
+                      href={explorerTxUrl(receipt.chainId, receipt.txHash)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline dark:text-blue-400"
+                    >
+                      View transaction ↗
+                    </a>
+                  </>
+                )}
               </>
             )}
           </p>

@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
+import { stellarTestnetEnabled } from "@diversifi/shared/src/config/stellar";
 import SwapTab from "./SwapTab";
 import { useNavigation } from "@/context/app/NavigationContext";
 import { usePortfolio } from "@/context/app/PortfolioContext";
@@ -355,14 +357,15 @@ interface ExchangeTabProps {
   portfolio?: MultichainPortfolio;
 }
 
-export default function ExchangeTab({
+function EvmExchangeTab({
   userRegion,
   inflationData,
   refreshBalances,
   refreshChainId,
   isBalancesLoading,
   portfolio,
-}: ExchangeTabProps) {
+  networkControl,
+}: ExchangeTabProps & { networkControl?: React.ReactNode }) {
   const { address } = useWalletContext();
   const { demoMode, enableDemoMode, disableDemoMode } = useDemoMode();
   const router = useRouter();
@@ -522,6 +525,7 @@ export default function ExchangeTab({
         inspectorOpen={Boolean(inspectorSel)}
         object={
           <div data-testid="exchange-swap-object" className="w-full">
+            {networkControl}
             <SwapTab
               userRegion={userRegion}
               inflationData={inflationData}
@@ -598,6 +602,7 @@ export default function ExchangeTab({
       inspectorOpen={Boolean(inspectorSel)}
       object={
         <div data-testid="exchange-swap-object" className="w-full">
+          {networkControl}
           <SwapTab
             userRegion={userRegion}
             inflationData={inflationData}
@@ -682,4 +687,33 @@ export default function ExchangeTab({
       }
     />
   );
+}
+
+/** The Stellar testnet surface loads lazily — its code (and the wallet
+ *  bridge it reaches) never enters the EVM bundle or an unauthorized build. */
+const StellarExchange = dynamic(() => import("../swap/StellarExchange"), { ssr: false });
+
+export default function ExchangeTab(props: ExchangeTabProps) {
+  const { exchangeNetwork = "evm", setExchangeNetwork } = useNavigation();
+  const enabled = stellarTestnetEnabled();
+  // The network switch is inert while a signature or submission is busy.
+  const [stellarBusy, setStellarBusy] = useState(false);
+  const networkControl = enabled ? (
+    <select
+      aria-label="Exchange network"
+      value={exchangeNetwork}
+      disabled={stellarBusy}
+      onChange={(event) =>
+        setExchangeNetwork(event.target.value === "stellar:testnet" ? "stellar:testnet" : "evm")
+      }
+      className="min-h-tap rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink"
+    >
+      <option value="evm">Wallet networks</option>
+      <option value="stellar:testnet">Stellar testnet</option>
+    </select>
+  ) : null;
+  if (enabled && exchangeNetwork === "stellar:testnet") {
+    return <StellarExchange networkControl={networkControl} onBusyChange={setStellarBusy} />;
+  }
+  return <EvmExchangeTab {...props} networkControl={networkControl} />;
 }

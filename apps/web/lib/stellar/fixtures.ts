@@ -39,19 +39,23 @@ export const notConnected: StellarCapabilities = {
 
 export const disabled: StellarCapabilities = { ...notConnected, enabled: false };
 
-/** Funded classic account with a USDC trustline. 10 XLM total, 3 XLM reserved, 100 stroops held for the fee. */
+/** Funded classic account with a USDC trustline. 10 XLM total, 1.5 XLM reserved (0.5 base), 100 stroops held for the fee. */
 export const readyAccount: StellarAccountState = {
   network: STELLAR_TESTNET,
   account: FIXTURE_ACCOUNT,
   accountKind: "classic",
   exists: true,
   subentryCount: 1,
-  reserveStroops: "30000000",
+  reserveStroops: "15000000",
+  baseReserveStroops: "5000000",
+  baseFeeStroops: "100",
+  numSponsoring: 0,
+  numSponsored: 0,
   balances: [
     {
       asset: stellarNativeAsset(),
       balanceUnits: "100000000",
-      spendableUnits: "69999900",
+      spendableUnits: "84999900",
       authorized: true,
     },
     {
@@ -59,6 +63,8 @@ export const readyAccount: StellarAccountState = {
       balanceUnits: "0",
       spendableUnits: "0",
       authorized: true,
+      limitUnits: "9223372036854775807",
+      buyingLiabilitiesUnits: "0",
     },
   ],
   issues: [],
@@ -69,8 +75,8 @@ export const readyAccount: StellarAccountState = {
 export const trustlineRequired: StellarAccountState = {
   ...readyAccount,
   subentryCount: 0,
-  reserveStroops: "20000000",
-  balances: [readyAccount.balances[0]],
+  reserveStroops: "10000000",
+  balances: [{ ...readyAccount.balances[0], spendableUnits: "89999900" }],
   issues: ["trustline_required"],
 };
 
@@ -87,7 +93,7 @@ export const quote: StellarQuote = {
   expectedOutUnits: "87094750",
   minimumOutUnits: "86223802",
   slippageBps: 100,
-  priceImpactBps: 0,
+  priceImpactBps: null,
   feeMaxStroops: "100",
   path: [],
   observedAt,
@@ -115,6 +121,7 @@ export const paymentQuote: StellarQuote = {
 };
 
 export const prepared: PreparedStellarTransaction = {
+  kind: "transaction",
   proposalId: quote.id,
   quote,
   unsignedXdr: "AAAA",

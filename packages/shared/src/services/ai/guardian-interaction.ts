@@ -24,6 +24,7 @@ export type GuardianInteraction =
   | { kind: 'navigate'; tab: GuardianTab }
   | { kind: 'explain_current' }
   | { kind: 'cancel_draft' }
+  | { kind: 'open_stellar' }
   | { kind: 'review_proposal' }
   | { kind: 'clarify'; message: string; clarification?: CurrencyClarification };
 
@@ -131,6 +132,7 @@ export function validateInteraction(value: unknown, context: InteractionContext)
     case 'explain_current':
     case 'cancel_draft':
     case 'review_proposal':
+    case 'open_stellar':
       return exactKeys(item, ['kind']) ? { kind: item.kind } : null;
     // Clarifications may be generated locally, but arbitrary model text is
     // not an executable command or a source of financial facts.
@@ -148,6 +150,12 @@ export function discoverInteraction(text: string, context: InteractionContext): 
   if (/\b(?:dont|do not|never|instead|if|unless)\b/.test(s)
     || /\b(?:and|then)\s+(?:show|open|send|swap|buy|sell|change|compare)\b/.test(s)
     || /\b(?:why|risks?|tradeoffs?|should|mean for|recommend|someone saving)\b/.test(s)) return null;
+  // Stellar testnet navigation is local-only — voice never pre-fills an
+  // amount and never signs.
+  if (/^(?:(?:please|can you|could you|would you)\s+)*(?:open|show|switch to|take me to|go to)\s+(?:the\s+)?stellar(?:\s+testnet)?(?:\s+(?:exchange|screen))?[.!?]?$/.test(s)) return {kind:'open_stellar'};
+  if (/^(?:(?:please|can you|could you|would you)\s+)*(?:swap|convert|send|sign|exchange|trade|move)\b.*\b(?:stellar|xlm)\b/.test(s)) {
+    return { kind: 'clarify', message: 'Open Stellar testnet in Exchange, enter the XLM amount, and review it there. Signing requires the Freighter approval control.' };
+  }
   if (context.clarification) {
     const answer = s.replace(/^the /, '').replace(/ please[.!?]?$/, '').replace(/[.!?]$/, '');
     const code = context.currencies.find(currency =>

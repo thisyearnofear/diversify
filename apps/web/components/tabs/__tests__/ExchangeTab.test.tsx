@@ -14,6 +14,11 @@ vi.mock("@/components/wallet/WalletProvider", () => ({
   useWalletContext: () => ({ address: mockAddress, connect: mockConnect }),
 }));
 
+const navOverrides = vi.hoisted(() => ({
+  exchangeNetwork: undefined as string | undefined,
+  setExchangeNetwork: undefined as ((n: string) => void) | undefined,
+}));
+
 const navState: {
   pendingIntent: { tab: string; intent: { source: string; lens?: "compare" | "netting" } } | null;
 } = { pendingIntent: null };
@@ -30,7 +35,18 @@ vi.mock("@/context/app/NavigationContext", () => ({
     setSwapPrefill: vi.fn(),
     pendingIntent: navState.pendingIntent,
     consumeIntent: mockConsumeIntent,
+    exchangeNetwork: navOverrides.exchangeNetwork,
+    setExchangeNetwork: navOverrides.setExchangeNetwork ?? vi.fn(),
   }),
+}));
+
+// Stub the lazy Stellar surface so flag tests don't load the real leaf.
+const MockStellar = vi.hoisted(() => {
+  const React = require("react") as typeof import("react");
+  return { component: () => React.createElement("div", { "data-testid": "mock-stellar-exchange" }) };
+});
+vi.mock("next/dynamic", () => ({
+  default: () => MockStellar.component,
 }));
 
 vi.mock("@/context/app/StrategyContext", () => ({
@@ -813,5 +829,35 @@ describe("ExchangeTab — decision window", () => {
     expect(
       document.querySelectorAll("[data-status-slot]").length,
     ).toBeLessThanOrEqual(3);
+  });
+});
+
+describe("Exchange network selector", () => {
+  beforeEach(() => {
+    navOverrides.exchangeNetwork = undefined;
+    navOverrides.setExchangeNetwork = undefined;
+  });
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  it("offers no Stellar entry when the flag is off", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "");
+    navOverrides.exchangeNetwork = "stellar:testnet"; // stale saved selection
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    expect(screen.queryByLabelText("Exchange network")).toBeNull();
+    expect(screen.queryByTestId("mock-stellar-exchange")).toBeNull();
+  });
+
+  it("routes the select to the Stellar surface when enabled", () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    const setExchangeNetwork = vi.fn();
+    navOverrides.setExchangeNetwork = setExchangeNetwork;
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    const select = screen.getByLabelText("Exchange network");
+    fireEvent.change(select, { target: { value: "stellar:testnet" } });
+    expect(setExchangeNetwork).toHaveBeenCalledWith("stellar:testnet");
+    navOverrides.exchangeNetwork = "stellar:testnet";
+    cleanup();
+    render(<ExchangeTab userRegion="USA" inflationData={{}} />);
+    expect(screen.getByTestId("mock-stellar-exchange")).toBeTruthy();
   });
 });

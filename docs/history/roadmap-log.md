@@ -1,5 +1,29 @@
 # Roadmap Log — historical waves & file deltas
 
+### Stellar testnet adapter hardening + Exchange integration (2026-10-25)
+
+- Adapter/types: ledger-derived reserve/fee, strict account parsing,
+  full-body prepared validation (fee-bump/signed/non-v1 rejected),
+  provenance-bound settlement (result-XDR actual output, charged fee
+  bound to result XDR ≤ reviewed max), `expired_unseen` via latest-ledger
+  `closed_at` + second lookup, module-level submit coalescing, durable
+  `pending.ts` recovery (prepared action only, never signed XDR), unified
+  `prepare`/`prepareTrustline`/`sign`/`submit`/`getSettlement`.
+- UI: `exchangeNetwork` in `NavigationContext` (session-persisted,
+  flag-gated, EVM hand-offs force EVM), `EvmExchangeTab` split + lazy
+  `StellarExchange`, `useStellarExchange` (generation + sync guards,
+  mount-time lookup-only recovery, immutable pending), `PairReceipt`
+  Stellar branch in `PairStage` (inert controls, exact amounts),
+  `open_stellar` local guardian intent (navigation only, no signing).
+- Verification (unit only — no live wallet, browser, or build): 234
+  focused vitest tests green across `lib/stellar` adapter (43), shared
+  types (13), `use-stellar-exchange` (13), `StellarExchange` (9),
+  `PairStage` (51), `ExchangeTab` (39), `NavigationContext` (14),
+  `guardian-interaction` + interaction boundary + guardian-review chat,
+  `use-guardian-interaction-stellar` (3). `pnpm --filter
+  @diversifi/web typecheck` clean; eslint on changed files clean.
+  Live Freighter/Horizon sign + settle (Gate 2/3) remains open.
+
 ### First-session journey rework — onboarding → Home → Shield → Guardian (2026-10-27)
 
 The onboarding → first-run surfaces were rebuilt around "same money, less

@@ -109,3 +109,20 @@ describe('interaction schema boundary', () => {
     expect(validateInteraction(value, context)).toBeNull();
   });
 });
+
+describe('open_stellar local intent', () => {
+  const ctx: InteractionContext = { currencies: ['NGN', 'USD'], currency: null, clarification: null };
+  it('opens Stellar testnet locally and validates exactly', () => {
+    expect(discoverInteraction('Open Stellar testnet', ctx)).toEqual({ kind: 'open_stellar' });
+    expect(discoverInteraction('Take me to the stellar exchange', ctx)).toEqual({ kind: 'open_stellar' });
+    expect(validateInteraction({ kind: 'open_stellar' }, ctx)).toEqual({ kind: 'open_stellar' });
+    expect(validateInteraction({ kind: 'open_stellar', extra: 1 }, ctx)).toBeNull();
+  });
+  it('never turns a Stellar conversion command into signing or an EVM swap', () => {
+    const msg = 'Open Stellar testnet in Exchange, enter the XLM amount, and review it there. Signing requires the Freighter approval control.';
+    expect(discoverInteraction('Swap 10 XLM on Stellar', ctx)).toEqual({ kind: 'clarify', message: msg });
+    expect(discoverInteraction('Convert XLM to USDC on stellar', ctx)).toEqual({ kind: 'clarify', message: msg });
+    expect(discoverInteraction('Send stellar to my friend', ctx)).toEqual({ kind: 'clarify', message: msg });
+    expect(discoverInteraction("Don't open stellar", ctx)).toBeNull();
+  });
+});

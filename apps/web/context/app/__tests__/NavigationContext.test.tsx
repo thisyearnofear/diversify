@@ -12,7 +12,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, act, cleanup } from "@testing-library/react";
 
 import { NavigationProvider, useNavigation } from "../NavigationContext";
@@ -264,5 +264,46 @@ describe("NavigationContext — ?tab= doorway", () => {
     );
 
     expect(seen!.activeTab).toBe("exchange");
+  });
+});
+
+
+describe("Exchange network selection", () => {
+  it("hydrates a saved Stellar selection only when the flag is on", () => {
+    window.sessionStorage.clear();
+    window.sessionStorage.setItem("diversifi.exchange.network", "stellar:testnet");
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    render(<NavigationProvider><Probe /></NavigationProvider>);
+    expect(seen!.exchangeNetwork).toBe("stellar:testnet");
+    vi.unstubAllEnvs();
+    cleanup();
+
+    window.sessionStorage.setItem("diversifi.exchange.network", "stellar:testnet");
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "");
+    render(<NavigationProvider><Probe /></NavigationProvider>);
+    expect(seen!.exchangeNetwork).toBe("evm");
+    vi.unstubAllEnvs();
+    window.sessionStorage.clear();
+  });
+
+  it("entering Stellar clears a stale EVM prefill; EVM hand-offs force EVM back", () => {
+    window.sessionStorage.clear();
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    render(<NavigationProvider><Probe /></NavigationProvider>);
+    act(() => {
+      seen!.setSwapPrefill({ fromToken: "cUSD", toToken: "cEUR", reason: "x" });
+    });
+    expect(seen!.swapPrefill).toBeTruthy();
+    act(() => { seen!.setExchangeNetwork("stellar:testnet"); });
+    expect(seen!.exchangeNetwork).toBe("stellar:testnet");
+    expect(seen!.swapPrefill).toBeNull();
+    expect(window.sessionStorage.getItem("diversifi.exchange.network")).toBe("stellar:testnet");
+    act(() => {
+      seen!.navigateToSwap({ fromToken: "USDm", toToken: "NGNm", reason: "y" });
+    });
+    expect(seen!.exchangeNetwork).toBe("evm");
+    expect(window.sessionStorage.getItem("diversifi.exchange.network")).toBeNull();
+    vi.unstubAllEnvs();
+    window.sessionStorage.clear();
   });
 });

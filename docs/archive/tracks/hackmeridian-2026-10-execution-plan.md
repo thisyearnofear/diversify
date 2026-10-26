@@ -361,18 +361,18 @@ Estimates are engineering budgets, not guarantees. Both developers start immedia
 | A2 | Add server-owned interpretation operation to `AIService`; validate command schemas; integrate advisor allowance/demo gate | A1 contract | Navigation/interpretation causes no ledger/storage write; actual recommendations retain their rules; invalid output cannot dispatch | 1.5 h |
 | A3 | One voice session/playback owner; `VoiceButton`, `use-agent-voice`, speech provider/routes/status | G0 | Start/stop, transcript, interruption, cleanup, and upload fallback work; realtime spike has a 90-minute limit within this task | 3 h |
 | A4 | NGN/BRL Home/story refinement and persistent compact Guardian control | A1 | Existing motifs, readable data/source, reduced motion, no extra resting card or hidden screen change | 2 h |
-| A5 | Wire B's adapter into Exchange review/receipt and the existing wallet entry | B1/B2 payloads | Explicit test-funds transition; exact asset/network/minimum; rejection and pending states; no speech signing | 2 h |
+| A5 | Wire B's adapter into Exchange review/receipt and the existing wallet entry | B1/B2 payloads | **Integrated 2026-10-25**: `exchangeNetwork` selector, `useStellarExchange`, `StellarExchange` (lazy, ssr:false), Stellar `PairReceipt` in `PairStage`, `open_stellar` guardian intent. Unit-checked; live sign/receipt Gate 2/3 open | 2 h |
 | A6 | UX/voice verification, three short user trials, video and submission narrative | A3–A5 | Core acceptance matrix passes; video records current build and real receipt | 2 h |
 
 ### Developer B — Stellar developer
 
 | ID | Work / primary files | Dependency | Pass condition | Budget |
 |---|---|---|---|---|
-| B1 | `packages/shared/src/types/stellar.ts`, `config/stellar.ts`, browser adapter under `apps/web/lib/stellar/` | G0 | Types, fixtures, and a read-only 10 XLM quote landed 2026-10-25. A Freighter session was not opened. | 2 h |
-| B2 | Prepare/sign/submit/verify implementation in those leaves; server routes only where needed | B1 | Prepare, sign, submit, and result decode are implemented and unit-tested. No testnet conversion has been signed. | 3 h |
-| B3 | Expiry, changed-account/network, reserve/trustline, duplicated submission, RPC timeout and no-route behavior | B2 | Typed failures are unit-tested. A live account, trustline, and timeout rehearsal are still open. | 2 h |
-| B4 | Adapter integration support and production/testnet gate review | A5/B3 | End-to-end UI receives real results; disabled environment fails closed; no EVM fallback | 1.5 h |
-| B5 | Focused tests, README/run instructions, deployment configuration, rehearsal evidence | B3/B4 | 17 focused tests, env rows, and `pnpm check-stellar-routes` are in. A reviewer still needs test funds to sign. | 1.5 h |
+| B1 | `packages/shared/src/types/stellar.ts`, `config/stellar.ts`, browser adapter under `apps/web/lib/stellar/` | G0 | Done: types, parsers, fixed testnet endpoints, fixtures. Unit-tested; no live session | 2 h |
+| B2 | Prepare/sign/submit/verify implementation in those leaves; server routes only where needed | B1 | Done: `prepare`/`prepareTrustline`/`sign`/`submit`/`getSettlement`/`validatePrepared`, ledger reserve/fee, provenance-bound result decode. Unit-tested; no live signature | 3 h |
+| B3 | Expiry, changed-account/network, reserve/trustline, duplicated submission, RPC timeout and no-route behavior | B2 | Done in code: readiness revalidation, expiry proof, module-level submit coalescing, durable pending recovery, ambiguous-error retention. Unit-tested; live rehearsal open (Gate 2/3) | 2 h |
+| B4 | Adapter integration support and production/testnet gate review | A5/B3 | Integrated: flag-gated selector, disabled env fails closed, no EVM fallback. Unit-tested | 1.5 h |
+| B5 | Focused tests, README/run instructions, deployment configuration, rehearsal evidence | B3/B4 | 100+ focused tests (adapter, types, hook, PairStage, ExchangeTab, guardian), `docs/reference.md` testnet flow. Live rehearsal still open | 1.5 h |
 | B6 | Optional direct token-transfer spending policy spike | G3 complete | Allowed transfer plus scoped over-limit denial; no unrestricted rule fallback | ≤2 h |
 
 **Ownership edges:** A owns all existing UI, navigation, voice, AI intent, and interpretation tests. B owns new Stellar services/types/config/tests, wallet bridge, dependency files, and a proposed read-only route-health script. A and B jointly review changes to shared receipt types; A applies those edits. Neither changes the legacy EVM execution path without a concrete integration need and its required verification.

@@ -8,10 +8,14 @@ import {
   Account,
   Asset,
   BASE_FEE,
+  FeeBumpTransaction,
   Horizon,
   Networks,
   Operation,
+  StrKey,
+  Transaction,
   TransactionBuilder,
+  xdr,
 } from "@stellar/stellar-sdk";
 import type { StellarAsset } from "@diversifi/shared/src/types/stellar";
 import { STELLAR_TESTNET_PASSPHRASE } from "@diversifi/shared/src/types/stellar";
@@ -42,4 +46,4 @@ export function fromSdkAsset(asset: Asset, network: StellarAsset["network"]): St
   return { network, kind: "issued", code: asset.getCode(), issuer, decimals: 7 };
 }
 
-export { Account, Asset, Horizon, Operation, TransactionBuilder };
+export { Account, Asset, FeeBumpTransaction, Horizon, Operation, StrKey, Transaction, TransactionBuilder, xdr };

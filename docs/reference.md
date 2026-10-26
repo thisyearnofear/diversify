@@ -145,8 +145,8 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS` | client | unset → "Let Guardian act for you" hidden | Public address of the session signer keyed by `GUARDIAN_SESSION_PRIVATE_KEY`; ERC-7715/7710 autonomy path (§1.6). |
 | `NEXT_PUBLIC_ARC_ARRIVAL` | client | off in production | Gates the Arc arrival path (`lib/arc-arrival.ts` → `hooks/use-arc-arrival.ts`). Tests and prod never hit Arc RPC by default; flip only after a real mainnet rehearsal (§3.4). |
 | `NEXT_PUBLIC_STELLAR_TESTNET` | client | off | Gates the classic Freighter testnet adapter (`apps/web/lib/stellar/`). Exactly `true` enables it. Not a mainnet rail and not an EVM chain. No signer key. |
-| `STELLAR_HORIZON_URL` | server/script | `https://horizon-testnet.stellar.org` | Read-only path and account endpoint. Must stay on the public testnet host. |
-| `STELLAR_RPC_URL` | server/script | `https://soroban-testnet.stellar.org` | Recorded for later verification. P0 classic reads do not use it. |
+| `STELLAR_HORIZON_URL` | server/script | `https://horizon-testnet.stellar.org` | Path/account/ledger reads and signed transaction submission. Config rejects any other host — no mainnet or custom override. |
+| `STELLAR_RPC_URL` | server/script | `https://soroban-testnet.stellar.org` | Recorded for later verification. P0 classic reads do not use it. Same fixed-endpoint rule. |
 | `NEXT_PUBLIC_ENABLE_ARC` | — | **removed** | The old Arc-research flag was never read and is gone; rail selection is `SETTLEMENT_NETWORK` + `SETTLEMENT_ENV`. |
 | `MONGODB_URI` | server | — | MongoDB connection. Required for the Caribbean FX netting demo — hosts the intent pool so intents match across users and time (free Atlas tier; shape in `.env.example`). |
 | `GUARDIAN_LOOP_SECRET` | server | — | Protects POST calls to `/api/agent/guardian-loop` and `/api/agent/fx-macro-signal` (server-to-server only). |
@@ -247,6 +247,26 @@ can't route CELO. `pnpm check-swap-routes` is the live read-only route health ch
 after touching Celo routing. `pnpm check-stellar-routes` is the separate read-only
 Stellar testnet probe (10 XLM → Circle testnet USDC). It does not sign, and it is
 not coverage for the EVM routes.
+
+### Stellar testnet flow (manual, test funds only)
+
+Flag off by default (`NEXT_PUBLIC_STELLAR_TESTNET=true` reveals the Exchange
+network switch). The only supported action is own-account **XLM → Circle
+testnet USDC** plus the USDC trustline setup that precedes it. Sequence:
+explicit Freighter connect → if the account lacks the pinned USDC line,
+review a one-op `changeTrust` (int64-max limit, reserve shown as reserved,
+not spent) → separate Review exchange → Sign in Freighter → Check
+transaction → receipt shows the ledgered actual output and charged fee,
+never the quote. Reload recovery: the reviewed prepared action persists in
+`diversifi.stellar.pending.v1`; a reload only looks the hash up, never
+re-signs or resubmits. Ambiguous submit errors stay `unknown`/pending;
+only structured Horizon `result_codes` fail definitively. A 404 hash is
+declared `expired_unseen` only after the latest closed ledger has passed
+the proposal expiry plus a 60s margin and a second fresh lookup still
+misses; testnet history resets can still lose old receipts — this is not
+proof against resets. No mainnet, no autonomy, no mirrored reasoning
+evidence.
+
 
 ### Uniswap Trading API — fee / bridge / chain notes (researched 2026-10-03)
 

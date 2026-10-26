@@ -29,12 +29,20 @@ export function stellarTestnetEnabled(
   return flag === "true";
 }
 
+function fixedEndpoint(envValue: string | undefined, fallback: string, name: string): string {
+  if (envValue === undefined || envValue === "") return fallback;
+  if (!isTrustedStellarUrl(envValue, fallback)) {
+    throw new Error(`${name} must be the documented Stellar testnet URL. Mainnet and custom endpoints are not accepted.`);
+  }
+  return fallback;
+}
+
 export function stellarEndpoints(): StellarEndpointConfig {
   return {
     network: STELLAR_TESTNET,
     passphrase: STELLAR_TESTNET_PASSPHRASE,
-    horizonUrl: process.env.STELLAR_HORIZON_URL || STELLAR_HORIZON_TESTNET,
-    rpcUrl: process.env.STELLAR_RPC_URL || STELLAR_RPC_TESTNET,
+    horizonUrl: fixedEndpoint(process.env.STELLAR_HORIZON_URL, STELLAR_HORIZON_TESTNET, "STELLAR_HORIZON_URL"),
+    rpcUrl: fixedEndpoint(process.env.STELLAR_RPC_URL, STELLAR_RPC_TESTNET, "STELLAR_RPC_URL"),
     rpcUsedForP0: false,
   };
 }
@@ -44,7 +52,10 @@ export function isTrustedStellarUrl(url: string, expected: string): boolean {
   try {
     const actual = new URL(url);
     const allowed = new URL(expected);
-    return actual.protocol === "https:" && actual.host === allowed.host && actual.pathname === allowed.pathname;
+    return actual.protocol === "https:"
+      && actual.host === allowed.host
+      && actual.pathname === allowed.pathname
+      && !actual.username && !actual.password && !actual.search && !actual.hash;
   } catch {
     return false;
   }

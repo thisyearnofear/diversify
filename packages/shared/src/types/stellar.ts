@@ -49,6 +49,8 @@ export const STELLAR_TX_TTL_SECONDS = 300;
 /** 1% of the pathfinding destination amount, integer basis points. */
 export const STELLAR_DEFAULT_SLIPPAGE_BPS = 100;
 export const STELLAR_MAX_SLIPPAGE_BPS = 100;
+/** Largest positive amount any classic Stellar operation can carry. */
+export const STELLAR_INT64_MAX = 9223372036854775807n;
 
 const AMOUNT_RE = /^(0|[1-9]\d*)(\.\d+)?$/;
 
@@ -80,6 +82,8 @@ export type StellarReadinessCode =
   | "wrong_network"
   | "account_unfunded"
   | "trustline_required"
+  | "trustline_unauthorized"
+  | "trustline_full"
   | "insufficient_spendable_balance"
   | "wallet_missing";
 
@@ -93,6 +97,11 @@ export type StellarBalance = {
    */
   spendableUnits: string;
   authorized: boolean;
+  /** Integer units offered for sale (open orders) — needed for exact fee arithmetic. */
+  sellingLiabilitiesUnits?: string;
+  /** Issued balances only: trustline limit and buying liabilities, integer units. */
+  limitUnits?: string;
+  buyingLiabilitiesUnits?: string;
 };
 
 export type StellarAccountState = {
@@ -101,8 +110,13 @@ export type StellarAccountState = {
   accountKind: "classic";
   exists: boolean;
   subentryCount: number;
-  /** Base reserve (2 XLM) + one reserve per subentry, in stroops. */
+  /** (2 + subentries + sponsoring − sponsored) × base reserve, in stroops. */
   reserveStroops: string;
+  /** Latest ledger base reserve and base fee, in stroops. "0" when unavailable. */
+  baseReserveStroops: string;
+  baseFeeStroops: string;
+  numSponsoring: number;
+  numSponsored: number;
   balances: StellarBalance[];
   issues: StellarReadinessCode[];
   observedLedger: number | null;
@@ -126,8 +140,8 @@ export type StellarQuote = {
   minimumOutUnits: string;
   /** Integer basis points: (expected − minimum) / expected. */
   slippageBps: number;
-  /** Always 0 for a same-asset payment. Pathfinding has no separate spot. */
-  priceImpactBps: number;
+  /** Always 0 for a same-asset payment. Null for a conversion: unmeasured, never fabricated. */
+  priceImpactBps: number | null;
   feeMaxStroops: string;
   path: StellarAsset[];
   observedAt: string;
@@ -148,6 +162,7 @@ export type StellarQuoteRequest = {
 };
 
 export type PreparedStellarTransaction = {
+  kind: "transaction";
   proposalId: string;
   quote: StellarQuote;
   /** Adapter/signer boundary. Never put this in model context. */
@@ -157,6 +172,24 @@ export type PreparedStellarTransaction = {
   sequence: string;
   expiresAt: string;
 };
+
+export type PreparedStellarTrustline = {
+  kind: "trustline";
+  proposalId: string;
+  network: StellarNetwork;
+  account: string;
+  asset: StellarAsset;
+  /** Integer asset units. */
+  limit: string;
+  reserveIncreaseStroops: string;
+  feeMaxStroops: string;
+  unsignedXdr: string;
+  transactionHash: string;
+  sequence: string;
+  expiresAt: string;
+};
+
+export type PreparedStellarAction = PreparedStellarTransaction | PreparedStellarTrustline;
 
 export type StellarSettlement =
   | { status: "submitted" | "pending"; proposalId: string; txHash: string }
@@ -170,6 +203,17 @@ export type StellarSettlement =
       amountInUnits: string;
       /** From the operation result, never from the quote. */
       actualOutUnits: string;
+      feeChargedStroops: string;
+      explorerUrl: string;
+      reasoningEvidence: "none";
+    }
+  | {
+      status: "trustline_confirmed";
+      proposalId: string;
+      txHash: string;
+      network: StellarNetwork;
+      ledger: number;
+      confirmedAt: string;
       feeChargedStroops: string;
       explorerUrl: string;
       reasoningEvidence: "none";
@@ -197,6 +241,8 @@ export type StellarFailureCode =
   | "tx_bad_seq"
   | "below_minimum"
   | "unexpected_operation"
+  | "submission_pending"
+  | "storage_unavailable"
   | "network_error";
 
 export type StellarFailure = {
@@ -256,7 +302,21 @@ export function parseAmountUnits(amount: string, decimals: number): string | nul
   if (frac.length > decimals) return null;
   try {
     const units = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(frac.padEnd(decimals, "0") || "0");
-    if (units <= 0n) return null;
+    if (units <= 0n || units > STELLAR_INT64_MAX) return null;
+    return units.toString();
+  } catch {
+    return null;
+  }
+}
+
+/** Same rules as parseAmountUnits, but a zero balance is a valid network value. */
+export function parseNonnegativeUnits(amount: string, decimals: number): string | null {
+  if (typeof amount !== "string" || !AMOUNT_RE.test(amount) || decimals < 0 || decimals > 18) return null;
+  const [whole, frac = ""] = amount.split(".");
+  if (frac.length > decimals) return null;
+  try {
+    const units = BigInt(whole) * 10n ** BigInt(decimals) + BigInt(frac.padEnd(decimals, "0") || "0");
+    if (units < 0n || units > STELLAR_INT64_MAX) return null;
     return units.toString();
   } catch {
     return null;
@@ -274,18 +334,24 @@ export function formatAmountUnits(units: string, decimals: number): string | nul
 
 /**
  * Classic spendable native balance, in stroops.
- * Reserve = (2 + subentryCount) XLM. Selling liabilities and the fee this
- * proposal will reserve are subtracted. Trustlines are subentries.
+ * Reserve = (2 + subentries + sponsoring − sponsored) × the latest base
+ * reserve. Selling liabilities and the fee this proposal will reserve are
+ * subtracted. Trustlines are subentries.
  */
 export function spendableNativeStroops(input: {
   balanceStroops: bigint;
   subentryCount: number;
+  /** From the latest ledger. Never default to 1 XLM. */
+  baseReserveStroops: bigint;
+  numSponsoring?: number;
+  numSponsored?: number;
   sellingLiabilitiesStroops: bigint;
   feeStroops: bigint;
 }): bigint {
-  const reserve = (2n + BigInt(Math.max(0, input.subentryCount))) * STROOPS_PER_XLM;
-  const locked = reserve + input.sellingLiabilitiesStroops + input.feeStroops;
-  const spendable = input.balanceStroops - locked;
+  const reserve = BigInt(
+    Math.max(0, 2 + input.subentryCount + (input.numSponsoring ?? 0) - (input.numSponsored ?? 0)),
+  ) * input.baseReserveStroops;
+  const spendable = input.balanceStroops - reserve - input.sellingLiabilitiesStroops - input.feeStroops;
   return spendable > 0n ? spendable : 0n;
 }
 
@@ -368,7 +434,8 @@ export function parseStellarQuote(value: unknown): StellarQuote | null {
   if (value.network !== STELLAR_TESTNET) return null;
   if (value.kind !== "path-payment-strict-send" && value.kind !== "payment") return null;
   if (!Number.isInteger(value.revision) || (value.revision as number) < 1) return null;
-  if (!Number.isInteger(value.slippageBps) || !Number.isInteger(value.priceImpactBps)) return null;
+  if (!Number.isInteger(value.slippageBps)) return null;
+  if (value.priceImpactBps !== null && !Number.isInteger(value.priceImpactBps)) return null;
   const amountIn = value.amountInUnits;
   const expected = value.expectedOutUnits;
   const minimum = value.minimumOutUnits;
@@ -376,21 +443,100 @@ export function parseStellarQuote(value: unknown): StellarQuote | null {
   if (typeof amountIn !== "string" || typeof expected !== "string" || typeof minimum !== "string" || typeof fee !== "string") {
     return null;
   }
-  if ([amountIn, expected, minimum, fee].some((part) => !/^[1-9]\d*$/.test(part))) return null;
+  if ([amountIn, expected, minimum, fee].some((part) => !/^[1-9]\d*$/.test(part) || BigInt(part) > STELLAR_INT64_MAX)) {
+    return null;
+  }
   if (!Array.isArray(value.path) || value.path.some((hop) => !parseStellarAsset(hop))) return null;
   if (typeof value.observedAt !== "string" || typeof value.expiresAt !== "string") return null;
-  if (!Number.isFinite(Date.parse(value.observedAt)) || !Number.isFinite(Date.parse(value.expiresAt))) return null;
+  const observed = Date.parse(value.observedAt);
+  const expires = Date.parse(value.expiresAt);
+  if (!Number.isFinite(observed) || !Number.isFinite(expires) || expires <= observed) return null;
   if (value.kind === "payment") {
     if (!assetsEqual(source, destinationAsset) || value.path.length !== 0) return null;
     if (amountIn !== expected || expected !== minimum || value.priceImpactBps !== 0) return null;
     if (value.account === value.destination) return null;
-  } else if (value.account !== value.destination || assetsEqual(source, destinationAsset)) {
-    return null;
+  } else {
+    // The only supported conversion is XLM into pinned Circle testnet USDC.
+    if (source.kind !== "native" || !assetsEqual(destinationAsset, stellarTestnetUsdc())) return null;
+    if (value.account !== value.destination || assetsEqual(source, destinationAsset)) return null;
+    if (value.priceImpactBps !== null) return null;
   }
   const implied = slippageBpsOf(expected, minimum);
   if (implied === null || implied !== value.slippageBps) return null;
   if ((value.slippageBps as number) > STELLAR_MAX_SLIPPAGE_BPS) return null;
   return value as unknown as StellarQuote;
+}
+
+const PREPARED_TX_KEYS = ["kind", "proposalId", "quote", "unsignedXdr", "transactionHash", "sequence", "expiresAt"];
+const PREPARED_TL_KEYS = [
+  "kind", "proposalId", "network", "account", "asset", "limit",
+  "reserveIncreaseStroops", "feeMaxStroops", "unsignedXdr", "transactionHash", "sequence", "expiresAt",
+];
+
+function isPositiveUnits(value: unknown): value is string {
+  return typeof value === "string" && /^[1-9]\d*$/.test(value) && BigInt(value) <= STELLAR_INT64_MAX;
+}
+
+function isIsoDate(value: unknown): value is string {
+  return typeof value === "string" && Number.isFinite(Date.parse(value));
+}
+
+function isSequence(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9]+$/.test(value);
+}
+
+/**
+ * Structural validation of a persisted prepared action. Explicit field picks,
+ * never a wholesale cast. Cryptographic binding is the adapter's job.
+ */
+export function parsePreparedStellarAction(value: unknown): PreparedStellarAction | null {
+  if (!isRecord(value)) return null;
+  if (value.kind === "transaction") {
+    if (Object.keys(value).some((key) => !PREPARED_TX_KEYS.includes(key))) return null;
+    const quote = parseStellarQuote(value.quote);
+    if (!quote || quote.id !== value.proposalId) return null;
+    if (typeof value.unsignedXdr !== "string" || value.unsignedXdr.length === 0) return null;
+    if (typeof value.transactionHash !== "string" || !STELLAR_TX_HASH.test(value.transactionHash)) return null;
+    if (!isSequence(value.sequence) || !isIsoDate(value.expiresAt)) return null;
+    return {
+      kind: "transaction",
+      proposalId: quote.id,
+      quote,
+      unsignedXdr: value.unsignedXdr,
+      transactionHash: value.transactionHash,
+      sequence: value.sequence,
+      expiresAt: value.expiresAt,
+    };
+  }
+  if (value.kind === "trustline") {
+    if (Object.keys(value).some((key) => !PREPARED_TL_KEYS.includes(key))) return null;
+    const asset = parseStellarAsset(value.asset);
+    if (!asset || !assetsEqual(asset, stellarTestnetUsdc())) return null;
+    if (value.network !== STELLAR_TESTNET) return null;
+    if (typeof value.proposalId !== "string" || value.proposalId.length === 0) return null;
+    if (typeof value.account !== "string" || !isStellarGAddress(value.account)) return null;
+    if (!isPositiveUnits(value.limit) || !isPositiveUnits(value.reserveIncreaseStroops) || !isPositiveUnits(value.feeMaxStroops)) {
+      return null;
+    }
+    if (typeof value.unsignedXdr !== "string" || value.unsignedXdr.length === 0) return null;
+    if (typeof value.transactionHash !== "string" || !STELLAR_TX_HASH.test(value.transactionHash)) return null;
+    if (!isSequence(value.sequence) || !isIsoDate(value.expiresAt)) return null;
+    return {
+      kind: "trustline",
+      proposalId: value.proposalId,
+      network: STELLAR_TESTNET,
+      account: value.account,
+      asset,
+      limit: value.limit,
+      reserveIncreaseStroops: value.reserveIncreaseStroops,
+      feeMaxStroops: value.feeMaxStroops,
+      unsignedXdr: value.unsignedXdr,
+      transactionHash: value.transactionHash,
+      sequence: value.sequence,
+      expiresAt: value.expiresAt,
+    };
+  }
+  return null;
 }
 
 export function parseStellarSettlement(value: unknown): StellarSettlement | null {
@@ -408,6 +554,16 @@ export function parseStellarSettlement(value: unknown): StellarSettlement | null
     for (const key of ["amountInUnits", "actualOutUnits", "feeChargedStroops"] as const) {
       if (typeof value[key] !== "string" || !/^[1-9]\d*$/.test(value[key] as string)) return null;
     }
+    const explorer = explorerTxUrl(value.txHash);
+    if (!explorer || value.explorerUrl !== explorer) return null;
+    return value as unknown as StellarSettlement;
+  }
+  if (value.status === "trustline_confirmed") {
+    if (value.network !== STELLAR_TESTNET || value.reasoningEvidence !== "none") return null;
+    if (typeof value.txHash !== "string" || !STELLAR_TX_HASH.test(value.txHash)) return null;
+    if (!Number.isInteger(value.ledger) || (value.ledger as number) < 1) return null;
+    if (typeof value.confirmedAt !== "string" || !Number.isFinite(Date.parse(value.confirmedAt))) return null;
+    if (typeof value.feeChargedStroops !== "string" || !/^[1-9]\d*$/.test(value.feeChargedStroops)) return null;
     const explorer = explorerTxUrl(value.txHash);
     if (!explorer || value.explorerUrl !== explorer) return null;
     return value as unknown as StellarSettlement;

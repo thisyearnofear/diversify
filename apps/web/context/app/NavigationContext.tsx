@@ -1,6 +1,11 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { isTabId, LEGACY_TAB_MAP, type TabId } from '@/constants/tabs';
 import type { NavigationState, SwapPrefill, TreasuryIntentSource } from './types';
+import { stellarTestnetEnabled } from '@diversifi/shared/src/config/stellar';
+
+export type ExchangeNetwork = 'evm' | 'stellar:testnet';
+/** Session-only Stellar testnet entry — never a default, never mainnet. */
+export const EXCHANGE_NETWORK_KEY = 'diversifi.exchange.network';
 import type { CurrencyView, CurrencyClarification } from '@diversifi/shared/src/services/ai/guardian-interaction';
 
 export type CurrencyReading = CurrencyView & { explanation: string };
@@ -73,6 +78,10 @@ type NavigationContextValue = NavigationState & {
   publishCurrencyReading: (reading: CurrencyReading | null) => void;
   setActiveTab: (tab: TabId) => void;
   setChainId: (chainId: number | null) => void;
+  /** Exchange surface selection — separate from the numeric EVM chainId.
+   *  `stellar:testnet` is accepted only while the testnet flag is on. */
+  exchangeNetwork: ExchangeNetwork;
+  setExchangeNetwork: (network: ExchangeNetwork) => void;
   setSwapPrefill: (prefill: SwapPrefill | null) => void;
   navigateToSwap: (prefill: SwapPrefill) => void;
   clearSwapPrefill: () => void;
@@ -139,6 +148,10 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   // it reflects the current "take this to Guardian" gesture, not history.
   const [guardianContext, setGuardianContext] = useState<GuardianContext | null>(null);
   const [pendingIntent, setPendingIntent] = useState<{ tab: TabId; intent: TreasuryIntent } | null>(null);
+  // Session-scoped Exchange network selection. The EVM wallet branch is
+  // always the default; a saved Stellar selection hydrates only when the
+  // flag is on, and EVM swap hand-offs force it back.
+  const [exchangeNetwork, setExchangeNetworkState] = useState<ExchangeNetwork>('evm');
   // Transient settlement echo — Home seals the destination region coin
   // once refreshed balances show the token. Not persisted.
   const [lastSettlement, setLastSettlement] = useState<{ toToken: string; settledAt: number } | null>(null);
@@ -171,13 +184,43 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
     localStorage.setItem('activeTab', state.activeTab);
   }, [state.activeTab]);
 
+  // Hydrate the saved exchange network once, only when the flag allows it.
+  useEffect(() => {
+    if (!stellarTestnetEnabled()) return;
+    try {
+      if (window.sessionStorage.getItem(EXCHANGE_NETWORK_KEY) === 'stellar:testnet') {
+        setExchangeNetworkState('stellar:testnet');
+      }
+    } catch { /* storage unavailable — stay on EVM */ }
+  }, []);
+
+  // Every EVM exchange hand-off forces the EVM branch back on.
+  const forceEvm = useCallback(() => {
+    setExchangeNetworkState('evm');
+    try { window.sessionStorage.removeItem(EXCHANGE_NETWORK_KEY); } catch { /* ignore */ }
+  }, []);
+
+  const setExchangeNetwork = useCallback((network: ExchangeNetwork) => {
+    const next: ExchangeNetwork = network === 'stellar:testnet' && stellarTestnetEnabled() ? 'stellar:testnet' : 'evm';
+    try {
+      if (next === 'stellar:testnet') window.sessionStorage.setItem(EXCHANGE_NETWORK_KEY, 'stellar:testnet');
+      else window.sessionStorage.removeItem(EXCHANGE_NETWORK_KEY);
+    } catch { /* ignore */ }
+    setExchangeNetworkState(next);
+    // Entering Stellar clears any stale EVM prefill so Cancel can't target it.
+    if (next === 'stellar:testnet') {
+      setState((prev) => (prev.swapPrefill ? { ...prev, swapPrefill: null } : prev));
+    }
+  }, []);
+
   const setChainId = useCallback((chainId: number | null) => {
     setState((prev) => ({ ...prev, chainId }));
   }, []);
 
   const setSwapPrefill = useCallback((swapPrefill: SwapPrefill | null) => {
+    if (swapPrefill) forceEvm();
     setState((prev) => ({ ...prev, swapPrefill }));
-  }, []);
+  }, [forceEvm]);
 
   const setActiveTab = useCallback((tab: TabId) => {
     setState((prev) => ({
@@ -188,14 +231,16 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   const navigateToSwap = useCallback((prefill: SwapPrefill) => {
+    forceEvm();
     setState((prev) => ({ ...prev, activeTab: 'exchange', swapPrefill: prefill }));
-  }, []);
+  }, [forceEvm]);
 
   const clearSwapPrefill = useCallback(() => {
     setState((prev) => ({ ...prev, swapPrefill: null }));
   }, []);
 
   const navigateWithIntent = useCallback((tab: TabId, intent: TreasuryIntent) => {
+    if (tab === 'exchange') forceEvm();
     setPendingIntent({ tab, intent });
     setState((prev) => ({
       ...prev,
@@ -203,7 +248,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       swapPrefill: null,
       visitedTabs: prev.visitedTabs.includes(tab) ? prev.visitedTabs : [...prev.visitedTabs, tab],
     }));
-  }, []);
+  }, [forceEvm]);
 
   /**
    * Open the Exchange tab with the counterparty-matching rail unfolded in
@@ -270,6 +315,8 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
   const value = useMemo<NavigationContextValue>(
     () => ({
       ...state,
+      exchangeNetwork,
+      setExchangeNetwork,
       currencyView,
       currencyClarification,
       setCurrencyClarification,
@@ -296,7 +343,7 @@ export function NavigationProvider({ children }: { children: React.ReactNode }) 
       focusedCycleId,
       setFocusedCycleId,
     }),
-    [state, currencyView, currencyClarification, currencyReading, publishCurrencyReading, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
+    [state, exchangeNetwork, setExchangeNetwork, currencyView, currencyClarification, currencyReading, publishCurrencyReading, setActiveTab, setChainId, setSwapPrefill, navigateToSwap, clearSwapPrefill, navigateToNetting, navigateToGuardian, guardianContext, clearGuardianContext, navigateToCompare, navigateWithIntent, pendingIntent, consumeIntent, lastSettlement, recordSettlement, consumeSettlement, initializeFromStorage, focusedCycleId],
   );
 
   // The consuming surface (PaymentCycleReport) already auto-clears the

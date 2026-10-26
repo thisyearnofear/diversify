@@ -17,6 +17,8 @@ export type WalletSession = {
 export type WalletBridge = {
   isAvailable(): Promise<boolean>;
   connect(): Promise<{ address: string } | { error: string }>;
+  /** Read-only. Never prompts; reports the address Freighter already exposes. */
+  currentAccount(): Promise<{ address: string } | { error: string }>;
   network(): Promise<{ networkPassphrase: string } | { error: string }>;
   sign(xdr: string, address: string): Promise<{ signedTxXdr: string; signerAddress: string } | { error: string; rejected: boolean }>;
 };
@@ -42,6 +44,18 @@ export function createFreighterBridge(): WalletBridge {
       try {
         const { requestAccess } = await freighter();
         const result = await requestAccess();
+        if (result.error || !result.address || !StrKey.isValidEd25519PublicKey(result.address)) {
+          return { error: result.error?.message ?? "Freighter did not return a classic account." };
+        }
+        return { address: result.address };
+      } catch {
+        return { error: "Freighter is not available in this browser." };
+      }
+    },
+    async currentAccount() {
+      try {
+        const { getAddress } = await freighter();
+        const result = await getAddress();
         if (result.error || !result.address || !StrKey.isValidEd25519PublicKey(result.address)) {
           return { error: result.error?.message ?? "Freighter did not return a classic account." };
         }

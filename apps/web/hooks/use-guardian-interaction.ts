@@ -6,6 +6,7 @@ import { useNavigationOptional } from '../context/app/NavigationContext';
 import { CURRENCY_BY_CODE } from '../constants/currency-risk';
 import { TAB_LABELS } from '../constants/tabs';
 import { IntentDiscoveryService } from '@diversifi/shared/src/services/ai/intent-discovery.service';
+import { stellarTestnetEnabled } from '@diversifi/shared/src/config/stellar';
 import { isInteractionRequest, validateInteraction, type GuardianInteraction } from '@diversifi/shared/src/services/ai/guardian-interaction';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 import { getDemoToken } from '../lib/demo-session';
@@ -21,7 +22,7 @@ export function useGuardianInteraction() {
   const experience = useExperienceOptional();
   const isDemo = useContext(DemoModeContext)?.demoMode.isActive;
   const current = navigation?.currencyView ?? navigation?.currencyReading;
-  const viewKey = JSON.stringify([navigation?.activeTab, current, navigation?.swapPrefill]);
+  const viewKey = JSON.stringify([navigation?.activeTab, navigation?.exchangeNetwork, current, navigation?.swapPrefill]);
   const latestView = useRef(viewKey);
   latestView.current = viewKey;
   const discover = useCallback((text: string) =>
@@ -101,11 +102,22 @@ export function useGuardianInteraction() {
         break;
       }
       case 'cancel_draft':
-        if (navigation.swapPrefill) {
+        if (navigation.exchangeNetwork === 'stellar:testnet') {
+          result = { message: 'Use Cancel in the Stellar review to discard that draft. A submitted transaction cannot be undone.', revealSurface: false };
+        } else if (navigation.swapPrefill) {
           navigation.clearSwapPrefill();
           result = { message: 'Cleared the pending exchange proposal. No transaction was signed by this action.', revealSurface: false };
         } else {
           result = { message: 'Use Cancel in the transaction review to discard that draft. A submitted transaction cannot be undone.', revealSurface: false };
+        }
+        break;
+      case 'open_stellar':
+        if (stellarTestnetEnabled()) {
+          navigation.setExchangeNetwork('stellar:testnet');
+          navigation.setActiveTab('exchange');
+          result = { message: 'Stellar testnet is open. Use test funds and review the exchange before approving it in Freighter.', revealSurface: true };
+        } else {
+          result = { message: 'Stellar testnet is not enabled in this build.', revealSurface: false };
         }
         break;
       case 'review_proposal':
@@ -122,7 +134,7 @@ export function useGuardianInteraction() {
 
   const getView = useCallback(() => {
     if (!navigation) return undefined;
-    const pair = navigation.activeTab === 'exchange' ? readExchangePair() : null;
+    const pair = navigation.activeTab === 'exchange' && navigation.exchangeNetwork !== 'stellar:testnet' ? readExchangePair() : null;
     return {
       tab: navigation.activeTab,
       ...(pair ? { pair: { from: pair.fromToken, to: pair.toToken } } : {}),

@@ -256,16 +256,19 @@ describe('PairStage — the pair time machine', () => {
 });
 
 describe('PairStage — settlement receipt', () => {
-  const receiptFor = (over: Partial<PairReceipt> = {}): PairReceipt => ({
+  const evmReceipt = {
     fromToken: 'USDm',
     toToken: 'NGNm',
     amountIn: '100',
-    quotedOut: '61.20',
-    txHash: '0xabc123',
+    quotedOut: '61.20' as string | null,
+    txHash: '0xabc123' as string | null,
     chainId: 42220,
     settledAt: 1,
+  };
+  const receiptFor = (over: Partial<PairReceipt> = {}): PairReceipt => ({
+    ...evmReceipt,
     ...over,
-  });
+  } as PairReceipt);
 
   const renderReceipt = (
     receipt: Partial<PairReceipt> | null = {},
@@ -643,5 +646,37 @@ describe('drafting by drag along the beam', () => {
     cleanup();
     renderStage({ fromBalance: '42.5', onDraft: () => {} });
     expect(screen.getByTestId('pair-coin-draft')).toBeInTheDocument();
+  });
+});
+
+describe('PairStage — Stellar testnet receipt', () => {
+  it('renders exact settled output and fee with the Stellar explorer, no quote/provenance/picker', () => {
+    const receipt: PairReceipt = {
+      fromToken: 'XLM',
+      toToken: 'USDC',
+      amountIn: '10.0000000',
+      quotedOut: null,
+      txHash: 'ab'.repeat(32),
+      settledAt: 1,
+      settlement: {
+        family: 'stellar',
+        network: 'stellar:testnet',
+        actualOut: '8.6900000',
+        feePaidXlm: '0.0000100',
+        ledger: 42,
+      },
+    };
+    renderStage({ fromToken: 'XLM', toToken: 'USDC', receipt });
+    const text = screen.getByTestId('pair-receipt').textContent ?? '';
+    expect(text).toContain('10.0000000 XLM → 8.6900000 USDC');
+    expect(text).not.toContain('at quote');
+    expect(text).toContain('Stellar testnet');
+    expect(text).toContain('ledger 42');
+    expect(text).toContain('0.0000100 XLM');
+    const link = screen.getByRole('link', { name: /View transaction/ });
+    expect(link.getAttribute('href')).toBe(`https://stellar.expert/explorer/testnet/tx/${'ab'.repeat(32)}`);
+    expect(screen.queryByLabelText('Switch tokens')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Change XLM/ })).toBeNull();
+    expect(screen.getByTestId('receipt-done')).toBeTruthy();
   });
 });

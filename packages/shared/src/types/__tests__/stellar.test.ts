@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
   STELLAR_TESTNET_USDC_ISSUER,
+  formatAmountUnits,
   assetsEqual,
   isAllowlistedAsset,
   minimumOutUnits,
   parseAmountUnits,
+  parsePreparedStellarAction,
   parseStellarQuote,
   parseStellarSettlement,
   spendableNativeStroops,
@@ -34,10 +36,34 @@ describe("Stellar amount and reserve arithmetic", () => {
     const spendable = spendableNativeStroops({
       balanceStroops: 100_000_000n,
       subentryCount: 1,
+      baseReserveStroops: 5_000_000n,
       sellingLiabilitiesStroops: 0n,
       feeStroops: 100n,
     });
-    expect(spendable).toBe(100_000_000n - 30_000_000n - 100n);
+    expect(spendable).toBe(84_999_900n);
+  });
+
+  it("adds sponsoring subentries and subtracts sponsored ones", () => {
+    const spendable = spendableNativeStroops({
+      balanceStroops: 100_000_000n,
+      subentryCount: 1,
+      baseReserveStroops: 5_000_000n,
+      numSponsoring: 2,
+      numSponsored: 1,
+      sellingLiabilitiesStroops: 0n,
+      feeStroops: 100n,
+    });
+    expect(spendable).toBe(100_000_000n - 20_000_000n - 100n);
+  });
+
+  it("refuses amounts above the signed int64 maximum", () => {
+    expect(parseAmountUnits("922337203685.4775807", 7)).toBe("9223372036854775807");
+    expect(parseAmountUnits("922337203685.4775808", 7)).toBeNull();
+  });
+
+  it("formats zero-decimal units without a dangling point", () => {
+    expect(formatAmountUnits("42", 0)).toBe("42");
+    expect(formatAmountUnits("86900000", 7)).toBe("8.6900000");
   });
 
   it("rounds the minimum down and refuses more than 100 bps", () => {
@@ -71,7 +97,7 @@ describe("Stellar quote validation", () => {
     expectedOutUnits: "87094750",
     minimumOutUnits: "86223802",
     slippageBps: 100,
-    priceImpactBps: 0,
+    priceImpactBps: null,
     feeMaxStroops: "100",
     path: [],
     observedAt: "2026-10-25T18:00:00.000Z",
@@ -94,6 +120,7 @@ describe("Stellar quote validation", () => {
       expectedOutUnits: "100000000",
       minimumOutUnits: "100000000",
       slippageBps: 0,
+      priceImpactBps: 0,
     };
     expect(parseStellarQuote(payment)?.kind).toBe("payment");
     expect(parseStellarQuote({ ...payment, destination: ACCOUNT })).toBeNull();
@@ -118,5 +145,44 @@ describe("Stellar quote validation", () => {
     expect(parseStellarSettlement(receipt)?.status).toBe("confirmed");
     expect(parseStellarSettlement({ ...receipt, reasoningEvidence: "mirrored" })).toBeNull();
     expect(parseStellarSettlement({ ...receipt, explorerUrl: "https://evil.example/tx" })).toBeNull();
+  });
+
+  it("requires the exact XLM -> USDC direction and a null price impact for conversions", () => {
+    expect(parseStellarQuote({ ...quote, source: stellarTestnetUsdc(), destinationAsset: stellarNativeAsset() })).toBeNull();
+    expect(parseStellarQuote({ ...quote, priceImpactBps: 0 })).toBeNull();
+    expect(parseStellarQuote({ ...quote, expiresAt: quote.observedAt })).toBeNull();
+    expect(parseStellarQuote({ ...quote, amountInUnits: "9223372036854775808" })).toBeNull();
+  });
+
+  it("validates a prepared action field by field and rejects extras", () => {
+    const prepared = {
+      kind: "transaction",
+      proposalId: quote.id,
+      quote,
+      unsignedXdr: "AAAA",
+      transactionHash: "ab".repeat(32),
+      sequence: "6",
+      expiresAt: "2026-10-25T18:05:00.000Z",
+    };
+    expect(parsePreparedStellarAction(prepared)?.transactionHash).toBe("ab".repeat(32));
+    expect(parsePreparedStellarAction({ ...prepared, signedXdr: "BBBB" })).toBeNull();
+    expect(parsePreparedStellarAction({ ...prepared, transactionHash: "zz" })).toBeNull();
+    const trustline = {
+      kind: "trustline",
+      proposalId: "tl-1",
+      network: "stellar:testnet",
+      account: ACCOUNT,
+      asset: stellarTestnetUsdc(),
+      limit: "9223372036854775807",
+      reserveIncreaseStroops: "5000000",
+      feeMaxStroops: "100",
+      unsignedXdr: "AAAA",
+      transactionHash: "cd".repeat(32),
+      sequence: "7",
+      expiresAt: "2026-10-25T18:05:00.000Z",
+    };
+    expect(parsePreparedStellarAction(trustline)?.kind).toBe("trustline");
+    expect(parsePreparedStellarAction({ ...trustline, limit: "0" })).toBeNull();
+    expect(parsePreparedStellarAction({ ...trustline, asset: stellarNativeAsset() })).toBeNull();
   });
 });
