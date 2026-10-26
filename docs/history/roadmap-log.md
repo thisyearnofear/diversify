@@ -108,18 +108,31 @@ Follow-ups landed the same day, in priority order:
   The AgenticID ERC-721 on 0G needs nothing: token #1's metadata is a
   content-addressed CID with no host reference.
 
-What is **not** yet fixed:
+Same-day follow-through on the leftovers:
 
-- **The Cloudflare DNS record is still grey.** The gate is armed and tested,
-  but `api.diversifi.famile.xyz` is a plain A record to the box, so
-  `cf-ipcountry` is absent on direct-origin traffic and the origin IP stays
-  reachable (and forgeable). One dashboard toggle on the `famile.xyz` zone
-  (grey → orange) closes both, and unlocks the origin lockdown.
-- The 0G signer still needs funding on mainnet (chain 16661). Until then the
-  runtime anchors nothing — honestly, but nothing.
-- The next Vercel build has to be a **cache miss** for `NEXT_PUBLIC_APP_URL`
-  to reach the client bundle — the variable is inlined at build time, and
-  several recent deployments replayed a turbo cache hit for the web build.
+- **The Cloudflare flip was attempted and reverted.** Orange-clouding
+  `api.diversifi.famile.xyz` broke public TLS immediately: it is a
+  second-level subdomain (`*.diversifi.famile.xyz`), and the free
+  Universal SSL cert covers only `famile.xyz` + `*.famile.xyz`, so the
+  edge refused the handshake (alert 40). The record went back to grey;
+  the API is public again. The geo gate stays **installed but inert**
+  (`cf-ipcountry` absent → map `""` → allow). Re-proxing needs Advanced
+  Certificate Manager / Total TLS (~$10/mo) or a first-level hostname.
+  One durable change kept: `/etc/hosts` on the box now pins the API
+  hostname to `127.0.0.1`, so the Guardian cron and probes never
+  hairpin through the edge — restored them mid-outage, kept permanently.
+  The staged cf-only snippet gained `allow 127.0.0.1` for the same reason.
+- **The 0G signer is funded.** `0x8037…B8F2` holds ~5 0G on mainnet
+  (chain 16661, nonce 640) — the "unfunded" line in the earlier entry was
+  already stale. Anchoring can proceed; `DIVERSIFI_DEV_FALLBACK=disabled`
+  still means failures throw rather than fabricate a CID.
+- **`NEXT_PUBLIC_APP_URL` is set and cache-proof.** It had been created as
+  a *sensitive* env var holding an empty value — unreadable by design and
+  inert at build time. Recreated as `encrypted` with
+  `https://diversifi.persidian.com`, verified via `vercel env pull`.
+  `turbo.json` `globalEnv` now lists `NEXT_PUBLIC_*` so every inlined
+  public var is a cache input — an env change busts the turbo hash instead
+  of silently replaying a stale bundle.
 
 ### Stellar depth layer wired (2026-10-26)
 

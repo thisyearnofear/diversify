@@ -1314,7 +1314,7 @@ One sentence: **Vercel serves pages; the Hetzner runtime serves the API, runs th
 |---|---|---|
 | Frontend (pages, static assets) | **Vercel** | Canonical URL `https://diversifi.persidian.com/` (secondary alias `https://diversifiapp.vercel.app/`). Project `diversify` (`prj_mCjdTiyigVoxYh0ZEJlEu2i2E8WK`), org `papas-projects-5b188431`. |
 | Edge geo-block (`apps/web/proxy.ts`) | **Vercel** | 451 → `/restricted` on sanctioned locations; sets the `dfi-cc` cookie. Vercel-only — it reads `x-vercel-ip-country` / `x-vercel-ip-country-region`. |
-| API geo-block | **Hetzner** | 451 on the country deny-list, from Cloudflare's `cf-ipcountry` (`scripts/nginx-diversifi-geo.conf` + the vhost). Armed and tested; armed-and-effective once the Cloudflare record is proxied. Country-level only — the UA sub-national list stays page-path only. See §7.5. |
+| API geo-block | **Hetzner** | 451 on the country deny-list, from Cloudflare's `cf-ipcountry` (`scripts/nginx-diversifi-geo.conf` + the vhost). Installed and tested, but **inert** — the DNS flip was reverted (second-level subdomain needs ACM/Total TLS for edge TLS). Country-level only — the UA sub-national list stays page-path only. See §7.5. |
 | Every `/api/*` route | **Hetzner** | `api.diversifi.famile.xyz` → nginx → `127.0.0.1:6174` → `diversifi-api` (Next.js standalone). |
 | Guardian loop + heartbeats | **Hetzner** | crontab, `*/5` for the loop, per-rail heartbeats on their own cadence. |
 | FX macro signal tick | **Hetzner** | `0 6 * * *` → `/home/deploy/bin/diversifi-macro-cron.sh` (reads `CRON_SECRET` from the runtime `.env`; the secret is **not** in the crontab). |
@@ -1342,8 +1342,9 @@ the box (2026-10-26). With it enabled, a failed 0G Storage upload returned a
 *random* CID and the ledger recorded it as `evidenceUploaded: true` — a fake
 anchor presented as a real one. Disabled, a failed upload throws, the CID
 stays empty, and surfaces say "anchor recorded WITHOUT evidence CID". The
-0G signer still needs funding on mainnet (chain 16661) — until then the
-runtime anchors nothing, and says so.
+0G signer (`0x8037…B8F2`) was funded on mainnet (chain 16661) — ~5 0G,
+nonce 640 as of 2026-10-26 — so anchoring can proceed; failures still
+throw rather than fabricate.
 
 **Vercel deployment protection** is `ssoProtection: { deploymentType: "preview" }` — production is public (the canonical `vercel.app` alias is SSO-gated otherwise, because a `*.vercel.app` subdomain is not a custom domain), previews stay team-only.
 
@@ -1595,25 +1596,41 @@ the API, not only for the rewritten routes. Closed on 2026-10-26:
   **451** when the map matches. Declines are recorded in the access log; no
   IP is logged.
 - `scripts/nginx-diversifi-cf-only.conf` → `/etc/nginx/snippets/` — the
-  origin lockdown to Cloudflare ranges. **Staged, not enabled**: the DNS
-  record for `api.diversifi.famile.xyz` is still a plain A record to the
-  box, so enabling it early would cut off every direct client including the
-  VPS cron. Enable it (uncomment the `include` in the vhost) *after* the
-  Cloudflare record is proxied — that is also what makes `cf-ipcountry`
-  trustworthy rather than forgeable against the raw origin.
+  origin lockdown to Cloudflare ranges (plus `allow 127.0.0.1` for the
+  hosts-pinned on-box callers). **Staged, not enabled**: enabling it early
+  would cut off every direct client. Enable it (uncomment the `include`
+  in the vhost) *after* the Cloudflare record is proxied — that is also
+  what makes `cf-ipcountry` trustworthy rather than forgeable against the
+  raw origin.
 
-**What is and is not covered.** Country-level blocking now exists at both
-origins. Sub-national subdivisions (UA: Crimea, Sevastopol, Donetsk,
-Luhansk) are **page-path only** — Cloudflare's free tier sends a country
-code and nothing finer. Do not claim region-level coverage at the API
-origin; closing it needs GeoLite2 City plus the `geoip2` nginx module
-(not installed, licence key required).
+**What is and is not covered.** Country-level blocking exists at the page
+origin, and is installed-and-tested but inert at the API origin until the
+record is proxied (see below). Sub-national subdivisions (UA: Crimea,
+Sevastopol, Donetsk, Luhansk) are **page-path only** — Cloudflare's free
+tier sends a country code and nothing finer. Do not claim region-level
+coverage at the API origin; closing it needs GeoLite2 City plus the
+`geoip2` nginx module (not installed, licence key required).
 
 Until the Cloudflare record is proxied, `cf-ipcountry` is absent on
-direct-origin traffic and the map returns "" — the gate is present and
-armed, but the origin's own IP is still reachable. That is the one step
-left, and it is a Cloudflare dashboard toggle on the `famile.xyz` zone
-(`api.diversifi.famile.xyz`, grey → orange cloud).
+direct-origin traffic and the map returns "" — **the gate is armed but
+inert**, and the origin IP stays reachable. The flip was attempted on
+2026-10-26 and **reverted the same day**: `api.diversifi.famile.xyz` is a
+second-level subdomain (`*.diversifi.famile.xyz`), which Cloudflare's free
+Universal SSL does not cover — the edge refused TLS handshakes and public
+API traffic broke. Re-proxing the record needs **Advanced Certificate
+Manager / Total TLS** (~$10/mo), or renaming the API to a first-level
+subdomain (e.g. `api-diversifi.famile.xyz`, covered by `*.famile.xyz`).
+Until one of those lands, treat the API geo gate as installed-and-tested
+but not enforceable.
+
+Two ops notes from the same day:
+
+- `/etc/hosts` on the box pins `api.diversifi.famile.xyz` → `127.0.0.1`,
+  so the Guardian-loop cron and service probes reach the vhost directly
+  instead of hairpinning through the edge. This is what the cf-only
+  snippet's `allow 127.0.0.1` exists for.
+- The geo `map` returns `""` for header-absent traffic, so direct-origin
+  calls are never misclassified — the gate cannot over-block while inert.
 
 The proxy also forwards `x-vercel-ip-country` into the `dfi-cc` cookie so
 surfaces can self-gate (`lib/geo.ts`, `useGeoCountry` — e.g. the `thesis`
