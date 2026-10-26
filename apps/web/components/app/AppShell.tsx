@@ -177,7 +177,9 @@ function AppShellInner() {
                 ? "Celo Sepolia"
                 : walletChainId === NETWORKS.ARC_TESTNET.chainId
                   ? "Arc Testnet"
-                  : "Robinhood Testnet"}
+                  : NETWORKS.RH_TESTNET.chainId === walletChainId
+                    ? "Robinhood Testnet"
+                    : "Testnet"}
               &nbsp;(play money)
             </span>
           </div>
@@ -185,9 +187,7 @@ function AppShellInner() {
             href={
               walletChainId === NETWORKS.CELO_SEPOLIA.chainId
                 ? "https://faucet.celo.org/sepolia"
-                : walletChainId === NETWORKS.ARC_TESTNET.chainId
-                  ? "https://faucet.circle.com"
-                  : "https://faucet.testnet.chain.robinhood.com"
+                : "https://faucet.circle.com"
             }
             target="_blank"
             rel="noopener noreferrer"

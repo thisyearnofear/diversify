@@ -27,7 +27,7 @@ import {
   setupWalletEventListenersForProvider,
   type WalletProviderType,
 } from "@diversifi/shared/src/modules/wallet/core/provider-registry";
-import { NETWORKS } from "../config";
+import { NETWORKS, isTestnetChain } from "../config";
 import { WALLET_FEATURES } from "../config/features";
 
 const NON_EVM_CHAIN_IDS = new Set<number>([NETWORKS.HYPERLIQUID.chainId]);
@@ -587,7 +587,9 @@ async function detectChainId(
   }
 
   const cachedChainId = getCachedChainId();
-  if (cachedChainId) {
+  // Never resurrect a dev/testnet chain from cache — Stellar is the only
+  // user-facing testnet, and EVM testnets are flag-gated developer rails.
+  if (cachedChainId && !isTestnetChain(cachedChainId)) {
     return cachedChainId;
   }
 

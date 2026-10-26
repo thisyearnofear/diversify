@@ -22,8 +22,11 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
     otherChainId,
     isBridgeMode = false,
 }) => {
-    const isDev = process.env.NODE_ENV === 'development';
+    const isDev = process.env.NEXT_PUBLIC_SHOW_TESTNET === 'true' || process.env.NODE_ENV === 'development';
     
+    // User-facing execution chains only. HashKey/Arc/Robinhood are settlement
+    // or dev rails — never offered as a swap network (AGENTS.md: the
+    // executable set is ChainDetectionService.isSupported).
     const allNetworks = [
         {
             ...NETWORKS.CELO_MAINNET,
@@ -53,22 +56,11 @@ const ChainSelector: React.FC<ChainSelectorProps> = ({
             color: 'purple',
             isTestnet: true,
         },
-        {
-            ...NETWORKS.HASHKEY_MAINNET,
-            label: NETWORKS.HASHKEY_MAINNET.name,
-            icon: '⛩️',
-            color: 'red',
-            isTestnet: false,
-        },
     ];
     
-    // Filter out dev-only networks in production
-    const networks = allNetworks.filter(n => {
-        if (isDev) return true;
-        if (n.chainId === NETWORKS.CELO_SEPOLIA.chainId && NETWORKS.CELO_SEPOLIA.devOnly) return false;
-        if (n.chainId === NETWORKS.ARC_TESTNET.chainId && NETWORKS.ARC_TESTNET.devOnly) return false;
-        return true;
-    });
+    // Dev/testnet chains are gated on the explicit flag (same discipline as
+    // Stellar), not merely on a development build.
+    const networks = allNetworks.filter(n => !n.isTestnet || isDev);
 
     // Helper function to check if a network combination is valid for bridging
     const isValidBridgeCombination = (chainId: number): boolean => {

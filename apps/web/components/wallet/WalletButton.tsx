@@ -214,6 +214,9 @@ export default function WalletButton({
       setShowDropdown(false);
       return;
     }
+    // Only remaining case with an action: sitting on a legacy EVM testnet
+    // (cached chain, dev flag) — offer the way back to mainnet.
+    if (!isTestnetChain(chainId)) return;
     try {
       const targetChain = NETWORKS.CELO_MAINNET.chainId;
       showToast(`Requesting Mainnet...`, "info");
@@ -384,6 +387,11 @@ export default function WalletButton({
                         {stellarShowing ? 'Stellar' : networkName}
                       </button>
                     </div>
+                    {/* The toggle only renders when it does something: exit
+                        Stellar, escape a legacy EVM testnet, or enter Stellar
+                        (flag on). No more "Switch to Testnet" that requests
+                        mainnet. */}
+                    {(stellarMode || isTestnetChain(chainId) || stellarOn) && (
                     <button
                       onClick={handleToggleNetwork}
                       className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg transition-colors"
@@ -391,8 +399,9 @@ export default function WalletButton({
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
                       </svg>
-                      Switch to {isTestnet ? 'Mainnet' : 'Testnet'}
+                      {stellarMode || isTestnetChain(chainId) ? 'Switch to Mainnet' : 'Switch to Stellar testnet'}
                     </button>
+                    )}
                   </>
                 ) : (
                   <ChainSelector 

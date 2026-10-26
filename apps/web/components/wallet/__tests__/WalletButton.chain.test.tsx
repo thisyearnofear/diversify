@@ -303,12 +303,14 @@ describe("WalletButton — walletless connect tracking", () => {
     const switchNetwork = vi.fn().mockResolvedValue(undefined);
     mockUnconnected(null);
     const { rerender } = render(<WalletButton onConnect={onConnect} />);
-    mockWallet({ disconnect, switchNetwork });
+    // Sit on a legacy EVM testnet so the "Switch to Mainnet" escape renders
+    // (with the Stellar flag off, mainnet users get no toggle at all).
+    mockWallet({ disconnect, switchNetwork, chainId: NETWORKS.CELO_SEPOLIA.chainId });
     rerender(<WalletButton onConnect={onConnect} />);
     expect(onConnect).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: /Wallet menu/i }));
-    fireEvent.click(screen.getByRole("button", { name: /Switch to Testnet/i }));
+    fireEvent.click(screen.getByRole("button", { name: /Switch to Mainnet/i }));
     await waitFor(() => expect(switchNetwork).toHaveBeenCalled());
     fireEvent.click(screen.getByRole("button", { name: /Wallet menu/i }));
     fireEvent.click(screen.getByRole("button", { name: "Disconnect wallet" }));

@@ -5,7 +5,6 @@ import { NETWORKS } from '@/config';
 import {
   hasTestnetOptIn,
   isAppTestnetChain,
-  optIntoTestnetUi,
   shouldShowTestnetBanner,
   TESTNET_OPT_IN_KEY,
 } from '../testnet';
@@ -26,17 +25,18 @@ describe('testnet helpers', () => {
     expect(isAppTestnetChain(NETWORKS.CELO_MAINNET.chainId)).toBe(false);
   });
 
-  it('hides testnet banner without opt-in in production', () => {
+  it('hides testnet banner without the dev flag in production', () => {
     expect(hasTestnetOptIn()).toBe(false);
     expect(
       shouldShowTestnetBanner(NETWORKS.ARC_TESTNET.chainId),
     ).toBe(false);
   });
 
-  it('shows testnet banner after explicit opt-in', () => {
-    optIntoTestnetUi();
-    expect(localStorage.getItem(TESTNET_OPT_IN_KEY)).toBe('true');
-    expect(shouldShowTestnetBanner(NETWORKS.CELO_SEPOLIA.chainId)).toBe(true);
+  it('purges the legacy per-user opt-in key on read', () => {
+    localStorage.setItem(TESTNET_OPT_IN_KEY, 'true');
+    expect(hasTestnetOptIn()).toBe(false);
+    expect(localStorage.getItem(TESTNET_OPT_IN_KEY)).toBeNull();
+    expect(shouldShowTestnetBanner(NETWORKS.CELO_SEPOLIA.chainId)).toBe(false);
   });
 
   it('shows testnet UI when NEXT_PUBLIC_SHOW_TESTNET is set', () => {

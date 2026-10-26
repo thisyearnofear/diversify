@@ -8,7 +8,21 @@ export function showTestnetUi(): boolean {
   );
 }
 
+/**
+ * Legacy per-user opt-in key. The EVM testnet experience is developer-only
+ * now (Stellar is the single user-facing testnet), so the persisted opt-in
+ * is dead weight — purge it on read so old sessions stop showing the banner.
+ */
 export const TESTNET_OPT_IN_KEY = 'diversifi-testnet-opt-in';
+
+function purgeLegacyOptIn(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(TESTNET_OPT_IN_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
 
 const TESTNET_CHAIN_IDS: ReadonlySet<number> = new Set([
   NETWORKS.CELO_SEPOLIA.chainId,
@@ -21,23 +35,8 @@ export function isAppTestnetChain(chainId: number | null | undefined): boolean {
 }
 
 export function hasTestnetOptIn(): boolean {
-  if (showTestnetUi()) return true;
-  if (typeof window === 'undefined') return false;
-  try {
-    return localStorage.getItem(TESTNET_OPT_IN_KEY) === 'true';
-  } catch {
-    return false;
-  }
-}
-
-/** Persist opt-in after the user explicitly switches to testnet in onboarding. */
-export function optIntoTestnetUi(): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(TESTNET_OPT_IN_KEY, 'true');
-  } catch {
-    // Ignore storage errors
-  }
+  purgeLegacyOptIn();
+  return showTestnetUi();
 }
 
 export function shouldShowTestnetBanner(

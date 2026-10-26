@@ -12,7 +12,7 @@ import { useEffect, useId, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion, LayoutGroup } from 'framer-motion';
 import { NETWORKS } from '../../../../config';
 import { useWalletContext } from '../../../wallet/WalletProvider';
-import { showTestnetUi, optIntoTestnetUi } from '../../../../constants/testnet';
+import { showTestnetUi } from '../../../../constants/testnet';
 import { ShimmerText } from '../../../shared/ShimmerText';
 import { Coin } from '../../../shared/FloatingCoins';
 import { phaseVariants, staggerChild } from './phase-config';
@@ -93,7 +93,6 @@ export function DetectPhase({
     setIsSwitching(true);
     try {
       await switchNetwork(NETWORKS.ARC_TESTNET.chainId);
-      optIntoTestnetUi();
       setSwitchDone(true);
     } catch { /* fall through */ } finally {
       setIsSwitching(false);

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { trackFunnelEvent } from "../../lib/analytics";
 import { motion } from "framer-motion";
 import { useAnimatedNumber } from "../../hooks/use-animation";
-import NetworkSwitcher from "../swap/NetworkSwitcher";
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import AskAIButton from "../ui/AskAIButton";
 import { STATUS_COLORS } from "./palette";
@@ -657,16 +656,12 @@ export const TabHeader = ({
   chainId = null,
   onRefresh,
   isLoading,
-  onNetworkChange,
-  showNetworkSwitcher = true,
   rightContent,
 }: {
   title: string;
   chainId?: number | null;
   onRefresh?: () => void;
   isLoading?: boolean;
-  onNetworkChange?: () => Promise<void>;
-  showNetworkSwitcher?: boolean;
   rightContent?: React.ReactNode;
 }) => {
   const networkName = ChainDetectionService.getNetworkName(chainId);
@@ -683,14 +678,6 @@ export const TabHeader = ({
       </div>
       <div className="flex items-center gap-3">
         {rightContent}
-        {showNetworkSwitcher && (
-          <NetworkSwitcher
-            currentChainId={chainId ?? null}
-            onNetworkChange={onNetworkChange}
-            compact
-            className="min-w-0"
-          />
-        )}
         {onRefresh && (
           <button
             onClick={onRefresh}

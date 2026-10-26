@@ -156,7 +156,7 @@ export function createEmptyPortfolio(): MultichainPortfolio {
 // CONFIGURATION - Production Chains Only
 // ============================================================================
 
-// Testnets are only shown via NetworkSwitcher, not in automatic multichain tracking
+// Testnets are never part of automatic multichain tracking — production chains only
 const PRODUCTION_CHAINS = [
   {
     chainId: NETWORKS.CELO_MAINNET.chainId,

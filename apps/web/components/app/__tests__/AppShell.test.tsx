@@ -203,13 +203,19 @@ describe("AppShell testnet banner", () => {
     cleanup();
   });
 
-  it("hides testnet banner without explicit opt-in in production", () => {
+  it("hides testnet banner without the dev flag in production", () => {
     renderShell();
     expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument();
   });
 
-  it("shows testnet banner when user opted into testnet UI", () => {
+  it("ignores the legacy per-user opt-in key in production", () => {
     localStorage.setItem("diversifi-testnet-opt-in", "true");
+    renderShell();
+    expect(screen.queryByText(/Testnet/i)).not.toBeInTheDocument();
+  });
+
+  it("shows testnet banner when the developer flag is on", () => {
+    vi.stubEnv("NEXT_PUBLIC_SHOW_TESTNET", "true");
     renderShell();
     expect(screen.getByText(/Testnet/i)).toBeInTheDocument();
   });

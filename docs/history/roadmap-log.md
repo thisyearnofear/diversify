@@ -1,5 +1,52 @@
 # Roadmap Log — historical waves & file deltas
 
+### Testnet surface cleanup — Stellar becomes the only user-facing testnet (2026-10-26)
+
+A product review of the auth/network-switching UX found the EVM testnet
+surfaces contradicting the Stellar design: Stellar testnet is flag-gated,
+session-scoped, lazy-loaded and endpoint-allowlisted, but three legacy EVM
+paths still leaked testnets to production users. What was broken and what
+changed:
+
+- **`NetworkSwitcher.tsx` deleted.** Its comment said testnets are "ALWAYS
+  shown in both dev and production" — Celo Sepolia, Arc Testnet and Robinhood
+  Testnet were one tap away for every user, alongside Base/Ethereum/RH
+  Mainnet which aren't even executable per `ChainDetectionService.isSupported`.
+  Its only mount was `TabHeader` (`TabComponents.tsx`), itself dead code with
+  no live consumer — the switcher props were stripped from it. This was the
+  duplicate-switcher sin the `AppHeader.tsx` comment claimed was already fixed
+  in the 2026-09-28 ChainPill removal.
+- **`WalletButton.tsx` toggle no longer lies.** "Switch to Testnet" on
+  mainnet with the Stellar flag off used to fall through to requesting Celo
+  *mainnet* — a no-op switch with a misleading toast. The toggle now renders
+  only when it does something: "Switch to Stellar testnet" (flag on, mainnet)
+  or "Switch to Mainnet" (in Stellar mode or stranded on a legacy EVM testnet).
+- **Legacy per-user opt-in purged.** `diversifi-testnet-opt-in` (localStorage,
+  no expiry) kept the amber testnet banner alive in production for anyone who
+  had tapped the onboarding dev option. `optIntoTestnetUi` removed;
+  `hasTestnetOptIn` now purges the key on read and returns the dev flag only
+  (`NEXT_PUBLIC_SHOW_TESTNET` / development build). `DetectPhase`'s dev-menu
+  Arc switch still works, it just no longer persists anything.
+- **`AppShell.tsx` banner** no longer labels every unknown testnet "Robinhood
+  Testnet" with a Robinhood faucet link — it names the three configured
+  testnets explicitly and falls back to a neutral "Testnet" + Circle faucet.
+- **`swap/ChainSelector.tsx`** dropped HashKey (settlement rail, not an
+  execution chain) and gates testnets on the explicit flag instead of
+  `NODE_ENV` alone — same discipline Stellar already had.
+- **`use-wallet.ts`** cached-chain restore (`diversifi-last-chain-id`) skips
+  testnet ids, so a stale Arc/Sepolia session can't resurrect on reload.
+- **Docs:** `docs/reference.md` §1.4 rewritten ("Test Drive" → "Testnets":
+  Stellar user-facing, EVM dev-only) and `NEXT_PUBLIC_SHOW_TESTNET` added to
+  the authoritative env table + `.env.example`.
+
+Verified: tsc clean, eslint clean on touched files, 327 tests green across the
+affected suites (testnet helpers, WalletButton.chain, AppShell banner,
+SwapTab, ExchangeTab, AppProviders, hooks). Files: `NetworkSwitcher.tsx`
+(deleted), `TabComponents.tsx`, `WalletButton.tsx`, `constants/testnet.ts`,
+`AppShell.tsx`, `swap/ChainSelector.tsx`, `use-wallet.ts`, `DetectPhase.tsx`,
+`use-multichain-balances.ts` (comment), `docs/reference.md`, `.env.example`,
+plus three updated test files.
+
 ### Vercel cleanup — Vercel becomes frontend-only (2026-10-26)
 
 **The name is the hazard here.** The repo and the Vercel project are

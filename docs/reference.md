@@ -88,13 +88,26 @@ Prefer not to run anything? The deterministic engine is a pure-function library 
 
 The endpoints behind this demo are in [§4](#4-api-endpoints) (`/api/fx-netting/intent`, `/match`, `/settle`).
 
-### 1.4 Test Drive
+### 1.4 Testnets
 
-1. Switch to Celo Sepolia in your wallet
-2. Get testnet tokens from the faucet — they stay in your wallet
-3. Pick a protection plan; the Guardian starts proposing moves
-4. Tap "Review this move →" and sign on Exchange
-5. Monitor allocations and P&L in the dashboard
+**Stellar testnet is the only user-facing testnet** — it is gated by
+`NEXT_PUBLIC_STELLAR_TESTNET=true` and reached through the Exchange network
+switch (see [§3 Stellar testnet flow](#stellar-testnet-flow-manual-test-funds-only)).
+
+EVM testnets (Celo Sepolia, Arc Testnet) are developer-only rails, gated by
+`NEXT_PUBLIC_SHOW_TESTNET=true` or a development build. There is no
+production UI path onto them: the legacy per-user testnet opt-in
+(`diversifi-testnet-opt-in` in localStorage) was removed 2026-10-26 and is
+purged on read, cached chain ids never restore a testnet, and the wallet
+menu's toggle only offers Stellar (or the escape back to mainnet).
+
+For a developer EVM drill:
+
+1. Set `NEXT_PUBLIC_SHOW_TESTNET=true`, `pnpm dev`
+2. Switch to Celo Sepolia via the wallet menu's chain selector
+3. Get testnet tokens from the faucet — they stay in your wallet
+4. Pick a protection plan; the Guardian starts proposing moves
+5. Tap "Review this move →" and sign on Exchange
 
 ### 1.5 Rive objects (optional — only when editing them)
 
@@ -145,6 +158,7 @@ commit — see [§7 security hardening](#75-security-hardening).
 | `NEXT_PUBLIC_GUARDIAN_SESSION_ADDRESS` | client | unset → "Let Guardian act for you" hidden | Public address of the session signer keyed by `GUARDIAN_SESSION_PRIVATE_KEY`; ERC-7715/7710 autonomy path (§1.6). |
 | `NEXT_PUBLIC_ARC_ARRIVAL` | client | off in production | Gates the Arc arrival path (`lib/arc-arrival.ts` → `hooks/use-arc-arrival.ts`). Tests and prod never hit Arc RPC by default; flip only after a real mainnet rehearsal (§3.4). |
 | `NEXT_PUBLIC_STELLAR_TESTNET` | client | off | Gates the Stellar testnet adapter (`apps/web/lib/stellar/`). Exactly `true` enables it. Not a mainnet rail and not an EVM chain. No signer key. |
+| `NEXT_PUBLIC_SHOW_TESTNET` | client | off | Reveals EVM testnet UI (Celo Sepolia / Arc Testnet) outside development builds: the onboarding developer menu, the testnet banner, and testnet entries in the chain selectors. Exactly `true` enables it. Stellar has its own flag (`NEXT_PUBLIC_STELLAR_TESTNET`) and is the only user-facing testnet. |
 | `STELLAR_HORIZON_URL` | server/script | `https://horizon-testnet.stellar.org` | Path/account/ledger reads and signed transaction submission. Config rejects any other host — no mainnet or custom override. |
 | `STELLAR_RPC_URL` | server/script | `https://soroban-testnet.stellar.org` | Recorded for later verification. P0 classic reads do not use it. Same fixed-endpoint rule. |
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | client | unset → WalletConnect module off | WalletConnect Cloud project id (public, not a secret). Enables the WalletConnect module in the Stellar picker — how mobile wallets (LOBSTR app, Freighter mobile) pair to a desktop session. Testnet chain only (`stellar:testnet`). |

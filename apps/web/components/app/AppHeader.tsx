@@ -1,7 +1,7 @@
 /**
  * ChainPill was removed 2026-09-28 (nav decluttering) — it duplicated the
- * wallet button's own ChainSelector (Celo/Arbitrum/Arc-testnet/Robinhood/
- * Celo-Sepolia), which is the more complete control. One switcher, not two.
+ * wallet button's own ChainSelector (Celo/Arbitrum + Stellar testnet behind
+ * its flag), which is the more complete control. One switcher, not two.
  */
 import type { TabId } from "@/constants/tabs";
 import WalletButton from "@/components/wallet/WalletButton";
