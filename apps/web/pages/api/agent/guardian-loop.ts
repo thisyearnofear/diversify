@@ -200,6 +200,9 @@ function isAutoExecutableCandidate(
   // Only trusted server-side recommendations are eligible for auto-execution.
   // Browser-originated writes are stamped `manual_review` by the HTTP endpoint.
   if (recommendation.executionEligibility !== 'guardian_eligible') return false;
+  // A proposal filed by an external agent (MCP) is never the loop's to
+  // execute, whatever eligibility it claims — the owner signs it in Exchange.
+  if (recommendation.source === 'mcp' || recommendation.origin === 'mcp') return false;
   if ((recommendation.confidence ?? 0) < CONFIDENCE_THRESHOLD) return false;
   if (!recommendation.tradeAmountUSD || recommendation.tradeAmountUSD <= 0) return false;
   // The loop signs Celo swaps only; an off-rail target stays a one-tap proposal.

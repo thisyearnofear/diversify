@@ -227,7 +227,7 @@ describe("AgentTab — unconnected morph", () => {
     try {
       render(<AgentTab />);
       const replay = screen.getByTestId("guardian-example");
-      expect(replay).toHaveTextContent("Replay · NGN vs USD · past data");
+      expect(replay).toHaveTextContent("Past data replay · NGN vs USD");
       expect(replay).toHaveTextContent("Nov 2025");
       fireEvent.click(screen.getByTestId("guardian-example-mark"));
       await waitFor(() => expect(replay).toHaveTextContent("NGN −9.1% in 30 days"));

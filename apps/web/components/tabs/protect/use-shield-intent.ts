@@ -4,6 +4,7 @@ import { useNavigation } from "@/context/app/NavigationContext";
 import { resolveIntentFocus } from "@/lib/resolve-intent-focus";
 import { trackFunnelEvent } from "@/lib/analytics";
 import type { ShieldShape } from "./shield-shape";
+import type { ShieldAction } from "./use-shield-mode";
 
 interface UseShieldIntentArgs {
   address: string | null;
@@ -16,10 +17,8 @@ interface UseShieldIntentArgs {
   shape: ShieldShape;
   allocations: { token: string; percent: number }[];
   heldPctByToken: Map<string, number>;
-  setComparing: (v: boolean) => void;
-  setFocusedToken: (v: string | null) => void;
-  /** Opens the payment-cycle inspector (lens "cycle"). */
-  openCycle: () => void;
+  comparing: boolean;
+  dispatch: React.Dispatch<ShieldAction>;
 }
 
 export function useShieldIntent({
@@ -32,9 +31,8 @@ export function useShieldIntent({
   shape,
   allocations,
   heldPctByToken,
-  setComparing,
-  setFocusedToken,
-  openCycle,
+  comparing,
+  dispatch,
 }: UseShieldIntentArgs): void {
   const { pendingIntent, consumeIntent } = useNavigation();
 
@@ -53,16 +51,13 @@ export function useShieldIntent({
       // Plan-independent: a business user with no plan or allocation still
       // reaches the per-cycle report. A balance draft is never discarded.
       if (!isPreviewing) {
-        setComparing(false);
-        setFocusedToken(null);
-        openCycle();
+        dispatch({ type: "openCycle", report: "next" });
       }
       outcome = isPreviewing ? "preview_kept" : "cycle";
     } else if (intent.lens === "compare") {
       // No plan → the picker already IS the gallery; just consume.
-      if (hasPlan && shape !== "picker") {
-        setFocusedToken(null);
-        setComparing(true);
+      if (hasPlan && shape !== "picker" && !comparing) {
+        dispatch({ type: "toggleCompare" });
       }
       outcome = "compare";
     } else if (isPreviewing) {
@@ -70,8 +65,10 @@ export function useShieldIntent({
     } else if (hasPlan && shape !== "picker") {
       const token = resolveIntentFocus(intent, allocations, heldPctByToken);
       if (token) {
-        setComparing(false);
-        setFocusedToken(token);
+        // A hand-off focuses the slice on the resting ring — an open
+        // compare yields to it rather than swallowing the tap.
+        if (comparing) dispatch({ type: "exitCompare" });
+        dispatch({ type: "selectSlice", token });
       }
       outcome = token ? "focused" : "unfocused";
     } else {
@@ -94,9 +91,8 @@ export function useShieldIntent({
     shape,
     allocations,
     heldPctByToken,
+    comparing,
     consumeIntent,
-    setComparing,
-    setFocusedToken,
-    openCycle,
+    dispatch,
   ]);
 }

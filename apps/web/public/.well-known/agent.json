@@ -1,89 +1,100 @@
 {
   "protocol_version": "1.0",
   "name": "DiversiFi Guardian",
-  "tagline": "FX-risk intelligence and autonomous protection for businesses that earn in one currency and must purchase in another.",
-  "description": "DiversiFi is an FX-risk intelligence and autonomous protection layer. The Guardian app is the reference consumer: it detects a visitor's country/currency, surfaces their real FX risk, lets them choose a values-aligned protection philosophy, and auto-executes within user-signed permission bounds. The business layer is the north star: per-purchase-cycle FX drag quantification for SME importers/traders, with every decision recorded on the chain-aware RecommendationLedger and anchored to 0G Storage. The philosophy/values system (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, and Custom) is the structural moat that drives identity-based retention.",
+  "tagline": "You set the rules, the Guardian operates within them, and every decision is explainable and verifiable.",
+  "description": "DiversiFi is an FX-risk intelligence layer with a constrained agent. The Guardian detects a visitor's country/currency, quantifies their real FX risk against dollars, euros or gold, lets them choose a values-aligned protection plan, and then watches that plan. By default the Guardian only PROPOSES moves — the user signs each one in their own wallet. Autonomous execution exists only where the user has granted an ERC-7715 permission that their own smart account enforces on-chain (Celo, Celo Sepolia, Arbitrum); unconfigured or ineligible chains fail closed to one-tap proposals. There is no custody: savings stay in the user's wallet. Every decision is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage, with a readable reasoning echo whose hash matches the on-chain commitment. Businesses that earn in one currency and buy in another get per-payment-cycle FX drag quantification. The values system (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, Custom) shapes the plan, never the authority: data → deterministic risk calculation → constrained strategy → AI explanation → user approval → on-chain execution.",
   "author": "thisyearnofear",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "homepage": "https://diversifiapp.vercel.app",
   "icon": "https://diversifiapp.vercel.app/icon.png",
   "banner": "https://diversifiapp.vercel.app/preview.png",
   "category": "DeFi / AI Agents",
-  "agent_type": "autonomous-guardian",
+  "agent_type": "constrained-guardian",
   "capabilities": [
     {
       "id": "fx_risk_intelligence",
       "name": "FX-Risk Intelligence",
-      "description": "Quantifies currency drag per purchase cycle for SMEs and surfaces a real-time, country-specific risk moment for retail users."
+      "description": "Country-specific currency risk against dollars, euros and gold over 1/3/5-year horizons, with dated, cited corridor signals (≤14 days fresh) and curated token provenance."
     },
     {
-      "id": "autonomous_protection",
-      "name": "Autonomous Protection",
-      "description": "The Guardian loop monitors macro/FX/inflation signals and auto-executes rebalancing within user-signed ERC-7715-style permission bounds."
+      "id": "constrained_protection",
+      "name": "Constrained Protection",
+      "description": "The Guardian loop monitors macro/FX/inflation signals and proposes plan-aligned moves within a user-set daily limit. Proposal-only by default; autonomous only under a user-signed, wallet-enforced ERC-7715 permission."
     },
     {
       "id": "verifiable_ai",
       "name": "Verifiable AI",
-      "description": "Every recommendation is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage, producing an auditable proof trail."
+      "description": "Every recommendation is recorded on the chain-aware RecommendationLedger (0x3BCf…369C on Celo, Arbitrum and 0G) and anchored to 0G Storage. Any tx hash can be verified via GET /api/agent/zero-g-ledger?verify=<txHash>."
     },
     {
       "id": "philosophy_system",
       "name": "Philosophy / Values System",
-      "description": "Identity-based protection strategies that shape asset filtering, AI prompts, and scoring — including Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong, Pan-Caribbean, Global Diversification, and Custom."
+      "description": "Values-aligned protection plans — Africapitalism, Buen Vivir, Islamic Finance, Confucian, Gotong Royong, Pan-Caribbean, Global Diversification, Custom — that shape the plan's legs and the explanation, never the deterministic risk calculation."
+    },
+    {
+      "id": "fx_cycle_report",
+      "name": "Per-Cycle FX Drag",
+      "description": "For businesses earning in one currency and paying suppliers in USD: what FX timing costs this payment cycle, as a dated scenario, never a forecast."
     },
     {
       "id": "chain_aware_routing",
       "name": "Chain-Aware Routing",
-      "description": "Routes savings to Celo/Mento (local stablecoins), yield to Arbitrum (deep liquidity / RWA), and APAC savings to HashKey Chain."
+      "description": "Routes local-stablecoin savings on Celo/Mento and deep-liquidity/RWA yield on Arbitrum; Arc and HashKey ledgers remain live for evidence."
     },
     {
-      "id": "best_yield_engine",
-      "name": "Best-Yield Engine",
-      "description": "Personalized vault recommendations via vaults.fyi and GMX GM-pool deposits on Arbitrum."
-    },
-    {
-      "id": "enterprise_gateway",
-      "name": "Enterprise Gateway",
-      "description": "API-key authenticated audit export and x402 marketplace for rails players and B2B licensing."
+      "id": "mcp_tools",
+      "name": "MCP Tool Server",
+      "description": "Model Context Protocol server (Streamable HTTP) exposing the same read-only intelligence to third-party agents, plus a single write tool that files a PROPOSAL into the owner's Guardian queue — subject to the same wallet-signature approval as every other move."
     }
   ],
   "api": {
     "base_url": "https://diversifiapp.vercel.app/api/agent",
     "endpoints": {
-      "chat": "/chat",
+      "advisor": "/advisor",
       "status": "/status",
       "activities": "/activities",
-      "analyze": "/analyze",
-      "yield_monitor": "/yield-monitor",
+      "deep_analyze": "/deep-analyze",
+      "intelligence": "/intelligence",
+      "fx_cycle_report": "/fx-cycle-report",
+      "rwa_market": "/rwa-market",
       "best_yield": "/best-yield",
+      "yield_monitor": "/yield-monitor",
+      "ledger": "/zero-g-ledger",
+      "x402_gateway": "/x402-gateway",
       "enterprise_audit": "/enterprise/audit"
-    }
+    },
+    "mcp": "https://diversifiapp.vercel.app/api/mcp"
   },
   "networks": [
     {
-      "chainId": 42161,
-      "name": "Arbitrum One",
-      "role": "execution-and-yield-primary"
-    },
-    {
-      "chainId": 4663,
-      "name": "Robinhood Chain",
-      "role": "rwa-stock-token-rail"
-    },
-    {
       "chainId": 42220,
       "name": "Celo Mainnet",
-      "role": "savings-and-local-stables"
+      "role": "savings-and-local-stables; proposals and ERC-7715 execution; RecommendationLedger"
+    },
+    {
+      "chainId": 42161,
+      "name": "Arbitrum One",
+      "role": "deep-liquidity and RWA yield; ERC-7715 execution; RecommendationLedger"
+    },
+    {
+      "chainId": 16661,
+      "name": "0G Mainnet",
+      "role": "evidence anchoring; AgenticID #1; RecommendationLedger"
     },
     {
       "chainId": 177,
       "name": "HashKey Chain",
-      "role": "apac-savings-spoke"
+      "role": "ledger only (APAC rail machinery retained, not on the plan)"
     },
     {
-      "chainId": 44787,
+      "chainId": 5042,
+      "name": "Arc Mainnet",
+      "role": "ledger only"
+    },
+    {
+      "chainId": 11142220,
       "name": "Celo Sepolia",
-      "role": "testing"
+      "role": "testing; ERC-7715 execution"
     }
   ],
   "platforms": {

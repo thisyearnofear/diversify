@@ -1,5 +1,55 @@
 # Roadmap Log — historical waves & file deltas
 
+### Agent surface + instrument refactor (2026-10-26)
+
+- **Shield state machine**: ~15 interacting flags in `ProtectionTab`
+  collapsed into `protect/use-shield-mode.ts`
+  (`rest | slice | floor | compare | tilt | custom | cycle`); the render
+  guards are `mode.kind` checks and mode collisions are impossible by
+  construction. `use-shield-intent` dispatches actions. Behaviour deltas:
+  closing a vault slice steps back to the sleeve; a focus hand-off exits
+  compare; wallet/plan changes reset the whole mode.
+- **Exchange**: pre-instrument chrome deleted from `SwapTab` (Action Hub
+  header, demo banner, Simple header, chain balances, search, AI banner,
+  GoalAlignmentBanner; `instrument` prop removed — it was always on).
+  `ChainBalancesHeader`, `GoalAlignmentBanner`, `NetworkSwitcher`,
+  `TabHeader` left orphaned on disk.
+- **Copy pass**: "Use starting mix" → "Use this plan" (design-language
+  contradiction fixed), "Shape/Build my mix" → "Adjust/Build my own
+  plan", "stood down/stand-downs" → "held off", floor → reserve
+  wording, `Replay` label → `Past data replay`. Tests/docs updated.
+- **Affordances**: floor door + reserve prompt raised to `text-2xs`
+  readable register; hatched sleeve wedge gets a one-time visible cue
+  via new `useFirstUseCue` (`dfi:cue:*`, SSR-safe).
+- **Mascot as Ask Guardian FAB**: live tier mood (idle/funded/
+  monitoring), thinking while the advisor chats, beat posture from any
+  tab's LiveLine via a new `publishBeat/subscribeBeats` bus in
+  `lib/beat-impulse.ts`; tap = talk when voice is configured.
+- **Voice verbs**: `lib/voice-verbs.ts` grammar + `VoiceVerbContext`
+  per-tab registry. Speech inspects/navigates/previews/drafts only —
+  never commits (stated in the file header + design-language amendment);
+  confirmations name the tap that would persist. Home already covered
+  by `guardian-interaction`.
+- **MCP server**: `POST /api/mcp` — hand-rolled stateless JSON-RPC,
+  10 tools (`fx_risk_moment`, `corridor_signals`, `token_provenance`,
+  `fx_cycle_report`, `ledger_verify`, `ledger_recent`, `rwa_market`,
+  owner-only `plan_alignment`, `guardian_journal`, `propose_move`).
+  Owner tools verify `walletAuth` signatures; `propose_move` enqueues a
+  `source:'mcp'`/`manual_review` proposal and the loop hard-refuses
+  `origin:'mcp'` — external agents can never execute. x402 metering
+  deferred (TODO in `lib/mcp/server.ts`); per-IP rate limit instead.
+- **Chronology**: `planCommittedAt` persisted on commits → rim
+  engraving ("Struck {date} · N days"); one hallmark per anchored
+  ledger record arcs the ring rim (≤12, chronological). Previews and
+  walletless rings stay unstruck.
+- **Agent cards**: `.well-known/agent.json` + `erc8004.json` rewritten —
+  real endpoints, proposal-by-default trust language ("auto-executes"
+  removed), correct chain roles, MCP service advertised.
+- Verification: `tsc` clean, eslint 0 errors. vitest NOT run this wave —
+  new suites (`use-shield-mode`, `voice-verbs`, `mcp/server`,
+  `use-first-use-cue`, rim strikes) compile only; rim-strike cap test is
+  the weakest (DOM attribute scan).
+
 ### Stellar first-class network mode (2026-10-26)
 
 - Wallet picker: Stellar is the only user-visible testnet row; selecting it

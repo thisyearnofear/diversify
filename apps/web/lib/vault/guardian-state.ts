@@ -4,7 +4,9 @@ import type { GuardianRecommendationContract } from '@diversifi/shared/src/types
 
 export interface GuardianRecommendationSnapshot {
   capturedAt: string;
-  source: 'advisor-analysis' | 'proactive-yield' | 'cycle-monitor' | 'firecrawl-webhook';
+  source: 'advisor-analysis' | 'proactive-yield' | 'cycle-monitor' | 'firecrawl-webhook' | 'mcp';
+  /** Who filed this item — the loop or an external agent via the MCP endpoint. */
+  origin?: 'guardian-loop' | 'mcp';
   action?: string;
   targetToken?: string;
   /** Executable chain the target token lives on (validated server-side). */

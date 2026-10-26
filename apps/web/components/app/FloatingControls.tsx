@@ -1,7 +1,7 @@
 /**
  * FloatingControls — Guardian FAB, proactive updates, tour triggers.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import dynamic from "next/dynamic";
 
@@ -15,6 +15,17 @@ import type { UserExperienceMode } from "@/context/app/types";
 import type { GuardianUpdate } from "@/context/AIConversationContext";
 import { useGuardianVoice } from '@/context/app/GuardianVoiceContext';
 import { GuardianVoiceControls } from '@/components/agent/GuardianVoiceControls';
+import { useAgentChatContext } from "@/context/app/AgentChatContext";
+import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgentVoice } from "@/hooks/use-agent-voice";
+import { useVault } from "@/hooks/use-vault";
+import { useSessionKey } from "@/hooks/use-session-key";
+import { useGuardianTierSnapshotFrom } from "@/components/agent/AgentTierStatus";
+import { MOOD_BY_STATE } from "@/components/agent/GuardianObject";
+import { beatImpulseForKey, GUARDIAN_BEAT_MOOD, subscribeBeats } from "@/lib/beat-impulse";
+import { UI_FEATURES } from "@/config/features";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
 const GuidedTour = dynamic(() => import("@/components/tour/GuidedTour"), {
   ssr: false,
@@ -44,11 +55,39 @@ export default function FloatingControls({
   onMuteGuardianUpdateType,
 }: FloatingControlsProps) {
   const voice = useGuardianVoice();
+  const { capabilities } = useAgentStatus();
+  const { transcribeAudio } = useAgentVoice({ apiBase: API_BASE, capabilities });
+  // The mascot carries the real Guardian tier (idle → monitoring), not
+  // just the badge — same derivation the Guardian tab's object reads.
+  const vault = useVault();
+  const { signedPermission, sessionInfo, deriveGuardianState } = useSessionKey();
+  const { guardianState } = useGuardianTierSnapshotFrom(vault, {
+    signedPermission,
+    sessionInfo,
+    deriveGuardianState,
+  });
+  const chatting = useAgentChatContext()?.chatState.isChatting ?? false;
+  // Beat posture: a beat landing on any instrument's LiveLine pulses the
+  // mascot the same way GuardianObject reacts — once per key, ~2.4s,
+  // dead under reduced motion.
+  const reducedMotion = useReducedMotion();
+  const [beatMood, setBeatMood] = useState<"alert" | "thinking" | null>(null);
+  const playedBeats = useRef(new Set<string>());
+  useEffect(() => {
+    if (reducedMotion) return;
+    return subscribeBeats(({ key }) => {
+      if (playedBeats.current.has(key)) return;
+      const next = GUARDIAN_BEAT_MOOD[beatImpulseForKey(key) ?? "settle"];
+      if (!next) return;
+      playedBeats.current.add(key);
+      setBeatMood(next);
+      setTimeout(() => setBeatMood((m) => (m === next ? null : m)), 2400);
+    });
+  }, [reducedMotion]);
   // The FAB morphs into the desktop docked panel via a shared layoutId —
   // while the drawer is open the pill folds away. Read the context
   // defensively so isolated tests outside the provider still render the FAB.
   const isDrawerOpen = useAIConversationOptional()?.isDrawerOpen ?? false;
-  const reducedMotion = useReducedMotion();
   const [isDesktop, setIsDesktop] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia?.("(min-width: 1024px)");
@@ -78,6 +117,26 @@ export default function FloatingControls({
     setPrevBadge(badgeCount);
   }, [badgeCount, prevBadge]);
 
+  // Alert wins; a landed beat outranks the resting state mood; a live
+  // chat turn narrows the eyes; otherwise the tier's own mood.
+  const mood =
+    badgeCount > 0
+      ? "alert"
+      : (beatMood ?? (chatting ? "thinking" : MOOD_BY_STATE[guardianState]));
+
+  // Tap = talk when voice is actually available — same start path as
+  // VoiceButton (one session, one recorder). Otherwise tap just opens
+  // the advisor.
+  const canTalk = Boolean(
+    UI_FEATURES.VOICE_UI && voice && capabilities.voiceInput && onTranscription,
+  );
+  const handleFabPress = () => {
+    openAdvisor();
+    if (canTalk && voice && onTranscription) {
+      void voice.start(transcribeAudio, (text) => onTranscription(text));
+    }
+  };
+
   return (
     <>
       <TourTrigger />
@@ -104,8 +163,8 @@ export default function FloatingControls({
       <motion.button
         key={bounceKey}
         layoutId={isDesktop && !reducedMotion ? "ask-guardian" : undefined}
-        onClick={openAdvisor}
-        aria-label={`${ASK_GUARDIAN_LABEL} — ask about your protection`}
+        onClick={handleFabPress}
+        aria-label={canTalk ? "Ask Guardian — tap to speak" : `${ASK_GUARDIAN_LABEL} — ask about your protection`}
         title={ASK_GUARDIAN_LABEL}
         initial={reducedMotion ? false : { opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -125,7 +184,7 @@ export default function FloatingControls({
         >
         <GuardianMascot
           size={30}
-          mood={badgeCount > 0 ? "alert" : "neutral"}
+          mood={mood}
           className="shrink-0"
         />
         <span className="text-xs font-black uppercase tracking-wider hidden sm:inline">{ASK_GUARDIAN_LABEL}</span>

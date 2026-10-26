@@ -470,7 +470,7 @@ export function CurrencyMomentCard({
   // explains it. Silent on the first beat (the stage's arrival owns
   // that move) and dead whenever the user is acting, scrubbing, or in
   // the inspector — the same stillness contract as the line itself.
-  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter("home");
   const beatAlive =
     liveAlive && !acted && !inspecting && !reading && !currencySelected;
   const beat = useBeatImpulse(activeBeatKey, beatAlive, { surface: "home" });

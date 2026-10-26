@@ -452,7 +452,7 @@ export function useGuardianInstrument({
       .map((decision) => ({
         id: `decision-${decision.capturedAt}-${decision.status}`,
         source: "vault" as const,
-        title: "Guardian stood down",
+        title: "Guardian held off",
         subtitle: decision.reason || decision.status,
         timestamp: new Date(decision.capturedAt).getTime(),
         status: "declined",

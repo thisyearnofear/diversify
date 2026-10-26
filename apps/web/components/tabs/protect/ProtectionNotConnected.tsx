@@ -248,7 +248,7 @@ export function ProtectionNotConnected({
   // The beat→object event — same grammar as connected Shield: a signal
   // on a plan leg's currency tremors the ring, the cadence breathes it.
   // Silent on the first beat, dead once the user acts.
-  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter("shield");
   const ringBeat = useBeatImpulse(
     activeBeatKey,
     liveLineShowing && !acted && !inspectorOpen,
@@ -295,7 +295,7 @@ export function ProtectionNotConnected({
         <div className="text-center space-y-1">
           <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink">
             {picking || comparing
-              ? "Your values. Your starting mix."
+              ? "Your values. Your starting plan."
               : "A plan you can make your own."}
           </h2>
           {picking && (
@@ -537,7 +537,7 @@ export function ProtectionNotConnected({
                 onClick={commitFocusedPlan}
                 className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
               >
-                Use starting mix
+                Use this plan
               </button>
               {onShapePlan && (
                 <button
@@ -549,7 +549,7 @@ export function ProtectionNotConnected({
                   }}
                   className="link-quiet shrink-0"
                 >
-                  Shape this mix
+                  Adjust this plan
                 </button>
               )}
             </div>
@@ -565,7 +565,7 @@ export function ProtectionNotConnected({
                 }}
                 className="link-quiet shrink-0"
               >
-                Build my mix
+                Build my own plan
               </button>
             </div>
           )}

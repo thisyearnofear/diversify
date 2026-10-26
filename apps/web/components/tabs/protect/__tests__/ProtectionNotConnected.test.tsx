@@ -145,7 +145,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     expect(buttons.length).toBe(1);
   });
 
-  it("planless: the first coin tap only previews — 'Use starting mix' is the primary commit", () => {
+  it("planless: the first coin tap only previews — 'Use this plan' is the primary commit", () => {
     mockState.setFinancialStrategy.mockClear();
     render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
 
@@ -366,7 +366,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
-  it("the badge enters compare; a coin previews, the hole exits, 'Use starting mix' commits", async () => {
+  it("the badge enters compare; a coin previews, the hole exits, 'Use this plan' commits", async () => {
     mockState.financialStrategy = "africapitalism";
     mockState.setFinancialStrategy.mockClear();
     try {
@@ -771,7 +771,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
 });
 
 describe("ProtectionNotConnected — shape-the-mix handoffs", () => {
-  it("'Shape this mix' hands the focused philosophy to the shared editor without committing", () => {
+  it("'Adjust this plan' hands the focused philosophy to the shared editor without committing", () => {
     mockState.setFinancialStrategy.mockClear();
     const onShapePlan = vi.fn();
     render(
@@ -783,7 +783,7 @@ describe("ProtectionNotConnected — shape-the-mix handoffs", () => {
     expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
   });
 
-  it("'Build my mix' opens the standalone editor path from the planless picker", () => {
+  it("'Build my own plan' opens the standalone editor path from the planless picker", () => {
     const onShapePlan = vi.fn();
     render(
       <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} onShapePlan={onShapePlan} />,

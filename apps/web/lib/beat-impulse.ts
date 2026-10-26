@@ -84,3 +84,25 @@ export const GUARDIAN_BEAT_MOOD: Partial<
   cycle: 'thinking',
   watch: 'thinking',
 };
+
+/**
+ * BeatBus — one process-wide pulse for beats that already landed on an
+ * object's LiveLine. Reporters publish {surface, key}; shell consumers
+ * (the FAB mascot) subscribe and play the same posture the tab's object
+ * would. No replay, no queue: a beat heard late is no beat at all.
+ */
+export interface BeatEvent {
+  surface: string | undefined;
+  key: string;
+}
+
+const beatSubscribers = new Set<(event: BeatEvent) => void>();
+
+export function publishBeat(event: BeatEvent): void {
+  beatSubscribers.forEach((fn) => fn(event));
+}
+
+export function subscribeBeats(fn: (event: BeatEvent) => void): () => void {
+  beatSubscribers.add(fn);
+  return () => beatSubscribers.delete(fn);
+}

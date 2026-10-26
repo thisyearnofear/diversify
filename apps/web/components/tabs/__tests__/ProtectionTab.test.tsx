@@ -626,7 +626,7 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
   });
 
-  it("inspects a plan then commits with Use starting mix", () => {
+  it("inspects a plan then commits with Use this plan", () => {
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
       chainId: 42220,
@@ -644,10 +644,10 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
     expect(screen.getByTestId("protection-calculator")).toBeInTheDocument();
     const sheet = screen.getByTestId("inspector-sheet");
-    expect(within(sheet).getByRole("button", { name: "Use starting mix" })).toBeInTheDocument();
+    expect(within(sheet).getByRole("button", { name: "Use this plan" })).toBeInTheDocument();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
 
-    fireEvent.click(within(sheet).getByRole("button", { name: "Use starting mix" }));
+    fireEvent.click(within(sheet).getByRole("button", { name: "Use this plan" }));
     expect(mockSetFinancialStrategy).toHaveBeenCalledWith("africapitalism");
   });
 
@@ -1226,7 +1226,7 @@ describe("ProtectionTab — instrument shapes", () => {
     expect(screen.queryByRole("button", { name: "Set up Guardian" })).not.toBeInTheDocument();
   });
 
-  it("a coin tap re-slices the ring in place and 'Use starting mix' commits", () => {
+  it("a coin tap re-slices the ring in place and 'Use this plan' commits", () => {
     mockFinancialStrategy = "africapitalism";
     vi.mocked(useWalletContext).mockReturnValue({
       address: "0xabc",
@@ -1790,7 +1790,7 @@ describe("ProtectionTab — instrument shapes", () => {
       expect(screen.getByTestId("inspector-sheet")).toBeInTheDocument();
       expect(
         within(screen.getByTestId("inspector-sheet")).getByRole("button", {
-          name: "Use starting mix",
+          name: "Use this plan",
         }),
       ).toBeInTheDocument();
     } finally {
@@ -1826,13 +1826,13 @@ describe("ProtectionTab — instrument shapes", () => {
       fireEvent.click(screen.getByTestId("ring-select-kesm"));
 
       const line = screen.getByTestId("guardian-attribution");
-      expect(line.textContent).toContain("stood down on KESm");
+      expect(line.textContent).toContain("held off on KESm");
       expect(line.textContent).toContain("5m ago");
       expect(line.textContent).toContain("decided in 1.2 s");
 
       fireEvent.click(line);
       const payload = mockNavigateToGuardian.mock.calls[0][0];
-      expect(payload.summary).toContain("stood down on KESm");
+      expect(payload.summary).toContain("held off on KESm");
       expect(payload.decisionRef).toMatchObject({
         kind: "decision",
         status: "daily_limit_reached",
@@ -2095,7 +2095,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
   it("shows when the wallet's dollar share beats the plan floor by ≥10 points", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
-    expect(prompt).toHaveTextContent("wallet holds 64% — try a stronger floor");
+    expect(prompt).toHaveTextContent("Wallet holds 64% — try a larger reserve");
     // The offer rides the same engraved line as the floor affordance —
     // and again inside the dial's caption once the control is open.
     expect(screen.getByTestId("floor-affordance-row").contains(prompt)).toBe(true);
@@ -2147,7 +2147,7 @@ describe("ProtectionTab — stronger-floor lens prompt", () => {
     };
     render(<ProtectionTab userRegion="USA" portfolio={shillingMajorityDollarSurplus} />);
     const prompt = screen.getByTestId("shield-floor-prompt");
-    expect(prompt).toHaveTextContent("wallet holds 40% — try a stronger floor");
+    expect(prompt).toHaveTextContent("Wallet holds 40% — try a larger reserve");
     expect(prompt).not.toHaveTextContent(/KES/);
     fireEvent.click(screen.getByTestId("floor-affordance"));
     expect(screen.getByTestId("plan-floor-control")).toHaveTextContent("Dollar reserve");
@@ -2378,6 +2378,9 @@ describe("ProtectionTab — business morph (shieldMorph: cycle)", () => {
 describe("ProtectionTab — live line", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // The sleeve wedge's first-use cue owns the line's slot until the
+    // sleeve has been opened once — these tests start past that moment.
+    window.localStorage.setItem("dfi:cue:shield-sleeve", "1");
     mockFinancialStrategy = "africapitalism";
     mockMoneyPurpose = "inflation_protection";
     mockGuardianState = "idle";
@@ -2405,6 +2408,14 @@ describe("ProtectionTab — live line", () => {
     expect(screen.getByTestId("shield-ring").contains(line)).toBe(true);
     // KESm is the plan's largest non-USD leg — its watch cadence carries.
     expect(line.textContent).toContain("Watch 🇰🇪:");
+  });
+
+  it("first visit: the sleeve wedge's cue takes the line's slot until the sleeve is opened", () => {
+    window.localStorage.removeItem("dfi:cue:shield-sleeve");
+    mockGuardianState = "monitoring";
+    render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
+    expect(screen.getByTestId("sleeve-teaser-cue")).toBeInTheDocument();
+    expect(screen.queryByTestId("shield-live-line")).not.toBeInTheDocument();
   });
 
   it("the biggest-gap CTA hides the line — two lines never compete", () => {
@@ -2549,7 +2560,7 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
     render(<ProtectionTab userRegion="USA" portfolio={MOCK_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("custom-tweak"));
     expect(screen.getByTestId("custom-provenance")).toHaveTextContent("Starting from Africapitalism · you set targets");
-    expect(screen.getByTestId("custom-exact-note")).toHaveTextContent("exact targets");
+    expect(screen.getByTestId("custom-exact-note")).toHaveTextContent("exact percentages");
     fireEvent.click(screen.getByTestId("ring-select-kesm"));
     fireEvent.click(screen.getByTestId("custom-step-up"));
     expect(screen.getByTestId("custom-slice-delta")).toHaveTextContent("60% → 65%");
@@ -2567,6 +2578,7 @@ describe("ProtectionTab — Custom plan editor on the ring", () => {
       philosophy: "custom",
       valuesPhilosophy: "africapitalism",
       riskTolerance: "Balanced",
+      planCommittedAt: expect.any(String),
     });
     expect(mockSetCustomPlan).not.toHaveBeenCalled();
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
@@ -2671,7 +2683,7 @@ describe("ProtectionTab — walletless editor round-trips", () => {
     cleanup();
   });
 
-  it("canceling Shape this mix returns to the named preview without committing", () => {
+  it("canceling Adjust this plan returns to the named preview without committing", () => {
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("buen_vivir");
@@ -2685,7 +2697,7 @@ describe("ProtectionTab — walletless editor round-trips", () => {
     expect(mockSetFinancialStrategy).not.toHaveBeenCalled();
   });
 
-  it("canceling Build my mix returns to the unfocused picker", () => {
+  it("canceling Build my own plan returns to the unfocused picker", () => {
     render(<ProtectionTab userRegion="USA" portfolio={EMPTY_PORTFOLIO} />);
     fireEvent.click(screen.getByTestId("build-my-mix"));
     expect(screen.getByTestId("shield-custom-editor")).toBeInTheDocument();

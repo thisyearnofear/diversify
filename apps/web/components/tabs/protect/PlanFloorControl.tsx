@@ -192,7 +192,7 @@ export function PlanFloorControl({
               }}
               className="font-semibold text-blue-600 dark:text-blue-400"
             >
-              wallet holds {floorOffer.heldFloor}% — try a stronger floor →
+              Wallet holds {floorOffer.heldFloor}% — try a larger reserve →
             </button>
           </>
         )}

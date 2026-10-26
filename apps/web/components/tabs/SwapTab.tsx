@@ -14,25 +14,20 @@ import { getChainAssets, getPreferredChainIdForGoal, NETWORKS, isTestnetChain } 
 import { ChainDetectionService } from "@diversifi/shared/src/services/swap/chain-detection.service";
 import { StrategyService } from "@diversifi/shared/src/services/strategy/strategy.service";
 import { getPersistedStrategy } from "../../hooks/useFinancialStrategies";
-import { TabHeader, Skeleton } from "../shared/TabComponents";
+import { Skeleton } from "../shared/TabComponents";
 import { useSwap } from "../../hooks/use-swap";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useNavigation } from "../../context/app/NavigationContext";
 import { useExperience } from "../../context/app/ExperienceContext";
 import { useDemoMode } from "../../context/app/DemoModeContext";
-import WalletButton from "../wallet/WalletButton";
 import {
   useTradeableTokens,
   filterTradeableTokens,
 } from "../../hooks/use-tradeable-tokens";
-import ChainBalancesHeader from "../swap/ChainBalancesHeader";
 import { usePortfolio, useSharedMultichainBalances } from "../../context/app/PortfolioContext";
 import { useStreakRewards } from "../../hooks/use-streak-rewards";
 import { useClaimFlowContext } from "../../hooks/claim-flow-context";
 import { useProtectionProfile } from "../../hooks/use-protection-profile";
-import NetworkSwitcher from "../swap/NetworkSwitcher";
-import { useMobile } from "../../hooks/use-mobile";
-import GoalAlignmentBanner from "../swap/GoalAlignmentBanner";
 import ErrorBoundary from "../ui/ErrorBoundary";
 import { buildWalletPortfolioView, canSafelyExecute } from "@/lib/wallet-portfolio-view";
 import { trackFunnelEvent } from "@/lib/analytics";
@@ -43,10 +38,7 @@ interface SwapTabProps {
   userRegion: Region;
   inflationData: Record<string, RegionalInflationData>;
   refreshBalances?: () => Promise<void>;
-  refreshChainId?: () => Promise<number | null>;
   isBalancesLoading?: boolean;
-  /** Strip tab chrome so Exchange can own the instrument layout. */
-  instrument?: boolean;
   onInspectQuote?: (
     fromToken: string,
     toToken: string,
@@ -74,9 +66,7 @@ export default function SwapTab({
   userRegion,
   inflationData,
   refreshBalances,
-  refreshChainId,
   isBalancesLoading,
-  instrument = false,
   onInspectQuote,
   quoteInspected = false,
   capitalHistory,
@@ -89,7 +79,7 @@ export default function SwapTab({
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
-  const { recordSwap: recordExperienceSwap, experienceMode } = useExperience();
+  const { recordSwap: recordExperienceSwap } = useExperience();
   const { demoMode } = useDemoMode();
   const {
     recordActivity,
@@ -97,30 +87,20 @@ export default function SwapTab({
     estimatedReward,
   } = useStreakRewards();
   const flow = useClaimFlowContext();
-  const { config: profileConfig, isComplete: profileComplete } =
-    useProtectionProfile();
+  const { config: profileConfig } = useProtectionProfile();
   const preferredChainId = useMemo(
     () => getPreferredChainIdForGoal(profileConfig.userGoal, isMiniPay),
     [profileConfig.userGoal, isMiniPay],
   );
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const isSimple = experienceMode === "simple";
   const isDemo = demoMode.isActive;
-  const isMobile = useMobile();
 
   const {
     swap: performSwap,
-    isLoading: isSwapLoading,
     error: swapError,
     txHash: swapTxHash,
     step: hookSwapStep,
   } = useSwap();
 
-  const [showAiRecommendation, setShowAiRecommendation] = useState(false);
-  const [aiRecommendationReason, setAiRecommendationReason] = useState<
-    string | null
-  >(null);
   // Inline banner shown when the wallet is being auto-switched to the
   // prefilled source chain. Helps the user understand the chain
   // change isn't accidental (especially the reverse-bridge case:
@@ -161,7 +141,6 @@ export default function SwapTab({
   const sharedPortfolio = usePortfolio();
   const {
     chains,
-    allTokens,
     isLoading: isMultichainLoading,
     isStale: isMultichainStale,
     errors: multichainErrors,
@@ -196,7 +175,6 @@ export default function SwapTab({
   const previousAddress = useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
-      setSearchQuery("");
       setAutoSwitchNotice(null);
       previousAddress.current = address;
     }
@@ -268,17 +246,6 @@ export default function SwapTab({
     return combined;
   }, [networkTokens, tradeableSymbols, walletSymbols, walletChainId, preferredChainId]);
 
-  const filteredTokens = useMemo(() => {
-    if (!searchQuery) return tradeableTokens;
-    const query = searchQuery.toLowerCase();
-    return tradeableTokens.filter(
-      (t) =>
-        t.symbol.toLowerCase().includes(query) ||
-        t.name.toLowerCase().includes(query) ||
-        t.region.toLowerCase().includes(query),
-    );
-  }, [tradeableTokens, searchQuery]);
-
   // Memoize handlers to prevent unnecessary re-renders in child components
 
   const targetRegion = profileConfig.userRegion;
@@ -332,11 +299,6 @@ export default function SwapTab({
         swapPrefill.phoneNumber,
         swapPrefill.recipientAddress
       );
-      if (swapPrefill.reason) {
-        setAiRecommendationReason(swapPrefill.reason);
-        setShowAiRecommendation(true);
-      }
-
       // Auto-switch the wallet to the prefilled SOURCE chain
       // (fromChainId) so the form is fully executable. The wallet must
       // be on the source chain to sign the swap/bridge transaction.
@@ -379,7 +341,7 @@ export default function SwapTab({
             err
           );
           // Clear the notice on rejection — the user will need to
-          // either retry or switch manually via the NetworkSwitcher.
+          // either retry or switch chains manually.
           setAutoSwitchNotice(null);
         });
       }
@@ -389,8 +351,6 @@ export default function SwapTab({
   }, [
     swapPrefill,
     setSwapPrefill,
-    setAiRecommendationReason,
-    setShowAiRecommendation,
     address,
     walletChainId,
     switchNetwork,
@@ -485,34 +445,6 @@ export default function SwapTab({
     });
   };
 
-  const handleRefresh = async () => {
-    if (refreshChainId) await refreshChainId();
-    if (refreshBalances) await refreshBalances();
-    await refreshMultichain();
-  };
-
-  // Handle chain switching from the balances header
-  const handleSwitchChain = async (chainId: number) => {
-    if (switchNetwork && walletChainId !== chainId) {
-      await switchNetwork(chainId);
-    }
-  };
-
-  // Prepare chain data for the header
-  const chainBalancesData = useMemo(() => {
-    return chains.map((chain) => ({
-      chainId: chain.chainId,
-      chainName: chain.chainName,
-      totalValue: chain.totalValue,
-      tokenCount: chain.tokenCount,
-      isActive: chain.chainId === walletChainId,
-    }));
-  }, [chains, walletChainId]);
-
-  // Add bottom padding on mobile beginner mode to account for sticky CTA
-  const containerPadding = !instrument && isMobile && isSimple ? "pb-24" : "";
-  const showChrome = !instrument;
-
   // The swap ticket — the object in both connection states. Unconnected,
   // SwapInterface morphs its execute CTA into the connect wallet button.
   const ticket = (
@@ -534,7 +466,7 @@ export default function SwapTab({
         <div className="relative">
           <SwapInterface
             ref={swapInterfaceRef}
-            availableTokens={filteredTokens}
+            availableTokens={tradeableTokens}
             address={address}
             onSwap={handleSwap}
             preferredFromRegion={userRegion}
@@ -544,7 +476,7 @@ export default function SwapTab({
             title=""
             chainId={walletChainId}
             enableCrossChain={true}
-            instrument={instrument}
+            instrument
             onInspectQuote={onInspectQuote}
             quoteInspected={quoteInspected}
             capitalHistory={capitalHistory}
@@ -568,164 +500,37 @@ export default function SwapTab({
   );
 
   return (
-    <div className={`space-y-4 ${containerPadding}`}>
-      <div>
-        {/* DEMO MODE BANNER */}
-        {showChrome && isDemo && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-200 dark:border-blue-800 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">🎮</span>
-                <div>
-                  <p className="text-xs font-bold text-blue-900 dark:text-blue-100">
-                    Preview Mode
-                  </p>
-                  <p className="text-xs text-blue-700 dark:text-blue-300">
-                    Sign in or connect a wallet to make real protection moves
-                  </p>
-                </div>
-              </div>
-              <WalletButton variant="inline" />
-            </div>
-          </div>
-        )}
-
-        {/* Hide complex header for beginners */}
-        {showChrome && !isSimple && (
-          <TabHeader
-            title="Action Hub"
-            chainId={walletChainId}
-            onRefresh={handleRefresh}
-            isLoading={isBalancesLoading || isSwapLoading}
-            onNetworkChange={handleRefresh}
-          />
-        )}
-
-        {/* Beginner: Simple title + compact NetworkSwitcher (consistent with advanced mode) */}
-        {showChrome && isSimple && (
-          <div className="mb-4 flex items-start justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                Protect Your Savings
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                Move into more stable currencies with a guided protection flow
+    <div className="space-y-4">
+      {!address ? (
+        // Unconnected morph: the ticket itself is the object — no prompt
+        // card. Its execute CTA becomes the connect button (SwapInterface).
+        ticket
+      ) : (
+        <>
+          {autoSwitchNotice && (
+            <div
+              className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 mb-4 rounded-xl flex justify-between items-start"
+              role="status"
+              aria-live="polite"
+              data-testid="auto-switch-notice"
+            >
+              <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
+                🔄 Guardian is moving your wallet to{" "}
+                {autoSwitchNotice.chainName} to sign the bridge
               </p>
-            </div>
-            {/* Compact chain selector — same control as advanced mode, incl. Test Drive networks */}
-            <NetworkSwitcher
-              currentChainId={walletChainId}
-              onNetworkChange={handleRefresh}
-              compact={true}
-              className="mt-1 flex-shrink-0"
-            />
-          </div>
-        )}
-
-        {/* Hide chain balances header for beginners */}
-        {showChrome && address && !isSimple && (
-          isMultichainLoading ? (
-            <div className="flex gap-2 py-2">
-              <Skeleton className="flex-1 h-16" variant="rect" />
-              <Skeleton className="flex-1 h-16" variant="rect" />
-              <Skeleton className="flex-1 h-16" variant="rect" />
-            </div>
-          ) : (
-            <ChainBalancesHeader
-              chains={chainBalancesData}
-              currentChainId={walletChainId}
-              onSwitchChain={handleSwitchChain}
-              isLoading={isMultichainLoading}
-            />
-          )
-        )}
-
-        {/* Hide search for beginners */}
-        {showChrome && !isSimple && (
-          <div className="mb-4">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg
-                  className="size-4 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={3}
-                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                  />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search assets (e.g. 'USDm', 'Gold')..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="block w-full pl-10 pr-3 py-2 border-2 border-gray-100 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900 text-sm font-bold focus:border-blue-500 outline-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {!address ? (
-          // Unconnected morph: the ticket itself is the object — no prompt
-          // card. Its execute CTA becomes the connect button (SwapInterface).
-          ticket
-        ) : (
-          <>
-            {showChrome && showAiRecommendation && (
-              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-3 mb-4 rounded-xl flex justify-between items-start">
-                <p className="text-xs font-bold text-blue-800 dark:text-blue-200">
-                  🧠 AI: {aiRecommendationReason}
-                </p>
-                <button
-                  onClick={() => setShowAiRecommendation(false)}
-                  className="text-blue-400 font-bold"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-
-            {autoSwitchNotice && (
-              <div
-                className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3 mb-4 rounded-xl flex justify-between items-start"
-                role="status"
-                aria-live="polite"
-                data-testid="auto-switch-notice"
+              <button
+                onClick={() => setAutoSwitchNotice(null)}
+                className="text-amber-500 font-bold"
+                aria-label="Dismiss"
               >
-                <p className="text-xs font-bold text-amber-800 dark:text-amber-200">
-                  🔄 Guardian is moving your wallet to{" "}
-                  {autoSwitchNotice.chainName} to sign the bridge
-                </p>
-                <button
-                  onClick={() => setAutoSwitchNotice(null)}
-                  className="text-amber-500 font-bold"
-                  aria-label="Dismiss"
-                >
-                  ×
-                </button>
-              </div>
-            )}
+                ×
+              </button>
+            </div>
+          )}
 
-            {showChrome && (
-              <GoalAlignmentBanner
-                userGoal={profileConfig.userGoal}
-                riskTolerance={profileConfig.riskTolerance}
-                timeHorizon={profileConfig.timeHorizon}
-                profileComplete={profileComplete}
-                suppressedByAI={showAiRecommendation}
-              />
-            )}
-
-            {ticket}
-          </>
-        )}
-      </div>
-
+          {ticket}
+        </>
+      )}
     </div>
   );
 }

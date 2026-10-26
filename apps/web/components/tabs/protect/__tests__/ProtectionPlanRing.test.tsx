@@ -1403,3 +1403,73 @@ describe('ProtectionPlanRing — values identity vs plan composition', () => {
     expect(badge).toHaveStyle('border-color: #7c3aed');
   });
 });
+
+
+describe('ProtectionPlanRing — chronology', () => {
+  const portfolio = {
+    totalValue: 1000,
+    chains: [{ chainId: 42220, chainName: 'Celo', totalValue: 1000, tokenCount: 2, balances: [] }],
+    isLoading: false,
+  } as any;
+
+  it('engraves the strike date on a committed ring', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        planCommittedAt="2026-09-01T00:00:00Z"
+      />,
+    );
+    expect(screen.getByTestId('rim-engraving')).toBeInTheDocument();
+    expect(screen.getByTestId('rim-engraving')).toHaveTextContent(/Struck .*days?$/);
+  });
+
+  it('shows "Struck today" under one day', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        planCommittedAt={new Date().toISOString()}
+      />,
+    );
+    expect(screen.getByTestId('rim-engraving')).toHaveTextContent('Struck today');
+  });
+
+  it('omits the engraving on sample/preview rings', () => {
+    render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        planCommittedAt="2026-09-01T00:00:00Z"
+        sample
+      />,
+    );
+    expect(screen.queryByTestId('rim-engraving')).not.toBeInTheDocument();
+  });
+
+  it('caps anchored strikes at 12 plus the plan mark', () => {
+    const hashes = Array.from({ length: 15 }, (_, i) => `0xhash${i}`);
+    const { container } = render(
+      <ProtectionPlanRing
+        strategyKey="africapitalism"
+        portfolio={portfolio}
+        selectedToken={null}
+        onSelectToken={() => {}}
+        ledgerStrikes={hashes}
+      />,
+    );
+    const marks = container.querySelectorAll('[id^="mark-"], [data-mark-id]');
+    // Marks render keyed by id — count strike ids in DOM attributes if exposed;
+    // fall back to svg elements with strike- prefix in markup.
+    const struckIds = Array.from(container.querySelectorAll('*'))
+      .flatMap((el) => Array.from(el.attributes).map((a) => a.value))
+      .filter((v) => v.includes('strike-'));
+    expect(struckIds.length + marks.length).toBeLessThanOrEqual(13);
+  });
+});

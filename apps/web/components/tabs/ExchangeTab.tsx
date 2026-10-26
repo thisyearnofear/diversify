@@ -4,6 +4,7 @@ import { useRouter } from "next/router";
 import { stellarTestnetEnabled } from "@diversifi/shared/src/config/stellar";
 import SwapTab from "./SwapTab";
 import { useNavigation } from "@/context/app/NavigationContext";
+import { useVoiceVerbRegistry } from "@/context/app/VoiceVerbContext";
 import { usePortfolio } from "@/context/app/PortfolioContext";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { useDemoMode } from "@/context/app/DemoModeContext";
@@ -361,7 +362,6 @@ function EvmExchangeTab({
   userRegion,
   inflationData,
   refreshBalances,
-  refreshChainId,
   isBalancesLoading,
   portfolio,
   networkControl,
@@ -370,6 +370,23 @@ function EvmExchangeTab({
   const { demoMode, enableDemoMode, disableDemoMode } = useDemoMode();
   const router = useRouter();
   const { setSwapPrefill, swapPrefill, pendingIntent, consumeIntent } = useNavigation();
+  // Spoken "swap 50 KESm to USDm" drafts the ticket — the same prefill
+  // channel as deep links, never an execution (design-language §5).
+  const voiceRegistry = useVoiceVerbRegistry();
+  useEffect(() => {
+    if (!voiceRegistry) return;
+    return voiceRegistry.register("exchange", async (verb) => {
+      if (verb.kind !== "prefill") return null;
+      setSwapPrefill({
+        fromToken: verb.from.toUpperCase(),
+        toToken: verb.to.toUpperCase(),
+        amount: verb.amount,
+        reason: "Voice-drafted protection move",
+        origin: { source: "guardian" },
+      });
+      return `Guardian drafted ${verb.amount} ${verb.from.toUpperCase()} → ${verb.to.toUpperCase()} in Exchange. Review and sign there.`;
+    });
+  }, [voiceRegistry, setSwapPrefill]);
   const { valuesPhilosophy } = useStrategy();
   const { config } = useProtectionProfile();
   const sharedPortfolio = usePortfolio();
@@ -529,8 +546,7 @@ function EvmExchangeTab({
             <SwapTab
               userRegion={userRegion}
               inflationData={inflationData}
-              instrument
-              onInspectQuote={(fromToken, toToken, view) =>
+                onInspectQuote={(fromToken, toToken, view) =>
                 setInspectorSel({ kind: "pair", fromToken, toToken, view })
               }
               quoteInspected={inspectorSel?.kind === "pair"}
@@ -607,9 +623,7 @@ function EvmExchangeTab({
             userRegion={userRegion}
             inflationData={inflationData}
             refreshBalances={refreshBalances}
-            refreshChainId={refreshChainId}
             isBalancesLoading={isBalancesLoading}
-            instrument
             onInspectQuote={(fromToken, toToken, view) =>
               setInspectorSel({ kind: "pair", fromToken, toToken, view })
             }

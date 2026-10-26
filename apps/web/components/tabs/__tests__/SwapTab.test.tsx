@@ -255,18 +255,6 @@ vi.mock("@/components/swap/SwapInterface", () => {
   return { default: MockSwapInterface };
 });
 
-vi.mock("@/components/swap/ChainBalancesHeader", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/components/swap/NetworkSwitcher", () => ({
-  default: () => null,
-}));
-
-vi.mock("@/components/swap/GoalAlignmentBanner", () => ({
-  default: () => null,
-}));
-
 vi.mock("@/components/swap/SocialContactPicker", () => ({
   SocialContactPicker: () => null,
 }));
@@ -289,10 +277,6 @@ vi.mock("@/components/shared/TabComponents", () => ({
   ConnectWalletPrompt: () => null,
   Skeleton: () => null,
   Section: ({ children }: { children: React.ReactNode }) => children,
-}));
-
-vi.mock("@/components/wallet/WalletButton", () => ({
-  default: () => null,
 }));
 
 // ──────────────────────────────────────────────────────────────────────────

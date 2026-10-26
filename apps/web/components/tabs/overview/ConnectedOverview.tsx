@@ -275,7 +275,7 @@ export function ConnectedOverview({
     const parts = [
       `Guardian ran ${counts.evaluated} check${counts.evaluated === 1 ? "" : "s"}`,
       counts.executed > 0 ? `${counts.executed} move${counts.executed === 1 ? "" : "s"}` : null,
-      counts.declined > 0 ? `${counts.declined} stand-down${counts.declined === 1 ? "" : "s"}` : null,
+      counts.declined > 0 ? `held off ${counts.declined} time${counts.declined === 1 ? "" : "s"}` : null,
       (sessionInfo?.decisionLog?.length ?? 0) > 0 ? "recent decisions in Ask Guardian" : null,
     ].filter(Boolean);
     const line = `${lead} ${parts.join(" · ")}`;
@@ -285,7 +285,7 @@ export function ConnectedOverview({
       .join("\n");
     const prompt =
       `Guardian, ${lead.toLowerCase()} you ran ${counts.evaluated} checks, ` +
-      `${counts.executed} moves and ${counts.declined} stand-downs for me. ` +
+      `${counts.executed} moves and held off ${counts.declined} times for me. ` +
       `Walk me through what you did and why.` +
       (recentDecisions ? `\nRecent decisions:\n${recentDecisions}` : "");
     return { line, summary: line, prompt };

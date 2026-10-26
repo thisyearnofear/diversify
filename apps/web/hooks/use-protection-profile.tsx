@@ -63,6 +63,8 @@ export interface ProtectionConfig {
   anchorCurrency?: string | null;
   /** The user's Custom plan (strategy `custom`). */
   customPlan?: CustomPlan | null;
+  /** ISO timestamp of the last committed plan change — drives the ring's age engraving. Never set for demo/sample. */
+  planCommittedAt?: string | null;
 }
 
 export type ProfileMode = 'editing' | 'viewing' | 'complete';

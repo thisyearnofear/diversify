@@ -32,7 +32,7 @@ import { formatUsd } from "@/lib/money-format";
 import type { LiveBeatText } from "@/lib/live-lines";
 import { timeAgo } from "@/lib/format-duration";
 
-const MOOD_BY_STATE: Record<GuardianTierState, "neutral" | "happy" | "thinking" | "protective"> = {
+export const MOOD_BY_STATE: Record<GuardianTierState, "neutral" | "happy" | "thinking" | "protective"> = {
   idle: "neutral",
   authorized: "neutral",
   funded: "happy",
@@ -159,7 +159,7 @@ export function GuardianObject({
   // while the user acts, and on a rotation wrap — the same fact landing
   // twice reads as wallpaper, not reaction (once per beat, like the
   // coins' signatures).
-  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter("guardian");
   const [beatMood, setBeatMood] = useState<"alert" | "thinking" | null>(null);
   const resting = (liveAlive ?? false) && !acted;
   const playedBeats = useRef(new Set<string>());

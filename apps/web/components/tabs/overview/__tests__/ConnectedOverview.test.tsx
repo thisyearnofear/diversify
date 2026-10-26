@@ -1097,7 +1097,7 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
     expect(payload.summary).toContain("Since your last visit (3d ago)");
     expect(payload.summary).toContain("ran 5 checks");
     expect(payload.summary).toContain("1 move");
-    expect(payload.summary).toContain("1 stand-down");
+    expect(payload.summary).toContain("held off 1 time");
     expect(payload.prompt).toContain("Recent decisions:");
     expect(payload.prompt).toContain("within bounds");
   });

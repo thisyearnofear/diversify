@@ -443,7 +443,7 @@ export function PairStage({
   // fiat, the pair's story lands on both). The beam itself never tips —
   // a beat carries no direction; the tilt is the drift's word alone.
   // Silent on the first beat: the stage's re-weigh owns the opening.
-  const { beatKey: activeBeatKey, reportBeat, reset: resetBeat } = useBeatReporter();
+  const { beatKey: activeBeatKey, reportBeat, reset: resetBeat } = useBeatReporter("exchange");
   // Re-arm the first-beat silence on a real pair change — never on
   // mount: child effects report beat 0 before this effect runs, and an
   // unconditional reset would swallow the second beat too.

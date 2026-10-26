@@ -118,7 +118,7 @@ async function fetchSingleChainFeed(
   };
 }
 
-async function fetchMultiChainProofFeed(limit: number): Promise<LedgerResponse> {
+export async function fetchMultiChainProofFeed(limit: number): Promise<LedgerResponse> {
   const chainIds = configuredProofFeedChains();
 
   if (chainIds.length === 0) {

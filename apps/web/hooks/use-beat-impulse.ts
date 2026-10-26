@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAnimationControls, useReducedMotion } from 'framer-motion';
 import type { TargetAndTransition } from 'framer-motion';
-import { BEAT_IMPULSE, beatImpulseForKey } from '@/lib/beat-impulse';
+import { BEAT_IMPULSE, beatImpulseForKey, publishBeat } from '@/lib/beat-impulse';
 import { trackFunnelEvent } from '@/lib/analytics';
 
 export interface BeatImpulseOpts {
@@ -95,7 +95,7 @@ export function useBeatImpulse(
  * `reset` re-arms the first-beat silence for a re-staged object — a new
  * pair's re-weigh IS its signature, so its first beat stays quiet too.
  */
-export function useBeatReporter(): {
+export function useBeatReporter(surface?: string): {
   beatKey: string | null;
   reportBeat: (key: string) => void;
   reset: () => void;
@@ -116,7 +116,8 @@ export function useBeatReporter(): {
       armed.current = true;
     }
     setBeatKey(key);
-  }, []);
+    publishBeat({ surface, key });
+  }, [surface]);
   const reset = useCallback(() => {
     first.current = null;
     armed.current = false;

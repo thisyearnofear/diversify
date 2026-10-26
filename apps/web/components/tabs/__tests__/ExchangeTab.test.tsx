@@ -115,7 +115,6 @@ vi.mock("../SwapTab", () => ({
     onExitDecisionWindow?: () => void;
   }) {
     const {
-      instrument,
       onInspectQuote,
       onInspectJourney,
       lookupAddress,
@@ -130,7 +129,7 @@ vi.mock("../SwapTab", () => ({
     return React.createElement(
       "div",
       { "data-testid": "swap-tab" },
-      instrument ? "instrument" : "chrome",
+      "instrument",
       React.createElement(
         "button",
         {

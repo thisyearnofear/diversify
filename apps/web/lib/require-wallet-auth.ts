@@ -9,13 +9,17 @@ import { parseWalletAuthMessage } from '@/lib/wallet-auth';
 
 const MAX_AUTH_TTL_MS = 20 * 60 * 1000;
 
-export function requireWalletAuth(req: NextApiRequest): string | null {
-  const encodedMessage = req.headers['x-wallet-auth-message'];
-  const signature = req.headers['x-wallet-auth-signature'];
-  if (typeof encodedMessage !== 'string' || typeof signature !== 'string') return null;
-
+/**
+ * Verify a signed wallet-auth payload. Returns the recovered lowercase
+ * address, or null when the message is malformed, expired, or the
+ * signature doesn't match the claimed address. Shared by the header path
+ * (requireWalletAuth) and the MCP owner-only tools.
+ */
+export function verifyWalletAuth(
+  message: string,
+  signature: string,
+): string | null {
   try {
-    const message = decodeURIComponent(encodedMessage);
     const payload = parseWalletAuthMessage(message);
     if (!payload) return null;
     const issuedAt = Date.parse(payload.issuedAt);
@@ -33,4 +37,12 @@ export function requireWalletAuth(req: NextApiRequest): string | null {
   } catch {
     return null;
   }
+}
+
+export function requireWalletAuth(req: NextApiRequest): string | null {
+  const encodedMessage = req.headers['x-wallet-auth-message'];
+  const signature = req.headers['x-wallet-auth-signature'];
+  if (typeof encodedMessage !== 'string' || typeof signature !== 'string') return null;
+  const message = decodeURIComponent(encodedMessage);
+  return verifyWalletAuth(message, signature);
 }

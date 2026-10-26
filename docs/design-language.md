@@ -364,6 +364,20 @@ time, not animation, so reduced motion keeps the gate. The commit
 fires inside the pointer's activation window so the wallet popup is
 never blocked.
 
+*Amendment 2026-10 — speech maps onto the existing verbs.* Voice
+transcriptions route through `lib/voice-verbs.ts` (Shield/Exchange) or
+the existing `guardian-interaction` intents (Home). A spoken command may
+inspect, navigate, preview or draft — the same verbs a gesture performs
+— and it may never commit: no spoken path reaches plan commit, balance
+commit, swap execution or the Guardian grant. The confirmation names the
+gesture that would persist ("Tap Use this plan to keep it"), keeping
+the closed gesture set intact. Registered handlers live in
+`VoiceVerbContext` per tab; unmatched speech falls through to Ask
+Guardian. Shield's surface state is one machine —
+`protect/use-shield-mode.ts` (`rest | slice | floor | compare | tilt |
+custom | cycle`) — so a voice verb and a tap dispatch the same action
+and collisions are impossible by construction.
+
 *Feel* (Settings → Feel: Silent / Touch / Sound) owns non-visual
 feedback. Touch (default) is the existing haptics; Sound is opt-in — a
 synthesised clink only when a coin settles for real (a drafted amount
@@ -395,8 +409,7 @@ example decision performed by the mark: stand down on missing data,
 propose for user approval, then show what evidence a real decision carries.
 When the visitor's own currency has a real fall (≥2% between two
 samples) in its live 12-month vs-USD series, the same three beats are a
-**replay** pinned to the sampled dates of that series and labelled `Replay · CODE vs USD ·
-past data` — never live activity, never a balance; otherwise the
+**replay** pinned to the sampled dates of that series and labelled `Past data replay · CODE vs USD` — never live activity, never a balance; otherwise the
 illustrative steps.
 The visitor advances by tapping the mark; the example never auto-advances.
 "Why this decision?" opens one inspector with the current explanation.
@@ -564,7 +577,7 @@ in place, and the commit writes the user's own exposure plan — explicit
 legs and weights, with the risk-floor dial as one way to shape them. The
 mix's origin and trade-off read at L0/L1 or in the inspector — never a
 feature card. Each state carries one CTA, and the two construction verbs
-("Use starting mix" → commit the previewed mix; "Shape this mix" → open
+("Use this plan" → commit the previewed mix; "Adjust this plan" → open
 the editor) are state transitions, never simultaneous competing primaries.
 Custom is an editor entry — not an eighth philosophy coin — and entering it
 seeds the editor from a named plan or existing holdings (a valid editable

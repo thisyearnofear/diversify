@@ -37,13 +37,11 @@ import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 import { rwaLegFor } from './rwa-assets';
 import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 
-/** Selection id the parent uses for the tokenized-asset (RWA) lens. */
-export const SLEEVE_ID = 'sleeve';
-/** Selection id the parent uses for the Guardian-suggestion preview —
- *  the tilt arrives as a ghost wedge, never a text chip. */
-export const TILT_ID = 'guardian-tilt';
-/** Selection prefix for an IXS vault row focused in the sleeve inspector. */
-export const VAULT_SLICE_PREFIX = 'vault:';
+/** Selection ids live in ring-ids.ts — a leaf module so non-component
+ *  consumers (the mode machine, the voice grammar) share them without
+ *  importing the ring. Re-exported here for existing call sites. */
+export { SLEEVE_ID, TILT_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from './ring-ids';
+import { SLEEVE_ID, TILT_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from './ring-ids';
 /** Preview wedge weight when the ring holds no tokenized asset. */
 const SLEEVE_PREVIEW_PCT = 15;
 /** Teaser wedge weight — the walletless ring's quiet invite into the
@@ -54,15 +52,16 @@ const SLEEVE_TEASER_PCT = 8;
  *  lighter than an asset class. */
 const SUGGESTION_TEASER_PCT = 6;
 
-export function isSleeveSelection(id: string | null | undefined): boolean {
-  return id === SLEEVE_ID || Boolean(id?.startsWith(VAULT_SLICE_PREFIX));
-}
 
 interface Props {
   /** Effective strategy key (selected strategy overrides onboarding philosophy). */
   strategyKey: string | null;
   identityStrategyKey?: string | null;
   portfolio: MultichainPortfolio;
+  /** ISO time the committed plan was struck — engraved on the rim. */
+  planCommittedAt?: string | null;
+  /** Tx hashes of this wallet's anchored ledger records — one rim strike each. */
+  ledgerStrikes?: string[];
   /** Controlled selection — the tab's focus state lives in ProtectionTab. */
   selectedToken: string | null;
   onSelectToken: (token: string | null) => void;
@@ -133,6 +132,8 @@ interface Props {
 }
 
 export function ProtectionPlanRing({
+  planCommittedAt = null,
+  ledgerStrikes,
   strategyKey,
   identityStrategyKey,
   portfolio,
@@ -439,7 +440,38 @@ export function ProtectionPlanRing({
   // per plan (the mark key remounts), then holds. Previews stay unstruck.
   const struck =
     !compact && !balancePreview && !walletless && !sample && !forcePlanLegs;
-  const marks: RingMark[] = struck ? [{ deg: 0, id: `strike-${archetype.id}` }] : [];
+  const MAX_RIM_STRIKES = 12;
+  const anchorHashes = struck
+    ? (ledgerStrikes ?? []).slice(0, MAX_RIM_STRIKES)
+    : [];
+  // The plan's own strike sits at 0°; anchored records arc the rest of
+  // the rim in chronological order — one mark per verified tx hash.
+  const marks: RingMark[] = struck
+    ? [
+        { deg: 0, id: `strike-${archetype.id}` },
+        ...anchorHashes.map((hash, i) => ({
+          deg:
+            anchorHashes.length === 1
+              ? 180
+              : 20 + (i * 320) / (anchorHashes.length - 1),
+          id: `strike-${hash}`,
+        })),
+      ]
+    : [];
+  // Plan-age engraving on the rim — "a three-month shield is visibly aged".
+  const rimText = (() => {
+    if (!struck || !planCommittedAt) return undefined;
+    const at = Date.parse(planCommittedAt);
+    if (!Number.isFinite(at)) return undefined;
+    const days = Math.floor((Date.now() - at) / 86_400_000);
+    if (days < 1) return 'Struck today';
+    const date = new Date(at).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    return `Struck ${date} · ${days} ${days === 1 ? 'day' : 'days'}`;
+  })();
   const ghostSlices: RingSlice[] = (ghostLegs ?? []).map((a, i) => ({
     id: a.token,
     label: `${a.label ?? displayToken(a.token)} — ${ghostLabel}`,
@@ -680,6 +712,7 @@ export function ProtectionPlanRing({
             thickness={ringThickness}
             variant="foundry"
             marks={marks}
+            rimText={rimText}
             strike={struck}
             monitoring={monitoring}
           >

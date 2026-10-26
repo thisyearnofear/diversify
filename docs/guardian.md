@@ -244,7 +244,7 @@ vanished cycle) key by the candidate they declined. Transient per-tick noise
 
 Surfacing: `GET /api/vault/permission` returns `decisionLog`; the Guardian
 journal (`useGuardianInstrument` → `GuardianJournalSheet` → `GuardianJournalTab`)
-renders each as an amber "Guardian stood down" event with the loop's own
+renders each as an amber "Guardian held off" event with the loop's own
 reason; the newest one is also the Guardian object's latest-decision line. The loop response now
 carries `declinesJournaled` for cron logs.
 
@@ -515,6 +515,17 @@ Registering on both gives the DiversiFi Guardian:
 
 The `agentURI` for both can point to the same registration file
 (`public/.well-known/erc8004.json`), since the schema is compatible.
+
+### Third-party agents (MCP)
+
+External agents reach the Guardian's intelligence through `/api/mcp`
+(Model Context Protocol, Streamable HTTP). Read tools wrap the same
+functions the tabs use; the single write tool (`propose_move`) files a
+*proposal* into the owner's `recommendationQueue` — `source:'mcp'`,
+`executionEligibility:'manual_review'`, `confidence:0`, and the
+guardian-loop refuses `origin:'mcp'` records outright, so an external
+agent can never trigger execution. The owner signs in Exchange. Tool
+list, auth shape and plumbing: `docs/reference.md` §4.5.
 
 ---
 

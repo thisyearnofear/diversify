@@ -185,7 +185,7 @@ export default function AgentTab({
         {example ? (
           <div data-testid="guardian-example" className="w-full max-w-[320px]" aria-live="polite">
             <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
-              {replay ? `Replay · ${replayCode} vs USD · past data` : "Example decision · not live"}
+              {replay ? `Past data replay · ${replayCode} vs USD` : "Example decision · not live"}
             </p>
             <AnimatePresence mode="wait" initial={false}>
               <motion.div

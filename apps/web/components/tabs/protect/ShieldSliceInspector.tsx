@@ -348,7 +348,7 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
             mixLabel={learnMixLabel}
             onSelectYear={setLearnYear}
             onProtect={commitFocusedPlan}
-            ctaLabel="Use starting mix"
+            ctaLabel="Use this plan"
           />
           <button
             type="button"
@@ -454,10 +454,10 @@ export function ShieldSliceInspector(props: ShieldSliceInspectorProps) {
             if (!attr && !anchor) return null;
             const ms = formatDuration(attr?.durationMs ?? anchor?.durationMs);
             const line = attr
-              ? `Guardian ${attr.kind === "decline" ? `stood down on ${focusedToken}` : `proposed a move for ${focusedToken}`} · ${timeAgo(attr.capturedAt)}${ms ? ` · decided in ${ms}` : ""}`
+              ? `Guardian ${attr.kind === "decline" ? `held off on ${focusedToken}` : `proposed a move for ${focusedToken}`} · ${timeAgo(attr.capturedAt)}${ms ? ` · decided in ${ms}` : ""}`
               : `Guardian's last execution · ${timeAgo(anchor!.capturedAt)}${ms ? ` · took ${ms}` : ""}`;
             const prompt = attr
-              ? `Guardian, you ${attr.kind === "decline" ? "stood down" : "made a proposal"} on my ${focusedToken} position (${attr.status}${attr.reason ? ` — ${attr.reason}` : ""}). Explain what you saw and what would change your mind.`
+              ? `Guardian, you ${attr.kind === "decline" ? "held off" : "made a proposal"} on my ${focusedToken} position (${attr.status}${attr.reason ? ` — ${attr.reason}` : ""}). Explain what you saw and what would change your mind.`
               : `Guardian, walk me through your most recent execution for me (${anchor!.status}). What moved and why?`;
             const decisionRef: GuardianDecisionRef = attr
               ? {

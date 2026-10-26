@@ -69,6 +69,8 @@ interface AllocationRingProps {
   variant?: 'flat' | 'foundry';
   /** Rim hallmarks — verified commits, accumulated (foundry only). */
   marks?: RingMark[];
+  /** Engraved rim text on the bottom arc — the plan's age, struck once. */
+  rimText?: string;
   /** Punch-in the newest mark once on mount — the strike ceremony. */
   strike?: boolean;
   /** Guardian monitoring — engraves the maker's mark in the plate. */
@@ -90,6 +92,7 @@ export default function AllocationRing({
   className = '',
   variant = 'flat',
   marks = [],
+  rimText,
   strike = false,
   monitoring = false,
   children,
@@ -187,6 +190,29 @@ export default function AllocationRing({
               strokeWidth={1.5}
               className="stroke-current text-gray-300/90 dark:text-white/15"
             />
+            {rimText && (
+              <>
+                <defs>
+                  <path
+                    id="rim-engraving-arc"
+                    d={`M ${size / 2 - (size / 2 - 2) * 0.866} ${size / 2 + (size / 2 - 2) * 0.5} A ${size / 2 - 2} ${size / 2 - 2} 0 0 0 ${size / 2 + (size / 2 - 2) * 0.866} ${size / 2 + (size / 2 - 2) * 0.5}`}
+                    fill="none"
+                  />
+                </defs>
+                <text
+                  data-testid="rim-engraving"
+                  aria-hidden="true"
+                  textAnchor="middle"
+                  fontSize={Math.max(7, size * 0.045)}
+                  className="fill-current text-gray-400 dark:text-gray-500"
+                  opacity={0.8}
+                >
+                  <textPath href="#rim-engraving-arc" startOffset="50%">
+                    {rimText}
+                  </textPath>
+                </text>
+              </>
+            )}
             <circle
               data-testid="foundry-plate"
               cx={size / 2}

@@ -581,6 +581,7 @@ The following providers have been evaluated but not yet integrated. See [`plan.m
 | `/api/fx-netting/intent` | POST/GET | Wallet-authenticated FX intent creation for the hosted CARICOM FX pool. POST validates + normalizes + **persists** an intent (sellCurrency, sellAmount, buyCurrency, buyAmountMin?, deadline?) — `participantId` derived from the signed message, never the body. GET lists the caller's own pool intents. |
 | `/api/fx-netting/match` | POST | CARICOM FX matching + net settlement **against the hosted intent pool**. Body `{ intents?: FxIntent[] }` (optional — supplied intents are upserted into the pool first), then the full open pool is loaded and matched at live mid-market rates (no USD bridge); outcomes persist (remainingSell decrements, `open → partially_matched → matched`, matchId audit). Nets obligations to cUSD transfers, anchors each match to the RecommendationLedger on the region-canonical chain (Celo; APAC → HashKey). Returns matches + savings + settlement plan + `poolSize`. |
 | `/api/fx-netting/settle` | POST/GET | Zero-custody settlement of a net FX obligation. POST (debtor-only, wallet-authenticated): body `{ settlementId, txHash }` — the server fetches the tx receipt on the settlement's region-canonical chain, parses the ERC-20 Transfer log, and verifies token/debtor/creditor/amount (settlement-execution.ts::verifySettlementTransfer) before marking the settlement + both intents `settled` and anchoring `FX_SETTLE` to the RecommendationLedger. Idempotent. GET lists the caller's settlements (outgoing = debtor worklist, incoming = creditor inbox). Settlement rails: Celo/cUSD (Africa/Caribbean/LatAm), HashKey/USDT (APAC) — routed by `settlement-rails.ts`, per-obligation, never hardcoded. |
+| `/api/mcp` | POST | Model Context Protocol tool server (Streamable HTTP, stateless JSON-RPC — §4.5). GET/DELETE → 405. |
 
 ### 4.2 x402 settlement rails (env-gated) & research mode
 
@@ -822,6 +823,36 @@ post-filters for secrets (seed phrases, private keys, account numbers)
 server-side regardless of model output.
 
 ---
+
+### 4.5 MCP tool server (`/api/mcp`)
+
+Model Context Protocol endpoint for third-party agents (Claude Desktop,
+Cursor, other ERC-8004 agents). Hand-rolled stateless JSON-RPC —
+`pages/api/mcp.ts` is thin; the plumbing lives in `lib/mcp/server.ts`
+and the tool registry in `lib/mcp/tools.ts`. `POST` only; GET/DELETE →
+405; per-IP rate limit (60 req/min); no SSE stream and no new
+dependencies in v1. Advertised as a service in
+`public/.well-known/agent.json` and `erc8004.json`. x402 metering is
+deferred (`TODO(x402)` in `server.ts` — wire the credit model there).
+
+Tools (all read-only unless noted; every result carries `asOf`):
+
+| Tool | Backs | Notes |
+|---|---|---|
+| `fx_risk_moment` | `buildCurrencyMoment` + `getCurrencyRisk` | Curated dataset; ISO2/ISO3/currency input. |
+| `corridor_signals` | `fetchMultiChainProofFeed` + `corridorSignalsFor` | Dated, cited beats only; `[]` when none. |
+| `token_provenance` | `provenanceFor` | Curated claims with `asOf`; null entry reported, never invented. |
+| `fx_cycle_report` | `buildFxCycleReport` (shared with the API route) | Scenario, not a quote; USD targets only. |
+| `ledger_verify` | `verifyLedgerTx` | Same path as `?verify=<txHash>`. |
+| `ledger_recent` | `fetchMultiChainProofFeed` + `attachLedgerReasoning` | Hash-only records when no echo. |
+| `rwa_market` | `fetchRwaMarket` | `available:false` on provider failure — never stale-as-live. |
+| `plan_alignment` | `verifyWalletAuth` + `getGuardianState` | Owner-only. |
+| `guardian_journal` | `verifyWalletAuth` + `getGuardianState` | Owner-only. |
+| `propose_move` | `verifyWalletAuth` + `enqueueRecommendation` | Owner-only **write**: files a proposal (`source:'mcp'`, `executionEligibility:'manual_review'`, `confidence:0`). `guardian-loop.ts` additionally refuses any `origin:'mcp'` record regardless of claimed eligibility — an MCP proposal can never be auto-executed; the owner signs it in Exchange. |
+
+Owner-only tools take `walletAuth { message, signature }` — the signed
+`buildWalletAuthMessage` (20-min TTL), verified server-side by
+`verifyWalletAuth` (extracted core of `require-wallet-auth.ts`).
 
 ## 5. AI providers & data sources
 
@@ -1685,7 +1716,7 @@ caption-worthy entries, note the ISO week in the capture journal.
 
 Same stack, different story: the Guardian **refuses** to move money.
 
-1. Attribution line shows a decline: "stood down on {token} · daily_limit_reached".
+1. Attribution line shows a decline: "held off on {token} · daily_limit_reached".
 2. Inspector reveals the reason and the spent-today ledger — the bound was
    real and it bit.
 3. Ask Guardian drill-down answers "why did you do nothing?" grounded in the

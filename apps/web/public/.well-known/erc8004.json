@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "DiversiFi Guardian",
-  "description": "FX-risk intelligence and autonomous protection layer for businesses that earn in one currency and must purchase in another. The DiversiFi Guardian is the reference consumer app that demonstrates the full loop: FX risk quantification → autonomous decision → chain-aware settlement → verifiable 0G evidence. The philosophy/values system (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, and Custom) is the structural moat that drives identity-based retention. Monitors macro/FX/inflation signals and routes capital between Celo/Mento (local stablecoins), Arbitrum (deep liquidity / RWA yield), and HashKey Chain (APAC regulated-market savings). Every decision is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage. Executes within user-signed ERC-7715-style permission bounds.",
+  "description": "FX-risk intelligence with a constrained agent. You set the rules, the Guardian operates within them, and every decision is explainable and verifiable: data → deterministic risk calculation → constrained strategy → AI explanation → user approval → on-chain execution. By default the Guardian only proposes moves the user signs in their own wallet; autonomous execution exists only under a user-signed ERC-7715 permission enforced on-chain by the user's own smart account (Celo, Celo Sepolia, Arbitrum). No custody. Serves emerging-market savers protecting purchasing power and businesses that earn in one currency and pay in another (per-cycle FX drag). Values-aligned plans (Africapitalism, Buen Vivir, Confucian, Gotong Royong, Islamic Finance, Pan-Caribbean, Global Diversification, Custom). Every decision is recorded on the chain-aware RecommendationLedger and anchored to 0G Storage; read-only intelligence is also exposed as MCP tools.",
   "image": "https://diversifiapp.vercel.app/icon.png",
   "services": [
     {
@@ -15,7 +15,12 @@
     },
     {
       "name": "x402",
-      "endpoint": "https://diversifiapp.vercel.app/api/agent"
+      "endpoint": "https://diversifiapp.vercel.app/api/agent/x402-gateway"
+    },
+    {
+      "name": "MCP",
+      "endpoint": "https://diversifiapp.vercel.app/api/mcp",
+      "version": "2025-03-26"
     }
   ],
   "x402Support": true,

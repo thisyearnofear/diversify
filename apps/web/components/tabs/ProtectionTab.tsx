@@ -39,13 +39,14 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useToast } from "@/components/ui/Toast";
 import { haptics } from "@/lib/haptics";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
-import { usePlanBalancePreview } from "@/hooks/use-plan-balance-preview";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { shareLandingFor } from "@/hooks/use-share-landing";
 import { useLensOffered } from "@/hooks/use-lens-offered";
 import { useShieldIntent } from "./protect/use-shield-intent";
+import { useShieldMode } from "./protect/use-shield-mode";
+import { useVoiceVerbRegistry } from "@/context/app/VoiceVerbContext";
 import { ShieldSliceInspector } from "./protect/ShieldSliceInspector";
 import { ShieldStatusTier } from "./protect/ShieldStatusTier";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
@@ -63,10 +64,10 @@ import {
   reserveLabel,
   resolvePlan,
   allocationPlanFromResolved,
-  type CustomPlan,
+  type RiskTolerance,
 } from "@/components/protection-cards/plan-preview";
 import { scorePlanAlignment } from "@/lib/plan-alignment";
-import { configTokenFor, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
+import { configTokenFor, displayToken, isLegFillable, pickBiggestFillableGap } from "@/lib/plan-legs";
 import { strongerFloorOffer } from "@/lib/shield-lens";
 import { PlanFloorControl } from "./protect/PlanFloorControl";
 import { deriveShieldShape } from "./protect/shield-shape";
@@ -77,6 +78,7 @@ import { useVault } from "@/hooks/use-vault";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
 import { useSessionKey } from "@/hooks/use-session-key";
 import { useStreakRewards } from "@/hooks/use-streak-rewards";
+import { useFirstUseCue } from "@/hooks/use-first-use-cue";
 import type { FinancialStrategy } from "@/context/app/types";
 import { exampleSavingsFor } from "@/constants/currency-risk";
 import { FALLBACK_INFLATION_DATA } from "@/constants/inflation";
@@ -92,7 +94,7 @@ import ProtectionSkeleton from "../ui/skeletons/ProtectionSkeleton";
 import { InstrumentShell } from "../shared/InstrumentShell";
 import { buildWalletPortfolioView, heldAsLine } from "@/lib/wallet-portfolio-view";
 import { rwaLegFor } from "./protect/rwa-assets";
-import { SLEEVE_ID, TILT_ID, VAULT_SLICE_PREFIX, isSleeveSelection } from "./protect/ProtectionPlanRing";
+import { SLEEVE_ID, TILT_ID, isSleeveSelection } from "./protect/ProtectionPlanRing";
 import { useRwaAllocation } from "@/hooks/use-rwa-allocation";
 import { useRwaMarket } from "@/hooks/use-rwa-market";
 import { useProofFeed } from "@/hooks/use-proof-feed";
@@ -151,57 +153,88 @@ export default function ProtectionTab({
     ? demoMode.previewStrategy ?? selectedStrategy ?? financialStrategy ?? 'global'
     : selectedStrategy || financialStrategy) as string | null;
 
-  const [focusedToken, setFocusedToken] = useState<string | null>(null);
-  const [focusedPhilosophy, setFocusedPhilosophy] = useState<FinancialStrategy | null>(null);
-  const [comparing, setComparing] = useState(false);
+  // One machine owns which surface is live: resting ring, slice
+  // inspector, floor dial, compare, Guardian tilt, custom editor, or the
+  // payment-cycle report. Collisions are impossible by construction.
+  const { mode, dispatch } = useShieldMode();
+  const comparing = mode.kind === "compare";
+  const focusedToken =
+    mode.kind === "slice" || mode.kind === "floor"
+      ? (mode.token ?? null)
+      : mode.kind === "compare" || mode.kind === "custom"
+        ? mode.token
+        : null;
   // The second tap on the already-focused coin opens the details sheet
   // ("About {plan}") — a first tap only previews in the ring.
-  const [philosophyDetailsOpen, setPhilosophyDetailsOpen] = useState(false);
-  const ambient = useAmbientOrigin();
+  const focusedPhilosophy =
+    mode.kind === "rest" || mode.kind === "compare" ? mode.focus.id : null;
+  const philosophyDetailsOpen =
+    (mode.kind === "rest" || mode.kind === "compare") && mode.focus.details;
+  const customDraft = mode.kind === "custom" ? mode.draft : null;
+  const customSeed = mode.kind === "custom" ? mode.seed : null;
+  const customSeedLabel = mode.kind === "custom" ? mode.seedLabel : null;
+  const customSeededFromWallet = mode.kind === "custom" ? mode.seededFromWallet : false;
+  const addingSlice = mode.kind === "custom" ? mode.addingSlice : false;
   // Payment-cycle inspector — opened by the `cycle` intent (Home's
   // graduation / payment-cycle transition). Independent of any slice.
-  const [cycleOpen, setCycleOpen] = useState(false);
+  const cycleOpen = mode.kind === "cycle";
   // The inspector's two engines — the `cycle` intent and ?cycle=1 open the
   // forward report; the /fx-drag-calculator doorway lands on 'last'.
-  const [cycleMode, setCycleMode] = useState<"next" | "last">("next");
-  const openCycle = useCallback((m: "next" | "last" = "next") => {
-    setCycleMode(m);
-    setCycleOpen(true);
-  }, []);
-  useEffect(() => {
-    if (focusedToken) setCycleOpen(false);
-  }, [focusedToken]);
+  const cycleMode = mode.kind === "cycle" ? mode.report : "next";
+  const openCycle = useCallback(
+    (m: "next" | "last" = "next") => dispatch({ type: "openCycle", report: m }),
+    [dispatch],
+  );
+  // The floor dial's risk draft — a draft different from the saved floor
+  // IS the balance preview.
+  const savedRisk: RiskTolerance = config.riskTolerance ?? "Balanced";
+  const balanceRisk = mode.kind === "floor" && mode.draft ? mode.draft : savedRisk;
+  const balancePreviewing = balanceRisk !== savedRisk;
+  const balance = useMemo(
+    () => ({
+      risk: balanceRisk,
+      isPreviewing: balancePreviewing,
+      select: (risk: RiskTolerance) => dispatch({ type: "previewFloor", risk }),
+      cancel: () => dispatch({ type: "closeFloor" }),
+      commit: () => {
+        if (!balancePreviewing || isDemo) return false;
+        setRiskTolerance(balanceRisk);
+        dispatch({ type: "reset" });
+        return true;
+      },
+    }),
+    [balanceRisk, balancePreviewing, isDemo, setRiskTolerance, dispatch],
+  );
+  // Inspector/state-tier adapters — they keep their setter-shaped props.
+  const setFocusedToken = useCallback(
+    (token: string | null) => dispatch({ type: "selectSlice", token }),
+    [dispatch],
+  );
+  const setFocusedPhilosophy = useCallback(
+    (v: React.SetStateAction<FinancialStrategy | null>) => {
+      const next = typeof v === "function" ? v(focusedPhilosophy) : v;
+      dispatch(
+        next === null
+          ? { type: "clearPhilosophy" }
+          : { type: "focusPhilosophy", id: next },
+      );
+    },
+    [focusedPhilosophy, dispatch],
+  );
+  const ambient = useAmbientOrigin();
   const [learnYear, setLearnYear] = useState(5);
   const [learnAmountOverride, setLearnAmountOverride] = useState<number | null>(null);
-  const previousAddress = useRef(address);
-  useEffect(() => {
-    if (previousAddress.current !== address) {
-      setFocusedToken(null);
-      setFocusedPhilosophy(null);
-      previousAddress.current = address;
-    }
-  }, [address]);
-  const balance = usePlanBalancePreview({
-    scopeKey: `${address ?? 'walletless'}:${strategyKey ?? 'none'}:${comparing ? 'compare' : 'plan'}:${isDemo ? 'sample' : 'live'}`,
-    savedRisk: config.riskTolerance,
-    onCommit: setRiskTolerance,
-    canCommit: !isDemo,
-  });
   const handleMarqueeSelect = useCallback((token: string | null) => {
     // The suggestion wedge is the tilt's door — tapping it previews the
     // reshaped ring instead of focusing a slice.
     if (token === TILT_ID) {
-      setFocusedToken(null);
-      setTiltPreview(true);
+      dispatch({ type: "showTilt" });
       haptics.tap();
       return;
     }
-    // Re-tapping a vault wedge steps back to the sleeve, not out of it.
-    setFocusedToken((prev) =>
-      token === null && prev?.startsWith(VAULT_SLICE_PREFIX) ? SLEEVE_ID : token,
-    );
+    dispatch({ type: "selectSlice", token });
     if (token) trackFunnelEvent("marquee_select", { token, source: "shield_ring" });
-  }, []);
+  }, [dispatch]);
 
   // RWA vault sleeve — the hatched wedge fans into the IXS allocation.
   // Free heuristic is local + instant; SERV Reasoning is an opt-in rail in
@@ -219,27 +252,30 @@ export default function ProtectionTab({
   const router = useRouter();
   useEffect(() => {
     if (!router.isReady) return;
-    if (router.query.sleeve === "rwa") setFocusedToken(SLEEVE_ID);
-    // ?cycle=1 opens the payment-cycle inspector's forward report; the
-    // /fx-drag-calculator doorway lands on ?cycle=last (historical engine).
-    if (router.query.cycle === "1") openCycle("next");
-    if (router.query.cycle === "last") openCycle("last");
+    if (router.query.sleeve === "rwa") {
+      dispatch({ type: "selectSlice", token: SLEEVE_ID });
+    } else if (router.query.cycle === "1" || router.query.cycle === "last") {
+      // ?cycle=1 opens the payment-cycle inspector's forward report; the
+      // /fx-drag-calculator doorway lands on ?cycle=last (historical engine).
+      openCycle(router.query.cycle === "last" ? "last" : "next");
+    }
     if (router.query.serv === "1" || router.query.serv === "true") {
       setRwaServOn(true);
     }
     // A shared plan card lands here: ?plan= previews the philosophy in
     // the same focused state the picker's flick/compare uses — never a
-    // commit, never persisted.
+    // commit, never persisted. Two focusPhilosophy dispatches replay the
+    // first-tap/second-tap rule so the card lands on the details sheet.
     const plan = router.query.plan;
     if (typeof plan === "string" && STRATEGIES.some((s) => s.id === plan)) {
-      setFocusedPhilosophy(plan as FinancialStrategy);
-      setPhilosophyDetailsOpen(true);
+      dispatch({ type: "focusPhilosophy", id: plan as FinancialStrategy });
+      dispatch({ type: "focusPhilosophy", id: plan as FinancialStrategy });
     }
     // One-shot URL consumption on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router.isReady]);
 
-  const sleeveOpen = !comparing && !balance.isPreviewing && isSleeveSelection(focusedToken);
+  const sleeveOpen = mode.kind === "slice" && isSleeveSelection(mode.token);
   const rwa = useRwaAllocation(
     useMemo(
       () => ({
@@ -296,14 +332,13 @@ export default function ProtectionTab({
       legs: applyTilt(allocations, tilt.exposure, tilt.delta),
     };
   }, [latestAdvice, strategyKey, allocations]);
-  const [tiltPreview, setTiltPreview] = useState(false);
-  // Custom plan being edited on the ring (not saved until "Save plan").
-  const [customDraft, setCustomDraft] = useState<CustomPlan | null>(null);
-  const [customSeed, setCustomSeed] = useState<CustomPlan | null>(null);
-  const [customSeedLabel, setCustomSeedLabel] = useState<string | null>(null);
-  const [customSeededFromWallet, setCustomSeededFromWallet] = useState(false);
-  const [shapeResume, setShapeResume] = useState<string | null>(null);
-  const [addingSlice, setAddingSlice] = useState(false);
+  // If the suggestion disappears while its preview owns the ring, fall
+  // back to the resting surface.
+  useEffect(() => {
+    if (mode.kind === "tilt" && guardianTilt === null) {
+      dispatch({ type: "hideTilt" });
+    }
+  }, [mode.kind, guardianTilt, dispatch]);
   const walletHoldings = useMemo(
     () =>
       (chains ?? []).flatMap((c) =>
@@ -315,7 +350,7 @@ export default function ProtectionTab({
       ),
     [chains],
   );
-  const tiltShowing = tiltPreview && guardianTilt !== null && !comparing && !balance.isPreviewing;
+  const tiltShowing = mode.kind === "tilt" && guardianTilt !== null;
   const balanceAllocations = useMemo(() => {
     return resolvePlan({ customPlan: config.customPlan, strategy: strategyKey, riskTolerance: balance.risk, anchorCurrency }).legs;
   }, [strategyKey, balance.risk, anchorCurrency, config.customPlan]);
@@ -369,63 +404,47 @@ export default function ProtectionTab({
     () => scorePlanAlignment(previewAllocations, heldPctByToken, totalValue, previewRules),
     [previewAllocations, heldPctByToken, totalValue, previewRules],
   );
-  const exitCompare = useCallback(() => {
-    setFocusedToken(null);
-    setComparing(false);
-    setFocusedPhilosophy(null);
-    setPhilosophyDetailsOpen(false);
-  }, []);
-  const toggleCompare = useCallback(() => {
-    setFocusedToken(null);
-    setFloorOpen(false);
-    setComparing((c) => !c);
-    if (comparing) {
-      setFocusedPhilosophy(null);
-      setPhilosophyDetailsOpen(false);
-    }
-  }, [comparing]);
+  const exitCompare = useCallback(() => dispatch({ type: "exitCompare" }), [dispatch]);
+  const toggleCompare = useCallback(() => dispatch({ type: "toggleCompare" }), [dispatch]);
   // A coin tap previews; a second tap on the already-focused coin opens
   // the details sheet. The ambient layer blooms from the tap point.
   const handlePhilosophySelect = useCallback(
     (id: string) => {
       const strategyId = id as FinancialStrategy;
-      setFocusedToken(null);
       // Custom never starts empty: with no saved plan it opens the editor
       // on the wallet's current exposures.
       if (strategyId === "custom" && !config.customPlan) {
         const global = resolvePlan({ strategy: "global", anchorCurrency });
-        setComparing(false);
-        setFocusedPhilosophy(null);
-        setPhilosophyDetailsOpen(false);
-        setAddingSlice(false);
-        const draft = customFromHoldings(walletHoldings);
-        setCustomSeededFromWallet(Boolean(draft));
-        setCustomSeed(draft ?? customFromLegs(global.legs, {}, null));
-        setCustomSeedLabel(
-          `Starting from ${draft ? "your wallet" : "a global mix"} · you set targets`,
-        );
-        setCustomDraft(draft ?? customFromLegs(global.legs, {}, null));
+        const walletDraft = customFromHoldings(walletHoldings);
+        const draft = walletDraft ?? customFromLegs(global.legs, {}, null);
+        dispatch({
+          type: "startCustom",
+          draft,
+          seed: draft,
+          seedLabel: `Starting from ${walletDraft ? "your wallet" : "a global mix"} · you set targets`,
+          seededFromWallet: Boolean(walletDraft),
+          resume: null,
+        });
         return;
       }
+      dispatch({ type: "focusPhilosophy", id: strategyId });
       if (strategyId === focusedPhilosophy) {
         trackFunnelEvent("philosophy_details_opened", { strategy: strategyId });
-        setPhilosophyDetailsOpen(true);
-        return;
+      } else {
+        trackFunnelEvent("marquee_select", {
+          strategy: strategyId,
+          source: hasPlan ? "shield_compare" : "shield_picker",
+        });
       }
-      setPhilosophyDetailsOpen(false);
-      setFocusedPhilosophy(strategyId);
-      trackFunnelEvent("marquee_select", {
-        strategy: strategyId,
-        source: hasPlan ? "shield_compare" : "shield_picker",
-      });
     },
-    [focusedPhilosophy, hasPlan, config.customPlan, walletHoldings, anchorCurrency],
+    [focusedPhilosophy, hasPlan, config.customPlan, walletHoldings, anchorCurrency, dispatch],
   );
   // While comparing, a slice tap only reads the previewed plan's leg —
   // the inspector stays on the philosophy, not the token.
-  const handleCompareSliceSelect = useCallback((token: string | null) => {
-    setFocusedToken((prev) => (token !== null && prev === token ? null : token));
-  }, []);
+  const handleCompareSliceSelect = useCallback(
+    (token: string | null) => dispatch({ type: "selectSlice", token }),
+    [dispatch],
+  );
 
   const openProtectionFlow = (
     targetToken: string,
@@ -490,7 +509,7 @@ export default function ProtectionTab({
   const reviewGuardianTilt = () => {
     if (!guardianTilt) return;
     const { instrument, tilt, amountUsd } = guardianTilt;
-    setTiltPreview(false);
+    dispatch({ type: "hideTilt" });
     navigateToSwap({
       fromToken: getBestFromToken(instrument.symbol),
       toToken: instrument.symbol,
@@ -621,16 +640,25 @@ export default function ProtectionTab({
       }),
     [config.riskTolerance, allocations, heldPctByToken, planFloor],
   );
+  // Resting surfaces only — a resting ring, a tilt preview, or the open
+  // floor dial without a draft all count as "nothing else owns the
+  // surface" (the machine makes compare/slice/custom/cycle impossible to
+  // combine with these anyway).
+  const resting =
+    mode.kind === "rest" ||
+    mode.kind === "tilt" ||
+    (mode.kind === "floor" && !balancePreviewing);
+  // First-use verb for the hatched wedge — the teaser has no visible
+  // verb of its own, so one line names it once, then never again.
+  const sleeveCue = useFirstUseCue("shield-sleeve");
   const showFloorPrompt =
     floorOffer !== null &&
     hasPlan &&
     planRingVisible &&
     shape !== "picker" &&
     shape !== "fund" &&
-    !comparing &&
-    !balance.isPreviewing &&
-    !sleeveOpen &&
-    !focusedToken;
+    resting &&
+    !sleeveOpen;
   // Offered = the prompt is actually the chosen transition (sleeve back
   // and the compare row are already excluded by showFloorPrompt) on a
   // live, non-demo surface.
@@ -646,6 +674,14 @@ export default function ProtectionTab({
     adaptiveConfig.content.shieldMorph === "cycle" || isPaymentCycle;
   // The CTA offers a gap the user's network can actually fill when one
   // exists — it never disappears because a leg lives elsewhere.
+  const sleeveTeaserShowing =
+    !businessMorph && !sleeveOpen && !tiltShowing && (resting || mode.kind === "slice");
+  const sleeveCueShowing = sleeveTeaserShowing && sleeveCue.show;
+  // Opening the sleeve counts as having found it.
+  const markSleeveCueSeen = sleeveCue.markSeen;
+  useEffect(() => {
+    if (sleeveOpen) markSleeveCueSeen();
+  }, [sleeveOpen, markSleeveCueSeen]);
   const biggestGap = useMemo(
     () => pickBiggestFillableGap(alignment.legs, chainId),
     [alignment.legs, chainId],
@@ -660,41 +696,52 @@ export default function ProtectionTab({
     () => shieldBeats({ records: liveFeed?.recent, legs: allocations }),
     [liveFeed, allocations],
   );
+  // Rim strikes — one hallmark per anchored record for THIS wallet.
+  // Only records carrying a tx hash earn a mark; sample/walletless
+  // rings get none.
+  const ledgerStrikes = useMemo(
+    () =>
+      address && !isDemo
+        ? (liveFeed?.recent ?? [])
+            .filter(
+              (r) =>
+                r.user?.toLowerCase() === address.toLowerCase() &&
+                typeof r.settlementTxHash === 'string' &&
+                r.settlementTxHash.length > 0,
+            )
+            .map((r) => r.settlementTxHash)
+        : [],
+    [liveFeed, address, isDemo],
+  );
   const [acted, setActed] = useState(false);
-  // The floor dial is a mode, not standing furniture — the engraved
-  // affordance ("Dollar floor 25%") is the resting door; opening it
-  // morphs into the full control in place.
-  const [floorOpen, setFloorOpen] = useState(false);
   // Commits seat the object — the die presses the new metal once.
   const [seatNonce, setSeatNonce] = useState(0);
   // The engraved affordance etches in once per mount — a graver's cut
   // sweeping left to right, never a loop, never replayed.
   const etchedRef = useRef(false);
+  // A new wallet or plan discards whatever mode owned the surface
+  // (covers the old balance-preview scopeKey reset too).
+  const scopeRef = useRef({ address, strategyKey });
   useEffect(() => {
+    if (scopeRef.current.address !== address || scopeRef.current.strategyKey !== strategyKey) {
+      scopeRef.current = { address, strategyKey };
+      dispatch({ type: "reset" });
+    }
     setActed(false);
-    setFloorOpen(false);
-  }, [address, strategyKey]);
+  }, [address, strategyKey, dispatch]);
   const gapCtaShowing =
-    !comparing &&
-    !balance.isPreviewing &&
+    resting &&
     shape === "gap" &&
-    !focusedToken &&
-    !cycleOpen &&
     biggestGap &&
     address &&
     guardianState !== "monitoring";
-  const liveLineShowing =
-    !comparing &&
-    !balance.isPreviewing &&
-    !focusedToken &&
-    !cycleOpen &&
-    !gapCtaShowing;
+  const liveLineShowing = resting && !gapCtaShowing;
 
   // The beat→object event: a fresh signal on a plan leg's currency
   // tremors the ring, the standing cadence breathes it — the caption
   // below explains. Silent on the first beat (the ring's arrival owns
   // that move), dead the moment the user acts.
-  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter();
+  const { beatKey: activeBeatKey, reportBeat } = useBeatReporter("shield");
   const ringBeat = useBeatImpulse(
     activeBeatKey,
     liveLineShowing && !acted && !tiltShowing,
@@ -712,10 +759,88 @@ export default function ProtectionTab({
     shape,
     allocations,
     heldPctByToken,
-    setComparing,
-    setFocusedToken,
-    openCycle,
+    comparing,
+    dispatch,
   });
+
+  // Spoken verbs → the same mode machine the gestures drive. Voice
+  // previews and inspects; it never commits (design-language §5).
+  const voiceRegistry = useVoiceVerbRegistry();
+  useEffect(() => {
+    if (!voiceRegistry) return;
+    return voiceRegistry.register("protect", async (verb) => {
+      const q = verb.kind === "slice" ? verb.query.toLowerCase().trim() : "";
+      switch (verb.kind) {
+        case "shield": {
+          const action = verb.action;
+          if (action.type === "toggleCompare" && comparing) {
+            return "Guardian is already comparing plans.";
+          }
+          dispatch(action);
+          switch (action.type) {
+            case "toggleCompare":
+              return "Guardian is comparing your philosophies — tap a coin to preview, Use this plan to keep it.";
+            case "exitCompare":
+              return "Guardian is back on your plan.";
+            case "focusPhilosophy": {
+              const name = STRATEGIES.find((s) => s.id === action.id)?.name ?? action.id;
+              const resolved = resolvePlan({
+                customPlan: config.customPlan,
+                strategy: action.id,
+                riskTolerance: config.riskTolerance,
+                anchorCurrency,
+              });
+              const pct = floorPercent(resolved.legs, resolved.floor);
+              return `Guardian is previewing ${name} — ${pct}% dollar reserve. Tap Use this plan to keep it.`;
+            }
+            case "previewFloor":
+              return `Guardian set the reserve preview to ${action.risk}. Tap Apply to save it.`;
+            case "selectSlice":
+              return action.token === SLEEVE_ID
+                ? "Guardian opened the tokenized-assets sleeve."
+                : action.token
+                  ? `Guardian opened the ${displayToken(action.token)} slice.`
+                  : "Guardian closed the slice.";
+            case "reset":
+              return "Guardian cleared the preview.";
+            default:
+              return null;
+          }
+        }
+        case "slice": {
+          // Resolve the spoken asset against the live legs — symbol,
+          // display ticker, label, region, then exposure aliases.
+          const token =
+            (["dollar", "dollars", "usd", "usdc", "usdm"].includes(q)
+              ? allocations.find((l) => l.exposure === "USD")?.token
+              : undefined) ??
+            (q === "gold" ? allocations.find((l) => l.token.toUpperCase() === "PAXG")?.token : undefined) ??
+            allocations.find((l) =>
+              [
+                l.token,
+                displayToken(l.token),
+                l.label ?? "",
+                l.region ?? "",
+              ].some((n) => {
+                const name = n.toLowerCase();
+                return name && (name === q || name.includes(q) || (q.length > 2 && q.includes(name)));
+              }),
+            )?.token ?? null;
+          if (!token) return null;
+          dispatch({ type: "selectSlice", token });
+          const leg = allocations.find((l) => l.token === token);
+          return `Guardian opened the ${leg?.label ?? displayToken(token)} slice.`;
+        }
+        case "biggest_gap": {
+          if (!biggestGap) return null;
+          dispatch({ type: "selectSlice", token: biggestGap.token });
+          return `Guardian opened the ${displayToken(biggestGap.token)} slice — the biggest gap.`;
+        }
+        default:
+          return null;
+      }
+    });
+  }, [voiceRegistry, comparing, allocations, biggestGap, config.customPlan, config.riskTolerance, anchorCurrency, dispatch]);
 
   const learnMix = useMemo(() => {
     const legs = resolvePlan({ customPlan: config.customPlan, strategy: focusedPhilosophy, riskTolerance: config.riskTolerance, anchorCurrency }).legs;
@@ -787,11 +912,9 @@ export default function ProtectionTab({
     } else {
       setFinancialStrategy(focusedPhilosophy);
     }
-    setFocusedPhilosophy(null);
-    setFocusedToken(null);
-    setComparing(false);
-    setPhilosophyDetailsOpen(false);
+    dispatch({ type: "reset" });
     setSeatNonce(Date.now());
+    if (!isDemo) setMultipleConfig({ planCommittedAt: new Date().toISOString() });
     haptics.confirm();
     if (!isDemo) followOnGuardian(focusedPhilosophy);
     if (!isDemo && address && chainId) {
@@ -803,13 +926,13 @@ export default function ProtectionTab({
         }),
       ).catch(() => {});
     }
-  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy, followOnGuardian, isDemo, setDemoStrategy]);
+  }, [address, chainId, focusedPhilosophy, recordActivity, setFinancialStrategy, followOnGuardian, isDemo, setDemoStrategy, dispatch, setMultipleConfig]);
 
-  // "Shape this mix": the plan the ring actually shows (risk-adjusted,
+  // "Adjust this plan": the plan the ring actually shows (risk-adjusted,
   // anchored legs) becomes a Custom draft; null seeds a standalone Global
   // baseline with no named values.
   const startTweak = useCallback(
-    (from: string | null) => {
+    (from: string | null, resume: string | null = null) => {
       const base = resolvePlan(
         from
           ? {
@@ -821,13 +944,6 @@ export default function ProtectionTab({
           : { strategy: "global", anchorCurrency },
       );
       if (base.legs.length === 0) return;
-      setFocusedToken(null);
-      setComparing(false);
-      setFocusedPhilosophy(null);
-      setPhilosophyDetailsOpen(false);
-      setTiltPreview(false);
-      if (balance.isPreviewing) balance.cancel();
-      setAddingSlice(false);
       const holdingsDraft = !from ? customFromHoldings(walletHoldings) : null;
       const draft =
         holdingsDraft ??
@@ -836,17 +952,20 @@ export default function ProtectionTab({
           from ? base.rules : {},
           from ? (from === "custom" ? config.customPlan?.from ?? null : from) : null,
         );
-      setCustomSeed(draft);
-      setCustomSeededFromWallet(Boolean(holdingsDraft));
-      setCustomSeedLabel(
-        draft.from && STRATEGIES.some((s) => s.id === draft.from)
-          ? `Starting from ${STRATEGIES.find((s) => s.id === draft.from)?.name} · you set targets`
-          : `Starting from ${holdingsDraft ? "your wallet" : from === "custom" ? "your saved mix" : "a global mix"} · you set targets`,
-      );
-      setCustomDraft(draft);
+      dispatch({
+        type: "startCustom",
+        draft,
+        seed: draft,
+        seedLabel:
+          draft.from && STRATEGIES.some((s) => s.id === draft.from)
+            ? `Starting from ${STRATEGIES.find((s) => s.id === draft.from)?.name} · you set targets`
+            : `Starting from ${holdingsDraft ? "your wallet" : from === "custom" ? "your saved mix" : "a global mix"} · you set targets`,
+        seededFromWallet: Boolean(holdingsDraft),
+        resume,
+      });
       haptics.tap();
     },
-    [config.customPlan, config.riskTolerance, anchorCurrency, balance, walletHoldings],
+    [config.customPlan, config.riskTolerance, anchorCurrency, walletHoldings, dispatch],
   );
   const draftPlan = useMemo(
     () => (customDraft ? resolvePlan({ strategy: "custom", customPlan: customDraft, anchorCurrency }) : null),
@@ -857,14 +976,9 @@ export default function ProtectionTab({
     [customDraft, walletHoldings],
   );
   const cancelCustom = useCallback(() => {
-    setCustomDraft(null);
-    setCustomSeed(null);
-    setCustomSeedLabel(null);
-    setCustomSeededFromWallet(false);
-    setAddingSlice(false);
-    setFocusedToken(null);
+    dispatch({ type: "cancelCustom" });
     haptics.tap();
-  }, []);
+  }, [dispatch]);
   const saveCustom = useCallback(() => {
     if (!customDraft) return;
     if (isDemo) {
@@ -877,14 +991,9 @@ export default function ProtectionTab({
       philosophy: "custom",
       valuesPhilosophy,
       riskTolerance: "Balanced",
+      planCommittedAt: new Date().toISOString(),
     });
-    setCustomDraft(null);
-    setCustomSeed(null);
-    setCustomSeedLabel(null);
-    setCustomSeededFromWallet(false);
-    setShapeResume(null);
-    setAddingSlice(false);
-    setFocusedToken(null);
+    dispatch({ type: "reset" });
     haptics.confirm();
     showToast("Custom plan saved. Your holdings have not moved.", "success");
     if (address && getCachedWalletAuth(address)) {
@@ -901,13 +1010,7 @@ export default function ProtectionTab({
         }).catch(() => showToast('Guardian targets could not be synced.', 'warning'));
       }
     }
-  }, [customDraft, setMultipleConfig, showToast, isDemo, address, vault, anchorCurrency]);
-
-  // The walletless picker remounts when the shared editor closes — its
-  // useState initializer has already captured resumeFocus by then.
-  useEffect(() => {
-    if (!customDraft && shapeResume !== null) setShapeResume(null);
-  }, [customDraft, shapeResume]);
+  }, [customDraft, setMultipleConfig, showToast, isDemo, address, vault, anchorCurrency, dispatch]);
 
   const guardianTarget = useMemo(
     () =>
@@ -969,8 +1072,10 @@ export default function ProtectionTab({
   const stepDraft = (direction: 1 | -1) => {
     if (!customDraft || draftIndex < 0) return;
     const next = stepSlice(customDraft, draftIndex, direction);
-    if (next.slices.length < customDraft.slices.length) setFocusedToken(null);
-    setCustomDraft(next);
+    dispatch({ type: "updateDraft", draft: next });
+    if (next.slices.length < customDraft.slices.length) {
+      dispatch({ type: "selectSlice", token: null });
+    }
     haptics.tap();
   };
   const customName = customDraft
@@ -991,7 +1096,7 @@ export default function ProtectionTab({
         onClick={() => startTweak(from)}
         className="link-quiet shrink-0"
       >
-        {from === "custom" ? "Edit custom plan" : "Shape this mix"}
+        {from === "custom" ? "Edit custom plan" : "Adjust this plan"}
       </button>
     ) : null;
 
@@ -1009,10 +1114,7 @@ export default function ProtectionTab({
         ghostLabel="saved plan"
         portfolio={activePortfolio as MultichainPortfolio}
         selectedToken={draftLeg ? focusedToken : null}
-        onSelectToken={(token) => {
-          setAddingSlice(false);
-          setFocusedToken(token);
-        }}
+        onSelectToken={(token) => dispatch({ type: "selectSlice", token })}
         alignmentScore={null}
         holeOverride={draftLeg ? undefined : { label: customName, hint: "Tap a slice to adjust · not saved" }}
         floor={draftPlan.floor}
@@ -1086,8 +1188,8 @@ export default function ProtectionTab({
                     type="button"
                     data-testid={`custom-add-${a.exposure}`}
                     onClick={() => {
-                      setCustomDraft(addSlice(customDraft, a.exposure));
-                      setAddingSlice(false);
+                      dispatch({ type: "updateDraft", draft: addSlice(customDraft, a.exposure) });
+                      dispatch({ type: "setAddingSlice", adding: false });
                       haptics.tap();
                     }}
                     className="min-h-tap px-3 rounded-full bg-gray-100 dark:bg-white/10 text-xs font-semibold text-gray-900 dark:text-white"
@@ -1101,7 +1203,7 @@ export default function ProtectionTab({
               <button
                 type="button"
                 data-testid="custom-add"
-                onClick={() => { setAddingSlice(true); haptics.tap(); }}
+                onClick={() => { dispatch({ type: "setAddingSlice", adding: true }); haptics.tap(); }}
                 className="mx-auto flex min-h-tap items-center rounded-full px-3 text-xs font-semibold text-action dark:text-action hover:bg-action/8 dark:hover:bg-action/15 transition-colors"
               >
                 + Add
@@ -1111,7 +1213,7 @@ export default function ProtectionTab({
               data-testid="custom-exact-note"
               className="text-center text-2xs text-gray-500 dark:text-gray-400"
             >
-              Saves as exact targets — the floor dial resets to Balanced.
+              Saves these exact percentages. The reserve setting goes back to Balanced.
             </p>
             <div className="flex justify-center gap-2">
               <button
@@ -1183,7 +1285,7 @@ export default function ProtectionTab({
                 onClick={commitFocusedPlan}
                 className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
               >
-                Use starting mix
+                Use this plan
               </button>
               {tweakButton(focusedPhilosophy, "picker-tweak")}
             </div>
@@ -1196,7 +1298,7 @@ export default function ProtectionTab({
                 onClick={() => startTweak(null)}
                 className="link-quiet shrink-0"
               >
-                Build my mix
+                Build my own plan
               </button>
             </div>
           )}
@@ -1254,16 +1356,18 @@ export default function ProtectionTab({
             }
             sleeveOpen={sleeveOpen}
             monitoring={guardianState === "monitoring"}
-            sleeveTeaser={!businessMorph && !sleeveOpen && !comparing && !balance.isPreviewing && !tiltShowing}
+            sleeveTeaser={sleeveTeaserShowing}
             suggestionTeaser={
-              guardianTilt && !tiltShowing && !comparing && !balance.isPreviewing
+              guardianTilt && !tiltShowing && (resting || mode.kind === "slice")
                 ? `Guardian suggests ${tiltLabel(guardianTilt.tilt)}`
                 : undefined
             }
             stilled={acted}
             seatNonce={seatNonce}
+            planCommittedAt={config.planCommittedAt}
+            ledgerStrikes={ledgerStrikes}
             floor={comparing ? previewFloor : planFloor}
-            controls={!comparing && tiltShowing && guardianTilt ? (
+            controls={tiltShowing && guardianTilt ? (
               <div className="mt-3 space-y-2" data-testid="guardian-tilt-preview">
                 <p className="text-center text-xs text-gray-600 dark:text-gray-300">
                   {guardianTilt.tilt.reason}
@@ -1279,7 +1383,7 @@ export default function ProtectionTab({
                   </button>
                   <button
                     type="button"
-                    onClick={() => { setTiltPreview(false); haptics.tap(); }}
+                    onClick={() => { dispatch({ type: "hideTilt" }); haptics.tap(); }}
                     className="min-h-tap px-4 rounded-full text-sm font-semibold text-gray-600 dark:text-gray-300"
                   >
                     Not now
@@ -1288,7 +1392,7 @@ export default function ProtectionTab({
               </div>
             ) : !comparing ? (
               <div className="mt-3">
-                {balance.isPreviewing || (floorOpen && !focusedToken) ? (
+                {mode.kind === "floor" ? (
                   <>
                     <PlanFloorControl
                       value={balance.risk}
@@ -1299,14 +1403,11 @@ export default function ProtectionTab({
                       floor={planFloor}
                       accent={identityAccent(identityKeyFor(strategyKey))}
                       onChange={(risk) => {
-                        setFocusedToken(null);
                         balance.select(risk);
                         trackFunnelEvent('marquee_select', { source: 'shield_balance', selection: risk });
                       }}
                       onApply={isDemo ? undefined : () => {
                         if (balance.commit()) {
-                          setFloorOpen(false);
-                          setFocusedToken(null);
                           setSeatNonce(Date.now());
                           haptics.confirm();
                           showToast('Balance saved. Your holdings have not moved.', 'success');
@@ -1320,7 +1421,7 @@ export default function ProtectionTab({
                           }
                         }
                       }}
-                      onCancel={() => { setFloorOpen(false); balance.cancel(); setFocusedToken(null); haptics.tap(); }}
+                      onCancel={() => { balance.cancel(); haptics.tap(); }}
                       floorOffer={showFloorPrompt ? floorOffer : null}
                       onFloorOffer={() => {
                         if (!floorOffer) return;
@@ -1329,18 +1430,18 @@ export default function ProtectionTab({
                         if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
                       }}
                     />
-                    {floorOpen && !balance.isPreviewing && (
+                    {!balance.isPreviewing && (
                       <button
                         type="button"
                         data-testid="floor-done"
-                        onClick={() => { setFloorOpen(false); haptics.tap(); }}
+                        onClick={() => { dispatch({ type: "closeFloor" }); haptics.tap(); }}
                         className="mt-1 w-full text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                       >
                         Done
                       </button>
                     )}
                   </>
-                ) : !focusedToken ? (
+                ) : mode.kind === "rest" || mode.kind === "tilt" ? (
                   // The resting door — the floor is engraved beneath the
                   // object like provenance, not mounted as a control. The
                   // offer and the tweak ride the same quiet line. The row
@@ -1356,10 +1457,10 @@ export default function ProtectionTab({
                     <button
                       type="button"
                       data-testid="floor-affordance"
-                      onClick={() => { setFloorOpen(true); haptics.tap(); }}
-                      className="min-h-tap px-1 text-3xs font-semibold uppercase tracking-[0.18em] text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 transition-colors"
+                      onClick={() => { dispatch({ type: "openFloor" }); haptics.tap(); }}
+                      className="min-h-tap px-1 text-2xs font-semibold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                     >
-                      {reserveLabel(planFloor)} floor {floorPercent(allocations, planFloor)}%
+                      {reserveLabel(planFloor)} reserve · {floorPercent(allocations, planFloor)}%
                     </button>
                     {showFloorPrompt && floorOffer && (
                       <button
@@ -1370,15 +1471,15 @@ export default function ProtectionTab({
                           haptics.tap();
                           if (!isDemo) trackFunnelEvent("lens_open", { tab: "protect", lens: "floor" });
                         }}
-                        className="min-h-tap px-1 text-3xs font-semibold uppercase tracking-[0.14em] text-blue-600 dark:text-blue-400"
+                        className="min-h-tap px-1 text-2xs font-semibold text-blue-600 dark:text-blue-400"
                       >
-                        wallet holds {floorOffer.heldFloor}% — try a stronger floor →
+                        Wallet holds {floorOffer.heldFloor}% — try a larger reserve →
                       </button>
                     )}
                     {tweakButton(strategyKey, "custom-tweak")}
                   </motion.div>
                 ) : null}
-                {!businessMorph && !sleeveOpen && !comparing && !focusedToken &&
+                {!businessMorph && !sleeveOpen && mode.kind === "floor" &&
                   balance.isPreviewing &&
                   (previewRwaSymbols.length > 0 || planRwaSymbols.length > 0 || walletOnlyRwaSymbols.length > 0) && (
                     <p data-testid="rwa-preview-context" className="mt-2 text-2xs text-ink-muted">
@@ -1393,7 +1494,15 @@ export default function ProtectionTab({
             ) : undefined}
           />
           </motion.div>
-          {liveLineShowing && (
+          {sleeveCueShowing && (
+            <p
+              data-testid="sleeve-teaser-cue"
+              className="mt-2 text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
+            >
+              Hatched wedge: tokenized assets · tap it to look inside
+            </p>
+          )}
+          {liveLineShowing && !sleeveCueShowing && (
             <LiveLine
               testId="shield-live-line"
               beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
@@ -1426,7 +1535,7 @@ export default function ProtectionTab({
                       onClick={commitFocusedPlan}
                       className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
                     >
-                      Use starting mix
+                      Use this plan
                     </button>
                   )}
                   {tweakButton(focusedPhilosophy ?? strategyKey, "compare-tweak")}
@@ -1434,9 +1543,7 @@ export default function ProtectionTab({
               </div>
             )}
           </AnimatePresence>
-          {!comparing && !balance.isPreviewing && shape === "gap" && !focusedToken && !cycleOpen &&
-            biggestGap && address &&
-            guardianState !== "monitoring" && (
+          {gapCtaShowing && (
             <div data-testid="shield-gap-cta" className="mt-3">
               <button
                 type="button"
@@ -1449,8 +1556,7 @@ export default function ProtectionTab({
               </button>
             </div>
           )}
-          {shape === "fund" && !comparing && !balance.isPreviewing &&
-            !focusedToken && !cycleOpen && (
+          {shape === "fund" && resting && (
             <div data-testid="shield-fund" className="mt-3 space-y-2">
               {isMiniPay ? (
                 <p className="text-sm text-gray-600 dark:text-gray-300">
@@ -1487,15 +1593,18 @@ export default function ProtectionTab({
   // walletless and planless.
   // A coin tap only previews — the philosophy inspector opens on the
   // second tap (philosophyDetailsOpen). Slice taps still route normally.
-  const inspectorSel = balance.isPreviewing || customDraft
-    ? null
-    : comparing
-    ? focusedToken ?? (philosophyDetailsOpen ? focusedPhilosophy : null)
-    : isSleeveSelection(focusedToken) || shape !== "picker"
-      ? focusedToken
-      : philosophyDetailsOpen
-        ? focusedPhilosophy
-        : null;
+  const inspectorSel =
+    mode.kind === "compare"
+      ? (mode.token ?? (mode.focus.details ? mode.focus.id : null))
+      : mode.kind === "slice"
+        ? isSleeveSelection(mode.token) || shape !== "picker"
+          ? mode.token
+          : null
+        : mode.kind === "rest"
+          ? shape === "picker" && mode.focus.details
+            ? mode.focus.id
+            : null
+          : null;
 
   const inspector = (
     <ShieldSliceInspector
@@ -1553,10 +1662,10 @@ export default function ProtectionTab({
       guardianState={guardianState}
       onSetUpGuardian={setUpGuardian}
       showToast={showToast}
-      cycleOpen={cycleOpen && !balance.isPreviewing}
+      cycleOpen={cycleOpen}
       cycleMode={cycleMode}
       sample={isDemo}
-      onCloseCycle={() => setCycleOpen(false)}
+      onCloseCycle={() => dispatch({ type: "closeCycle" })}
       onOpenCycle={() => openCycle("next")}
     />
   );
@@ -1599,7 +1708,7 @@ export default function ProtectionTab({
 
   // A payment intent transforms the primary stage, with or without a wallet
   // or plan. The ring returns only when the user leaves the cycle.
-  if (cycleOpen && !balance.isPreviewing) {
+  if (mode.kind === "cycle") {
     return (
       <InstrumentShell
         object={inspector}
@@ -1608,7 +1717,7 @@ export default function ProtectionTab({
     );
   }
 
-  if (customDraft && draftPlan) {
+  if (mode.kind === "custom" && draftPlan) {
     return <InstrumentShell object={customEditor} />;
   }
 
@@ -1626,11 +1735,8 @@ export default function ProtectionTab({
         onOpenSleeve={() => setFocusedToken(SLEEVE_ID)}
         onCloseSleeve={() => setFocusedToken(null)}
         onOpenCycle={businessMorph ? () => openCycle("next") : undefined}
-        onShapePlan={(from) => {
-          setShapeResume(from);
-          startTweak(from);
-        }}
-        resumeFocus={shapeResume}
+        onShapePlan={(from) => startTweak(from, from)}
+        resumeFocus={mode.kind === "rest" ? mode.focus.id : null}
       />
     );
   }
@@ -1638,7 +1744,7 @@ export default function ProtectionTab({
   return (
     <div className="relative">
       <InstrumentShell
-        inspectorOpen={Boolean(inspectorSel) || (cycleOpen && !balance.isPreviewing)}
+        inspectorOpen={Boolean(inspectorSel)}
         pattern={pattern}
         object={object}
         inspector={inspector}
