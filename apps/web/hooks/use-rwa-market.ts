@@ -9,6 +9,7 @@ import {
   type RwaMarket,
 } from '@diversifi/shared/src/services/rwa-market-service';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { apiUrl } from '@/lib/api-url';
 
 export function useRwaMarket(enabled: boolean): { market: RwaMarket; loading: boolean } {
   const [market, setMarket] = useState<RwaMarket>(EMPTY_RWA_MARKET);
@@ -19,7 +20,7 @@ export function useRwaMarket(enabled: boolean): { market: RwaMarket; loading: bo
     if (!enabled || loaded) return;
     let cancelled = false;
     setLoading(true);
-    fetchWithTimeout('/api/agent/rwa-market', {}, 15_000)
+    fetchWithTimeout(apiUrl('/api/agent/rwa-market'), {}, 15_000)
       .then(async (res) => (res.ok ? ((await res.json()) as { market?: RwaMarket }) : null))
       .then((data) => {
         if (cancelled) return;

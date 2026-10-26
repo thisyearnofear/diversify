@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { LensAgreementSummary } from '@/lib/agent/lens-agreement';
 import type { SpikeAgreementSummary } from '@/lib/agent/ask-world-spike/agreement';
+import { apiUrl } from '@/lib/api-url';
 
 const CACHE_KEY = 'diversifi:guardian-telemetry:v2';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -82,7 +83,7 @@ function writeCache(entry: { data: GuardianTelemetryData; cachedAt: number }): v
 }
 
 async function fetchFromApi(signal: AbortSignal): Promise<GuardianTelemetryData> {
-    const resp = await fetch('/api/agent/guardian-telemetry', { signal });
+    const resp = await fetch(apiUrl('/api/agent/guardian-telemetry'), { signal });
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const json = await resp.json();
     return {

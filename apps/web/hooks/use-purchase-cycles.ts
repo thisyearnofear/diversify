@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { CycleReportSnapshot, PurchaseCycleRecord } from '@diversifi/shared/src/types/purchase-cycle';
 import { getCachedWalletAuth, getWalletAuthHeaders } from '@/lib/wallet-auth';
+import { apiUrl } from '@/lib/api-url';
 
 export function usePurchaseCycles(
   userAddress: string | null | undefined,
@@ -43,7 +44,7 @@ export function usePurchaseCycles(
       }
 
       setNeedsUnlock(false);
-      const res = await fetch('/api/agent/business/cycles', { headers: authHeaders });
+      const res = await fetch(apiUrl('/api/agent/business/cycles'), { headers: authHeaders });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? 'Failed to load cycles');
@@ -52,7 +53,7 @@ export function usePurchaseCycles(
       }
       setCycles(data.cycles ?? []);
 
-      const permissionRes = await fetch('/api/vault/permission', { headers: authHeaders });
+      const permissionRes = await fetch(apiUrl('/api/vault/permission'), { headers: authHeaders });
       if (permissionRes.ok) {
         const permissionData = await permissionRes.json();
         setCycleAutoExecutionEnabled(
@@ -90,7 +91,7 @@ export function usePurchaseCycles(
       if (!userAddress) return null;
       const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
       if (!authHeaders) throw new Error('Wallet signature required');
-      const res = await fetch('/api/agent/business/cycles', {
+      const res = await fetch(apiUrl('/api/agent/business/cycles'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify(input),
@@ -126,7 +127,7 @@ export function usePurchaseCycles(
       if (!userAddress) return null;
       const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
       if (!authHeaders) throw new Error('Wallet signature required');
-      const res = await fetch('/api/agent/business/cycles', {
+      const res = await fetch(apiUrl('/api/agent/business/cycles'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ cycleId, ...patch }),
@@ -143,7 +144,7 @@ export function usePurchaseCycles(
     if (!userAddress) throw new Error('Connect your wallet first');
     const authHeaders = await getWalletAuthHeaders(userAddress, signMessage);
     if (!authHeaders) throw new Error('Wallet signature required');
-    const res = await fetch('/api/vault/permission', {
+    const res = await fetch(apiUrl('/api/vault/permission'), {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders },
       body: JSON.stringify({ autoExecuteCycleProtection: enabled }),

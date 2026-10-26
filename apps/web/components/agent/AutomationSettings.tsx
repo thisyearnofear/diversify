@@ -5,6 +5,7 @@ import { usePrivy } from '@/context/PrivyProvider';
 import { useVoiceEnabled } from "../ui/VoiceButton";
 import { useToast } from "../ui/Toast";
 import { useGuardianVisibility } from "@/context/app/GuardianVisibilityContext";
+import { apiUrl } from '@/lib/api-url';
 
 const AUTOMATION_STORAGE_KEY = "diversifi-automation-prefs";
 
@@ -136,7 +137,7 @@ export default function AutomationSettings({
 
     try {
       const response = await fetch(
-        `/api/agent/automation?userAddress=${encodeURIComponent(stableUserId)}`,
+        apiUrl(`/api/agent/automation?userAddress=${encodeURIComponent(stableUserId)}`),
       );
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}`);
@@ -169,7 +170,7 @@ export default function AutomationSettings({
     setSaving(true);
     try {
       const response = await fetch(
-        `/api/agent/automation?userAddress=${encodeURIComponent(stableUserId)}`,
+        apiUrl(`/api/agent/automation?userAddress=${encodeURIComponent(stableUserId)}`),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -195,7 +196,7 @@ export default function AutomationSettings({
   const testZapierIntegration = async () => {
     setTestingAutomation(true);
     try {
-      const response = await fetch("/api/agent/test-zapier", {
+      const response = await fetch(apiUrl("/api/agent/test-zapier"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -274,7 +275,7 @@ export default function AutomationSettings({
     if (!stableUserId) return;
     setVerifyingConnection(connection);
     try {
-      const response = await fetch("/api/agent/check-connection", {
+      const response = await fetch(apiUrl("/api/agent/check-connection"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

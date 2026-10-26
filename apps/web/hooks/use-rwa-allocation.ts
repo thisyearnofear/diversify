@@ -21,6 +21,7 @@ import type {
 } from '@diversifi/shared/src/services/serv/rwa-allocator';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
 import { getCachedWalletAuth } from '@/lib/wallet-auth';
+import { apiUrl } from '@/lib/api-url';
 
 export interface UseRwaAllocation {
   allocations: VaultAllocation[];
@@ -64,7 +65,7 @@ export function useRwaAllocation(
     setFailed(null);
     const auth = address ? getCachedWalletAuth(address) : null;
     fetchWithTimeout(
-      '/api/agent/rwa-allocation?serv=1',
+      apiUrl('/api/agent/rwa-allocation?serv=1'),
       {
         method: 'POST',
         headers: {

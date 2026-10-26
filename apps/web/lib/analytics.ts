@@ -5,6 +5,8 @@
  * respected. Never throws, never blocks rendering.
  */
 
+import { apiUrl } from '@/lib/api-url';
+
 const SESSION_KEY = 'diversifi-anon-session';
 
 function sessionId(): string | null {
@@ -29,9 +31,9 @@ export function trackFunnelEvent(event: string, props?: Record<string, string>):
   const body = JSON.stringify({ sessionId: id, event, props });
   try {
     if (navigator.sendBeacon) {
-      navigator.sendBeacon('/api/analytics/event', new Blob([body], { type: 'application/json' }));
+      navigator.sendBeacon(apiUrl('/api/analytics/event'), new Blob([body], { type: 'application/json' }));
     } else {
-      void fetch('/api/analytics/event', {
+      void fetch(apiUrl('/api/analytics/event'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,

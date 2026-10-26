@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { CapitalHistory } from '@diversifi/shared/src/services/capital-history';
+import { apiUrl } from '@/lib/api-url';
 
 const CACHE_KEY = 'diversifi:capital-history:v2';
 const CACHE_TTL_MS = 10 * 60 * 1000;
@@ -69,7 +70,7 @@ export function useCapitalHistory(address: string | null): {
         setIsLoading(true);
         try {
             const resp = await fetch(
-                `/api/wallet/capital-history?address=${encodeURIComponent(addr)}`,
+                apiUrl(`/api/wallet/capital-history?address=${encodeURIComponent(addr)}`),
                 { signal: controller.signal },
             );
             if (!resp.ok) {

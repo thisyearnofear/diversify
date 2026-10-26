@@ -22,6 +22,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
+import { apiUrl } from '@/lib/api-url';
 
 export type VerificationStatus = 'verified' | 'unverified' | 'checking';
 
@@ -51,7 +52,7 @@ async function fetchVerification(key: string): Promise<VerificationStatus> {
     const chainId = key.slice(0, separator);
     const txHash = key.slice(separator + 1);
     const resp = await fetch(
-        `/api/agent/zero-g-ledger?verify=${encodeURIComponent(txHash)}&chainId=${chainId}`,
+        apiUrl(`/api/agent/zero-g-ledger?verify=${encodeURIComponent(txHash)}&chainId=${chainId}`),
     );
     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
     const json = await resp.json();

@@ -8,6 +8,8 @@
  * retries. A 429 carries the server's Retry-After seconds through.
  */
 
+import { apiUrl } from '@/lib/api-url';
+
 export interface ClientScreening {
   status: 'clear' | 'blocked' | 'unavailable';
   reason?: string;
@@ -39,7 +41,7 @@ export function screenWallet(address: string): Promise<ClientScreening> {
   const promise = (async (): Promise<ClientScreening> => {
     try {
       const res = await fetch(
-        `/api/compliance/screen?address=${encodeURIComponent(address)}`,
+        apiUrl(`/api/compliance/screen?address=${encodeURIComponent(address)}`),
       );
       if (!res.ok) {
         const retry = res.status === 429 ? Number(res.headers.get('Retry-After')) : NaN;

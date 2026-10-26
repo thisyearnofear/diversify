@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { type GeographicRegion } from '../config';
+import { apiUrl } from '@/lib/api-url';
 
 interface CurrencyPerformance {
   symbol: string;
@@ -68,7 +69,7 @@ export function useCurrencyPerformance(baseCurrency = 'USD', enabled = true) {
               // The route owns the external provider request. Frankfurter
               // rejects browser-originated calls in production.
               const response = await fetch(
-                `/api/exchange-rates?from=${encodeURIComponent(baseCurrency)}&to=${encodeURIComponent(currency.symbol)}&historical=true`,
+                apiUrl(`/api/exchange-rates?from=${encodeURIComponent(baseCurrency)}&to=${encodeURIComponent(currency.symbol)}&historical=true`),
               );
               if (!response.ok) throw new Error(`Exchange-rate API error: ${response.status}`);
               const historicalData = await response.json();

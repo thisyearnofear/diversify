@@ -6,6 +6,7 @@ import { useBalanceVisibility } from '@/context/app/BalanceVisibilityContext';
 import { allocationReviewPrefill } from '@/lib/allocation-review';
 import { invalidateExpectedOutputCache } from '@/hooks/use-expected-amount-out';
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { apiUrl } from '@/lib/api-url';
 
 /** A user-initiated measured read. It never submits a transaction. */
 export function GuardianAllocationReview() {
@@ -33,7 +34,7 @@ export function GuardianAllocationReview() {
     try {
       const headers = await getWalletAuthHeaders(address, signMessage);
       if (!headers) throw new Error('Sign the wallet read request to continue.');
-      const response = await fetchWithTimeout('/api/agent/deep-analyze', {
+      const response = await fetchWithTimeout(apiUrl('/api/agent/deep-analyze'), {
         method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: '{}',
       }, 35000);
       const body = await response.json();

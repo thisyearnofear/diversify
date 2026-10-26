@@ -27,6 +27,7 @@
 
 import { useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { ProofFeedContext, type ProofFeedContextValue } from './proof-feed-context';
+import { apiUrl } from '@/lib/api-url';
 
 const CACHE_KEY = 'diversifi:proof-feed:v1';
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -111,7 +112,7 @@ function writeCache(entry: CacheEntry): void {
 }
 
 async function fetchFromApi(signal: AbortSignal): Promise<ProofFeedData> {
-    const resp = await fetch('/api/agent/zero-g-ledger', { signal });
+    const resp = await fetch(apiUrl('/api/agent/zero-g-ledger'), { signal });
     if (!resp.ok) {
         throw new Error(`HTTP ${resp.status}`);
     }

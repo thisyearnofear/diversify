@@ -32,6 +32,7 @@ import {
 } from '../components/protection-cards/plan-preview';
 import type { ArchetypeId } from '../components/protection-cards/tokens';
 import { countryNameFor } from '@diversifi/shared/src/constants/countries';
+import { apiUrl } from '@/lib/api-url';
 
 interface LiveDepreciationResponse {
   currency: string;
@@ -161,7 +162,7 @@ export function useCurrencyRisk(): UseCurrencyRiskReturn {
       return;
     }
     let cancelled = false;
-    fetch(`/api/currency-risk/live?currency=${encodeURIComponent(currencyCode)}`)
+    fetch(apiUrl(`/api/currency-risk/live?currency=${encodeURIComponent(currencyCode)}`))
       .then((res) => res.json())
       .then((data: LiveDepreciationResponse) => {
         if (!cancelled) setLiveDep(data);

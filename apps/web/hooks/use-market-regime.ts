@@ -15,6 +15,7 @@ import {
     type MarketSignals,
     type RegimeClassification,
 } from "../lib/market-regime";
+import { apiUrl } from '@/lib/api-url';
 
 interface PulseResponse {
     success: boolean;
@@ -55,7 +56,7 @@ export function useMarketRegime(): MarketRegimeState | null {
         let cancelled = false;
         const fetchRegime = async () => {
             try {
-                const res = await fetch("/api/trading/market-pulse");
+                const res = await fetch(apiUrl("/api/trading/market-pulse"));
                 if (!res.ok) return;
                 const data: PulseResponse = await res.json();
                 if (!data.success || !data.pulse) return;

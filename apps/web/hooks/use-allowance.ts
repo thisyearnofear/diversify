@@ -12,6 +12,7 @@ import {
 // Deep leaf import — NOT the barrel — keeps the timeout helper available
 // without dragging the AI/swap/ethers stack into first-load.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { apiUrl } from '@/lib/api-url';
 
 /**
  * Daily-question allowance hook.
@@ -127,7 +128,7 @@ export function useAllowance() {
   const refresh = useCallback(async () => {
     try {
       const qs = address ? `?subject=${encodeURIComponent(address)}` : '';
-      const res = await fetchWithTimeout(`/api/agent/credits${qs}`, {}, FETCH_TIMEOUT_MS);
+      const res = await fetchWithTimeout(apiUrl(`/api/agent/credits${qs}`), {}, FETCH_TIMEOUT_MS);
       if (!res.ok) return;
       applyServer(await res.json());
     } catch {
@@ -198,7 +199,7 @@ export function useAllowance() {
     setGranting(action);
     try {
       const res = await fetchWithTimeout(
-        '/api/agent/credits',
+        apiUrl('/api/agent/credits'),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

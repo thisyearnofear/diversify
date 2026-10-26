@@ -36,6 +36,7 @@ import { MONEY_MASK } from '@/lib/money-format';
 import { useCountUp } from '@/hooks/use-count-up';
 import { haptics } from '@/lib/haptics';
 import { reveal, springPop } from '@/lib/motion-tokens';
+import { apiUrl } from '@/lib/api-url';
 
 function PaymentScenarioReading({ comparison, currency }: { comparison: PaymentScenarioComparison; currency: string }) {
   const { hidden } = useBalanceVisibility();
@@ -423,7 +424,7 @@ export function PaymentCycleReport({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/agent/fx-cycle-report', {
+      const res = await fetch(apiUrl('/api/agent/fx-cycle-report'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

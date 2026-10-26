@@ -47,6 +47,7 @@ import {
   type RecordActivityParams,
 } from '@diversifi/shared/src/modules/rewards/streak/internal/activity';
 import { computeNextLocalStreak } from '@diversifi/shared/src/modules/rewards/streak/internal/local-fallback';
+import { apiUrl } from '@/lib/api-url';
 
 const INITIAL_STATE: StreakState = {
   streak: null,
@@ -172,7 +173,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
 
       try {
         const response = await fetchWithTimeout(
-          `/api/streaks/${address}`,
+          apiUrl(`/api/streaks/${address}`),
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -313,7 +314,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
     setState((prev) => ({ ...prev, isLoading: true }));
     try {
       await fetchWithTimeout(
-        `/api/streaks/${address}`,
+        apiUrl(`/api/streaks/${address}`),
         { method: 'DELETE' },
         STREAK_FETCH_TIMEOUT_MS,
       );

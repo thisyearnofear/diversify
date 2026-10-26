@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useCurrencyPerformance } from './use-currency-performance';
 import type { MarketMomentum } from '@diversifi/shared/src/utils/market-momentum-service';
+import { apiUrl } from '@/lib/api-url';
 
 /**
  * useNetworkActivity - Adaptive Behavioral & Social Proof Hook
@@ -44,7 +45,7 @@ export function useNetworkActivity() {
     useEffect(() => {
         let cancelled = false;
 
-        fetch('/api/finance/momentum')
+        fetch(apiUrl('/api/finance/momentum'))
             .then(async (response) => {
                 if (!response.ok) throw new Error(`Momentum API error: ${response.status}`);
                 return response.json();

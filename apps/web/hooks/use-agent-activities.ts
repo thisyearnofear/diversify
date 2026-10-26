@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AgentActivity } from "./agent-types";
+import { apiUrl } from '@/lib/api-url';
 
 const ACTIVITY_STORAGE_KEY = "diversifi-agent-activities";
-const ACTIVITY_API_PATH = "/api/agent/activities";
+const ACTIVITY_API_PATH = apiUrl("/api/agent/activities");
 
 const normalizeActivities = (items: AgentActivity[]): AgentActivity[] => {
   return items.filter((activity) =>

@@ -5,6 +5,7 @@ import {
   CURRENCY_TO_COUNTRY,
   getFallbackByRegion
 } from '../constants/inflation';
+import { apiUrl } from '@/lib/api-url';
 
 // Types
 export interface InflationData {
@@ -84,7 +85,7 @@ export function useInflationData() {
 
         // Browser code must use the same-origin proxy: direct IMF requests are
         // blocked in production by the provider's CORS policy.
-        const response = await fetch('/api/inflation');
+        const response = await fetch(apiUrl('/api/inflation'));
         if (!response.ok) throw new Error(`Inflation API error: ${response.status}`);
         const improvedData = await response.json();
 

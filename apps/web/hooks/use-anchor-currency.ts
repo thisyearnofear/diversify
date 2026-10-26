@@ -8,6 +8,7 @@ import {
   resolveAnchorCurrency,
   type AnchorFx,
 } from "@/lib/anchor-currency";
+import { apiUrl } from '@/lib/api-url';
 
 /**
  * Live USD→anchor rate from /api/exchange-rates; the fallback table only
@@ -29,7 +30,7 @@ export function useAnchorFx(currency: Exposure): AnchorFx | null {
       const rate = fallbackUsdRate(currency);
       if (!cancelled) setFx(rate ? { rate, source: "fallback" } : null);
     };
-    fetch(`/api/exchange-rates?from=USD&to=${currency}`)
+    fetch(apiUrl(`/api/exchange-rates?from=USD&to=${currency}`))
       .then((res) => (res.ok ? res.json() : null))
       .then((body: { rate?: number; date?: string } | null) => {
         if (cancelled) return;

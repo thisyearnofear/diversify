@@ -17,6 +17,7 @@ import {
   SelfQRcodeWrapper,
   type SelfApp,
 } from "@selfxyz/qrcode";
+import { apiUrl } from '@/lib/api-url';
 
 const REGISTRY_MAINNET = "0xaC3DF9ABf80d0F5c020C06B04Cced27763355944";
 const REGISTRY_TESTNET = "0x043DaCac8b0771DD5b444bCC88f2f8BBDBEdd379";
@@ -53,7 +54,7 @@ export function SelfAgentRegistration({
       try {
         // The signing + payload building uses node:crypto (server-only).
         // Call the API route to get the signed userDefinedData.
-        const res = await fetch("/api/agent/self-register-challenge", {
+        const res = await fetch(apiUrl("/api/agent/self-register-challenge"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

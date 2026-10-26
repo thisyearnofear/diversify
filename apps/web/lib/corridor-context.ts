@@ -12,6 +12,7 @@ import {
   type CurrencyRiskEntry,
 } from '@/constants/currency-risk';
 import { REHEARSAL_SIGNAL_ACTION, REHEARSAL_SOURCE_HOST } from '@/lib/macro-rehearsal';
+import { apiUrl } from '@/lib/api-url';
 
 /** Token symbol → ISO fiat code it mirrors. Crypto assets and UBI tokens
  *  have no fiat mirror — absent on purpose. */
@@ -342,7 +343,7 @@ export async function fetchLiveCurrencyRisk(
   if (!code) return null;
   try {
     const res = await fetch(
-      `/api/currency-risk/live?currency=${encodeURIComponent(code)}`,
+      apiUrl(`/api/currency-risk/live?currency=${encodeURIComponent(code)}`),
     );
     if (!res.ok) return null;
     const data = await res.json();

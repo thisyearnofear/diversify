@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CurrencyNewsItem } from '@/lib/currency-news';
+import { apiUrl } from '@/lib/api-url';
 
 // Session-scoped: the route is cached at the edge too, but a re-opened
 // inspector shouldn't refetch or flash empty.
@@ -13,7 +14,7 @@ export function useCurrencyNews(code: string | null): CurrencyNewsItem[] {
   useEffect(() => {
     if (!code || cache.has(code)) return;
     const ctrl = new AbortController();
-    fetch(`/api/agent/currency-news?code=${encodeURIComponent(code)}`, { signal: ctrl.signal })
+    fetch(apiUrl(`/api/agent/currency-news?code=${encodeURIComponent(code)}`), { signal: ctrl.signal })
       .then((r) => (r.ok ? r.json() : null))
       .then((body: { items?: CurrencyNewsItem[] } | null) => {
         const items = Array.isArray(body?.items) ? body.items : [];

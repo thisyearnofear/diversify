@@ -11,6 +11,7 @@
 import { useState, useEffect, useCallback } from "react";
 // Deep leaf import — NOT the barrel — keeps the AI/swap/ethers stack out of first-load.
 import { fetchWithTimeout } from "@diversifi/shared/src/utils/promise-utils";
+import { apiUrl } from '@/lib/api-url';
 
 interface PriceData {
     symbol: string;
@@ -52,7 +53,7 @@ export function useEmergingMarketsPrices(
             setError(null);
 
             const response = await fetchWithTimeout(
-                "/api/emerging-markets/prices",
+                apiUrl("/api/emerging-markets/prices"),
                 {},
                 FETCH_TIMEOUT_MS
             );

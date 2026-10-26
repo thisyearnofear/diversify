@@ -14,6 +14,7 @@ import { NETWORKS } from '../config';
 // Deep leaf import — NOT the barrel — keeps the timeout helper available
 // without dragging the AI/swap/ethers stack into first-load.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { apiUrl } from '@/lib/api-url';
 
 // The Arc rail follows the settlement env: 5042 on mainnet, 5042002 on testnet.
 const ARC_CHAIN_ID = process.env.NEXT_PUBLIC_SETTLEMENT_ENV === 'mainnet'
@@ -42,7 +43,7 @@ export function useArcBalance(): ArcBalanceState {
         setLoading(true);
         try {
             const res = await fetchWithTimeout(
-              `/api/agent/arc-balance?address=${address}`,
+              apiUrl(`/api/agent/arc-balance?address=${address}`),
               {},
               ARC_BALANCE_TIMEOUT_MS,
             );

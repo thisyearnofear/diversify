@@ -18,6 +18,7 @@ import { PEER_BRACKETS_FALLBACK } from '@/lib/peer-brackets';
 // fall back to hardcoded brackets on failure, so the bound is just to
 // prevent the request itself from hanging.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { apiUrl } from '@/lib/api-url';
 
 export interface BracketEntry {
     minRatio: number;
@@ -51,7 +52,7 @@ export function usePeerStableRatio(): UsePeerStableRatioResult {
         async function fetchBrackets() {
             try {
                 const res = await fetchWithTimeout(
-                    '/api/metrics/peer-stable-ratio',
+                    apiUrl('/api/metrics/peer-stable-ratio'),
                     {
                         method: 'GET',
                         headers: { Accept: 'application/json' },

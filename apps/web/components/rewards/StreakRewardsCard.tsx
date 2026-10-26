@@ -16,6 +16,7 @@ import { InsightCard } from '../shared/TabComponents';
 import { useStreakRewards } from '../../hooks/use-streak-rewards';
 import { useClaimFlowContext } from '../../hooks/claim-flow-context';
 import { useWalletContext } from '../wallet/WalletProvider';
+import { apiUrl } from '@/lib/api-url';
 
 const DISMISSED_KEY = 'diversifi_streak_dismissed';
 
@@ -317,7 +318,7 @@ export function RewardsStats({ className = '' }: { className?: string }) {
   React.useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('/api/streaks/stats');
+        const response = await fetch(apiUrl('/api/streaks/stats'));
         if (response.ok) {
           const data = await response.json();
           setStats(data);

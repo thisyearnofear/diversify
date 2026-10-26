@@ -19,8 +19,9 @@
  */
 import { useCallback, useEffect, useState } from "react";
 import { getCachedWalletAuth } from "@/lib/wallet-auth";
+import { apiUrl } from '@/lib/api-url';
 
-const API_PATH = "/api/agent/business/graduation-signals";
+const API_PATH = apiUrl("/api/agent/business/graduation-signals");
 // Per-mount request budget: errors must not cascade into infinite retries.
 const MAX_ATTEMPTS_PER_MOUNT = 2;
 // Don't refetch more than once per minute even on a noisy parent re-render.

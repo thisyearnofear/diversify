@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWalletContext } from "../wallet/WalletProvider";
 import { OnrampModal } from "./OnrampModal";
+import { apiUrl } from '@/lib/api-url';
 
 export interface GuardarianOnrampProps {
     mode?: "buy" | "sell";
@@ -61,7 +62,7 @@ export function GuardarianOnramp({
         if (chainId) params.set("chainId", String(chainId));
 
         let cancelled = false;
-        fetch(`/api/onramp/guardarian-url?${params}`)
+        fetch(apiUrl(`/api/onramp/guardarian-url?${params}`))
             .then(async (r) => {
                 if (cancelled) return;
                 if (r.status === 501) { setUnavailable(true); return; }

@@ -11,6 +11,7 @@ import { useCallback } from 'react';
 // Deep leaf import — NOT the barrel — keeps the timeout helper available
 // without dragging the AI/swap/ethers stack into first-load.
 import { fetchWithTimeout } from '@diversifi/shared/src/utils/promise-utils';
+import { apiUrl } from '@/lib/api-url';
 
 // Bound social-resolve & social-transfer: a wedged resolution server
 // would otherwise freeze the "send to phone" flow indefinitely.
@@ -29,7 +30,7 @@ export function useSocialResolve() {
   ): Promise<string | null> => {
     try {
       const response = await fetchWithTimeout(
-        '/api/agent/social-resolve',
+        apiUrl('/api/agent/social-resolve'),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -62,7 +63,7 @@ export function useSocialResolve() {
   }): Promise<SocialResolveResult> => {
     try {
       const response = await fetchWithTimeout(
-        '/api/agent/social-transfer',
+        apiUrl('/api/agent/social-transfer'),
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

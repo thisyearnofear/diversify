@@ -36,6 +36,7 @@ import {
   MIN_AUTO_SAVER_FUNDS_USD,
   SUPPORTED_AUTO_SAVER_CHAINS,
 } from "../constants/guardian-limits";
+import { apiUrl } from '@/lib/api-url';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "";
 
@@ -102,7 +103,7 @@ export function useGuardianInstrument({
 
   useEffect(() => {
     if (!address) return;
-    fetch(`/api/agent/automation?userAddress=${encodeURIComponent(address)}`)
+    fetch(apiUrl(`/api/agent/automation?userAddress=${encodeURIComponent(address)}`))
       .then(res => res.json())
       .then(data => {
         if (data?.preferences?.auth0RefreshToken) {

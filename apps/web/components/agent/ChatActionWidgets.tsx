@@ -11,6 +11,7 @@ import { motion } from "framer-motion";
 // shared AI/swap/ethers stack into the chunk.
 import { CELO_TOKEN_ADDRESS_BY_SYMBOL } from "@diversifi/shared/src/config/celo-tokens";
 import { useWalletContext } from "../wallet/WalletProvider";
+import { apiUrl } from '@/lib/api-url';
 
 export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplete: (result: any) => void }) => {
   const [status, setStatus] = useState<'idle' | 'executing' | 'success' | 'error'>('idle');
@@ -41,7 +42,7 @@ export const RwaActionWidget = ({ action, onComplete }: { action: any, onComplet
       const { getWalletAuthHeaders } = await import("@/lib/wallet-auth");
       const authHeaders = (await getWalletAuthHeaders(userAddress, signMessage)) || {};
 
-      const response = await fetch('/api/vault/rebalance', {
+      const response = await fetch(apiUrl('/api/vault/rebalance'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
