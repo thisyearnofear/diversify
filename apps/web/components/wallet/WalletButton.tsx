@@ -12,6 +12,7 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { useDismissibleLayer } from '@/hooks/use-dismissible-layer';
 import { trackFunnelEvent } from '@/lib/analytics';
 import { useNavigationOptional } from '@/context/app/NavigationContext';
+import { useStellarSession } from '@/hooks/use-stellar-session';
 import { stellarTestnetEnabled } from '@diversifi/shared/src/config/stellar';
 
 // FarCaster Mini App supported chains (as of 2025)
@@ -161,16 +162,22 @@ export default function WalletButton({
   };
 
   const copyAddress = () => {
-    if (address) {
-      navigator.clipboard.writeText(address);
+    const target = address ?? stellarAccount?.account;
+    if (target) {
+      navigator.clipboard.writeText(target);
       showToast("Address copied to clipboard!", "success");
       setShowDropdown(false);
     }
   };
 
+  // Disconnect-all: EVM session and Stellar session are torn down together —
+  // the user expects one control to mean "wallet off". Stellar pending
+  // records stay untouched (they key to the prepared account, not the
+  // session) so a submitted-but-unseen tx can still be checked later.
   const handleDisconnect = async () => {
     try {
-      await disconnect();
+      if (address) await disconnect();
+      stellarSession.disconnect();
       showToast("Wallet disconnected", "success");
       setShowDropdown(false);
     } catch (error) {
@@ -182,6 +189,8 @@ export default function WalletButton({
   // Network helpers — Stellar mode is a separate account family surfaced
   // through Exchange's exchangeNetwork selection, not an EVM chain switch.
   const navigation = useNavigationOptional();
+  const stellarSession = useStellarSession();
+  const stellarAccount = stellarSession.account;
   const stellarMode = navigation?.exchangeNetwork === 'stellar:testnet';
   const stellarOn = stellarTestnetEnabled();
   const isTestnet = stellarMode || isTestnetChain(chainId);
@@ -201,7 +210,7 @@ export default function WalletButton({
     if (stellarOn && !isTestnetChain(chainId)) {
       navigation?.setExchangeNetwork('stellar:testnet');
       navigation?.setActiveTab('exchange');
-      showToast("Stellar testnet — connect Freighter in Exchange", "success");
+      showToast("Stellar testnet — connect a Stellar wallet in Exchange", "success");
       setShowDropdown(false);
       return;
     }
@@ -268,20 +277,22 @@ export default function WalletButton({
     }
   };
 
-  // 1. Connected State
-  if (address) {
+  // 1. Connected State — either family: an EVM wallet or a Stellar session.
+  // Stellar-only (no EVM address) still reads connected and identifies as
+  // the Stellar account whether or not Exchange is in stellar mode.
+  const stellarShowing = stellarMode || Boolean(!address && stellarAccount);
+  if (address || stellarAccount) {
     // Determine display text based on connection type
     const privyEmail = isPrivyUser && privy.user?.email
       ? (typeof privy.user.email === 'string' ? privy.user.email : privy.user.email.address)
       : null;
 
-    const stellarAccount = navigation?.stellarAccount ?? null;
-    const displayText = stellarMode
+    const displayText = stellarShowing
       ? (stellarAccount ? `${stellarAccount.account.slice(0, 4)}…${stellarAccount.account.slice(-4)}` : 'Stellar')
-      : privyEmail || formatAddress(address);
-    const displayIcon = stellarMode ? '✦' : (privyEmail ? '📧' : '🔗');
-    const chainIcon = stellarMode ? '✦' : (chainId ? CHAIN_METADATA[chainId]?.icon : undefined);
-    const chainShort = stellarMode ? 'Stellar' : (chainId ? CHAIN_SHORT_NAME[chainId] ?? networkName : undefined);
+      : privyEmail || formatAddress(address!);
+    const displayIcon = stellarShowing ? '✦' : (privyEmail ? '📧' : '🔗');
+    const chainIcon = stellarShowing ? '✦' : (chainId ? CHAIN_METADATA[chainId]?.icon : undefined);
+    const chainShort = stellarShowing ? 'Stellar' : (chainId ? CHAIN_SHORT_NAME[chainId] ?? networkName : undefined);
 
     return (
       <div className="relative" ref={wrapperRef}>
@@ -346,25 +357,31 @@ export default function WalletButton({
             }`}
           >
             <div className="py-1">
-              {/* Network Status with Chain Selector */}
+              {/* Network Status with Chain Selector — the selector itself is
+                  EVM-only; a Stellar-only session still gets the network read
+                  and the testnet/mainnet toggle, just no chain list. */}
               <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
-                {!showChainSelector ? (
+                {!showChainSelector || !address ? (
                   <>
                     <div className="flex items-center justify-between mb-2">
                       <button
-                        onClick={() => setShowChainSelector(true)}
-                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-tap py-1 rounded hover:brightness-95 dark:hover:brightness-110 transition-[filter] ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'}`}
+                        onClick={() => address && setShowChainSelector(true)}
+                        disabled={!address}
+                        className={`flex items-center gap-1 text-xs font-black uppercase tracking-wider px-2 min-h-tap py-1 rounded transition-[filter] ${isTestnet ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'} ${address ? 'hover:brightness-95 dark:hover:brightness-110' : 'cursor-default'}`}
                       >
                         {isTestnet ? 'TESTNET' : 'MAINNET'}
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
+                        {address && (
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                          </svg>
+                        )}
                       </button>
                       <button
-                        onClick={() => setShowChainSelector(true)}
-                        className="text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        onClick={() => address && setShowChainSelector(true)}
+                        disabled={!address}
+                        className={`text-xs font-bold ${address ? 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white' : 'text-gray-600 dark:text-gray-400 cursor-default'} transition-colors`}
                       >
-                        {networkName}
+                        {stellarShowing ? 'Stellar' : networkName}
                       </button>
                     </div>
                     <button
@@ -684,7 +701,7 @@ function ChainSelector({ chainId, isFarcaster, onSelectChain, onClose }: ChainSe
           <span>✦</span>
           <div className="flex-1 text-left">
             <div className="font-medium">Stellar</div>
-            <div className="text-xs opacity-70">XLM → USDC · Freighter wallet</div>
+            <div className="text-xs opacity-70">XLM → USDC · Stellar wallet</div>
           </div>
           {stellarMode && <span>✓</span>}
         </button>

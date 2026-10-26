@@ -1,7 +1,7 @@
 /**
  * StellarModePanel — what a surface renders while exchangeNetwork is
  * 'stellar:testnet'. The EVM object (portfolio ring, risk theater) stays
- * off-screen; this panel acknowledges the mode honestly — the real Freighter
+ * off-screen; this panel acknowledges the mode honestly — the real wallet
  * account and balances if connected, the hand-off to Exchange if not.
  * Never shows fabricated holdings.
  */
@@ -9,6 +9,7 @@
 import React, { useCallback, useState } from "react";
 import { useNavigationOptional } from "@/context/app/NavigationContext";
 import { useAIConversationOptional } from "@/context/AIConversationContext";
+import { useStellarSession } from "@/hooks/use-stellar-session";
 import { formatAmountUnits } from "@diversifi/shared/src/types/stellar";
 import { ASK_GUARDIAN_LABEL } from "@/constants/guardian-copy";
 import { fundWithFriendbot } from "@/lib/stellar/friendbot";
@@ -31,8 +32,18 @@ function shortAccount(account: string): string {
 export function StellarModePanel({ surface }: { surface: "home" | "shield" }) {
   const navigation = useNavigationOptional();
   const conversation = useAIConversationOptional();
-  const account = navigation?.stellarAccount ?? null;
+  const session = useStellarSession();
+  const account = session.account;
   const copy = SURFACE_COPY[surface] ?? SURFACE_COPY.home;
+  const [connecting, setConnecting] = useState(false);
+  const connect = useCallback(async () => {
+    setConnecting(true);
+    try {
+      await session.connect();
+    } finally {
+      setConnecting(false);
+    }
+  }, [session]);
 
   // A connected account with no XLM is one action away — friendbot funds
   // any testnet address; the user should never have to leave to find it.
@@ -89,7 +100,18 @@ export function StellarModePanel({ surface }: { surface: "home" | "shield" }) {
           )}
         </div>
       ) : (
-        <p className="mt-3 text-sm text-ink-muted">Connect Freighter in Exchange to see the account here.</p>
+        <p className="mt-3 text-sm text-ink-muted">
+          <button
+            type="button"
+            data-testid="stellar-panel-connect"
+            onClick={() => void connect()}
+            disabled={connecting}
+            className="text-blue-600 font-semibold hover:underline dark:text-blue-400 disabled:opacity-50"
+          >
+            {connecting ? "Opening the wallet picker…" : "Connect a Stellar wallet"}
+          </button>{" "}
+          to see the account here.
+        </p>
       )}
       <p className="mt-4 text-sm text-ink-muted">{copy.body}</p>
       <div className="mt-6 flex flex-col items-center gap-3">

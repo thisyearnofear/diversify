@@ -254,13 +254,25 @@ not coverage for the EVM routes.
 Flag off by default (`NEXT_PUBLIC_STELLAR_TESTNET=true` reveals the Exchange
 network switch). The only supported action is own-account **XLM → Circle
 testnet USDC** plus the USDC trustline setup that precedes it. Sequence:
-explicit Freighter connect → if the account lacks the pinned USDC line,
+explicit connect through the wallet picker (StellarWalletsKit) → if the
+account lacks the pinned USDC line,
 review a one-op `changeTrust` (int64-max limit, reserve shown as reserved,
-not spent) → separate Review exchange → Sign in Freighter → Check
+not spent) → separate Review exchange → Sign in your wallet → Check
 transaction → receipt shows the ledgered actual output and charged fee,
-never the quote. Reload recovery: the reviewed prepared action persists in
-`diversifi.stellar.pending.v1`; a reload only looks the hash up, never
-re-signs or resubmits. Ambiguous submit errors stay `unknown`/pending;
+never the quote. The connected account lives in the `lib/stellar/session`
+module store (every surface reads the same session; `diversifi.stellar.session`
+is the remembered-session marker). A reload with a remembered session
+restores silently via the kit's `fetchAddress` on the remembered module —
+silent only for wallets that can answer without prompting
+(`SILENT_RESTORE_WALLETS`: freighter/lobstr/hana); pairing/modal wallets
+reconnect by explicit choice. Reload recovery: the reviewed prepared action
+persists in `diversifi.stellar.pending.v1` and is adopted only once the
+session of the account it was prepared for is live — a foreign or absent
+session leaves it untouched, and the lookup only reads the hash, never
+re-signs or resubmits. Disconnect is one control for both wallet families:
+it clears the session marker and the kit's persisted keys
+(`@StellarWalletsKit/*`) so logout sticks even for wallets whose own
+connection the app can't revoke; pending records survive a logout. Ambiguous submit errors stay `unknown`/pending;
 only structured Horizon `result_codes` fail definitively. A 404 hash is
 declared `expired_unseen` only after the latest closed ledger has passed
 the proposal expiry plus a 60s margin and a second fresh lookup still
@@ -876,7 +888,10 @@ Owner-only tools take `walletAuth { message, signature }` — the signed
   `@stellar/freighter-api`) remains as the degraded fallback when the kit
   chunk can't load. With `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` set, the
   WalletConnect module joins the picker — mobile wallets pair via QR
-  (`stellar:testnet` only).
+  (`stellar:testnet` only). Both bridges implement `restore()`
+  (prompt-free session re-adoption; the kit path skips WalletConnect and
+  non-silent modules) and `disconnect()` (kit-side teardown plus clearing
+  the kit's persisted localStorage keys).
 - `smart-account-kit` is a devDependency (0.8.0) and ESM-only — demo scripts
   are `.mts`. Build toolchain needs
   `RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin` on this machine.

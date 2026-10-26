@@ -25,11 +25,33 @@ export type WalletSession = {
 export type WalletBridge = {
   isAvailable(): Promise<boolean>;
   connect(): Promise<{ address: string } | { error: string }>;
-  /** Read-only. Never prompts; reports the address Freighter already exposes. */
+  /** Read-only. Never prompts; reports the address the wallet already exposes. */
   currentAccount(): Promise<{ address: string } | { error: string }>;
+  /**
+   * Silent session restore. Never prompts: adopts a remembered wallet session
+   * only when the wallet can be asked for its address without any user
+   * interaction, and reports an error otherwise ("reconnect by choice").
+   */
+  restore(): Promise<{ address: string } | { error: string }>;
+  /** Tears the wallet-side session down so a later restore can't re-adopt it. */
+  disconnect(): Promise<void>;
   network(): Promise<{ networkPassphrase: string } | { error: string }>;
   sign(xdr: string, address: string): Promise<{ signedTxXdr: string; signerAddress: string } | { error: string; rejected: boolean }>;
 };
+
+/**
+ * Wallets whose address can be read WITHOUT any user interaction. Rabet
+ * (connect popup), xBull (bridge connect), Albedo (web popup) and
+ * WalletConnect (pairing modal) all prompt — a remembered session with one of
+ * those is re-established by explicit choice only.
+ */
+const SILENT_RESTORE_WALLETS = new Set(["freighter", "lobstr", "hana"]);
+
+// The kit's own persisted session markers (its `LocalStorageKeys`). Cleared on
+// disconnect even when the kit chunk is unavailable — otherwise the next
+// silent restore would re-adopt the wallet the user just dropped.
+const KIT_ACTIVE_ADDRESS_KEY = "@StellarWalletsKit/activeAddress";
+const KIT_SELECTED_MODULE_ID_KEY = "@StellarWalletsKit/selectedModuleId";
 
 type FreighterModule = typeof import("@stellar/freighter-api");
 type WalletsKitModule = typeof import("@creit.tech/stellar-wallets-kit");
@@ -136,6 +158,43 @@ export function createWalletsKitBridge(): WalletBridge {
         return { error: "No connected wallet session." };
       }
     },
+    async restore() {
+      try {
+        const { StellarWalletsKit } = await load();
+        // `selectedModule` throws when no wallet is remembered — quiet.
+        const remembered = StellarWalletsKit.selectedModule as { productId?: string };
+        if (!SILENT_RESTORE_WALLETS.has(remembered.productId ?? "")) {
+          return { error: "This wallet needs an explicit reconnect." };
+        }
+        // `getAddress` reads kit memory (possibly stale); `fetchAddress` asks
+        // the wallet itself and updates it — silent for the wallets above.
+        const { address } = await StellarWalletsKit.fetchAddress();
+        if (!address || !StrKey.isValidEd25519PublicKey(address)) {
+          return { error: "The wallet did not return a classic account." };
+        }
+        return { address };
+      } catch {
+        return { error: "No connected wallet session." };
+      }
+    },
+    async disconnect() {
+      // The remembered selection must go first and unconditionally — the kit
+      // chunk may be unavailable exactly when the user is logging out.
+      try {
+        window.localStorage.removeItem(KIT_ACTIVE_ADDRESS_KEY);
+        window.localStorage.removeItem(KIT_SELECTED_MODULE_ID_KEY);
+      } catch {
+        // Storage unavailable — the kit reset below may still clear it.
+      }
+      if (!kitReady) return; // no in-page kit session to tear down
+      try {
+        const { StellarWalletsKit } = await ensureKit();
+        // Module-side teardown (WalletConnect signClient) + kit state reset.
+        await StellarWalletsKit.disconnect();
+      } catch {
+        // Local session is already gone.
+      }
+    },
     async network() {
       try {
         const { StellarWalletsKit } = await load();
@@ -165,6 +224,19 @@ export function createWalletsKitBridge(): WalletBridge {
   };
 }
 
+async function freighterAccount(): Promise<{ address: string } | { error: string }> {
+  try {
+    const { getAddress } = await freighter();
+    const result = await getAddress();
+    if (result.error || !result.address || !StrKey.isValidEd25519PublicKey(result.address)) {
+      return { error: result.error?.message ?? "Freighter did not return a classic account." };
+    }
+    return { address: result.address };
+  } catch {
+    return { error: "Freighter is not available in this browser." };
+  }
+}
+
 export function createFreighterBridge(): WalletBridge {
   return {
     async isAvailable() {
@@ -189,16 +261,15 @@ export function createFreighterBridge(): WalletBridge {
       }
     },
     async currentAccount() {
-      try {
-        const { getAddress } = await freighter();
-        const result = await getAddress();
-        if (result.error || !result.address || !StrKey.isValidEd25519PublicKey(result.address)) {
-          return { error: result.error?.message ?? "Freighter did not return a classic account." };
-        }
-        return { address: result.address };
-      } catch {
-        return { error: "Freighter is not available in this browser." };
-      }
+      return freighterAccount();
+    },
+    async restore() {
+      // Freighter's getAddress is already a silent read of the granted account.
+      return freighterAccount();
+    },
+    async disconnect() {
+      // Freighter keeps its own connection in the extension; the app simply
+      // forgets it (the session store clears its remembered marker).
     },
     async network() {
       try {

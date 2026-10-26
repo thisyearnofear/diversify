@@ -1,8 +1,10 @@
 /**
  * UI orchestration for the Stellar testnet exchange. All validation and
  * settlement live in `lib/stellar/adapter.ts` — this hook owns phases,
- * cancellation guards, and reload recovery. The adapter (and its SDK) are
- * dynamically imported so no Stellar code enters the EVM bundle.
+ * cancellation guards, and reload recovery. The wallet SESSION (which account
+ * is connected) lives in `lib/stellar/session` so it survives surface
+ * switches; this hook owns only the exchange flow. The adapter (and its SDK)
+ * are dynamically imported so no Stellar code enters the EVM bundle.
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -16,8 +18,15 @@ import {
   type StellarSettlement,
 } from "@diversifi/shared/src/types/stellar";
 import type { StellarTestnetAdapter } from "@/lib/stellar/adapter";
-import { clearPendingStellar, readPendingStellar } from "@/lib/stellar/pending";
-import { useNavigationOptional } from "@/context/app/NavigationContext";
+import { clearPendingStellar, readPendingStellar, type PendingStellarAction } from "@/lib/stellar/pending";
+import {
+  connectStellarSession,
+  disconnectStellarSession,
+  dropStellarAccount,
+  getStellarAdapter,
+  refreshStellarSession,
+} from "@/lib/stellar/session";
+import { useStellarSession } from "@/hooks/use-stellar-session";
 
 export type StellarExchangePhase =
   | "connect"
@@ -27,6 +36,11 @@ export type StellarExchangePhase =
   | "signing"
   | "pending"
   | "receipt";
+
+/** The account a prepared action belongs to — pending records key to it. */
+function preparedAccountOf(prepared: PreparedStellarAction): string {
+  return prepared.kind === "transaction" ? prepared.quote.account : prepared.account;
+}
 
 export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): {
   phase: StellarExchangePhase;
@@ -52,7 +66,10 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   disconnect(): void;
 } {
   const [phase, setPhase] = useState<StellarExchangePhase>("connect");
-  const [account, setAccount] = useState<StellarAccountState | null>(null);
+  // The session store is the single owner of the connected account — every
+  // surface (wallet button, mode panel, exchange) reads the same session.
+  const session = useStellarSession();
+  const account = session.account;
   const [amount, setAmountState] = useState("");
   const [prepared, setPrepared] = useState<PreparedStellarAction | null>(null);
   const [settlement, setSettlement] = useState<StellarSettlement | null>(null);
@@ -61,7 +78,6 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   const [busy, setBusy] = useState(false);
   const [reviewExpired, setReviewExpired] = useState(false);
 
-  const adapterRef = useRef<StellarTestnetAdapter | null>(null);
   // Synchronous gates — never rely on renders for mutation safety.
   const busyRef = useRef(false);
   const phaseRef = useRef<StellarExchangePhase>("connect");
@@ -82,14 +98,6 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   enabledRef.current = enabled;
   const accountRef = useRef(account);
   accountRef.current = account;
-  // Publish the live Freighter account so surfaces outside Exchange (wallet
-  // button, Home, Shield) can render honest Stellar state. Cleared on
-  // unmount — an account only exists while Exchange holds it.
-  const navigation = useNavigationOptional();
-  useEffect(() => {
-    navigation?.setStellarAccount(account);
-    return () => navigation?.setStellarAccount(null);
-  }, [navigation, account]);
   const amountRef = useRef(amount);
   amountRef.current = amount;
   const preparedRef = useRef(prepared);
@@ -104,21 +112,17 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   const live = useCallback((generation: number) =>
     mountedRef.current && enabledRef.current && generationRef.current === generation, []);
 
-  const getAdapter = useCallback(async (): Promise<StellarTestnetAdapter | null> => {
-    if (!enabled) return null;
-    if (!adapterRef.current) {
-      const adapterModule = await import("@/lib/stellar/adapter");
-      adapterRef.current = new adapterModule.StellarTestnetAdapter();
-    }
-    return adapterRef.current;
-  }, [enabled]);
-
   const asError = useCallback((cause: unknown): StellarFailure => ({
     ok: false,
     code: "network_error",
     message: cause instanceof Error ? cause.message : "Something went wrong reading Stellar testnet.",
     retry: "lookup",
   }), []);
+
+  const adapterOf = useCallback(async (): Promise<StellarTestnetAdapter | null> => {
+    if (!enabled) return null;
+    return getStellarAdapter();
+  }, [enabled]);
 
   /** Single transition owner for recovery, Check status, and submit. */
   const applySettlement = useCallback((found: StellarSettlement) => {
@@ -164,21 +168,30 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     setPhaseSync("pending");
   }, [setPhaseSync, setPreparedSync]);
 
+  /**
+   * Adopt a durable pending record into the flow — ONLY when it belongs to the
+   * connected account. A stale record never surfaces as another account's
+   * transaction; it survives in storage until its owner resolves it.
+   */
+  const adoptPending = useCallback((stored: PendingStellarAction | null): boolean => {
+    if (!stored || preparedAccountOf(stored.prepared) !== accountRef.current?.account) return false;
+    setPreparedSync(stored.prepared);
+    unresolvedRef.current = true;
+    setPhaseSync("pending");
+    return true;
+  }, [setPreparedSync, setPhaseSync]);
+
   const refresh = useCallback(async () => {
     const generation = generationRef.current;
-    const address = accountRef.current?.account;
-    if (!address || !live(generation)) return;
+    if (!accountRef.current || !live(generation)) return;
     try {
-      const adapter = await getAdapter();
-      if (!adapter || !live(generation)) return;
-      const state = await adapter.getBalances(address);
-      if (!live(generation) || accountRef.current?.account !== address) return;
-      if (state.ok) setAccount(state.value);
-      else if (phaseRef.current !== "receipt") setError(state);
+      const state = await refreshStellarSession();
+      if (!live(generation)) return;
+      if (!state.ok && phaseRef.current !== "receipt") setError(state);
     } catch (cause) {
       if (live(generation)) setError(asError(cause));
     }
-  }, [getAdapter, live, asError]);
+  }, [live, asError]);
 
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
@@ -211,24 +224,72 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     };
   }, []);
 
-  // Recovery on mount: a persisted prepared action means look up, never
-  // sign or resubmit. Cryptographically invalid records surface as an
-  // error with an explicit clear action — never rendered as verified.
+  // The flow follows the session: a session that appears adopts the connect
+  // stage; a session that goes away (header logout, wallet revoked) drops the
+  // flow with it. A flow operation that already dropped to "connect" in the
+  // same batch (the sign-failure reconnect path) keeps its error message. The
+  // durable pending record itself always survives in storage.
+  const sessionAccountAddress = account?.account ?? null;
+  const hadSessionAddressRef = useRef<string | null>(sessionAccountAddress);
   useEffect(() => {
-    if (!enabled) return;
+    const previous = hadSessionAddressRef.current;
+    hadSessionAddressRef.current = sessionAccountAddress;
+    if (sessionAccountAddress) {
+      if (phaseRef.current === "connect" && !unresolvedRef.current && !busyRef.current) {
+        // A durable pending record owned by this account outranks "ready" —
+        // leave the phase at connect so the recovery effect below (same
+        // commit, next in order) adopts it and starts the lookup.
+        const stored = readPendingStellar();
+        if (!stored || preparedAccountOf(stored.prepared) !== sessionAccountAddress) {
+          setPhaseSync("ready");
+        }
+      }
+      return;
+    }
+    if (previous === null) return;
+    invalidate();
+    if (phaseRef.current === "connect" && !unresolvedRef.current) return;
+    unresolvedRef.current = false;
+    setCanDiscardInvalidPending(false);
+    setPreparedSync(null);
+    setSettlement(null);
+    setError(null);
+    setNotice(null);
+    amountRef.current = "";
+    setAmountState("");
+    setPhaseSync("connect");
+  }, [sessionAccountAddress, invalidate, setPhaseSync, setPreparedSync]);
+
+  /**
+   * Adopt an owned pending record and look it up — shared by the recovery
+   * effect (mount / session-appears) and the post-connect path (where the
+   * busy flag is still held, so the effect can't fire). Never signs or
+   * resubmits; cryptographically invalid records surface as an error with an
+   * explicit clear action — never rendered as verified. Returns the busy
+   * release for the caller's invalidation path.
+   */
+  const startPendingRecovery = useCallback((stored: PendingStellarAction): (() => void) => {
     const generation = generationRef.current;
-    const pending = readPendingStellar();
-    if (!pending) return;
-    setPreparedSync(pending.prepared);
+    // The recovery owns the busy flag it raises and must hand it back even
+    // when it is abandoned mid-lookup (the account changed, the surface closed).
+    let raisedBusy = true;
+    const releaseBusy = () => {
+      if (raisedBusy) {
+        raisedBusy = false;
+        busyRef.current = false;
+        setBusy(false);
+      }
+    };
+    setPreparedSync(stored.prepared);
     unresolvedRef.current = true;
     setPhaseSync("pending");
     busyRef.current = true;
     setBusy(true);
     void (async () => {
       try {
-        const adapter = await getAdapter();
+        const adapter = await adapterOf();
         if (!adapter || !live(generation)) return;
-        const validated = await adapter.validatePrepared(pending.prepared);
+        const validated = await adapter.validatePrepared(stored.prepared);
         if (!live(generation)) return;
         if (!validated.ok) {
           // Only a structural/cryptographic mismatch at validate time makes
@@ -239,7 +300,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
           );
           return;
         }
-        const found = await adapter.getSettlement(pending.prepared.transactionHash, validated.value);
+        const found = await adapter.getSettlement(stored.prepared.transactionHash, validated.value);
         if (!live(generation)) return;
         if (found.ok) {
           applySettlement(found.value);
@@ -254,14 +315,26 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
       } catch (cause) {
         if (live(generation)) setError(asError(cause));
       } finally {
-        if (live(generation)) {
-          busyRef.current = false;
-          setBusy(false);
-        }
+        if (live(generation)) releaseBusy();
       }
     })();
-    return () => { generationRef.current += 1; };
-  }, [enabled, getAdapter, live, applySettlement, setPhaseSync, setPreparedSync, asError]);
+    return releaseBusy;
+  }, [adapterOf, live, asError, applySettlement, setPhaseSync, setPreparedSync]);
+
+  // Recovery on mount and whenever the owning account's session appears: a
+  // persisted prepared action means look up, never sign or resubmit.
+  useEffect(() => {
+    if (!enabled) return;
+    const pending = readPendingStellar();
+    if (!pending) return;
+    if (preparedAccountOf(pending.prepared) !== sessionAccountAddress) return;
+    if (unresolvedRef.current || busyRef.current || phaseRef.current !== "connect") return;
+    const releaseBusy = startPendingRecovery(pending);
+    return () => {
+      generationRef.current += 1;
+      releaseBusy();
+    };
+  }, [enabled, sessionAccountAddress, startPendingRecovery]);
 
   // Disabling the hook revokes in-flight continuations.
   useEffect(() => {
@@ -274,26 +347,18 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     setBusy(true);
     setError(null);
     const generation = generationRef.current;
+    let connectedAccount: string | null = null;
     try {
-      const adapter = await getAdapter();
-      if (!adapter || !live(generation)) return;
-      setAccount(null);
       setPreparedSync(null);
-      const session = await adapter.connect();
-      if (!live(generation)) return;
-      if (!session.ok) {
-        setError(session);
-        setAccount(null);
-        return;
-      }
-      const state = await adapter.getBalances(session.value.account);
+      // Opens the wallet picker and publishes the account to the shared
+      // session — the flow only owns the phase transition.
+      const state = await connectStellarSession();
       if (!live(generation)) return;
       if (!state.ok) {
         setError(state);
         return;
       }
-      setAccount(state.value);
-      setPhaseSync("ready");
+      connectedAccount = state.value.account;
     } catch (cause) {
       if (live(generation)) setError(asError(cause));
     } finally {
@@ -302,7 +367,17 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
         setBusy(false);
       }
     }
-  }, [getAdapter, live, asError, setPreparedSync, setPhaseSync]);
+    if (!connectedAccount || !live(generation)) return;
+    // The session-follow effect can't run while busy — the transition is
+    // decided here instead: an owned durable pending record is adopted and
+    // looked up immediately, never left invisible beside a fresh exchange.
+    const stored = readPendingStellar();
+    if (stored && preparedAccountOf(stored.prepared) === connectedAccount) {
+      startPendingRecovery(stored);
+    } else {
+      setPhaseSync("ready");
+    }
+  }, [live, asError, setPreparedSync, setPhaseSync, startPendingRecovery]);
 
   const setAmount = useCallback((value: string) => {
     if (!enabledRef.current || unresolvedRef.current) return; // pending/signing/receipt: input is immutable
@@ -328,7 +403,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     setPhaseSync("quoting");
     const generation = generationRef.current;
     try {
-      const adapter = await getAdapter();
+      const adapter = await adapterOf();
       if (!live(generation)) return;
       const address = account?.account;
       if (!adapter || !address || !amountRef.current.trim()) {
@@ -371,7 +446,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
         setBusy(false);
       }
     }
-  }, [getAdapter, account?.account, live, asError, setPhaseSync, setPreparedSync]);
+  }, [adapterOf, account?.account, live, asError, setPhaseSync, setPreparedSync]);
 
   const reviewTrustline = useCallback(async () => {
     if (!enabledRef.current || busyRef.current || unresolvedRef.current || phaseRef.current !== "ready") return;
@@ -381,7 +456,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     setPhaseSync("quoting");
     const generation = generationRef.current;
     try {
-      const adapter = await getAdapter();
+      const adapter = await adapterOf();
       if (!live(generation)) return;
       const address = account?.account;
       if (!adapter || !address) {
@@ -408,7 +483,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
         setBusy(false);
       }
     }
-  }, [getAdapter, account?.account, live, asError, setPhaseSync, setPreparedSync]);
+  }, [adapterOf, account?.account, live, asError, setPhaseSync, setPreparedSync]);
 
   const checkSettlement = useCallback(async () => {
     if (busyRef.current || phaseRef.current !== "pending") return;
@@ -418,7 +493,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     const generation = generationRef.current;
     const current = preparedRef.current;
     try {
-      const adapter = await getAdapter();
+      const adapter = await adapterOf();
       if (!adapter || !current || !live(generation)) return;
       const found = await adapter.getSettlement(current.transactionHash, current);
       if (!live(generation)) return;
@@ -438,10 +513,10 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
         setBusy(false);
       }
     }
-  }, [getAdapter, live, asError, applySettlement]);
+  }, [adapterOf, live, asError, applySettlement]);
 
   const signReviewed = useCallback(async () => {
-    if (!enabledRef.current || busyRef.current || phaseRef.current !== "review") return;
+    if (!enabledRef.current || busyRef.current || unresolvedRef.current || phaseRef.current !== "review") return;
     const current = preparedRef.current;
     if (!current) return;
     if (Date.parse(current.expiresAt) <= Date.now()
@@ -457,7 +532,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     setPhaseSync("signing");
     const generation = generationRef.current;
     try {
-      const adapter = await getAdapter();
+      const adapter = await adapterOf();
       if (!adapter || !live(generation)) return;
       const signed = await adapter.sign(current);
       if (!live(generation)) return; // unmounted or cancelled — never submit.
@@ -467,7 +542,10 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
           setPreparedSync(null);
           setPhaseSync("ready");
         } else if (signed.retry === "reconnect") {
-          setAccount(null);
+          // The wallet session went stale (account changed, network moved).
+          // Drop the account but keep the remembered session — the next load
+          // may silently restore it.
+          dropStellarAccount();
           setPreparedSync(null);
           setPhaseSync("connect");
         } else {
@@ -479,26 +557,22 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
       if (!live(generation)) return;
       if (!submitted.ok) {
         setError(submitted);
-        const stored = readPendingStellar();
-        // A submission that never posted leaves nothing to look up.
-        if (!stored) {
+        // A submission that never posted leaves nothing to look up. A stored
+        // record is adopted only when it belongs to the connected account.
+        if (!adoptPending(readPendingStellar())) {
           setPhaseSync("ready");
           setPreparedSync(null);
-          return;
         }
-        setPreparedSync(stored.prepared);
-        unresolvedRef.current = true;
-        setPhaseSync("pending");
         return;
       }
       applySettlement(submitted.value);
     } catch (cause) {
       if (live(generation)) {
         setError(asError(cause));
-        const stored = readPendingStellar();
-        unresolvedRef.current = Boolean(stored);
-        setPreparedSync(stored?.prepared ?? null);
-        setPhaseSync(stored ? "pending" : "ready");
+        if (!adoptPending(readPendingStellar())) {
+          setPreparedSync(null);
+          setPhaseSync("ready");
+        }
       }
     } finally {
       if (live(generation)) {
@@ -506,7 +580,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
         setBusy(false);
       }
     }
-  }, [getAdapter, live, asError, applySettlement, setPhaseSync, setPreparedSync]);
+  }, [adapterOf, live, asError, applySettlement, adoptPending, setPhaseSync, setPreparedSync]);
 
   const cancelReview = useCallback(() => {
     if (phaseRef.current !== "review" || unresolvedRef.current) return;
@@ -530,7 +604,7 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
     setPreparedSync(null);
     setSettlement(null);
     setError(null);
-    setPhaseSync("connect");
+    setPhaseSync(accountRef.current ? "ready" : "connect");
   }, [canDiscardInvalidPending, setPreparedSync, setPhaseSync, invalidate]);
 
   const reset = useCallback(() => {
@@ -548,9 +622,9 @@ export function useStellarExchange(enabled: boolean = stellarTestnetEnabled()): 
   const disconnect = useCallback(() => {
     if (unresolvedRef.current || busyRef.current || phaseRef.current === "signing") return;
     invalidate();
-    void adapterRef.current?.disconnect();
-    adapterRef.current = null;
-    setAccount(null);
+    // Full logout: shared session torn down everywhere, remembered session
+    // forgotten. Durable pending records are left untouched.
+    disconnectStellarSession();
     setPreparedSync(null);
     setSettlement(null);
     setError(null);

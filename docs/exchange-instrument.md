@@ -197,8 +197,11 @@ The Exchange tab carries a quiet network selector (`Wallet networks` /
 `Stellar testnet`, flag-gated by `NEXT_PUBLIC_STELLAR_TESTNET`). Selecting
 Stellar mounts `components/swap/StellarExchange.tsx` — one InstrumentShell,
 one object (XLM → USDC coins), one inspector — sharing the tab's shape
-while remaining a separate account family (Freighter, G-address, 7-decimal
-units). The session-scoped selection lives in `NavigationContext` as
-`exchangeNetwork`; every EVM swap hand-off forces EVM back on. Settled
+while remaining a separate account family (the wallet picker, G-address,
+7-decimal units). The connected account lives in the `lib/stellar/session`
+store — shared by the wallet button, the mode panel, and the exchange, and
+restored silently on reload — while the session-scoped network selection
+lives in `NavigationContext` as `exchangeNetwork`; every EVM swap hand-off
+forces EVM back on. Settled
 conversions reuse `PairStage`'s receipt (`isStellarReceipt`) with pickers,
 flip, and switch inert — no corridor, provenance, or stamps.

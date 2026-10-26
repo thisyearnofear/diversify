@@ -115,7 +115,7 @@ export function useGuardianInteraction() {
         if (stellarTestnetEnabled()) {
           navigation.setExchangeNetwork('stellar:testnet');
           navigation.setActiveTab('exchange');
-          result = { message: 'Stellar testnet is open. Use test funds and review the exchange before approving it in Freighter.', revealSurface: true };
+          result = { message: 'Stellar testnet is open. Use test funds and review the exchange before approving it in your wallet.', revealSurface: true };
         } else {
           result = { message: 'Stellar testnet is not enabled in this build.', revealSurface: false };
         }

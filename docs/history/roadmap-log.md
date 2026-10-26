@@ -1,5 +1,44 @@
 # Roadmap Log — historical waves & file deltas
 
+### Session + logout correctness (2026-10-26, shared push — lower half)
+
+- `PrivyProvider` not-ready `logout()` was a silent no-op — it now delegates
+  through `ensureReady` like `login`, and if the host never comes up it
+  clears the local session hints (`privy:token`, `privy:refresh_token`,
+  privy-typed wallet preference) so a stale hint can't resurrect auth, then
+  still reports the failure. `clearPrivySessionHints` only runs on failure —
+  a real `privy.logout()` owns the tokens.
+- `WalletButton` renders the Stellar family: a Stellar-only session (no EVM
+  wallet) reads connected with the G-address + Stellar tag, the EVM chain
+  selector hides when there's no EVM chain to switch, Copy Address falls
+  back to the Stellar account, and Disconnect tears down both families —
+  pending Stellar records survive (they key to the prepared account).
+- `StellarModePanel` reads the session store (`useStellarSession`) instead
+  of the NavigationContext mirror, and the unconnected state connects
+  in place through the shared picker instead of routing to Exchange.
+- Tests: `lib/stellar/__tests__/session.test.ts` (restore semantics,
+  generation-guarded teardown, lazy disconnect),
+  `context/__tests__/PrivyProvider.logout.test.tsx` (hint-clearing on
+  unreachable host, non-privy preference preserved),
+  `components/wallet/__tests__/WalletButton.stellar.test.tsx`
+  (stellar-only connected state, disconnect-all, pending survives).
+- Cleanup pass caught a real ordering bug: the session-follow effect ran
+  before the recovery effect in the same commit and flipped `connect →
+  ready`, so pending adoption (gated on `phase === "connect"`) could never
+  fire — and the explicit-connect path had the same hole, since its busy
+  flag blocks both effects while the session write lands. The follow effect
+  now leaves the phase alone when the incoming session owns a durable
+  pending record, and the lookup itself is `startPendingRecovery`, shared by
+  the effect and the post-connect transition. StellarExchange/Pending copy also went
+  wallet-agnostic ("Connect a Stellar wallet", "Sign … in your wallet",
+  "Awaiting wallet approval") — the picker covers six wallets, not just
+  Freighter. `session.ts` teardown wraps `adapter.logout()` in
+  `Promise.resolve().catch` so a rejecting bridge can't surface an
+  unhandled rejection. `StellarExchange`/`useStellarExchange` tests now
+  reset the module store per test and exercise pending recovery through a
+  live session (explicit connect or silent restore), including the
+  foreign-owner negative case.
+
 ### Multi-wallet Stellar connect (2026-10-26)
 
 - `lib/stellar/wallet.ts` gains `createWalletsKitBridge` — the

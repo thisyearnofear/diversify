@@ -36,7 +36,7 @@ describe("open_stellar apply", () => {
     const { result } = renderHook(() => useGuardianInteraction());
     const applied = result.current.apply({ kind: "open_stellar" });
     expect(applied).toEqual({
-      message: "Stellar testnet is open. Use test funds and review the exchange before approving it in Freighter.",
+      message: "Stellar testnet is open. Use test funds and review the exchange before approving it in your wallet.",
       revealSurface: true,
     });
     expect(nav.navigation!.setExchangeNetwork).toHaveBeenCalledWith("stellar:testnet");

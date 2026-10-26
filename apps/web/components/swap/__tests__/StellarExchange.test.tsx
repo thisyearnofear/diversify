@@ -67,13 +67,14 @@ const tlConfirmed = {
 };
 
 const fake = {
-  connect: vi.fn(), disconnect: vi.fn(), getBalances: vi.fn(), quote: vi.fn(),
+  connect: vi.fn(), disconnect: vi.fn(), restore: vi.fn(), logout: vi.fn(), getBalances: vi.fn(), quote: vi.fn(),
   prepare: vi.fn(), prepareTrustline: vi.fn(), sign: vi.fn(), submit: vi.fn(),
   getSettlement: vi.fn(), validatePrepared: vi.fn(),
 };
 vi.mock("@/lib/stellar/adapter", () => ({
   StellarTestnetAdapter: class {
-    connect = fake.connect; disconnect = fake.disconnect; getBalances = fake.getBalances;
+    connect = fake.connect; disconnect = fake.disconnect; restore = fake.restore; logout = fake.logout;
+    getBalances = fake.getBalances;
     quote = fake.quote; prepare = fake.prepare; prepareTrustline = fake.prepareTrustline;
     sign = fake.sign; submit = fake.submit; getSettlement = fake.getSettlement;
     validatePrepared = fake.validatePrepared;
@@ -103,8 +104,8 @@ vi.mock("@/context/app/DemoModeContext", () => ({
   useDemoMode: () => ({ demoMode: { isActive: demoState.active }, disableDemoMode: demoState.disableDemoMode }),
 }));
 vi.mock("@/context/app/NavigationContext", () => ({
-  useNavigation: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet", setStellarAccount: vi.fn() }),
-  useNavigationOptional: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet", setStellarAccount: vi.fn() }),
+  useNavigation: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet" }),
+  useNavigationOptional: () => ({ setSwapPrefill: vi.fn(), exchangeNetwork: "stellar:testnet" }),
 }));
 vi.mock("@/context/app/BalanceVisibilityContext", () => ({
   useBalanceVisibility: () => ({ hidden: balanceHidden.value }),
@@ -128,19 +129,31 @@ class MemStorage {
 }
 
 import StellarExchange from "../StellarExchange";
+import { disconnectStellarSession, restoreStellarSession } from "@/lib/stellar/session";
 
 const renderStellar = () => render(<StellarExchange />);
 
 beforeEach(() => {
+  // The session store is module-level — tear it down before touching
+  // storage/mocks so no account leaks across tests.
+  disconnectStellarSession();
   (globalThis as { localStorage?: Storage }).localStorage = new MemStorage() as unknown as Storage;
   demoState.active = false;
   demoState.disableDemoMode.mockClear();
   balanceHidden.value = false;
   for (const fn of Object.values(fake)) fn.mockReset();
   fake.connect.mockResolvedValue({ ok: true, value: { account: ACCOUNT } });
+  fake.restore.mockResolvedValue({ ok: true, value: { account: ACCOUNT, network: "stellar:testnet" } });
   fake.getBalances.mockResolvedValue({ ok: true, value: accountState() });
   fake.validatePrepared.mockImplementation(async (p) => ({ ok: true, value: p }));
 });
+
+// A returning session: the remembered-session marker is in place and the
+// wallet answers a silent fetchAddress — no picker, no connect.
+const restoreSession = async () => {
+  localStorage.setItem("diversifi.stellar.session", ACCOUNT);
+  await restoreStellarSession();
+};
 
 describe("StellarExchange", () => {
   it("demo gate shows Use test funds and never connects a wallet", async () => {
@@ -165,7 +178,7 @@ describe("StellarExchange", () => {
     fake.prepare.mockResolvedValue({ ok: true, value: preparedTx() });
 
     renderStellar();
-    fireEvent.click(screen.getByTestId("stellar-primary")); // Connect Freighter
+    fireEvent.click(screen.getByTestId("stellar-primary")); // Connect a Stellar wallet
     await act(async () => {});
     expect(screen.getByTestId("stellar-primary").textContent).toContain("Review USDC setup");
 
@@ -191,16 +204,33 @@ describe("StellarExchange", () => {
     vi.unstubAllEnvs();
   });
 
-  it("pending reload without an account offers Check transaction, never Connect or sign", async () => {
+  it("a remembered session restores silently and its pending record offers Check transaction, never connect or sign", async () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
     localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx() }));
     fake.getSettlement.mockResolvedValue({ ok: true, value: { status: "pending", proposalId: "q1", txHash: HASH } });
+    await restoreSession();
     renderStellar();
     await act(async () => {});
     await act(async () => {});
     expect(screen.getByTestId("stellar-primary").textContent).toContain("Check transaction");
-    expect(screen.queryByText(/Connect Freighter/)).toBeNull();
+    expect(screen.queryByText(/Connect a Stellar wallet/)).toBeNull();
+    // Silent restore adopted the session — the picker never opened.
+    expect(fake.restore).toHaveBeenCalled();
     expect(fake.connect).not.toHaveBeenCalled();
+    expect(fake.sign).not.toHaveBeenCalled();
+    expect(fake.submit).not.toHaveBeenCalled();
+    vi.unstubAllEnvs();
+  });
+
+  it("a pending record for a different account is never adopted — it waits for its owner", async () => {
+    vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
+    localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx() }));
+    // No session at all: the record belongs to ACCOUNT and nothing is connected.
+    renderStellar();
+    await act(async () => {});
+    await act(async () => {});
+    expect(screen.getByTestId("stellar-primary").textContent).toContain("Connect a Stellar wallet");
+    expect(fake.getSettlement).not.toHaveBeenCalled();
     expect(fake.sign).not.toHaveBeenCalled();
     expect(fake.submit).not.toHaveBeenCalled();
     vi.unstubAllEnvs();
@@ -219,6 +249,7 @@ describe("StellarExchange", () => {
       await act(async () => {});
       expect(screen.queryByText(/Review USDC setup/)).toBeNull();
       unmount();
+      disconnectStellarSession(); // module store survives unmount — reset between states
     }
     vi.unstubAllEnvs();
   });
@@ -237,6 +268,7 @@ describe("StellarExchange", () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
     localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx() }));
     fake.getSettlement.mockResolvedValue({ ok: true, value: { status: "unknown", proposalId: "q1", txHash: HASH, code: "lookup_failed", retry: "lookup" } });
+    await restoreSession();
     renderStellar();
     await act(async () => {});
     await act(async () => {});
@@ -248,6 +280,7 @@ describe("StellarExchange", () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
     localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx() }));
     fake.getSettlement.mockResolvedValue({ ok: false, code: "proposal_mismatch", message: "The ledger record does not match the reviewed proposal.", retry: "none" });
+    await restoreSession();
     renderStellar();
     await act(async () => {});
     await act(async () => {});
@@ -255,7 +288,8 @@ describe("StellarExchange", () => {
     fireEvent.click(screen.getByTestId("stellar-clear-invalid"));
     await act(async () => {});
     expect(localStorage.getItem("diversifi.stellar.pending.v1")).toBeNull();
-    expect(screen.getByTestId("stellar-primary").textContent).toContain("Connect Freighter");
+    // Session still live — discard lands on the ready action, not connect.
+    expect(screen.getByTestId("stellar-primary").textContent).toContain("Review exchange");
     vi.unstubAllEnvs();
   });
 
@@ -278,7 +312,7 @@ describe("StellarExchange", () => {
       fireEvent.change(screen.getByTestId("stellar-amount"), { target: { value: "10" } });
       fireEvent.click(screen.getByTestId("stellar-primary")); // review
       await act(async () => {});
-      expect(screen.getByTestId("stellar-primary").textContent).toContain("Sign exchange in Freighter");
+      expect(screen.getByTestId("stellar-primary").textContent).toContain("Sign exchange in your wallet");
 
       // Advance past the quote's 60s TTL but inside the tx's 300s TTL.
       act(() => { vi.advanceTimersByTime(61_000); });
@@ -288,7 +322,7 @@ describe("StellarExchange", () => {
       await act(async () => {});
       expect(fake.quote).toHaveBeenCalledTimes(2);
       expect(fake.prepare).toHaveBeenCalledTimes(2);
-      expect(screen.getByTestId("stellar-primary").textContent).toContain("Sign exchange in Freighter");
+      expect(screen.getByTestId("stellar-primary").textContent).toContain("Sign exchange in your wallet");
       expect(fake.sign).not.toHaveBeenCalled();
     } finally {
       vi.useRealTimers();
@@ -303,6 +337,7 @@ describe("StellarExchange", () => {
       .mockResolvedValueOnce({ ok: true, value: { status: "pending", proposalId: "tl1", txHash: "cd".repeat(32) } })
       .mockResolvedValueOnce({ ok: true, value: tlConfirmed });
     fake.getBalances.mockResolvedValue({ ok: true, value: accountState() });
+    await restoreSession();
     renderStellar();
     await act(async () => {});
     await act(async () => {});
@@ -325,13 +360,16 @@ describe("StellarExchange", () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
     localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx() }));
     fake.getSettlement.mockResolvedValue({ ok: true, value: { status: "failed", proposalId: "q1", txHash: HASH, code: "expired_unseen", retry: "requote" } });
+    await restoreSession();
     renderStellar();
     await act(async () => {});
     await act(async () => {});
     await act(async () => {});
     expect(screen.getByRole("alert").textContent).toContain("expired without being recorded");
-    // Failed recovery is resolved — a fresh Connect/Review path is usable.
+    // Failed recovery is resolved — the session survives and the ready
+    // action is usable (Review exchange, not a stuck Check).
     expect(screen.queryByText(/Check transaction/)).toBeNull();
+    expect(screen.getByTestId("stellar-primary").textContent).toContain("Review exchange");
     vi.unstubAllEnvs();
   });
 
@@ -341,7 +379,7 @@ describe("StellarExchange", () => {
     // balance yet, so the confirmation line stays visible.
     fake.getBalances.mockResolvedValue({ ok: true, value: accountState({ unfunded: true }) });
     renderStellar();
-    fireEvent.click(screen.getByTestId("stellar-primary")); // Connect Freighter
+    fireEvent.click(screen.getByTestId("stellar-primary")); // Connect a Stellar wallet
     await act(async () => {});
 
     const btn = screen.getByTestId("stellar-friendbot");

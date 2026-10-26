@@ -92,6 +92,8 @@ function wallet(partial: Partial<WalletBridge> = {}): WalletBridge {
     isAvailable: async () => true,
     connect: async () => ({ address: ACCOUNT }),
     currentAccount: async () => ({ address: ACCOUNT }),
+    restore: async () => ({ address: ACCOUNT }),
+    disconnect: async () => {},
     network: async () => ({ networkPassphrase: STELLAR_TESTNET_PASSPHRASE }),
     sign: async () => ({ error: "The user rejected this request.", rejected: true }),
     ...partial,

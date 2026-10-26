@@ -74,7 +74,19 @@ function makeNotReadyApi(ensureReady: () => Promise<PrivySnapshot>): PrivyApi {
             const { privy } = await ensureReady()
             return (privy.login as (...a: unknown[]) => unknown)(...args)
         },
-        logout: async () => {},
+        // Real logout: wait for the host rather than no-op. If the host
+        // never comes up, still clear the local session hints so a stale
+        // hint can't resurrect the session on the next load — then report
+        // the failure honestly to the caller.
+        logout: async () => {
+            try {
+                const { privy } = await ensureReady()
+                await privy.logout()
+            } catch (error) {
+                clearPrivySessionHints()
+                throw error
+            }
+        },
         createWallet: async () => {
             const { privy } = await ensureReady()
             return privy.createWallet()
@@ -95,6 +107,25 @@ export function hasPrivySessionHint(): boolean {
         // Storage unavailable — treat as walletless.
     }
     return false
+}
+
+/**
+ * Drop the local hints hasPrivySessionHint() reads. Only for paths that
+ * cannot reach Privy itself — a successful privy.logout() owns the tokens.
+ */
+function clearPrivySessionHints(): void {
+    if (typeof window === 'undefined') return
+    try {
+        const ls = window.localStorage
+        ls.removeItem('privy:token')
+        ls.removeItem('privy:refresh_token')
+        const pref = ls.getItem('diversifi-wallet-preference')
+        if (pref && JSON.parse(pref)?.type === 'privy') {
+            ls.removeItem('diversifi-wallet-preference')
+        }
+    } catch {
+        // Storage unavailable — nothing to clear.
+    }
 }
 
 function onIdle(cb: () => void, timeout: number): () => void {

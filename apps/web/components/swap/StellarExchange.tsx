@@ -118,10 +118,10 @@ export default function StellarExchange({
     }
     if (phase === "receipt") return null;
     if (busy && (phase === "signing" || phase === "quoting")) {
-      return { label: phase === "signing" ? "Awaiting Freighter approval" : "Quoting…", onClick: () => {}, disabled: true };
+      return { label: phase === "signing" ? "Awaiting wallet approval" : "Quoting…", onClick: () => {}, disabled: true };
     }
     if (!account || phase === "connect") {
-      return { label: "Connect Freighter", onClick: () => void exchange.connect(), disabled: busy };
+      return { label: "Connect a Stellar wallet", onClick: () => void exchange.connect(), disabled: busy };
     }
     if (phase === "review" && prepared) {
       if (reviewExpired) {
@@ -135,7 +135,7 @@ export default function StellarExchange({
         };
       }
       return {
-        label: isTrustlineReview ? "Sign USDC setup in Freighter" : "Sign exchange in Freighter",
+        label: isTrustlineReview ? "Sign USDC setup in your wallet" : "Sign exchange in your wallet",
         onClick: () => void exchange.signReviewed(),
         disabled: busy,
       };
@@ -190,7 +190,7 @@ export default function StellarExchange({
                   : "Circle testnet USDC setup"}
               </p>
               <p className="text-2xs text-ink-muted">
-                {phase === "signing" ? "Awaiting Freighter approval" : "Confirmation pending — check the transaction, never resubmit."}
+                {phase === "signing" ? "Awaiting wallet approval" : "Confirmation pending — check the transaction, never resubmit."}
               </p>
             </div>
           ) : phase === "review" && prepared ? (
@@ -281,7 +281,7 @@ export default function StellarExchange({
             </div>
           ) : (
             <p className="mt-4 text-2xs text-ink-muted">
-              Connect Freighter on Stellar testnet to review a test-funds exchange.
+              Connect a Stellar wallet on testnet to review a test-funds exchange.
             </p>
           )}
         </>

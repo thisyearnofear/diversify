@@ -201,6 +201,21 @@ export class StellarTestnetAdapter {
     });
   }
 
+  /**
+   * Wallet network evidence. Signing is pinned to the testnet passphrase and
+   * the prepared XDR is validated against the review, so an UNREADABLE network
+   * is not evidence of the wrong one — LOBSTR and Rabet can't always report
+   * one. Only a reported mismatch fails: closing on evidence, not on its
+   * absence.
+   */
+  private async networkMismatch(bridge: WalletBridge): Promise<string | null> {
+    const network = await bridge.network();
+    if ("error" in network) return null;
+    return network.networkPassphrase === STELLAR_TESTNET_PASSPHRASE
+      ? null
+      : "The wallet is not on Stellar testnet. Switch it to testnet and connect again.";
+  }
+
   async connect(): Promise<StellarResult<{ account: string; network: typeof STELLAR_TESTNET }>> {
     if (!this.enabled) return fail("disabled", "Stellar testnet is off. Set NEXT_PUBLIC_STELLAR_TESTNET=true to enable the testnet adapter only.", "none");
     this.disconnect();
@@ -208,22 +223,60 @@ export class StellarTestnetAdapter {
     const session = await bridge.connect();
     const { StrKey } = await sdk();
     if ("error" in session || !isStellarGAddress(session.address) || !StrKey.isValidEd25519PublicKey(session.address)) {
-      return fail("wallet_missing", "error" in session ? session.error : "Freighter did not return a classic account.", "reconnect");
+      return fail("wallet_missing", "error" in session ? session.error : "The wallet did not return a classic account.", "reconnect");
     }
-    const network = await bridge.network();
-    if ("error" in network) return fail("wrong_network", network.error, "reconnect");
-    if (network.networkPassphrase !== STELLAR_TESTNET_PASSPHRASE) {
+    const mismatch = await this.networkMismatch(bridge);
+    if (mismatch) {
       this.disconnect();
-      return fail("wrong_network", "Freighter is not on Stellar testnet. Switch the wallet to testnet and connect again.", "reconnect");
+      return fail("wrong_network", mismatch, "reconnect");
     }
     this.account = session.address;
     this.networkOk = true;
     return { ok: true, value: { account: session.address, network: STELLAR_TESTNET } };
   }
 
+  /**
+   * Silent session re-adoption — never prompts. Asks the wallet for its
+   * remembered session and validates it exactly like connect() does, so a
+   * returning wallet session (or a switch back from EVM) restores without
+   * re-opening the picker. A missing or wrong-network session is a quiet
+   * `wallet_missing`/`wrong_network`, not an error surface.
+   */
+  async restore(): Promise<StellarResult<{ account: string; network: typeof STELLAR_TESTNET }>> {
+    if (!this.enabled) return fail("disabled", "Stellar testnet is off. Set NEXT_PUBLIC_STELLAR_TESTNET=true to enable the testnet adapter only.", "none");
+    const bridge = await this.walletBridge();
+    const current = await bridge.restore();
+    const { StrKey } = await sdk();
+    if ("error" in current || !isStellarGAddress(current.address) || !StrKey.isValidEd25519PublicKey(current.address)) {
+      return fail("wallet_missing", "error" in current ? current.error : "No connected wallet session.", "none");
+    }
+    const mismatch = await this.networkMismatch(bridge);
+    if (mismatch) {
+      this.disconnect();
+      return fail("wrong_network", mismatch, "none");
+    }
+    this.account = current.address;
+    this.networkOk = true;
+    return { ok: true, value: { account: current.address, network: STELLAR_TESTNET } };
+  }
+
   disconnect(): void {
     this.account = null;
     this.networkOk = false;
+  }
+
+  /**
+   * User logout: drop the local session AND tear the wallet-side session down
+   * so a later restore can't silently re-adopt it.
+   */
+  async logout(): Promise<void> {
+    this.disconnect();
+    try {
+      const bridge = this.wallet ?? (await import("./wallet")).createWalletsKitBridge();
+      await bridge.disconnect();
+    } catch {
+      // The local session is already gone; wallet-side teardown is best-effort.
+    }
   }
 
   async getBalances(account: string): Promise<StellarResult<StellarAccountState>> {
@@ -672,10 +725,10 @@ export class StellarTestnetAdapter {
     );
     if (!check.ok) return check;
     const bridge = await this.walletBridge();
-    const network = await bridge.network();
-    if ("error" in network || network.networkPassphrase !== STELLAR_TESTNET_PASSPHRASE) {
+    const mismatch = await this.networkMismatch(bridge);
+    if (mismatch) {
       this.disconnect();
-      return fail("wrong_network", "error" in network ? network.error : "Freighter is no longer on Stellar testnet.", "reconnect");
+      return fail("wrong_network", mismatch, "reconnect");
     }
     const current = await bridge.currentAccount();
     if ("error" in current) {
@@ -695,7 +748,7 @@ export class StellarTestnetAdapter {
       return fail(signed.rejected ? "cancelled" : "network_error", signed.error, signed.rejected ? "none" : "reconnect");
     }
     if (signed.signerAddress !== account) {
-      return fail("proposal_mismatch", "Freighter signed with a different account than the one reviewed.", "reconnect");
+      return fail("proposal_mismatch", "The wallet signed with a different account than the one reviewed.", "reconnect");
     }
     const checked = await this.signedEnvelopeMatches(parsed, signed.signedTxXdr);
     if (!checked.ok) return checked;

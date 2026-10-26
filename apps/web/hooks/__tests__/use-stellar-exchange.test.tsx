@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { useStellarExchange } from "../use-stellar-exchange";
 import { readPendingStellar } from "@/lib/stellar/pending";
+import { connectStellarSession, disconnectStellarSession } from "@/lib/stellar/session";
 import { stellarNativeAsset, stellarTestnetUsdc } from "@diversifi/shared/src/types/stellar";
 import type { PreparedStellarAction, StellarAccountState } from "@diversifi/shared/src/types/stellar";
 
@@ -92,6 +93,8 @@ const trustlineConfirmed = {
 const fake = {
   connect: vi.fn(),
   disconnect: vi.fn(),
+  restore: vi.fn(),
+  logout: vi.fn(),
   getBalances: vi.fn(),
   quote: vi.fn(),
   prepare: vi.fn(),
@@ -106,6 +109,8 @@ vi.mock("@/lib/stellar/adapter", () => ({
   StellarTestnetAdapter: class {
     connect = fake.connect;
     disconnect = fake.disconnect;
+    restore = fake.restore;
+    logout = fake.logout;
     getBalances = fake.getBalances;
     quote = fake.quote;
     prepare = fake.prepare;
@@ -125,12 +130,23 @@ class MemStorage {
 }
 
 beforeEach(() => {
+  // The session store is module-level — tear it down before touching
+  // storage/mocks so no account leaks across tests.
+  disconnectStellarSession();
   (globalThis as { localStorage?: Storage }).localStorage = new MemStorage() as unknown as Storage;
   for (const fn of Object.values(fake)) fn.mockReset();
   fake.connect.mockResolvedValue({ ok: true, value: { account: ACCOUNT, network: "stellar:testnet" } });
+  fake.restore.mockResolvedValue({ ok: true, value: { account: ACCOUNT, network: "stellar:testnet" } });
   fake.getBalances.mockResolvedValue({ ok: true, value: accountState() });
   fake.validatePrepared.mockImplementation(async (p) => ({ ok: true, value: p }));
 });
+
+// Pending recovery is owner-gated: a durable record is only adopted once the
+// session for the account it was prepared for is live.
+const connectSession = async () => {
+  const session = await connectStellarSession();
+  expect(session.ok).toBe(true);
+};
 
 describe("useStellarExchange", () => {
 
@@ -241,9 +257,38 @@ describe("useStellarExchange", () => {
     expect(fake.submit).not.toHaveBeenCalled();
   });
 
+  it("connecting while an owned pending record exists adopts and looks it up", async () => {
+    // The busy flag is held through connect, so the session-appears recovery
+    // effect cannot fire — connect itself must hand the record to recovery.
+    localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx }));
+    fake.getSettlement.mockResolvedValue({ ok: true, value: confirmed });
+    const { result } = renderHook(() => useStellarExchange(true));
+    await act(async () => { await result.current.connect(); });
+    await waitFor(() => expect(result.current.phase).toBe("receipt"));
+    expect(fake.getSettlement).toHaveBeenCalledWith(HASH, preparedTx);
+    expect(fake.sign).not.toHaveBeenCalled();
+    expect(fake.submit).not.toHaveBeenCalled();
+  });
+
+  it("a pending record owned by another account is never adopted on connect", async () => {
+    // A trustline record keeps its owner in a top-level `account` field.
+    localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({
+      version: 1,
+      prepared: { ...preparedTl, account: "G" + "B".repeat(55) },
+    }));
+    const { result } = renderHook(() => useStellarExchange(true));
+    await act(async () => { await result.current.connect(); });
+    // The record stays untouched and the flow lands on a usable ready state.
+    expect(result.current.phase).toBe("ready");
+    expect(result.current.prepared).toBeNull();
+    expect(readPendingStellar()).not.toBeNull();
+    expect(fake.getSettlement).not.toHaveBeenCalled();
+  });
+
   it("a persisted pending record is looked up, never signed or resubmitted", async () => {
     localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx }));
     fake.getSettlement.mockResolvedValue({ ok: true, value: confirmed });
+    await connectSession();
     const { result } = renderHook(() => useStellarExchange(true));
     await act(async () => { await Promise.resolve(); });
     await act(async () => { await Promise.resolve(); });
@@ -366,6 +411,7 @@ describe("useStellarExchange", () => {
   it("pending recovery survives an unmount/remount and settles usable", async () => {
     localStorage.setItem("diversifi.stellar.pending.v1", JSON.stringify({ version: 1, prepared: preparedTx }));
     fake.getSettlement.mockResolvedValue({ ok: true, value: confirmed });
+    await connectSession();
     // Unmount/remount coverage (not StrictMode equivalent): a first mount's
     // in-flight recovery must not corrupt the second mount's — generation
     // invalidation protects continuations.
@@ -387,10 +433,12 @@ describe("useStellarExchange", () => {
       ok: true,
       value: { status: "failed", proposalId: "q1", txHash: HASH, code: "op_no_trust", retry: "requote" },
     });
+    await connectSession();
     const { result, unmount } = renderHook(() => useStellarExchange(true));
     await waitFor(() => expect(result.current.error).not.toBeNull());
     expect(result.current.error?.code).toBe("settlement_rejected");
-    expect(result.current.phase).toBe("connect");
+    // The session survives a failed recovery — the flow lands on ready, not connect.
+    expect(result.current.phase).toBe("ready");
     unmount();
 
     fake.getSettlement.mockResolvedValue({
@@ -410,13 +458,15 @@ describe("useStellarExchange", () => {
       message: "The ledger record does not match the reviewed proposal.",
       retry: "none",
     });
+    await connectSession();
     const { result } = renderHook(() => useStellarExchange(true));
     await waitFor(() => expect(result.current.error).not.toBeNull());
     expect(result.current.phase).toBe("pending");
     expect(result.current.canDiscardInvalidPending).toBe(true);
     await act(async () => { result.current.clearInvalidPending(); });
     expect(readPendingStellar()).toBeNull();
-    expect(result.current.phase).toBe("connect");
+    // Session still live — discard returns to ready, not connect.
+    expect(result.current.phase).toBe("ready");
     expect(result.current.canDiscardInvalidPending).toBe(false);
   });
 });
