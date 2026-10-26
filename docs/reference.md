@@ -854,6 +854,25 @@ Owner-only tools take `walletAuth { message, signature }` — the signed
 `buildWalletAuthMessage` (20-min TTL), verified server-side by
 `verifyWalletAuth` (extracted core of `require-wallet-auth.ts`).
 
+### 4.6 Stellar testnet artifacts (HackMeridian)
+
+- **Soroban `RecommendationLedger`** — `contracts-stellar/` workspace
+  (soroban-sdk 26, wasm32v1-none). Testnet contract
+  `CDQUT55ICBFEC6JGMZDJEHA47ECWQOAYHLNFHO2ULFLDQVIDNMKL4WT6`; reasoning stays
+  hash-only on-chain (`record(agent, BytesN<32>)`), matching the EVM ledger's
+  convention. Record via `pnpm stellar-ledger-record`.
+- **OpenZeppelin smart account** — `CBH5NT2HEIQGBMTABOPRPRUJKDNHU3HFIY6STSN7QZSCX7WXSLCOAVC2`,
+  sole signer = external Ed25519 agent key via verifier
+  `CAAVTMCBXEIBPR64EAASKFXERVPYFZA2JYP5A3BG6PESWEFUJX5IHKN4`;
+  `CallContract(XLM SAC)` rule carries spending-limit policy
+  `CABXBYJNZ7IUW4G3D6BND5YCAQF3ASSDMDAOKQQ63UYFSO7WUU2TIP5G` (2 XLM /
+  17,280 ledgers). Proven: within-limit spend accepted, over-limit rejected
+  (#3221). Repro: `pnpm stellar-policy-demo`.
+- Contract IDs and evidence txs are tabulated in `README.md` → HackMeridian.
+- `smart-account-kit` is a devDependency (0.8.0) and ESM-only — demo scripts
+  are `.mts`. Build toolchain needs
+  `RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin` on this machine.
+
 ## 5. AI providers & data sources
 
 ### 5.1 AI provider failover chain

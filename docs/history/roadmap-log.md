@@ -1,5 +1,33 @@
 # Roadmap Log — historical waves & file deltas
 
+### Stellar depth layer — contracts, policy enforcement, anchors (2026-10-26)
+
+- **Soroban RecommendationLedger** (`contracts-stellar/`, soroban-sdk 26):
+  per-agent keyed commitments — `record(agent, reasoning_hash) → seq`,
+  `count`, `get`; agent self-authorizes its own writes. Deployed testnet
+  `CDQUT55I…WT6`; records anchored via `scripts/stellar-ledger-record.mts`
+  (SHA-256 commitment on-chain, text off-chain — same convention as EVM).
+- **OpenZeppelin smart account + spending policy** on testnet
+  (`scripts/stellar-smart-account-policy.mts`): account `CBH5NT2H…AVC2`,
+  sole signer = external Ed25519 verifier (agent key, no passkey needed
+  headless), `CallContract(XLM SAC)` rule + `CABXBY…P5G` spending-limit
+  policy (2 XLM / 17,280 ledgers). Within-limit 1 XLM transfer succeeded;
+  over-limit 5 XLM rejected with policy error #3221. Implementation notes:
+  `TransactionBuilder` mutates `Account.sequence` (refetch before resim);
+  auth entries signed via kit's `computeEntryAuthDigest` +
+  `Ed25519Signer` → AuthPayload ScVal; `smart-account-kit` is ESM-only so
+  the script is `.mts`.
+- **Claimable-balance corridor** (`scripts/stellar-claimable-balance.ts`):
+  create → claimant-only claim, real txs `ffde38e3…` / `0b8927b8…`.
+- **SEP-24 discovery** (`scripts/sep24-anchor-discovery.ts`): toml →
+  TRANSFER_SERVER_SEP0024 → /info. testanchor advertises USDC deposit +
+  withdraw; read-only — a listed rail is not proof of redeemability.
+- **Keys**: `guardian-agent` (agent key), `testnet-user`, `alice` in the
+  stellar CLI keyring; secrets never committed — scripts take them via env.
+- Toolchain note: this machine's rustup default is the Solana SBPF
+  toolchain; Stellar contract builds need
+  `PATH=~/.cargo/bin:$PATH RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin`.
+
 ### Agent surface + instrument refactor (2026-10-26)
 
 - **Shield state machine**: ~15 interacting flags in `ProtectionTab`

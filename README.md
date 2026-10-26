@@ -95,6 +95,48 @@ material: [`docs/reference.md`](./docs/reference.md). Docs index:
 | [`docs/history/roadmap-log.md`](./docs/history/roadmap-log.md) | Dated record of what shipped |
 | [`docs/archive/`](./docs/archive/) | Closed grant tracks and past submissions — reference, not roadmap |
 
+## HackMeridian 2026-10 submission
+
+**Prior-work disclosure.** DiversiFi is an existing product. **All Stellar
+support was built during HackMeridian** — the Stellar network adapter, wallet
+integration, exchange flow, receipt path, and this section. The underlying
+risk/philosophy/ledger machinery predates the event; the hackathon scope is
+Stellar-specific work only. Executed plan:
+[`docs/archive/tracks/hackmeridian-2026-10-execution-plan.md`](./docs/archive/tracks/hackmeridian-2026-10-execution-plan.md).
+
+**What the Stellar integration does.** Stellar testnet is a first-class
+network mode: connect Freighter → the instrument surfaces real G-address
+balances → a supported move is prepared as a strict-send **path payment**
+(`XLM → testnet USDC`, min-destination computed from a live route) → the user
+reviews exact terms and signs in their own wallet → the confirmed transaction
+renders as a ledger-verified receipt with an explorer link. Stellar never
+masquerades as an EVM chain — a dedicated adapter (`apps/web/lib/stellar/`)
+isolates Horizon reads, validates prepared transactions (fee-bump/signed/legacy
+XDR rejected), and recovers pending submissions durably.
+
+| Piece | Where |
+|---|---|
+| Stellar adapter (Horizon isolation, strict validation, pending recovery) | `apps/web/lib/stellar/` |
+| Wallet (Freighter) | `apps/web/lib/stellar/wallet.ts` |
+| Exchange flow + receipt | `apps/web/components/swap/StellarExchange.tsx`, `PairStage.tsx` |
+| Home/Shield honest Stellar surface | `apps/web/components/stellar/StellarModePanel.tsx` |
+| Agent intent (`open_stellar` — navigation only, never signing) | `use-agent-chat.ts`, `guardian-interaction.ts` |
+| Stellar voice-of-the-corridor verbs (speech previews/drafts — never commits) | `apps/web/lib/voice-verbs.ts` |
+
+**On-chain evidence (all Stellar testnet):**
+
+| Demonstration | Artifact |
+|---|---|
+| XLM → USDC strict-send path payment, Freighter-signed | Exchange flow (`pnpm check-stellar-routes` re-queries the live route) |
+| Soroban RecommendationLedger contract | [`contracts-stellar/`](./contracts-stellar) → `CDQUT55ICBFEC6JGMZDJEHA47ECWQOAYHLNFHO2ULFLDQVIDNMKL4WT6`, deploy tx [`b3115c87…`](https://stellar.expert/explorer/testnet/tx/b3115c873d7ef38c12e6e2cc4e963ab82626833274b28ac18a8139ce5d80de38), records seq 1 [`a0a2b75b…`](https://stellar.expert/explorer/testnet/tx/a0a2b75bd16a4b5e837949300c24b75316aa81b4363364b118bbd28bbb57a6ec) / seq 2 [`f8e41fa3…`](https://stellar.expert/explorer/testnet/tx/f8e41fa3b7759118a160b3dbe0a6667a08e3a773a5dfa25f954d565fe5d9ae07) |
+| Smart account + on-chain spending policy (agent key can only move funds inside the cap) | account `CBH5NT2HEIQGBMTABOPRPRUJKDNHU3HFIY6STSN7QZSCX7WXSLCOAVC2`, policy install [`abc2fa2e…`](https://stellar.expert/explorer/testnet/tx/abc2fa2e206533f8926cab6131fb61c0d9a23f3fbf21d3ba424682ab6d162c2a), **within-limit spend accepted** [`a8ab4ab0…`](https://stellar.expert/explorer/testnet/tx/a8ab4ab0cdcdbf17412def66d3f65c9a28faf2ce79dbc552245ec9340ae5e00f), over-limit rejected on-chain (policy error #3221) — `scripts/stellar-smart-account-policy.mts` reproduces both legs |
+| Claimable-balance corridor (bounded proposal claimable only by the counterparty) | create [`ffde38e3…`](https://stellar.expert/explorer/testnet/tx/ffde38e3238fb261de75136946e669f991dbfb2dac5c4257cea0363f94b49f05), claim [`0b8927b8…`](https://stellar.expert/explorer/testnet/tx/0b8927b83827f855e6b46a392017b8cce97cf50253737930879c66bc0a52ae07) — `scripts/stellar-claimable-balance.ts` |
+| SEP-24 anchor discovery (read-only: which assets an anchor advertises; not a redemption claim) | `scripts/sep24-anchor-discovery.ts` — testanchor.stellar.org advertises USDC deposit + withdraw |
+
+Demo: https://diversifiapp.vercel.app (wallet picker → Stellar testnet →
+Exchange). Video walkthrough covers one success and one refusal (a spoken
+commit being declined — voice never signs).
+
 ## Status, honestly
 
 - Live: FX-drift and depreciation reporting, protection plans, one-tap

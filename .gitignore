@@ -125,3 +125,6 @@ videos/
 # pnpm local store (created by workspace installs)
 .pnpm-store/
 .git-commit-msg.txt
+
+# Soroban build output
+contracts-stellar/target/

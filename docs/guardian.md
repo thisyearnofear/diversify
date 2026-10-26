@@ -165,6 +165,15 @@ something weaker.
   chains where the installed `@metamask/smart-accounts-kit` ships
   `getSmartAccountsEnvironment()` (`ERC7710_KIT_CHAIN_IDS`). Today that
   intersects to **Celo 42220, Celo Sepolia 11142220, Arbitrum 42161**.
+- **Stellar analogue (testnet, HackMeridian):** the same trust shape is
+  proven on Stellar — an OpenZeppelin smart account whose sole signer is an
+  external Ed25519 agent key, with an on-chain spending-limit policy
+  installed on a `CallContract` context rule. The agent can only move funds
+  inside the period cap; over-limit transfers are rejected by the policy
+  contract, not by app code. Evidence and repro:
+  `scripts/stellar-smart-account-policy.mts`, artifacts in the README's
+  HackMeridian section. App-level ERC-7715 integration on Stellar remains a
+  later milestone — this is a demonstrated primitive, not wired to a user flow.
 - **Per-chain routing in the executor:**
   - Celo chains → Mento SDK v3 (`mento-sdk.service.ts`): `approve(tokenIn → Mento Router)` + the SDK-built Router swap (multi-hop in one call), 1% slippage.
   - Other eligible chains → LI.FI HTTP quote (`https://li.quest/v1/quote`);

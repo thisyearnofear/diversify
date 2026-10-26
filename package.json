@@ -37,7 +37,11 @@
     "render-guardian-assets": "npx tsx scripts/render-guardian-assets.ts",
     "rive:build": "cd apps/web/rive && for p in claim-coin net-pair protection-seal guardian verified-seal assay-shield; do rive \"$p\" --once --quiet || exit 1; done && cp claim-coin/build/claim-coin.riv net-pair/build/net-pair.riv protection-seal/build/protection-seal.riv guardian/build/guardian.riv verified-seal/build/verified-seal.riv assay-shield/build/assay-shield.riv ../public/rive/ && cp ../../../node_modules/@rive-app/canvas-lite/rive.wasm ../../../node_modules/@rive-app/canvas-lite/rive_fallback.wasm ../public/rive/",
     "rive:wasm": "cp node_modules/@rive-app/canvas-lite/rive.wasm node_modules/@rive-app/canvas-lite/rive_fallback.wasm apps/web/public/rive/",
-    "prepare": "husky"
+    "prepare": "husky",
+    "sep24-discovery": "npx tsx scripts/sep24-anchor-discovery.ts",
+    "stellar-claimable-demo": "npx tsx scripts/stellar-claimable-balance.ts",
+    "stellar-ledger-record": "npx tsx scripts/stellar-ledger-record.mts",
+    "stellar-policy-demo": "npx tsx scripts/stellar-smart-account-policy.mts"
   },
   "devDependencies": {
     "@circle-fin/x402-batching": "3.5.0",

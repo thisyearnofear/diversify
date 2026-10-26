@@ -63,6 +63,17 @@ cp deploy-env-to-server.sh.example deploy-env-to-server.sh
 - `start-runtime.sh.example`, `pm2.ecosystem.config.cjs.example`, `nginx-diversifi-api.conf.example` — templates to copy
 - `setup-firecrawl-monitors.ts` — Firecrawl watcher registration
 
+### Stellar testnet demos (HackMeridian 2026-10)
+
+Secrets come from the stellar CLI keyring (`stellar keys secret <alias>`) —
+never commit them.
+
+- `check-stellar-routes.ts` — read-only strict-send path check (XLM → testnet USDC).
+- `sep24-anchor-discovery.ts` — read-only SEP-24 anchor discovery (toml → transfer server → `/info`). `--domain`, `--asset` flags.
+- `stellar-claimable-balance.ts` — create + claim a claimant-only claimable balance (`STELLAR_SOURCE_SECRET`/`STELLAR_CLAIMANT_SECRET`, `--amount`).
+- `stellar-ledger-record.mts` — commit a reasoning-hash to the testnet Soroban ledger `CDQUT55I…WT6` (`--reasoning "..."`, `--agent`, `--contract`).
+- `stellar-smart-account-policy.mts` — OpenZeppelin smart account + on-chain spending-limit policy demo: within-limit transfer succeeds, over-limit is rejected by the policy contract (`STELLAR_AGENT_SECRET`, `STELLAR_FEE_SECRET`, `STELLAR_SMART_ACCOUNT`). Contract builds on this machine need `PATH=~/.cargo/bin:$PATH RUSTUP_TOOLCHAIN=stable-aarch64-apple-darwin` (default toolchain is the Solana SBPF fork).
+
 ## Hetzner runtime shape (intended)
 
 - Source/build checkout in one directory
