@@ -12,7 +12,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
+import { RouteLink } from '@/components/shared/RouteLink';
 import { useRouter } from 'next/router';
 import { IXS_VAULT_BY_ID } from '@diversifi/shared/src/services/serv/ixs-vault-catalog';
 import type { RwaAllocationResult } from '@diversifi/shared/src/services/serv/rwa-allocator';
@@ -116,12 +116,12 @@ export default function RwaVaultsPage() {
               The allocation rail lives inside the Shield instrument now —
               free heuristic first, SERV Reasoning one toggle away.
             </p>
-            <Link
+            <RouteLink
               href="/rwa-vaults?sandbox=1"
               className="mt-4 inline-block text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
             >
               Prefer the standalone sandbox? Stay here →
-            </Link>
+            </RouteLink>
           </div>
         </div>
       </>

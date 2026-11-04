@@ -7,7 +7,7 @@
  */
 
 import Head from 'next/head';
-import Link from 'next/link';
+import { RouteLink } from '@/components/shared/RouteLink';
 import type { ReactNode } from 'react';
 
 const APPROVED = process.env.NEXT_PUBLIC_LEGAL_APPROVED === 'true';
@@ -49,15 +49,15 @@ export function LegalPage({
             aria-label="Legal"
             className="mt-10 flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400"
           >
-            <Link href="/terms" className="underline underline-offset-2">Terms</Link>
+            <RouteLink href="/terms" className="underline underline-offset-2">Terms</RouteLink>
             <span aria-hidden="true">·</span>
-            <Link href="/privacy" className="underline underline-offset-2">Privacy</Link>
+            <RouteLink href="/privacy" className="underline underline-offset-2">Privacy</RouteLink>
             <span aria-hidden="true">·</span>
-            <Link href="/risk" className="underline underline-offset-2">Risk</Link>
+            <RouteLink href="/risk" className="underline underline-offset-2">Risk</RouteLink>
             <span aria-hidden="true">·</span>
-            <Link href="/fees" className="underline underline-offset-2">Fees</Link>
+            <RouteLink href="/fees" className="underline underline-offset-2">Fees</RouteLink>
             <span aria-hidden="true">·</span>
-            <Link href="/" className="underline underline-offset-2">DiversiFi</Link>
+            <RouteLink href="/" className="underline underline-offset-2">DiversiFi</RouteLink>
           </nav>
         </div>
       </main>

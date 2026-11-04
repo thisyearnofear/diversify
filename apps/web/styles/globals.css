@@ -297,6 +297,38 @@ body {
   }
 }
 
+/* Route seam — a push wrapped by lib/route-transition.ts crossfades instead
+   of hard-cutting: the arriving page travels a little and settles, the
+   leaving one clears out faster (same hand-off as a tab pane — these times
+   mirror duration.fast/base and easing.out in lib/motion-tokens.ts). */
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(root) {
+    animation: dfi-route-out 180ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: dfi-route-in 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+}
+
+@keyframes dfi-route-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes dfi-route-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 /* Custom scrollbar for dark mode */
 :root.dark {
   scrollbar-color: #4b5563 #1f2937;

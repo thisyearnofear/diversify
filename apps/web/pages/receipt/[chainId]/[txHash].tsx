@@ -8,7 +8,7 @@
  */
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
-import Link from 'next/link';
+import { RouteLink } from '@/components/shared/RouteLink';
 import { motion, useReducedMotion } from 'framer-motion';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { MintMark } from '@/components/swap/MintMark';
@@ -144,12 +144,12 @@ export default function ReceiptPage({
                             ? 'The transaction may still be indexing, or it isn’t a transfer.'
                             : 'Receipts can be read on Celo and Arbitrum only.'}
                     </p>
-                    <Link
+                    <RouteLink
                         href="/"
                         className="mt-6 text-sm font-semibold text-blue-400 hover:underline"
                     >
                         Open in DiversiFi →
-                    </Link>
+                    </RouteLink>
                 </div>
             </>
         );
@@ -295,12 +295,12 @@ export default function ReceiptPage({
                 >
                     view on explorer ↗
                 </a>
-                <Link
+                <RouteLink
                     href="/"
                     className="mt-8 text-sm font-semibold text-[#8b8b9a] hover:text-white"
                 >
                     DiversiFi →
-                </Link>
+                </RouteLink>
             </div>
         </>
     );

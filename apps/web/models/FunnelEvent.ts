@@ -90,12 +90,13 @@ export const FUNNEL_EVENTS = [
   // never beat content, amounts, or identity.
   'beat_impulse',
   'instrument_dwell',
-  // Walletless walkthrough — Home currency story opened, a cited headline
-  // tapped, the story's Ask Guardian CTA tapped, and the shared
-  // WalletButton's disconnected connect/retry tapped. Props: currency code
-  // + fixed source/attempt only — never headline text/urls, questions,
-  // addresses, or errors.
+  // Walletless walkthrough — Home currency story opened, the story handed
+  // off to the currency instrument, a cited headline tapped, the story's
+  // Ask Guardian CTA tapped, and the shared WalletButton's disconnected
+  // connect/retry tapped. Props: currency code + fixed source/attempt only
+  // — never headline text/urls, questions, addresses, or errors.
   'currency_story_opened',
+  'currency_instrument_opened',
   'currency_headline_tapped',
   'ask_guardian_tapped',
   'walletless_connect_tapped',

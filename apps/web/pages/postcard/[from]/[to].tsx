@@ -15,6 +15,7 @@ import Head from 'next/head';
 import { motion, useReducedMotion } from 'framer-motion';
 import { resolveStamps, type Stamp } from '@/lib/stamps';
 import { StampSealFace, stampRotation } from '@/components/shared/StampSeal';
+import { RouteLink } from '@/components/shared/RouteLink';
 import type { StampMode } from '@/components/swap/StampSheet';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { tokenColor } from '@/components/shared/palette';
@@ -192,12 +193,12 @@ export default function PostcardPage({
                 ))}
               </div>
 
-              <a
+              <RouteLink
                 href={pairUrl ?? '/'}
                 className="mt-10 inline-block text-sm font-semibold text-blue-400 hover:underline"
               >
                 See {fromName} → {toName ? bareName(toName) : to} story →
-              </a>
+              </RouteLink>
             </>
           ) : (
             <>

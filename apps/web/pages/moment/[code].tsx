@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { momentCardContent, type MomentCardContent } from '@/lib/moment-card';
+import { RouteLink } from '@/components/shared/RouteLink';
 
 interface Props {
   content: MomentCardContent;
@@ -88,12 +89,12 @@ export default function MomentPage({ content, deepLink, ogImageUrl, pageUrl }: P
         <h1 className="max-w-md text-2xl font-bold text-white">
           {content.headline}
         </h1>
-        <a
+        <RouteLink
           href={deepLink}
           className="mt-6 text-sm font-semibold text-blue-400 hover:underline"
         >
           Open in DiversiFi →
-        </a>
+        </RouteLink>
       </div>
     </>
   );

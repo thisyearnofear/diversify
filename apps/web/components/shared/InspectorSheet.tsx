@@ -14,11 +14,11 @@ import {
   motion,
   useDragControls,
   useIsPresent,
-  useReducedMotion,
   type PanInfo,
 } from "framer-motion";
 import { press, spring, springPress, springSoft } from "@/lib/motion-tokens";
 import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
+import { useMotionBudget } from "@/hooks/use-motion-budget";
 import { useInstrumentInspectorPlacement } from "./InstrumentShell";
 import { haptics } from "@/lib/haptics";
 
@@ -139,7 +139,9 @@ export function InspectorSheet({
   className = "",
   presentation = "sheet",
 }: InspectorSheetProps) {
-  const reducedMotion = useReducedMotion();
+  // Budget, not just the media query: the sheet's fold is the same motion
+  // grammar the tab shell uses, so both ask the one hook.
+  const reducedMotion = !useMotionBudget().motion;
   const dragControls = useDragControls();
   const placement = useInstrumentInspectorPlacement();
   const open = Boolean(selectedId);

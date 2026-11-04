@@ -1,5 +1,54 @@
 # Roadmap Log — historical waves & file deltas
 
+### One motion clock, one budget, one route seam (2026-11-04)
+
+The feed read as uneven: tabs blinked on hand-off, durations were hand-typed
+per component, and every jump between surfaces hard-cut. What changed:
+
+- **One clock.** `lib/motion-tokens.ts` gained `duration` (`instant` 0.1 /
+  `fast` 0.18 / `base` 0.28 / `settle` 0.5 / `slow` 0.8) and `easing`
+  (`out` — the house curve, `[0.16, 1, 0.3, 1]`, `inOut` for symmetric
+  returns), plus `revealBase`, `PANE_TRAVEL_PX` (40) and
+  `paneTransition(direction, reducedMotion)`. Migrated call sites: `Tooltip`
+  (instant), `MoreOptions` (fast), `AskAIButton`, `ContextualBanner`,
+  `PickerSheetShell`, `shared/LiveLine`, `ui/EmptyState`, `ui/ErrorState`
+  (base). No component keeps a hand-typed duration.
+- **The blink was the pane hand-off.** `TabContentRouter`'s `TabPane` and
+  `KeepMountedPane` now share `paneTransition`: the entering pane travels
+  40px from the movement direction on `base` while the leaving pane clears
+  on `fast` with a 0.99 recede — overlap instead of a sequential
+  out-then-in.
+- **One budget.** `hooks/use-motion-budget.ts` (`useMotionBudget` →
+  `{ motion, velocityBlur }`, pure `motionBudgetFor` for tests) reads
+  reduced-motion + device cost once on mount. `TabContentRouter`,
+  `InspectorSheet` and `CurrencyInstrument` derive `reducedMotion` from it
+  instead of each calling `useReducedMotion`; only the velocity-driven blur
+  drops for cost, because data motion is meaning.
+- **The route seam.** `lib/route-transition.ts` (`canTransitionRoutes`,
+  `pushWithRouteTransition`, `useRouteTransition`) wraps `router.push` in
+  `document.startViewTransition` — a default root crossfade (no named
+  element pairs; multiple coins per surface make names ambiguous), one at a
+  time behind a `data-dfi-route-transition` guard cleared on `finished`, and
+  a plain push when the browser lacks the API, motion is reduced or the
+  seam is busy. `styles/globals.css` owns the `::view-transition-old/new
+  (root)` keyframes under `prefers-reduced-motion: no-preference`.
+- **Every in-app link uses it.** `components/shared/RouteLink.tsx` is a
+  `next/link` that pushes plain left-clicks through the seam (modified
+  clicks, `#hash`, `target`/`download` and `defaultPrevented` keep browser
+  behaviour). Wired on: currency instrument page + `CurrencyInstrument`
+  CTAs + `CurrencyStoryInspector`, postcard, pair, moment, receipt,
+  restricted, terms, rwa-vaults, fx-drag-calculator, `LegalPage` footer,
+  `MoreOptions`. Postcard citation anchors stay external `<a>`. There is no
+  `/debt/[code]` page, so the sovereign-debt curation has no link surface.
+
+Verified: `tsc --noEmit` clean in `apps/web`; eslint clean on every touched
+file; 92 tests green across `route-transition` (5), `RouteLink` (3),
+`CurrencyStoryInspector` (30), `MoreOptions` (13), `CurrencyInstrument`,
+`moment-page`, `pair-page`, `receipt`. `CurrencyStoryInspector`'s test now
+mocks `next/router` (a `RouteLink` needs the router mounted, like the
+`MoreOptions`/`CurrencyInstrument` suites already did). No visual check was
+run — the crossfade itself is unverified in a browser.
+
 ### Testnet surface cleanup — Stellar becomes the only user-facing testnet (2026-10-26)
 
 A product review of the auth/network-switching UX found the EVM testnet

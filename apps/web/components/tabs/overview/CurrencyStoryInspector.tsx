@@ -29,6 +29,7 @@ import {
 } from '@/constants/currency-risk';
 import { momentCardContent } from '@/lib/moment-card';
 import { trackFunnelEvent } from '@/lib/analytics';
+import { RouteLink } from '@/components/shared/RouteLink';
 
 /** The currency's story is public knowledge — shareable via a card whose
  *  numbers are derived from the code alone. */
@@ -480,6 +481,25 @@ function CurrencyStoryBody({
         </motion.div>
       </AnimatePresence>
       {content && <MomentShareLine code={content.code} />}
+      {/* The story is this sheet's job; the instrument is a separate, deeper
+          surface (rings, what-if, provenance). Quiet, because Ask Guardian
+          is the commitment here. */}
+      <div>
+        <RouteLink
+          href={`/currency/${entry.code}`}
+          onClick={() => {
+            trackFunnelEvent('currency_instrument_opened', {
+              currency: entry.code,
+              source: 'currency_story',
+            });
+            haptics.tap();
+            onClose();
+          }}
+          className="inline-flex min-h-tap items-center px-1 text-2xs font-semibold text-ink-muted transition-colors hover:text-ink"
+        >
+          Open the {entry.code} instrument →
+        </RouteLink>
+      </div>
       <motion.button
         type="button"
         {...controlMotion(Boolean(reducedMotion))}

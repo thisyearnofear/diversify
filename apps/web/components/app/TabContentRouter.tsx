@@ -10,17 +10,19 @@
  * the tab appears instead of bouncing.
  */
 import { forwardRef, useEffect, useRef, useState, type ReactNode } from "react";
-import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useIsPresent } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { getVisibleTabIds, isTabId } from "@/constants/tabs";
 
 import { useAppShellContext } from "@/context/app/AppShellContext";
+import { useMotionBudget } from "@/hooks/use-motion-budget";
 import { useTabDiscovery } from "@/hooks/use-tab-discovery";
 import { useShareLanding } from "@/hooks/use-share-landing";
 import ErrorBoundary from "@/components/ui/ErrorBoundary";
 import PullToRefresh from "@/components/ui/PullToRefresh";
 import { TabSkeleton } from "@/components/ui/Skeleton";
+import { paneTransition } from "@/lib/motion-tokens";
 import { TAB_LOADERS, preloadNeighbourTabs } from "@/lib/tab-preload";
 
 // ── Dynamic tab imports ──
@@ -61,24 +63,19 @@ const TabPane = forwardRef<HTMLDivElement, TabPaneProps>(function TabPane(
   { id, children, direction },
   ref,
 ) {
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = !useMotionBudget().motion;
   const present = useIsPresent();
+  // One hand-off in both directions: the arriving pane travels further and
+  // settles, the leaving one clears out faster and recedes — overlap, not a
+  // sequential exit-then-enter blink (lib/motion-tokens.ts paneTransition).
+  const handoff = paneTransition(direction, reducedMotion);
   return (
     <motion.div
       key={id}
       ref={ref}
-      initial={
-        reducedMotion
-          ? { opacity: 0 }
-          : { opacity: 0, x: 24 * direction, y: 0 }
-      }
-      animate={{ opacity: 1, x: 0, y: 0 }}
-      exit={
-        reducedMotion
-          ? { opacity: 0 }
-          : { opacity: 0, x: -24 * direction, y: 0 }
-      }
-      transition={{ duration: 0.18, ease: "easeOut" }}
+      initial={handoff.initial}
+      animate={handoff.animate}
+      exit={handoff.exit}
       style={{
         pointerEvents: present ? "auto" : "none",
         position: present ? "relative" : "absolute",
@@ -123,24 +120,22 @@ function KeepMountedPane({
   reducedMotion: boolean;
 }) {
   const direction = active ? 1 : -1;
+  // Same hand-off as a normal pane, driven by `active` instead of presence:
+  // leaving Home recedes to the left, arriving Home settles in from the right.
+  const handoff = paneTransition(direction, reducedMotion);
   return (
     <motion.div
       key={id}
-      initial={
-        reducedMotion
-          ? { opacity: 0 }
-          : { opacity: 0, x: 24 * direction }
+      initial={handoff.initial}
+      animate={
+        active
+          ? { ...handoff.animate, visibility: "visible" }
+          : // visibility lands in the a11y tree too: hidden panes are
+            // invisible AND unfocusable (unlike opacity alone, which leaves
+            // phantom focus targets). framer animates the crossfade,
+            // visibility gates interaction the moment the fade completes.
+            { ...handoff.exit, visibility: "hidden" }
       }
-      animate={{
-        opacity: active ? 1 : 0,
-        x: 0,
-        // visibility lands in the a11y tree too: hidden panes are invisible
-        // AND unfocusable (unlike opacity alone, which leaves phantom
-        // focus targets). framer animates the crossfade, visibility gates
-        // interaction the moment the fade completes.
-        visibility: active ? "visible" : "hidden",
-      }}
-      transition={{ duration: 0.18, ease: "easeOut" }}
       style={{
         pointerEvents: active ? "auto" : "none",
         // Inactive: out of the layout flow entirely. popLayout only pops
@@ -243,7 +238,7 @@ export default function TabContentRouter() {
   // NEXT_PUBLIC_KEEP_MOUNTED_HOME=false reverts without a code change.
   // Disabled under test (NODE_ENV=test) so suites exercise the classic
   // unmount path and framer stubs never see popLayout.
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = !useMotionBudget().motion;
   const RENDER_OVERVIEW_ALWAYS =
     process.env.NEXT_PUBLIC_KEEP_MOUNTED_HOME !== "false" &&
     process.env.NODE_ENV !== "test";
@@ -304,7 +299,7 @@ export default function TabContentRouter() {
             key="overview"
             id="overview"
             active={activeTab === "overview"}
-            reducedMotion={Boolean(reducedMotion)}
+            reducedMotion={reducedMotion}
           >
             {overviewContent}
           </KeepMountedPane>

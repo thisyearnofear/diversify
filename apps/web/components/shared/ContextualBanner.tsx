@@ -15,6 +15,7 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { duration, easing } from "@/lib/motion-tokens";
 import type { Region } from "@/hooks/use-user-region";
 import { Card, PrimaryButton, SecondaryButton } from "./TabComponents";
 import { useColdStart } from "@/hooks/use-cold-start";
@@ -117,7 +118,7 @@ export function ContextualBanner({
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -6 }}
-      transition={{ duration: 0.2 }}
+      transition={{ duration: duration.fast, ease: easing.out }}
     >
       {kind === "cold-start" && (
         <ColdStartVariant

@@ -8,7 +8,7 @@
 
 import { useEffect } from 'react';
 import Head from 'next/head';
-import Link from 'next/link';
+import { RouteLink } from '@/components/shared/RouteLink';
 import { useRouter } from 'next/router';
 import { CURRENCY_BY_CODE, getCurrencyRisk } from '@/constants/currency-risk';
 import { readPaymentCycleDraft, seedPaymentCycleDraft } from '@/hooks/use-payment-cycle';
@@ -48,12 +48,12 @@ export default function FxDragCalculatorDoorway() {
           <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
             Opening the FX drag report inside DiversiFi…
           </p>
-          <Link
+          <RouteLink
             href={TARGET}
             className="mt-4 inline-block text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline"
           >
             Open it now →
-          </Link>
+          </RouteLink>
         </div>
       </div>
     </>

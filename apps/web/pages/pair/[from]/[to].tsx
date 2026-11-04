@@ -9,6 +9,7 @@ import Head from 'next/head';
 import { useRouter } from 'next/router';
 import { useEffect } from 'react';
 import { pairCardContent, type PairCardContent } from '@/lib/pair-card';
+import { RouteLink } from '@/components/shared/RouteLink';
 import { fetchLedgerRecords } from '@/lib/server/fetch-ledger-records';
 import { geoCountryFromHeaders } from '@/lib/geo';
 
@@ -99,12 +100,12 @@ export default function PairPage({ content, deepLink, ogImageUrl, pageUrl }: Pro
         <h1 className="max-w-md text-2xl font-bold text-white">
           {content.headline}
         </h1>
-        <a
+        <RouteLink
           href={deepLink}
           className="mt-6 text-sm font-semibold text-blue-400 hover:underline"
         >
           Open in DiversiFi →
-        </a>
+        </RouteLink>
       </div>
     </>
   );

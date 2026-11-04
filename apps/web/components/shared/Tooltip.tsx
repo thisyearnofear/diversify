@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAnalytics } from "@/hooks/use-analytics";
+import { duration, easing } from "@/lib/motion-tokens";
 
 interface TooltipProps {
     children: React.ReactNode;
@@ -78,7 +79,7 @@ export function Tooltip({ children, content, side = "top", className = "", analy
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.95 }}
-                        transition={{ duration: 0.15 }}
+                        transition={{ duration: duration.instant, ease: easing.out }}
                         className={`absolute z-50 ${sideStyles[side]} pointer-events-none`}
                         role="tooltip"
                         aria-live="polite"

@@ -12,6 +12,7 @@
  */
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { duration } from '@/lib/motion-tokens';
 
 /** Dwell per beat while the line breathes (§5 state rule). */
 export const LIVE_LINE_DWELL_MS = 7000;
@@ -84,7 +85,7 @@ export function LiveLine({
             initial={{ opacity: 0, filter: 'blur(4px)' }}
             animate={{ opacity: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, filter: 'blur(4px)' }}
-            transition={{ duration: 0.18 }}
+            transition={{ duration: duration.fast }}
           >
             {beats[shown].content}
           </motion.span>

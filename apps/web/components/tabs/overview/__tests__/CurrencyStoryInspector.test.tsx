@@ -18,6 +18,9 @@ let mockNews: Array<{ title: string; url: string; source: string; date: string |
 let mockGeo: string | null = null;
 vi.mock('@/hooks/use-geo-country', () => ({ useGeoCountry: () => mockGeo }));
 
+vi.mock("next/router", () => ({
+  useRouter: () => ({ push: vi.fn(), prefetch: vi.fn(), asPath: "/" }),
+}));
 vi.mock("@/components/swap/CorridorContext", () => ({
   useLiveCurrencyRisk: () => mockLive,
 }));
@@ -39,6 +42,21 @@ afterEach(() => {
   mockGeo = null;
   mockAskAdvisor.mockClear();
   mockTrack.mockClear();
+});
+
+describe('Currency instrument entry point', () => {
+  it('links to the currency instrument and closes the sheet on the way', () => {
+    const onClose = vi.fn();
+    render(<CurrencyStoryInspector code="KES" onClose={onClose} />);
+    const link = screen.getByRole('link', { name: 'Open the KES instrument →' });
+    expect(link).toHaveAttribute('href', '/currency/KES');
+    fireEvent.click(link);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(mockTrack.mock.calls).toContainEqual([
+      'currency_instrument_opened',
+      { currency: 'KES', source: 'currency_story' },
+    ]);
+  });
 });
 
 describe('Currency story wording', () => {

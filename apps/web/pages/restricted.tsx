@@ -1,5 +1,5 @@
 import Head from 'next/head';
-import Link from 'next/link';
+import { RouteLink } from '@/components/shared/RouteLink';
 
 /**
  * Shown when the edge proxy rewrites a sanctioned location here (451).
@@ -22,12 +22,12 @@ export default function Restricted() {
             product and its API.
           </p>
           <p className="mt-6 text-sm">
-            <Link
+            <RouteLink
               href="/terms"
               className="text-gray-900 underline underline-offset-4 dark:text-white"
             >
               Read the terms
-            </Link>
+            </RouteLink>
           </p>
         </div>
       </main>

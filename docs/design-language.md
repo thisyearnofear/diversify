@@ -152,6 +152,48 @@ the bundle):
 - **Count-up** (`AnimatedNumber`): the number arrives as a punch.
 - **Flick scroll row** (`FlickScrollRow`, powered by `useDragToScroll`): the ONLY sanctioned horizontal scroll row — new rows compose the primitive instead of re-rolling `overflow-x-auto`. Native touch, pointer drag with momentum on mouse/pen, chevron buttons; `snap-proximity`, never `snap-mandatory` (a snap that yanks the gesture out of the user's hand is motion fighting the user). Interactive children guard with `useDidDrag()` inside a child component (a body-level call reads the never-drag default and silently no-ops); drag-release swallows exactly one click, a new press revokes the trap. Live users: philosophy picker, Home holdings coins, BestYield chain toolbar, onboarding ArchetypeStrip.
 
+### One clock, one budget, one seam
+
+Shared values, never hand-typed. `apps/web/lib/motion-tokens.ts` owns the
+duration bands — `instant` 0.1 / `fast` 0.18 / `base` 0.28 / `settle` 0.5 /
+`slow` 0.8 — and the curves (`easing.out` `[0.16, 1, 0.3, 1]`, the house
+curve; `easing.inOut` for a symmetric move home). Picking a band IS the
+decision; a duration typed into a component is a bug.
+
+- **Energy is contrast and overlap, not length.** Leaving content clears on
+  `fast` (one band lower, 0.99 recede) while arriving content lands on
+  `base` on the house curve. The two run together — a sequential
+  out-then-in is exactly what reads as a blink.
+- **The tab hand-off** is `paneTransition(direction, reducedMotion)`: the
+  entering pane travels `PANE_TRAVEL_PX` (40) from the direction of
+  movement on `base`, the leaving pane clears on `fast`. `TabContentRouter`
+  applies it to `TabPane` and `KeepMountedPane` alike, so panes handed over
+  in `AnimatePresence mode="popLayout"` overlap instead of stacking.
+- **Reduced motion is a budget, not a per-component hook.**
+  `apps/web/hooks/use-motion-budget.ts` answers `{ motion, velocityBlur }`
+  from one mount-time read of `prefers-reduced-motion` plus device cost
+  (Save-Data, slow effective type, ≤4 cores / ≤4GB). `motion: false` lands
+  every reveal in its final state and is the only correctness switch;
+  `velocityBlur` is a cost switch, because a number that changed must still
+  travel (data motion is meaning). Components gate on
+  `!useMotionBudget().motion` rather than each calling `useReducedMotion`.
+- **The route seam** (`apps/web/lib/route-transition.ts`) wraps a
+  `router.push` in `document.startViewTransition`, so a jump between
+  surfaces crossfades at the root (`::view-transition-old/new(root)` in
+  `globals.css`, inside a `prefers-reduced-motion: no-preference` block).
+  One transition at a time — a `data-dfi-route-transition` guard on
+  `documentElement`, cleared on `finished` (which also rejects when the
+  transition is skipped or interrupted). No named element pairs: several
+  coins per surface make names ambiguous, so the root crossfade is the
+  whole hand-off. An unsupported browser, reduced motion, a busy seam or a
+  second tap falls through to a plain push — the seam never blocks
+  navigation.
+- **`RouteLink`** (`components/shared/RouteLink.tsx`) is how an in-app jump
+  uses the seam: use it instead of `next/link` for internal hrefs. Modified
+  clicks, `#hash` hrefs, non-left buttons, `target`/`download` and a
+  `defaultPrevented` event keep the browser's own behaviour, so the seam is
+  opt-in per click, never a hijack. External URLs stay a plain `<a>`.
+
 **Rive objects (scoped exception).** A self-contained interactive object —
 a coin that flips, lands, and shines on claim; a celebration artefact — may
 be authored in Rive (`.rml` source under `apps/web/rive/`, compiled `.riv`
@@ -846,7 +888,8 @@ truthfully somewhere verifiable.
 - [ ] Discovery invites, exploration responds, commitment settles; one focal choreography, no competing loops, and unrelated motion stops on user action.
 - [ ] New facts name their depth layer (L0 object / L1 line / L2
       inspector / L3 Guardian); an L1 addition evicts, never stacks.
-- [ ] Reduced-motion path verified.
+- [ ] Reduced-motion path verified through `useMotionBudget` (never a local `useReducedMotion` gate), and any timed motion picks a `duration.*` band instead of a number.
+- [ ] Internal links are `RouteLink`, not `next/link` — the jump crosses through the route seam (§5).
 - [ ] Disclaimers/honesty copy appear exactly once, in plain words.
 - [ ] New CTAs use `bg-action-fill` (+ `hover:bg-action-fill-hover`) under white ink, and `text-action` when the action is a link; new status-tier links use `.link-handoff` (next step) or `.link-quiet` (supporting) — never a new hue, never green/teal for a pitch, no arrow on static text.
 - [ ] No email form or input interrupting an emotional beat.
@@ -972,7 +1015,10 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `ShimmerText` | `apps/web/components/shared/ShimmerText.tsx` | CTA text (use sparingly) |
 | `TokenIcon` | `apps/web/components/shared/TokenIcon.tsx` + `apps/web/constants/token-logos.ts` | curated token logos w/ branded coin fallback on missing or failed logos; add verified assets to the registry, never leave broken images |
 | `phaseVariants`, `staggerChild` | onboarding screens | directional phase transitions |
-| `controlMotion` | `apps/web/lib/motion-tokens.ts` | one press grammar for all controls |
+| `controlMotion`, `duration`, `easing`, `paneTransition` | `apps/web/lib/motion-tokens.ts` | one press grammar for all controls; the duration bands + house curve every timed motion picks from; the tab pane hand-off |
+| `useMotionBudget` | `apps/web/hooks/use-motion-budget.ts` | the one motion gate — reduced-motion correctness + device-cost switches (§5) |
+| `RouteLink` | `apps/web/components/shared/RouteLink.tsx` | in-app link that navigates through the route seam (use instead of `next/link` for internal hrefs) |
+| `pushWithRouteTransition`, `useRouteTransition` | `apps/web/lib/route-transition.ts` | root crossfade around `router.push`; falls through to a plain push (§5) |
 | `PickerSheetShell` / `CountryPicker` | `apps/web/components/shared/PickerSheetShell.tsx`, `apps/web/components/tabs/overview/CountryPicker.tsx` | searchable picker sheet/dialog (country + token); focus-trapped, origin restored |
 | `benchmarkBuyingPower` | `apps/web/lib/narrative/currency-moment.ts` | onboarding before/after reading (100 benchmark units → end) |
 | `onboarding-draft` | `apps/web/components/onboarding/onboarding-draft.ts` | session-only draft recovery; validated, never a commit |

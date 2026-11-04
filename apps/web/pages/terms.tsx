@@ -1,5 +1,5 @@
 import { LegalPage, Counsel } from '../components/legal/LegalPage';
-import Link from 'next/link';
+import { RouteLink } from '@/components/shared/RouteLink';
 
 export default function Terms() {
   return (
@@ -37,7 +37,7 @@ export default function Terms() {
         <p className="mt-2">
           Content, plans, and Guardian recommendations are informational, not
           investment, legal, or tax advice. You are responsible for your own
-          decisions. See <Link href="/risk" className="underline underline-offset-2">Risk disclosures</Link>.{' '}
+          decisions. See <RouteLink href="/risk" className="underline underline-offset-2">Risk disclosures</RouteLink>.{' '}
           <Counsel note="confirm whether personalised Guardian proposals count as personal recommendations in target jurisdictions; adjust this clause accordingly" />
         </p>
       </section>
@@ -57,7 +57,7 @@ export default function Terms() {
         <p className="mt-2">
           DiversiFi charges no fee on swaps today; network and venue costs
           apply and are shown in the quote before signing. See{' '}
-          <Link href="/fees" className="underline underline-offset-2">Fees</Link>.
+          <RouteLink href="/fees" className="underline underline-offset-2">Fees</RouteLink>.
         </p>
       </section>
 

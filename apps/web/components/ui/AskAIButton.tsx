@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAdvisor } from '../../hooks/use-advisor';
 import { motion, AnimatePresence } from 'framer-motion';
+import { duration, easing } from '@/lib/motion-tokens';
 
 interface AskAIButtonProps {
   /**
@@ -152,7 +153,7 @@ export default function AskAIButton({
       >
         <motion.span
           animate={{ rotate: showInput ? 180 : 0 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: duration.fast, ease: easing.out }}
         >
           🤖
         </motion.span>
@@ -166,7 +167,7 @@ export default function AskAIButton({
             initial={{ opacity: 0, y: 10, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 10, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: duration.fast, ease: easing.out }}
             className="absolute bottom-full mb-2 right-0 w-72 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 p-3 z-50"
           >
             {/* Quick Questions */}

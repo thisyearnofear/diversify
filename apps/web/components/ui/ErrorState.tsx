@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { duration, easing } from '@/lib/motion-tokens';
 
 interface ErrorStateProps {
   /** Custom title for the error message */
@@ -39,7 +40,7 @@ const ErrorState: React.FC<ErrorStateProps> = ({
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
+      transition={{ duration: duration.base, ease: easing.out }}
       className={`rounded-2xl border border-red-200 dark:border-red-800/50 bg-red-50 dark:bg-red-950/30 p-6 ${className}`}
     >
       <div className="flex flex-col items-center text-center gap-3">

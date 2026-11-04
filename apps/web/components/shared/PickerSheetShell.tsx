@@ -21,7 +21,7 @@ import React, { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
 import Scrim from "./Scrim";
-import { spring } from "@/lib/motion-tokens";
+import { duration, easing, spring } from "@/lib/motion-tokens";
 import { useDismissibleLayer } from "@/hooks/use-dismissible-layer";
 import { shouldDismissDrag, useDismissDetent } from "./InspectorSheet";
 
@@ -128,7 +128,7 @@ export function PickerSheetShell({
             initial={{ opacity: 1 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            transition={{ duration: duration.fast, ease: easing.out }}
           >
           <motion.div
             ref={panelRef}

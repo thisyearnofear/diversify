@@ -62,6 +62,23 @@ export function corridorSideFor(token: string | null | undefined): CorridorSide 
   return { token, code, flag: entry.flag, name: entry.countryName, entry };
 }
 
+/**
+ * The onchain token that mirrors a fiat currency, or null when the
+ * currency has none. Prefers the Mento `…m` series (the app's canonical
+ * regional stables) and falls back to the first mapped token, so callers
+ * asking "is this currency onchain?" get one stable answer.
+ */
+export function tokenForFiatCode(code: string): string | null {
+  const upper = code.toUpperCase();
+  if (upper === 'XAU') return 'PAXG';
+  const preferred = `${upper}m`;
+  if (TOKEN_TO_FIAT[preferred] === upper) return preferred;
+  for (const [token, fiat] of Object.entries(TOKEN_TO_FIAT)) {
+    if (fiat === upper) return token;
+  }
+  return null;
+}
+
 /** The time-machine horizon — how far back the beam re-weighs. */
 export type Horizon = '1yr' | '3yr' | '5yr';
 

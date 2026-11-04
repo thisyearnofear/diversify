@@ -1152,6 +1152,7 @@ The `useProactiveAgent` monitoring loop is mounted once at the app root via `com
 | `lens_offered` | `tab`, `lens` | A lens prompt actually renders in its slot — once per session per lens, never in demo |
 | `lens_open` | `tab`, `lens` | The user opens that lens (same demo gate, so open ÷ offered is an honest rate) |
 | `share_open` | `source` | A share line is tapped (`pair_card` / `moment_card` / `plan_card`) |
+| `currency_instrument_opened` | `currency`, `source` | The Home currency story hands off to the full instrument at `/currency/{code}` (`source: currency_story`) |
 | `share_landed` | `source` | A `?src=…_card` deep link arrives — once per session, demo-gated |
 | `share_settled` | `source` | A receipt settles the shared pair, or the shared plan is committed |
 | `shield_cue_used` | — | The first-use dot on the Shield dock button is tapped (shown while Home is active and Shield is unvisited) |

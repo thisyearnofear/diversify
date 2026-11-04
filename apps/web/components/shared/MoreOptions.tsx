@@ -15,7 +15,7 @@
  */
 
 import React from "react";
-import Link from "next/link";
+import { RouteLink } from "@/components/shared/RouteLink";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Region } from "@/hooks/use-user-region";
 import type { UserExperienceMode } from "@/context/app/types";
@@ -28,6 +28,7 @@ import {
 } from "@/lib/anchor-currency";
 import RegionalIconography from "../regional/RegionalIconography";
 import { FEELS, getFeel, setFeel, type Feel } from "@/lib/feel";
+import { duration as motionDuration, easing } from "@/lib/motion-tokens";
 
 const FEEL_LABEL: Record<Feel, string> = {
   silent: "Silent",
@@ -203,7 +204,7 @@ export function MoreOptions({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: motionDuration.fast, ease: easing.out }}
             className="overflow-hidden"
           >
             <div className="px-4 pb-4 space-y-4 border-t border-gray-100 dark:border-gray-800">
@@ -396,13 +397,13 @@ export function MoreOptions({
                   aria-label="Legal"
                   className="pt-3 flex items-center gap-3 text-2xs text-gray-500 dark:text-gray-400"
                 >
-                  <Link href="/terms" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Terms</Link>
+                  <RouteLink href="/terms" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Terms</RouteLink>
                   <span aria-hidden="true">·</span>
-                  <Link href="/privacy" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Privacy</Link>
+                  <RouteLink href="/privacy" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Privacy</RouteLink>
                   <span aria-hidden="true">·</span>
-                  <Link href="/risk" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Risk</Link>
+                  <RouteLink href="/risk" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Risk</RouteLink>
                   <span aria-hidden="true">·</span>
-                  <Link href="/fees" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Fees</Link>
+                  <RouteLink href="/fees" className="underline underline-offset-2 hover:text-gray-700 dark:hover:text-gray-300">Fees</RouteLink>
                 </nav>
               )}
             </div>

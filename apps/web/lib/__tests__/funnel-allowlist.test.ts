@@ -32,6 +32,7 @@ describe('FUNNEL_EVENTS allowlist', () => {
     const allowed = FUNNEL_EVENTS as readonly string[];
     for (const event of [
       'currency_story_opened',
+      'currency_instrument_opened',
       'currency_headline_tapped',
       'ask_guardian_tapped',
       'walletless_connect_tapped',
