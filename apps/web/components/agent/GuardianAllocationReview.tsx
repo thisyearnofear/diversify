@@ -68,11 +68,11 @@ export function GuardianAllocationReview() {
           if (!fresh) { setAdvice(null); setError('The allocation reading expired. Check again.'); return; }
           invalidateExpectedOutputCache();
           navigateToSwap(fresh);
-        }} className="min-h-tap w-full rounded-xl bg-action px-4 text-sm font-bold text-white">
+        }} className="min-h-tap w-full rounded-xl bg-action-fill px-4 text-sm font-bold text-white">
           Review in Exchange
         </button>
       ) : (
-        <button type="button" onClick={() => void read()} disabled={loading || !address} className="min-h-tap w-full rounded-xl bg-action px-4 text-sm font-bold text-white disabled:opacity-50">
+        <button type="button" onClick={() => void read()} disabled={loading || !address} className="min-h-tap w-full rounded-xl bg-action-fill px-4 text-sm font-bold text-white disabled:opacity-50">
           {loading ? 'Reading allocation…' : advice || error ? 'Check again' : 'Check saved allocation'}
         </button>
       )}

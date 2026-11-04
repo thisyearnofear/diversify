@@ -212,7 +212,7 @@ export function LastCycleDrag({ currency, onCurrencyChange, onTrackNext }: LastC
         type="button"
         onClick={calculate}
         disabled={isCalculating}
-        className="w-full min-h-tap py-2.5 rounded-xl bg-action hover:bg-action-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+        className="w-full min-h-tap py-2.5 rounded-xl bg-action-fill hover:bg-action-fill-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
       >
         {isCalculating ? <InlineSpinner /> : null}
         {isCalculating ? 'Estimating…' : 'Estimate FX drag'}
@@ -356,7 +356,7 @@ function LastCycleResult({
           trackFunnelEvent('fx_drag_handoff', { currency, target: 'cycle', source: 'inspector' });
           onTrackNext({ currency, paymentUsd: summary.totalUsdPaid });
         }}
-        className="min-h-tap w-full py-2.5 rounded-xl bg-action hover:bg-action-hover text-white text-sm font-bold transition-colors"
+        className="min-h-tap w-full py-2.5 rounded-xl bg-action-fill hover:bg-action-fill-hover text-white text-sm font-bold transition-colors"
       >
         Track your next payment →
       </button>

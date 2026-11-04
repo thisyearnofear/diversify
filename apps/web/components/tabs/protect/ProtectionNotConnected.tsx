@@ -535,7 +535,7 @@ export function ProtectionNotConnected({
                 type="button"
                 data-testid="walletless-commit"
                 onClick={commitFocusedPlan}
-                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
+                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action-fill text-white hover:bg-action-fill-hover active:bg-action-fill-hover transition-colors"
               >
                 Use this plan
               </button>

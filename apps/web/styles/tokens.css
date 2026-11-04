@@ -131,6 +131,14 @@
   --action:          37 99 235;    /* blue-600 */
   --action-hover:    29 78 216;    /* blue-700 */
 
+  /* The SAME hue in its filled form: a solid surface with white ink on it.
+     In light mode these are numerically `--action`, so nothing changes. In
+     dark they must NOT follow it — `--action` goes light there so link text
+     stays legible on gray-900, and white ink on a light-blue fill measures
+     2.5:1. A fill and a link are two jobs; they get two values. ─────────── */
+  --action-fill:       37 99 235;  /* blue-600 — white label 5.2:1 */
+  --action-fill-hover: 29 78 216;  /* blue-700 */
+
   /* ── Touch target — 44px (Apple HIG) floor for anything tappable ── */
   --tap-min: 2.75rem;
 }
@@ -162,4 +170,8 @@
   --line:            31 41 55;     /* gray-800 */
   --action:          96 165 250;   /* blue-400 — legible on gray-900 */
   --action-hover:    147 197 253;  /* blue-300 */
+  /* Fills stay dark-mode blue-600: white on blue-400 is 2.5:1, and hover
+     goes *deeper*, not lighter, so the label never drops below AA. */
+  --action-fill:       37 99 235;   /* blue-600 — white label 5.2:1 */
+  --action-fill-hover: 30 64 175;   /* blue-800 — white label 8.7:1 */
 }

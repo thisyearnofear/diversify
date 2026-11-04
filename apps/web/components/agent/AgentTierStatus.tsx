@@ -168,7 +168,7 @@ export function GuardianStatusChip({
         <button
           type="button"
           onClick={handleCta}
-          className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors text-white bg-action"
+          className="mt-3 w-full py-2.5 rounded-xl text-sm font-bold transition-colors text-white bg-action-fill"
           onMouseEnter={(e) => {
             e.currentTarget.style.opacity = '0.85';
           }}

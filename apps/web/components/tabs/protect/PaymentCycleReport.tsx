@@ -236,7 +236,7 @@ function PaymentDueConfirm({
           type="button"
           disabled={saving}
           onClick={submit}
-          className="min-h-11 px-3 rounded-lg bg-action text-white text-xs font-bold disabled:opacity-50"
+          className="min-h-11 px-3 rounded-lg bg-action-fill text-white text-xs font-bold disabled:opacity-50"
         >
           {saving ? 'Saving…' : 'Confirm paid'}
         </button>
@@ -871,7 +871,7 @@ export function PaymentCycleReport({
         type="button"
         onClick={runReport}
         disabled={!canSubmit || loading}
-        className="w-full min-h-tap py-2.5 rounded-xl bg-action hover:bg-action-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
+        className="w-full min-h-tap py-2.5 rounded-xl bg-action-fill hover:bg-action-fill-hover disabled:opacity-50 text-white text-sm font-bold transition-colors flex items-center justify-center gap-2"
       >
         {loading ? <InlineSpinner /> : null}
         {loading ? 'Comparing…' : 'Compare payment options'}
@@ -916,7 +916,7 @@ export function PaymentCycleReport({
             type="button"
             onClick={saveReport}
             disabled={saving}
-            className="min-h-tap w-full rounded-xl bg-action hover:bg-action-hover text-white text-sm font-bold disabled:opacity-50"
+            className="min-h-tap w-full rounded-xl bg-action-fill hover:bg-action-fill-hover text-white text-sm font-bold disabled:opacity-50"
           >
             {saving ? 'Saving…' : 'Save this payment'}
           </button>
@@ -938,7 +938,7 @@ export function PaymentCycleReport({
               type="button"
               onClick={() => toggleMonitoring(true)}
               disabled={cycleConsentSaving}
-              className="min-h-tap w-full py-2.5 rounded-xl bg-action hover:bg-action-hover disabled:opacity-50 text-white text-sm font-bold transition-colors"
+              className="min-h-tap w-full py-2.5 rounded-xl bg-action-fill hover:bg-action-fill-hover disabled:opacity-50 text-white text-sm font-bold transition-colors"
             >
               {cycleConsentSaving ? 'Enabling monitoring…' : 'Let Guardian watch this payment'}
             </button>
@@ -962,7 +962,7 @@ export function PaymentCycleReport({
           </motion.p>
           <p className="text-xs text-ink-muted">{approvalBoundary}</p>
           {onAskGuardian && (
-            <button type="button" onClick={explainReport} className="min-h-tap w-full rounded-xl bg-action text-white text-sm font-bold">
+            <button type="button" onClick={explainReport} className="min-h-tap w-full rounded-xl bg-action-fill text-white text-sm font-bold">
               Review with Guardian
             </button>
           )}

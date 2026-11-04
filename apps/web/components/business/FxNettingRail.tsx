@@ -233,7 +233,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             onClick={() => setSupportingView(v)}
             className={`min-h-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action ${
               supportingView === v
-                ? "bg-action text-white shadow-sm"
+                ? "bg-action-fill text-white shadow-sm"
                 : "text-ink-muted hover:text-ink"
             }`}
           >
@@ -418,7 +418,7 @@ export function FxNettingRail({ initialSell, initialBuy, leadIn }: FxNettingRail
             type="button"
             onClick={handleSubmit}
             disabled={!canMatch || isLoading}
-            className="mt-4 w-full min-h-11 px-4 py-2 rounded-xl bg-action hover:bg-action-hover active:scale-[0.98] text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+            className="mt-4 w-full min-h-11 px-4 py-2 rounded-xl bg-action-fill hover:bg-action-fill-hover active:scale-[0.98] text-white text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
           >
             {isLoading ? "Matching…" : "Find a match"}
           </button>
@@ -616,7 +616,7 @@ function SettlementSection({
             type="button"
             onClick={() => onSettle(s)}
             disabled={isSettling}
-            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-action hover:bg-action-hover active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
+            className="mt-2 min-h-11 px-4 py-2 rounded-xl bg-action-fill hover:bg-action-fill-hover active:scale-[0.98] text-white text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed transition-[color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-action/60 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-900"
           >
             {isSettling ? "Sending…" : `Send ${s.netAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${s.settlementCurrency}`}
           </button>

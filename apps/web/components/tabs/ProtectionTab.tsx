@@ -1221,7 +1221,7 @@ export default function ProtectionTab({
                 data-testid="custom-save"
                 onClick={saveCustom}
                 disabled={isDemo}
-                className="min-h-tap px-5 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors disabled:opacity-50"
+                className="min-h-tap px-5 rounded-full text-sm font-semibold bg-action-fill text-white hover:bg-action-fill-hover active:bg-action-fill-hover transition-colors disabled:opacity-50"
               >
                 Save plan
               </button>
@@ -1283,7 +1283,7 @@ export default function ProtectionTab({
                 type="button"
                 data-testid="picker-commit"
                 onClick={commitFocusedPlan}
-                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
+                className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action-fill text-white hover:bg-action-fill-hover active:bg-action-fill-hover transition-colors"
               >
                 Use this plan
               </button>
@@ -1377,7 +1377,7 @@ export default function ProtectionTab({
                     type="button"
                     data-testid="guardian-tilt-review"
                     onClick={reviewGuardianTilt}
-                    className="min-h-tap px-5 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
+                    className="min-h-tap px-5 rounded-full text-sm font-semibold bg-action-fill text-white hover:bg-action-fill-hover active:bg-action-fill-hover transition-colors"
                   >
                     Review in Exchange
                   </button>
@@ -1533,7 +1533,7 @@ export default function ProtectionTab({
                       type="button"
                       data-testid="compare-commit"
                       onClick={commitFocusedPlan}
-                      className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action text-white hover:bg-action-hover active:bg-action-hover transition-colors"
+                      className="min-h-tap px-6 rounded-full text-sm font-semibold bg-action-fill text-white hover:bg-action-fill-hover active:bg-action-fill-hover transition-colors"
                     >
                       Use this plan
                     </button>

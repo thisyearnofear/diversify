@@ -116,9 +116,15 @@ module.exports = {
       /** The ONE action hue for primary CTAs and handoff links. Backed by
        *  `--action` so light and dark agree. `bg-blue-600` is numerically
        *  identical, so legacy call sites still match — but `action` is the
-       *  sanctioned spelling and the only one that tracks the token. */
+       *  sanctioned spelling and the only one that tracks the token.
+       *  `action-fill` is the same hue in its filled form — use it for a
+       *  solid surface carrying white ink. In light the two are identical;
+       *  in dark `--action` lightens for link text and would drop a white
+       *  label to 2.5:1, so fills stay on `action-fill`. */
       action: "rgb(var(--action) / <alpha-value>)",
       "action-hover": "rgb(var(--action-hover) / <alpha-value>)",
+      "action-fill": "rgb(var(--action-fill) / <alpha-value>)",
+      "action-fill-hover": "rgb(var(--action-fill-hover) / <alpha-value>)",
       },
       // Micro text in rem so it scales with browser zoom / root font size.
       // Replaces text-[11px] / text-[10px]; nothing smaller should ship.
