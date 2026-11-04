@@ -17,6 +17,7 @@ import React from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 import { springSoft } from '@/lib/motion-tokens';
+import { FoundryDefs, metalPaintId, proudFilterId } from './foundry-defs';
 
 export interface RingSlice {
   /** Stable key — usually the token symbol. */
@@ -134,34 +135,7 @@ export default function AllocationRing({
       >
         {/* Track */}
         <defs>
-          {foundry && (
-            <>
-              <linearGradient id={`metal-machined-${uid}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#E4E9EE" />
-                <stop offset="0.5" stopColor="#ADB9C5" />
-                <stop offset="1" stopColor="#7C8996" />
-              </linearGradient>
-              <linearGradient id={`metal-noble-${uid}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#F6DC8F" />
-                <stop offset="0.5" stopColor="#D7AC4B" />
-                <stop offset="1" stopColor="#9C7823" />
-              </linearGradient>
-              <linearGradient id={`metal-living-${uid}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#DD9C5C" />
-                <stop offset="0.5" stopColor="#B56E38" />
-                <stop offset="1" stopColor="#7A4820" />
-              </linearGradient>
-              <linearGradient id={`metal-ghost-${uid}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#BEC8D1" />
-                <stop offset="1" stopColor="#8B99A5" />
-              </linearGradient>
-              {/* The selected leg sits proud of the plate — a lift off
-                  the die, not a color change. */}
-              <filter id={`proud-${uid}`} x="-40%" y="-40%" width="180%" height="180%">
-                <feDropShadow dx="0" dy="2.5" stdDeviation="3" floodColor="#000" floodOpacity="0.45" />
-              </filter>
-            </>
-          )}
+          {foundry && <FoundryDefs uid={uid} />}
           {segments
             .filter(({ slice }) => slice.hatch)
             .map(({ slice }) => (
@@ -245,7 +219,7 @@ export default function AllocationRing({
           const stroke = slice.hatch
             ? `url(#hatch-${uid}-${slice.id})`
             : foundry && slice.material
-              ? `url(#metal-${slice.material}-${uid})`
+              ? `url(#${metalPaintId(uid, slice.material)})`
               : slice.color;
           const patina = foundry ? (slice.patina ?? 0) : 0;
           const dimOpacity = selectedId && !isSelected ? 0.4 : 1;
@@ -257,7 +231,7 @@ export default function AllocationRing({
             <motion.g
               key={slice.id}
               data-proud={liftPx > 0 || undefined}
-              filter={liftPx > 0 ? `url(#proud-${uid})` : undefined}
+              filter={liftPx > 0 ? `url(#${proudFilterId(uid)})` : undefined}
               animate={{ x: Math.cos(midRad) * liftPx, y: Math.sin(midRad) * liftPx }}
               transition={spring}
             >

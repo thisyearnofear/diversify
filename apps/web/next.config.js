@@ -239,7 +239,7 @@ const nextConfig = {
       : [
           {
             source:
-              "/(terms|privacy|risk|fees|restricted|rive-test|stamps-test)",
+              "/(terms|privacy|risk|fees|restricted|rive-test|stamps-test|budget-test)",
             headers: [
               { key: "X-Robots-Tag", value: "noindex, nofollow" },
             ],

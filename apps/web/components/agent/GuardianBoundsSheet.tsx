@@ -10,6 +10,7 @@
 
 import React from "react";
 import { LoopResultSummary } from "./LoopResultSummary";
+import { GuardianBudgetBar } from "./GuardianBudgetBar";
 import type {
   GuardianLoopResult,
   GuardianSessionInfo,
@@ -105,33 +106,32 @@ export function GuardianBoundsSheet({
     <div className="space-y-6">
       {hasValidPermission ? (
         <div className="space-y-3">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-ink-muted">
             {isAutonomous
               ? "Guardian can move savings on its own within this limit. Your wallet enforces the cap on-chain."
               : "Guardian proposes moves within this limit. You approve each one in your wallet."}
           </p>
-          <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">Daily limit</span>
-            <span className="font-bold">{formatMoney(dailyLimit)}/day</span>
-          </div>
-          {sessionInfo && (
+          {sessionInfo ? (
             <>
+              <GuardianBudgetBar
+                spentTodayUSD={sessionInfo.spentTodayUSD}
+                dailyLimitUSD={sessionInfo.dailyLimitUSD}
+                remainingTodayUSD={sessionInfo.remainingTodayUSD}
+                executions={sessionInfo.recentExecutions}
+              />
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Used today</span>
-                <span className="font-bold tabular-nums">{formatMoney(sessionInfo.spentTodayUSD)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Left today</span>
-                <span className="font-bold tabular-nums">{formatMoney(sessionInfo.remainingTodayUSD)}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-500">Moves so far</span>
+                <span className="text-ink-muted">Moves so far</span>
                 <span className="font-bold tabular-nums">{sessionInfo.executionCount}</span>
               </div>
             </>
+          ) : (
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-ink-muted">Daily limit</span>
+              <span className="font-bold">{formatMoney(dailyLimit)}/day</span>
+            </div>
           )}
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">Expires</span>
+            <span className="text-ink-muted">Expires</span>
             <span className="font-bold">{permissionExpiry}</span>
           </div>
 
@@ -148,7 +148,7 @@ export function GuardianBoundsSheet({
                 <button
                   type="button"
                   onClick={onNavigateToFund}
-                  className="min-h-tap w-full text-xs font-bold text-amber-800 dark:text-amber-100 bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-lg transition-colors"
+                  className="min-h-tap w-full text-sm font-bold text-amber-800 dark:text-amber-100 bg-surface border border-amber-200 dark:border-amber-800 rounded-lg transition-colors"
                 >
                   Add funds
                 </button>
@@ -160,7 +160,7 @@ export function GuardianBoundsSheet({
             type="button"
             onClick={onRunNow}
             disabled={isRunningLoop}
-            className="min-h-tap w-full text-xs font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors disabled:opacity-50"
+            className="min-h-tap w-full text-sm font-bold bg-action-fill hover:bg-action-fill-hover text-white rounded-xl transition-colors disabled:opacity-50"
           >
             {isRunningLoop ? "Checking…" : "Check for a move now"}
           </button>
@@ -174,20 +174,20 @@ export function GuardianBoundsSheet({
             type="button"
             onClick={onRevoke}
             disabled={isRevoking}
-            className="min-h-tap w-full text-sm font-bold text-red-500 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-tap w-full text-sm font-bold text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800 rounded-xl hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isRevoking ? "Pausing…" : "Pause Guardian"}
           </button>
         </div>
       ) : (
         <div className="space-y-3">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-ink-muted">
             No daily limit yet. Guardian can explain and suggest, but it can&apos;t propose a move until you set one.
           </p>
           <button
             type="button"
             onClick={onSetLimit}
-            className="min-h-tap w-full text-sm font-bold bg-purple-600 hover:bg-purple-700 text-white rounded-xl transition-colors"
+            className="min-h-tap w-full text-sm font-bold bg-action-fill hover:bg-action-fill-hover text-white rounded-xl transition-colors"
           >
             Set daily limit
           </button>
@@ -196,9 +196,9 @@ export function GuardianBoundsSheet({
 
       {/* Saved allocation for measured review. Same noun as Shield ("Protection plan"). */}
       {(vault.vault?.strategy || (planSyncNeeded && onFollowShieldPlan) || onEditPlanInShield) && (
-        <div className="flex items-center justify-between gap-3 text-sm pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex items-center justify-between gap-3 text-sm pt-4 border-t border-line">
           <div className="min-w-0">
-            <p className="text-gray-500">Protection plan</p>
+            <p className="text-ink-muted">Protection plan</p>
             <p className="font-bold capitalize truncate">
               {planSynced && shieldPlan === 'custom'
                 ? `Custom mix${valuesPlanName ? ` · ${valuesPlanName} values` : ''}`
@@ -211,7 +211,7 @@ export function GuardianBoundsSheet({
             <button
               type="button"
               onClick={onFollowShieldPlan}
-              className="min-h-tap px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-3 text-sm font-bold text-action shrink-0"
             >
               Sync targets for measured review
             </button>
@@ -219,7 +219,7 @@ export function GuardianBoundsSheet({
             <button
               type="button"
               onClick={onEditPlanInShield}
-              className="min-h-tap px-3 text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0"
+              className="min-h-tap px-3 text-sm font-bold text-action shrink-0"
             >
               {shieldPlan ? 'Edit plan in Shield' : 'Choose a plan in Shield'}
             </button>
@@ -227,11 +227,11 @@ export function GuardianBoundsSheet({
         </div>
       )}
       {planSyncNeeded ? (
-        <p className="-mt-4 text-2xs text-gray-500 dark:text-gray-400" data-testid="guardian-plan-unsynced">
+        <p className="-mt-4 text-2xs text-ink-subtle" data-testid="guardian-plan-unsynced">
           On this device{shieldPlanName ? ` — Shield plan: ${shieldPlanName}` : ""}
         </p>
       ) : planSynced ? (
-        <p className="-mt-4 text-2xs text-gray-500 dark:text-gray-400" data-testid="guardian-plan-synced">
+        <p className="-mt-4 text-2xs text-ink-subtle" data-testid="guardian-plan-synced">
           Targets synced for measured review
         </p>
       ) : null}
@@ -239,15 +239,15 @@ export function GuardianBoundsSheet({
       {/* Optional wallet-enforced cap (ERC-7715). Only offered once a
           limit is signed — the grant attaches to that permission. */}
       {hasValidPermission && (
-        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-          <p className="text-2xs font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <div className="pt-4 border-t border-line space-y-2">
+          <p className="text-2xs font-bold uppercase tracking-wide text-ink-subtle">
             Optional · Let Guardian act for you
           </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+          <p className="text-sm text-ink-muted">
             Skip the per-move signature: Guardian may move up to {formatMoney(dailyLimit)}/day on its own, and MetaMask enforces that cap on-chain.
           </p>
           {!grantAvailable ? (
-            <p className="text-xs text-gray-400 dark:text-gray-500">
+            <p className="text-2xs text-ink-subtle">
               Not available on this deployment yet.
             </p>
           ) : grantStatus === 'granted' ? (
@@ -258,7 +258,7 @@ export function GuardianBoundsSheet({
             <button
               type="button"
               onClick={onSwitchToGrantChain}
-              className="min-h-tap w-full text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition-colors"
+              className="min-h-tap w-full text-sm font-bold text-ink border border-line rounded-xl transition-colors"
             >
               Switch to a supported network
             </button>
@@ -268,12 +268,12 @@ export function GuardianBoundsSheet({
                 type="button"
                 onClick={onOpenGrantModal}
                 disabled={grantStatus === 'requesting'}
-                className="min-h-tap w-full text-xs font-bold text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="min-h-tap w-full text-sm font-bold text-ink border border-line rounded-xl transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {grantStatus === 'requesting' ? 'Waiting for MetaMask…' : 'Let Guardian act (MetaMask)'}
               </button>
               {grantError && (
-                <p className="text-xs text-red-500" role="alert">{grantError}</p>
+                <p className="text-xs text-red-600 dark:text-red-400" role="alert">{grantError}</p>
               )}
             </>
           )}
@@ -285,14 +285,14 @@ export function GuardianBoundsSheet({
           Review saved allocation →
         </button>
       )}
-      {vault.error && <p role="alert" className="text-sm text-red-600">{vault.error}</p>}
+      {vault.error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{vault.error}</p>}
       {researchFunding}
 
-      <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+      <div className="pt-4 border-t border-line">
         <button
           type="button"
           onClick={onOpenSettings}
-          className="min-h-tap w-full text-left text-sm font-semibold text-blue-600 dark:text-blue-400"
+          className="min-h-tap w-full text-left text-sm font-semibold text-action"
         >
           Notifications &amp; integrations →
         </button>

@@ -173,7 +173,8 @@ describe("GuardianGrantModal — the one autonomy opt-in", () => {
 describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
   it("renders limits, pause and the plan — preferences live behind one link", () => {
     const props = boundsSheet();
-    expect(screen.getByText("$25/day")).toBeInTheDocument();
+    expect(screen.getByText("$5 used of $25/day")).toBeInTheDocument();
+    expect(screen.getByText("$20")).toBeInTheDocument();
     expect(screen.getByText("Protection plan")).toBeInTheDocument();
     expect(screen.queryByText(/Voice|Email|Zapier|Protection Settings/)).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Notifications & integrations →" }));
@@ -215,10 +216,15 @@ describe("GuardianBoundsSheet — Limits & controls holds limits only", () => {
       onOpenSettings: vi.fn(),
     };
     render(<BalanceVisibilityProvider><GuardianBoundsSheet {...props} /></BalanceVisibilityProvider>);
-    expect(screen.getByText("••••/day")).toBeInTheDocument();
-    expect(screen.getAllByText("••••")).toHaveLength(2);
+    expect(screen.getByText("•••• used of ••••/day")).toBeInTheDocument();
     expect(screen.getByText(/may move up to ••••\/day/)).toBeInTheDocument();
     expect(screen.queryByText(/\$25\/day/)).not.toBeInTheDocument();
+    // The bar is money information too: no account figure, and no proportion
+    // a reader could measure off the fill.
+    expect(screen.queryByText("$20")).not.toBeInTheDocument();
+    expect(screen.queryByText("$5")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-budget-track")).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     localStorage.removeItem("diversifi.balances.hidden");
   });
 
