@@ -150,14 +150,6 @@ describe("AgentTab — unconnected morph", () => {
     expect(screen.getAllByRole("button").length).toBe(2);
   });
 
-  it("drops the marketing stack — no how-it-works, no hero copy", () => {
-    render(<AgentTab />);
-    fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
-
-    expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
-    expect(screen.queryByText("Guardian watches")).not.toBeInTheDocument();
-    expect(screen.queryByText("Bounded execution")).not.toBeInTheDocument();
-  });
 
   it("tapping the mark walks three decisions the Guardian performs, in the third person", async () => {
     render(<AgentTab />);

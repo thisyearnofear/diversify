@@ -83,10 +83,6 @@ vi.mock("@/components/ui/ErrorBoundary", () => ({
   default: ({ children }: any) => React.createElement("div", null, children),
 }));
 
-vi.mock("@/components/agent/GuardianStreakWidget", () => ({
-  GuardianStreakWidget: () => React.createElement("div", { "data-testid": "streak" }),
-}));
-
 vi.mock("@/components/ui/Skeleton", () => ({
   TabSkeleton: () => React.createElement("div", null),
 }));

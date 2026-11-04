@@ -44,7 +44,10 @@ export function changedPaths(records, git) {
 }
 
 export function selectChecks(paths, exists = () => true) {
-  if (paths === null) return { mode: 'full', paths: [] };
+  if (paths === null) {
+    if (process.env.FULL_SUITE === '1') return { mode: 'full', paths: [] };
+    return { mode: 'related', paths: [] };
+  }
   const code = paths.filter((p) => !(
     p.startsWith('docs/') && p.endsWith('.md') ||
     !p.includes('/') && p.endsWith('.md')

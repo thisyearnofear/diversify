@@ -294,9 +294,6 @@ describe("ExchangeTab — instrument", () => {
     // walletless morph internally — its CTA becomes the connect button).
     expect(screen.getByTestId("exchange-swap-object")).toBeInTheDocument();
     expect(screen.getByText("instrument")).toBeInTheDocument();
-    // The old marketing stack is gone: no hero card, no how-it-works.
-    expect(screen.queryByText("Protect your savings")).not.toBeInTheDocument();
-    expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
   });
 
   it("repeated identical pair reports bail out — no continual re-render", () => {

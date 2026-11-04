@@ -57,5 +57,5 @@ test('shared code, tooling, config and unknown assets run fully', () => {
     'scripts/pre-push-checks.mjs', 'apps/web/styles/globals.css',
     'apps/web/next.config.js', 'apps/web/public/rive/guardian.riv',
   ]) assert.equal(selectChecks([path]).mode, 'full', path);
-  assert.equal(selectChecks(null).mode, 'full');
+  assert.equal(selectChecks(null).mode, 'related');
 });

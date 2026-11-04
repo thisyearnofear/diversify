@@ -73,10 +73,6 @@ vi.mock("@/components/tour/TourTrigger", () => ({
   default: () => null,
 }));
 
-vi.mock("@/components/agent/GuardianStreakWidget", () => ({
-  GuardianStreakWidget: () => null,
-}));
-
 vi.mock("@/components/wallet/WalletTutorial", () => ({
   WalletTutorial: () => null,
 }));

@@ -65,6 +65,9 @@ After a fresh install, prepare package declarations before typechecking:
 pnpm exec turbo run build --filter=@diversifi/shared --filter=@stable-station/mento-utils
 pnpm exec tsc --noEmit
 pnpm test
+pnpm test:changed   # git-aware: only tests affected by uncommitted changes
+pnpm test:slow      # heavy rendering tests (excluded from default run)
+pnpm test:dormant   # dormant rails (Hyperliquid, off by default)
 node --test scripts/pre-push-checks.test.mjs
 ```
 

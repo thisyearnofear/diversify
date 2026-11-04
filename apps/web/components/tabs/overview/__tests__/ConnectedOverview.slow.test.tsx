@@ -287,11 +287,6 @@ vi.mock("../CurrencyMomentCard", () => ({
     </div>
   ),
 }));
-vi.mock("../HomeExposureDial", () => ({
-  HomeExposureDial: ({ selectedRegion }: { selectedRegion: string | null }) => (
-    <div data-testid="exposure-dial" data-selected={selectedRegion ?? "none"} />
-  ),
-}));
 vi.mock("../HomeRiskTheater", () => ({
   HomeRiskTheater: ({ moment, inflationMoment, regionData, focusedRegion, isActive, onSelectRegion, sealedRegion, inspection, onInspectCurrency }: { moment: unknown; inflationMoment: unknown; regionData: unknown[]; focusedRegion: string | null; isActive?: boolean; onSelectRegion?: (region: string | null) => void; sealedRegion?: string | null; inspection?: React.ReactNode; onInspectCurrency?: () => void }) => {
     if (moment) {

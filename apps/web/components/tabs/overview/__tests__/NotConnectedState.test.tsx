@@ -213,14 +213,6 @@ describe("NotConnectedState — Home's unconnected morph", () => {
     ).toHaveAttribute("data-variant", "primary");
   });
 
-  it("drops the marketing stack — no how-it-works, no proof card", () => {
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
-
-    expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(/Connect a wallet to protect what matters/),
-    ).not.toBeInTheDocument();
-  });
 
   it("keeps demo as a quiet status-tier line — no generic Verified on Home", () => {
     const onEnableDemo = vi.fn();

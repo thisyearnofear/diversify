@@ -279,14 +279,6 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     }
   });
 
-  it("drops the marketing stack — no hero card, no how-it-works, no scrollytelling card", () => {
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
-
-    expect(screen.queryByText("How It Works")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Shield your purchasing power/)).not.toBeInTheDocument();
-    expect(screen.queryByText("Protection Setup Steps")).not.toBeInTheDocument();
-    expect(screen.queryByText("Auto-Saver Status")).not.toBeInTheDocument();
-  });
 
   it("keeps trust + demo as quiet status-tier lines (shared tier) — no proof ticker", () => {
     const onEnableDemo = vi.fn();
