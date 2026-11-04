@@ -104,7 +104,7 @@ export function SocialContactPicker({ onSelect, onResolve, amount, disabled }: S
           onChange={(e) => setIdentifier(formatIdentifier(e.target.value, type))}
           placeholder={type === 'email' ? 'friend@example.com' : '(555) 123-4567'}
           disabled={disabled || isResolving}
-          className={`w-full py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:opacity-50 ${type === 'phone' ? 'pl-10 pr-3' : 'px-3'}`}
+          className={`w-full py-2 text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-action/60 disabled:opacity-50 ${type === 'phone' ? 'pl-10 pr-3' : 'px-3'}`}
         />
         {type === 'phone' && (
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
@@ -117,7 +117,7 @@ export function SocialContactPicker({ onSelect, onResolve, amount, disabled }: S
       <button
         onClick={handleResolve}
         disabled={!identifier.trim() || disabled || isResolving}
-        className="w-full py-2 bg-purple-500 hover:bg-purple-600 text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+        className="w-full py-2 bg-action-fill hover:bg-action-fill-hover text-white text-xs font-bold rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
       >
         {isResolving ? (
           <>

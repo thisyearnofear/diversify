@@ -90,7 +90,7 @@ export default function ClaimCelebration({ amount, txHash, streakDays, onClose, 
               onProtect();
               onClose();
             }}
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-sm font-black rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-colors shadow-lg shadow-indigo-600/20 mb-2"
+            className="w-full py-3 bg-action-fill hover:bg-action-fill-hover text-white text-sm font-black rounded-2xl transition-colors shadow-lg mb-2"
           >
             🛡️ Protect your G$ from inflation →
           </button>

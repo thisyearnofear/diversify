@@ -210,13 +210,13 @@ export default function AskAIButton({
                         }
                       }}
                       placeholder="Type your question..."
-                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-action/60"
                       autoFocus
                     />
                     <button
                       onClick={() => handleAsk()}
                       disabled={!customQuestion.trim()}
-                      className="px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-colors"
+                      className="px-3 py-2 bg-action-fill hover:bg-action-fill-hover disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg font-bold text-sm transition-colors"
                     >
                       Ask
                     </button>
@@ -229,7 +229,7 @@ export default function AskAIButton({
             {!allowCustomInput && quickQuestions.length === 0 && prompt && (
               <button
                 onClick={() => handleAsk()}
-                className="w-full px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold text-sm transition-colors"
+                className="w-full px-3 py-2 bg-action-fill hover:bg-action-fill-hover text-white rounded-lg font-bold text-sm transition-colors"
               >
                 {typeof prompt === 'function' ? 'Ask AI' : prompt}
               </button>

@@ -97,7 +97,7 @@ export const GuardianJournalTab: React.FC<{
                   type="button"
                   onClick={onPreview}
                   disabled={isRunningLoop}
-                  className="mt-2 text-2xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300 bg-white dark:bg-gray-800 hover:bg-purple-50 dark:hover:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="mt-2 text-2xs font-bold uppercase tracking-wider text-ink bg-surface hover:bg-surface-sunken border border-line rounded-xl px-4 py-2 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {isRunningLoop ? "Previewing…" : "Preview next move"}
                 </button>
@@ -116,8 +116,8 @@ export const GuardianJournalTab: React.FC<{
                 initial={reducedMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.18, delay: Math.min(index * 0.05, 0.15) }}
-                className="relative pl-6 pb-2 border-l-2 border-purple-100 dark:border-purple-800/50">
-                <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-purple-500'} z-10`}>
+                className="relative pl-6 pb-2 border-l-2 border-line">
+                <div className={`absolute left-[-9px] top-0 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-2 ${index === 0 ? 'border-green-500' : 'border-line'} z-10`}>
                   {index === 0 && <span className="absolute inset-0 rounded-full animate-ping bg-green-400 opacity-40"></span>}
                 </div>
                 <div className={`bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border ${index === 0 ? 'border-green-100 dark:border-green-900/50 ring-1 ring-green-50 dark:ring-green-900/20' : 'border-gray-100 dark:border-gray-700'} hover:shadow-md transition-shadow relative overflow-hidden`}>
@@ -227,7 +227,7 @@ export const GuardianJournalTab: React.FC<{
               type="button"
               onClick={() => { const { haptics } = require("@/lib/haptics"); haptics.tap(); setShowAll((v) => !v); }}
               data-testid="journal-show-all"
-              className="w-full py-2.5 text-xs font-bold text-purple-600 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-xl border border-purple-200 dark:border-purple-800 transition-colors"
+              className="w-full py-2.5 text-xs font-bold text-ink bg-surface hover:bg-surface-sunken rounded-xl border border-line transition-colors"
             >
               {showAll ? "Show less" : `Show ${hiddenCount} more`}
             </button>

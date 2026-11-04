@@ -184,7 +184,7 @@ export function GuardianPlanSwitcher({
             loading ||
             (selected === currentPlan && PLANS.some((p) => p.id === currentPlan))
           }
-          className="w-full py-4 min-h-[56px] bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors disabled:opacity-50"
+          className="w-full py-4 min-h-[56px] bg-action-fill hover:bg-action-fill-hover text-white font-bold rounded-xl transition-colors disabled:opacity-50"
         >
           {loading ? "Saving…" : "Use this plan"}
         </button>

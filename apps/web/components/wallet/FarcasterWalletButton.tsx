@@ -81,15 +81,15 @@ export default function FarcasterWalletButton() {
       onClick={connectFarcasterWallet}
       disabled={isConnecting}
       className={`flex items-center gap-2 min-h-[40px] px-4 py-1.5 rounded-full transition-colors font-bold shadow-sm ${isConnecting
-        ? 'bg-purple-100 text-purple-400 cursor-not-allowed border border-purple-200'
-        : 'bg-purple-600 hover:bg-purple-700 text-white'
+        ? 'bg-surface-sunken text-ink-subtle cursor-not-allowed border border-line'
+        : 'bg-action-fill hover:bg-action-fill-hover text-white'
         }`}
       aria-label="Connect Farcaster wallet"
       aria-disabled={isConnecting}
     >
       {isConnecting ? (
         <>
-          <div className="w-3 h-3 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-3 h-3 border-2 border-action border-t-transparent rounded-full animate-spin" />
           <span className="text-xs">Authenticating...</span>
         </>
       ) : (

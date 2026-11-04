@@ -206,7 +206,7 @@ export const GuardianPermissionModal: React.FC<{
             <span className="text-xs font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300">
               Daily limit
             </span>
-            <span className="text-sm font-black text-purple-600 dark:text-purple-400">
+            <span className="text-sm font-black text-action">
               ${pendingDailyLimit} / day
             </span>
           </div>
@@ -229,10 +229,10 @@ export const GuardianPermissionModal: React.FC<{
                   title={aboveBalance ? "More than what's in your wallet right now" : undefined}
                   className={`py-2 text-xs font-bold rounded-xl border transition-colors ${
                     selected
-                      ? "bg-purple-600 border-purple-600 text-white"
+                      ? "bg-action-fill border-action-fill text-white"
                       : aboveBalance
-                        ? "bg-white/40 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-purple-300"
-                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-purple-400"
+                        ? "bg-white/40 dark:bg-gray-800/40 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 hover:border-action"
+                        : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-action"
                   }`}
                 >
                   ${amount}
@@ -245,29 +245,29 @@ export const GuardianPermissionModal: React.FC<{
           </p>
         </div>
 
-        <div className="space-y-2 bg-purple-50 dark:bg-purple-900/20 rounded-2xl p-4 border border-purple-100 dark:border-purple-800">
-          <p className="text-2xs font-bold uppercase tracking-wide text-purple-700 dark:text-purple-300">
+        <div className="space-y-2 bg-surface-sunken rounded-2xl p-4 border border-line">
+          <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
             What you're signing
           </p>
-          <ul className="space-y-1.5 text-sm text-gray-700 dark:text-gray-300">
+          <ul className="space-y-1.5 text-sm text-ink">
             <li className="flex items-start gap-2">
-              <span className="text-purple-500 mt-0.5">•</span>
+              <span className="text-ink-subtle mt-0.5">•</span>
               <span>Guardian may propose moves of up to <strong>${pendingDailyLimit}</strong> of your stables each day. You approve each one.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-purple-500 mt-0.5">•</span>
+              <span className="text-ink-subtle mt-0.5">•</span>
               <span>Valid for <strong>7 days</strong>, then expires automatically.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-purple-500 mt-0.5">•</span>
+              <span className="text-ink-subtle mt-0.5">•</span>
               <span>Only into approved stablecoins or gold (USDC, EURC, PAXG).</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-purple-500 mt-0.5">•</span>
+              <span className="text-ink-subtle mt-0.5">•</span>
               <span>Signing is free and moves nothing.</span>
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-purple-500 mt-0.5">•</span>
+              <span className="text-ink-subtle mt-0.5">•</span>
               <span>Pause any time from Limits &amp; controls.</span>
             </li>
           </ul>
@@ -283,7 +283,7 @@ export const GuardianPermissionModal: React.FC<{
           <button
             onClick={() => { haptic("medium"); onApprove(); }}
             disabled={!isChainSupported}
-            className="flex-1 text-sm font-black bg-purple-600 hover:bg-purple-700 disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 min-h-tap shadow-lg shadow-purple-200 dark:shadow-purple-900/30 transition-[color,transform] active:scale-95"
+            className="flex-1 text-sm font-black bg-action-fill hover:bg-action-fill-hover disabled:bg-gray-300 dark:disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white rounded-2xl py-4 min-h-tap shadow-lg transition-[color,transform] active:scale-95"
           >
             {isChainSupported ? "Sign in wallet" : "Switch network first"}
           </button>
