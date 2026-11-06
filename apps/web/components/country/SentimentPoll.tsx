@@ -21,6 +21,9 @@ interface Props {
   code: string;
   /** "the naira" — the question names the money, not the trade. */
   moneyName: string;
+  /** After a vote, reflect where the voter landed in the crowd — one
+   *  quiet line, used where the poll speaks in the Guardian's register. */
+  acknowledge?: boolean;
 }
 
 const OPTIONS: Array<{ id: Sentiment; label: string }> = [
@@ -33,7 +36,7 @@ function pctOf(count: number, total: number): number {
   return total > 0 ? Math.round((count / total) * 100) : 0;
 }
 
-export function SentimentPoll({ code, moneyName }: Props) {
+export function SentimentPoll({ code, moneyName, acknowledge }: Props) {
   const reduced = useReducedMotion();
   const [result, setResult] = useState<SentimentResult | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'voting' | 'unavailable' | 'error'>('loading');
@@ -133,6 +136,20 @@ export function SentimentPoll({ code, moneyName }: Props) {
               </div>
             );
           })}
+          {acknowledge && result.yourVote && (() => {
+            const top = OPTIONS.reduce((a, b) =>
+              result.tally[b.id] > result.tally[a.id] ? b : a);
+            const myLabel = OPTIONS.find((o) => o.id === result.yourVote)?.label ?? '';
+            const myPct = pctOf(result.tally[result.yourVote], result.total);
+            const topPct = pctOf(result.tally[top.id], result.total);
+            return (
+              <p className="pt-1 text-xs leading-relaxed text-ink/50">
+                {result.yourVote === top.id
+                  ? `You're with the ${myPct}% — ${myLabel.toLowerCase()}.`
+                  : `You're with ${myPct}% on ${myLabel.toLowerCase()} — most went ${top.label.toLowerCase()} (${topPct}%).`}
+              </p>
+            );
+          })()}
           <button
             type="button"
             onClick={() => setChanging(true)}

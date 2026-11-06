@@ -189,6 +189,24 @@ export function GuardianObject({
     if (!resting) setBeatMood(null);
   }, [resting]);
   useInstrumentDwell("guardian", resting, acted);
+
+  // The watching scan — the Guardian's baseline when it has nothing to
+  // decide: the eyes drift across the board, attending on beat pulses.
+  // Off the moment real state owns the face (analyzing, proposal) or the
+  // pointer asks for attention; still under reduced motion.
+  const [scanX, setScanX] = useState(0);
+  const scanning =
+    resting && !isAnalyzing && !proposalPending && !attention && !reducedMotion;
+  useEffect(() => {
+    if (!scanning) return;
+    const seq = [-0.55, 0.5, -0.3, 0.6, 0.15];
+    let i = 0;
+    const t = setInterval(() => {
+      i = (i + 1) % seq.length;
+      setScanX(seq[i]);
+    }, 2600);
+    return () => clearInterval(t);
+  }, [scanning]);
   const mood = isAnalyzing
     ? "thinking"
     : proposalPending
@@ -204,7 +222,7 @@ export function GuardianObject({
       onFocusCapture={() => setActed(true)}
     >
       <div className="instrument-artifact flex justify-center">
-        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : "off"} className="mb-3" protagonistTab="agent" />
+        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : scanning ? { x: scanX, y: -0.1 } : "off"} className="mb-3" protagonistTab="agent" />
       </div>
       {showBudget && (
         <BudgetFence remaining={sessionInfo!.remainingTodayUSD} limit={dailyLimit} />

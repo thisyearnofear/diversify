@@ -97,7 +97,7 @@ export function GuardianBoard({ initialCode }: { initialCode?: string }) {
               </p>
             </section>
           )}
-          <SentimentPoll code={code} moneyName={moneyNameFor(code)} />
+          <SentimentPoll code={code} moneyName={moneyNameFor(code)} acknowledge />
           {ways && (
             <WaysToHold code={code} moneyName={moneyNameFor(code)} ways={ways} />
           )}
