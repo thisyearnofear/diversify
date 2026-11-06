@@ -123,11 +123,11 @@ describe('capital-history route', () => {
             makeReq({ address }) as never,
             res as never,
         );
-        const celoCalls = fetchMock.mock.calls.filter(([u]: [unknown]) =>
-            String(u).includes('celo.blockscout.com'),
+        const celoCalls = fetchMock.mock.calls.filter((args: unknown[]) =>
+            String(args[0]).includes('celo.blockscout.com'),
         );
-        const arbCalls = fetchMock.mock.calls.filter(([u]: [unknown]) =>
-            String(u).includes('arbitrum.blockscout.com'),
+        const arbCalls = fetchMock.mock.calls.filter((args: unknown[]) =>
+            String(args[0]).includes('arbitrum.blockscout.com'),
         );
         // Celo keeps paging to the cap; the default arb handler answers
         // one empty, complete page.
