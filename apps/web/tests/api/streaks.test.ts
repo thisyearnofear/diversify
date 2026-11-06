@@ -52,6 +52,13 @@ vi.mock('../../config', () => ({
   },
 }));
 
+// The route is wallet-authed — the tests exercise streak behavior, so the
+// verifier is mocked to the test address unless a case overrides it.
+const authMock = vi.hoisted(() => ({ requireWalletAuth: vi.fn() }));
+vi.mock('../../lib/require-wallet-auth', () => ({
+  requireWalletAuth: authMock.requireWalletAuth,
+}));
+
 import handler from '@/pages/api/streaks/[address]';
 
 const ADDR = '0x1111111111111111111111111111111111111111';
@@ -88,6 +95,24 @@ function req(method: string, body: any = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   store.docs.clear();
+  authMock.requireWalletAuth.mockReturnValue(ADDR);
+});
+
+describe('auth', () => {
+  it('rejects a request that cannot sign for the address', async () => {
+    authMock.requireWalletAuth.mockReturnValue(null);
+    const r = res();
+    await handler(req('GET'), r);
+    expect(r.statusCode).toBe(401);
+  });
+
+  it('rejects a signature for a different wallet', async () => {
+    authMock.requireWalletAuth.mockReturnValue('0x2222222222222222222222222222222222222222');
+    const r = res();
+    await handler(req('PATCH', { action: 'swap', chainId: 42220, networkType: 'mainnet' }), r);
+    expect(r.statusCode).toBe(401);
+    expect(store.docs.size).toBe(0);
+  });
 });
 
 describe('POST /api/streaks/[address]', () => {

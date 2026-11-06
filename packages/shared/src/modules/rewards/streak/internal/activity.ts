@@ -10,10 +10,14 @@ export type RecordActivityParams = {
   simulatedAlpha?: number;
 };
 
-export async function patchActivity(address: string, params: RecordActivityParams): Promise<any> {
+export async function patchActivity(
+  address: string,
+  params: RecordActivityParams,
+  headers?: Record<string, string>,
+): Promise<any> {
   const response = await fetch(`/api/streaks/${address}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(params),
   });
 

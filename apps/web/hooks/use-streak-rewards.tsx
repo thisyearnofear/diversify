@@ -48,6 +48,7 @@ import {
 } from '@diversifi/shared/src/modules/rewards/streak/internal/activity';
 import { computeNextLocalStreak } from '@diversifi/shared/src/modules/rewards/streak/internal/local-fallback';
 import { apiUrl } from '@/lib/api-url';
+import { getWalletAuthHeaders } from '@/lib/wallet-auth';
 
 const INITIAL_STATE: StreakState = {
   streak: null,
@@ -74,7 +75,14 @@ const INITIAL_STATE: StreakState = {
 const StreakRewardsContext = createContext<(StreakState & StreakActions) | null>(null);
 
 export function StreakRewardsProvider({ children }: { children: ReactNode }) {
-  const { address, isConnected } = useWalletContext();
+  const { address, isConnected, signMessage } = useWalletContext();
+
+  // The streaks API is address-keyed and now wallet-authed — every call
+  // carries the cached session signature, signing once if needed.
+  const authHeaders = useCallback(
+    () => getWalletAuthHeaders(address ?? '', signMessage).catch(() => null),
+    [address, signMessage],
+  );
   const [state, setState] = useState<StreakState>(INITIAL_STATE);
 
   // Fetch streak from API or fallback to localStorage.
@@ -105,7 +113,10 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
         console.warn('[StreakRewards] Could not fetch real entitlement:', err);
       }
 
-      const { streak, raw } = await fetchStreakFromApi(address);
+      const { streak, raw } = await fetchStreakFromApi(
+        address,
+        (await authHeaders()) ?? undefined,
+      );
       const streakState = calculateStreakState(streak);
 
       const testnetSwaps = raw.crossChainActivity?.testnet?.totalSwaps || 0;
@@ -146,7 +157,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
         usingFallback: true,
       }));
     }
-  }, [address, isConnected]);
+  }, [address, isConnected, authHeaders]);
 
   // Single poll timer + focus listener, regardless of how many components
   // subscribe to the context.
@@ -176,7 +187,10 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
           apiUrl(`/api/streaks/${address}`),
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...((await authHeaders()) ?? {}),
+            },
             body: JSON.stringify({ amountUSD, source: source || 'swap' }),
           },
           STREAK_FETCH_TIMEOUT_MS,
@@ -222,7 +236,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
         }));
       }
     },
-    [address],
+    [address, authHeaders],
   );
 
   const claimG = useCallback(async (): Promise<{ success: boolean; txHash?: string; amount?: string; error?: string }> => {
@@ -315,7 +329,10 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
     try {
       await fetchWithTimeout(
         apiUrl(`/api/streaks/${address}`),
-        { method: 'DELETE' },
+        {
+          method: 'DELETE',
+          headers: (await authHeaders()) ?? {},
+        },
         STREAK_FETCH_TIMEOUT_MS,
       );
     } catch (err) {
@@ -323,7 +340,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
     }
     clearLocalStreak(address);
     setState((prev) => ({ ...prev, ...calculateStreakState(null), isLoading: false }));
-  }, [address]);
+  }, [address, authHeaders]);
 
   const recordActivity = useCallback(
     async (params: {
@@ -336,7 +353,11 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
     }): Promise<boolean> => {
       if (!address) return false;
       try {
-        const data = await patchActivity(address, params as RecordActivityParams);
+        const data = await patchActivity(
+          address,
+          params as RecordActivityParams,
+          (await authHeaders()) ?? undefined,
+        );
         const eligibleForGraduation = computeEligibleForGraduation(data.crossChainActivity);
         setState((prev) => {
           const nextAchievements = data.achievements || prev.achievements;
@@ -355,7 +376,7 @@ export function StreakRewardsProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [address],
+    [address, authHeaders],
   );
 
   const value = useMemo<StreakState & StreakActions>(

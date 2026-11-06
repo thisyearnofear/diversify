@@ -1,5 +1,27 @@
 # Roadmap Log — historical waves & file deltas
 
+### Streaks endpoint auth + L1 vote invite (2026-11-06)
+
+- **`/api/streaks/[address]` is now wallet-authed.** The route keyed every
+  method on the caller-supplied URL address — anyone could read, inflate
+  or delete another wallet's streak. `requireWalletAuth` (the same signed
+  `x-wallet-auth-*` header contract as agent memory) must now recover the
+  URL address or the request 401s, and the "dev only" DELETE is actually
+  env-gated (404 in production). Client side: `use-streak-rewards` signs
+  via `getWalletAuthHeaders` + the wallet context's `signMessage` (the
+  sessionStorage-cached session proof, one signature); `fetchStreakFromApi`
+  and `patchActivity` in `packages/shared` take an optional headers param.
+  Public aggregate `/api/streaks/stats` is untouched. +2 tests: missing
+  auth and wrong-wallet signatures both 401.
+- **L1 invite for the poll.** `CurrencyMomentCard` gained a
+  "How confident are you in the {money}? →" line under the LiveLine —
+  discovery invites at L1, the poll itself stays in the story inspector
+  (L2), hidden while the coin is mid-scrub or the sheet is open.
+- **`Permission.ts` docstring corrected** (commit `85bbb1a8`): it still
+  described the deleted Privy Safe / `VAULT_PRIVATE_KEY` path and pointed
+  at a doc removed 2026-08-31 — rewritten to the two-layer model
+  (app gates everywhere, on-chain caveats on kit-supported chains).
+
 ### Nation desk — culture-layer surfaces + dead-analytics cleanup (2026-11-06)
 
 First wave of the MVP defined in `docs/internal/mvp-plan-2026-11.md`

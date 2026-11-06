@@ -1,15 +1,21 @@
 /**
  * Streak API Routes
- * 
+ *
+ * Every method requires a signed wallet-auth header matching the URL
+ * address (`requireWalletAuth`) — the same rule as agent memory: state
+ * keyed by an address is never readable or writable by a stranger.
+ *
  * GET /api/streaks/[address] - Get streak data for a wallet
  * POST /api/streaks/[address] - Record a save/update streak
- * DELETE /api/streaks/[address] - Reset streak (dev only)
+ * PATCH /api/streaks/[address] - Record cross-chain activity
+ * DELETE /api/streaks/[address] - Reset streak (dev only — 404 in production)
  */
 
 import type { NextApiRequest, NextApiResponse } from 'next';
 import connectDB from '../../../lib/mongodb';
 import Streak from '../../../models/Streak';
 import { isTestnetChain, NETWORKS } from '../../../config';
+import { requireWalletAuth } from '../../../lib/require-wallet-auth';
 
 const GRACE_PERIODS_PER_WEEK = 1;
 
@@ -57,6 +63,13 @@ export default async function handler(
 
   const normalizedAddress = address.toLowerCase();
 
+  // Identity comes from the signature, not the URL — a caller may only
+  // read or mutate a streak it can sign for.
+  const authedAddress = requireWalletAuth(req);
+  if (authedAddress !== normalizedAddress) {
+    return res.status(401).json({ error: 'Signed wallet auth required for this address' });
+  }
+
   try {
     await connectDB();
 
@@ -71,6 +84,10 @@ export default async function handler(
         return await handlePatch(normalizedAddress, req, res);
 
       case 'DELETE':
+        // Dev-only reset — unreachable in production regardless of auth.
+        if (process.env.NODE_ENV === 'production') {
+          return res.status(404).json({ error: 'Not found' });
+        }
         return await handleDelete(normalizedAddress, res);
 
       default:

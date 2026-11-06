@@ -13,13 +13,16 @@ export type StreakApiGetResponse = {
   achievements?: string[];
 };
 
-export async function fetchStreakFromApi(address: string): Promise<{
+export async function fetchStreakFromApi(
+  address: string,
+  headers?: Record<string, string>,
+): Promise<{
   streak: StreakData | null;
   raw: any;
 }> {
   const response = await fetch(`/api/streaks/${address}`, {
     method: 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
   });
 
   if (!response.ok) {
