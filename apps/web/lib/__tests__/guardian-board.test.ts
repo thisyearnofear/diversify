@@ -72,8 +72,8 @@ describe('boardPriorityFor', () => {
       nowMs: new Date('2031-01-01T00:00:00Z').getTime(), // all events past
     });
     expect(entries).toEqual([
-      { code: 'NGN', why: 'watching', score: 0 },
-      { code: 'KES', why: 'watching', score: 0 },
+      { code: 'NGN', why: 'watching', glyph: '◌', score: 0 },
+      { code: 'KES', why: 'watching', glyph: '◌', score: 0 },
     ]);
   });
 

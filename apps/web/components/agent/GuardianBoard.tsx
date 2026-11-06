@@ -18,6 +18,9 @@ import { boardPriorityFor } from '@/lib/guardian-board';
 import { useGeoCountry } from '@/hooks/use-geo-country';
 import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import { SentimentPoll } from '@/components/country/SentimentPoll';
+import { GuardianMascot } from '@/components/shared/GuardianMascot';
+import { tokenColor } from '@/components/shared/palette';
+import { tokenForFiatCode } from '@/lib/corridor-context';
 import { WaysToHold } from '@/components/country/WaysToHold';
 import { RouteLink } from '@/components/shared/RouteLink';
 import { haptics } from '@/lib/haptics';
@@ -40,6 +43,13 @@ export function GuardianBoard({
   const codes = entries.map((e) => e.code);
   const [code, setCode] = useState<string>(codes[0]);
   const [touched, setTouched] = useState(false);
+  // The settle nod — one dip of the eyes when the visitor's vote lands.
+  const [settle, setSettle] = useState(false);
+  useEffect(() => {
+    if (!settle) return;
+    const t = setTimeout(() => setSettle(false), 1600);
+    return () => clearTimeout(t);
+  }, [settle]);
   const promoDenied = featureDenied('thesis', useGeoCountry());
 
   // The queue may reorder as data lands — keep the card on a money that
@@ -59,7 +69,8 @@ export function GuardianBoard({
   }, [touched, codes.join('|')]);
 
   const entry = CURRENCY_BY_CODE[code];
-  const why = entries.find((e) => e.code === code)?.why;
+  const boardEntry = entries.find((e) => e.code === code);
+  const why = boardEntry?.why;
   const debt = sovereignDebtFor(entry?.iso2);
   const ways = waysToHoldFor(code);
   const kept = entry
@@ -96,13 +107,24 @@ export function GuardianBoard({
 
       {entry && (
         <div key={code} className="space-y-3">
+          {/* The Guardian carrying the money — coin takes the country's
+              tint, the ring arcs what it kept, the visor shows its flag. */}
+          <div className="flex justify-center">
+            <GuardianMascot
+              size={56}
+              mood={settle ? 'settle' : 'neutral'}
+              coinTint={tokenColor(tokenForFiatCode(code))}
+              coinFill={(kept ?? 0) / 100}
+              visorGlyph={entry.flag}
+            />
+          </div>
           <p className="text-center text-sm leading-relaxed text-ink/80">
             {entry.flag} <strong>{entry.countryName}</strong> — the{' '}
             {moneyNameFor(code)} kept ~{kept}¢ of a five-years-ago dollar.
           </p>
-          {why && (
+          {why && boardEntry && (
             <p className="text-center text-2xs uppercase tracking-wide text-ink-subtle">
-              {why}
+              {boardEntry.glyph} {why}
             </p>
           )}
           {debt && !promoDenied && (
@@ -118,7 +140,7 @@ export function GuardianBoard({
               </p>
             </section>
           )}
-          <SentimentPoll code={code} moneyName={moneyNameFor(code)} acknowledge />
+          <SentimentPoll code={code} moneyName={moneyNameFor(code)} acknowledge onVote={() => setSettle(true)} />
           {ways && (
             <WaysToHold code={code} moneyName={moneyNameFor(code)} ways={ways} />
           )}

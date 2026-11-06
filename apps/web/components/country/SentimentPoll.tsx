@@ -24,6 +24,9 @@ interface Props {
   /** After a vote, reflect where the voter landed in the crowd — one
    *  quiet line, used where the poll speaks in the Guardian's register. */
   acknowledge?: boolean;
+  /** Fires once a vote lands — hosts use it to react non-verbally
+   *  (the Guardian's settle nod on the board). */
+  onVote?: () => void;
 }
 
 const OPTIONS: Array<{ id: Sentiment; label: string }> = [
@@ -36,7 +39,7 @@ function pctOf(count: number, total: number): number {
   return total > 0 ? Math.round((count / total) * 100) : 0;
 }
 
-export function SentimentPoll({ code, moneyName, acknowledge }: Props) {
+export function SentimentPoll({ code, moneyName, acknowledge, onVote }: Props) {
   const reduced = useReducedMotion();
   const [result, setResult] = useState<SentimentResult | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'voting' | 'unavailable' | 'error'>('loading');
@@ -69,11 +72,12 @@ export function SentimentPoll({ code, moneyName, acknowledge }: Props) {
         setChanging(false);
         setState('ready');
         trackFunnelEvent('sentiment_vote_cast', { code, sentiment });
+        onVote?.();
       } else {
         setState('error');
       }
     },
-    [code, state],
+    [code, state, onVote],
   );
 
   // Absent, not an error card: a poll that can't answer renders nothing.

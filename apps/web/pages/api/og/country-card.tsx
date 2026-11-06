@@ -8,6 +8,7 @@ import type { NextRequest } from 'next/server';
 import { currencyInstrumentFor } from '@/lib/currency-instrument';
 import { geoCountryFromHeaders } from '@/lib/geo';
 import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
+import { COIN, EYES, SHIELD_D, VISOR_D } from '@/components/shared/guardian-mark';
 
 export const config = {
   runtime: 'edge',
@@ -54,6 +55,10 @@ export default function handler(req: NextRequest) {
   const thesisDenied = featureDenied('thesis', geoCountryFromHeaders(req.headers));
   const usd = instrument.rings.find((r) => r.benchmark === 'USD');
   const retained = Math.round(usd?.retained['5yr'] ?? 0);
+
+  // The Guardian reacts to the money it watches — wide eyes on a
+  // collapsed currency, settled lids on a held one.
+  const eyeScale = retained < 50 ? 1.35 : retained >= 80 ? 0.8 : 1;
 
   return new ImageResponse(
     (
@@ -113,6 +118,23 @@ export default function handler(req: NextRequest) {
         <div style={{ display: 'flex', color: QUIET, fontSize: 26, marginTop: 6, textAlign: 'center' }}>
           kept of a 5-years-ago dollar&apos;s worth of {instrument.name}
         </div>
+        <svg width="84" height="84" viewBox="0 0 100 100" style={{ marginTop: 18 }}>
+          <path d={SHIELD_D} fill="#1e293b" stroke="#2563eb" strokeWidth="2" strokeLinejoin="round" />
+          <path d={VISOR_D} fill="#0f172a" opacity="0.9" />
+          {EYES.map((e) => (
+            <rect
+              key={e.x}
+              x={e.x}
+              y={e.y}
+              width={e.size}
+              height={e.size}
+              rx={e.rx}
+              fill="#60a5fa"
+              transform={`translate(${e.x + e.size / 2} ${e.y + e.size / 2}) scale(${eyeScale}) translate(${-(e.x + e.size / 2)} ${-(e.y + e.size / 2)})`}
+            />
+          ))}
+          <circle cx={COIN.cx} cy={COIN.cy} r={COIN.r} fill="#f59e0b" />
+        </svg>
         <div style={{ display: 'flex', color: '#55555f', fontSize: 18, marginTop: 30 }}>
           Curated data to {instrument.asOfLabel} · Not live FX · diversifi
         </div>

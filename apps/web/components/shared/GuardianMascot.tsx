@@ -16,7 +16,7 @@ import {
 } from './guardian-mark';
 import { springSoft } from "@/lib/motion-tokens";
 import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
-type Mood = 'happy' | 'neutral' | 'thinking' | 'protective' | 'alert';
+type Mood = 'happy' | 'neutral' | 'thinking' | 'protective' | 'alert' | 'wince' | 'settle';
 type Gaze = 'off' | 'pointer' | { x: number; y: number };
 
 interface GuardianMascotProps {
@@ -40,6 +40,13 @@ interface GuardianMascotProps {
   /** Render the settled frame — no draw-in, blink, or pursuit. The face
    *  lab's state board and any thumbnail path use this. */
   frozen?: boolean;
+  /** The belly coin takes the watched money's tint — the Guardian is
+   *  holding the currency. Solid color replaces the gold gradient. */
+  coinTint?: string;
+  /** Kept-cents as the coin's inner fill ring (0..1). */
+  coinFill?: number;
+  /** The visor is a screen — a glyph (the watched flag) drawn on it. */
+  visorGlyph?: string;
 }
 
 /**
@@ -84,6 +91,12 @@ export const EYE_POSE: Variants = {
   },
   protective: { ...NEUTRAL_EYE, scaleY: 0.35, y: 2 },
   alert: { ...NEUTRAL_EYE, scaleX: 1.25, scaleY: 1.25, y: -0.5 },
+  // The wince — a dated danger on your money: eyes narrow and glance
+  // away for one beat, then recover. A reaction to data, not a state.
+  wince: { ...NEUTRAL_EYE, scaleY: 0.45, y: 1.5, x: -1.5 },
+  // The settle — acknowledgment: eyes dip once, like a nod, when your
+  // input lands.
+  settle: { ...NEUTRAL_EYE, scaleY: 0.7, y: 1 },
 };
 
 /** Blink pose: lids slam nearly shut; the spring back open IS the blink. */
@@ -109,6 +122,9 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
   gaze = 'off',
   protagonistTab,
   frozen = false,
+  coinTint,
+  coinFill,
+  visorGlyph,
 }) => {
   const prefersReducedMotion = useReducedMotion();
   const uid = useId();
@@ -230,22 +246,51 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
         {/* Bottom shade: blue weight settling into the point — barely-there. */}
         <path d={SHIELD_D} fill={`url(#${shadeId})`} />
 
-        {/* Visor — the dark screen face. */}
+        {/* Visor — the dark screen face; the watched glyph can surface on it. */}
         <path d={VISOR_D} fill={P.visor} opacity="0.85" />
+        {visorGlyph && (
+          <text x="50" y="56" fontSize="9" textAnchor="middle" aria-hidden="true">
+            {visorGlyph}
+          </text>
+        )}
 
         {/* Belly coin — the app's motif as the Guardian's core, straddling the
-            visor's lower edge. Present even in compact: identity, not decoration. */}
+            visor's lower edge. Present even in compact: identity, not decoration.
+            coinTint carries the watched money's color; coinFill arcs kept-cents. */}
         <g {...(protagonistTab ? protagonistAnchor(protagonistTab) : {})}>
-          <circle cx={COIN.cx} cy={COIN.cy} r={COIN.r} fill={`url(#${coinGradId})`} />
           <circle
             cx={COIN.cx}
             cy={COIN.cy}
-            r={COIN.ringR}
-            stroke={P.ring}
-            strokeWidth={COIN.ringW}
-            fill="none"
-            opacity="0.9"
+            r={COIN.r}
+            fill={coinTint ?? `url(#${coinGradId})`}
           />
+          {coinFill != null && coinFill >= 0 && (
+            <circle
+              cx={COIN.cx}
+              cy={COIN.cy}
+              r={COIN.ringR}
+              stroke="#ffffff"
+              strokeWidth={COIN.ringW}
+              fill="none"
+              opacity="0.95"
+              pathLength={1}
+              strokeDasharray="1"
+              strokeDashoffset={1 - Math.min(1, Math.max(0, coinFill))}
+              strokeLinecap="round"
+              transform={`rotate(-90 ${COIN.cx} ${COIN.cy})`}
+            />
+          )}
+          {coinFill == null && (
+            <circle
+              cx={COIN.cx}
+              cy={COIN.cy}
+              r={COIN.ringR}
+              stroke={P.ring}
+              strokeWidth={COIN.ringW}
+              fill="none"
+              opacity="0.9"
+            />
+          )}
         </g>
 
         {/* Eyes — two digital blue squares on the visor. Outer group carries

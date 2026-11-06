@@ -161,7 +161,7 @@ export function GuardianObject({
   // twice reads as wallpaper, not reaction (once per beat, like the
   // coins' signatures).
   const { beatKey: activeBeatKey, reportBeat } = useBeatReporter("guardian");
-  const [beatMood, setBeatMood] = useState<"alert" | "thinking" | null>(null);
+  const [beatMood, setBeatMood] = useState<"alert" | "thinking" | "wince" | null>(null);
   const resting = (liveAlive ?? false) && !acted;
   const playedBeats = useRef(new Set<string>());
   useEffect(() => {
@@ -178,7 +178,9 @@ export function GuardianObject({
       return;
     }
     const kind = beatImpulseForKey(activeBeatKey) ?? "settle";
-    const next = GUARDIAN_BEAT_MOOD[kind];
+    // A dated risk print reads on the face as a wince — the weight of
+    // what happened — where other kinds widen or narrow the eyes.
+    const next = kind === "risk" ? "wince" : GUARDIAN_BEAT_MOOD[kind];
     if (!next) return;
     playedBeats.current.add(activeBeatKey);
     setBeatMood(next);
@@ -227,7 +229,7 @@ export function GuardianObject({
       onFocusCapture={() => setActed(true)}
     >
       <div className="instrument-artifact flex justify-center">
-        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : scanning ? scanGaze : "off"} className="mb-3" protagonistTab="agent" />
+        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : beatMood ? { x: 0, y: 0.9 } : scanning ? scanGaze : "off"} className="mb-3" protagonistTab="agent" />
       </div>
       {showBudget && (
         <BudgetFence remaining={sessionInfo!.remainingTodayUSD} limit={dailyLimit} />
