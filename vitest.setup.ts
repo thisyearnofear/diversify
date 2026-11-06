@@ -39,36 +39,93 @@ import { afterEach } from 'vitest';
 import { scrubSignerEnvKeys } from './packages/shared/src/utils/signer-env-keys';
 
 /**
- * Node >=22 test environments can expose `window` without a Web Storage
- * backend (localStorage exists only behind --localstorage-file). Suites
- * that exercise snapshot/session storage then crash on
- * `window.localStorage` — ~360 tests across dozens of files under
- * Node 26 while jsdom environments silently mask it. Install a
- * Map-backed surface ONLY when the real one is absent, so jsdom and
- * browsers keep their own implementation.
+ * Node >=22 test environments can expose `window` without Web Storage
+ * backends (localStorage/sessionStorage exist only behind
+ * --localstorage-file). Suites that exercise snapshot/session storage
+ * then crash — ~360 tests across dozens of files under Node 26 while
+ * jsdom environments silently mask it.
+ *
+ * When the `Storage` class exists but the surfaces are missing, patch
+ * the prototype itself (per-instance state via WeakMap) and hand out
+ * `Storage`-derived objects — so `vi.spyOn(Storage.prototype, 'setItem')`
+ * still intercepts, which a plain-object shim would silently bypass.
+ * Only installed where the real surface is absent, so jsdom keeps its own.
  */
-const memStorage = new Map<string, string>();
-const storageShim = {
-  getItem: (k: string) => (memStorage.has(k) ? memStorage.get(k)! : null),
-  setItem: (k: string, v: string) => void memStorage.set(k, String(v)),
-  removeItem: (k: string) => void memStorage.delete(k),
-  clear: () => memStorage.clear(),
-  get length() {
-    return memStorage.size;
-  },
-  key: (i: number) => [...memStorage.keys()][i] ?? null,
-};
-if (typeof window !== 'undefined' && !window.localStorage) {
-  Object.defineProperty(window, 'localStorage', {
+if (
+  typeof Storage !== 'undefined' &&
+  typeof window !== 'undefined' &&
+  (!window.localStorage || !window.sessionStorage)
+) {
+  const stores = new WeakMap<object, Map<string, string>>();
+  const mem = (o: object) => {
+    let m = stores.get(o);
+    if (!m) {
+      m = new Map();
+      stores.set(o, m);
+    }
+    return m;
+  };
+  const proto = Storage.prototype as unknown as Record<string, unknown>;
+  proto.getItem = function (k: string) {
+    return stores.get(this)?.get(k) ?? null;
+  };
+  proto.setItem = function (this: object, k: string, v: string) {
+    mem(this).set(k, String(v));
+  };
+  proto.removeItem = function (k: string) {
+    stores.get(this)?.delete(k);
+  };
+  proto.clear = function () {
+    stores.get(this)?.clear();
+  };
+  proto.key = function (i: number) {
+    return [...(stores.get(this)?.keys() ?? [])][i] ?? null;
+  };
+  Object.defineProperty(proto, 'length', {
     configurable: true,
-    value: storageShim,
+    get: function (this: object) {
+      return stores.get(this)?.size ?? 0;
+    },
   });
 }
-if (typeof globalThis !== 'undefined' && !(globalThis as { localStorage?: unknown }).localStorage) {
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: storageShim,
-  });
+
+const newStorageSurface = (): unknown => {
+  if (typeof Storage !== 'undefined') {
+    return Object.create(Storage.prototype);
+  }
+  // No Storage class at all — plain-object fallback with an internal map.
+  const mem = new Map<string, string>();
+  return {
+    getItem: (k: string) => mem.get(k) ?? null,
+    setItem: (k: string, v: string) => void mem.set(k, String(v)),
+    removeItem: (k: string) => void mem.delete(k),
+    clear: () => mem.clear(),
+    get length() {
+      return mem.size;
+    },
+    key: (i: number) => [...mem.keys()][i] ?? null,
+  };
+};
+
+for (const name of ['localStorage', 'sessionStorage'] as const) {
+  // One shared surface per name — a test spying through `window` must see
+  // code that writes through `globalThis` and vice versa.
+  const w = typeof window !== 'undefined' ? window : undefined;
+  if (w && !w[name]) {
+    Object.defineProperty(w, name, {
+      configurable: true,
+      writable: true,
+      value: newStorageSurface(),
+    });
+  }
+  const g = globalThis as Record<string, unknown>;
+  if (!g[name]) {
+    Object.defineProperty(g, name, {
+      configurable: true,
+      writable: true,
+      value: w?.[name] ?? newStorageSurface(),
+    });
+  }
 }
 
 scrubSignerEnvKeys();
