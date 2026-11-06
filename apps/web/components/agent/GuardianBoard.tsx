@@ -24,17 +24,23 @@ import { haptics } from '@/lib/haptics';
 const BOARD_CODES = ['NGN', 'TRY', 'KES', 'MXN', 'GHS', 'BRL'] as const;
 const ROTATE_MS = 8000;
 
-export function GuardianBoard() {
-  const [code, setCode] = useState<string>(BOARD_CODES[0]);
+export function GuardianBoard({ initialCode }: { initialCode?: string }) {
+  // The plan's currency leads the pills when there is one — the board
+  // opens already on your money, not an arbitrary rotation start.
+  const codes = initialCode
+    ? [initialCode, ...BOARD_CODES.filter((c) => c !== initialCode)]
+    : BOARD_CODES;
+  const [code, setCode] = useState<string>(codes[0]);
   const [touched, setTouched] = useState(false);
   const promoDenied = featureDenied('thesis', useGeoCountry());
 
   useEffect(() => {
     if (touched) return;
     const t = setInterval(() => {
-      setCode((c) => BOARD_CODES[(BOARD_CODES.indexOf(c as never) + 1) % BOARD_CODES.length]);
+      setCode((c) => codes[(codes.indexOf(c as never) + 1) % codes.length]);
     }, ROTATE_MS);
     return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [touched]);
 
   const entry = CURRENCY_BY_CODE[code];
@@ -51,7 +57,7 @@ export function GuardianBoard() {
         aria-label="Pick a country"
         className="flex flex-wrap justify-center gap-1.5"
       >
-        {BOARD_CODES.map((c) => (
+        {codes.map((c) => (
           <button
             key={c}
             type="button"

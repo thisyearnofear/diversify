@@ -132,8 +132,9 @@ describe('guardianBeats', () => {
     expect(beats).toHaveLength(4);
     expect(beats[0].text).toContain('BoG held');
     expect(beats[1].text).toContain('Watch 🇰🇪:');
-    // Then the Guardian's nation-watching beats — one per plan currency.
-    expect(beats[2].text).toContain('Watching the');
+    // Then the Guardian's nation-watching beats — the primary leg gets
+    // ownership framing, the rest the plain watching line.
+    expect(beats[2].text).toContain('Your largest holding');
     expect(beats[3].text).toContain('Watching the');
   });
 

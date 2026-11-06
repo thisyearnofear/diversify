@@ -215,9 +215,22 @@ export function guardianBeats(args: {
   if (watchCodes.length === 0) {
     watchCodes.push('NGN', 'KES');
   }
+  const primaryCode = primaryLocalToken
+    ? corridorSideFor(primaryLocalToken)?.code
+    : undefined;
   for (const code of watchCodes.slice(0, 2)) {
     const entry = CURRENCY_BY_CODE[code];
     if (!entry) continue;
+    // Ownership framing for the plan's largest leg — the Guardian
+    // watching *for you*, newest dated event, never a take.
+    if (code === primaryCode && entry.riskEvents.length > 0) {
+      const newest = entry.riskEvents.reduce((a, b) => (b.year > a.year ? b : a));
+      beats.push({
+        key: `watch-own-${code}`,
+        text: `Your largest holding ${entry.flag} — ${newest.year}: ${newest.event}`,
+      });
+      continue;
+    }
     const kept = Math.max(0, Math.round(100 + entry.depreciation.vsUSD['5yr']));
     beats.push({
       key: `watch-nation-${code}`,

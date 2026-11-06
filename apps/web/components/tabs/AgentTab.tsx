@@ -37,6 +37,7 @@ import { GuardianBoard } from '../agent/GuardianBoard';
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
+import { corridorSideFor } from "@/lib/corridor-context";
 import { EXPOSURE_LABELS, type Exposure } from '@diversifi/shared/src/config/exposures';
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { guardianPlanForShield, sameGuardianPlan } from "@/lib/plan-sync";
@@ -360,15 +361,17 @@ function ConnectedAgent({
   // fresh macro beat on a plan currency, or the local leg's watch cadence.
   const { data: liveFeed } = useProofFeed();
   const { cycles: liveCycles } = usePurchaseCycles(address);
+  const { legs } = resolvePlan({ strategy: shieldPlan, customPlan });
+  const primaryToken = primaryLocalToken(legs);
+  const primaryCode = primaryToken ? corridorSideFor(primaryToken)?.code : undefined;
   const liveBeats = React.useMemo(() => {
-    const { legs } = resolvePlan({ strategy: shieldPlan, customPlan });
     return guardianBeats({
       records: liveFeed?.recent,
       cycles: liveCycles,
       planTokens: legs.map((l) => l.token),
-      primaryLocalToken: primaryLocalToken(legs),
+      primaryLocalToken: primaryToken,
     });
-  }, [liveFeed, liveCycles, shieldPlan, customPlan]);
+  }, [liveFeed, liveCycles, legs, primaryToken]);
   const liveAlive =
     sel === null &&
     !guardianContext &&
@@ -531,7 +534,7 @@ function ConnectedAgent({
           ) : sel === 'allocation' ? (
             <GuardianAllocationReview />
           ) : sel === "board" ? (
-            <GuardianBoard />
+            <GuardianBoard initialCode={primaryCode} />
           ) : sel === "journal" ? (
             <GuardianJournalSheet
               sessionInfo={g.sessionInfo}
