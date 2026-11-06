@@ -37,6 +37,12 @@ data — no new integrations.
   explicit 20s budgets on the two full-directory picker tests
   (`NotConnectedState`, `CurrencyMomentCard`) that timed out under
   full-suite parallel load.
+- **W5 board-pointer beat.** The walletless LiveLine gains a
+  `board-reads` beat naming the board's contents — discovery was the
+  funnel's weakest link. `board-*` → settle → no mood (a pointer isn't
+  news). `guardian_board_pointer_shown` fires once per mount when the
+  beat is shown, pairing with `guardian_board_opened` for a
+  pointer → open rate.
 
 ### Streaks endpoint auth + L1 vote invite (2026-11-06)
 

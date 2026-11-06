@@ -538,3 +538,18 @@ Session-scoped watch list (localStorage) reordering the board. Deferred: the
 walletless replay already keys on `currencyCode`, so implicit watching exists;
 build only if W0–W3 funnel data shows board engagement without return visits.
 
+### W5 · Board-pointer beat — shipped 2026-11-06
+
+The board's only walletless affordance was a quiet link under the LiveLine —
+discovery was the funnel's weakest link. One appended beat
+(`board-reads`, "The board — kept-cents, dated events, the mood poll") joins
+the rotation: names contents, no counts, always true. `board-*` keys fall
+through `beatImpulseForKey` to `settle`, which has no Guardian mood — the
+pointer isn't news, so the object doesn't react. First-time visitors see it
+at ~14s; return visitors at ~21s.
+
+Measurement pairs it with `guardian_board_pointer_shown` (once per mount,
+via `onBeatChange`) so pointer-impression → `guardian_board_opened` is
+computable. No board-open tracking in the snapshot — that's machinery for a
+hypothesis not yet measured.
+

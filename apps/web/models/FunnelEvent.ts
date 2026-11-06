@@ -127,6 +127,9 @@ export const FUNNEL_EVENTS = [
   'guardian_tab_viewed',
   'guardian_board_opened',
   'guardian_example_stepped',
+  // W5 (plan.md §12): the board-pointer beat's impression — pairs with
+  // `guardian_board_opened` so pointer → open rate is computable.
+  'guardian_board_pointer_shown',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

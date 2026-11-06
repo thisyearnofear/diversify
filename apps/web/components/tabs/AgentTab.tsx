@@ -90,6 +90,15 @@ const EXAMPLE_STEPS = [
   },
 ] as const;
 
+// W5 (plan.md §12): the board's only walletless affordance was a quiet
+// link — this beat is the Guardian naming what the board holds, in the
+// line's own grammar. `board-*` classifies as 'settle' → no mood, no
+// beat_impulse: a pointer isn't news.
+const BOARD_POINTER_BEAT = {
+  key: "board-reads",
+  text: "The board — kept-cents, dated events, the mood poll",
+};
+
 interface AgentTabProps {
   isMiniPay?: boolean;
   isFarcaster?: boolean;
@@ -184,7 +193,11 @@ export default function AgentTab({
     }
     writeSnapshot("guardian-watch", { keys });
   }, [address, isDemo, watchBeats]);
-  const lineBeats = returnLead ? [returnLead, ...watchBeats] : watchBeats;
+  const lineBeats = [
+    ...(returnLead ? [returnLead] : []),
+    ...watchBeats,
+    BOARD_POINTER_BEAT,
+  ];
   const { beatKey: watchBeatKey, reportBeat: reportWatchBeat } =
     useBeatReporter("guardian");
   const [watchMood, setWatchMood] = useState<
@@ -223,6 +236,18 @@ export default function AgentTab({
   // variant waits for the live-risk read (bounded) so a replay isn't counted
   // as the illustrative example.
   const tabViewedRef = React.useRef(false);
+  // W5: the pointer beat's impression — once per mount, pairs with
+  // `guardian_board_opened` so pointer → open rate is computable.
+  const pointerShownRef = React.useRef(false);
+  const handleWatchBeat = (key: string) => {
+    reportWatchBeat(key);
+    if (key === BOARD_POINTER_BEAT.key && !pointerShownRef.current) {
+      pointerShownRef.current = true;
+      trackFunnelEvent("guardian_board_pointer_shown", {
+        state: "unconnected",
+      });
+    }
+  };
   useEffect(() => {
     if (tabViewedRef.current) return;
     if (address) {
@@ -358,7 +383,7 @@ export default function AgentTab({
           testId="guardian-live-line"
           beats={lineBeats.map((b) => ({ key: b.key, content: b.text }))}
           alive={watchingAlive}
-          onBeatChange={reportWatchBeat}
+          onBeatChange={handleWatchBeat}
           className="mt-1 block text-2xs text-ink-muted"
         />
         <div className="mt-4 w-full">
