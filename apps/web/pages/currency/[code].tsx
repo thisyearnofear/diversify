@@ -65,11 +65,16 @@ export const getStaticProps: GetStaticProps<Props> = async ({ params }) => {
       : null;
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://diversifi.persidian.com';
 
+  // getStaticProps serializes to JSON — a source with no URL in the debt
+  // data (or any other optional field left undefined) crashes the build,
+  // so the derived props go through a round-trip that drops them.
+  const serialize = <T,>(v: T): T => JSON.parse(JSON.stringify(v));
+
   return {
     props: {
       instrument,
-      debt: sovereignDebtFor(CURRENCY_BY_CODE[instrument.code]?.iso2),
-      ways: waysToHoldFor(instrument.code) ?? { direct: [], benchmarks: [] },
+      debt: serialize(sovereignDebtFor(CURRENCY_BY_CODE[instrument.code]?.iso2)),
+      ways: serialize(waysToHoldFor(instrument.code) ?? { direct: [], benchmarks: [] }),
       pairPath,
       pageUrl: `${baseUrl}/currency/${instrument.code.toLowerCase()}`,
     },
