@@ -70,8 +70,13 @@ export default function CountryIndexPage({ rows, asOfLabel }: Props) {
           property="og:description"
           content="Each country's currency read like a stock: how much of your money it kept, what happened, what you can hold."
         />
-        <meta property="og:image" content={`${baseUrl}/embed-image.png`} />
+        {/* The share card IS the readout — every share of the index
+            carries the live public mood, not a static brand image. */}
+        <meta property="og:image" content={`${baseUrl}/api/og/sentiment-card`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:image" content={`${baseUrl}/api/og/sentiment-card`} />
       </Head>
       <div className="min-h-screen bg-[#0b0b12] text-white">
         <nav className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 pt-5 sm:px-6">

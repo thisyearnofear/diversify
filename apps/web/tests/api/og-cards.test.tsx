@@ -22,6 +22,15 @@ vi.mock('@vercel/og', () => ({
 import pairCardHandler from '@/pages/api/og/pair-card';
 import shareCardHandler from '@/pages/api/og/share-card';
 import receiptHandler from '@/pages/api/og/receipt';
+import sentimentCardHandler from '@/pages/api/og/sentiment-card';
+
+// The sentiment card is the only data-backed OG route — mongoose is
+// mocked to a hoisted aggregate the tests drive per case.
+const sentimentAggregate = vi.hoisted(() => vi.fn());
+vi.mock('@/lib/mongodb', () => ({ default: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('@/models/SentimentVote', () => ({
+  SentimentVote: { aggregate: sentimentAggregate },
+}));
 
 function textOf(node: React.ReactNode): string {
   if (node == null || typeof node === 'boolean') return '';
@@ -196,5 +205,40 @@ describe('/api/og/receipt — the lookup key is the only input', () => {
     expect(mockFetch).not.toHaveBeenCalled();
     expect(textOf(calls[0].children)).toContain('DiversiFi');
     mockFetch.mockRejectedValue(new Error('no feed'));
+  });
+});
+
+describe('/api/og/sentiment-card — the public mood, counts disclosed', () => {
+  it('renders tallies with percentages only at readable N', async () => {
+    sentimentAggregate.mockResolvedValue([
+      { _id: 'NGN', sentiments: ['worried', 'worried', 'worried', 'confident', 'neutral', 'worried', 'worried', 'confident', 'worried', 'neutral'] },
+      { _id: 'KES', sentiments: ['confident', 'confident', 'neutral'] },
+    ]);
+    calls.length = 0;
+    await sentimentCardHandler(req('https://x/api/og/sentiment-card') as never);
+    const text = textOf(calls[0].children);
+    expect(text).toContain('How visitors feel');
+    // NGN: 10 votes → 60% worried is a real share.
+    expect(text).toContain('60% worried · 10 votes');
+    // KES: 3 votes → count disclosed, no percentage invented.
+    expect(text).toContain('3 votes — too few to read');
+    expect(text).toContain('Vibes, not a market');
+    expect(text).not.toContain('75%');
+  });
+
+  it('no votes → the invite card, never an empty chart', async () => {
+    sentimentAggregate.mockResolvedValue([]);
+    calls.length = 0;
+    await sentimentCardHandler(req('https://x/api/og/sentiment-card') as never);
+    const text = textOf(calls[0].children);
+    expect(text).toContain('No votes yet');
+    expect(text).toContain('cast yours on any scorecard');
+  });
+
+  it('a failed aggregation still renders the invite card', async () => {
+    sentimentAggregate.mockRejectedValue(new Error('db down'));
+    calls.length = 0;
+    await sentimentCardHandler(req('https://x/api/og/sentiment-card') as never);
+    expect(textOf(calls[0].children)).toContain('No votes yet');
   });
 });

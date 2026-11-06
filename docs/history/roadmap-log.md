@@ -31,6 +31,12 @@ data — no new integrations.
 - **Tests.** +5 (board opens walletless, live line present, return-lead
   positive/negative, sentiment aggregate route). W4 (session watch list)
   stays deferred pending funnel evidence.
+- **Same-day follow-ups.** `/api/og/sentiment-card` (nodejs — the first
+  data-backed OG route) renders the public mood with the same ≥10-vote
+  rule; `/country` og:image now points at it. Push-gate flakes fixed:
+  explicit 20s budgets on the two full-directory picker tests
+  (`NotConnectedState`, `CurrencyMomentCard`) that timed out under
+  full-suite parallel load.
 
 ### Streaks endpoint auth + L1 vote invite (2026-11-06)
 

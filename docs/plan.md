@@ -499,7 +499,7 @@ unconnected object keeps one job (demonstrate → connect CTA). Acceptance:
 unconnected tab shows dated beats and the full board incl. the poll; no
 wallet-gated hook runs; `legs={[]}` path covered by tests.
 
-### W2 · Public confidence readout — shipped 2026-11-06 (OG card variant still open)
+### W2 · Public confidence readout — shipped 2026-11-06 (OG card shipped same day)
 
 The poll's tallies are already public per currency (`SentimentVote`, indexed
 by `code`, 180-day TTL). The new surface is the cross-currency readout:
@@ -512,8 +512,10 @@ by `code`, 180-day TTL). The new surface is the cross-currency readout:
 - Register stays "vibes, not a market" — never "index", "sentiment score", or
   anything implying a tradable signal. Date-stamp; tallies drift because
   re-votes upsert.
-- Shareable by construction: the readout is a candidate for an OG card variant
-  so the artifact travels to people who never visited.
+- Shareable by construction: `/api/og/sentiment-card` (nodejs runtime — the
+  only data-backed OG route) renders the top tallies with the same min-N
+  rule; `/country`'s og:image now points at it, so every share of the index
+  carries the live public mood.
 
 Acceptance: a dated public readout with disclosed counts; honesty footer
 preserved; no geo-gate regression vs. the poll's current posture.

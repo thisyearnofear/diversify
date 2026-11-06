@@ -442,5 +442,7 @@ describe("CountryPicker — no-country placeholder state", () => {
     fireEvent.click(screen.getByRole('button', { name: /Jamaica \(JMD\)/ }));
     expect(onChange).toHaveBeenCalledWith("JM");
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(), { timeout: 3000 });
-  });
+    // Two full-directory sheet lifecycles — the default 5s budget flakes
+    // under full-suite parallel load.
+  }, 20000);
 });

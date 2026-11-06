@@ -228,7 +228,9 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
       () => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
       { timeout: 3000 },
     );
-  });
+    // Full-directory sheet teardown — the default 5s budget flakes under
+    // full-suite parallel load.
+  }, 20000);
 
   it('keeps the static country heading when no change handler exists', () => {
     render(<CurrencyMomentCard {...baseProps} />);
