@@ -71,3 +71,25 @@ Exchange pair/ticket/receipt spec, the densest surface in the app.
 5. **Reference detail is never summarized away.** `reference.md` and
    `architecture.md` exist so that env vars, addresses, chain IDs and runbooks
    have exactly one home. Consolidating docs must not lose facts.
+
+## Doc system insights (as of 2026-10-31)
+
+**How it's organized:**
+- **6 core docs** (guardian, product, plan, architecture, reference, design-language) — the active set. Each answers one question; none competes with `guardian.md`'s headline.
+- **`archive/`** — closed tracks, submissions, strategy, stale plans. Event material never enters the core set.
+- **`internal/`** — exploratory findings, design drafts, superseded briefs. Reference, not current architecture.
+- **`history/roadmap-log.md`** — the single sink for dated progress (shipped waves, migrations, test counts).
+
+**Load-bearing rules (the "House rules" above):**
+1. One headline — `guardian.md`'s claim. No doc makes a subsystem the headline.
+2. Track/event material → `archive/`. Never core.
+3. Dated progress → `history/roadmap-log.md`. Never core.
+4. Claims about enforcement/verification/"live" need a trace to code or a tx, or are written as intent (enforced by `guardian.md` § Standing check).
+5. Reference detail never summarized away — env vars, addresses, chain IDs, runbooks have exactly one home.
+
+**Thoughts for the Airwallex build phase:**
+- Airwallex future-work lives in `plan.md` § 11 (build-phase plan), with dated progress appended to `history/roadmap-log.md` — already done.
+- Submission artifacts (project overview, demo script) go to `archive/submissions/` if we submit to a hackathon — keeps the core set clean.
+- Any Airwallex-specific exploratory findings (corridor research, FX provider diligence) go to `internal/`, not `plan.md`.
+- The "claims need trace to code" rule is especially relevant: Airwallex integration claims (e.g., "payout gated by `VaultService` caps") are written as intent until the code lands — which is exactly how § 11 is framed.
+- The 6-doc core set is the right size; resist adding a 7th doc for Airwallex. If Airwallex needs its own deep-dive, it goes in `internal/` or as a section in `architecture.md` (chains/rails) + `reference.md` (env vars/providers).
