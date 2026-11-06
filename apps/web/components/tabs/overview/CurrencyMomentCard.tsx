@@ -47,6 +47,7 @@ import {
   springSoft,
 } from "@/lib/motion-tokens";
 import { trackFunnelEvent } from "@/lib/analytics";
+import { moneyNameFor } from "@/lib/corridor-context";
 import { useInstrumentInspection } from "@/components/shared/InstrumentShell";
 import { useAIConversationOptional } from "@/context/AIConversationContext";
 import { useLiveCurrencyRisk } from "@/components/swap/CorridorContext";
@@ -931,6 +932,24 @@ export function CurrencyMomentCard({
                 onBeatChange={reportBeat}
                 className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
               />
+            )}
+
+            {/* The vote's L1 invite — discovery asks at the line layer; the
+                poll itself stays in the story inspector (L2). One question,
+                one tap, gone once the inspector is open or the coin is
+                mid-scrub. */}
+            {onInspectCurrency && !currencySelected && !reading && (
+              <button
+                type="button"
+                onClick={() => {
+                  haptics.tap();
+                  act();
+                  onInspectCurrency();
+                }}
+                className="mt-1.5 text-xs font-semibold text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
+              >
+                How confident are you in the {moneyNameFor(moment.currencyCode)}? →
+              </button>
             )}
 
             {/* Controls — the same segmented + coin motifs learned in onboarding */}
