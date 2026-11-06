@@ -129,15 +129,18 @@ describe('guardianBeats', () => {
       primaryLocalToken: 'KESm',
       nowMs: NOW,
     });
-    expect(beats).toHaveLength(2);
+    expect(beats).toHaveLength(4);
     expect(beats[0].text).toContain('BoG held');
     expect(beats[1].text).toContain('Watch 🇰🇪:');
+    // Then the Guardian's nation-watching beats — one per plan currency.
+    expect(beats[2].text).toContain('Watching the');
+    expect(beats[3].text).toContain('Watching the');
   });
 
-  it('renders nothing when no data resolves', () => {
-    expect(
-      guardianBeats({ records: [], cycles: [], planTokens: [], nowMs: NOW }),
-    ).toEqual([]);
+  it('still watches default nations when no plan data resolves', () => {
+    const beats = guardianBeats({ records: [], cycles: [], planTokens: [], nowMs: NOW });
+    expect(beats).toHaveLength(2);
+    expect(beats.every((b) => b.text.includes('Watching the'))).toBe(true);
   });
 });
 
