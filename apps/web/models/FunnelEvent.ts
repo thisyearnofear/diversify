@@ -130,6 +130,12 @@ export const FUNNEL_EVENTS = [
   // W5 (plan.md §12): the board-pointer beat's impression — pairs with
   // `guardian_board_opened` so pointer → open rate is computable.
   'guardian_board_pointer_shown',
+  // The chat funnel's top: Ask Guardian is the Guardian's only walletless
+  // surface in Simple mode (the tab doesn't exist there), so drawer-open
+  // → chat_send → chat_done/chat_error is the real first-touch funnel.
+  // chat_* events carry a `state` prop (connected|unconnected) for
+  // segmentation; this one does too.
+  'guardian_chat_opened',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

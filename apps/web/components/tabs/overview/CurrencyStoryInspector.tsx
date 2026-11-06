@@ -32,6 +32,8 @@ import { trackFunnelEvent } from '@/lib/analytics';
 import { RouteLink } from '@/components/shared/RouteLink';
 import { SentimentPoll } from '@/components/country/SentimentPoll';
 import { WaysToHold } from '@/components/country/WaysToHold';
+import { ReadingControls } from './ReadingControls';
+import type { Benchmark, Horizon } from '@/constants/currency-risk';
 import { waysToHoldFor } from '@/lib/holdable-assets';
 import { sovereignDebtFor } from '@diversifi/shared/src/constants/sovereign-debt';
 
@@ -255,9 +257,21 @@ function newsContext(news: CurrencyNewsItem[]): string {
 function CurrencyStoryBody({
   code,
   onClose,
+  reading,
 }: {
   code: string;
   onClose: () => void;
+  /** The Home reading's benchmark/horizon controls — L2 material that
+   *  used to stack under the resting moment card. Selection rewrites the
+   *  artefact; the artefact states it in the subline. */
+  reading?: {
+    benchmark: Benchmark;
+    horizon: Horizon;
+    benchmarks: Benchmark[];
+    horizons: Horizon[];
+    onSelectBenchmark: (b: Benchmark) => void;
+    onSelectHorizon: (h: Horizon) => void;
+  } | null;
 }) {
   const { askAdvisor } = useAdvisor();
   const entry = CURRENCY_BY_CODE[code] ?? null;
@@ -484,6 +498,23 @@ function CurrencyStoryBody({
           )}
         </motion.div>
       </AnimatePresence>
+      {reading && (
+        <section aria-label="Your reading" className="mt-4">
+          <p className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
+            Your reading
+          </p>
+          <div className="mt-2">
+            <ReadingControls
+              benchmarks={reading.benchmarks}
+              horizons={reading.horizons}
+              benchmark={reading.benchmark}
+              horizon={reading.horizon}
+              onSelectBenchmark={reading.onSelectBenchmark}
+              onSelectHorizon={reading.onSelectHorizon}
+            />
+          </div>
+        </section>
+      )}
       {content && <MomentShareLine code={content.code} />}
       <NationDeskSections code={entry.code} />
       {/* The story is this sheet's job; the instrument is a separate, deeper
@@ -558,11 +589,21 @@ export function CurrencyStoryInspector({
   code,
   onClose,
   presentation = 'sheet',
+  reading,
 }: {
   /** Selected currency code — null closes the sheet. */
   code: string | null;
   onClose: () => void;
   presentation?: 'sheet' | 'stage';
+  /** Benchmark/horizon controls for the Home reading — see CurrencyStoryBody. */
+  reading?: {
+    benchmark: Benchmark;
+    horizon: Horizon;
+    benchmarks: Benchmark[];
+    horizons: Horizon[];
+    onSelectBenchmark: (b: Benchmark) => void;
+    onSelectHorizon: (h: Horizon) => void;
+  } | null;
 }) {
   const entry = code ? CURRENCY_BY_CODE[code] ?? null : null;
 
@@ -573,7 +614,14 @@ export function CurrencyStoryInspector({
       title={entry ? `${entry.flag} ${entry.countryName} — ${entry.code}` : 'Currency'}
       presentation={presentation}
     >
-      {entry && <CurrencyStoryBody key={entry.code} code={entry.code} onClose={onClose} />}
+      {entry && (
+        <CurrencyStoryBody
+          key={entry.code}
+          code={entry.code}
+          onClose={onClose}
+          reading={reading}
+        />
+      )}
     </InspectorSheet>
   );
 }

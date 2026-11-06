@@ -18,7 +18,6 @@ import { CurrencyMomentCard } from "./CurrencyMomentCard";
 import { InflationMomentCard } from "./InflationMomentCard";
 import type { NarrativeMoment, InflationMoment } from "@/lib/narrative/currency-moment";
 import type { MomentFrame } from "@/lib/narrative/moment-framing";
-import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import { Coin } from "@/components/shared/FloatingCoins";
 import { regionGlyph } from "@/lib/home-lens";
 import { haptics } from "@/lib/haptics";
@@ -132,10 +131,6 @@ function RegionCoin({
 interface HomeRiskTheaterProps {
   moment: NarrativeMoment | null;
   inflationMoment: InflationMoment | null;
-  benchmarks: Benchmark[];
-  horizons: Horizon[];
-  onSelectBenchmark: (b: Benchmark) => void;
-  onSelectHorizon: (h: Horizon) => void;
   onAmountChange: (amount: number) => void;
   /** The one action. Omitted while a region selection owns inspection. */
   onProtect?: () => void;
@@ -166,10 +161,6 @@ interface HomeRiskTheaterProps {
 export function HomeRiskTheater({
   moment,
   inflationMoment,
-  benchmarks,
-  horizons,
-  onSelectBenchmark,
-  onSelectHorizon,
   onAmountChange,
   onProtect,
   protectLabel,
@@ -261,10 +252,6 @@ export function HomeRiskTheater({
         <div hidden={inspecting} data-testid="home-comparison">
           <CurrencyMomentCard
             moment={moment}
-            benchmarks={benchmarks}
-            horizons={horizons}
-            onSelectBenchmark={onSelectBenchmark}
-            onSelectHorizon={onSelectHorizon}
             onAmountChange={onAmountChange}
             onProtect={onProtect}
             protectLabel={protectLabel}

@@ -553,3 +553,23 @@ via `onBeatChange`) so pointer-impression → `guardian_board_opened` is
 computable. No board-open tracking in the snapshot — that's machinery for a
 hypothesis not yet measured.
 
+### W6 · Chat funnel + Home density — shipped 2026-11-06
+
+User feedback surfaced two structural gaps: a first-time visitor never saw
+the Guardian *tab* (Simple mode hides it — the FAB chat is the walletless
+Guardian surface, and it was 500ing on a citizen-sdk/lz-string ESM interop
+crash, fixed in `0d59c6bf`), and Home read as too many text layers.
+
+- **Chat funnel.** `guardian_chat_opened` fires once per drawer-open
+  transition (`AIConversationContext.setDrawerOpen`); `chat_send`,
+  `chat_done`, `chat_error` now carry `state: connected|unconnected` so
+  the walletless first-touch funnel is segmentable. The real top-of-funnel
+  for Simple-mode visitors is now measured.
+- **Home density.** `CurrencyMomentCard` no longer stacks the benchmark +
+  horizon control row under the resting reading — comparison is L2
+  exploration, so the controls moved into `CurrencyStoryInspector` as a
+  "Your reading" section (`ReadingControls`, same segmented + coin
+  motifs). The artefact still states the selection in its subline; the
+  money/goods toggle stays inline because it is fused to the consequence
+  sentence. `/currency/[code]` remains the deep what-if surface.
+

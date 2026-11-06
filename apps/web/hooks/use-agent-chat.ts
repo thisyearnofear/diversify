@@ -273,6 +273,7 @@ export function useAgentChat({
           trackFunnelEvent("chat_done", {
             latency: String(outcome.answer.badge.latencyMs),
             intent: intentLabel,
+            state: address ? 'connected' : 'unconnected',
           });
           updateChatState({ isChatting: false, thinkingStep: "" });
           return "answered";
@@ -671,8 +672,12 @@ export function useAgentChat({
         }
       }
 
-      // Track chat send for funnel analytics
-      trackFunnelEvent('chat_send', { intent: effectiveIntent.type });
+      // Track chat send for funnel analytics — `state` segments the
+      // walletless first-touch funnel from connected usage.
+      trackFunnelEvent('chat_send', {
+        intent: effectiveIntent.type,
+        state: address ? 'connected' : 'unconnected',
+      });
       const sendStartTime = Date.now();
       let pendingAssistant: { id: string; timestamp: Date } | null = null;
 
@@ -857,6 +862,7 @@ export function useAgentChat({
           trackFunnelEvent('chat_done', {
             latency: String(Math.round(latencyMs)),
             provider: String(result.provider || 'unknown'),
+            state: address ? 'connected' : 'unconnected',
             ...(result.action ? { action: String(result.action.type) } : {}),
           });
           pendingAssistant = null;
@@ -1044,7 +1050,10 @@ export function useAgentChat({
             response.status,
             errorData,
           );
-          trackFunnelEvent('chat_error', { status: String(response.status) });
+          trackFunnelEvent('chat_error', {
+            status: String(response.status),
+            state: address ? 'connected' : 'unconnected',
+          });
 
           const errorMessage: AIMessage = {
             role: "assistant",
@@ -1056,7 +1065,10 @@ export function useAgentChat({
         }
       } catch (error) {
         console.error("[useAgentChat] Chat failed:", error);
-        trackFunnelEvent('chat_error', { reason: String(error instanceof Error ? error.message : 'unknown') });
+        trackFunnelEvent('chat_error', {
+          reason: String(error instanceof Error ? error.message : 'unknown'),
+          state: address ? 'connected' : 'unconnected',
+        });
 
         // A TypeError from fetch() means the request never completed (CORS,
         // offline, DNS) — blaming the AI provider would be a lie.

@@ -67,10 +67,6 @@ export function NotConnectedState({
         {moment ? (
           <CurrencyMomentCard
             moment={moment}
-            benchmarks={benchmarks}
-            horizons={horizons}
-            onSelectBenchmark={selectBenchmark}
-            onSelectHorizon={selectHorizon}
             onAmountChange={setSavingsAmount}
             onChangeCountry={onChangeCountry}
             frame={frame}
@@ -146,6 +142,18 @@ export function NotConnectedState({
         code={inspectedCurrency}
         onClose={() => setInspectedCurrency(null)}
         presentation="stage"
+        reading={
+          moment
+            ? {
+                benchmark: moment.benchmark,
+                horizon: moment.horizon,
+                benchmarks,
+                horizons,
+                onSelectBenchmark: selectBenchmark,
+                onSelectHorizon: selectHorizon,
+              }
+            : null
+        }
       />
     </div>
   );

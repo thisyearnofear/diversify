@@ -338,6 +338,18 @@ export function ConnectedOverview({
         code={inspectedCurrency}
         onClose={() => setInspectedCurrency(null)}
         presentation="stage"
+        reading={
+          moment
+            ? {
+                benchmark: moment.benchmark,
+                horizon: moment.horizon,
+                benchmarks,
+                horizons,
+                onSelectBenchmark: handleMomentBenchmark,
+                onSelectHorizon: handleMomentHorizon,
+              }
+            : null
+        }
       />
     </>
   );
@@ -352,10 +364,6 @@ export function ConnectedOverview({
     <HomeRiskTheater
       moment={moment}
       inflationMoment={inflationMoment}
-      benchmarks={benchmarks}
-      horizons={horizons}
-      onSelectBenchmark={handleMomentBenchmark}
-      onSelectHorizon={handleMomentHorizon}
       onAmountChange={setSavingsAmount}
       onProtect={focusedRegion === null ? () => setActiveTab("protect") : undefined}
       protectLabel={philosophyName ? "Review protection plan" : undefined}

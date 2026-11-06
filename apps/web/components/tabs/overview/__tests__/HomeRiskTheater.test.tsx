@@ -4,7 +4,6 @@ import { render, screen, fireEvent, waitFor, within, cleanup } from "@testing-li
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import { HomeRiskTheater } from "../HomeRiskTheater";
-import { BENCHMARK_KEYS, HORIZON_KEYS } from "@/constants/currency-risk";
 import type { InflationMoment, NarrativeMoment } from "@/lib/narrative/currency-moment";
 
 const mocks = vi.hoisted(() => ({
@@ -62,10 +61,6 @@ function renderTheater(overrides: Partial<React.ComponentProps<typeof HomeRiskTh
     <HomeRiskTheater
       moment={MOMENT}
       inflationMoment={null}
-      benchmarks={BENCHMARK_KEYS}
-      horizons={HORIZON_KEYS}
-      onSelectBenchmark={() => {}}
-      onSelectHorizon={() => {}}
       onAmountChange={() => {}}
       onProtect={() => {}}
       frame={null}
@@ -219,7 +214,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     expect(snap.at).toBe(NOW);
   });
 
-  it("the visit/history toggle never swaps out the stage controls", async () => {
+  it("the visit/history toggle never swaps out the stage reading", async () => {
     window.localStorage.setItem(
       KEY,
       JSON.stringify({ value: READING, at: NOW - 3 * 24 * 3600 * 1000 }),
@@ -228,11 +223,11 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     await screen.findByTestId("currency-visit-review");
 
     fireEvent.click(screen.getByRole("button", { name: "Longer view" }));
-    expect(screen.getByRole("button", { name: "3Y" })).toBeInTheDocument();
+    expect(screen.getByTestId("home-reading")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Last visit" }));
     await screen.findByTestId("currency-visit-review");
     fireEvent.click(screen.getByRole("button", { name: "Longer view" }));
-    expect(screen.getByRole("button", { name: "3Y" })).toBeInTheDocument();
+    expect(screen.getByTestId("home-reading")).toBeInTheDocument();
   });
 
   it("writes no visit memory while inactive, then compares once active", async () => {
@@ -247,10 +242,6 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
       <HomeRiskTheater
         moment={MOMENT}
         inflationMoment={null}
-        benchmarks={BENCHMARK_KEYS}
-        horizons={HORIZON_KEYS}
-        onSelectBenchmark={() => {}}
-        onSelectHorizon={() => {}}
         onAmountChange={() => {}}
         onProtect={() => {}}
         frame={null}
@@ -376,10 +367,6 @@ describe("HomeRiskTheater — inline inspection replaces the stage", () => {
       <HomeRiskTheater
         moment={MOMENT}
         inflationMoment={null}
-        benchmarks={BENCHMARK_KEYS}
-        horizons={HORIZON_KEYS}
-        onSelectBenchmark={() => {}}
-        onSelectHorizon={() => {}}
         onAmountChange={() => {}}
         onProtect={() => {}}
         frame={null}
@@ -397,10 +384,6 @@ describe("HomeRiskTheater — inline inspection replaces the stage", () => {
       <HomeRiskTheater
         moment={MOMENT}
         inflationMoment={null}
-        benchmarks={BENCHMARK_KEYS}
-        horizons={HORIZON_KEYS}
-        onSelectBenchmark={() => {}}
-        onSelectHorizon={() => {}}
         onAmountChange={() => {}}
         onProtect={() => {}}
         frame={null}
@@ -444,10 +427,6 @@ describe("HomeRiskTheater — inline inspection replaces the stage", () => {
     const shared = {
       moment: goodsMoment,
       inflationMoment: null,
-      benchmarks: BENCHMARK_KEYS,
-      horizons: HORIZON_KEYS,
-      onSelectBenchmark: () => {},
-      onSelectHorizon: () => {},
       onAmountChange: () => {},
       onProtect: () => {},
       frame: null,

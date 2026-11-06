@@ -2,9 +2,9 @@
  * CurrencyMomentCard — the Home tab's opening artifact.
  *
  * One expressive object: your currency against the benchmark as two coins,
- * the delta as the number, your savings consequence underneath. Scrubbing
- * the horizon or tapping a benchmark coin changes the composition — the
- * interaction does the explaining, so the copy stays at two sentences.
+ * the delta as the number, your savings consequence underneath. The copy
+ * stays at two sentences — benchmark/horizon exploration is L2 (the story
+ * inspector's ReadingControls), not stacked under the resting reading.
  *
  * Grammar: one object gets the colour (the local coin + delta); everything
  * else is quiet. Motion reveals selection, never loops.
@@ -19,14 +19,12 @@ import { useCountUp } from "@/hooks/use-count-up";
 import { usePointerTilt } from "@/hooks/use-pointer-tilt";
 import { haptics } from "@/lib/haptics";
 import {
-  BENCHMARKS,
   CURRENCY_BY_CODE,
   CURRENCY_RISK_REVIEW_WINDOW_DAYS,
   HORIZONS,
   isCurrencyRiskDatasetStale,
-  type Benchmark,
-  type Horizon,
 } from "@/constants/currency-risk";
+import { BENCHMARK_COIN } from "./ReadingControls";
 import type { NarrativeMoment } from "@/lib/narrative/currency-moment";
 import { CountryPicker } from "./CountryPicker";
 import { CurrencyVisitReview } from "./CurrencyVisitReview";
@@ -65,10 +63,6 @@ import {
 
 interface Props {
   moment: NarrativeMoment;
-  benchmarks: Benchmark[];
-  horizons: Horizon[];
-  onSelectBenchmark: (b: Benchmark) => void;
-  onSelectHorizon: (h: Horizon) => void;
   onAmountChange: (amount: number) => void;
   /** The one action. Omitted and the CTA disappears (0px). */
   onProtect?: () => void;
@@ -97,18 +91,6 @@ interface Props {
   liveAlive?: boolean;
   className?: string;
 }
-
-const BENCHMARK_COIN: Record<Benchmark, { glyph: string; color: string }> = {
-  USD: { glyph: "$", color: BENCHMARK_COLORS.USD },
-  EUR: { glyph: "€", color: BENCHMARK_COLORS.EUR },
-  XAU: { glyph: "Au", color: BENCHMARK_COLORS.XAU },
-};
-
-const BENCHMARK_SHORT: Record<Benchmark, string> = {
-  USD: "USD",
-  EUR: "EUR",
-  XAU: "Gold",
-};
 
 /**
  * One accent for the whole moment. The traffic-light (red/amber/green) is
@@ -269,10 +251,6 @@ function MoneyConsequence({
 
 export function CurrencyMomentCard({
   moment,
-  benchmarks,
-  horizons,
-  onSelectBenchmark,
-  onSelectHorizon,
   onAmountChange,
   onProtect,
   protectLabel,
@@ -952,82 +930,6 @@ export function CurrencyMomentCard({
               </button>
             )}
 
-            {/* Controls — the same segmented + coin motifs learned in onboarding */}
-            <div className="instrument-inspect-hidden mt-4 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
-              <div
-                className="inline-flex items-center gap-2"
-                role="group"
-                aria-label="Time horizon"
-              >
-                {horizons.map((h) => (
-                  <motion.button
-                    key={h}
-                    type="button"
-                    aria-pressed={moment.horizon === h}
-                    onClick={() => {
-                      haptics.tap();
-                      act();
-                      onSelectHorizon(h);
-                    }}
-                    whileTap={reducedMotion ? undefined : press}
-                    transition={springPress}
-                    className={`min-h-tap min-w-tap px-3 rounded-full text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                      moment.horizon === h
-                        ? "bg-gray-900 text-white dark:bg-white dark:text-gray-900"
-                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
-                    }`}
-                  >
-                    {HORIZONS[h].short}
-                  </motion.button>
-                ))}
-              </div>
-              <span
-                className="hidden sm:block w-px h-5 bg-gray-200 dark:bg-gray-700"
-                aria-hidden="true"
-              />
-              <div
-                role="group"
-                aria-label="Benchmark"
-                className="inline-flex items-center gap-1.5"
-              >
-                {benchmarks.map((b) => {
-                  const c = BENCHMARK_COIN[b];
-                  const selected = moment.benchmark === b;
-                  return (
-                    <motion.button
-                      key={b}
-                      type="button"
-                      aria-pressed={selected}
-                      aria-label={`Compare against ${BENCHMARKS[b].label}`}
-                      onClick={() => {
-                        haptics.tap();
-                        act();
-                        onSelectBenchmark(b);
-                      }}
-                      whileTap={reducedMotion ? undefined : press}
-                      transition={springPress}
-                      className={`min-h-tap min-w-tap inline-flex flex-col items-center justify-center gap-0.5 rounded-2xl px-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 ${
-                        selected
-                          ? "bg-gray-100 dark:bg-gray-800 ring-2 ring-gray-900 dark:ring-white"
-                          : "ring-1 ring-transparent hover:bg-gray-50 dark:hover:bg-gray-800/60"
-                      }`}
-                    >
-                      <Coin
-                        size={34}
-                        symbol={c.glyph}
-                        color={c.color}
-                        variant="asset"
-                      />
-                      <span
-                        className={`text-2xs font-bold ${selected ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400"}`}
-                      >
-                        {BENCHMARK_SHORT[b]}
-                      </span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
         )}
       </motion.div>

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode, use
 import { AIMessage } from '../hooks/agent-types';
 import type { GuardianRecommendationContract } from '@diversifi/shared/src/types/guardian-protection';
 import { useWalletContext } from '@/components/wallet/WalletProvider';
+import { trackFunnelEvent } from '@/lib/analytics';
 
 /**
  * Ask Guardian transcript stance (session thread):
@@ -267,6 +268,14 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
 
   /** Closing Ask Guardian ends the visible thread — next open is empty. */
   const setDrawerOpen = useCallback((open: boolean) => {
+    // Funnel top for the Guardian's walletless surface — Simple mode has
+    // no Guardian tab, so this drawer IS the first touch. Once per
+    // false→true transition; `state` segments connected vs walletless.
+    if (open && !isDrawerOpen) {
+      trackFunnelEvent('guardian_chat_opened', {
+        state: address ? 'connected' : 'unconnected',
+      });
+    }
     if (!open) {
       setMessages([]);
       setLastReadTimestamp(null);
@@ -274,7 +283,7 @@ export function AIConversationProvider({ children }: { children: ReactNode }) {
       scrubLegacyTranscriptKeys(scopedKey);
     }
     setDrawerOpenState(open);
-  }, [scopedKey]);
+  }, [scopedKey, isDrawerOpen, address]);
 
   const markAsRead = useCallback(() => {
     setLastReadTimestamp(new Date());

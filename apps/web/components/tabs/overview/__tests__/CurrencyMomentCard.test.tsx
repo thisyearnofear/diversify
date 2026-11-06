@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within, act, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { CurrencyMomentCard } from '../CurrencyMomentCard';
+import { ReadingControls } from '../ReadingControls';
 import type { NarrativeMoment } from '@/lib/narrative/currency-moment';
 import { momentFrameFor } from '@/lib/narrative/moment-framing';
 import type { Benchmark, Horizon } from '@/constants/currency-risk';
@@ -69,10 +70,6 @@ const HORIZONS: Horizon[] = ['1yr', '3yr', '5yr'];
 
 const baseProps = {
   moment: MOMENT,
-  benchmarks: BENCHMARKS,
-  horizons: HORIZONS,
-  onSelectBenchmark: () => {},
-  onSelectHorizon: () => {},
   onAmountChange: () => {},
 };
 
@@ -112,49 +109,15 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     ).toBeTruthy();
   });
 
-  it('keeps horizon and benchmark controls as two wrapping groups', async () => {
+  it('keeps benchmark and horizon controls out of the resting reading — they are L2', async () => {
     render(<CurrencyMomentCard {...baseProps} />);
-    const horizonGroup = await screen.findByRole('group', { name: 'Time horizon' });
-    const benchmarkGroup = screen.getByRole('group', { name: 'Benchmark' });
-    expect(horizonGroup.className).toContain('inline-flex');
-    expect(benchmarkGroup.className).toContain('inline-flex');
-    const wrap = horizonGroup.parentElement!;
-    expect(wrap.className).toContain('flex-wrap');
-    expect(wrap.contains(horizonGroup)).toBe(true);
-    expect(wrap.contains(benchmarkGroup)).toBe(true);
-    const divider = [...wrap.children].find(
-      (el) => el.tagName === 'SPAN',
-    ) as HTMLElement | undefined;
-    expect(divider?.className).toContain('hidden');
-    expect(divider?.className).toContain('sm:block');
-    expect(horizonGroup.contains(benchmarkGroup)).toBe(false);
-  });
-
-  it('scrubs the horizon and selects benchmarks with a haptic tick', () => {
-    const onSelectHorizon = vi.fn();
-    const onSelectBenchmark = vi.fn();
-    render(
-      <CurrencyMomentCard
-        {...baseProps}
-        onSelectHorizon={onSelectHorizon}
-        onSelectBenchmark={onSelectBenchmark}
-      />,
-    );
-
-    fireEvent.click(screen.getByRole('button', { name: '3Y' }));
-    expect(onSelectHorizon).toHaveBeenCalledWith('3yr');
-    expect(haptics.tap).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByRole('button', { name: /Compare against Euro/ }));
-    expect(onSelectBenchmark).toHaveBeenCalledWith('EUR');
-    expect(haptics.tap).toHaveBeenCalledTimes(2);
-  });
-
-  it('marks the active horizon and benchmark', () => {
-    render(<CurrencyMomentCard {...baseProps} />);
-    expect(screen.getByRole('button', { name: '1Y' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.getByRole('button', { name: '3Y' })).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: /Compare against US Dollar/ })).toHaveAttribute('aria-pressed', 'true');
+    await screen.findByTestId('home-reading');
+    // Density contract: comparison is exploration, so the controls live in
+    // the story inspector (ReadingControls), not stacked under the artefact.
+    expect(screen.queryByRole('group', { name: 'Time horizon' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'Benchmark' })).not.toBeInTheDocument();
+    // The selection still reads on the artefact itself.
+    expect(screen.getByText(/Over 1 year against US Dollar/)).toBeInTheDocument();
   });
 
   it('the Guardian door is explicit: absent without a provider, open-only on tap', () => {
@@ -592,16 +555,6 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(screen.getByText(/Over 5 years against US Dollar/)).toBeInTheDocument();
   });
 
-  it('each benchmark coin carries its short visible name and marks the active one', () => {
-    render(<CurrencyMomentCard {...baseProps} />);
-    for (const name of ['USD', 'EUR', 'Gold']) {
-      expect(screen.getByText(name)).toBeInTheDocument();
-    }
-    const active = screen.getByRole('button', { name: /Compare against US Dollar/ });
-    expect(active).toHaveAttribute('aria-pressed', 'true');
-    expect(active).toHaveTextContent('USD');
-  });
-
   it('applies a single neutral accent instead of a traffic-light', () => {
     const { container, rerender } = render(<CurrencyMomentCard {...baseProps} />);
     const review = container.querySelector('[style*="color"]');
@@ -677,7 +630,9 @@ describe('CurrencyMomentCard — live line', () => {
       });
       expect(line.textContent).not.toBe(first);
 
-      fireEvent.click(screen.getByRole('button', { name: '3Y' }));
+      fireEvent.change(screen.getByLabelText('Illustrative amount'), {
+        target: { value: '5' },
+      });
       const settled = line.textContent;
       act(() => {
         vi.advanceTimersByTime(3 * LIVE_LINE_DWELL_MS);
@@ -952,7 +907,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Longer view' }));
     expect(screen.queryByTestId('currency-visit-review')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Illustrative amount')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '3Y' })).toBeInTheDocument();
+    expect(screen.getByTestId('home-reading')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Last visit' }));
     expect(await screen.findByTestId('currency-visit-review')).toBeInTheDocument();
@@ -1217,5 +1172,60 @@ describe('CurrencyMomentCard — the coin is the chart', () => {
       />,
     );
     expect(screen.queryByTestId('moment-time-track')).toBeNull();
+  });
+});
+
+describe('ReadingControls — the L2 home for benchmark/horizon selection', () => {
+  function renderControls(overrides: Partial<React.ComponentProps<typeof ReadingControls>> = {}) {
+    return render(
+      <ReadingControls
+        benchmarks={BENCHMARKS}
+        horizons={HORIZONS}
+        benchmark="USD"
+        horizon="1yr"
+        onSelectBenchmark={() => {}}
+        onSelectHorizon={() => {}}
+        {...overrides}
+      />,
+    );
+  }
+
+  it('keeps horizon and benchmark controls as two wrapping groups', async () => {
+    renderControls();
+    const horizonGroup = await screen.findByRole('group', { name: 'Time horizon' });
+    const benchmarkGroup = screen.getByRole('group', { name: 'Benchmark' });
+    expect(horizonGroup.className).toContain('inline-flex');
+    expect(benchmarkGroup.className).toContain('inline-flex');
+    const wrap = horizonGroup.parentElement!;
+    expect(wrap.className).toContain('flex-wrap');
+    expect(wrap.contains(horizonGroup)).toBe(true);
+    expect(wrap.contains(benchmarkGroup)).toBe(true);
+    expect(horizonGroup.contains(benchmarkGroup)).toBe(false);
+  });
+
+  it('selects horizons and benchmarks with a haptic tick', () => {
+    const onSelectHorizon = vi.fn();
+    const onSelectBenchmark = vi.fn();
+    renderControls({ onSelectHorizon, onSelectBenchmark });
+
+    fireEvent.click(screen.getByRole('button', { name: '3Y' }));
+    expect(onSelectHorizon).toHaveBeenCalledWith('3yr');
+    expect(haptics.tap).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole('button', { name: /Compare against Euro/ }));
+    expect(onSelectBenchmark).toHaveBeenCalledWith('EUR');
+    expect(haptics.tap).toHaveBeenCalledTimes(2);
+  });
+
+  it('marks the active horizon and benchmark', () => {
+    renderControls();
+    expect(screen.getByRole('button', { name: '1Y' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '3Y' })).toHaveAttribute('aria-pressed', 'false');
+    const active = screen.getByRole('button', { name: /Compare against US Dollar/ });
+    expect(active).toHaveAttribute('aria-pressed', 'true');
+    expect(active).toHaveTextContent('USD');
+    for (const name of ['EUR', 'Gold']) {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    }
   });
 });

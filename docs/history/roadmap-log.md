@@ -52,6 +52,12 @@ data — no new integrations.
   route reaching `GoodDollarService` crashed at module load. Fix:
   `transpilePackages` now bundles citizen-sdk so bundler CJS interop
   resolves it. Verified `next build` + `next start` → advisor 200.
+- **W6 chat funnel + Home density.** `guardian_chat_opened` (drawer-open
+  transition) + `state` prop on `chat_send`/`chat_done`/`chat_error` —
+  the Simple-mode walletless funnel is now measurable end to end.
+  Benchmark/horizon controls demoted from `CurrencyMomentCard`'s resting
+  stack into `CurrencyStoryInspector` ("Your reading" → `ReadingControls`);
+  the artefact still names the selection in its subline.
 
 ### Streaks endpoint auth + L1 vote invite (2026-11-06)
 
