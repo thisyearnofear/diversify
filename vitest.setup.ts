@@ -38,6 +38,39 @@ import { afterEach } from 'vitest';
  */
 import { scrubSignerEnvKeys } from './packages/shared/src/utils/signer-env-keys';
 
+/**
+ * Node >=22 test environments can expose `window` without a Web Storage
+ * backend (localStorage exists only behind --localstorage-file). Suites
+ * that exercise snapshot/session storage then crash on
+ * `window.localStorage` — ~360 tests across dozens of files under
+ * Node 26 while jsdom environments silently mask it. Install a
+ * Map-backed surface ONLY when the real one is absent, so jsdom and
+ * browsers keep their own implementation.
+ */
+const memStorage = new Map<string, string>();
+const storageShim = {
+  getItem: (k: string) => (memStorage.has(k) ? memStorage.get(k)! : null),
+  setItem: (k: string, v: string) => void memStorage.set(k, String(v)),
+  removeItem: (k: string) => void memStorage.delete(k),
+  clear: () => memStorage.clear(),
+  get length() {
+    return memStorage.size;
+  },
+  key: (i: number) => [...memStorage.keys()][i] ?? null,
+};
+if (typeof window !== 'undefined' && !window.localStorage) {
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: storageShim,
+  });
+}
+if (typeof globalThis !== 'undefined' && !(globalThis as { localStorage?: unknown }).localStorage) {
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    value: storageShim,
+  });
+}
+
 scrubSignerEnvKeys();
 
 // Load DOM cleanup only after credentials are scrubbed. Node-only service
