@@ -851,6 +851,22 @@ describe('corridor return-visit lead', () => {
   const KEY = 'diversifi:last-visit:corridor:NGNm-USDm';
   const DAY = 86_400_000;
 
+  // Node ≥22 exposes `window` without the Web Storage backend (the
+  // --localstorage-file flag is not set in CI or pre-push), so the
+  // snapshot tests get an in-memory surface instead of crashing.
+  if (typeof window !== 'undefined' && !window.localStorage) {
+    const mem = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, v),
+        removeItem: (k: string) => void mem.delete(k),
+        clear: () => mem.clear(),
+      },
+    });
+  }
+
   const seed = (ageMs: number, value: unknown) =>
     window.localStorage.setItem(
       KEY,
