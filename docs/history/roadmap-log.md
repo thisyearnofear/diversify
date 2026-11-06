@@ -43,6 +43,15 @@ data — no new integrations.
   news). `guardian_board_pointer_shown` fires once per mount when the
   beat is shown, pairing with `guardian_board_opened` for a
   pointer → open rate.
+- **Advisor 500 root-caused + fixed.** User feedback: a first-time
+  visitor never saw the Guardian tab (Simple mode hides it by design —
+  the FAB chat is the walletless Guardian surface) and the chat
+  answered "Analysis Unavailable". Cause: `@goodsdks/citizen-sdk` is
+  ESM and named-imports `compressToEncodedURIComponent` from CJS
+  `lz-string`, whose exports Node's ESM loader can't detect — every
+  route reaching `GoodDollarService` crashed at module load. Fix:
+  `transpilePackages` now bundles citizen-sdk so bundler CJS interop
+  resolves it. Verified `next build` + `next start` → advisor 200.
 
 ### Streaks endpoint auth + L1 vote invite (2026-11-06)
 
