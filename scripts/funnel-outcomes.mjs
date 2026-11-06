@@ -59,6 +59,15 @@ const FUNNELS = [
   ['funding', ['fund_started', 'fund_resumed']],
   ['onboarding', ['onboarding_viewed', 'risk_moment_viewed', 'philosophy_chosen', 'wallet_prompt_viewed']],
   ['chat', ['chat_send', 'chat_done', 'chat_error']],
+  // Nation desk — the culture layer's demand-validation loop:
+  // scorecard → compare → vote → share → convert (tapped or fake-door intent).
+  ['nation desk', [
+    'country_scorecard_view',
+    'sentiment_vote_cast',
+    'nation_share',
+    'convert_intent',
+    'convert_tapped',
+  ]],
 ];
 
 const events = FUNNELS.flatMap(([, evs]) => evs);

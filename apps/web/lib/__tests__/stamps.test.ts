@@ -99,7 +99,7 @@ describe('stampsForPair', () => {
     const coming = beats.filter((b) => b.stampId?.startsWith('coming-'));
     expect(coming.map((b) => b.stampId)).toEqual([
       'coming-ng-2027-presidential',
-      'coming-us-fomc-2026-10',
+      'coming-us-fomc-2026-12',
     ]);
   });
 

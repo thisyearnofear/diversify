@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAnalytics } from "@/hooks/use-analytics";
 import { duration, easing } from "@/lib/motion-tokens";
 
 interface TooltipProps {
@@ -8,26 +7,16 @@ interface TooltipProps {
     content: string;
     side?: "top" | "bottom" | "left" | "right";
     className?: string;
-    /** Optional analytics label override (defaults to a snippet of content) */
-    analyticsLabel?: string;
 }
 
 /**
  * Accessible tooltip component for explaining crypto jargon
  * Works on hover (desktop) and tap (mobile)
  */
-export function Tooltip({ children, content, side = "top", className = "", analyticsLabel }: TooltipProps) {
+export function Tooltip({ children, content, side = "top", className = "" }: TooltipProps) {
     const [isVisible, setIsVisible] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | number | null>(null);
-    const { trackTooltipView } = useAnalytics();
-    const hasTracked = useRef(false);
-
-    const trackOnce = useCallback(() => {
-        if (hasTracked.current) return;
-        hasTracked.current = true;
-        trackTooltipView(analyticsLabel || content.slice(0, 40));
-    }, [content, analyticsLabel, trackTooltipView]);
 
     useEffect(() => {
         setIsMobile("ontouchstart" in window);
@@ -36,7 +25,6 @@ export function Tooltip({ children, content, side = "top", className = "", analy
     const showTooltip = () => {
         if (timeoutRef.current) window.clearTimeout(timeoutRef.current);
         setIsVisible(true);
-        trackOnce();
     };
 
     const hideTooltip = () => {
@@ -51,7 +39,6 @@ export function Tooltip({ children, content, side = "top", className = "", analy
         if (isMobile) {
             e.preventDefault();
             setIsVisible(!isVisible);
-            trackOnce();
         }
     };
 

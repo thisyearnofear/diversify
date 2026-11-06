@@ -6,8 +6,8 @@
  * stablecoin ratio maps to.
  *
  * Phase 1 (2026-06): returns hardcoded estimates seeded from internal
- *   testing. When real telemetry from useAnalytics accumulates, replace
- *   the static PEER_BRACKETS with computed aggregates.
+ *   testing. Replace the static PEER_BRACKETS with computed aggregates
+ *   once anonymous ratio telemetry accumulates.
  *
  * Phase 2 (planned): /api/metrics/ingest receives anonymous ratio pings
  *   from the client, stores them in Mongo, and this endpoint computes
@@ -49,7 +49,7 @@ export interface PeerStableRatioResponse {
 // ── Bracket definitions (Phase 1: hardcoded estimates) ──────────────────
 // These thresholds were seeded from internal testing of ~50 portfolios
 // during the 2026-05 home-overview launch. Replace with real distribution
-// data once useAnalytics telemetry reaches critical mass.
+// data once anonymous ratio telemetry reaches critical mass.
 const PEER_BRACKETS: ReadonlyArray<{
     minRatio: number;
     bracket: PeerBracket;

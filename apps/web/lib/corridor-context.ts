@@ -28,6 +28,7 @@ const TOKEN_TO_FIAT: Record<string, string> = {
   PHPm: 'PHP',
   GHSm: 'GHS',
   NGNm: 'NGN',
+  MXNB: 'MXN',
   ZARm: 'ZAR',
   GBPm: 'GBP',
   XOFm: 'XOF',

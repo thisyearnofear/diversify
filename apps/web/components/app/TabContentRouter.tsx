@@ -160,7 +160,7 @@ function KeepMountedPane({
 
 export default function TabContentRouter() {
   const {
-    activeTab, setActiveTab, trackTabChange,
+    activeTab, setActiveTab,
     multichainPortfolio, isMultichainLoading, refresh,
     isRegionLoading, userRegion, setUserRegion, REGIONS,
     inflationData, currencyPerformanceData,
@@ -277,13 +277,11 @@ export default function TabContentRouter() {
         const idx = tabOrder.indexOf(activeTab);
         if (info.offset.x < -SWIPE_THRESHOLD && idx < tabOrder.length - 1) {
           const newTab = tabOrder[idx + 1];
-          trackTabChange(activeTab, newTab);
           setActiveTab(newTab);
           recordSwipe();
           recordTabVisit(newTab);
         } else if (info.offset.x > SWIPE_THRESHOLD && idx > 0) {
           const newTab = tabOrder[idx - 1];
-          trackTabChange(activeTab, newTab);
           setActiveTab(newTab);
           recordSwipe();
           recordTabVisit(newTab);

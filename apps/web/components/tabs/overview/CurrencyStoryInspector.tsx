@@ -30,6 +30,10 @@ import {
 import { momentCardContent } from '@/lib/moment-card';
 import { trackFunnelEvent } from '@/lib/analytics';
 import { RouteLink } from '@/components/shared/RouteLink';
+import { SentimentPoll } from '@/components/country/SentimentPoll';
+import { WaysToHold } from '@/components/country/WaysToHold';
+import { waysToHoldFor } from '@/lib/holdable-assets';
+import { sovereignDebtFor } from '@diversifi/shared/src/constants/sovereign-debt';
 
 /** The currency's story is public knowledge — shareable via a card whose
  *  numbers are derived from the code alone. */
@@ -481,6 +485,7 @@ function CurrencyStoryBody({
         </motion.div>
       </AnimatePresence>
       {content && <MomentShareLine code={content.code} />}
+      <NationDeskSections code={entry.code} />
       {/* The story is this sheet's job; the instrument is a separate, deeper
           surface (rings, what-if, provenance). Quiet, because Ask Guardian
           is the commitment here. */}
@@ -517,6 +522,34 @@ function CurrencyStoryBody({
       >
         Ask Guardian about the {entry.code} →
       </motion.button>
+    </div>
+  );
+}
+
+/** The nation-desk loop inside the story surface — the debt state of play,
+ *  the confidence poll and ways to hold — so the user votes and sees access
+ *  without leaving the app. Same geo gate as the sheet's own thesis surfaces. */
+function NationDeskSections({ code }: { code: string }) {
+  // Same thesis gate as the sheet's own surfaces — the debt block is
+  // commentary and drops where counsel has denied it.
+  const promoDenied = featureDenied('thesis', useGeoCountry());
+  const debt = sovereignDebtFor(CURRENCY_BY_CODE[code]?.iso2);
+  const ways = waysToHoldFor(code);
+  return (
+    <div className="mt-3 space-y-3">
+      {debt && !promoDenied && (
+        <section
+          aria-label="The state of play"
+          className="rounded-2xl border border-ink/10 bg-ink/[0.03] p-4"
+        >
+          <p className="text-2xs font-semibold uppercase tracking-wide text-ink-subtle">
+            The state of play · as of {debt.asOf}
+          </p>
+          <p className="mt-1.5 text-sm leading-relaxed text-ink/80">{debt.status}</p>
+        </section>
+      )}
+      <SentimentPoll code={code} moneyName={moneyNameFor(code)} />
+      {ways && <WaysToHold code={code} moneyName={moneyNameFor(code)} ways={ways} />}
     </div>
   );
 }

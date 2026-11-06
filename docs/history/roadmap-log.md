@@ -1,5 +1,73 @@
 # Roadmap Log — historical waves & file deltas
 
+### Streaks endpoint auth + L1 vote invite (2026-11-06)
+
+- **`/api/streaks/[address]` is now wallet-authed.** The route keyed every
+  method on the caller-supplied URL address — anyone could read, inflate
+  or delete another wallet's streak. `requireWalletAuth` (the same signed
+  `x-wallet-auth-*` header contract as agent memory) must now recover the
+  URL address or the request 401s, and the "dev only" DELETE is actually
+  env-gated (404 in production). Client side: `use-streak-rewards` signs
+  via `getWalletAuthHeaders` + the wallet context's `signMessage` (the
+  sessionStorage-cached session proof, one signature); `fetchStreakFromApi`
+  and `patchActivity` in `packages/shared` take an optional headers param.
+  Public aggregate `/api/streaks/stats` is untouched. +2 tests: missing
+  auth and wrong-wallet signatures both 401.
+- **L1 invite for the poll.** `CurrencyMomentCard` gained a
+  "How confident are you in the {money}? →" line under the LiveLine —
+  discovery invites at L1, the poll itself stays in the story inspector
+  (L2), hidden while the coin is mid-scrub or the sheet is open.
+- **`Permission.ts` docstring corrected** (commit `85bbb1a8`): it still
+  described the deleted Privy Safe / `VAULT_PRIVATE_KEY` path and pointed
+  at a doc removed 2026-08-31 — rewritten to the two-layer model
+  (app gates everywhere, on-chain caveats on kit-supported chains).
+
+### Nation desk — culture-layer surfaces + dead-analytics cleanup (2026-11-06)
+
+First wave of the MVP defined in `docs/internal/mvp-plan-2026-11.md`
+(context: pre-PMF, pre-entity — the layer's job is demand validation, not
+revenue). All public, walletless, server-derived; no money surface was
+touched.
+
+- **Architecture (revised same-day).** The culture layer lives INSIDE the
+  existing instrument, not on standalone pages: the poll, ways-to-hold,
+  sovereign-debt block and weigh-in link mount below `CurrencyInstrument`
+  on `/currency/[code]` — the one route that is both the in-app depth
+  surface and the public landing. `/country` stays as an index of links
+  into `/currency/*`; `/country/[code]` became a moment-style doorway
+  (meta + OG card → redirect into the instrument); `/compare` was folded
+  into the existing `/pair` doorway and deleted. OG card kept:
+  `/api/og/country-card`.
+- **Confidence poll.** `models/SentimentVote.ts` (one vote per anonymous
+  session per currency, 180-day TTL) + `/api/sentiment` (GET tally, POST
+  upsert; codes allowlisted against the curated dataset) +
+  `lib/sentiment.ts` + `components/country/SentimentPoll.tsx`. Anonymous
+  session shared with funnel analytics; SENTIMENTS lives in a leaf lib so
+  mongoose never enters the client bundle.
+- **Ways to hold.** `lib/holdable-assets.ts` scans swap-executable chains'
+  token lists through the unroutable list — routable mirrors only
+  (NGN→NGNm, MXN→MXNB, XAU→PAXG; unroutable USDY never offered). No rail
+  → honest absence + `convert_intent` fake door. Rows deep-link Exchange
+  `?tab=exchange&to=…&src=nation_desk`.
+- **Derivations.** `lib/compare.ts` (same cross-rate family as the
+  corridor; kept-cents unclamped so gains read honestly; gold is a
+  benchmark priced via the dollar's own vs-XAU track, not a country).
+  `MXNB:'MXN'` added to `corridor-context`'s fiat mirror map.
+- **Geo gates.** Epithets + the debt block drop via
+  `featureDenied('thesis', country)` on all three routes (GB stays clean
+  pending finprom advice); numbers stay — they're dated facts.
+- **Funnel.** Six events (`country_scorecard_view`, `country_compare_view`,
+  `sentiment_vote_cast`, `nation_share`, `convert_tapped`,
+  `convert_intent`) + a 'nation desk' group in `pnpm funnel-outcomes`.
+- **Cleanup.** `hooks/use-analytics.ts` deleted — a dead console-only
+  queue that never reached a sink; call sites removed (`Tooltip`,
+  `use-app-shell`, `TabContentRouter`; `peer-stable-ratio` comments
+  updated). The `/country` ↔ `/currency` overlap resolved as hierarchy:
+  scorecard is the public front door, `/currency/[code]` stays the deeper
+  in-app instrument, cross-linked from the scorecard footer.
+- **Tests:** +3 files, 24 cases (`compare`, `holdable-assets`,
+  `sentiment`).
+
 ### One motion clock, one budget, one route seam (2026-11-04)
 
 The feed read as uneven: tabs blinked on hand-off, durations were hand-typed

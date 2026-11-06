@@ -6,17 +6,20 @@
  * `erc7715-service.ts`), which is cryptographic CONSENT that binds the grant to
  * the user's wallet.
  *
- * ⚠️ Enforcement is app-layer, not on-chain (today). On the production Celo /
- * Mento path the bounds in this document — `dailyLimitUSD`, `spendingLimitUSD`,
- * `allowedTokens`, `expiresAt`, `status` — are enforced only in application code
- * (`VaultService.validateSwap` + the guardian-loop gates), because execution
- * goes through a server-custodied smart account (Privy Safe) / `VAULT_PRIVATE_KEY`.
- * The signature is consent, NOT an on-chain spending constraint, and `revoke`
- * is a status flag here, not an on-chain revocation. True on-chain enforcement
- * (ERC-7710 redemption via a DelegationManager) exists in
- * `providers/metamask-delegation-provider.ts` but is dark and EIP-7702-only
- * (no Celo support). See `docs/guardian-enforcement-model.md` for the current
- * model, the residual gap, and the hybrid plan.
+ * Enforcement is two-layer. The app layer gates every proposal
+ * (`VaultService.validateSwap` + the guardian-loop gates: confidence, spend
+ * caps, chain eligibility, provenance). On chains the MetaMask Advanced
+ * Permissions kit supports — Celo, Celo Sepolia, Arbitrum, derived at
+ * runtime from `getSmartAccountsEnvironment` in
+ * `providers/metamask-delegation-provider.ts` — the granted caveats
+ * additionally bind on-chain: the scoped session account redeems through
+ * the user's own smart account DelegationManager, which enforces the
+ * spend caps itself, and `revoke` there is an on-chain disable. Outside
+ * those chains — or wherever ERC-7710 redeems are unavailable — the
+ * permission is advisory-only and execution fails closed to one-tap
+ * signing. There is no server-custodied Safe or vault key; the custodial
+ * execution path was removed in `78b34139`. See `docs/guardian.md` for
+ * the trust model.
  */
 
 import mongoose, { Schema, Document } from 'mongoose';

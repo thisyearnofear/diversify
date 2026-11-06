@@ -19,7 +19,6 @@ import { getChainAssets, getPreferredChainIdForGoal } from "../config";
 import { useWalletContext } from "../components/wallet/WalletProvider";
 import { useWalletTutorial } from "../components/wallet/WalletTutorial";
 import { useVoiceIntent } from "./use-voice-intent";
-import { useAnalytics } from "./use-analytics";
 import { useAdvisor } from "./use-advisor";
 import { useStreakRewards } from "./use-streak-rewards";
 import { useProtectionProfile } from "./use-protection-profile";
@@ -27,7 +26,6 @@ import { useProtectionProfile } from "./use-protection-profile";
 export function useAppShell() {
   // ── Navigation ──
   const { activeTab, setActiveTab } = useNavigation();
-  const { trackTabChange } = useAnalytics();
 
   // ── Experience mode ──
   const { experienceMode, setExperienceMode, hydrated } = useExperience();
@@ -85,7 +83,6 @@ export function useAppShell() {
     // Navigation
     activeTab,
     setActiveTab,
-    trackTabChange,
 
     // Experience
     experienceMode,

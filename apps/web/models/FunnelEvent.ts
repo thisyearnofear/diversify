@@ -110,6 +110,15 @@ export const FUNNEL_EVENTS = [
   'shield_cue_used',
   'philosophy_details_opened',
   'starter_tapped',
+  // Nation desk — the culture layer's whole loop: a scorecard was read, a
+  // pair weighed, a confidence vote cast, a card shared, a convert row
+  // tapped, and the fake door knocked when no rail exists. Coarse: codes
+  // and surface names only, never content or identity.
+  'country_scorecard_view',
+  'sentiment_vote_cast',
+  'nation_share',
+  'convert_tapped',
+  'convert_intent',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

@@ -285,7 +285,7 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
       // nearest coming event within 120 days.
       expect(line).toHaveTextContent('Jan 16 🇳🇬: Nigeria presidential');
       act(() => { vi.advanceTimersByTime(7000); });
-      expect(line).toHaveTextContent('Oct 27 🇺🇸: Fed rate decision');
+      expect(line).toHaveTextContent('Dec 8 🇺🇸: Fed rate decision');
       act(() => { vi.advanceTimersByTime(7000); });
       expect(line).toHaveTextContent('Watch');
       expect(line).toHaveTextContent('CBN Monetary Policy Committee');
@@ -850,6 +850,22 @@ describe('CorridorLine — decision window', () => {
 describe('corridor return-visit lead', () => {
   const KEY = 'diversifi:last-visit:corridor:NGNm-USDm';
   const DAY = 86_400_000;
+
+  // Node ≥22 exposes `window` without the Web Storage backend (the
+  // --localstorage-file flag is not set in CI or pre-push), so the
+  // snapshot tests get an in-memory surface instead of crashing.
+  if (typeof window !== 'undefined' && !window.localStorage) {
+    const mem = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (k: string) => mem.get(k) ?? null,
+        setItem: (k: string, v: string) => void mem.set(k, v),
+        removeItem: (k: string) => void mem.delete(k),
+        clear: () => mem.clear(),
+      },
+    });
+  }
 
   const seed = (ageMs: number, value: unknown) =>
     window.localStorage.setItem(
