@@ -285,7 +285,7 @@ describe('CorridorLine browsing state (§5: alive while browsing, still while ac
       // nearest coming event within 120 days.
       expect(line).toHaveTextContent('Jan 16 🇳🇬: Nigeria presidential');
       act(() => { vi.advanceTimersByTime(7000); });
-      expect(line).toHaveTextContent('Oct 27 🇺🇸: Fed rate decision');
+      expect(line).toHaveTextContent('Dec 8 🇺🇸: Fed rate decision');
       act(() => { vi.advanceTimersByTime(7000); });
       expect(line).toHaveTextContent('Watch');
       expect(line).toHaveTextContent('CBN Monetary Policy Committee');
