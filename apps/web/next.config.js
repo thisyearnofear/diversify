@@ -25,6 +25,12 @@ const nextConfig = {
   transpilePackages: [
     "@diversifi/shared",
     "@stable-station/mento-utils",
+    // citizen-sdk is ESM and does `import { compressToEncodedURIComponent }
+    // from 'lz-string'` — lz-string is CJS whose exports Node's ESM loader
+    // can't name-detect, so an *externalized* citizen-sdk crashes every route
+    // that reaches GoodDollarService at module load (advisor 500, 2026-11-06).
+    // Bundling it lets the bundler's CJS interop resolve the named import.
+    "@goodsdks/citizen-sdk",
   ],
 
   // `ai` is ESM-only and is loaded at runtime by the server-only TypeSafe
