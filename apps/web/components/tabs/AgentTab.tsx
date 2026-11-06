@@ -33,6 +33,7 @@ import { buildGuardianReplay } from "@/lib/narrative/guardian-replay";
 import { GRANT_ELIGIBLE_CHAIN_IDS } from "@/lib/erc7715-client-grant";
 import { GuardianObject } from "../agent/GuardianObject";
 import { GuardianAllocationReview } from '../agent/GuardianAllocationReview';
+import { GuardianBoard } from '../agent/GuardianBoard';
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
@@ -352,7 +353,7 @@ function ConnectedAgent({
   });
   const guardianSynced = sameGuardianPlan(g.vault.vault, guardianTarget);
   const planSyncNeeded = Boolean(guardianTarget && !guardianSynced);
-  const [sel, setSel] = useState<"journal" | "bounds" | "settings" | "allocation" | null>(null);
+  const [sel, setSel] = useState<"journal" | "bounds" | "settings" | "allocation" | "board" | null>(null);
 
   // The live line — only facts that already exist: a saved payment cycle
   // the wallet already unlocked (usePurchaseCycles never signs here), a
@@ -442,6 +443,17 @@ function ConnectedAgent({
             proposalPending={Boolean(g.pendingMove)}
           />
         )}
+        {/* The board — the Guardian's observation desk, quiet link under
+            the object like the reading's Ask door on Home. */}
+        {!isStatusLoading && (
+          <button
+            type="button"
+            className="link-quiet mt-2"
+            onClick={() => setSel("board")}
+          >
+            What the Guardian watches →
+          </button>
+        )}
       </ErrorBoundary>
     </div>
   );
@@ -450,6 +462,8 @@ function ConnectedAgent({
     ? "From your Shield plan"
     : sel === 'allocation'
       ? 'Measured allocation'
+    : sel === "board"
+      ? "What the Guardian watches"
     : sel === "journal"
       ? "Guardian journal"
       : sel === "settings"
@@ -516,6 +530,8 @@ function ConnectedAgent({
             </>
           ) : sel === 'allocation' ? (
             <GuardianAllocationReview />
+          ) : sel === "board" ? (
+            <GuardianBoard />
           ) : sel === "journal" ? (
             <GuardianJournalSheet
               sessionInfo={g.sessionInfo}

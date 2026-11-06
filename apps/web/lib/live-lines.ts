@@ -12,6 +12,7 @@ import {
   corridorSignalForCurrency,
   corridorSideFor,
   corridorTokenForCurrency,
+  moneyNameFor,
   type CorridorSignal,
   type CorridorSignalRecord,
 } from '@/lib/corridor-context';
@@ -196,6 +197,33 @@ export function guardianBeats(args: {
 
   const watch = watchBeatForToken(primaryLocalToken);
   if (watch) beats.push(watch);
+
+  // Observation beats — the Guardian watching nations' money in the same
+  // terse, dated voice it uses for your limits. Facts only (kept-cents
+  // from the curated dataset), never a take on the future. Plan
+  // currencies first; a small rotating default set when there is no plan
+  // yet so the tab still feels attended.
+  const seenWatch = new Set<string>();
+  const watchCodes: string[] = [];
+  for (const token of planTokens) {
+    const code = corridorSideFor(token)?.code;
+    if (code && !seenWatch.has(code)) {
+      seenWatch.add(code);
+      watchCodes.push(code);
+    }
+  }
+  if (watchCodes.length === 0) {
+    watchCodes.push('NGN', 'KES');
+  }
+  for (const code of watchCodes.slice(0, 2)) {
+    const entry = CURRENCY_BY_CODE[code];
+    if (!entry) continue;
+    const kept = Math.max(0, Math.round(100 + entry.depreciation.vsUSD['5yr']));
+    beats.push({
+      key: `watch-nation-${code}`,
+      text: `Watching the ${moneyNameFor(code)} — kept ~${kept}¢ of a five-years-ago dollar`,
+    });
+  }
   return beats;
 }
 
