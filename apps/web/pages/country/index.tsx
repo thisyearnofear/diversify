@@ -15,6 +15,7 @@ import { currencyInstrumentCodes } from '@/lib/currency-instrument';
 import { geoCountryFromHeaders } from '@/lib/geo';
 import { featureDenied } from '@diversifi/shared/src/config/jurisdictions';
 import { RouteLink } from '@/components/shared/RouteLink';
+import { ConfidenceBoard } from '@/components/country/ConfidenceBoard';
 
 interface Row {
   code: string;
@@ -115,6 +116,7 @@ export default function CountryIndexPage({ rows, asOfLabel }: Props) {
               </li>
             ))}
           </ul>
+          <ConfidenceBoard />
           <footer className="mt-10 text-center">
             <p className="text-[11px] text-white/35">
               Curated data to {asOfLabel} · Historical figures, not a forecast · Not investment advice

@@ -37,11 +37,22 @@ import { GuardianBoard } from '../agent/GuardianBoard';
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
 import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
+import { trackFunnelEvent } from "@/lib/analytics";
 import { EXPOSURE_LABELS, type Exposure } from '@diversifi/shared/src/config/exposures';
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
 import { guardianPlanForShield, sameGuardianPlan } from "@/lib/plan-sync";
 import { GuardianJournalSheet } from "../agent/GuardianJournalSheet";
 import { GuardianCadenceLine } from "../shared/LiveProofCard";
+import { LiveLine } from "../shared/LiveLine";
+import { beatImpulseForKey, GUARDIAN_BEAT_MOOD } from "@/lib/beat-impulse";
+import { useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
+import {
+  readSnapshot,
+  writeSnapshot,
+  MIN_SNAPSHOT_AGE_MS,
+  formatElapsed,
+} from "@/lib/since-last-visit";
+import { useDemoMode } from "@/context/app/DemoModeContext";
 import { GuardianBoundsSheet } from "../agent/GuardianBoundsSheet";
 import { ResearchFundingLine } from "../agent/ResearchFundingLine";
 import { GuardianPermissionModal } from "../agent/GuardianPermissionModal";
@@ -112,6 +123,8 @@ export default function AgentTab({
   // describing it. Connecting resets it below.
   const [example, setExample] = useState(() => !address);
   const [exampleDetails, setExampleDetails] = useState(false);
+  const [boardOpen, setBoardOpen] = useState(false);
+  const [acted, setActed] = useState(false);
   const [step, setStep] = useState(0);
   const reducedMotion = useReducedMotion();
   // Walletless only: replay the visitor's own currency's sharpest drop
@@ -125,12 +138,119 @@ export default function AgentTab({
   );
   const steps = replay ?? EXAMPLE_STEPS;
   const current = steps[step % steps.length];
+
+  // W1 (plan.md §12): the watching layer is walletless — the proof feed is
+  // public and the beat/board fallbacks already handle no plan. Connected
+  // keeps its own richer beats inside ConnectedAgent.
+  const { data: liveFeed } = useProofFeed();
+  const watchBeats = useMemo(
+    () =>
+      guardianBeats({
+        records: liveFeed?.recent,
+        cycles: [],
+        planTokens: [],
+        primaryLocalToken: null,
+      }),
+    [liveFeed],
+  );
+  const watchingAlive = !boardOpen && !exampleDetails;
+  const watchingResting = watchingAlive && !acted;
+
+  // W3 (plan.md §12): the Guardian's quiet memory — same snapshot grammar
+  // as the corridor line. A beat key the last visit didn't know earns one
+  // "Since {elapsed} ·" lead beat; nothing changed → nothing is said.
+  const { demoMode } = useDemoMode();
+  const isDemo = demoMode.isActive;
+  const [returnLead, setReturnLead] = useState<{
+    key: string;
+    text: string;
+  } | null>(null);
+  useEffect(() => {
+    if (address || isDemo) return;
+    const keys = watchBeats.map((b) => b.key);
+    const prev = readSnapshot<{ keys?: string[] }>("guardian-watch");
+    if (
+      prev &&
+      Date.now() - prev.at >= MIN_SNAPSHOT_AGE_MS &&
+      Array.isArray(prev.value?.keys)
+    ) {
+      const fresh = watchBeats.find((b) => !prev.value.keys!.includes(b.key));
+      if (fresh) {
+        setReturnLead({
+          key: "return-lead",
+          text: `Since ${formatElapsed(prev.at)} · ${fresh.text}`,
+        });
+      }
+    }
+    writeSnapshot("guardian-watch", { keys });
+  }, [address, isDemo, watchBeats]);
+  const lineBeats = returnLead ? [returnLead, ...watchBeats] : watchBeats;
+  const { beatKey: watchBeatKey, reportBeat: reportWatchBeat } =
+    useBeatReporter("guardian");
+  const [watchMood, setWatchMood] = useState<
+    "alert" | "thinking" | "wince" | null
+  >(null);
+  const playedWatchBeats = React.useRef(new Set<string>());
+  useEffect(() => {
+    if (
+      !watchBeatKey ||
+      !watchingResting ||
+      playedWatchBeats.current.has(watchBeatKey)
+    ) {
+      return;
+    }
+    const kind = beatImpulseForKey(watchBeatKey) ?? "settle";
+    const next = kind === "risk" ? "wince" : GUARDIAN_BEAT_MOOD[kind];
+    if (!next) return;
+    playedWatchBeats.current.add(watchBeatKey);
+    setWatchMood(next);
+    trackFunnelEvent("beat_impulse", {
+      surface: "guardian_unconnected",
+      kind,
+    });
+    const t = setTimeout(() => setWatchMood(null), 2400);
+    return () => clearTimeout(t);
+  }, [watchBeatKey, watchingResting]);
+  useEffect(() => {
+    if (!watchingResting) setWatchMood(null);
+  }, [watchingResting]);
+  useInstrumentDwell(
+    "guardian_unconnected",
+    !address && watchingResting,
+    acted,
+  );
+  // Funnel baseline (plan.md §12 W0): one tab-view per mount. The unconnected
+  // variant waits for the live-risk read (bounded) so a replay isn't counted
+  // as the illustrative example.
+  const tabViewedRef = React.useRef(false);
+  useEffect(() => {
+    if (tabViewedRef.current) return;
+    if (address) {
+      tabViewedRef.current = true;
+      trackFunnelEvent('guardian_tab_viewed', { state: 'connected', variant: 'object' });
+      return;
+    }
+    if (replay) {
+      tabViewedRef.current = true;
+      trackFunnelEvent('guardian_tab_viewed', { state: 'unconnected', variant: 'replay' });
+      return;
+    }
+    const t = setTimeout(() => {
+      if (tabViewedRef.current) return;
+      tabViewedRef.current = true;
+      trackFunnelEvent('guardian_tab_viewed', { state: 'unconnected', variant: 'example' });
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [address, replay]);
   const previousAddress = React.useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
       setDismissError(false);
       setExample(false);
       setExampleDetails(false);
+      setBoardOpen(false);
+      setActed(false);
+      setReturnLead(null);
       setStep(0);
       previousAddress.current = address;
     }
@@ -147,7 +267,12 @@ export default function AgentTab({
     // empty state were the first two). One sentence states the object's job;
     // the connect CTA attaches; trust + demo live in the shared status tier.
     const object = (
-      <div data-testid="guardian-unconnected-object" className="instrument-composition text-center py-2">
+      <div
+        data-testid="guardian-unconnected-object"
+        className="instrument-composition text-center py-2"
+        onPointerDownCapture={() => setActed(true)}
+        onFocusCapture={() => setActed(true)}
+      >
         <div className="instrument-artifact flex flex-col items-center justify-center">
           {example ? (
             <>
@@ -158,13 +283,23 @@ export default function AgentTab({
                 onClick={() => {
                   haptics.tap();
                   setExampleDetails(false);
-                  setStep((s) => (s + 1) % steps.length);
+                  const next = (step + 1) % steps.length;
+                  setStep(next);
+                  trackFunnelEvent('guardian_example_stepped', {
+                    variant: replay ? 'replay' : 'example',
+                    step: String(next),
+                  });
                 }}
                 whileTap={reducedMotion ? undefined : press}
                 transition={springPress}
                 className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
-                <GuardianMascot size={128} mood={current.mood} protagonistTab="agent" />
+                <GuardianMascot
+                  size={128}
+                  mood={watchMood ?? current.mood}
+                  gaze={watchMood ? { x: 0, y: 0.9 } : 'off'}
+                  protagonistTab="agent"
+                />
               </motion.button>
               <div className="mt-3 flex items-center gap-1.5" aria-hidden="true">
                 {steps.map((s, i) => (
@@ -179,7 +314,13 @@ export default function AgentTab({
               <p className="mt-2 text-2xs font-semibold text-ink-muted">Tap Guardian for the next one</p>
             </>
           ) : (
-            <GuardianMascot size={112} mood="protective" gaze="pointer" className="mb-3" protagonistTab="agent" />
+            <GuardianMascot
+              size={112}
+              mood={watchMood ?? "protective"}
+              gaze={watchMood ? { x: 0, y: 0.9 } : "pointer"}
+              className="mb-3"
+              protagonistTab="agent"
+            />
           )}
         </div>
         <div className="instrument-reading flex flex-col items-center">
@@ -213,24 +354,46 @@ export default function AgentTab({
             </p>
           </div>
         )}
+        <LiveLine
+          testId="guardian-live-line"
+          beats={lineBeats.map((b) => ({ key: b.key, content: b.text }))}
+          alive={watchingAlive}
+          onBeatChange={reportWatchBeat}
+          className="mt-1 block text-2xs text-ink-muted"
+        />
         <div className="mt-4 w-full">
           <WalletButton variant="primary" className="w-full" />
         </div>
         </div>
+        <button
+          type="button"
+          className="link-quiet mt-2"
+          onClick={() => {
+            trackFunnelEvent('guardian_board_opened', { state: 'unconnected' });
+            setExampleDetails(false);
+            setBoardOpen(true);
+          }}
+        >
+          What the Guardian watches →
+        </button>
       </div>
     );
 
     return (
       <InstrumentShell
         object={object}
-        inspectorOpen={exampleDetails}
+        inspectorOpen={exampleDetails || boardOpen}
         inspector={
           <InspectorSheet
-            selectedId={exampleDetails ? "example-decision" : null}
-            onClose={() => setExampleDetails(false)}
-            title={`Why: ${current.title}`}
+            selectedId={boardOpen ? "board" : exampleDetails ? "example-decision" : null}
+            onClose={() => (boardOpen ? setBoardOpen(false) : setExampleDetails(false))}
+            title={boardOpen ? "What the Guardian watches" : `Why: ${current.title}`}
           >
-            <p className="text-sm text-ink-muted">{current.why}</p>
+            {boardOpen ? (
+              <GuardianBoard legs={[]} records={liveFeed?.recent} />
+            ) : (
+              <p className="text-sm text-ink-muted">{current.why}</p>
+            )}
           </InspectorSheet>
         }
         status={
@@ -450,7 +613,10 @@ function ConnectedAgent({
           <button
             type="button"
             className="link-quiet mt-2"
-            onClick={() => setSel("board")}
+            onClick={() => {
+              trackFunnelEvent('guardian_board_opened', { state: 'connected' });
+              setSel("board");
+            }}
           >
             What the Guardian watches →
           </button>

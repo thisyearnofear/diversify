@@ -453,3 +453,86 @@ This section is the **build-phase plan for the Airwallex integration**, not a pr
 
 **Submission framing:** this is a future-work section for the hackathon idea phase. The demo and submission describe the plan; the incremental Airwallex integration is the build-phase deliverable that turns the existing bounded-autonomy agent into a multi-rail settlement product.
 
+## 12 · Walletless front door — the unconnected experience
+
+The culture layer (scorecards, kept-cents, dated events, the confidence poll,
+the Guardian's board) was built for walletless top-of-funnel, but the Guardian
+tab's watching surface is wired only inside the connected branch
+(`AgentTab.tsx` → `ConnectedAgent`). A visitor can walk the entire unconnected
+journey and never meet the character that is the product's voice. This section
+is the plan to close that gap — all derivation over data that already exists,
+no new integrations.
+
+**Ordering rule for this section:** instrument before building (W0 gives the
+baseline every later item is judged against), ship the biggest gap first (W1),
+then the shareable surface (W2), then memory (W3). W4 stays deferred until
+funnel evidence says return visits are the constraint.
+
+### W0 · Funnel baseline — shipped 2026-11-06
+
+Add allowlisted `FunnelEvent` names so the unconnected Guardian journey is
+measurable before W1 changes it:
+
+- `guardian_tab_viewed` — props `{ state: 'unconnected' | 'connected', variant: 'example' | 'replay' | 'object' }`
+- `guardian_board_opened` — props `{ state: 'unconnected' | 'connected' }`
+- `guardian_example_stepped` — props `{ variant, step }` (the walkthrough tap)
+
+Connect taps already fire `walletless_connect_tapped`; board votes already
+fire `sentiment_vote_cast`. Acceptance: events appear in `FunnelEvent` from
+the unconnected tab; a funnel read shows tab → board → vote → connect.
+
+### W1 · The watching layer, walletless — shipped 2026-11-06
+
+Wire the same observation surface into the unconnected branch of `AgentTab`:
+
+- `useProofFeed()` records → `guardianBeats({ records, cycles: [], planTokens: [], primaryLocalToken: null })` — the existing fallback already yields signal + NGN/KES watch beats with no plan.
+- `usePurchaseCycles(null)` returns empty safely — no change needed.
+- "What the Guardian watches →" quiet link under the object opens an
+  `InspectorSheet` containing `GuardianBoard legs={[]} records={liveFeed?.recent}` — the board's own fallback ranks by fresh signals and imminent dated events.
+- Winch/settle and eyes-to-line reuse where they need no wallet state; the
+  example walkthrough's three decisions gain the watching → thinking → acting
+  framing only where it doesn't fabricate a live claim.
+
+Design constraint (design-language §5): morphs, never appends — the board is
+an inspector sheet, beats live in the object's reading/status slots, and the
+unconnected object keeps one job (demonstrate → connect CTA). Acceptance:
+unconnected tab shows dated beats and the full board incl. the poll; no
+wallet-gated hook runs; `legs={[]}` path covered by tests.
+
+### W2 · Public confidence readout — shipped 2026-11-06 (OG card variant still open)
+
+The poll's tallies are already public per currency (`SentimentVote`, indexed
+by `code`, 180-day TTL). The new surface is the cross-currency readout:
+
+- Extend `/api/sentiment` (or a sibling route) with an aggregate read: per-code
+  tallies + totals + `asOf`, no session id required.
+- Render as a dated block — candidate homes: `/country` index top, or a
+  board-adjacent strip. Disclose N per row; below a minimum-N threshold show
+  "too few votes to read" rather than a percentage of three.
+- Register stays "vibes, not a market" — never "index", "sentiment score", or
+  anything implying a tradable signal. Date-stamp; tallies drift because
+  re-votes upsert.
+- Shareable by construction: the readout is a candidate for an OG card variant
+  so the artifact travels to people who never visited.
+
+Acceptance: a dated public readout with disclosed counts; honesty footer
+preserved; no geo-gate regression vs. the poll's current posture.
+
+### W3 · Return-visit greeting — shipped 2026-11-06 (as a LiveLine lead beat, corridor grammar)
+
+Extend `lib/since-last-visit.ts` (already the app's quiet memory — Home delta,
+Shield alignment) with a Guardian snapshot of the shown beat keys. On
+unconnected mount, if the snapshot is ≥ `MIN_SNAPSHOT_AGE_MS` (6h) and a beat
+key is new, the LiveLine gains one `Since {elapsed} ·` lead beat — the
+corridor's own return-visit grammar, not a separate status-tier line.
+Storage-blocked or demo → renders nothing.
+
+Acceptance: the line only appears on a real delta; never invents a change;
+reduced-motion safe; covered by `since-last-visit` tests.
+
+### W4 · "Watch this money" — deferred
+
+Session-scoped watch list (localStorage) reordering the board. Deferred: the
+walletless replay already keys on `currencyCode`, so implicit watching exists;
+build only if W0–W3 funnel data shows board engagement without return visits.
+

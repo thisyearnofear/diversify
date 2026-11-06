@@ -3,6 +3,9 @@
  *
  * GET  /api/sentiment?code=NGN[&session=<id>]
  *   → { code, tally: {confident, neutral, worried}, total, yourVote }
+ * GET  /api/sentiment
+ *   → { asOf, rows: [{ code, tally, total }] } — the public readout:
+ *     every currency with votes, totals disclosed, no session id.
  * POST /api/sentiment  { sessionId, code, sentiment }
  *   → upserts the session's vote for that currency, returns the same
  *     shape with yourVote set.
@@ -56,6 +59,33 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     if (!rateLimit(`sentiment:get:${getClientIp(req)}`, GET_LIMIT, WINDOW_MS).allowed) {
       return res.status(429).json({ error: 'Too many requests.' });
+    }
+    // Aggregate read — the public confidence board. No session id, no
+    // per-vote detail: tallies and totals only, dated.
+    if (req.query.code === undefined) {
+      try {
+        await connectDB();
+        const rows = await SentimentVote.aggregate<{
+          _id: string;
+          sentiments: string[];
+        }>([
+          { $group: { _id: '$code', sentiments: { $push: '$sentiment' } } },
+        ]);
+        const board = rows
+          .map((r) => {
+            const tally = { confident: 0, neutral: 0, worried: 0 };
+            for (const s of r.sentiments ?? []) {
+              if (s in tally) tally[s as keyof typeof tally] += 1;
+            }
+            const total = tally.confident + tally.neutral + tally.worried;
+            return { code: r._id, tally, total };
+          })
+          .filter((r) => r.total > 0)
+          .sort((a, b) => b.total - a.total || a.code.localeCompare(b.code));
+        return res.status(200).json({ asOf: new Date().toISOString(), rows: board });
+      } catch {
+        return res.status(503).json({ error: 'Unavailable right now.' });
+      }
     }
     const code = validVoteCode(req.query.code);
     if (!code) return res.status(400).json({ error: 'Unknown currency.' });

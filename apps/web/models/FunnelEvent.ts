@@ -119,6 +119,14 @@ export const FUNNEL_EVENTS = [
   'nation_share',
   'convert_tapped',
   'convert_intent',
+  // Walletless Guardian tab — the front-door funnel: the tab was viewed
+  // (state + which object variant led), the watching board was opened,
+  // and the example/replay walkthrough was stepped. Connect taps reuse
+  // `walletless_connect_tapped`; board votes reuse `sentiment_vote_cast`.
+  // Props: fixed state/variant/step strings only — never content.
+  'guardian_tab_viewed',
+  'guardian_board_opened',
+  'guardian_example_stepped',
 ] as const;
 export type FunnelEventName = (typeof FUNNEL_EVENTS)[number];
 

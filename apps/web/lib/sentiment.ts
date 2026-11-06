@@ -100,6 +100,30 @@ export async function fetchSentiment(
   }
 }
 
+export interface SentimentBoardRow {
+  code: string;
+  tally: SentimentTally;
+  total: number;
+}
+
+export interface SentimentBoard {
+  asOf: string;
+  rows: SentimentBoardRow[];
+}
+
+/** The public readout — every currency's tally, dated. Null on failure:
+ *  the board is a delight surface, never a blocker. */
+export async function fetchSentimentBoard(): Promise<SentimentBoard | null> {
+  try {
+    const res = await fetch(apiUrl('/api/sentiment'));
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data?.rows) ? (data as SentimentBoard) : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Cast or change a vote. Returns the fresh tally, or null on failure. */
 export async function castVote(
   code: string,

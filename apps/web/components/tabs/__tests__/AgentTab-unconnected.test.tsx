@@ -61,6 +61,10 @@ vi.mock("@/context/app/NavigationContext", () => ({
   useNavigationOptional: () => navState,
 }));
 
+vi.mock("next/router", () => ({
+  useRouter: () => ({ isReady: true, query: {} }),
+}));
+
 vi.mock("@/components/wallet/WalletButton", () => ({
   default: () => <button type="button">Connect wallet</button>,
 }));
@@ -146,8 +150,29 @@ describe("AgentTab — unconnected morph", () => {
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
     ).toBeInTheDocument();
-    // Two buttons total: the connect CTA + the example link — nothing else.
-    expect(screen.getAllByRole("button").length).toBe(2);
+    // Three buttons total: the connect CTA + the example link + the
+    // watching-board link — the walletless watching layer (plan §12 W1).
+    expect(screen.getAllByRole("button").length).toBe(3);
+    expect(
+      screen.getByRole("button", { name: "What the Guardian watches →" }),
+    ).toBeInTheDocument();
+    // The live line carries real watch beats even with no wallet.
+    expect(screen.getByTestId("guardian-live-line")).toBeInTheDocument();
+  });
+
+  it("opens the watching board walletless — the same queue, no plan legs", async () => {
+    render(<AgentTab />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "What the Guardian watches →" }),
+    );
+    const inspector = await screen.findByTestId("inspector-sheet");
+    expect(inspector).toHaveAttribute("data-selected-id", "board");
+    expect(inspector).toHaveTextContent("What the Guardian watches");
+    // The fallback queue still names real moneys — never an empty deck.
+    await waitFor(() =>
+      expect(inspector.textContent).toMatch(/NGN|KES|kept/),
+    );
   });
 
 
@@ -209,6 +234,53 @@ describe("AgentTab — unconnected morph", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
     expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+  });
+
+  it("greets a returner with a 'Since' lead only when the watch changed", async () => {
+    const key = "diversifi:last-visit:guardian-watch";
+    // Last visit knew only the naira beat; a week has passed.
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        value: { keys: ["watch-nation-NGN"] },
+        at: Date.now() - 7 * 3_600_000,
+      }),
+    );
+    try {
+      render(<AgentTab />);
+      await waitFor(() =>
+        expect(screen.getByTestId("guardian-live-line")).toHaveTextContent(
+          "Since ",
+        ),
+      );
+    } finally {
+      window.localStorage.removeItem(key);
+    }
+  });
+
+  it("says nothing on return when the watch is unchanged", async () => {
+    const key = "diversifi:last-visit:guardian-watch";
+    // Both fallback watch beats were already known last visit.
+    window.localStorage.setItem(
+      key,
+      JSON.stringify({
+        value: { keys: ["watch-nation-NGN", "watch-nation-KES"] },
+        at: Date.now() - 7 * 3_600_000,
+      }),
+    );
+    try {
+      render(<AgentTab />);
+      await waitFor(() =>
+        expect(screen.getByTestId("guardian-live-line")).toHaveTextContent(
+          "Watching the",
+        ),
+      );
+      expect(screen.getByTestId("guardian-live-line")).not.toHaveTextContent(
+        "Since ",
+      );
+    } finally {
+      window.localStorage.removeItem(key);
+    }
   });
 
   it("replays the visitor's own currency's sharpest month, labelled past data", async () => {

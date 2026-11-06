@@ -1,5 +1,37 @@
 # Roadmap Log — historical waves & file deltas
 
+### Walletless Guardian front door — plan §12 W0–W3 (2026-11-06)
+
+The Guardian tab's watching surface was wired only inside the connected
+branch; a walletless visitor never met the product's voice. Plan:
+`docs/plan.md` §12. All shipped in one wave, all derivation over existing
+data — no new integrations.
+
+- **W0 funnel baseline.** Three allowlisted `FunnelEvent` names
+  (`guardian_tab_viewed` {state, variant}, `guardian_board_opened` {state},
+  `guardian_example_stepped` {variant, step}) + call sites in `AgentTab`.
+  Connect taps reuse `walletless_connect_tapped`; votes reuse
+  `sentiment_vote_cast`.
+- **W1 watching layer, walletless.** The unconnected morph now carries the
+  same observation surface: `useProofFeed` records → `guardianBeats` with
+  empty plan legs (signal + NGN/KES fallback beats), a `LiveLine` under the
+  reading, beat→face moods (alert/thinking/wince, eyes down to the line),
+  and "What the Guardian watches →" opening an `InspectorSheet` with
+  `GuardianBoard legs={[]}` — the board's own signal/event fallback ranks
+  the queue. Morphs, not appends: the board is a sheet, beats live in the
+  reading slot.
+- **W2 public confidence readout.** `GET /api/sentiment` (no code) returns
+  the dated aggregate board; `components/country/ConfidenceBoard.tsx`
+  renders it on `/country` — counts disclosed, percentages only at ≥10
+  votes per row ("too few to read" below), "vibes, not a market" register.
+- **W3 return-visit greeting.** `guardian-watch` snapshot (beat keys) via
+  `since-last-visit`; a key new since ≥6h earns one `Since {elapsed} ·`
+  lead beat in the LiveLine — corridor grammar. Demo/storage-blocked →
+  silent.
+- **Tests.** +5 (board opens walletless, live line present, return-lead
+  positive/negative, sentiment aggregate route). W4 (session watch list)
+  stays deferred pending funnel evidence.
+
 ### Streaks endpoint auth + L1 vote invite (2026-11-06)
 
 - **`/api/streaks/[address]` is now wallet-authed.** The route keyed every
