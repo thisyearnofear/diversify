@@ -1,5 +1,36 @@
 # Roadmap Log — historical waves & file deltas
 
+### The board performed — plan §12 W7 (2026-11-06)
+
+User feedback: the watching board must not be a drawer expanding the
+viewport — no cards, no verbosity. The board now occupies time, depth,
+and replacement, not vertical space:
+
+- **Time.** `boardEventBeats` (`lib/live-lines.ts`) performs imminent
+  `SCHEDULED_EVENTS` (≤45d, max 2) as `coming-*` beats in the walletless
+  LiveLine — dateline grammar ("Oct 4 🇧🇷: Brazil general election"),
+  alert signature via the existing impulse map. The Guardian notices
+  what is approaching on its own timing, then yields.
+- **Replacement.** "What the Guardian watches →" no longer opens an
+  `InspectorSheet`; it swaps the `instrument-reading` slot to
+  `GuardianWatchView` (`components/agent/GuardianWatchView.tsx`) — ≤4
+  typographic rows (flag, money name, kept-cents, provenance), no cards.
+  The lead row is narrated per-character (`CHAR_STAGGER_S`, HeadlineReveal
+  grammar); the mascot holds `thinking`. "Full board →" reaches the real
+  `GuardianBoard` deck in the sheet one tap behind; closing it returns
+  to the strip.
+- **Depth.** Nothing expands — the view is bounded, the connect CTA
+  never moves, beats still while open.
+- **Funnel unchanged** — `guardian_board_opened` fires on entering the
+  inline view; `guardian_board_pointer_shown` still pairs with it.
+- **Tests.** Rewrote the board test for view → deck → back; added a
+  fold-away test and `boardEventBeats` coverage (soonest-first, empty
+  calendar, `coming` impulse). jsdom note: the deck's live content can
+  stall the sheet's `height:auto` exit spring — the test asserts the
+  close initiated (sheet inert) rather than unmount.
+- Deferred per plan: coin-flip board (object-as-deck), agent-initiated
+  spotlight interruptions beyond beat rotation.
+
 ### Walletless Guardian front door — plan §12 W0–W3 (2026-11-06)
 
 The Guardian tab's watching surface was wired only inside the connected

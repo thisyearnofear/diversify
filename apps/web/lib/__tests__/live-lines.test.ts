@@ -7,12 +7,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  boardEventBeats,
   homeBeats,
   guardianBeats,
   shieldBeats,
 
   primaryLocalToken,
 } from '../live-lines';
+import { beatImpulseForKey } from '../beat-impulse';
 import type { CorridorSignalRecord } from '../corridor-context';
 import { SIGNAL_FRESH_MS } from '../corridor-context';
 
@@ -220,6 +222,22 @@ describe('primaryLocalToken', () => {
       ]),
     ).toBe('KESm');
     expect(primaryLocalToken([{ token: 'cUSD', percent: 100 }])).toBeNull();
+  });
+});
+
+describe('boardEventBeats', () => {
+  it('performs imminent dated events as coming-* beats, soonest first', () => {
+    const beats = boardEventBeats({ nowMs: NOW });
+    expect(beats.length).toBe(2);
+    expect(beats[0].key).toBe('coming-br-2026-first-round');
+    expect(beats[0].text).toContain('Oct 4');
+    expect(beats[0].text).toContain('Brazil general election');
+    // coming-* keys carry the alert signature — the Guardian notices.
+    expect(beatImpulseForKey(beats[0].key)).toBe('coming');
+  });
+
+  it('returns nothing when the calendar has nothing imminent', () => {
+    expect(boardEventBeats({ nowMs: Date.parse('2028-06-01') })).toEqual([]);
   });
 });
 

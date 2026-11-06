@@ -573,3 +573,39 @@ crash, fixed in `0d59c6bf`), and Home read as too many text layers.
   money/goods toggle stays inline because it is fused to the consequence
   sentence. `/currency/[code]` remains the deep what-if surface.
 
+### W7 · The board performed — spec 2026-11-06
+
+User feedback: the watching board must not be a drawer that expands the
+viewport — no cards, no verbosity. The board occupies **time, depth, and
+replacement**, not vertical space:
+
+- **Time — board facts join the line.** Imminent dated events
+  (`SCHEDULED_EVENTS`, ≤45d, max 2) become `coming-*` beats in the
+  walletless LiveLine — `boardEventBeats` in `lib/live-lines.ts`. They
+  carry the `coming` impulse → alert mood + lift: the Guardian notices
+  what's approaching on its own timing, then yields. This is the
+  agent-initiative layer — dated, sourced, rare.
+- **Replacement — the reading becomes the board.** "What the Guardian
+  watches →" no longer opens an `InspectorSheet`; it swaps the
+  `instrument-reading` slot to `GuardianWatchView` — a compact typographic
+  list (≤4 rows: flag, money name, kept-cents, provenance), no cards. The
+  lead row is *narrated*: per-character masked rise (`CHAR_STAGGER_S`,
+  HeadlineReveal grammar) as the Guardian reads it aloud; the mascot
+  holds `thinking`. Rows 2–4 stagger-fade. "Full board →" still reaches
+  the real `GuardianBoard` deck in the inspector sheet — the deep
+  surface, one tap behind.
+- **Depth — nothing expands.** The view is bounded (~4 lines + footer);
+  the CTA never moves. Fold away returns to the reading. Beats still
+  while open (`watchingAlive` already false on `boardOpen`).
+
+Funnel unchanged: `guardian_board_opened` fires on entering the inline
+view; `guardian_board_pointer_shown` still pairs with it. Deferred: the
+coin-flip board (object-as-deck) — prototype only if performed beats
+prove too ephemeral; agent-initiated spotlight interruptions beyond the
+beat rotation.
+
+Acceptance: no `InspectorSheet` for the board's first open; rows are
+text, not cards; reduced-motion renders the final state; `coming-*`
+beats classify to the alert signature; tests cover view + full-board
+deck hand-off.
+

@@ -34,9 +34,11 @@ import { GRANT_ELIGIBLE_CHAIN_IDS } from "@/lib/erc7715-client-grant";
 import { GuardianObject } from "../agent/GuardianObject";
 import { GuardianAllocationReview } from '../agent/GuardianAllocationReview';
 import { GuardianBoard } from '../agent/GuardianBoard';
+import { GuardianWatchView } from '../agent/GuardianWatchView';
+import { boardPriorityFor } from '@/lib/guardian-board';
 import { useProofFeed } from "@/hooks/use-proof-feed";
 import { usePurchaseCycles } from "@/hooks/use-purchase-cycles";
-import { guardianBeats, primaryLocalToken } from "@/lib/live-lines";
+import { boardEventBeats, guardianBeats, primaryLocalToken } from "@/lib/live-lines";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { EXPOSURE_LABELS, type Exposure } from '@diversifi/shared/src/config/exposures';
 import { resolvePlan } from "@/components/protection-cards/plan-preview";
@@ -132,7 +134,10 @@ export default function AgentTab({
   // describing it. Connecting resets it below.
   const [example, setExample] = useState(() => !address);
   const [exampleDetails, setExampleDetails] = useState(false);
-  const [boardOpen, setBoardOpen] = useState(false);
+  // W7 (plan.md §12): the board is a mode of the reading, not a sheet —
+  // 'view' swaps the reading to the performed strip, 'sheet' is the deep
+  // GuardianBoard deck one tap behind.
+  const [boardMode, setBoardMode] = useState<"closed" | "view" | "sheet">("closed");
   const [acted, setActed] = useState(false);
   const [step, setStep] = useState(0);
   const reducedMotion = useReducedMotion();
@@ -162,8 +167,18 @@ export default function AgentTab({
       }),
     [liveFeed],
   );
+  const boardOpen = boardMode !== "closed";
   const watchingAlive = !boardOpen && !exampleDetails;
   const watchingResting = watchingAlive && !acted;
+
+  // W7: the board's queue, walletless — same ranking the deck uses.
+  const boardEntries = useMemo(
+    () => boardPriorityFor({ legs: [], records: liveFeed?.recent }),
+    [liveFeed],
+  );
+  // Dated events the board ranks by, performed as `coming-*` beats —
+  // the Guardian noticing what is approaching, on its own timing.
+  const eventBeats = useMemo(() => boardEventBeats(), []);
 
   // W3 (plan.md §12): the Guardian's quiet memory — same snapshot grammar
   // as the corridor line. A beat key the last visit didn't know earns one
@@ -196,6 +211,7 @@ export default function AgentTab({
   const lineBeats = [
     ...(returnLead ? [returnLead] : []),
     ...watchBeats,
+    ...eventBeats,
     BOARD_POINTER_BEAT,
   ];
   const { beatKey: watchBeatKey, reportBeat: reportWatchBeat } =
@@ -273,7 +289,7 @@ export default function AgentTab({
       setDismissError(false);
       setExample(false);
       setExampleDetails(false);
-      setBoardOpen(false);
+      setBoardMode("closed");
       setActed(false);
       setReturnLead(null);
       setStep(0);
@@ -321,7 +337,7 @@ export default function AgentTab({
               >
                 <GuardianMascot
                   size={128}
-                  mood={watchMood ?? current.mood}
+                  mood={watchMood ?? (boardMode === "view" ? "thinking" : current.mood)}
                   gaze={watchMood ? { x: 0, y: 0.9 } : 'off'}
                   protagonistTab="agent"
                 />
@@ -341,7 +357,7 @@ export default function AgentTab({
           ) : (
             <GuardianMascot
               size={112}
-              mood={watchMood ?? "protective"}
+              mood={watchMood ?? (boardMode === "view" ? "thinking" : "protective")}
               gaze={watchMood ? { x: 0, y: 0.9 } : "pointer"}
               className="mb-3"
               protagonistTab="agent"
@@ -349,7 +365,13 @@ export default function AgentTab({
           )}
         </div>
         <div className="instrument-reading flex flex-col items-center">
-        {example ? (
+        {boardMode === "view" ? (
+          <GuardianWatchView
+            entries={boardEntries}
+            onOpenFull={() => setBoardMode("sheet")}
+            onClose={() => setBoardMode("closed")}
+          />
+        ) : example ? (
           <div data-testid="guardian-example" className="w-full max-w-[320px]" aria-live="polite">
             <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
               {replay ? `Past data replay · ${replayCode} vs USD` : "Example decision · not live"}
@@ -394,12 +416,18 @@ export default function AgentTab({
           type="button"
           className="link-quiet mt-2"
           onClick={() => {
+            if (boardMode !== "closed") {
+              setBoardMode("closed");
+              return;
+            }
             trackFunnelEvent('guardian_board_opened', { state: 'unconnected' });
             setExampleDetails(false);
-            setBoardOpen(true);
+            setBoardMode("view");
           }}
         >
-          What the Guardian watches →
+          {boardMode === "closed"
+            ? "What the Guardian watches →"
+            : "Fold the board away ↑"}
         </button>
       </div>
     );
@@ -407,14 +435,18 @@ export default function AgentTab({
     return (
       <InstrumentShell
         object={object}
-        inspectorOpen={exampleDetails || boardOpen}
+        inspectorOpen={exampleDetails || boardMode === "sheet"}
         inspector={
           <InspectorSheet
-            selectedId={boardOpen ? "board" : exampleDetails ? "example-decision" : null}
-            onClose={() => (boardOpen ? setBoardOpen(false) : setExampleDetails(false))}
-            title={boardOpen ? "What the Guardian watches" : `Why: ${current.title}`}
+            selectedId={boardMode === "sheet" ? "board" : exampleDetails ? "example-decision" : null}
+            onClose={() =>
+              boardMode === "sheet"
+                ? setBoardMode("view")
+                : setExampleDetails(false)
+            }
+            title={boardMode === "sheet" ? "What the Guardian watches" : `Why: ${current.title}`}
           >
-            {boardOpen ? (
+            {boardMode === "sheet" ? (
               <GuardianBoard legs={[]} records={liveFeed?.recent} />
             ) : (
               <p className="text-sm text-ink-muted">{current.why}</p>

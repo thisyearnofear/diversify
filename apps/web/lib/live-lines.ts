@@ -24,6 +24,7 @@ import {
   pastStampsForFiat,
   watchStampForToken,
 } from '@/lib/stamps';
+import { SCHEDULED_EVENTS } from '@/constants/scheduled-events';
 import { daysUntilPaymentDate } from '@diversifi/shared/src/services/guardian/recommendation-contract';
 
 export interface LiveBeatText {
@@ -82,6 +83,41 @@ export function comingBeatForCode(
  *  the currency, then its provenance. */
 function watchBeatForCode(code: string | null | undefined): LiveBeatText | null {
   return watchBeatForToken(corridorTokenForCurrency(code));
+}
+
+/**
+ * Guardian board events — the dated facts the board ranks by, performed
+ * as beats (plan.md §12 W7). Imminent SCHEDULED_EVENTS (≤45d, soonest
+ * first, max two) arrive in the dateline grammar — "Oct 27 🇺🇸: US
+ * midterm elections" — keyed `coming-*` so they carry the alert
+ * signature: the Guardian notices what is approaching, then yields.
+ * Dated and sourced only; an empty calendar returns no beats.
+ */
+export function boardEventBeats(args?: {
+  nowMs?: number;
+}): LiveBeatText[] {
+  const nowMs = args?.nowMs ?? Date.now();
+  const DAY = 86_400_000;
+  const thisYear = new Date(nowMs).getFullYear();
+  return SCHEDULED_EVENTS.map((ev) => ({
+    ev,
+    days: Math.ceil((Date.parse(ev.date) - nowMs) / DAY),
+  }))
+    .filter(({ days }) => days >= 0 && days <= 45)
+    .sort((a, b) => a.days - b.days)
+    .slice(0, 2)
+    .map(({ ev }) => {
+      const fiat = ev.fiat.toUpperCase();
+      const flag =
+        CURRENCY_BY_CODE[fiat]?.flag ?? (fiat === 'USD' ? '🇺🇸' : '◌');
+      const d = new Date(ev.date);
+      const label = d.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        ...(d.getFullYear() !== thisYear ? { year: 'numeric' } : {}),
+      });
+      return { key: `coming-${ev.id}`, text: `${label} ${flag}: ${ev.event}` };
+    });
 }
 
 /**

@@ -160,19 +160,60 @@ describe("AgentTab — unconnected morph", () => {
     expect(screen.getByTestId("guardian-live-line")).toBeInTheDocument();
   });
 
-  it("opens the watching board walletless — the same queue, no plan legs", async () => {
+  it("performs the watching board in place — no sheet, then the deck one tap behind", async () => {
     render(<AgentTab />);
 
     fireEvent.click(
       screen.getByRole("button", { name: "What the Guardian watches →" }),
     );
+    // W7: the reading swaps to the strip — the fallback queue still names
+    // real moneys, and no InspectorSheet opens for the first view.
+    const view = await screen.findByTestId("guardian-watch-view");
+    expect(view).toHaveTextContent("What the Guardian watches");
+    await waitFor(() =>
+      expect(view.textContent).toMatch(/NGN|KES|kept/),
+    );
+    expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
+    // The Guardian narrates — it holds the thinking posture while reading.
+    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute(
+      "data-mood",
+      "thinking",
+    );
+
+    // The deep deck is still one tap behind, in the inspector sheet.
+    fireEvent.click(
+      screen.getByRole("button", { name: /Full board/ }),
+    );
     const inspector = await screen.findByTestId("inspector-sheet");
     expect(inspector).toHaveAttribute("data-selected-id", "board");
-    expect(inspector).toHaveTextContent("What the Guardian watches");
-    // The fallback queue still names real moneys — never an empty deck.
     await waitFor(() =>
       expect(inspector.textContent).toMatch(/NGN|KES|kept/),
     );
+
+    // Closing the deck returns to the strip, not to nothing. The deck's
+    // live content (rotating cards, async poll) keeps mutating height
+    // mid-exit under jsdom, so the fold spring can stall — assert the
+    // close initiated (sheet inert/exiting) and the strip is back.
+    fireEvent.click(screen.getByRole("button", { name: "Close inspector" }));
+    await waitFor(() => {
+      const sheet = screen.queryByTestId("inspector-sheet");
+      expect(sheet === null || sheet.hasAttribute("inert")).toBe(true);
+    });
+    expect(screen.getByTestId("guardian-watch-view")).toBeInTheDocument();
+  });
+
+  it("folds the board away back to the reading", async () => {
+    render(<AgentTab />);
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "What the Guardian watches →" }),
+    );
+    await screen.findByTestId("guardian-watch-view");
+    fireEvent.click(screen.getByRole("button", { name: "Fold away" }));
+    await waitFor(() =>
+      expect(screen.queryByTestId("guardian-watch-view")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
   });
 
 
