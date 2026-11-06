@@ -10,6 +10,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { press, springPress } from "@/lib/motion-tokens";
 import { beatImpulseForKey, GUARDIAN_BEAT_MOOD } from "@/lib/beat-impulse";
 import { useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
+import { saccadeAt } from "@/lib/mascot-scan";
 import { trackFunnelEvent } from "@/lib/analytics";
 import { Hallmark } from "../shared/Hallmark";
 import { GuardianMascot } from "../shared/GuardianMascot";
@@ -190,22 +191,26 @@ export function GuardianObject({
   }, [resting]);
   useInstrumentDwell("guardian", resting, acted);
 
-  // The watching scan — the Guardian's baseline when it has nothing to
-  // decide: the eyes drift across the board, attending on beat pulses.
-  // Off the moment real state owns the face (analyzing, proposal) or the
-  // pointer asks for attention; still under reduced motion.
-  const [scanX, setScanX] = useState(0);
+  // The watching scan — saccadic, not a metronome: dwell on a point of
+  // interest, dart, dwell, home every fifth look. The schedule is a pure
+  // seeded function (lib/mascot-scan) so the lab renders identical poses.
+  // The first dart lands just after the mount blink — draw-in, blink,
+  // then the first look-around is the Guardian's arrival ritual.
+  const [scanGaze, setScanGaze] = useState({ x: 0, y: -0.1 });
+  const scanSeed = useRef(Math.floor(Math.random() * 1e9) + 1);
   const scanning =
     resting && !isAnalyzing && !proposalPending && !attention && !reducedMotion;
   useEffect(() => {
     if (!scanning) return;
-    const seq = [-0.55, 0.5, -0.3, 0.6, 0.15];
     let i = 0;
-    const t = setInterval(() => {
-      i = (i + 1) % seq.length;
-      setScanX(seq[i]);
-    }, 2600);
-    return () => clearInterval(t);
+    let t: ReturnType<typeof setTimeout>;
+    const step = () => {
+      const s = saccadeAt(scanSeed.current, i++);
+      setScanGaze({ x: s.x, y: s.y });
+      t = setTimeout(step, s.dwellMs);
+    };
+    t = setTimeout(step, 1300);
+    return () => clearTimeout(t);
   }, [scanning]);
   const mood = isAnalyzing
     ? "thinking"
@@ -222,7 +227,7 @@ export function GuardianObject({
       onFocusCapture={() => setActed(true)}
     >
       <div className="instrument-artifact flex justify-center">
-        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : scanning ? { x: scanX, y: -0.1 } : "off"} className="mb-3" protagonistTab="agent" />
+        <GuardianMascot size={96} mood={mood} gaze={attention && !acted && !isAnalyzing ? "pointer" : scanning ? scanGaze : "off"} className="mb-3" protagonistTab="agent" />
       </div>
       {showBudget && (
         <BudgetFence remaining={sessionInfo!.remainingTodayUSD} limit={dailyLimit} />

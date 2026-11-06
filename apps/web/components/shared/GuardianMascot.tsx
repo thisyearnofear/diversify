@@ -37,6 +37,9 @@ interface GuardianMascotProps {
   /** Marks the belly coin as the protagonist coin's landing on this tab
    *  (see ProtagonistFlight). */
   protagonistTab?: string;
+  /** Render the settled frame — no draw-in, blink, or pursuit. The face
+   *  lab's state board and any thumbnail path use this. */
+  frozen?: boolean;
 }
 
 /**
@@ -87,12 +90,15 @@ export const EYE_POSE: Variants = {
 const BLINK_SCALE_Y = 0.06;
 const BLINK_CLOSE_MS = 160;
 
-/** Moods land with weight: spring-settled, never linear snaps. */
-const MOOD_SPRING = { type: 'spring', stiffness: 320, damping: 24 } as const;
-/** Blink close is fast; reopening uses the mood spring for life. */
+/** Moods land with weight, never bounce: exponential ease-out — a calm
+ *  agent eases into states; springs read excitable (bloub's measurement:
+ *  "the body never overshoots"). */
+const MOOD_TWEEN = { duration: 0.3, ease: [0.16, 1, 0.3, 1] } as const;
+/** Blink close is fast; reopening uses the mood ease for life. */
 const BLINK_CLOSE_TWEEN = { duration: 0.08, ease: 'easeIn' } as const;
-/** Awareness gaze: soft pursuit, not a rigid stare. */
-const GAZE_SPRING = { stiffness: 110, damping: 18, mass: 0.4 } as const;
+/** Gaze pursuit — stiff enough that fixed targets land as saccade darts,
+ *  soft enough that pointer tracking stays pursuit, not snapping. */
+const GAZE_SPRING = { stiffness: 380, damping: 26, mass: 0.4 } as const;
 
 const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
@@ -102,6 +108,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
   className = '',
   gaze = 'off',
   protagonistTab,
+  frozen = false,
 }) => {
   const prefersReducedMotion = useReducedMotion();
   const uid = useId();
@@ -109,7 +116,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
   const coinGradId = `${uid}-coin`;
   const shadeId = `${uid}-shade`;
   const compact = typeof size === 'number' && size <= 48;
-  const staticMode = !!prefersReducedMotion;
+  const staticMode = !!prefersReducedMotion || frozen;
 
   // --- State-tied blink (transition confirmation, never a loop) -----------
   const [blinking, setBlinking] = useState(false);
@@ -257,7 +264,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
               initial={staticMode ? false : undefined}
               animate={eyeTarget}
               variants={EYE_POSE}
-              transition={staticMode ? { duration: 0 } : blinking ? BLINK_CLOSE_TWEEN : MOOD_SPRING}
+              transition={staticMode ? { duration: 0 } : blinking ? BLINK_CLOSE_TWEEN : MOOD_TWEEN}
             />
           ))}
         </motion.g>
