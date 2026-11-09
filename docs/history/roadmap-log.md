@@ -1,5 +1,49 @@
 # Roadmap Log — historical waves & file deltas
 
+### Guardian film, currency cards, foundry reel and sticker pack (2026-11-09)
+
+Four new off-app SVGator families under `docs/assets/brand/`:
+`film/guardian-loop-{16x9,1x1}.mp4` + `guardian-loop.svg` (~590 KB /
+456 KB / 94 KB — the full Guardian loop in 12.5 s, composed
+modes-transform-never-append: the gauge becomes the ring, the −60%
+hands off to the NGN leg's label, everything clears for the end card);
+`cards/<code>.mp4` ×10 (4.5 s each, generated from the curated 5-year
+vsUSD figures in `currency-risk.ts` + `CURRENCY_RISK_DATA_AS_OF` — a
+static render, regenerated on each dataset review; coin area =
+purchasing power via `√kept`, textured `patinaFor` verdigris); `foundry/` reel (7 s, four coins with
+clipped sweeps/glints); `stickers/` ×6 (seamless ≤3 s loops). Sticker
+WEBMs carry real alpha — `ffprobe` reports `yuv420p` because VP9 alpha
+is a side channel; `ALPHA_MODE=1` is the marker (verified by overlaying
+frames on white). Hard-won SVGator fact: `transform.origin` is both
+pivot *and* the position of local (0,0) — appending origin keyframes to
+a statically-positioned element teleports it unless the first key seeds
+its static origin. Later the same day all rendered binaries were moved to
+Lens Grove storage (`chain_id=1`, immutable) to keep the repo lean — only
+SVGs and `scripts/svgator/` generators stay tracked; upload map in
+`.perch/svgator-lab/lens-manifest.json`, local mirror in
+`.perch/svgator-lab/final-media/`.
+
+### Animated Guardian brand assets via SVGator (2026-11-09)
+
+The mark now has produced motion for surfaces that can't run the app's
+own animation stack: `docs/assets/brand/guardian-wake.svg` (4,387 B
+CSS-animated SVG — eyes power-on, blink, glance, coin shine, 2400ms,
+once, `forwards`), `guardian-wake.png` (93,220 B animated PNG, 512²
+30fps), `guardian-og.svg` (3,598 B CSS SVG — emergence + eyes, 3000ms)
+and `guardian-og.mp4` (35,620 B, 1200×630 h264), with copies in
+`apps/web/public/brand/`. `index.tsx` gained `og:video` tags pointing at
+the MP4 (og:image/twitter unchanged). Every SVGator CSS export carries
+an appended `@media (prefers-reduced-motion: reduce)` rule that lands
+viewers on the final pose — `animation:none` would freeze on keyframe-0
+(eyes shut, mark invisible). Keyframes were hand-set in the editor and
+re-keyed through SVGator's MCP connection. The "Stamp press" seal stayed
+in code: SVGator flattens `<textPath>` to straight text on import, so
+rim text can't be authored there. Off-app media only — the app still
+owns motion via framer-motion/Rive. The PNG/MP4 binaries (and the copies
+in `apps/web/public/brand/`) were later moved to Lens Grove storage to
+keep the repo lean; `og:video` now points at the Grove gateway URL and
+the upload map lives in `.perch/svgator-lab/lens-manifest.json`.
+
 ### The board performed — plan §12 W7 (2026-11-06)
 
 User feedback: the watching board must not be a drawer expanding the

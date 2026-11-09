@@ -17,6 +17,7 @@ DiversiFi is a pnpm monorepo structured for high-integrity AI agent operations. 
 - **Test**: `pnpm test` (runs the Vitest suite).
 - **Lint**: `pnpm lint` (runs workspace-wide linting; currently clean — 0 errors, warnings only).
 - **Format**: `pnpm format` (Prettier).
+- **SVGator brand assets**: `npx tsx scripts/svgator/build-<piece>.ts` regenerates document JSON from repo sources (`lib.ts`, `build-a-loop*.ts`, `build-currency-cards.ts`, `build-c-foundry*.ts`, `build-d-stickers.ts`); pushing/rendering needs the SVGator MCP (Pro). Regenerate currency cards after any `currency-risk.ts` review. Only `.svg` outputs and the generators are committed — rendered binaries (mp4/webm/gif/png/lottie) are uploaded to Lens Grove (`POST https://api.grove.storage/?chain_id=1`, immutable, Ethereum mainnet) to keep the repo lean; the upload map is `.perch/svgator-lab/lens-manifest.json` and the local mirror `.perch/svgator-lab/final-media/` (both gitignored). `index.tsx` `og:video` points at the Grove gateway URL for `guardian-og.mp4`.
 - **Rive objects**: `pnpm rive:build` (recompiles all five `.rml` projects in `apps/web/rive/` → `apps/web/public/rive/` AND re-copies the `rive.wasm` pair — the self-hosted WASM must match the installed `@rive-app/react-canvas-lite` version, so bump the package then rebuild or run `pnpm rive:wasm`; requires the `rive` CLI). Canvases bind in `onRiveReady` before frame 1 (design-language §5). Dev-only exercise page: `/rive-test`.
 
 ### Specialized Verification

@@ -984,6 +984,47 @@ shield's visual DNA and keeps the redesign's motion discipline.
   survive PWA maskable safe zones. Solid named background (canonical field:
   deep slate navy `#0f172a`). Never bottom-center the character in wide
   formats. Clean square outer corners, no presentation chrome, no text.
+- Animated brand assets — `docs/assets/brand/guardian-wake.svg` and
+  `guardian-og.svg` are tracked in the repo; the rendered binaries
+  (`guardian-wake.png`, `guardian-og.mp4`) live on Lens Grove only —
+  `index.tsx` `og:video` points at the Grove gateway URL directly
+  (the deployed host no longer serves `/brand/*`). The assets are
+  authored in SVGator from the same `guardian-mark.ts` geometry (projects
+  "DFI lab – E1 Guardian wake" `pi_991dcbc74a7c49628c38ddc236d5b77c` and
+  "DFI lab – E3 OG emergence" `pi_b73ee75297824ae0907ebafa1c272d86`).
+  They are **off-app media only** (README, OG/social, notifications) —
+  never mounted in the app, where framer-motion/Rive own motion. CSS
+  export only (the JS export embeds a ~41 KB player); one-shot,
+  `forwards`, no loops. Every SVG export gets this rule appended inside
+  its `<style>` block — `animation:none` is wrong here because SVGator
+  bakes keyframe-0 (eyes shut, mark invisible) into the static transform
+  attributes, so the rule fast-forwards instead of freezing:
+  `@media (prefers-reduced-motion: reduce){*{animation-duration:1ms!important;animation-delay:0s!important}}`.
+  Re-export after any mark change.
+- Produced families — **film** (`film/guardian-loop-{16x9,1x1}.mp4` +
+  `guardian-loop.svg`, the 12.5 s hero loop), **currency cards**
+  (`cards/<code>.mp4` ×10), **foundry reel**
+  (`foundry/foundry-{16x9,1x1}.mp4` + `foundry.svg`), and **sticker pack**
+  (`stickers/<name>.{webm,gif,lottie.json}` ×6, transparent). To keep the
+  repo lean, **only the `.svg` sources are tracked**; every rendered
+  binary is uploaded to Lens Grove storage (`POST
+  https://api.grove.storage/?chain_id=1`, immutable ACL on Ethereum
+  mainnet) and the mapping lives in `.perch/svgator-lab/lens-manifest.json`
+  (gitignored), with a full local mirror in
+  `.perch/svgator-lab/final-media/`. Flow: regenerate via
+  `scripts/svgator/` → render through the SVGator MCP → upload each
+  binary → record `{local_path, storage_key, gateway_url, uri}` in the
+  manifest. README §Brand media links the hosted copies; never hotlink
+  `lens://` URIs into `<img>` tags (GitHub renders them as raw links).
+  Generators live in `scripts/svgator/` — pure transforms
+  from repo sources (`guardian-mark.ts`, `foundry.ts`,
+  `currency-risk.ts`) to SVGator document JSON, pushed and rendered
+  through the SVGator MCP. Currency cards read the curated 5-year vsUSD
+  figure and `CURRENCY_RISK_DATA_AS_OF` at generation time (the footer
+  carries the review date), coin area equals purchasing power (radius
+  `√kept`), patina follows `patinaFor` — regenerate them whenever the
+  dataset is re-reviewed. Stickers are the only family that loops:
+  sticker platforms auto-loop, so each is seamless and ≤3 s.
 
 **Blink (life without ambience):**
 - The Guardian blinks — but only as a **transition confirmation** (§5):

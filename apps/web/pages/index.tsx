@@ -5,6 +5,9 @@ import AppShell from "../components/app/AppShell";
 import StrategyModal, { useStrategyModal } from "../components/onboarding/StrategyModal";
 
 const ogImageUrl = "https://diversifi.persidian.com/embed-image.png";
+// Brand MP4 hosted on Lens Grove (immutable, chain_id=1) — repo keeps only SVGs.
+// See .perch/svgator-lab/lens-manifest.json for the full media manifest.
+const ogVideoUrl = "https://api.grove.storage/5b9d2f61c4201c998c18dfb25e2e740db7b88b39bc1535130d0ba87738b792c8";
 
 const farcasterMeta = {
   version: "1",
@@ -49,6 +52,11 @@ export default function DiversiFiPage() {
         <meta property="og:image" content={ogImageUrl} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
+        <meta property="og:video" content={ogVideoUrl} />
+        <meta property="og:video:secure_url" content={ogVideoUrl} />
+        <meta property="og:video:type" content="video/mp4" />
+        <meta property="og:video:width" content="1200" />
+        <meta property="og:video:height" content="630" />
         <meta property="og:type" content="website" />
 
         <meta name="twitter:card" content="summary_large_image" />
