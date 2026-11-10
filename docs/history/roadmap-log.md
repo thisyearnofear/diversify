@@ -1,5 +1,133 @@
 # Roadmap Log — historical waves & file deltas
 
+### Home's coin stage learns to read the ledger, and the floor learns to hold (2026-11-10)
+
+The previous entry closed with two numbers: Shield's pill row and page still grew
+**21px** on `Verify`, and Home grew **186px** because it had not been morphed at
+all. Both are closed here, and the second is the one that mattered — Home is the
+tab a first-time visitor lands on.
+
+- **Shield's floor holds the object, not the control.** The reserved slot is the
+  reading, and the pill row rides *below* it, so the control keeps its own height
+  and the legend's row cap comes from the plan legend it replaces (`maxLegs` from
+  the ring's own leg count) — the 21px is gone. Two `exhaustive-deps` gaps found
+  on the way were real staleness, not lint noise: neither Shield file recomputed
+  `ledgerViewFrom` when its shape changed (`shape` connected, `ringCompact`
+  walletless), so switching plan↔picker↔compare kept a stale arc cap.
+- **A band with nothing to read withdraws its pill.** Walletless Shield offered
+  `Live` over an empty slot — `shieldBeats` yields nothing without feed records
+  or a watch stamp — so the pill now appears only with a reading behind it
+  (`liveBandOffered`), and the ledger is the one door that always has.
+- **Home's `Verify` rewrites the coin stage.** `HomeLedgerStage` puts the two
+  tokens the read window named most where the local and benchmark coins were,
+  the window's count where the delta was, and the ledger's own rows where the
+  consequence line was — same grid, same `COIN_BASE_PX` (now single-sourced in
+  `overview/moment-stage.ts`, shared with `CurrencyMomentCard`), only the
+  measure changes. Below it the band keeps the staged verdict: seal, the
+  Guardian's last public record, the count of decisions on one shared ledger,
+  then the two doors.
+- **The holdings strip survives the band.** Extracted from `HomeRiskTheater` as
+  `HomeHoldingsStrip` so the presenter can keep it mounted while the stage above
+  it reads something else: what belongs to the user is not part of the reading.
+  It also removed the ~200px of reserved air the morph first left.
+- **Walletless Home has a trust door.** `NotConnectedState` carried no `Verify`
+  at all — the first tab a visitor reaches was the one tab that could not show
+  the ledger. The ledger is public, so the same band and the same morph run
+  without a wallet.
+- **`humanizeLedgerAction` translates `KIND:SUBTYPE`.** Records actioned as
+  `MACRO_SIGNAL:FX_MOVE` rendered their raw enum in the ledger legend,
+  `LiveProofCard` and the verdict ("macro signal:fx move"); each part now maps
+  through the label table.
+
+**Measured in the browser** (agent-browser, dev server, 1440×800, geo Lagos).
+Walletless Home, Story↔Verify: coin stage top `y 119 → 119`, pill row `y 694 →
+694`, page `963 → 963`. Connected (sample plan, Nigeria selected): the 682px
+theater (strip 140) becomes ledger 312 + strip 140 + verdict 243, pill `y 878 →
+878`, page `1135 → 1135`. Two honest residuals: the floor is measured, so it
+learns — the first switch to a denser band settles once (37px walletless) and
+every switch after moves nothing; and connected Home's pill row sits at `y 878`,
+below an 800px viewport, because the coin stage alone is 682px tall.
+
+Files: `tabs/overview/{HomeLedgerStage,HomeHoldingsStrip}.tsx` + `tabs/overview/moment-stage.ts` (new),
+`tabs/overview/{ConnectedOverview,NotConnectedState,HomeRiskTheater,CurrencyMomentCard}.tsx`,
+`tabs/ProtectionTab.tsx`, `tabs/protect/ProtectionNotConnected.tsx`,
+`constants/proof-feed.ts`, deleted `tabs/overview/HomeVerifyBand.tsx` (its two
+branches collapsed into the staged panel), tests in `tabs/overview/__tests__`,
+`tabs/protect/__tests__`. Docs: `design-language.md` §5 rail 2 + §7 chain-agnostic
+trust, `AGENTS.md` trust bullet. Verified: `tsc --noEmit` clean, eslint clean on
+touched files, full Vitest 3,480/3,480 across 375 files (the two names that went
+red in a partial run — `NotConnectedState`'s CountryPicker dismiss and
+`ProtectionTab-custom-reload` — passed in the full pass), slow tabs 185/185.
+
+### Shield and Home join the presenter grammar, and Shield's ring learns to mean the ledger (2026-11-10)
+
+The Exchange entry above left two tabs out of contract. Reviews of the
+fold found the reason: what shipped was a **slot-swap, not a morph**.
+`InstrumentShell` has no controls slot, so a band's content and its pill
+row rendered inside the object's column *below* the object, nothing
+reserved the height, and every band switch reflowed the page — Shield's
+coins climbed ~200px when `Verify` opened. The rule was already in §5
+("modes transform, never append"); the implementation had not honoured
+it. This wave fixes the grammar first, then the object.
+
+- **Shield and Home are presenters.** `ProtectionTab` /
+  `ProtectionNotConnected` present `Live | Guardian | Verify` and
+  `ConnectedOverview` presents `Story | Settings | Verify` through the
+  same `StageBands` control Exchange learned — one reading slot, one pill
+  row, active pill = exit, floor band = the resting reading, a band with
+  nothing to read withdraws its pill.
+- **The plan's verdict joins the object.** Shield's status is now a
+  `StatusBadge` punched into the ring header (`statusBadge`), and the
+  `Verify` band replaces it with `VerifierSealChip` — so the object wears
+  the verdict it is currently making. `ShieldStatusTier` and
+  `UnconnectedStatusTier` are **deleted**; neither tab has a foot tier in
+  either state, and the since-visit line became a `Live` band line. Two
+  surviving foot links went with them: "Explore this plan with Guardian"
+  (the Guardian pill is that door) and "How confident are you in the
+  naira? →" (the coin's Story ↗ is).
+- **The ring re-slices into the ledger.** `ledgerViewFrom`
+  (`lib/shield-ledger-view.ts`) buckets the read window by canonical
+  token — aliases folded through `canonicalToken`, so `USDm` and `cUSD`
+  are one arc, tail folded into a quiet `Other` past `MAX_LEDGER_ARCS` —
+  and `ProtectionPlanRing` draws those as its slices: same metals, same
+  hatching, one arc per token the ledger decided about, sized by that
+  token's share of the window. The hole counts the ledger's own
+  `stats.totalRecommendations` (tweened, not snapped), the legend rows
+  read decisions instead of allocations, and an unreadable feed leaves
+  the plan on screen — fail closed, never an empty ring. The flip verb,
+  the projections footer and the plan controls all withdraw for the
+  ledger reading; band-local arc selection belongs to the reading, not to
+  the tab's slice machinery.
+- **The stage gets a floor.** `useReservedHeight` holds a slot at the
+  height it measured at rest while another band fills it, so a band that
+  swaps in shorter can't pull the tab up under the user's thumb.
+
+**Three defects the fold's verification pass missed** — each invisible
+because no suite reached the path:
+
+1. `useReservedHeight` was called *after* Shield's loading early-return,
+   so the first loaded render ran more hooks than the skeleton render:
+   `Rendered more hooks than during the previous render` — a crash for a
+   connected visitor on first load. Moved above the return and covered by
+   a `ProtectionTab` test that renders skeleton → loaded; restoring the
+   old order reproduces the exact error.
+2. `lib/__tests__/shield-ledger-view.test.ts` was red and never run — it
+   sits outside the two suites the pass covered, and its fixture used
+   `USDC` where the alias is `USDm`, so the arc it asserted could not
+   fold.
+3. `ProtectionNotConnected.slow` mocked `VerifiedEvidence` without the
+   new `VerifierSealChip` export.
+
+**Measured in the browser** (agent-browser, dev server, sample plan,
+1440×660): the ring's origin is fixed at `201,119` across Live→Verify and
+exit returns the identical footprint. Residual: the ledger legend carries
+5 rows where the plan carries 4, so the pill row and page still grow
+**21px** — a floor only stops a band shrinking, never one growing. Home,
+not yet morphed, grows **186px** on the same switch, which is the defect
+in its original form.
+
+Files: `components/shared/StageBands.tsx` (new), `hooks/use-reserved-height.ts` (new), `lib/shield-ledger-view.ts` (new) + its test, `tabs/protect/{ShieldVerifyBand,ShieldGuardianBand}.tsx` (new), `tabs/protect/ProtectionPlanRing.tsx`, `tabs/protect/ProtectionNotConnected.tsx`, `tabs/ProtectionTab.tsx`, `tabs/overview/{ConnectedOverview,CurrencyMomentCard}.tsx`, `shared/VerifiedEvidence.tsx`, `swap/SwapInterface.tsx`, deleted `tabs/protect/ShieldStatusTier.tsx` + `shared/UnconnectedStatusTier.tsx` (+tests), tests in `tabs/__tests__`, `tabs/protect/__tests__`, `tabs/overview/__tests__`, `lib/__tests__`. Docs: `design-language.md` §5 rails 2/5/8 + primitives table, §7 chain-agnostic trust, `AGENTS.md` trust bullet. Verified: `tsc --noEmit` clean, eslint clean on touched files, full Vitest 3,479/3,479, slow suite 303/303.
+
 ### The Exchange stage becomes a presenter, the verifier an object (2026-11-10)
 
 Follows the same-day "verifier becomes a mode of the marquee object"

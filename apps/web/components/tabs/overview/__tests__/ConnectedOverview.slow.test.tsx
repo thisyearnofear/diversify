@@ -18,7 +18,7 @@
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, cleanup, screen, act, fireEvent } from "@testing-library/react";
+import { render, cleanup, screen, act, fireEvent, within } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import React from "react";
 import {
@@ -269,6 +269,27 @@ vi.mock("@/components/shared/HomeSection", () => ({
 }));
 vi.mock("@/components/shared/HomeNav", () => ({ HomeNav: () => null }));
 vi.mock("@/components/shared/MoreOptions", () => ({ MoreOptions: () => null }));
+vi.mock("@/components/shared/VerifiedEvidence", () => ({
+  VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
+  VerifiedEvidencePanel: () => (
+    <div data-testid="verified-evidence-panel">Ledger evidence</div>
+  ),
+}));
+// The story sheet deep-links through RouteLink, which needs a mounted router.
+vi.mock("@/components/shared/RouteLink", () => ({
+  RouteLink: ({
+    children,
+    href,
+    ...rest
+  }: {
+    children: React.ReactNode;
+    href: string;
+  } & React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
+  ),
+}));
 vi.mock("@/components/tabs/protect/PaymentCycleReport", () => ({ PaymentCycleReport: () => null }));
 vi.mock("@/components/portfolio/ZakatCalculator", () => ({
   default: () => <div data-testid="zakat-calculator" />,
@@ -642,9 +663,8 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
     mockNavigateWithIntent.mockClear();
     try {
       renderOverview();
-      const slots = document.querySelectorAll('[data-status-slot="transition"]');
-      expect(slots).toHaveLength(1);
-      expect(screen.getByTestId("home-graduation")).toBeInTheDocument();
+      const band = screen.getByTestId("home-story-band");
+      expect(within(band).getByTestId("home-graduation")).toBeInTheDocument();
       expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /Moving local savings into dollars often/ }));
       expect(mockNavigateWithIntent).toHaveBeenCalledWith("protect", { source: "home", lens: "cycle" });
@@ -685,10 +705,10 @@ describe("ConnectedOverview — geo-failure fallback and compare link", () => {
 });
 
 // ──────────────────────────────────────────────────────────────────────────
-// StatusTier budget + Home→Shield region intent
+// Presenter bands + Home→Shield region intent
 // ──────────────────────────────────────────────────────────────────────────
 
-describe("ConnectedOverview — status tier budget and region intent", () => {
+describe("ConnectedOverview — presenter bands and region intent", () => {
   afterEach(() => {
     cleanup();
     mockExperienceMode = "full";
@@ -701,7 +721,7 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
     mockNavigateWithIntent.mockClear();
   });
 
-  it("when banner + payment-cycle + tip + philosophy all apply, exactly one transition slot renders and it's the banner", () => {
+  it("a banner is disclosure beside the object — the story band still carries exactly one line", () => {
     mockMoment = GHANA_MOMENT;
     mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
     mockHomeSections = {
@@ -712,15 +732,18 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
     };
     renderOverview();
 
-    const slots = document.querySelectorAll('[data-status-slot="transition"]');
-    expect(slots).toHaveLength(1);
-    expect(slots[0].querySelector('[data-testid="contextual-banner"]')).not.toBeNull();
+    expect(screen.getByTestId("contextual-banner")).toBeInTheDocument();
+    const band = screen.getByTestId("home-story-band");
+    expect(within(band).getByTestId("home-cycle-link")).toBeInTheDocument();
     expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: /Match this payment/ })).not.toBeInTheDocument();
-    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
+    expect(within(band).queryByText("Add BRLm for LatAm coverage.")).not.toBeInTheDocument();
+    // The foot tier is gone: nothing in the status slot hands off anywhere.
+    expect(
+      document.querySelector('[data-testid="status-tier"]'),
+    ).not.toBeInTheDocument();
   });
 
-  it("with no banner and a payment cycle, the netting button wins the transition slot", () => {
+  it("with no banner and a payment cycle, the cycle door is the story band", () => {
     mockMoment = GHANA_MOMENT;
     mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
     mockHomeSections = {
@@ -731,19 +754,37 @@ describe("ConnectedOverview — status tier budget and region intent", () => {
     };
     renderOverview();
 
-    const slots = document.querySelectorAll('[data-status-slot="transition"]');
-    expect(slots).toHaveLength(1);
-    expect(slots[0].textContent).toContain("See what FX timing costs this payment");
+    const band = screen.getByTestId("home-story-band");
+    expect(band.textContent).toContain("See what FX timing costs this payment");
     expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
   });
 
-  it("never renders more than three status slots", () => {
+  it("Home has no foot tier — the pill row owns the readings and the verifier", () => {
     mockMoment = GHANA_MOMENT;
     mockProfileConfig = { userGoal: "inflation_protection", moneyPurpose: null, philosophy: "buen_vivir" };
     mockHomeSections = { ...defaultHomeSections, banner: "currency-risk", isPaymentCycle: true };
     renderOverview();
-    expect(document.querySelectorAll("[data-status-slot]").length).toBeLessThanOrEqual(3);
-    expect(document.querySelector('[data-status-slot="trust"]')).toBeNull();
+
+    // Nothing hands off at the foot of the card any more.
+    expect(document.querySelectorAll("[data-status-slot]")).toHaveLength(0);
+    expect(screen.queryByTestId("status-tier")).not.toBeInTheDocument();
+    // The presenter: the story band is the floor, Verify rewrites the slot.
+    expect(screen.getByTestId("home-bands")).toBeInTheDocument();
+    expect(screen.getByTestId("home-band-story")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    fireEvent.click(screen.getByTestId("home-band-verify"));
+    expect(screen.getByTestId("home-verifier")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("home-verifier")).getByTestId(
+        "verified-evidence-panel",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("home-story-band")).not.toBeInTheDocument();
+    // The active pill is the exit — tap it again and the story returns.
+    fireEvent.click(screen.getByTestId("home-band-verify"));
+    expect(screen.getByTestId("home-story-band")).toBeInTheDocument();
   });
 
   it("the region inspector CTA hands the region to Shield via navigateWithIntent", () => {
@@ -1082,8 +1123,8 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
     renderOverview();
     const link = await screen.findByTestId("home-guardian-activity-link");
     expect(link).toHaveTextContent("Review Guardian activity");
-    const slot = document.querySelector('[data-status-slot="transition"]')!;
-    expect(slot.textContent).not.toContain("ran 5 checks");
+    const band = screen.getByTestId("home-story-band");
+    expect(band.textContent).not.toContain("ran 5 checks");
     expect(screen.queryByText(/Guardian ran/)).not.toBeInTheDocument();
 
     fireEvent.click(link);
@@ -1156,7 +1197,7 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
     expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
   });
 
-  it("occupies the one transition slot — ahead of the tip and compare", async () => {
+  it("holds the one story line — ahead of the tip and compare", async () => {
     informedSession("2026-W39", 15, 3, 2);
     window.localStorage.setItem(
       ACTIVITY_KEY,
@@ -1166,8 +1207,8 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
     mockHomeSections = { ...defaultHomeSections, primaryTip: "Add BRLm for LatAm coverage." };
     renderOverview();
     await screen.findByTestId("home-guardian-activity-link");
-    const slots = document.querySelectorAll('[data-status-slot="transition"]');
-    expect(slots).toHaveLength(1);
+    const band = screen.getByTestId("home-story-band");
+    expect(within(band).getByTestId("home-guardian-activity-link")).toBeInTheDocument();
     expect(screen.queryByText("Add BRLm for LatAm coverage.")).not.toBeInTheDocument();
     expect(screen.queryByTestId("home-compare-link")).not.toBeInTheDocument();
     cleanup();
@@ -1189,17 +1230,20 @@ describe("ConnectedOverview — while you were away (Guardian activity)", () => 
     expect(screen.queryByTestId("home-concentration-link")).not.toBeInTheDocument();
   });
 
-  it("banner, payment-cycle, and graduation each outrank the activity link", async () => {
+  it("payment-cycle and graduation each outrank the activity link; a banner sits beside them", async () => {
     informedSession("2026-W39", 15, 3, 2);
     window.localStorage.setItem(
       ACTIVITY_KEY,
       JSON.stringify({ value: "2026-W39|10|2|1", at: Date.now() - 3 * DAY }),
     );
 
+    // The banner is disclosure, not a competing line: it never takes the
+    // story slot, so the one hand-off the object owns stays put.
     mockHomeSections = { ...defaultHomeSections, banner: "currency-risk" };
     renderOverview();
     await screen.findByTestId("contextual-banner");
-    expect(screen.queryByTestId("home-guardian-activity-link")).not.toBeInTheDocument();
+    expect(screen.getByTestId("home-guardian-activity-link")).toBeInTheDocument();
+    expect(document.querySelectorAll('[data-testid="home-story-band"]')).toHaveLength(1);
     cleanup();
 
     mockHomeSections = { ...defaultHomeSections, banner: null, isPaymentCycle: true };

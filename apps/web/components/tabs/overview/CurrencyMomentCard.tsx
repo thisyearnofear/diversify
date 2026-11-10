@@ -60,6 +60,7 @@ import {
   readingAt,
   type ValueSeries,
 } from "@/lib/narrative/coin-scrub";
+import { COIN_BASE_PX } from "./moment-stage";
 
 interface Props {
   moment: NarrativeMoment;
@@ -302,14 +303,13 @@ export function CurrencyMomentCard({
   const benchmarkCoin = BENCHMARK_COIN[moment.benchmark];
   // The local coin physically shrinks with retained purchasing power.
   const localScale = Math.max(0.45, 0.35 + 0.65 * moment.retainedRatio);
-  // Both coins share one base size. They used to declare different max-widths
-  // (local 112px vs benchmark 72px), which almost exactly cancelled the scale
-  // transform: at -60% the two coins rendered ~68px vs ~72px — visually
-  // identical, so the geometry encoded nothing. Worse, the crossover sat at
-  // delta ~= -34%, so for every mild-to-moderate depreciation (-8% EUR) the
-  // local coin rendered ~47% LARGER than the dollar it had lost ground to.
-  // One base size, one scale channel, no inversion.
-  const COIN_BASE_PX = 104;
+  // One base size, one scale channel, no inversion. (Both coins share
+  // COIN_BASE_PX — they used to declare different max-widths, local 112px vs
+  // benchmark 72px, which almost exactly cancelled the scale transform: at
+  // -60% the two coins rendered ~68px vs ~72px, visually identical, so the
+  // geometry encoded nothing. Worse, the crossover sat at delta ~= -34%, so
+  // for every mild-to-moderate depreciation (-8% EUR) the local coin
+  // rendered ~47% LARGER than the dollar it had lost ground to.)
   const COIN_MIN_SCALE = 0.62;
   // Never smaller than the benchmark coin, so the direction of the change is
   // always readable; magnitude is carried by the number, not by a coin that
@@ -910,24 +910,6 @@ export function CurrencyMomentCard({
                 onBeatChange={reportBeat}
                 className="mt-1.5 block text-xs font-semibold text-gray-500 dark:text-gray-400"
               />
-            )}
-
-            {/* The vote's L1 invite — discovery asks at the line layer; the
-                poll itself stays in the story inspector (L2). One question,
-                one tap, gone once the inspector is open or the coin is
-                mid-scrub. */}
-            {onInspectCurrency && !currencySelected && !reading && (
-              <button
-                type="button"
-                onClick={() => {
-                  haptics.tap();
-                  act();
-                  onInspectCurrency();
-                }}
-                className="mt-1.5 text-xs font-semibold text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
-              >
-                How confident are you in {moneyNameFor(moment.currencyCode)}? →
-              </button>
             )}
 
           </div>

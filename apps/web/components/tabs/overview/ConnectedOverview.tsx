@@ -30,7 +30,14 @@ import { InspectorSheet } from "../../shared/InspectorSheet";
 import { InstrumentWait } from "../../shared/InstrumentWait";
 import ZakatCalculator from "../../portfolio/ZakatCalculator";
 import { buildWalletPortfolioView } from "@/lib/wallet-portfolio-view";
-import { StatusTier } from "../../shared/StatusTier";
+import { StageBands, type StageBandOption } from "../../shared/StageBands";
+import { HomeLedgerStage } from "./HomeLedgerStage";
+import { HomeHoldingsStrip } from "./HomeHoldingsStrip";
+import { VerifiedEvidencePanel } from "@/components/shared/VerifiedEvidence";
+import { useProofFeed } from "@/hooks/use-proof-feed";
+import { ledgerViewFrom } from "@/lib/shield-ledger-view";
+import { DEFAULT_ACCENT } from "@/components/shared/palette";
+import { useReservedHeight } from "@/hooks/use-reserved-height";
 import { useGraduationSignal } from "@/hooks/use-graduation-signal";
 import { graduationPromptLine, leadGraduationSignal } from "@/lib/graduation-prompt";
 import { useGeoCountry } from "@/hooks/use-geo-country";
@@ -46,6 +53,8 @@ import { useGuardianSessionInfo } from "@/hooks/use-guardian-session-info";
 import { useSinceLastVisit } from "@/hooks/use-since-last-visit";
 import { MIN_SNAPSHOT_AGE_MS, formatElapsed } from "@/lib/since-last-visit";
 import { timeAgo } from "@/lib/format-duration";
+
+type HomeBand = "story" | "settings" | "verify";
 
 interface ConnectedOverviewProps {
   isActive?: boolean;
@@ -354,12 +363,55 @@ export function ConnectedOverview({
     </>
   );
 
+  // Home is a presenter like Exchange and Shield: one reading slot under
+  // the coin stage, one pill row that rewrites it. Story is the floor.
+  const [band, setBand] = React.useState<HomeBand>("story");
+  // The measure the Verify band draws — the ledger's own counts. Verify on
+  // Home doesn't add a panel: it rewrites the coin stage (design-language
+  // §7), so the object and the band read the same feed.
+  const {
+    data: liveFeed,
+    isLoading: feedLoading,
+    isStale: feedStale,
+    error: feedError,
+  } = useProofFeed();
+  const ledgerView = React.useMemo(
+    () =>
+      ledgerViewFrom(liveFeed, {
+        isLoading: feedLoading,
+        isStale: feedStale,
+        error: feedError,
+      }),
+    [liveFeed, feedLoading, feedStale, feedError],
+  );
+  const coinStageShowing = Boolean(moment || inflationMoment);
+  const verifyMorphs =
+    band === "verify" && coinStageShowing && ledgerView.state === "ready";
+  // The stage keeps the height of the tallest mode it has held, so opening
+  // Verify rewrites the object without moving the page (§5 rail 2).
+  const { ref: stageRef, style: stageFloor } = useReservedHeight();
+
   // The coin stage is always the hero. Holdings never swap it out — they
   // add a quiet strip beneath it. One object, one color, one CTA.
   // While the wallet fan-out settles, keep the instrument grammar (coin + job line), not a skeleton.
   const isWaitingForWallet = portfolio.isLoading && !moment && !inflationMoment && !activePortfolio.lastUpdated;
   const object = isWaitingForWallet ? (
     <InstrumentWait label="Reading your wallet" symbol="$" />
+  ) : verifyMorphs ? (
+    // Same coins, same number, different measure: the stage is the ledger.
+    // The holdings strip is the user's own split, not the market's, so it
+    // stays — the band rewrites what the coins above it mean.
+    <>
+      <HomeLedgerStage ledger={ledgerView} accent={frame?.accent ?? DEFAULT_ACCENT} />
+      <HomeHoldingsStrip
+        regionData={regionData}
+        totalValue={totalValue}
+        focusedRegion={focusedRegion}
+        onSelectRegion={handleDialSelect}
+        isDemo={isDemo}
+        sealedRegion={sealedRegion}
+      />
+    </>
   ) : moment || inflationMoment ? (
     <HomeRiskTheater
       moment={moment}
@@ -443,24 +495,10 @@ export function ConnectedOverview({
     </div>
   );
 
-  const transition = home.banner ? (
-    <ContextualBanner
-      placement="status"
-      kind={home.banner}
-      isDemo={isDemo}
-      demoValue={hasHoldings ? liveTotalValue : undefined}
-      userRegion={userRegion}
-      chainId={chainId}
-      address={address}
-      setActiveTab={setActiveTab}
-      onDisableDemo={onDisableDemo}
-      onEnableDemo={onEnableDemo}
-      onDismissFxCorridorHint={() => {
-        home.dismissFxCorridorHint();
-        openCycle();
-      }}
-    />
-  ) : home.isPaymentCycle ? (
+  // The Story band: the one line the coin stage is currently about, and the
+  // door that line describes. It sits in the object's reading slot, chosen
+  // by the pill row — never a link at the foot of the card (§5).
+  const storyReading = home.isPaymentCycle ? (
     // Declared payment purpose → the signature business surface: what FX
     // timing costs this cycle. Netting stays one tap away on Exchange.
     <button
@@ -472,7 +510,7 @@ export function ConnectedOverview({
       See what FX timing costs this payment →
     </button>
   ) : graduationLine ? (
-    <div className="flex items-center gap-1 min-w-0" data-testid="home-graduation">
+    <div className="flex items-center justify-center gap-1 min-w-0" data-testid="home-graduation">
       <button
         type="button"
         onClick={() => {
@@ -517,38 +555,106 @@ export function ConnectedOverview({
     >
       Compare philosophies →
     </button>
-  ) : undefined;
+  ) : null;
 
-  // Settings live in the shell's status tier — one card per instrument,
-  // never a second "Settings & region" card stacked under the object.
-  const status = (
+  const banner = home.banner ? (
+    <ContextualBanner
+      placement="status"
+      kind={home.banner}
+      isDemo={isDemo}
+      demoValue={hasHoldings ? liveTotalValue : undefined}
+      userRegion={userRegion}
+      chainId={chainId}
+      address={address}
+      setActiveTab={setActiveTab}
+      onDisableDemo={onDisableDemo}
+      onEnableDemo={onEnableDemo}
+      onDismissFxCorridorHint={() => {
+        home.dismissFxCorridorHint();
+        openCycle();
+      }}
+    />
+  ) : null;
+
+  // Home is a presenter like Exchange and Shield: one reading slot under
+  // the coin stage, one pill row that rewrites it. Story is the floor.
+  const floorBand: HomeBand = storyReading ? "story" : "settings";
+  const activeBand: HomeBand = band === "story" && !storyReading ? "settings" : band;
+  const bandOptions: StageBandOption<HomeBand>[] = [
+    ...(storyReading ? [{ id: "story" as const, label: "Story" }] : []),
+    { id: "settings", label: "Settings" },
+    { id: "verify", label: "Verify" },
+  ];
+  const presenterShowing = !isWaitingForWallet && !inspectingSelection;
+  React.useEffect(() => {
+    if (!presenterShowing) setBand("story");
+  }, [presenterShowing]);
+
+  const presenterReading = presenterShowing ? (
     <>
-      <StatusTier
-        // The trust slot stays empty until counsel copy lands — a tier
-        // that mounts an empty slot is worse than no slot.
-        trust={jurisdictionNoticeFor(geoCountry) ? <JurisdictionNotice /> : null}
-        transition={inspectingSelection ? undefined : transition}
-        rail={
-          <>
-            <PendingFundRail tokens={portfolio.allTokens ?? []} />
-            <ClaimRail setupMode="entry" />
-          </>
-        }
-      />
-      <MoreOptions
-        bare
-        userRegion={userRegion}
-        setUserRegion={setUserRegion}
-        regions={REGIONS ?? ALL_REGIONS}
-        showTwoChainsBanner={false}
-        experienceMode={experienceMode}
-        setExperienceMode={setExperienceMode}
-        anchorCurrency={anchor.anchorCurrency}
-        anchorSource={anchor.source}
-        anchorFx={anchorFx}
-        onAnchorChange={anchor.setAnchorCurrency}
-      />
+      {activeBand === "verify" ? (
+        <div data-testid="home-verifier" className="mx-auto w-full max-w-[420px]">
+          <VerifiedEvidencePanel presentation="stage" />
+        </div>
+      ) : activeBand === "settings" ? (
+        <MoreOptions
+          bare
+          userRegion={userRegion}
+          setUserRegion={setUserRegion}
+          regions={REGIONS ?? ALL_REGIONS}
+          showTwoChainsBanner={false}
+          experienceMode={experienceMode}
+          setExperienceMode={setExperienceMode}
+          anchorCurrency={anchor.anchorCurrency}
+          anchorSource={anchor.source}
+          anchorFx={anchorFx}
+          onAnchorChange={anchor.setAnchorCurrency}
+        />
+      ) : (
+        storyReading && (
+          <div data-testid="home-story-band" className="text-center">
+            {storyReading}
+          </div>
+        )
+      )}
     </>
+  ) : null;
+
+  const presenterPills = presenterShowing ? (
+    <StageBands
+      testIdBase="home"
+      groupLabel="What Home shows"
+      options={bandOptions}
+      active={activeBand}
+      onSelect={(id) => {
+        // The active pill is the exit, and Story is the floor it returns to.
+        setBand(id === activeBand ? floorBand : id);
+      }}
+    />
+  ) : null;
+
+  const stage = (
+    <>
+      {/* The floor holds the object and its reading; the pill row rides below
+          the tallest band, so it never moves and stays in the first viewport. */}
+      <div ref={stageRef} style={stageFloor}>
+        {object}
+        {presenterReading}
+      </div>
+      {presenterPills}
+    </>
+  );
+
+  // What stays below the object is disclosure and live money only — the
+  // banner, counsel's notice, and the rails that resume something. No
+  // hand-off link has a home here any more (§5).
+  const status = (
+    <div className="space-y-2">
+      {banner}
+      {jurisdictionNoticeFor(geoCountry) ? <JurisdictionNotice /> : null}
+      <PendingFundRail tokens={portfolio.allTokens ?? []} />
+      <ClaimRail setupMode="entry" />
+    </div>
   );
 
   return (
@@ -562,7 +668,7 @@ export function ConnectedOverview({
       )}
       <InstrumentShell
         inspectorOpen={focusedRegion !== null || inspectedCurrency !== null}
-        object={object}
+        object={stage}
         status={status}
         portfolio={{
           lastUpdated: portfolio.lastUpdated,

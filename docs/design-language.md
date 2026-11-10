@@ -543,6 +543,39 @@ A tab change that fails any of these is the old stack. Do not ship it.
    the page with a new block below the object. Shield's compare is the
    reference: the ring goes compact, the coin rail slides in, nothing
    stacks underneath.
+   - **Every tab's resting object is a presenter.** One reading slot, one
+     pill row that chooses what fills it (`StageBands`), the active pill
+     doubling as the exit and the floor band being what it returns to:
+     Exchange `Story | Pairs | Journey | Verify`, Shield
+     `Live | Guardian | Verify`, Home `Story | Settings | Verify`, the
+     Guardian's own control on its reading slot. A band with nothing to
+     read withdraws its pill, and a band whose pill has withdrawn falls
+     back to the floor. Walletless Home keeps only the pills it can fill:
+     the coin stage *is* the story, so its row is `Verify` alone.
+   - **The motif is the constant; the band rewrites the motif.** A band
+     that only fills the slot beneath a still object is an append wearing
+     a disguise — the object has to change what it *measures*. Shield's
+     `Verify` re-slices the plan ring into the public ledger (one arc per
+     token the ledger decided about, sized by that token's share of the
+     read window; the hole counts the ledger's own decisions), and its
+     `Guardian` band flips the hole's face to monitoring state. Home's
+     `Verify` does the same to the coin stage: the two coins become the
+     two tokens the window named most, the delta between them becomes the
+     window's count, and the legend under them reads the ledger's own
+     rows. Same geometry, same metals, only the measure changes. What
+     belongs to the user rather than to the reading — Shield's plan
+     context, Home's holdings strip — persists across the band.
+   - **The stage has a floor.** A band switch that moves the page is not
+     read as a transform, so the object and its reading slot reserve the
+     height of the *tallest* band they can hold (`useReservedHeight`) —
+     never the resting one, since a floor only stops a band shrinking,
+     not growing. The pill row rides *below* the floor, so it holds its
+     own height and stays where the user learned to find it. Reserve,
+     don't clip: if a band genuinely needs more room than the stage
+     holds, it is an inspector, not a band. The floor is measured, not
+     guessed, so it learns — the first switch to a denser band can settle
+     once, and every switch after it moves nothing.
+
 3. **One CTA, on a tab that is in the dock.** `navigateToSwap` into a
    hidden Exchange tab is a bug. A hand-off to Guardian from Simple mode
    is a real request, not a bug — it switches the mode Simple → Full so
@@ -565,10 +598,12 @@ A tab change that fails any of these is the old stack. Do not ship it.
    (choosing a lens rewrites the ghost ring — no funds needed), and the
    Agent tab's object is the Guardian itself (`gaze="pointer"`, the
    sanctioned third gaze surface). Never swap the object for a hero-card +
-   proof-card + how-it-works stack. Home and Shield carry the shared
-   `UnconnectedStatusTier` (trust line + one transition). **Exchange and
-   the Guardian are the exception: walletless they have no foot tier at
-   all.** Everything the retired tier used to hold moved *into* the
+   proof-card + how-it-works stack. **Walletless, no tab has a foot tier:**
+   `UnconnectedStatusTier` is deleted — Home and Shield put trust in the
+   object's `Verify` band, and Exchange and the Guardian carry none at all.
+   Connected, only Exchange and the Guardian keep a status rail (§5 rail 8);
+   `ShieldStatusTier` is deleted too, its readings now bands of the ring.
+   Everything the retired tier used to hold moved *into* the
    object — trust became the `Verify` band of the stage presenter (§7),
    the story pairs and the journey rail became bands too
    (`Story | Pairs | Journey | Verify`, active pill = exit), netting
@@ -620,9 +655,10 @@ A tab change that fails any of these is the old stack. Do not ship it.
    recreate them.
 8. **Status tier budget.** Trust + one transition + one rail, via
    `StatusTier` (`components/shared/StatusTier.tsx`). A new prompt
-   competes for the transition slot by priority — it never stacks. All
-   four tabs route their connected status through it (walletless keeps
-   `UnconnectedStatusTier`); tests assert ≤3 slots on every tab.
+   competes for the transition slot by priority — it never stacks. Two
+   tabs route connected status through it (Exchange, Guardian); Shield and
+   Home present instead — their reading slot is the tier, so they carry no
+   foot row in either state.
 
 **The plan ring is a live constructor, not a picker.** Shield's flow is
 preview → adjust → commit, walletless throughout: a philosophy coin
@@ -706,7 +742,7 @@ no country override, no visit memory — with an in-object "← Your currency" t
 coin flips the same way when a curated provenance entry exists (`ProvenanceCoinBack`, reset on selection change). Shield alone owns the
 `AllocationRing` (hole = gap when a slice is selected, ghost/hatch for
 RWA). Home never renders a ring. Shield's since-last-visit alignment
-lives in the status tier (`ShieldStatusTier`), not the ring hole. When a swap
+lives in the presenter's `Live` band, not the ring hole. When a swap
 settles, the destination's region coin wears a seal on the next Home
 visit — derived from refreshed balances (never the receipt's word), one
 emerald pulse plus a persistent ✓; reduced motion shows the ✓ alone.
@@ -855,8 +891,9 @@ must read the same way everywhere and be one tap from gone.
   slice select, legend row, or the plan badge. Auto-rotating facts are
   a feed — banned.
 - **Idle memory is not a hole layer.** The since-last-visit drift moved
-  out of the ring into `ShieldStatusTier`'s transition tier, under the
-  object where it reads as context rather than as part of the number.
+  out of the ring into the presenter's `Live` band, in the reading slot
+  under the object where it reads as context rather than as part of the
+  number.
 - **Privacy is dots.** `BalanceVisibilityProvider` (persisted,
   default visible) + the header eye toggle mask every dollar figure
   app-wide. The mask is `••••` with an honest `aria-label` — never a
@@ -885,7 +922,7 @@ numbers to fill a gap (per AGENTS.md Wave 8 — expired cache before a
 fake `+0.0%`); apply the same rule to copy: no claim you're not making
 truthfully somewhere verifiable.
 
-**Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The generic trust affordance says **Verify evidence**, not that the current plan, portfolio, or scenario has been verified. Confirmed verification stays bound to the specific evidence record. No chain names or hex in the first viewport. Tapping the affordance reveals network dots, ledger address, Guardian identity, explorer links, and the `/api/agent/zero-g-ledger?verify=<hash>` check. Evidence verification confirms ledger settlement, not recommendation accuracy, active protection, or authority to trade. Home's dated story already carries its own provenance, so its status tier omits this generic trust line. **Placement:** the verifier is a *mode* of the tab's marquee object, never a panel that grows beneath it (§5: modes transform, never append). Exchange's resting stage is a presenter: the beam stays as the object, one reading slot beneath it holds exactly one band, and a pill row chooses it — `Story | Pairs | Journey | Verify` (`Story` is the floor, so the active pill is also the exit, and `Pairs` only appears when the corridor dataset has stories to show). `Verify` replaces the beam with the verifier in the object's own slot — same morph the ticket uses — and the verifier opens on its **verdict**, not its plumbing: the seal, the Guardian's last public record, and how many decisions one shared ledger holds, centered because the slot it fills is the screen's subject. `Check a receipt` is the second door (prefilled with that record's hash, chain derived from it — verifying is a tap, not a typing task) and `Technical detail` the third; chain names, dots and hex live only behind that second door. When the feed is empty or unreachable the verdict says so — "Nothing has settled on the ledger yet" — and still offers the check; an unconfirmed receipt is labelled unconfirmed. When a wallet connects, `Verify` leaves the pill row and trust returns to the status rail, because the rail is now speaking about *that* wallet. The Guardian's presenter control carries the same object composition in its reading slot. Nothing about any of this adds a line at the card's foot: FX netting is the inspector's Match tab, the decision-window door rides inside the story reading it describes, and the sample-plan switch is app chrome in the header. The status tier is the fallback host — Shield, and every connected rail — never the default. Two shapes out of contract: an orphaned `+` at the card's foot, and an accordion that pushes the viewport open.
+**Chain-agnostic trust:** DiversiFi settles on 5 networks (0G, Arbitrum, Celo, HashKey, Robinhood — all at `0x3BCf…369C`) and the Guardian carries `AgenticID #1` on 0G (`0x6815…33D60`, 0G Storage root). The generic trust affordance says **Verify evidence**, not that the current plan, portfolio, or scenario has been verified. Confirmed verification stays bound to the specific evidence record. No chain names or hex in the first viewport. Tapping the affordance reveals network dots, ledger address, Guardian identity, explorer links, and the `/api/agent/zero-g-ledger?verify=<hash>` check. Evidence verification confirms ledger settlement, not recommendation accuracy, active protection, or authority to trade. Home's dated story already carries its own provenance, so the tab's only trust line is its `Verify` band. **Placement:** the verifier is a *mode* of the tab's marquee object, never a panel that grows beneath it (§5: modes transform, never append). Exchange's resting stage is a presenter: the beam stays as the object, one reading slot beneath it holds exactly one band, and a pill row chooses it — `Story | Pairs | Journey | Verify` (`Story` is the floor, so the active pill is also the exit, and `Pairs` only appears when the corridor dataset has stories to show). `Verify` replaces the beam with the verifier in the object's own slot — same morph the ticket uses — and the verifier opens on its **verdict**, not its plumbing: the seal, the Guardian's last public record, and how many decisions one shared ledger holds, centered because the slot it fills is the screen's subject. `Check a receipt` is the second door (prefilled with that record's hash, chain derived from it — verifying is a tap, not a typing task) and `Technical detail` the third; chain names, dots and hex live only behind that second door. When the feed is empty or unreachable the verdict says so — "Nothing has settled on the ledger yet" — and still offers the check; an unconfirmed receipt is labelled unconfirmed. On Exchange, when a wallet connects, `Verify` leaves the pill row and trust returns to the status rail, because the rail is now speaking about *that* wallet. Shield is the exception: it has no rail and no foot tier, so its `Verify` pill never withdraws — connected or walletless, on the plan ring or the compact picker, the band is the only trust host the tab has, and there it re-slices the ring itself rather than filling the slot beneath it (§5 rail 2). Home's `Verify` reads the same ledger in the stage under its coin pair — the coins themselves re-slice into the tokens the Guardian named (§5 rail 2), and the verdict keeps its face below them. Walletless Home carries that door too: the ledger is public, so an unconnected visitor reads the same records a connected one does, and the tab a first-time visitor lands on is not the one that can be left with no trust host. The Guardian's presenter control carries the same object composition in its reading slot. Nothing about any of this adds a line at the card's foot: FX netting is the inspector's Match tab, the decision-window door rides inside the story reading it describes, and the sample-plan switch is app chrome in the header. The status tier is the fallback host — Exchange's and the Guardian's connected rails — never the default, and never Shield's or Home's. Two shapes out of contract: an orphaned `+` at the card's foot, and an accordion that pushes the viewport open.
 
 **Colour carries meaning, so there is one action hue.** Every primary CTA and every product hand-off link wears `--action` (numerically blue-600 so legacy call sites still match, but `action` is the sanctioned spelling). One hue, **two values**: a CTA that fills a surface and carries white ink wears `bg-action-fill` / `hover:bg-action-fill-hover`, because in dark mode `--action` deliberately lightens to blue-400 so link text stays legible on gray-900 — and white ink on a blue-400 fill measures 2.5:1. The two are identical in light mode. `text-action`, `.link-handoff`, focus rings and indicator dots stay on the link value; a filled control never does. Green and teal are reserved for verified / ready / settled state (`StatusBadge` `ready`) — spending them on an upsell makes a pitch read as a confirmation, which is exactly the confusion this section exists to prevent. Status-tier text links follow one grammar: `.link-handoff` is a real next step (carries a verb, wears the action hue, the heaviest thing in the row); `.link-quiet` is supporting or exploratory (gray, never the action hue). The demo entry is quiet by contract — it is illustrative, not the way forward, so it never wears blue. Arrows suffix interactive hand-offs only; a static sentence never ends in `→`.
 
@@ -1060,8 +1097,9 @@ shield's visual DNA and keeps the redesign's motion discipline.
 | `AnimatedNumber` | `apps/web/components/shared/AnimatedNumber.tsx` | count-up data punches |
 | `MaskedReveal` | `apps/web/components/shared/MaskedReveal.tsx` | masked hero-line reveal (greeting headlines) |
 | `FlickScrollRow` | `apps/web/components/shared/FlickScrollRow.tsx` | the horizontal scroll row: drag + momentum + chevrons + edge fades |
-| `UnconnectedStatusTier` | `apps/web/components/shared/UnconnectedStatusTier.tsx` | shared unconnected status tier: trust line + demo link (demo is `.link-quiet` — gray, never blue) |
-| `StatusTier` | `apps/web/components/shared/StatusTier.tsx` | connected status tier budget: trust + one transition + one rail (§5 rail 8) |
+| `StageBands` | `apps/web/components/shared/StageBands.tsx` | the presenter control: one pill row choosing one band for the object's reading slot; active pill = exit, floor band = resting reading (§5 rail 2) |
+| `useReservedHeight` | `apps/web/hooks/use-reserved-height.ts` | the stage floor: a slot keeps the height of the tallest band it can hold, so a band switch never moves the page (§5 rail 2) |
+| `StatusTier` | `apps/web/components/shared/StatusTier.tsx` | connected status tier budget: trust + one transition + one rail (§5 rail 8) — Exchange and the Guardian only |
 | `--action` / `--action-fill`, `.link-handoff` / `.link-quiet` | `apps/web/styles/tokens.css`, `globals.css`, `tailwind.config.js` | the ONE action hue in two values — link/indicator and filled-CTA (§7: dark `--action` is a text value, never a fill under white ink); green/teal reserved for verified/ready; quiet register for supporting links |
 | `useBalanceVisibility`, `BalanceVisibilityProvider` | `apps/web/context/app/BalanceVisibilityContext.tsx` | app-wide privacy switch: `hidden` + `formatMoney` (dots while hidden). Every dollar figure goes through it |
 | `BalanceVisibilityToggle` | `apps/web/components/shared/BalanceVisibilityToggle.tsx` | the header eye control that flips the switch (`aria-pressed`) |
