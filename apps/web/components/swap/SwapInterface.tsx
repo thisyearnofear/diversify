@@ -28,6 +28,7 @@ import { savePendingFund } from "@/lib/pending-fund";
 import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY } from "../shared/palette";
 import { VerifiedEvidencePanel } from "../shared/VerifiedEvidence";
+import { StageBands, type StageBandOption } from "../shared/StageBands";
 import { haptics } from "@/lib/haptics";
 import { springPop, springSoft, STAGGER_STEP_S } from "@/lib/motion-tokens";
 import { useExperience } from "@/context/app/ExperienceContext";
@@ -55,50 +56,6 @@ const USD_STABLE_BUYABLE = new Set(["USDC", "CUSD"]);
  *  line the pair always answers with. The others each rewrite that one
  *  slot — never a new row under it (§5). */
 type StageBand = "story" | "pairs" | "journey" | "verify";
-
-interface StageBandOption {
-  id: StageBand;
-  label: string;
-}
-
-/** The presenter control — the segmented pill grammar the network switch
- *  and the Guardian board taught (design-language §1: controls are the
- *  motif). One row, one slot rewritten, and the active pill is the exit. */
-function StageBands({
-  options,
-  active,
-  onSelect,
-}: {
-  options: StageBandOption[];
-  active: StageBand;
-  onSelect: (id: StageBand) => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="What the pair shows"
-      data-testid="stage-bands"
-      className="mt-3 flex items-center justify-center gap-1.5"
-    >
-      {options.map((option) => (
-        <button
-          key={option.id}
-          type="button"
-          data-testid={`stage-band-${option.id}`}
-          aria-pressed={active === option.id}
-          onClick={() => onSelect(option.id)}
-          className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
-            active === option.id
-              ? "bg-ink text-surface"
-              : "bg-ink/[0.05] text-ink/60 hover:bg-ink/10"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
 
 interface SwapInterfaceProps {
   availableTokens: Token[];
@@ -589,7 +546,7 @@ const SwapInterface = forwardRef<
 
   // The presenter: one reading slot under the beam, one row to choose it.
   const activeBand: StageBand = band;
-  const bandOptions: StageBandOption[] = [
+  const bandOptions: StageBandOption<StageBand>[] = [
     { id: "story", label: "Story" },
     ...(storyPairs.length > 0 ? [{ id: "pairs" as const, label: "Pairs" }] : []),
     { id: "journey", label: "Journey" },
@@ -633,6 +590,7 @@ const SwapInterface = forwardRef<
 
   const presenter = (
     <StageBands
+      groupLabel="What the pair shows"
       options={bandOptions}
       active={activeBand}
       onSelect={(id) => {

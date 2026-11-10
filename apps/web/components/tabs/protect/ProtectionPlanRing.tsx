@@ -13,7 +13,7 @@
  * plan alignment on tap (flip), the plan badge above names the plan. A
  * one-shot dwell swap replaces the same face; stillness after the first
  * action. Every dollar figure honours the privacy switch (dots, never a
- * fabricated zero). Idle memory (sinceHint) lives in ShieldStatusTier,
+ * fabricated zero). Idle memory (sinceHint) is a line of the Live band,
  * not stacked in the hole.
  */
 import React, { useEffect, useMemo, useState } from 'react';
@@ -22,6 +22,7 @@ import AllocationRing, { type RingMark, type RingSlice } from '@/components/shar
 import { foundryMaterialFor, patinaFor } from '@/lib/foundry';
 import { TokenIcon } from '@/components/shared/TokenIcon';
 import { useCountUp } from '@/hooks/use-count-up';
+import { useReservedHeight } from '@/hooks/use-reserved-height';
 import { usePointerTilt } from '@/hooks/use-pointer-tilt';
 import { haptics } from '@/lib/haptics';
 import { formatUsd, MONEY_MASK } from '@/lib/money-format';
@@ -29,6 +30,8 @@ import { press, springPop, springPress, STAGGER_STEP_S } from '@/lib/motion-toke
 import { ARCHETYPES, strategyToArchetype } from '@/components/protection-cards/tokens';
 import { floorPercent, reserveLabel, resolvePlan, type CustomPlan, type Exposure, type PlanLeg } from '@/components/protection-cards/plan-preview';
 import { displayToken } from '@/lib/plan-legs';
+import { formatRecordAge, humanizeLedgerAction } from '@/constants/proof-feed';
+import { LEDGER_OTHER_TOKEN, type LedgerView } from '@/lib/shield-ledger-view';
 import type { MultichainPortfolio } from '@/hooks/use-multichain-balances';
 import { buildWalletPortfolioView, heldAsSymbol } from '@/lib/wallet-portfolio-view';
 import { useBalanceVisibility } from '@/context/app/BalanceVisibilityContext';
@@ -132,6 +135,19 @@ interface Props {
   /** The saved (or draft) Custom plan — `custom` resolves its legs and rules only from this. */
   customPlan?: CustomPlan | null;
   suppressPlanBadge?: boolean;
+  /** The plan's own verdict, punched into the object's header rather than
+   *  left in a row under it (design-language §5: the object carries its
+   *  state; there is no status foot). */
+  statusBadge?: React.ReactNode;
+  /**
+   * Verify band — the same ring re-slices into the public ledger. Arcs are
+   * one token's share of the decisions in the read window (a real proportion
+   * of a count, never a fabricated dollar weight), the hole counts the whole
+   * ledger, and the rows read the decisions instead of the allocation. The
+   * object is the verifier: nothing appends below it, and an unreadable feed
+   * leaves the plan on screen (§7: fail closed).
+   */
+  ledgerView?: LedgerView | null;
 }
 
 export function ProtectionPlanRing({
@@ -167,6 +183,8 @@ export function ProtectionPlanRing({
   floor = 'USD',
   customPlan = null,
   suppressPlanBadge = false,
+  statusBadge,
+  ledgerView = null,
 }: Props) {
   const archetypeId = strategyToArchetype(strategyKey);
   const archetype = archetypeId ? ARCHETYPES[archetypeId] : null;
@@ -185,15 +203,44 @@ export function ProtectionPlanRing({
         ? `Custom · ${identityArchetype.name} values`
         : 'Custom'
       : archetype?.name ?? '';
-  const allocations = useMemo(
+  const planAllocations = useMemo(
     () => legs ?? resolvePlan({ strategy: archetypeId, customPlan }).legs,
     [legs, archetypeId, customPlan],
   );
   const planRules = resolvePlan({ strategy: archetypeId, customPlan }).rules;
 
+  // Verify band: the arcs are decisions, not dollars. A view is only drawn
+  // when the feed was readable and named at least one token — otherwise the
+  // ring keeps the plan and the band fails closed.
+  const ledgerMode = ledgerView?.state === 'ready' && ledgerView.legs.length > 0;
+  // The rows swap from allocations to decisions; the reading keeps the height
+  // it had at rest, so opening Verify never moves the tab.
+  const { ref: legendRef, style: legendFloor } = useReservedHeight();
+  const ledgerAllocs: PlanLeg[] = useMemo(
+    () =>
+      (ledgerView?.legs ?? []).map((leg) => {
+        const age = formatRecordAge(leg.latest.timestamp);
+        return {
+          token: leg.token,
+          region: leg.foldedTokens
+            ? `${leg.foldedTokens} other tokens`
+            : `${humanizeLedgerAction(leg.latest.action)}${age ? ` · ${age}` : ''}`,
+          percent: leg.percent,
+          why: `${leg.count} of ${ledgerView?.windowCount ?? leg.count} decisions`,
+          label: leg.foldedTokens ? 'Other' : displayToken(leg.token),
+        };
+      }),
+    [ledgerView],
+  );
+  const allocations = ledgerMode ? ledgerAllocs : planAllocations;
+  const ledgerCountByToken = useMemo(
+    () => new Map((ledgerView?.legs ?? []).map((leg) => [leg.token, leg.count])),
+    [ledgerView],
+  );
+
   const walletView = useMemo(
-    () => buildWalletPortfolioView(portfolio, allocations, planRules),
-    [portfolio, allocations, planRules],
+    () => buildWalletPortfolioView(portfolio, planAllocations, planRules),
+    [portfolio, planAllocations, planRules],
   );
   const holdingByToken = useMemo(
     () => new Map(walletView.holdings.map((holding) => [holding.symbol, holding])),
@@ -211,6 +258,24 @@ export function ProtectionPlanRing({
   // ring is the plan waiting for funds.
   const slices: RingSlice[] = useMemo(() => {
     if (!archetype) return [];
+    if (ledgerMode && ledgerView) {
+      // One arc per token the ledger has decided about, sized by that
+      // token's share of the window. Same metals, same hatching: the
+      // material language carries over, only the measure changes.
+      return ledgerView.legs.map((leg, i) => ({
+        id: leg.token,
+        label: `${leg.foldedTokens ? 'Other' : displayToken(leg.token)} — ${leg.count} ${
+          leg.count === 1 ? 'decision' : 'decisions'
+        }`,
+        percent: leg.percent,
+        color:
+          (leg.foldedTokens ? QUIET_GRAY : TOKEN_COLORS[leg.token]) ??
+          (i === 0 ? accent : i === 1 ? accentSoft : QUIET_GRAY),
+        hatch: Boolean(rwaLegFor(leg.token)),
+        material: foundryMaterialFor(leg.token),
+        patina: patinaFor(leg.token),
+      }));
+    }
     if (!forcePlanLegs && !balancePreview && walletView.holdings.length > 0) {
       return walletView.holdings.map((holding, i) => ({
         id: holding.symbol,
@@ -235,7 +300,7 @@ export function ProtectionPlanRing({
         material: foundryMaterialFor(a.token),
         patina: patinaFor(a.token),
     }));
-  }, [archetype, walletView.holdings, allocations, balancePreview, forcePlanLegs, sample, accent, accentSoft]);
+  }, [archetype, ledgerMode, ledgerView, walletView.holdings, allocations, balancePreview, forcePlanLegs, sample, accent, accentSoft]);
 
   // Selection derivations feed the count-up hook below — and every hook
   // must run before the early return (rules of hooks): the ring simply
@@ -267,6 +332,27 @@ export function ProtectionPlanRing({
   });
   // Data motion (§6): the hole's total tweens old → new when balances move.
   const moneyCount = useCountUp(totalValue, { format: formatUsd });
+  // The ledger's own count, tweened into the same face — leaving the verify
+  // band must not snap a number.
+  const decisionCount = useCountUp(ledgerView?.totalDecisions ?? 0, {
+    duration: 0.9,
+  });
+
+  // Verify-band selection belongs to the reading, not the tab: tapping an arc
+  // here must not focus a plan slice (which would open the slice inspector
+  // and drop the band). It clears when the object goes back to the plan.
+  const [ledgerSelected, setLedgerSelected] = useState<string | null>(null);
+  useEffect(() => {
+    if (!ledgerMode) setLedgerSelected(null);
+  }, [ledgerMode]);
+  const activeToken = ledgerMode ? ledgerSelected : selectedToken;
+  const selectArc = (token: string) => {
+    if (ledgerMode) {
+      setLedgerSelected((prev) => (prev === token ? null : token));
+      return;
+    }
+    onSelectToken(selectedToken === token ? null : token);
+  };
 
   // Privacy switch: every dollar figure in this object (hole, legend,
   // projections) goes through formatMoney — dots while hidden, never a
@@ -280,6 +366,7 @@ export function ProtectionPlanRing({
   // total stillness once the user acts) and is skipped for reduced
   // motion.
   const flipAvailable =
+    !ledgerMode &&
     !balancePreview &&
     !sleeveOpen &&
     !isSleeveSelection(selectedToken) &&
@@ -513,7 +600,10 @@ export function ProtectionPlanRing({
   const purchasingPowerPreserved =
     projections?.optimizedPath?.purchasingPowerPreserved ?? 0;
   const showProjections =
-    !balancePreview && totalValue > 0 && (purchasingPowerLost > 0 || purchasingPowerPreserved > 0);
+    !ledgerMode &&
+    !balancePreview &&
+    totalValue > 0 &&
+    (purchasingPowerLost > 0 || purchasingPowerPreserved > 0);
 
   // One formatter for every dollar figure in the object; dots while the
   // user hides balances. Long totals step down one size so the face stays
@@ -526,6 +616,25 @@ export function ProtectionPlanRing({
   // `size` rides on the face so the number's type size is decided once,
   // here — never by which utility happens to win in the cascade.
   const hole: { number: React.ReactNode; label: React.ReactNode; hint: string; size?: string } = (() => {
+    if (ledgerMode && ledgerView) {
+      const leg = activeToken ? ledgerView.legs.find((l) => l.token === activeToken) : null;
+      if (leg) {
+        const age = formatRecordAge(leg.latest.timestamp);
+        return {
+          number: `${leg.count}` as React.ReactNode,
+          label: leg.foldedTokens ? 'other tokens' : displayToken(leg.token),
+          hint: `${humanizeLedgerAction(leg.latest.action)}${age ? ` · ${age}` : ''}`,
+        };
+      }
+      // The ledger's own count in the same face the savings number uses —
+      // the object changes what it measures, not where it sits.
+      return {
+        number: <motion.span>{decisionCount}</motion.span>,
+        label: 'decisions recorded',
+        hint: `arcs read the last ${ledgerView.windowCount}`,
+        size: 'text-2xl',
+      };
+    }
     if (holeOverride) {
       return {
         number: holeOverride.number ?? null,
@@ -634,7 +743,9 @@ export function ProtectionPlanRing({
       {compact ? null : (
       <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <h3 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white">
-          {balancePreview
+          {ledgerMode
+            ? 'The public ledger'
+            : balancePreview
             ? 'Preview allocation'
             : sample
               ? 'Sample portfolio'
@@ -645,7 +756,7 @@ export function ProtectionPlanRing({
         {/* The committed-plan hallmark lives on the object itself — a
             strike punched into the rim, not a badge beside it. */}
         <div className="flex items-center gap-2">
-        {!suppressPlanBadge && (onHoleTap ? (
+        {!suppressPlanBadge && !ledgerMode && (onHoleTap ? (
           <motion.button
             key={archetype.id}
             type="button"
@@ -678,6 +789,7 @@ export function ProtectionPlanRing({
             {planBadge}
           </motion.span>
         ))}
+        {statusBadge}
         </div>
       </div>
       )}
@@ -718,18 +830,24 @@ export function ProtectionPlanRing({
           </AnimatePresence>
           <AllocationRing
             slices={displaySlices}
-            selectedId={isSleeveSelection(selectedToken) ? null : selectedToken}
+            selectedId={isSleeveSelection(activeToken) ? null : activeToken}
             onSelect={(id) => {
               setHoleActed(true);
-              if (id === "__other__") {
-                setShowDust(true);
+              if (id === LEDGER_OTHER_TOKEN || id === "__other__") {
+                if (id === "__other__") setShowDust(true);
+                else selectArc(id);
                 return;
               }
               if (showDust && primary.some(({ slice }) => slice.id === id)) setShowDust(false);
-              onSelectToken(selectedToken === id ? null : id);
+              selectArc(id);
             }}
             ghost={
-              !balancePreview && selected && !empty && !onTarget && Math.abs(gapPts) > 2
+              !ledgerMode &&
+              !balancePreview &&
+              selected &&
+              !empty &&
+              !onTarget &&
+              Math.abs(gapPts) > 2
                 ? { id: selected.token, extraPercent: gapPts }
                 : null
             }
@@ -847,7 +965,10 @@ export function ProtectionPlanRing({
 
       {!compact && (
       <div
+        ref={legendRef}
+        style={legendFloor}
         data-testid="shield-legend"
+        data-ledger-mode={ledgerMode || undefined}
         className="instrument-reading instrument-inspect-hidden mt-3 divide-y divide-gray-100 dark:divide-white/[0.05]"
       >
         {showDust && (
@@ -856,12 +977,13 @@ export function ProtectionPlanRing({
           </p>
         )}
         {(showDust ? dust : primary).map(({ slice, alloc: a, held }, idx) => {
-          const isSelected = selectedToken === a.token;
+          const isSelected = activeToken === a.token;
+          const ledgerCount = ledgerMode ? ledgerCountByToken.get(a.token) ?? 0 : 0;
           return (
             <motion.button
               key={a.token}
               type="button"
-              onClick={() => { setHoleActed(true); onSelectToken(selectedToken === a.token ? null : a.token); }}
+              onClick={() => { setHoleActed(true); selectArc(a.token); }}
               aria-pressed={isSelected}
               whileTap={reducedMotion ? undefined : { ...press, transition: springPress }}
               initial={reducedMotion ? false : { opacity: 0, y: 6 }}
@@ -881,16 +1003,22 @@ export function ProtectionPlanRing({
                 </span>
               </span>
               <span className="text-sm font-black text-gray-900 dark:text-white tabular-nums">
-                {a.percent > 0 ? `${a.percent}% ${balancePreview ? 'preview' : 'plan'}` : 'not in plan'}
+                {ledgerMode
+                  ? `${ledgerCount} of ${ledgerView?.windowCount ?? ledgerCount}`
+                  : a.percent > 0 ? `${a.percent}% ${balancePreview ? 'preview' : 'plan'}` : 'not in plan'}
               </span>
               <span
                 className={`text-2xs font-bold tabular-nums w-20 text-right ${
-                  !balancePreview && held >= a.percent - 2
+                  ledgerMode
+                    ? 'text-gray-500 dark:text-gray-400'
+                    : !balancePreview && held >= a.percent - 2
                     ? 'text-emerald-600 dark:text-emerald-400'
                     : 'text-gray-500 dark:text-gray-400'
                 }`}
               >
-                {balancePreview
+                {ledgerMode
+                  ? `${a.percent}%`
+                  : balancePreview
                   ? `${savedLegs.find((leg) => leg.token === a.token)?.percent ?? 0}% saved`
                   : totalValue > 0
                     ? `${held.toFixed(0)}% held`

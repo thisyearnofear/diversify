@@ -30,8 +30,13 @@ import WalletButton from "../../wallet/WalletButton";
 import type { FinancialStrategy, UserExperienceMode } from "@/context/app/types";
 import { InstrumentShell } from "../../shared/InstrumentShell";
 import { shieldPatternFor } from "./shield-pattern";
-import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 import { VerifiedEvidence } from "../../shared/VerifiedEvidence";
+import { VerifierSealChip } from "@/components/shared/VerifiedEvidence";
+import { ShieldVerifyBand } from "./ShieldVerifyBand";
+import { ledgerViewFrom } from "@/lib/shield-ledger-view";
+import { useReservedHeight } from "@/hooks/use-reserved-height";
+import { StageBands, type StageBandOption } from "../../shared/StageBands";
+import { ShieldGuardianBand } from "./ShieldGuardianBand";
 import { useStrategy } from "@/context/app/StrategyContext";
 import { useProtectionProfile } from "@/hooks/use-protection-profile";
 import { useUserRegion } from "@/hooks/use-user-region";
@@ -58,7 +63,6 @@ import { useProofFeed } from "@/hooks/use-proof-feed";
 import { shieldBeats } from "@/lib/live-lines";
 import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
 import { motion, useReducedMotion } from "framer-motion";
-import { controlMotion } from "@/lib/motion-tokens";
 import { LiveLine } from "@/components/shared/LiveLine";
 import { haptics } from "@/lib/haptics";
 import { createEmptyPortfolio } from "@/hooks/use-multichain-balances";
@@ -74,7 +78,8 @@ import {
   type InflationRates,
 } from "@/lib/learn/protection-calculator";
 import { useNavigation } from "@/context/app/NavigationContext";
-import { useAIConversationOptional } from "@/context/AIConversationContext";
+
+type ShieldBand = "live" | "guardian" | "verify";
 
 interface Props {
   experienceMode: UserExperienceMode;
@@ -107,9 +112,6 @@ export function ProtectionNotConnected({
 }: Props) {
   const { financialStrategy, setFinancialStrategy } = useStrategy();
   const { pendingIntent, consumeIntent, navigateToGuardian } = useNavigation();
-  // The contextual Guardian door — present only where a conversation
-  // provider exists; opening it is always an explicit tap, never a send.
-  const conversation = useAIConversationOptional();
   const reducedMotion = useReducedMotion();
   const ambient = useAmbientOrigin();
   // Walletless ghost portfolio: the ring draws the plan's own slices, no
@@ -237,7 +239,24 @@ export function ProtectionNotConnected({
   // The live line under the full ring — same dated facts as connected
   // Shield, walletless because the data is public. It vanishes under the
   // compact compare/picker ring (the rail owns the attention there).
-  const { data: liveFeed } = useProofFeed();
+  const {
+    data: liveFeed,
+    isLoading: feedLoading,
+    isStale: feedStale,
+    error: feedError,
+  } = useProofFeed();
+  // The measure the Verify band draws — the same public counts the connected
+  // ring re-slices into. Walletless is no reason to read a different ledger.
+  const ledgerView = React.useMemo(
+    () =>
+      ledgerViewFrom(liveFeed, {
+        isLoading: feedLoading,
+        isStale: feedStale,
+        error: feedError,
+        maxLegs: ringCompact ? undefined : ringLegs.length,
+      }),
+    [liveFeed, feedLoading, feedStale, feedError, ringLegs, ringCompact],
+  );
   const liveBeats = React.useMemo(
     () => shieldBeats({ records: liveFeed?.recent, legs: ringLegs }),
     [liveFeed, ringLegs],
@@ -245,6 +264,36 @@ export function ProtectionNotConnected({
   const [acted, setActed] = React.useState(false);
   const liveLineShowing =
     !ringCompact && !sleeveOpen && !balance.isPreviewing && effectiveToken === null;
+
+  // The same presenter grammar as connected Shield (§5): one reading slot
+  // under the ring, one pill row that chooses what fills it. Live is the
+  // floor; a band with nothing to read withdraws its pill.
+  const [band, setBand] = React.useState<ShieldBand>("live");
+  const guardianBandOffered = showRing && !comparing;
+  // The floor withdraws with its reading: a planless visitor has no dated
+  // signal and no cycle door, so the row offers the ledger and nothing else.
+  const liveBandOffered = liveBeats.length > 0 || Boolean(onOpenCycle);
+  const bandOptions: StageBandOption<ShieldBand>[] = [
+    ...(liveBandOffered ? [{ id: "live" as const, label: "Live" }] : []),
+    ...(guardianBandOffered
+      ? [{ id: "guardian" as const, label: "Guardian" }]
+      : []),
+    { id: "verify", label: "Verify" },
+  ];
+  // A band whose pill has withdrawn falls back to the floor — the reading
+  // slot never keeps showing what the row no longer offers.
+  const activeBand: ShieldBand =
+    band === "guardian" && !guardianBandOffered ? "live" : band;
+  // The presenter owns every resting surface of the ring — including the
+  // compact picker, which is what a walletless visitor lands on. Gating it
+  // off there left unconnected visitors with no trust surface at all:
+  // Shield has no foot tier in either state, so the band is the only door.
+  // Compare, a sleeve, a preview or an open sheet still own the object.
+  const presenterShowing =
+    !comparing && !sleeveOpen && !balance.isPreviewing && !inspectorOpen;
+  React.useEffect(() => {
+    if (!presenterShowing) setBand("live");
+  }, [presenterShowing]);
 
   // The beat→object event — same grammar as connected Shield: a signal
   // on a plan leg's currency tremors the ring, the cadence breathes it.
@@ -290,6 +339,71 @@ export function ProtectionNotConnected({
     setIntentContext(null);
     haptics.confirm();
   };
+
+  const bandReading =
+    activeBand === "verify" ? (
+      <ShieldVerifyBand view={ledgerView} compact={ringCompact} />
+    ) : activeBand === "guardian" ? (
+      <ShieldGuardianBand
+        monitoring={false}
+        sample
+        onOpenActivity={() => {}}
+        onSetUp={() => {
+          navigateToGuardian({
+            summary: "An example Guardian decision",
+            prompt: "Show me an example Guardian decision",
+            example: true,
+          });
+          haptics.tap();
+        }}
+      />
+    ) : (
+      <div data-testid="shield-live-band" className="mt-2 space-y-1.5 text-center">
+        <LiveLine
+          testId="shield-live-line"
+          beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
+          alive={!acted && !inspectorOpen}
+          onBeatChange={reportBeat}
+          className="block text-2xs font-semibold text-gray-500 dark:text-gray-400"
+        />
+        {onOpenCycle && (
+          <button
+            type="button"
+            data-testid="cycle-entry"
+            onClick={() => {
+              onOpenCycle();
+              haptics.tap();
+            }}
+            className="min-h-tap text-2xs font-semibold text-blue-600 dark:text-blue-400"
+          >
+            What FX timing costs your next payment →
+          </button>
+        )}
+      </div>
+    );
+
+  // The slot keeps the height of the tallest band it holds, so opening
+  // Verify moves nothing but the ring's own slices.
+  const { ref: bandSlotRef, style: bandSlotFloor } = useReservedHeight();
+
+  const presenterSlot = presenterShowing ? (
+    <>
+      <div ref={bandSlotRef} style={bandSlotFloor}>
+        {bandReading}
+      </div>
+      <StageBands
+        testIdBase="shield"
+        groupLabel="What the plan shows"
+        options={bandOptions}
+        active={activeBand}
+        onSelect={(id) => {
+          haptics.tap();
+          // The active pill is the exit, and Live is the floor it returns to.
+          setBand(id === activeBand ? "live" : id);
+        }}
+      />
+    </>
+  ) : null;
 
   const object = (
     <div
@@ -373,6 +487,14 @@ export function ProtectionNotConnected({
           alignmentScore={null}
           empty
           walletless
+          ledgerView={
+            activeBand === "verify" && !balance.isPreviewing
+              ? ledgerView
+              : null
+          }
+          statusBadge={
+            activeBand === "verify" ? <VerifierSealChip /> : undefined
+          }
           floor={picking || (comparing && focusedPhilosophy) ? focusedFloor : ringFloor}
           onHoleTap={
             balance.isPreviewing || picking
@@ -387,6 +509,10 @@ export function ProtectionNotConnected({
           controls={
             !ringCompact ? (
               <div className="mt-3">
+                {/* Verify reads the ledger, not the user's balance — the
+                    balance dial steps aside for the reading, same as the
+                    connected tab's floor affordance. */}
+                {activeBand !== "verify" && (
                 <PlanFloorControl
                   value={balance.risk}
                   legs={balance.isPreviewing ? balanceLegs : ringLegs}
@@ -412,39 +538,23 @@ export function ProtectionNotConnected({
                     haptics.tap();
                   }}
                 />
+                )}
+                {/* The presenter is part of the object: the reading and its
+                    pills sit under the ring, and the CTA settles the card.
+                    The Guardian pill is the hand-off — the old quiet link
+                    under the button is gone (§5, no foot doors). */}
+                {presenterSlot}
                 {!balance.isPreviewing && !sleeveOpen && (
                   <WalletButton
                     variant="primary"
                     className="w-full mt-3"
                   />
                 )}
-                {!balance.isPreviewing && !sleeveOpen && !comparing && !picking && conversation && (
-                  <motion.button
-                    type="button"
-                    className="link-quiet mt-2"
-                    {...controlMotion(Boolean(reducedMotion))}
-                    onClick={() => {
-                      setActed(true);
-                      conversation.setDrawerOpen(true);
-                    }}
-                  >
-                    Explore this plan with Guardian
-                  </motion.button>
-                )}
               </div>
             ) : undefined
           }
         />
         </motion.div>
-        {liveLineShowing && (
-          <LiveLine
-            testId="shield-live-line"
-            beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
-            alive={!acted && !inspectorOpen}
-            onBeatChange={reportBeat}
-            className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
-          />
-        )}
       </div>
 
       {/* The picker's rail is the picker's control — it steps out while
@@ -571,71 +681,35 @@ export function ProtectionNotConnected({
               </button>
             </div>
           )}
+          {/* Under the compact picker the ring has no controls slot, so the
+              presenter lands here — after the rail, which is the picker's
+              own control. Walletless visitors get the same door. */}
+          {presenterSlot}
         </div>
       )}
     </div>
   );
 
-  const status = (
-    <div className="space-y-2">
-      {(showApacBanner || showCaribbeanBanner) && (
-        <div className="mb-1">
-          {showApacBanner && <ApacRailHonestyBanner />}
-          {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
-        </div>
-      )}
-      {balance.isPreviewing ? (
-          /* The commit moment owns the screen — trust stays, handoffs
-             and the demo link step out until it settles (§1 one job;
-             the dial already hides the rail, the CTA and the LiveLine). */
-          <VerifiedEvidence />
-        ) : (
-          <UnconnectedStatusTier>
-            {sleeveOpen && onCloseSleeve ? (
-              <button
-                type="button"
-                data-testid="rwa-sleeve-back"
-                onClick={() => {
-                  onCloseSleeve();
-                  haptics.tap();
-                }}
-                className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-              >
-                ← Back to plan
-              </button>
-            ) : onOpenCycle ? (
-              <button
-                type="button"
-                data-testid="cycle-entry"
-                onClick={() => {
-                  onOpenCycle();
-                  haptics.tap();
-                }}
-                className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-              >
-                What FX timing costs your next payment →
-              </button>
-            ) : showRing && !comparing ? (
-              <button
-                type="button"
-                data-testid="guardian-plan-link"
-                onClick={() => {
-                  navigateToGuardian({
-                    summary: "An example Guardian decision",
-                    prompt: "Show me an example Guardian decision",
-                    example: true,
-                  });
-                  haptics.tap();
-                }}
-                className="min-h-tap px-2 text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0"
-              >
-                See an example Guardian decision →
-              </button>
-            ) : null}
-          </UnconnectedStatusTier>
-      )}
-    </div>
-  );
+  const banner =
+    showApacBanner || showCaribbeanBanner ? (
+      <div className="space-y-1">
+        {showApacBanner && <ApacRailHonestyBanner />}
+        {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
+      </div>
+    ) : null;
+
+  // What stays below the object is disclosure and the commit moment only:
+  // the honesty banner a persona's corridor requires, and the trust line
+  // while a balance preview is asking for a decision. Everything the old
+  // foot tier carried (cycle entry, Guardian example, verify) is a band of
+  // the ring now.
+  const status =
+    banner || balance.isPreviewing ? (
+      <div className="space-y-2">
+        {banner}
+        {balance.isPreviewing && <VerifiedEvidence />}
+      </div>
+    ) : undefined;
 
   return <InstrumentShell object={object} inspector={balance.isPreviewing ? undefined : inspector} inspectorOpen={inspectorOpen && !balance.isPreviewing} status={status} pattern={pattern} />;
 }

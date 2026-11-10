@@ -87,17 +87,32 @@ export function getLedgerProofLabel(chainId: number | undefined | null): string 
 }
 
 /** Ledger actions are machine vocabulary; surfaces read by people doing a
- *  legitimacy check translate rather than shout enum names. */
+ *  legitimacy check translate rather than shout enum names. Macro records
+ *  carry a `KIND:SUBTYPE` action, so both halves read as words and the
+ *  colon becomes the same separator the rest of the line uses. */
 const LEDGER_ACTION_LABELS: Record<string, string> = {
   ADVISORY_HEARTBEAT: 'Guardian check-in',
   REBALANCE: 'Rebalance',
   SWAP: 'Swap',
   HOLD: 'Hold steady',
+  MACRO_OBSERVATION: 'Macro observation',
+  MACRO_SIGNAL: 'Macro signal',
+  FX_MOVE: 'FX move',
+  RATE_CUT: 'Rate cut',
+  PRICE_DEVIATION: 'Price deviation',
+  REHEARSAL: 'Rehearsal',
 };
 
 export function humanizeLedgerAction(action: string): string {
-  const key = action.toUpperCase();
-  return LEDGER_ACTION_LABELS[key] ?? action.replace(/_/g, ' ').toLowerCase();
+  return action
+    .toUpperCase()
+    .split(':')
+    .map(
+      (part) =>
+        LEDGER_ACTION_LABELS[part] ?? part.replace(/_/g, ' ').toLowerCase(),
+    )
+    .filter(Boolean)
+    .join(' · ');
 }
 
 /** Elapsed time for a ledger record's unix-seconds timestamp. */

@@ -48,7 +48,7 @@ import { useShieldIntent } from "./protect/use-shield-intent";
 import { useShieldMode } from "./protect/use-shield-mode";
 import { useVoiceVerbRegistry } from "@/context/app/VoiceVerbContext";
 import { ShieldSliceInspector } from "./protect/ShieldSliceInspector";
-import { ShieldStatusTier } from "./protect/ShieldStatusTier";
+import { ShieldGuardianBand } from "./protect/ShieldGuardianBand";
 import { DEMO_PORTFOLIO } from "@/lib/demo-data";
 
 import { ProtectionNotConnected } from "./protect/ProtectionNotConnected";
@@ -101,7 +101,15 @@ import { useProofFeed } from "@/hooks/use-proof-feed";
 import { shieldBeats } from "@/lib/live-lines";
 import { useBeatImpulse, useBeatReporter, useInstrumentDwell } from "@/hooks/use-beat-impulse";
 import { LiveLine } from "@/components/shared/LiveLine";
+import { StageBands, type StageBandOption } from "@/components/shared/StageBands";
+import { VerifierSealChip } from "@/components/shared/VerifiedEvidence";
+import { ShieldVerifyBand } from "./protect/ShieldVerifyBand";
+import { ledgerViewFrom } from "@/lib/shield-ledger-view";
+import { useReservedHeight } from "@/hooks/use-reserved-height";
+import StatusBadge from "@/components/shared/StatusBadge";
 import { useRouter } from "next/router";
+
+type ShieldBand = "live" | "guardian" | "verify";
 
 interface ProtectionTabProps {
   userRegion: Region;
@@ -691,7 +699,24 @@ export default function ProtectionTab({
   // local leg's watch cadence. Resting states only: it vanishes while
   // comparing, previewing, or when a slice/cycle or the gap CTA owns the
   // attention (two competing lines never share the surface).
-  const { data: liveFeed } = useProofFeed();
+  const {
+    data: liveFeed,
+    isLoading: feedLoading,
+    isStale: feedStale,
+    error: feedError,
+  } = useProofFeed();
+  // The measure the Verify band draws: the ledger's own counts, no invention,
+  // and no more rows than the plan legend it replaces (stage floor, §5).
+  const ledgerView = useMemo(
+    () =>
+      ledgerViewFrom(liveFeed, {
+        isLoading: feedLoading,
+        isStale: feedStale,
+        error: feedError,
+        maxLegs: shape === "picker" ? undefined : allocations.length,
+      }),
+    [liveFeed, feedLoading, feedStale, feedError, allocations, shape],
+  );
   const liveBeats = useMemo(
     () => shieldBeats({ records: liveFeed?.recent, legs: allocations }),
     [liveFeed, allocations],
@@ -736,6 +761,62 @@ export default function ProtectionTab({
     address &&
     guardianState !== "monitoring";
   const liveLineShowing = resting && !gapCtaShowing;
+  const restingText =
+    sleeveOpen || comparing
+      ? null
+      : shape === "quiet"
+        ? "Plan aligned."
+        : shape === "gap"
+          ? !focusedToken && biggestGap
+            ? null
+            : "Tap a slice to close the gap."
+          : shape === "fund"
+            ? "Add funds to start. Nothing moves without your approval."
+            : "Pick a plan to see what it would hold.";
+  // The floor is only a floor when it has something to read.
+  const liveBandOffered =
+    (liveLineShowing && !sleeveCueShowing && liveBeats.length > 0) ||
+    Boolean(restingText) ||
+    Boolean(!comparing && alignmentSinceHint) ||
+    (businessMorph && !focusedToken && !cycleOpen);
+
+  // The ring is a presenter: one reading slot beneath it, one pill row to
+  // choose what fills it — the same grammar Exchange's stage uses (§5: modes
+  // transform, never append). Live is the floor the other bands return to,
+  // and a band with nothing to read withdraws its pill.
+  const [band, setBand] = useState<ShieldBand>("live");
+  const guardianBandOffered =
+    Boolean(address) &&
+    !isDemo &&
+    (guardianState === "monitoring" ||
+      shape === "quiet" ||
+      (alignment.score != null && alignment.score >= 80));
+  const bandOptions: StageBandOption<ShieldBand>[] = [
+    ...(liveBandOffered ? [{ id: "live" as const, label: "Live" }] : []),
+    ...(guardianBandOffered
+      ? [{ id: "guardian" as const, label: "Guardian" }]
+      : []),
+    // Shield keeps no foot tier, so the Verify pill never withdraws: it is
+    // the only trust host this tab has, connected or not.
+    { id: "verify", label: "Verify" },
+  ];
+  // A band whose pill has withdrawn falls back to the floor — the reading
+  // slot never keeps showing what the row no longer offers.
+  const activeBand: ShieldBand =
+    band === "guardian" && !guardianBandOffered ? "live" : band;
+  // The presenter sits on every resting surface — including the gap CTA,
+  // where the dated line itself steps aside but the plan's other readings
+  // stay one tap away.
+  const presenterShowing = resting && !tiltShowing;
+  useEffect(() => {
+    if (!presenterShowing) setBand("live");
+  }, [presenterShowing]);
+
+  // The slot keeps the height of the tallest band it holds, so opening
+  // Verify moves nothing but the ring's own slices. Declared before the
+  // loading early return below — hooks must run in the same order on every
+  // render.
+  const { ref: bandSlotRef, style: bandSlotFloor } = useReservedHeight();
 
   // The beat→object event: a fresh signal on a plan leg's currency
   // tremors the ring, the standing cadence breathes it — the caption
@@ -1243,6 +1324,126 @@ export default function ProtectionTab({
     </div>
   );
 
+  const guardianActivityContext =
+    guardianState === "monitoring" && address && focusedToken && !isSleeveSelection(focusedToken)
+      ? {
+          summary: `${focusedToken} — ${selectedHeld.toFixed(0)}% held${
+            selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""
+          }`,
+          prompt: `Guardian, what's the status on my ${focusedToken} holding (${selectedHeld.toFixed(
+            0,
+          )}% held${selectedAlloc ? ` vs ${selectedAlloc.percent}% target` : ""}) for my ${planName} plan?`,
+        }
+      : undefined;
+
+
+  const bandReading =
+    activeBand === "verify" ? (
+      <ShieldVerifyBand view={ledgerView} compact={shape === "picker"} />
+    ) : activeBand === "guardian" ? (
+      <ShieldGuardianBand
+        monitoring={guardianState === "monitoring"}
+        planName={planName}
+        activityContext={guardianActivityContext}
+        onOpenActivity={() => navigateToGuardian(guardianActivityContext)}
+        onSetUp={setUpGuardian}
+        sync={
+          address && guardianTarget && !isDemo
+            ? {
+                synced: guardianSynced,
+                syncing: planSyncing,
+                onSync: syncPlanToGuardian,
+              }
+            : null
+        }
+      />
+    ) : (
+      <div data-testid="shield-live-band" className="mt-2 space-y-1.5 text-center">
+        {liveLineShowing && !sleeveCueShowing && (
+          <LiveLine
+            testId="shield-live-line"
+            beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
+            alive={!acted && !cycleOpen && !tiltShowing}
+            onBeatChange={reportBeat}
+            className="block text-2xs font-semibold text-gray-500 dark:text-gray-400"
+          />
+        )}
+        {restingText && (
+          <p
+            data-testid={shape === "quiet" ? "shield-quiet" : undefined}
+            className="text-xs text-gray-600 dark:text-gray-300"
+          >
+            {restingText}
+          </p>
+        )}
+        {!comparing && alignmentSinceHint && (
+          <p
+            data-testid="shield-since-last-visit"
+            className="text-3xs font-medium text-gray-400 dark:text-gray-500 tabular-nums"
+          >
+            {alignmentSinceHint}
+          </p>
+        )}
+        {businessMorph && !focusedToken && !cycleOpen && (
+          <button
+            type="button"
+            data-testid="cycle-entry"
+            onClick={() => openCycle("next")}
+            className="min-h-tap text-2xs font-semibold text-blue-600 dark:text-blue-400"
+          >
+            What FX timing costs your next payment →
+          </button>
+        )}
+      </div>
+    );
+
+  const presenter = (
+    <StageBands
+      testIdBase="shield"
+      groupLabel="What the plan shows"
+      options={bandOptions}
+      active={activeBand}
+      onSelect={(id) => {
+        haptics.tap();
+        // The active pill is the exit, and Live is the floor it returns to.
+        setBand(id === activeBand ? "live" : id);
+      }}
+    />
+  );
+
+  // The ring's reading slot, mounted wherever the resting object sits —
+  // ring shapes and the plan picker both present, so no shape loses trust.
+  // Only the reading is floored: the pill row is a constant, so opening a
+  // band moves the words, never the ring or the page.
+  const presenterSlot = presenterShowing ? (
+    <>
+      <div ref={bandSlotRef} style={bandSlotFloor}>
+        {bandReading}
+      </div>
+      {presenter}
+    </>
+  ) : null;
+
+  const ringStatus = (
+    <span data-testid="shield-ring-status" className="shrink-0">
+      {shape === "fund" ? (
+        <StatusBadge label="Wallet needs funds" tone="warning" compact />
+      ) : shape === "gap" ? (
+        <StatusBadge label="Plan needs review" tone="info" compact />
+      ) : shape === "picker" ? (
+        <StatusBadge label="Choose a plan" tone="neutral" compact />
+      ) : (
+        <StatusBadge label="Plan aligned" tone="ready" compact />
+      )}
+    </span>
+  );
+
+  // Verify is a band of the object, not a panel under it: the ring re-slices
+  // into the ledger, so the badge it wears becomes the chain's own verdict
+  // and the plan's own controls step aside for the reading.
+  const verifyBandShowing = activeBand === "verify";
+  const ringBadge = verifyBandShowing ? <VerifierSealChip /> : ringStatus;
+
   const object = (
     <div
       onPointerDownCapture={() => setActed(true)}
@@ -1269,6 +1470,7 @@ export default function ProtectionTab({
             compact
             holeOverride={compareHole}
             floor={previewFloor}
+            statusBadge={ringStatus}
           />
           <PhilosophyCoinRail
             selected={focusedPhilosophy}
@@ -1305,6 +1507,7 @@ export default function ProtectionTab({
               </button>
             </div>
           )}
+          {presenterSlot}
         </div>
       )}
       {planRingVisible && shape !== "picker" && (
@@ -1370,7 +1573,13 @@ export default function ProtectionTab({
             planCommittedAt={config.planCommittedAt}
             ledgerStrikes={ledgerStrikes}
             floor={comparing ? previewFloor : planFloor}
-            controls={tiltShowing && guardianTilt ? (
+            ledgerView={
+              verifyBandShowing && !balance.isPreviewing
+                ? ledgerView
+                : null
+            }
+            statusBadge={balance.isPreviewing ? undefined : ringBadge}
+            controls={verifyBandShowing ? undefined : tiltShowing && guardianTilt ? (
               <div className="mt-3 space-y-2" data-testid="guardian-tilt-preview">
                 <p className="text-center text-xs text-gray-600 dark:text-gray-300">
                   {guardianTilt.tilt.reason}
@@ -1505,15 +1714,7 @@ export default function ProtectionTab({
               Hatched wedge: tokenized assets · tap it to look inside
             </p>
           )}
-          {liveLineShowing && !sleeveCueShowing && (
-            <LiveLine
-              testId="shield-live-line"
-              beats={liveBeats.map((b) => ({ key: b.key, content: b.text }))}
-              alive={!acted && !cycleOpen && !tiltShowing}
-              onBeatChange={reportBeat}
-              className="mt-2 block text-center text-2xs font-semibold text-gray-500 dark:text-gray-400"
-            />
-          )}
+          {presenterSlot}
           {/* Compare transformation: the coin rail slides in under the
               compact ring — a tap previews, a second tap opens details,
               "Use this plan" commits. */}
@@ -1673,36 +1874,6 @@ export default function ProtectionTab({
     />
   );
 
-  const status = (
-    <ShieldStatusTier
-      isPreviewing={balance.isPreviewing}
-      guardianState={guardianState}
-      shape={shape}
-      sleeveOpen={sleeveOpen}
-      comparing={comparing}
-      focusedToken={focusedToken}
-      selectedHeld={selectedHeld}
-      selectedAlloc={selectedAlloc}
-      planName={planName}
-      address={address}
-      biggestGap={biggestGap}
-      alignmentScore={alignment.score}
-      exitCompare={exitCompare}
-      navigateToGuardian={navigateToGuardian}
-      setFocusedToken={setFocusedToken}
-      onSetUpGuardian={setUpGuardian}
-      businessMorph={businessMorph}
-      cycleOpen={cycleOpen}
-      onOpenCycle={() => openCycle("next")}
-      sinceHint={alignmentSinceHint ?? undefined}
-      planSync={
-        address && guardianTarget && !isDemo
-          ? { synced: guardianSynced, syncing: planSyncing, onSync: syncPlanToGuardian }
-          : null
-      }
-    />
-  );
-
   // Stellar mode owns the network surface — strategies run on wallet chains,
   // so Shield shows the honest account panel instead of the EVM object.
   if (stellarMode) {
@@ -1750,7 +1921,6 @@ export default function ProtectionTab({
         pattern={pattern}
         object={object}
         inspector={inspector}
-        status={status}
         portfolio={{
           ...activePortfolio,
           isLoading: activePortfolio.isLoading || Boolean(isLoading),

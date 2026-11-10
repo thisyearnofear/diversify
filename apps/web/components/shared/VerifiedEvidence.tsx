@@ -118,6 +118,31 @@ function VerifierDoors({
   );
 }
 
+/** What the feed says, plus what the chain independently attests to it.
+ *  Shared by the verdict layer and the chip the marquee object wears when the
+ *  verifier owns the object itself — one derivation, so a chip can never read
+ *  "verified" where the panel reads "not confirmed". */
+function useVerifierVerdict() {
+  const { data, isLoading, isStale, error } = useProofFeed();
+  const sample = sampleRecord(data?.recent);
+  const checkable = sample && isCheckable(sample) ? sample : null;
+  const statuses = useVerifiedTxs(
+    checkable
+      ? [{ key: rowKeyFor(checkable), txHash: checkable.settlementTxHash, chainId: checkable.chainId }]
+      : [],
+  );
+  return {
+    data,
+    isLoading,
+    isStale,
+    error,
+    sample,
+    checkable,
+    chainStatus: checkable ? statuses[rowKeyFor(checkable)] : undefined,
+    total: data?.stats?.totalRecommendations ?? 0,
+  };
+}
+
 function VerdictLayer({
   onCheck,
   onDetail,
@@ -127,20 +152,16 @@ function VerdictLayer({
   onDetail: () => void;
   /** `stage` is the verifier as the marquee object — the count is its face
    *  and everything centers, because the slot it transforms is the screen's
-   *  subject. `inline` is the same facts inside a status rail. */
-  presentation?: "inline" | "stage";
+   *  subject. `inline` is the same facts inside a status rail. `doors` is for
+   *  a tab whose object already carries the verdict (the ring re-sliced into
+   *  the ledger): the count, the seal and the records live in the object, so
+   *  the slot keeps only the two ways deeper — one line, no expansion. */
+  presentation?: "inline" | "stage" | "doors";
 }) {
-  const { data, isLoading, isStale, error } = useProofFeed();
-  const sample = sampleRecord(data?.recent);
-  const checkable = sample && isCheckable(sample) ? sample : null;
-  const statuses = useVerifiedTxs(
-    checkable
-      ? [{ key: rowKeyFor(checkable), txHash: checkable.settlementTxHash, chainId: checkable.chainId }]
-      : [],
-  );
-  const chainStatus = checkable ? statuses[rowKeyFor(checkable)] : undefined;
-  const total = data?.stats?.totalRecommendations ?? 0;
+  const { data, isLoading, isStale, error, sample, chainStatus, total } =
+    useVerifierVerdict();
   const count = useCountUp(total);
+  const doorsOnly = presentation === "doors";
   const stage = presentation === "stage";
 
   if (isLoading && !data) {
@@ -153,14 +174,27 @@ function VerdictLayer({
 
   if (!data && error) {
     return (
-      <div className={`space-y-2 ${stage ? "text-center" : ""}`} data-testid="verifier-verdict">
+      <div className={`space-y-2 ${stage || doorsOnly ? "text-center" : ""}`} data-testid="verifier-verdict">
         <p className="text-sm font-semibold text-ink">
           The public ledger isn&apos;t reachable right now.
         </p>
         <p className="text-2xs text-ink-muted">
           Nothing is claimed until it can be read. The addresses never change.
         </p>
-        <VerifierDoors center={stage} onCheck={onCheck} onDetail={onDetail} />
+        <VerifierDoors center={stage || doorsOnly} onCheck={onCheck} onDetail={onDetail} />
+      </div>
+    );
+  }
+
+  if (doorsOnly) {
+    return (
+      <div className="space-y-1.5 text-center" data-testid="verifier-verdict">
+        {isStale && (
+          <p role="status" className="text-3xs text-amber-600 dark:text-amber-400">
+            Showing the last read, not a fresh one.
+          </p>
+        )}
+        <VerifierDoors center onCheck={onCheck} onDetail={onDetail} />
       </div>
     );
   }
@@ -240,6 +274,45 @@ function VerdictLayer({
 
       <VerifierDoors center={stage} onCheck={onCheck} onDetail={onDetail} />
     </div>
+  );
+}
+
+/** The verdict as one chip — what the marquee object wears in its badge slot
+ *  while the verifier owns the object itself (§7: the seal belongs to the
+ *  reading, not to a panel below it). It reads the same chain attestation as
+ *  the panel, so a chip never claims what the panel would withhold. */
+export function VerifierSealChip({ className = "" }: { className?: string }) {
+  const { data, isLoading, error, chainStatus } = useVerifierVerdict();
+  const verified = chainStatus === "verified";
+  const label =
+    isLoading && !data
+      ? "Reading the ledger…"
+      : !data && error
+        ? "Ledger unreachable"
+        : verified
+          ? "Verified on the chain"
+          : "The Guardian’s last record";
+  return (
+    <span
+      role="status"
+      data-testid="verifier-chip"
+      data-verified={verified || undefined}
+      className={`inline-flex min-h-7 items-center gap-1.5 rounded-md border border-line px-2 py-1 text-xs font-bold text-ink ${
+        !data && error ? "text-ink-muted" : ""
+      } ${className}`.trim()}
+    >
+      {verified ? (
+        <RiveVerifiedSeal size={22} verified />
+      ) : (
+        <span
+          aria-hidden
+          className="flex size-5 shrink-0 items-center justify-center rounded border border-line bg-surface"
+        >
+          <Hallmark size={11} className="text-ink-subtle" />
+        </span>
+      )}
+      <span>{label}</span>
+    </span>
   );
 }
 
@@ -438,7 +511,7 @@ export function VerifiedEvidencePanel({
   presentation = "inline",
 }: {
   className?: string;
-  presentation?: "inline" | "stage";
+  presentation?: "inline" | "stage" | "doors";
 }) {
   const [layer, setLayer] = useState<Layer>("verdict");
   return (

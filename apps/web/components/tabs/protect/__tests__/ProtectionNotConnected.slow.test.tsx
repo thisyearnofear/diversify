@@ -105,6 +105,8 @@ vi.mock("@/components/shared/CaribbeanRailHonestyBanner", () => ({
 
 vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
+  VerifiedEvidencePanel: () => <div data-testid="verified-evidence">Verified</div>,
+  VerifierSealChip: () => <span data-testid="verifier-seal-chip">Verified</span>,
 }));
 
 // The live line's beats come from the proof feed — a holder the tests
@@ -138,12 +140,26 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     expect(
       screen.queryByRole("button", { name: "Connect wallet" }),
     ).not.toBeInTheDocument();
-    // Nothing but coins: the demo link moved to app chrome, and the
-    // planless picker carries no other affordance here.
+    // Nothing but coins and the presenter: the demo link moved to app
+    // chrome, and there is no foot tier under the picker. Walletless is no
+    // reason to read a different ledger — the band row is the only trust
+    // door Shield has here, so it stays on the planless surface too.
     const buttons = screen
       .getAllByRole("button")
-      .filter((b) => !b.getAttribute("data-testid")?.startsWith("coin-"));
+      .filter(
+        (b) =>
+          !b.getAttribute("data-testid")?.startsWith("coin-") &&
+          !b.getAttribute("data-testid")?.startsWith("shield-band-"),
+      );
     expect(buttons.length).toBe(0);
+    expect(screen.getByTestId("shield-bands")).toBeInTheDocument();
+    // The floor withdraws with its reading — with no feed and no plan, the
+    // picker has nothing dated to say. The ledger is the one door left.
+    expect(screen.queryByTestId("shield-band-live")).not.toBeInTheDocument();
+    expect(screen.getByTestId("shield-band-verify")).toBeInTheDocument();
+    // A planless visitor is not being offered a Guardian.
+    expect(screen.queryByTestId("shield-band-guardian")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("status-tier")).not.toBeInTheDocument();
   });
 
   it("planless: the first coin tap only previews — 'Use this plan' is the primary commit", () => {
@@ -186,8 +202,10 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.financialStrategy = "africapitalism";
     try {
       render(<ProtectionNotConnected experienceMode="simple" />);
+      // The Guardian's state is a band of the ring, chosen by its pill.
+      fireEvent.click(screen.getByTestId("shield-band-guardian"));
       const link = screen.getByTestId("guardian-plan-link");
-      expect(link).toHaveTextContent("See an example Guardian decision");
+      expect(link).toHaveTextContent("See an example decision");
       fireEvent.click(link);
       expect(navState.navigateToGuardian).toHaveBeenCalledWith(
         expect.objectContaining({ example: true }),
@@ -281,17 +299,28 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   });
 
 
-  it("keeps trust as a quiet status-tier line (shared tier) — no proof ticker, no demo link", () => {
-    render(<ProtectionNotConnected experienceMode="simple" />);
+  it("keeps trust as a band of the ring — no proof ticker, no demo link", () => {
+    mockState.financialStrategy = "africapitalism";
+    try {
+      render(<ProtectionNotConnected experienceMode="simple" />);
 
-    expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
-    // Home and Exchange carry no proof card; Shield's unconnected tier
-    // doesn't either — the Verified line covers proof.
-    expect(screen.queryByTestId("proof-ticker")).not.toBeInTheDocument();
-    // The sample-plan switch is app chrome now, not a per-tab foot link.
-    expect(
-      screen.queryByRole("button", { name: "Explore a sample plan" }),
-    ).not.toBeInTheDocument();
+      // No foot tier at all: the Verify pill rewrites the reading slot.
+      expect(screen.queryByTestId("status-tier")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("shield-band-verify"));
+      expect(screen.getByTestId("shield-verifier")).toBeInTheDocument();
+      expect(
+        within(screen.getByTestId("shield-verifier")).getByTestId("verified-evidence"),
+      ).toBeInTheDocument();
+      // Home and Exchange carry no proof card; Shield's unconnected morph
+      // doesn't either — the verifier covers proof.
+      expect(screen.queryByTestId("proof-ticker")).not.toBeInTheDocument();
+      // The sample-plan switch is app chrome now, not a per-tab foot link.
+      expect(
+        screen.queryByRole("button", { name: "Explore a sample plan" }),
+      ).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
   });
 
   it("persona morphs the status tier: APAC philosophy from Asia shows the APAC banner", () => {
@@ -623,7 +652,10 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     );
 
     expect(screen.queryByTestId("shield-philosophy-rail")).not.toBeInTheDocument();
-    expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
+    // The lens closes from inside itself — no back link under the ring,
+    // and the presenter steps aside while the lens owns the surface.
+    expect(screen.queryByTestId("rwa-sleeve-back")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("shield-bands")).not.toBeInTheDocument();
     expect(ring()).toHaveAttribute("width", "200");
 
     // Back to plan — the picker returns exactly as it was, teaser and all.
@@ -655,10 +687,12 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
         />,
       );
 
-      // Resting: the teaser wedge + the Guardian hand-off are present.
+      // Resting: the teaser wedge is on the object and the Guardian's
+      // example door is a band of the ring.
       expect(
         screen.getByRole("button", { name: /Tokenized assets — tap to look inside/ }),
       ).toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("shield-band-guardian"));
       expect(
         screen.getByTestId("guardian-plan-link"),
       ).toBeInTheDocument();
@@ -670,6 +704,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
         screen.getByRole("button", { name: "Use this balance" }),
       ).toBeInTheDocument();
       expect(screen.queryByTestId("guardian-plan-link")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("shield-bands")).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /Tokenized assets — tap to look inside/ }),
       ).not.toBeInTheDocument();
@@ -685,35 +720,47 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
 
   it("business morph: onOpenCycle renders the cycle entry instead of the tokenized link", () => {
     const onOpenCycle = vi.fn();
-    render(
-      <ProtectionNotConnected
-        experienceMode="simple"
+    mockState.financialStrategy = "africapitalism";
+    try {
+      render(
+        <ProtectionNotConnected
+          experienceMode="simple"
        
-        onOpenCycle={onOpenCycle}
-        onOpenSleeve={vi.fn()}
-        onCloseSleeve={vi.fn()}
-      />,
-    );
+          onOpenCycle={onOpenCycle}
+          onOpenSleeve={vi.fn()}
+          onCloseSleeve={vi.fn()}
+        />,
+      );
 
-    expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByTestId("cycle-entry"));
-    expect(onOpenCycle).toHaveBeenCalledTimes(1);
+      expect(screen.queryByTestId("rwa-sleeve-entry")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByTestId("cycle-entry"));
+      expect(onOpenCycle).toHaveBeenCalledTimes(1);
+    } finally {
+      mockState.financialStrategy = null;
+    }
   });
 
-  it("business morph: the sleeve back button still owns the open lens", () => {
-    render(
-      <ProtectionNotConnected
-        experienceMode="simple"
+  it("business morph: the open lens leaves the cycle entry aside", () => {
+    mockState.financialStrategy = "africapitalism";
+    try {
+      render(
+        <ProtectionNotConnected
+          experienceMode="simple"
        
-        onOpenCycle={vi.fn()}
-        sleeveOpen
-        onOpenSleeve={vi.fn()}
-        onCloseSleeve={vi.fn()}
-      />,
-    );
+          onOpenCycle={vi.fn()}
+          sleeveOpen
+          onOpenSleeve={vi.fn()}
+          onCloseSleeve={vi.fn()}
+        />,
+      );
 
-    expect(screen.getByTestId("rwa-sleeve-back")).toBeInTheDocument();
-    expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
+      // No foot back link — the sheet closes itself — and while the lens is
+      // open the presenter, cycle entry included, is off the surface.
+      expect(screen.queryByTestId("rwa-sleeve-back")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("cycle-entry")).not.toBeInTheDocument();
+    } finally {
+      mockState.financialStrategy = null;
+    }
   });
 
   it("persona morphs the status tier: Caribbean philosophy shows the Caribbean banner", () => {
