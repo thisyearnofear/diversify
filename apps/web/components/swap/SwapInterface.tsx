@@ -27,6 +27,9 @@ import { MTP_BUYABLE } from "../onramp/MtPelerinOnramp";
 import { savePendingFund } from "@/lib/pending-fund";
 import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY } from "../shared/palette";
+import { VerifiedEvidencePanel } from "../shared/VerifiedEvidence";
+import { Hallmark } from "../shared/Hallmark";
+import { haptics } from "@/lib/haptics";
 import { springPop, springSoft, STAGGER_STEP_S } from "@/lib/motion-tokens";
 import { useExperience } from "@/context/app/ExperienceContext";
 import { useStrategy } from "@/context/app/StrategyContext";
@@ -310,6 +313,10 @@ const SwapInterface = forwardRef<
   // completion carries leg2Hint and stays in the ticket for leg 2 —
   // no receipt there.
   const [receipt, setReceipt] = useState<PairReceipt | null>(null);
+  // The verifier is a mode of the stage, not a panel below it: tapping
+  // the line rewrites the resting object itself (§5 — modes transform,
+  // never append). Walletless only; connected users keep the rail's tier.
+  const [stageVerifier, setStageVerifier] = useState(false);
   useEffect(() => {
     if (status !== "completed" || leg2Hint) return;
     const settledAt = Date.now();
@@ -375,6 +382,7 @@ const SwapInterface = forwardRef<
   ]);
 
   const wakeTicket = () => {
+    setStageVerifier(false);
     setMode("ticket");
     try {
       window.sessionStorage.setItem("diversifi.exchange.mode", "ticket");
@@ -382,6 +390,7 @@ const SwapInterface = forwardRef<
   };
   const collapseToStage = () => {
     setAmount("");
+    setStageVerifier(false);
     setMode("stage");
     try {
       window.sessionStorage.removeItem("diversifi.exchange.mode");
@@ -539,7 +548,7 @@ const SwapInterface = forwardRef<
         )}
 
         <LayoutGroup id="exchange-pair">
-        {!inTicket ? (
+        {!inTicket && !stageVerifier ? (
           <>
             <PairStage
               fromToken={fromToken}
@@ -634,7 +643,48 @@ const SwapInterface = forwardRef<
                 />
               )
             )}
+            {/* Trust lives in the object the visitor reads, never at the
+                card's foot (§7). The line is the entry; tapping it turns
+                the stage into the verifier. Walletless only — connected
+                users keep the tier's trust rail. */}
+            {!address && !receipt && (
+              <div className="mt-4 flex flex-col items-center text-center">
+                <p className="text-2xs text-ink-muted">
+                  Every settlement is a public record —
+                </p>
+                <button
+                  type="button"
+                  data-testid="stage-verifier-open"
+                  onClick={() => {
+                    haptics.tap();
+                    setStageVerifier(true);
+                  }}
+                  className="inline-flex min-h-tap items-center gap-1.5 py-1.5 text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <Hallmark size={10} className="opacity-70" />
+                  <span className="font-semibold tracking-wide">Verify evidence</span>
+                  <span className="ml-0.5 text-3xs opacity-50" aria-hidden="true">+</span>
+                </button>
+              </div>
+            )}
           </>
+        ) : stageVerifier ? (
+          /* The verifier takes the stage itself — the same morph the ticket
+             uses (§5: modes transform, never append). "← Pair" collapses back. */
+          <div data-testid="stage-verifier" className="mx-auto w-full max-w-[420px]">
+            <button
+              type="button"
+              aria-label="Back to pair view"
+              onClick={() => {
+                haptics.tap();
+                setStageVerifier(false);
+              }}
+              className="mb-1 -ml-1 px-1 text-2xs text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 min-h-[32px]"
+            >
+              ← Pair
+            </button>
+            <VerifiedEvidencePanel />
+          </div>
         ) : (
           <>
         {!isLoading && status === "idle" && !leg2Hint && !phoneNumber && (

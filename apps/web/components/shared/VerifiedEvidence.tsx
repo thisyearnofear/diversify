@@ -5,6 +5,10 @@
  * trust tier (§7 Honesty is restraint). Tap/hover rewrites the artefact in
  * place to the 5 dots + shared ledger + Guardian #1 + working ?verify= check —
  * not a chain banner. Respects docs/design-language.md §7 Chain-agnostic trust.
+ *
+ * VerifiedEvidencePanel is the same disclosure without the accordion chrome —
+ * for tabs that transform their marquee slot into the verifier (§7: modes
+ * transform, never append) instead of growing a panel below the object.
  */
 
 import React, { useRef, useState } from "react";
@@ -37,13 +41,11 @@ function shortHex(hash: string): string {
   return hash.length > 14 ? `${hash.slice(0, 8)}…${hash.slice(-6)}` : hash;
 }
 
-export function VerifiedEvidence({ className = "" }: Props) {
-  const [expanded, setExpanded] = useState(false);
+export function VerifiedEvidencePanel({ className = "" }: { className?: string }) {
   const [hash, setHash] = useState("");
   const [network, setNetwork] = useState<number>(VERIFICATION_CHAINS[0].chainId);
   const [verify, setVerify] = useState<VerifyState>({ kind: "idle" });
   const requestSeq = useRef(0);
-  const reducedMotion = useReducedMotion();
 
   const trimmed = hash.trim();
   const hashValid = VERIFY_HASH_PATTERN.test(trimmed);
@@ -81,28 +83,7 @@ export function VerifiedEvidence({ className = "" }: Props) {
   };
 
   return (
-    <div className={className}>
-      <button
-        type="button"
-        aria-expanded={expanded}
-        onClick={() => setExpanded((v) => !v)}
-        className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
-      >
-        <Hallmark size={10} className="opacity-70" />
-        <span className="font-semibold tracking-wide">Verify evidence</span>
-        <span className="text-3xs opacity-50 ml-0.5" aria-hidden="true">{expanded ? "−" : "+"}</span>
-      </button>
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={reducedMotion ? false : { opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: reducedMotion ? 0 : 0.22, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div className="mt-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-3 space-y-2">
+    <div className={`mt-2 rounded-xl border border-gray-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-3 space-y-2 ${className}`.trim()}>
               <p className="text-xs text-ink-muted">
                 Check an on-chain receipt, not an allocation&apos;s safety or return.
               </p>
@@ -216,6 +197,36 @@ export function VerifiedEvidence({ className = "" }: Props) {
                 )}
               </div>
             </div>
+  );
+}
+
+export function VerifiedEvidence({ className = "" }: Props) {
+  const [expanded, setExpanded] = useState(false);
+  const reducedMotion = useReducedMotion();
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((v) => !v)}
+        className="relative inline-flex items-center gap-1.5 py-1.5 -my-1.5 text-2xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 rounded before:absolute before:inset-x-[-8px] before:inset-y-[-10px] before:content-['']"
+      >
+        <Hallmark size={10} className="opacity-70" />
+        <span className="font-semibold tracking-wide">Verify evidence</span>
+        <span className="text-3xs opacity-50 ml-0.5" aria-hidden="true">{expanded ? "−" : "+"}</span>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.22, ease: "easeOut" }}
+            className="overflow-hidden"
+          >
+            <VerifiedEvidencePanel />
           </motion.div>
         )}
       </AnimatePresence>

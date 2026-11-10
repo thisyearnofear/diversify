@@ -1014,6 +1014,22 @@ body {
       grid-template-columns: minmax(320px, 1.2fr) minmax(0, 1fr);
     }
 
+    /* The centred stage (design-language §1, Guardian's grammar): the
+       balancer is the marquee and everything reads below it — event,
+       corridor line, horizon, then the one CTA. One column, no split
+       between the object and its explanation. */
+    .instrument-composition.pair-stage.is-stacked {
+      max-width: 34rem;
+    }
+
+    .instrument-composition.pair-stage.is-stacked .instrument-reading {
+      text-align: center;
+    }
+
+    .instrument-composition.pair-stage.is-stacked [data-testid="corridor-line"] {
+      text-align: center;
+    }
+
     /* The beam is a SCALE, and a scale has a proportion. Stretched across
        the full artifact column it became a 950px line with two 72px coins
        at the ends — the physical metaphor read as a divider, and the stage

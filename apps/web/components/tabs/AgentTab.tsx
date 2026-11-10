@@ -23,7 +23,7 @@ import { InstrumentShell } from "../shared/InstrumentShell";
 import { InstrumentWait } from "../shared/InstrumentWait";
 import { InspectorSheet } from "../shared/InspectorSheet";
 import { StatusTier } from "../shared/StatusTier";
-import { VerifiedEvidence } from "../shared/VerifiedEvidence";
+import { VerifiedEvidence, VerifiedEvidencePanel } from "../shared/VerifiedEvidence";
 import { GuardianMascot } from "../shared/GuardianMascot";
 import { formatDuration } from "@/lib/format-duration";
 import { useGuardianInstrument } from "@/hooks/use-guardian-instrument";
@@ -133,15 +133,21 @@ export default function AgentTab({
   // — renders once as a context card, then clears so it can't go stale.
   const { guardianContext, clearGuardianContext } = useNavigation();
   const [dismissError, setDismissError] = useState(false);
-  // Walletless visitors open on the labelled example (or their own
-  // currency's replay): the object demonstrates the Guardian instead of
-  // describing it. Connecting resets it below.
-  const [example, setExample] = useState(() => !address);
+  // Walletless visitors open on the watch board — the Guardian's
+  // capability (gauges, ranked signals) is the first thing seen, not a
+  // description of it. The labelled example / own-currency replay lives
+  // behind its pill. Connecting resets both below.
+  const [example, setExample] = useState(false);
   const [exampleDetails, setExampleDetails] = useState(false);
   // W7 (plan.md §12): the board is a mode of the reading, not a sheet —
   // 'view' swaps the reading to the performed strip, 'sheet' is the deep
-  // GuardianBoard deck one tap behind.
-  const [boardMode, setBoardMode] = useState<"closed" | "view" | "sheet">("closed");
+  // GuardianBoard deck one tap behind. The walletless tab arrives in
+  // 'view': the board is the Guardian's first word.
+  const [boardMode, setBoardMode] = useState<"closed" | "view" | "sheet">("view");
+  // The verifier is a mode of the same reading slot: the pill transforms
+  // the presentation into the on-chain check, the active pill is the way
+  // out. Modes transform, never append (§5/§7).
+  const [verifyMode, setVerifyMode] = useState(false);
   const [acted, setActed] = useState(false);
   const [step, setStep] = useState(0);
   const reducedMotion = useReducedMotion();
@@ -252,9 +258,9 @@ export default function AgentTab({
     !address && watchingResting,
     acted,
   );
-  // Funnel baseline (plan.md §12 W0): one tab-view per mount. The unconnected
-  // variant waits for the live-risk read (bounded) so a replay isn't counted
-  // as the illustrative example.
+  // Funnel baseline (plan.md §12 W0): one tab-view per mount. The
+  // walletless landing is the board, so that is the variant recorded;
+  // which example the visitor opens afterwards is its own event.
   const tabViewedRef = React.useRef(false);
   // W5: the pointer beat's impression — once per mount, pairs with
   // `guardian_board_opened` so pointer → open rate is computable.
@@ -270,23 +276,12 @@ export default function AgentTab({
   };
   useEffect(() => {
     if (tabViewedRef.current) return;
-    if (address) {
       tabViewedRef.current = true;
-      trackFunnelEvent('guardian_tab_viewed', { state: 'connected', variant: 'object' });
-      return;
-    }
-    if (replay) {
-      tabViewedRef.current = true;
-      trackFunnelEvent('guardian_tab_viewed', { state: 'unconnected', variant: 'replay' });
-      return;
-    }
-    const t = setTimeout(() => {
-      if (tabViewedRef.current) return;
-      tabViewedRef.current = true;
-      trackFunnelEvent('guardian_tab_viewed', { state: 'unconnected', variant: 'example' });
-    }, 2500);
-    return () => clearTimeout(t);
-  }, [address, replay]);
+    trackFunnelEvent("guardian_tab_viewed", {
+      state: address ? "connected" : "unconnected",
+      variant: address ? "object" : "board",
+    });
+  }, [address]);
   const previousAddress = React.useRef(address);
   useEffect(() => {
     if (previousAddress.current !== address) {
@@ -294,6 +289,7 @@ export default function AgentTab({
       setExample(false);
       setExampleDetails(false);
       setBoardMode("closed");
+      setVerifyMode(false);
       setActed(false);
       setReturnLead(null);
       setStep(0);
@@ -302,6 +298,8 @@ export default function AgentTab({
   }, [address]);
   useEffect(() => {
     if (address || !guardianContext?.example) return;
+    setBoardMode("closed");
+    setVerifyMode(false);
     setExample(true);
     clearGuardianContext();
   }, [address, guardianContext, clearGuardianContext]);
@@ -369,12 +367,13 @@ export default function AgentTab({
           )}
         </div>
         <div className="instrument-reading flex flex-col items-center">
-        {boardMode === "view" ? (
-          <GuardianWatchView
-            entries={boardEntries}
-            onOpenFull={() => setBoardMode("sheet")}
-          />
-        ) : example ? (
+          {verifyMode ? (
+            <div data-testid="guardian-verify-view" className="w-full max-w-[340px] text-left">
+              <VerifiedEvidencePanel />
+            </div>
+          ) : boardMode === "view" ? (
+            <GuardianWatchView entries={boardEntries} onOpenFull={() => setBoardMode("sheet")} />
+          ) : example ? (
           <div data-testid="guardian-example" className="w-full max-w-[320px]" aria-live="polite">
             <p className="text-2xs font-bold uppercase tracking-wide text-ink-muted">
               {replay ? `Past data replay · ${replayCode} vs USD` : "Example decision · not live"}
@@ -416,7 +415,7 @@ export default function AgentTab({
               Your savings stay in your wallet. Guardian proposes moves for you to approve.
             </p>
           </div>
-        )}
+          )}
         <LiveLine
           testId="guardian-live-line"
           beats={lineBeats.map((b) => ({ key: b.key, content: b.text }))}
@@ -449,6 +448,7 @@ export default function AgentTab({
               trackFunnelEvent('guardian_board_opened', { state: 'unconnected' });
               setExampleDetails(false);
               setExample(false);
+              setVerifyMode(false);
               setBoardMode("view");
             }}
             className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
@@ -472,7 +472,11 @@ export default function AgentTab({
               }
               setBoardMode("closed");
               setExampleDetails(false);
+              setVerifyMode(false);
               setExample(true);
+              trackFunnelEvent("guardian_example_opened", {
+                variant: replay ? "replay" : "example",
+              });
             }}
             className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
               example
@@ -481,6 +485,26 @@ export default function AgentTab({
             }`}
           >
             {replay ? `Replay ${replayCode}` : "Example decision"}
+          </button>
+          <button
+            type="button"
+            aria-pressed={verifyMode}
+            onClick={() => {
+              haptics.tap();
+              if (verifyMode) {
+                setVerifyMode(false);
+                return;
+              }
+              setBoardMode("closed");
+              setExampleDetails(false);
+              setExample(false);
+              setVerifyMode(true);
+            }}
+            className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+              verifyMode ? "bg-ink text-surface" : "bg-ink/[0.05] text-ink/60 hover:bg-ink/10"
+            }`}
+          >
+            Verify evidence
           </button>
         </div>
       </div>
@@ -506,13 +530,6 @@ export default function AgentTab({
               <p className="text-sm text-ink-muted">{current.why}</p>
             )}
           </InspectorSheet>
-        }
-        status={
-          // Trust only — the mode verbs live on the presenter control, in
-          // the Guardian's own column, not in the status tier.
-          <StatusTier
-            trust={example ? null : <VerifiedEvidence />}
-          />
         }
       />
     );

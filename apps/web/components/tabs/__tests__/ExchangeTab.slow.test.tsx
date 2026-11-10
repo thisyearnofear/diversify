@@ -329,15 +329,19 @@ describe("ExchangeTab — instrument", () => {
     }
   });
 
-  it("unconnected: the trust line renders exactly once — the tier owns it", () => {
+  it("unconnected: the foot tier drops the trust line — the stage weaves it", () => {
     mockAddress = null;
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
 
-    // UnconnectedStatusTier already renders VerifiedEvidence; the
-    // netting hand-off must not bring a second copy.
-    expect(screen.getAllByRole("button", { name: /verify evidence/i })).toHaveLength(1);
+    // The verifier now lives inside the resting pair stage (SwapInterface),
+    // not at the card's foot — the tier carries the netting hand-off alone.
+    // SwapTab is mocked here, so the tier must render zero copies; the
+    // stage-side assertion lives in SwapInterface.slow.test.tsx.
+    expect(
+      screen.queryAllByRole("button", { name: /verify evidence/i }),
+    ).toHaveLength(0);
     expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
   });
 
@@ -838,6 +842,9 @@ describe("ExchangeTab — decision window", () => {
 
 describe("Exchange network selector", () => {
   beforeEach(() => {
+    // The venue toggle is a connected control — walletless there is no
+    // wallet network to pick, so it withdraws (§7 placement rule).
+    mockAddress = "0xabc";
     navOverrides.exchangeNetwork = undefined;
     navOverrides.setExchangeNetwork = undefined;
   });

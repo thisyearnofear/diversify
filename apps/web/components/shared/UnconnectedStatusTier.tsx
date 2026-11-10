@@ -7,9 +7,11 @@
  * exact block; Shield and Agent now join them, and the duplication collapses
  * into one primitive.
  *
- * Quiet by contract: one VerifiedEvidence line (§7 chain-agnostic trust —
- * no hex, no chain names until tapped) + one demo text link. Not a demo
- * strip with headline copy — the object owns the first viewport.
+ * Quiet by contract: at most one VerifiedEvidence line (§7 chain-agnostic
+ * trust — no hex, no chain names until tapped) + one demo text link. Not a
+ * demo strip with headline copy — the object owns the first viewport. Tabs
+ * whose first object can host the verifier (Guardian's board, Exchange's
+ * pair stage) pass trust={null} — woven beats orphaned (§7).
  */
 
 import React from "react";

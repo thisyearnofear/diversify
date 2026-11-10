@@ -1,5 +1,52 @@
 # Roadmap Log — historical waves & file deltas
 
+### The verifier becomes a mode of the marquee object (2026-11-10)
+
+Design-contract wave following the Guardian presenter control (e1f17250).
+Three fixes, all in the same direction — the tab's object is what
+changes, never what grows:
+
+- **Trust as mode, not accordion.** Both walletless trust surfaces used
+  `VerifiedEvidence`'s height accordion, which pushed the viewport open
+  below the card. `VerifiedEvidence.tsx` split: `VerifiedEvidencePanel`
+  (the disclosure without the chrome) + `VerifiedEvidence` (trigger +
+  accordion, unchanged for connected rails). Exchange's resting pair
+  stage now carries one centered caption line with a `Verify evidence`
+  verb; tapping it swaps `PairStage` itself for the panel
+  (`stage-verifier`) with `← Pair` as the exit — the same morph the
+  ticket uses, and any intent that wakes the ticket closes it. The
+  Guardian's presenter control gains a third pill, **Verify evidence**,
+  which rewrites the reading slot the way the board and example pills do
+  (active pill = exit; `setVerifyMode(false)` on board/example pills,
+  address change, and hand-off). The unconnected Guardian and Exchange
+  shells no longer pass a trust rail. `UnconnectedStatusTier`'s docstring
+  records the rule: a tab whose first object hosts the verifier passes
+  `trust={null}` — Shield keeps the tier.
+- **CTA beneath the beam.** `PairStage` renders
+  `instrument-composition pair-stage is-stacked` (new CSS: centered flex
+  column, `max-width: 34rem`, centered `.instrument-reading` and
+  corridor line) so "Explore this move" / "Move savings" sits under the
+  money-balancer instead of beside it.
+- **Network toggle is a connected control.** `ExchangeTab` drops
+  `Wallet networks` / `Stellar testnet` when there is no wallet — the
+  visitor has no wallet network to pick. Tests in the
+  "Exchange network selector" describe now connect a wallet.
+
+Also: `FunnelEvent` gains `guardian_example_opened` (the walletless tab
+lands on the board, so opening the labelled example is its own tap).
+Docs: `design-language.md` §7 Placement, `AGENTS.md` chain-agnostic
+trust bullet, `exchange-instrument.md` (stage composition, verifier
+mode, connected-only selector). Verified: `tsc --noEmit` clean, eslint
+clean on changed files, full suite 3463 passed (the three failures were
+the known full-suite timing flakes plus the allowlist entry, each green
+on re-run), `SwapInterface.slow` 36/36, `ExchangeTab.slow` +
+`PairStage.slow` 90/90, `AgentTab-unconnected` 10/10; screenshots at
+1440px and 390px reviewed in-browser.
+**Repo warning:** this repo has no Prettier config and HEAD is not
+Prettier-clean (lines up to 301 chars, mixed quote styles) — running
+`prettier --write` on an existing file produces ~1900 lines of churn.
+Format by hand or don't format.
+
 ### Guardian film, currency cards, foundry reel and sticker pack (2026-11-09)
 
 Four new off-app SVGator families under `docs/assets/brand/`:

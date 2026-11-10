@@ -536,7 +536,7 @@ export function PairStage({
     : null;
 
   return (
-    <div data-testid="pair-stage" className="instrument-composition pair-stage mx-auto w-full max-w-[340px]">
+    <div data-testid="pair-stage" className="instrument-composition pair-stage is-stacked mx-auto w-full max-w-[340px]">
       {/* The scale */}
       <div className="instrument-artifact">
       <motion.div

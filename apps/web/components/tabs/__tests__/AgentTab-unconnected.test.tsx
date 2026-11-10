@@ -89,6 +89,9 @@ vi.mock("@/components/shared/GuardianMascot", () => ({
 
 vi.mock("@/components/shared/VerifiedEvidence", () => ({
   VerifiedEvidence: () => <div data-testid="verified-evidence">Verified</div>,
+  VerifiedEvidencePanel: () => (
+    <div data-testid="verified-evidence-panel">Panel</div>
+  ),
 }));
 
 let mockSeries: { dates: string[]; values: number[] } | null = null;
@@ -130,19 +133,23 @@ describe("AgentTab — unconnected morph", () => {
     ).toBeInTheDocument();
   });
 
-  it("opens on the labelled example — the Guardian demonstrates itself, connect CTA attached", () => {
+  it("opens on the watch board — capability first, the example behind its pill", () => {
     render(<AgentTab />);
 
-    expect(screen.getByTestId("guardian-example")).toHaveTextContent("Example decision · not live");
-    expect(screen.getByTestId("guardian-example-mark")).toBeInTheDocument();
+    expect(screen.getByTestId("guardian-watch-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
     expect(mockEnableDemo).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
+    expect(screen.getByTestId("guardian-example")).toHaveTextContent("Example decision · not live");
+    expect(screen.getByTestId("guardian-example-mark")).toBeInTheDocument();
   });
 
   it("makes the Guardian itself the intro object, with the connect CTA attached", () => {
     render(<AgentTab />);
     // The presenter control owns the exits: the active pill folds its mode.
-    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
+    fireEvent.click(screen.getByRole("button", { name: "What it watches" }));
 
     expect(screen.getByTestId("guardian-mascot")).toBeInTheDocument();
     // Gaze surface: the mascot renders at hero size (not the 82px chat size,
@@ -151,9 +158,9 @@ describe("AgentTab — unconnected morph", () => {
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
     ).toBeInTheDocument();
-    // Three buttons total: the connect CTA + the two presenter pills —
+    // Four buttons total: the connect CTA + the three presenter pills —
     // the walletless watching layer (plan §12 W1) under one control.
-    expect(screen.getAllByRole("button").length).toBe(3);
+    expect(screen.getAllByRole("button").length).toBe(4);
     expect(
       screen.getByRole("button", { name: "What it watches" }),
     ).toBeInTheDocument();
@@ -164,11 +171,9 @@ describe("AgentTab — unconnected morph", () => {
   it("performs the watching board in place — no sheet, then the deck one tap behind", async () => {
     render(<AgentTab />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "What it watches" }),
-    );
-    // W7: the reading swaps to the gauge board — the fallback queue still
-    // names real moneys, and no InspectorSheet opens for the first view.
+    // W7: the walletless tab arrives on the gauge board — the fallback
+    // queue names real moneys on the first frame, and no InspectorSheet
+    // opens for the first view.
     const view = await screen.findByTestId("guardian-watch-view");
     expect(view).toHaveTextContent("What the Guardian watches");
     expect(view).toHaveTextContent("kept of a five-years-ago dollar");
@@ -204,12 +209,9 @@ describe("AgentTab — unconnected morph", () => {
     expect(screen.getByTestId("guardian-watch-view")).toBeInTheDocument();
   });
 
-  it("folds the board away with the same pill that opened it", async () => {
+  it("folds the board away with the same pill, and reopens it", async () => {
     render(<AgentTab />);
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "What it watches" }),
-    );
     await screen.findByTestId("guardian-watch-view");
     fireEvent.click(screen.getByRole("button", { name: "What it watches" }));
     await waitFor(() =>
@@ -217,11 +219,15 @@ describe("AgentTab — unconnected morph", () => {
     );
     // The presenter closes back on the resting intro, not another mode.
     expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "What it watches" }));
+    expect(screen.getByTestId("guardian-watch-view")).toBeInTheDocument();
   });
 
 
   it("tapping the mark walks three decisions the Guardian performs, in the third person", async () => {
     render(<AgentTab />);
+    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
     const mark = screen.getByTestId("guardian-example-mark");
     expect(mark).toHaveAccessibleName("Next example decision, 1 of 3");
     expect(screen.getByTestId("guardian-example")).toHaveTextContent("Example decision · not live");
@@ -251,36 +257,41 @@ describe("AgentTab — unconnected morph", () => {
     expect(mockEnableDemo).not.toHaveBeenCalled();
   });
 
-  it("keeps trust as a quiet status-tier line on the intro and teaches via a labeled example", async () => {
+  it("turns the reading into the verifier — a mode of the slot, never a panel below", async () => {
     render(<AgentTab />);
 
-    const example = screen.getByTestId("guardian-example");
-    expect(example).toHaveTextContent("Example decision · not live");
-    expect(example).toHaveTextContent("Wait for reliable data");
-    expect(example).toHaveTextContent("No trustworthy reading, so no move.");
-    expect(screen.getByTestId("guardian-mascot")).toHaveAttribute("data-mood", "protective");
+    // Arrival is the board alone: the check is not bolted underneath it,
+    // and no accordion waits to push the viewport open.
+    const board = await screen.findByTestId("guardian-watch-view");
+    expect(board).toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-verify-view")).not.toBeInTheDocument();
     expect(screen.queryByTestId("verified-evidence")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
-    expect(mockEnableDemo).not.toHaveBeenCalled();
 
-    fireEvent.click(screen.getByRole("button", { name: "Why this decision?" }));
-    const inspector = screen.getByTestId("inspector-sheet");
-    expect(inspector).toHaveAttribute("data-selected-id", "example-decision");
-    expect(inspector).toHaveTextContent("stands down instead of guessing");
-    fireEvent.click(screen.getByRole("button", { name: "Close inspector" }));
-    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
-    await waitFor(() => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument());
-    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verify evidence" }));
+    expect(screen.getByTestId("guardian-verify-view")).toBeInTheDocument();
+    expect(screen.getByTestId("verified-evidence-panel")).toBeInTheDocument();
+    // One thing on the stage at a time — the board withdrew into its pill.
+    expect(screen.queryByTestId("guardian-watch-view")).not.toBeInTheDocument();
 
-    // The presenter's exit: the active pill folds the example and the
-    // trust line returns with it.
+    // The other pills carry their own verb and take the check with them.
     fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
+    expect(screen.queryByTestId("guardian-verify-view")).not.toBeInTheDocument();
+    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+
+    // The active pill is the exit: it re-opens, then folds back to the
+    // resting intro — never onto another mode.
+    fireEvent.click(screen.getByRole("button", { name: "Verify evidence" }));
+    expect(screen.getByTestId("guardian-verify-view")).toBeInTheDocument();
     expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
-    expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Verify evidence" }));
+    expect(screen.queryByTestId("guardian-verify-view")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/Your savings stay in your wallet/i),
+    ).toBeInTheDocument();
 
-    // Re-opened by the same pill.
-    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
-    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "What it watches" }));
+    expect(screen.getByTestId("guardian-watch-view")).toBeInTheDocument();
   });
 
   it("greets a returner with a 'Since' lead only when the watch changed", async () => {
@@ -337,6 +348,8 @@ describe("AgentTab — unconnected morph", () => {
     };
     try {
       render(<AgentTab />);
+      // The replay lives behind its own pill now — labelled with the code.
+      fireEvent.click(screen.getByRole("button", { name: "Replay NGN" }));
       const replay = screen.getByTestId("guardian-example");
       expect(replay).toHaveTextContent("Past data replay · NGN vs USD");
       expect(replay).toHaveTextContent("Nov 2025");

@@ -29,7 +29,11 @@ signature pairs sits under the stage — connected, it leads with what
 the wallet holds (each held token vs USDm, EURm when the held token IS
 USDm); walletless, with the visitor's region token. Only pairs with
 provenance on both sides are offered; no chip ever selects a story
-that isn't there.
+that isn't there. The stage composes as one centered column
+(`instrument-composition pair-stage is-stacked`) — beam, reading, then
+the CTA under it — so the balance stays the thing the eye lands on and
+"Explore this move" reads as what the object invites, not a control in
+the margin.
 
 The ticket is the stage's acting mode — reached by one CTA ("Move
 savings") and still by construction (no shine, no beat rotation). The
@@ -40,6 +44,18 @@ Pair" collapses back and clears the amount. The mode persists per
 session (`sessionStorage` `diversifi.exchange.mode`); any real intent —
 an amount, a quote in flight, a leg-2 hint, a phone recipient — forces
 the ticket, so Guardian/Home prefills never land on the stage.
+
+Trust on the resting stage is itself a mode, walletless only: one
+centered line under
+the CTA — the claim's caption plus a `Verify evidence` verb — and
+tapping it rewrites the stage itself into `VerifiedEvidencePanel`
+(`stage-verifier`), with `← Pair` as the way back. Nothing opens below
+the object and the viewport never grows (§5: modes transform, never
+append; §7: the verifier is a mode of the marquee object, not an
+accordion at the card's foot). Acting supersedes verifying: any intent
+that wakes the ticket also closes the verifier, so trust never occupies
+the stage while the user is trading. Once a wallet is connected the
+entry withdraws — trust rides the rail's tier like the other tabs.
 
 Settlement returns to the pair. A completed swap clears the amount,
 acknowledges the controller back to idle, and reopens the stage holding
@@ -194,8 +210,11 @@ the pair changes or the signal expires.
 ## Stellar testnet surface
 
 The Exchange tab carries a quiet network selector (`Wallet networks` /
-`Stellar testnet`, flag-gated by `NEXT_PUBLIC_STELLAR_TESTNET`). Selecting
-Stellar mounts `components/swap/StellarExchange.tsx` — one InstrumentShell,
+`Stellar testnet`, flag-gated by `NEXT_PUBLIC_STELLAR_TESTNET`) — a
+connected control only: walletless there is no wallet network to pick,
+so the toggle withdraws rather than offering a choice the visitor cannot
+act on. Selecting Stellar mounts
+`components/swap/StellarExchange.tsx` — one InstrumentShell,
 one object (XLM → USDC coins), one inspector — sharing the tab's shape
 while remaining a separate account family (the wallet picker, G-address,
 7-decimal units). The connected account lives in the `lib/stellar/session`

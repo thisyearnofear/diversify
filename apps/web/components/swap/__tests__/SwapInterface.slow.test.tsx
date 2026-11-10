@@ -191,6 +191,46 @@ describe('SwapInterface — pair stage at rest', () => {
     expect(screen.getByTestId('pair-stage-wake')).toHaveTextContent('Move savings');
   });
 
+  it('walletless: the verifier is an entry on the stage, and takes the stage over', () => {
+    renderSwap({ address: null });
+    // One quiet line under the pair — the panel itself stays closed until
+    // the visitor asks, so nothing pushes the viewport open.
+    expect(screen.getAllByRole('button', { name: /verify evidence/i })).toHaveLength(1);
+    expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pair-stage')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('stage-verifier-open'));
+    const verifier = screen.getByTestId('stage-verifier');
+    expect(verifier).toBeInTheDocument();
+    // Modes transform, never append: the balancer is gone, not shadowed.
+    expect(screen.queryByTestId('pair-stage')).not.toBeInTheDocument();
+    expect(verifier).toHaveTextContent('Check an on-chain receipt');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to pair view' }));
+    expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
+    expect(screen.getByTestId('pair-stage')).toBeInTheDocument();
+  });
+
+  it('the acting mode withdraws the verifier — trust rides the stage, not the ticket', () => {
+    renderSwap({ address: null });
+    fireEvent.click(screen.getByTestId('pair-stage-wake'));
+    expect(
+      screen.queryByRole('button', { name: /verify evidence/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
+    // Collapsing restores the stage with its entry still on it.
+    fireEvent.click(screen.getByRole('button', { name: 'Back to pair view' }));
+    expect(screen.getByTestId('stage-verifier-open')).toBeInTheDocument();
+  });
+
+  it('connected: the stage carries no verifier — the rail keeps trust parity', () => {
+    renderSwap({ address: '0xabc' });
+    expect(
+      screen.queryByRole('button', { name: /verify evidence/i }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
+  });
+
   it('an unlisted local currency marks the resting pair as an example — a chosen pair is never relabeled', () => {
     renderSwap({ address: null, localCurrencyUnlisted: true });
     expect(screen.getByTestId('example-pair')).toHaveTextContent('Example pair');

@@ -529,20 +529,24 @@ function EvmExchangeTab({
   ) : null;
 
   // Connected status rail — trust parity with Home and Shield (§7) plus
-  // the netting hand-off. Walletless, UnconnectedStatusTier already owns
-  // the Verified line, so it gets the button alone — never doubled.
+  // the netting hand-off. Walletless, the verifier lives in the resting
+  // stage instead, so the foot tier carries the button alone — never
+  // doubled.
   if (!address) {
-    // Unconnected morph (§5): the ticket stays the object — SwapTab
-    // renders it walletless and its execute CTA becomes the connect button.
-    // No hero card, no proof card, no how-it-works stack: trust is one
-    // quiet line, demo entry is a text link, and the FX netting hand-off
-    // sits beside them (the rail works walletless in observer mode).
+    // Unconnected morph (§5): the pair stage stays the object — SwapTab
+    // renders it walletless and the ticket's execute CTA becomes the
+    // connect button. No hero card, no proof card, no how-it-works stack:
+    // the verifier is woven into the resting stage (the Guardian board's
+    // grammar), the foot tier keeps only the demo link and the FX netting
+    // hand-off (the rail works walletless in observer mode).
     return (
       <InstrumentShell
         inspectorOpen={Boolean(inspectorSel)}
         object={
           <div data-testid="exchange-swap-object" className="w-full">
-            {networkControl}
+            {/* The venue toggle is a connected control — walletless there is
+                no wallet network to pick, and it duplicated what the wallet
+                itself already knows. It appears with the wallet. */}
             <SwapTab
               userRegion={userRegion}
               inflationData={inflationData}
@@ -589,6 +593,7 @@ function EvmExchangeTab({
             onEnableDemo={enableDemoMode}
             demoActive={demoMode.isActive}
             onDisableDemo={disableDemoMode}
+            trust={null}
           >
             {hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton}
           </UnconnectedStatusTier>

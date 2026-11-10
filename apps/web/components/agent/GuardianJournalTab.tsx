@@ -138,7 +138,7 @@ function EventCard({
           0G failed
         </span>
       )}
-      <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
+      <p className="text-sm text-gray-500 dark:text-gray-400">
         {event.subtitle}
       </p>
       {event.error && <p className="mt-2 text-xs text-red-500">{event.error}</p>}
