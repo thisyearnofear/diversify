@@ -93,12 +93,13 @@ function renderStory(code = "KES") {
 
 const openPath = async () => {
   fireEvent.click(screen.getByRole("button", { name: "1Y path" }));
-  // mode="wait" — the outgoing panel exits before the new one mounts.
-  await screen.findByText(/12-month path vs USD|Historical path unavailable/);
+  // mode="wait" — the outgoing panel exits before the new one mounts;
+  // under full-suite parallel load the animations get starved of rAF.
+  await screen.findByText(/12-month path vs USD|Historical path unavailable/, {}, { timeout: 8000 });
 };
 const openNews = async () => {
   fireEvent.click(screen.getByRole("button", { name: "Headlines" }));
-  await screen.findByTestId("currency-news");
+  await screen.findByTestId("currency-news", {}, { timeout: 8000 });
 };
 
 describe("CurrencyStoryInspector — 12-month path", () => {

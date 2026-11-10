@@ -9,6 +9,12 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
     },
+    // 374 files run in parallel on shared CPUs; framer-motion mount/exit
+    // animations get starved of rAF under that load, so animation-gated
+    // assertions routinely land past the default 5s budget. The flakes so
+    // far (CurrencyMomentCard, AIChat, CurrencyStoryInspector) were all
+    // this — never a logic failure.
+    testTimeout: 20000,
     // setupFiles runs before each test file. The import registers
     // @testing-library/react's auto-cleanup hook so component tests
     // don't leak DOM between cases.
