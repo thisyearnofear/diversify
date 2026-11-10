@@ -186,10 +186,11 @@ describe('CurrencyMomentCard — Home opening artifact', () => {
     expect(onChangeCountry).toHaveBeenCalledWith('KE');
     // Choosing closes the sheet — selection commits, nothing lingers
     // (the exit animation unmounts a beat later, and the full ISO
-    // directory is a heavy subtree to tear down, so wait generously).
+    // directory is a heavy subtree to tear down — under full-suite
+    // parallel load rAF is starved, so the exit can take seconds).
     await waitFor(
       () => expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
-      { timeout: 3000 },
+      { timeout: 12000 },
     );
     // Full-directory sheet teardown — the default 5s budget flakes under
     // full-suite parallel load.

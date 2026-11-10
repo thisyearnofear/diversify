@@ -64,7 +64,10 @@ vi.mock('@/hooks/use-advisor', () => ({
   useAdvisor: () => ({ askAdvisor: vi.fn() }),
 }));
 
-vi.mock('@/hooks/use-mobile', () => ({ useMobile: () => false }));
+vi.mock('@/hooks/use-mobile', () => ({
+  useMobile: () => false,
+  useViewport: () => ({ width: 1280, height: 800, isMobile: false, isTablet: false, isDesktop: true }),
+}));
 
 vi.mock('../../../hooks/use-corridor-signals', () => ({
   useCorridorSignals: () => null,
