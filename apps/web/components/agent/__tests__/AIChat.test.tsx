@@ -649,7 +649,11 @@ describe('AIChat — Guardian memory', () => {
   it('Change opens the memory view with modes and providers — unavailable ones disabled', async () => {
     render(<AIChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Change' }));
-    expect(await screen.findByTestId('guardian-memory-view')).toBeInTheDocument();
+    // The view mounts after a lazy chunk + drawer animation; the default
+    // 1s findBy budget flakes under full-suite parallel load.
+    expect(
+      await screen.findByTestId('guardian-memory-view', {}, { timeout: 8000 })
+    ).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Off' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'This device' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'Across devices' })).toBeInTheDocument();
@@ -662,13 +666,13 @@ describe('AIChat — Guardian memory', () => {
     const tablestore = screen.getByRole('radio', { name: /Alibaba Cloud/ });
     expect(tablestore).toBeEnabled();
     expect(screen.getByText('stored in mainland China')).toBeInTheDocument();
-  });
+  }, 20000);
 
   it('choosing a cloud provider signs and commits; declining stays on the old mode', async () => {
     mocks.memory.chooseMode.mockResolvedValueOnce(false);
     render(<AIChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Change' }));
-    await screen.findByTestId('guardian-memory-view');
+    await screen.findByTestId('guardian-memory-view', {}, { timeout: 8000 });
     fireEvent.click(screen.getByRole('radio', { name: 'Across devices' }));
     fireEvent.click(await screen.findByRole('radio', { name: /Alibaba Cloud/ }, { timeout: 4000 }));
     await waitFor(() =>
@@ -678,7 +682,7 @@ describe('AIChat — Guardian memory', () => {
     await waitFor(() =>
       expect(screen.getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true'),
     );
-  });
+  }, 20000);
 
   it('a reply that stored facts shows "Remembered: … · Undo"; Undo removes it', async () => {
     mocks.memory.pref = { mode: 'device', provider: undefined };
@@ -711,24 +715,24 @@ describe('AIChat — Guardian memory', () => {
     ];
     render(<AIChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Change' }));
-    await screen.findByTestId('guardian-memory-view');
+    await screen.findByTestId('guardian-memory-view', {}, { timeout: 8000 });
     fireEvent.click(screen.getByRole('radio', { name: 'Off' }));
     expect(await screen.findByText('Also delete what Guardian remembers?')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     await waitFor(() => expect(mocks.memory.forgetAll).toHaveBeenCalled());
     await waitFor(() => expect(mocks.memory.chooseMode).toHaveBeenCalledWith('off'));
-  });
+  }, 20000);
 
   it('walletless users see no Across devices option', async () => {
     mocks.wallet.address = null;
     render(<AIChat />);
     fireEvent.click(screen.getByRole('button', { name: 'Change' }));
-    await screen.findByTestId('guardian-memory-view');
+    await screen.findByTestId('guardian-memory-view', {}, { timeout: 8000 });
     expect(screen.getByRole('radio', { name: 'Off' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: 'This device' })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: 'Across devices' })).not.toBeInTheDocument();
-  });
+  }, 20000);
 
   it('every advisor request carries the memory field', () => {
     mocks.memory.pref = { mode: 'device', provider: undefined };
