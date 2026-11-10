@@ -798,7 +798,7 @@ export function PairStage({
                   asset: receipt.origin?.asset,
                 })
               }
-              className="mt-1 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+              className="mx-auto mt-2 flex w-fit min-h-tap items-center rounded-full border border-line px-3 text-2xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300"
             >
               {receipt.origin.label
                 ? `Back to your ${receipt.origin.label} plan →`
@@ -813,7 +813,7 @@ export function PairStage({
               type="button"
               data-testid="receipt-return"
               onClick={() => navigateToGuardian()}
-              className="mt-1 w-full min-h-[32px] text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:text-gray-300"
+              className="mx-auto mt-2 flex w-fit min-h-tap items-center rounded-full border border-line px-3 text-2xs text-gray-500 transition-colors hover:border-gray-300 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:text-gray-300"
             >
               Back to Guardian →
             </button>

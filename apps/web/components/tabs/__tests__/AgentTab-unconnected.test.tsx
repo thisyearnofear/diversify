@@ -141,7 +141,8 @@ describe("AgentTab — unconnected morph", () => {
 
   it("makes the Guardian itself the intro object, with the connect CTA attached", () => {
     render(<AgentTab />);
-    fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
+    // The presenter control owns the exits: the active pill folds its mode.
+    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
 
     expect(screen.getByTestId("guardian-mascot")).toBeInTheDocument();
     // Gaze surface: the mascot renders at hero size (not the 82px chat size,
@@ -150,11 +151,11 @@ describe("AgentTab — unconnected morph", () => {
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
     ).toBeInTheDocument();
-    // Three buttons total: the connect CTA + the example link + the
-    // watching-board link — the walletless watching layer (plan §12 W1).
+    // Three buttons total: the connect CTA + the two presenter pills —
+    // the walletless watching layer (plan §12 W1) under one control.
     expect(screen.getAllByRole("button").length).toBe(3);
     expect(
-      screen.getByRole("button", { name: "What the Guardian watches →" }),
+      screen.getByRole("button", { name: "What it watches" }),
     ).toBeInTheDocument();
     // The live line carries real watch beats even with no wallet.
     expect(screen.getByTestId("guardian-live-line")).toBeInTheDocument();
@@ -164,14 +165,15 @@ describe("AgentTab — unconnected morph", () => {
     render(<AgentTab />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: "What the Guardian watches →" }),
+      screen.getByRole("button", { name: "What it watches" }),
     );
-    // W7: the reading swaps to the strip — the fallback queue still names
-    // real moneys, and no InspectorSheet opens for the first view.
+    // W7: the reading swaps to the gauge board — the fallback queue still
+    // names real moneys, and no InspectorSheet opens for the first view.
     const view = await screen.findByTestId("guardian-watch-view");
     expect(view).toHaveTextContent("What the Guardian watches");
+    expect(view).toHaveTextContent("kept of a five-years-ago dollar");
     await waitFor(() =>
-      expect(view.textContent).toMatch(/NGN|KES|kept/),
+      expect(view.textContent).toMatch(/~\d+¢/),
     );
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
     // The Guardian narrates — it holds the thinking posture while reading.
@@ -202,18 +204,19 @@ describe("AgentTab — unconnected morph", () => {
     expect(screen.getByTestId("guardian-watch-view")).toBeInTheDocument();
   });
 
-  it("folds the board away back to the reading", async () => {
+  it("folds the board away with the same pill that opened it", async () => {
     render(<AgentTab />);
 
     fireEvent.click(
-      screen.getByRole("button", { name: "What the Guardian watches →" }),
+      screen.getByRole("button", { name: "What it watches" }),
     );
     await screen.findByTestId("guardian-watch-view");
-    fireEvent.click(screen.getByRole("button", { name: "Fold away" }));
+    fireEvent.click(screen.getByRole("button", { name: "What it watches" }));
     await waitFor(() =>
       expect(screen.queryByTestId("guardian-watch-view")).not.toBeInTheDocument(),
     );
-    expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
+    // The presenter closes back on the resting intro, not another mode.
+    expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
   });
 
 
@@ -269,11 +272,14 @@ describe("AgentTab — unconnected morph", () => {
     await waitFor(() => expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument());
     expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: /Back to Guardian/ }));
+    // The presenter's exit: the active pill folds the example and the
+    // trust line returns with it.
+    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
     expect(screen.queryByTestId("guardian-example")).not.toBeInTheDocument();
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole("button", { name: "See an example decision" }));
+    // Re-opened by the same pill.
+    fireEvent.click(screen.getByRole("button", { name: "Example decision" }));
     expect(screen.getByTestId("guardian-example")).toBeInTheDocument();
   });
 

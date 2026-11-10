@@ -118,10 +118,19 @@ export function GuardianBoard({
               visorGlyph={entry.flag}
             />
           </div>
-          <p className="text-center text-sm leading-relaxed text-ink/80">
-            {entry.flag} <strong>{entry.countryName}</strong> — the{' '}
-            {moneyNameFor(code)} kept ~{kept}¢ of a five-years-ago dollar.
-          </p>
+          {/* The figure leads, the sentence follows: the cents kept is the
+              card's headline; the prose line is its caption. */}
+          <div className="text-center">
+            <div className="text-3xl font-black tabular-nums text-ink dark:text-white">
+              ~{kept}¢
+            </div>
+            <p className="mt-0.5 text-2xs uppercase tracking-wide text-ink-subtle">
+              kept of a five-years-ago dollar
+            </p>
+            <p className="mt-1 text-xs font-bold text-ink/80">
+              {entry.flag} {entry.countryName}
+            </p>
+          </div>
           {why && boardEntry && (
             <p className="text-center text-2xs uppercase tracking-wide text-ink-subtle">
               {boardEntry.glyph} {why}

@@ -373,7 +373,6 @@ export default function AgentTab({
           <GuardianWatchView
             entries={boardEntries}
             onOpenFull={() => setBoardMode("sheet")}
-            onClose={() => setBoardMode("closed")}
           />
         ) : example ? (
           <div data-testid="guardian-example" className="w-full max-w-[320px]" aria-live="polite">
@@ -394,6 +393,19 @@ export default function AgentTab({
                 <p className="mt-2 text-sm text-ink-muted">{current.line}</p>
               </motion.div>
             </AnimatePresence>
+            {/* The depth door sits under the decision it explains — the
+                Guardian showing its work, not a link at the card's foot. */}
+            <button
+              type="button"
+              data-testid="guardian-example-why"
+              onClick={() => {
+                haptics.tap();
+                setExampleDetails(true);
+              }}
+              className="link-quiet mt-2 text-2xs"
+            >
+              Why this decision?
+            </button>
           </div>
         ) : (
           <div className="w-full max-w-[320px]">
@@ -416,23 +428,61 @@ export default function AgentTab({
           <WalletButton variant="primary" className="w-full" />
         </div>
         </div>
-        <button
-          type="button"
-          className="link-quiet mt-2"
-          onClick={() => {
-            if (boardMode !== "closed") {
-              setBoardMode("closed");
-              return;
-            }
-            trackFunnelEvent('guardian_board_opened', { state: 'unconnected' });
-            setExampleDetails(false);
-            setBoardMode("view");
-          }}
+        {/* The Guardian's presenter control — one segmented row, one slot,
+            the same grammar the network control taught. Modes transform the
+            reading; the active pill is also the way out, so every mode has
+            exactly one exit verb and nothing lingers at the card's foot. */}
+        <div
+          role="group"
+          aria-label="What the Guardian shows"
+          className="mt-3 flex items-center justify-center gap-1.5"
         >
-          {boardMode === "closed"
-            ? "What the Guardian watches →"
-            : "Fold the board away ↑"}
-        </button>
+          <button
+            type="button"
+            aria-pressed={boardOpen}
+            onClick={() => {
+              haptics.tap();
+              if (boardOpen) {
+                setBoardMode("closed");
+                return;
+              }
+              trackFunnelEvent('guardian_board_opened', { state: 'unconnected' });
+              setExampleDetails(false);
+              setExample(false);
+              setBoardMode("view");
+            }}
+            className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+              boardOpen
+                ? "bg-ink text-surface"
+                : "bg-ink/[0.05] text-ink/60 hover:bg-ink/10"
+            }`}
+          >
+            What it watches
+          </button>
+          <button
+            type="button"
+            aria-pressed={example}
+            onClick={() => {
+              haptics.tap();
+              if (example) {
+                setExampleDetails(false);
+                setExample(false);
+                setStep(0);
+                return;
+              }
+              setBoardMode("closed");
+              setExampleDetails(false);
+              setExample(true);
+            }}
+            className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+              example
+                ? "bg-ink text-surface"
+                : "bg-ink/[0.05] text-ink/60 hover:bg-ink/10"
+            }`}
+          >
+            {replay ? `Replay ${replayCode}` : "Example decision"}
+          </button>
+        </div>
       </div>
     );
 
@@ -458,26 +508,10 @@ export default function AgentTab({
           </InspectorSheet>
         }
         status={
+          // Trust only — the mode verbs live on the presenter control, in
+          // the Guardian's own column, not in the status tier.
           <StatusTier
             trust={example ? null : <VerifiedEvidence />}
-            transition={example ? (
-              <button
-                type="button"
-                onClick={() => { setExampleDetails(false); setExample(false); setStep(0); }}
-                className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400"
-              >
-                ← Back to Guardian
-              </button>
-            ) : undefined}
-            rail={
-              <button
-                type="button"
-                onClick={() => example ? setExampleDetails(true) : setExample(true)}
-                className="min-h-tap px-3 text-sm font-semibold text-blue-600 dark:text-blue-400"
-              >
-                {example ? "Why this decision?" : replay ? `Replay ${replayCode}'s sharpest drop` : "See an example decision"}
-              </button>
-            }
           />
         }
       />
