@@ -34,6 +34,7 @@ import { stampsForPair } from '@/lib/stamps';
 import StampSheet, { type StampEntry, type StampMode } from './StampSheet';
 import { useInstrumentInspection } from '../shared/InstrumentShell';
 import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
+import { useViewport } from '@/hooks/use-mobile';
 
 const BEAM_SETTLE = { type: 'spring', stiffness: 60, damping: 8 } as const;
 const STAMP_TEACH_KEY = 'diversifi.stamps.taught';
@@ -131,6 +132,13 @@ function BeamCoin({
   readOnly?: boolean;
 }) {
   const reduced = useReducedMotion();
+  // The coin sizes to the stage it sits on. Fixed at 72px the scale read as
+  // a thin line with two chips at its ends on a 1440px desktop, and the
+  // stage looked empty rather than calm. A phone keeps 72; a wide stage
+  // gets a coin with presence. The beam's own width is capped in CSS so the
+  // proportion (coin : beam) stays a scale, not a divider.
+  const { isDesktop } = useViewport();
+  const coinPx = isDesktop ? 120 : 72;
   const [fraction, setFraction] = useState<number | null>(null);
   const dragged = useRef(false);
   const dragProps = draft
@@ -204,10 +212,10 @@ function BeamCoin({
       transition={springPop}
     >
       <span
-        className="relative inline-flex drop-shadow-md"
+        className="pair-beam-coin relative inline-flex drop-shadow-md"
         {...(index === 0 ? protagonistAnchor("exchange", { holds: symbol }) : {})}
       >
-        <TokenIcon symbol={symbol} size={72} />
+        <TokenIcon symbol={symbol} size={coinPx} />
         {sealed && !reduced && (
           <motion.span
             data-testid="receipt-seal"
@@ -382,6 +390,10 @@ export function PairStage({
 }) {
   const reduced = useReducedMotion();
   const { navigateWithIntent, navigateToGuardian } = useNavigation();
+  // Coin size for the beam geometry below — must match BeamCoin's own, or
+  // the bar overshoots the coins it is supposed to end at.
+  const { isDesktop: beamDesktop } = useViewport();
+  const coinPx = beamDesktop ? 120 : 72;
   // The pair time machine: the corridor line's 1y/3y/5y control picks
   // the horizon and the beam re-weighs to that window's drift. A pair
   // change resets to the resting 5y view.
@@ -394,6 +406,9 @@ export function PairStage({
   // Square-root curve: 8pts ≈ 4°, 38pts ≈ 8.6°, 57pts ≈ 10.6°, capped 14°.
   // The weaker side sits lower: left/from weaker → negative rotation.
   const tilt = tiltForDrift(drift);
+  // Arc headroom for the scale wrapper: the raised end of the beam lifts
+  // a coin by sin(tilt) × the beam's half-width on this stage.
+  const tiltPad = Math.ceil(Math.sin((Math.abs(tilt) * Math.PI) / 180) * (beamDesktop ? 336 : 162)) + 6;
 
   const [flipped, setFlipped] = useState<'from' | 'to' | null>(null);
   const [pickerSide, setPickerSide] = useState<'from' | 'to' | null>(null);
@@ -524,7 +539,17 @@ export function PairStage({
     <div data-testid="pair-stage" className="instrument-composition pair-stage mx-auto w-full max-w-[340px]">
       {/* The scale */}
       <div className="instrument-artifact">
-      <div aria-label={corridor?.line ? `${examplePair ? "Example pair — " : ""}${corridor.line}` : undefined}>
+      <motion.div
+        className="pair-beam-scale"
+        aria-label={corridor?.line ? `${examplePair ? "Example pair — " : ""}${corridor.line}` : undefined}
+        // A rotating beam lifts its far end by sin(tilt) × half-width —
+        // at the 14° cap that is ~40px on a phone, and the raised coin
+        // clipped into the network control above. The headroom tracks the
+        // tilt on the same spring, so it exists exactly when the scale
+        // tips and closes when it levels.
+        animate={{ paddingTop: tiltPad, paddingBottom: tiltPad }}
+        transition={reduced ? { duration: 0 } : BEAM_SETTLE}
+      >
         <motion.div
           data-testid="pair-beam"
           data-tilt={Math.round(tilt)}
@@ -538,17 +563,21 @@ export function PairStage({
           }
         >
           {/* The beam bar — coin-center to coin-center, passing behind
-              the coins so they sit ON it. */}
+              the coins so they sit ON it. The inset tracks half the coin
+              so the bar always ends at the coin centres, whatever size
+              the stage gives them. */}
           <div
             aria-hidden
-            className="absolute inset-x-[44px] top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-gray-400 dark:bg-white/25"
+            className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-gray-400 dark:bg-white/25"
+            style={{ left: coinPx / 2, right: coinPx / 2 }}
           />
           {/* The receipt's one-shot confirm: the spent coin travels the
               beam into the destination and fades — then the seal pulses. */}
           {receipt && !reduced && (
             <div
               aria-hidden
-              className="pointer-events-none absolute inset-x-[44px] top-1/2 h-0"
+              className="pointer-events-none absolute top-1/2 h-0"
+              style={{ left: coinPx / 2, right: coinPx / 2 }}
             >
               {/* A full-width carrier translates 0% → 100% of its own
                   width (= the beam), so the coin travels on the compositor
@@ -682,7 +711,7 @@ export function PairStage({
             />
           )}
         </div>
-      </div>
+      </motion.div>
       </div>
 
       <div className="instrument-reading">

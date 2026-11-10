@@ -158,7 +158,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
     );
     renderTheater();
     const review = await screen.findByTestId("currency-visit-review");
-    expect(within(review).getByRole("heading").textContent).toMatch(/0\.7 pts higher than/);
+    expect(within(review).getByRole("heading").textContent).toMatch(/Gained 0\.7 pts of buying power since/);
     expect(review.textContent).not.toContain("Since you last checked");
     expect(within(review).getByText("Now")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Home view" })).toBeInTheDocument();
@@ -253,7 +253,7 @@ describe("HomeRiskTheater — since you were here (quiet memory)", () => {
       />,
     );
     const review = await screen.findByTestId("currency-visit-review");
-    expect(review.textContent).toMatch(/0\.7 pts higher than/);
+    expect(review.textContent).toMatch(/Gained 0\.7 pts of buying power since/);
   });
 
   it("never reads or writes visit memory in demo mode", async () => {

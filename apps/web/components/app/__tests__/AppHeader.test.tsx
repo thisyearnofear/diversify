@@ -95,7 +95,7 @@ describe('AppHeader — one connect affordance below sm', () => {
   const walletWrapper = () => screen.getByTestId('wallet-button').parentElement!;
 
   it('hides the wallet button below sm on tabs that carry their own connect CTA', () => {
-    for (const activeTab of ['overview', 'protect', 'agent'] as const) {
+    for (const activeTab of ['overview', 'protect', 'agent', 'exchange'] as const) {
       const { unmount } = render(
         <AppHeader {...baseProps} address={null} activeTab={activeTab} />,
       );
@@ -105,14 +105,15 @@ describe('AppHeader — one connect affordance below sm', () => {
     }
   });
 
-  it('keeps the wallet button on tabs with no in-object connect CTA (Exchange)', () => {
-    for (const activeTab of ['exchange'] as const) {
-      const { unmount } = render(
-        <AppHeader {...baseProps} address={null} activeTab={activeTab} />,
-      );
-      expect(walletWrapper().className).not.toContain('hidden');
-      unmount();
-    }
+  it('keeps the wallet button on tabs with no in-object connect CTA', () => {
+    // Every tab now owns a connect CTA in its object, so the header chip
+    // is desktop-only while unconnected. This asserts the fallback path
+    // still renders (no activeTab = no in-object CTA to defer to).
+    const { unmount } = render(
+      <AppHeader {...baseProps} address={null} activeTab={undefined} />,
+    );
+    expect(walletWrapper().className).not.toContain('hidden');
+    unmount();
   });
 
   it('keeps the wallet button at every size once connected', () => {

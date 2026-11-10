@@ -270,7 +270,7 @@ export function guardianBeats(args: {
     const kept = Math.max(0, Math.round(100 + entry.depreciation.vsUSD['5yr']));
     beats.push({
       key: `watch-nation-${code}`,
-      text: `Watching the ${moneyNameFor(code)} — kept ~${kept}¢ of a five-years-ago dollar`,
+      text: `Watching ${moneyNameFor(code)} — kept ~${kept}¢ of a five-years-ago dollar`,
     });
   }
   return beats;

@@ -387,11 +387,13 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       );
       expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
 
-      // A coin tap only previews — nothing commits until the CTA.
+      // A coin tap only previews — nothing commits until the CTA. The
+      // name takes the plan line; the hole keeps its reserve-target face.
       fireEvent.click(screen.getByTestId("plan-badge"));
       fireEvent.click(await screen.findByTestId("coin-buen_vivir"));
       expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
-      expect(screen.getByTestId("ring-hole")).toHaveTextContent("Buen Vivir");
+      expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("buen_vivir");
+      expect(screen.getByTestId("ring-hole")).toHaveTextContent("reserve");
 
       fireEvent.click(screen.getByTestId("walletless-commit"));
       expect(mockState.setFinancialStrategy).toHaveBeenCalledWith("buen_vivir");

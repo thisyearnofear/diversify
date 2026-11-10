@@ -96,9 +96,13 @@ const EXAMPLE_STEPS = [
 // link — this beat is the Guardian naming what the board holds, in the
 // line's own grammar. `board-*` classifies as 'settle' → no mood, no
 // beat_impulse: a pointer isn't news.
+//
+// Copy is user-facing: "kept-cents", "mood poll" and "dated events" are
+// our internal names for those panels. The beat says what the visitor
+// finds, in their words.
 const BOARD_POINTER_BEAT = {
   key: "board-reads",
-  text: "The board — kept-cents, dated events, the mood poll",
+  text: "The board — what each currency kept, what moved it, what people expect",
 };
 
 interface AgentTabProps {
@@ -310,7 +314,7 @@ export default function AgentTab({
     const object = (
       <div
         data-testid="guardian-unconnected-object"
-        className="instrument-composition text-center py-2"
+        className="instrument-composition is-stacked text-center py-2"
         onPointerDownCapture={() => setActed(true)}
         onFocusCapture={() => setActed(true)}
       >

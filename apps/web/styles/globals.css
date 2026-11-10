@@ -959,6 +959,29 @@ body {
       column-gap: 1.5rem;
     }
 
+    /* Guardian opts out of the side-by-side composition. Its object is one
+       reading — a mark, a state, one line, one CTA — and splitting that
+       across two columns left the mark stranded left, the reading right and
+       the status rail bottom-left, three clusters with the explanation far
+       from the decision. One centred column is the same shape its
+       inspector-open state already uses, and it reads as calm rather than
+       unfinished. */
+    .instrument-composition.is-stacked {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 30rem;
+      margin-inline: auto;
+    }
+
+    .instrument-composition.is-stacked > .instrument-artifact,
+    .instrument-composition.is-stacked > .instrument-reading,
+    .instrument-composition.is-stacked > .instrument-controls {
+      grid-column: auto;
+      grid-row: auto;
+      width: 100%;
+    }
+
     .instrument-composition > .instrument-artifact {
       grid-column: 1;
       grid-row: 1;
@@ -989,6 +1012,17 @@ body {
       max-width: none;
       width: 100%;
       grid-template-columns: minmax(320px, 1.2fr) minmax(0, 1fr);
+    }
+
+    /* The beam is a SCALE, and a scale has a proportion. Stretched across
+       the full artifact column it became a 950px line with two 72px coins
+       at the ends — the physical metaphor read as a divider, and the stage
+       looked empty rather than calm. Capping the scale's own width keeps
+       the coins and the beam in the ratio the metaphor needs, and the
+       artifact column centres it. */
+    .pair-beam-scale {
+      max-width: 42rem;
+      margin-inline: auto;
     }
 
     .pair-stage-detail {

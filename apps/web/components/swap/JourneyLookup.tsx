@@ -131,7 +131,7 @@ export function JourneyLookup({
     }
 
     return (
-        <p className="mt-3 flex min-h-tap items-center px-1 text-2xs text-gray-500 dark:text-gray-400">
+        <p className="mt-3 flex min-h-tap flex-wrap items-center justify-center gap-x-1 px-1 text-center text-2xs text-gray-500 dark:text-gray-400">
             <button
                 type="button"
                 onClick={() => void connect()}
@@ -139,13 +139,13 @@ export function JourneyLookup({
             >
                 Your own journey appears here when you connect
             </button>
-            <span aria-hidden className="mx-1">
+            <span aria-hidden>
                 ·
             </span>
             <button
                 type="button"
                 onClick={() => setOpen(true)}
-                className="min-h-tap font-semibold text-gray-600 hover:underline dark:text-gray-300"
+                className="min-h-tap whitespace-nowrap font-semibold text-gray-600 hover:underline dark:text-gray-300"
             >
                 View any wallet →
             </button>

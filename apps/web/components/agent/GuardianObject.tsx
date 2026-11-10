@@ -224,7 +224,7 @@ export function GuardianObject({
 
   return (
     <div
-      className="instrument-composition text-center py-2"
+      className="instrument-composition is-stacked text-center py-2"
       onPointerDownCapture={() => setActed(true)}
       onFocusCapture={() => setActed(true)}
     >

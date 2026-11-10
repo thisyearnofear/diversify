@@ -1237,13 +1237,17 @@ describe("ProtectionTab — instrument shapes", () => {
     fireEvent.click(screen.getByTestId("ring-hole"));
     const hole = screen.getByTestId("ring-hole");
     expect(hole).toHaveAccessibleName("Exit compare");
-    // Focus falls back to the current plan before a coin is tapped.
-    expect(hole.textContent).toContain("Africapitalism");
+    // Focus falls back to the current plan before a coin is tapped — the
+    // hole states its reserve target, not the plan's name (§3: the name
+    // belongs to the plan line / compare status, one job per block).
+    expect(hole.textContent).toContain("reserve");
     expect(hole.textContent).toContain("Your plan");
 
-    // First tap previews only — name + compact delta in the hole, no sheet.
+    // First tap previews only — the name takes the plan line beneath the
+    // rail, the hole keeps its reserve face + compact delta, no sheet.
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
-    expect(hole.textContent).toContain("Buen Vivir");
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("buen_vivir");
+    expect(hole.textContent).toContain("reserve");
     expect(hole.textContent).toMatch(/[+−]\d+%/);
     expect(screen.queryByTestId("inspector-sheet")).not.toBeInTheDocument();
 
@@ -1734,7 +1738,7 @@ describe("ProtectionTab — instrument shapes", () => {
     // First tap previews (delta rides in the hole); a second tap opens
     // the details sheet with the value chips.
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
-    expect(screen.getByTestId("ring-hole")).toHaveTextContent("Buen Vivir");
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("buen_vivir");
     expect(screen.getByTestId("ring-hole").textContent).toMatch(/[+−]\d+%/);
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     const values = screen.getByTestId("plan-values");

@@ -111,20 +111,14 @@ export function FocusedPlanLine({
               )}
             </>
           ) : (
-            /* Not an instruction. The ring's hole already says "Choose a
-               philosophy" — it is the picker's documented object
-               (ProtectionPlanRing.tsx:338) and the strongest position in the
-               frame. This line used to repeat it as a `text-2xl font-bold`
-               heading ~40px below, so one act was stated twice and the
-               loudest element on the picker screen was an empty-state
-               instruction rather than a coin.
-
-               Now it names the row's job — what these controls ARE — as a
-               quiet caption. A label is not a duplicate instruction, and it
-               survives the empty state without reappearing on focus. */
-            <span className="block text-xs font-semibold uppercase tracking-widest text-ink-subtle">
-              Philosophy
-            </span>
+            /* Nothing selected. This block used to render a `PHILOSOPHY`
+               uppercase kicker to name the row's job. It was redundant
+               chrome: the ring's hole already says "Choose a philosophy",
+               the caption under it says "Tap a philosophy coin to preview
+               its plan", and the rail carries `aria-label="Protection
+               philosophies"`. Three labels for one act. The empty state
+               now renders nothing here, which also tightens the stage. */
+            null
           )}
         </motion.p>
       </AnimatePresence>

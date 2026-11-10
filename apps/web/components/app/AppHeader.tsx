@@ -20,13 +20,21 @@ interface AppHeaderProps {
   onAskGuardian?: () => void;
 }
 
-// Tabs whose unconnected object already carries a connect CTA (§5: one
-// connect affordance per tab). Exchange's resting pair stage has none,
-// so the header button stays there.
+// Every tab's unconnected object carries its own connect CTA (§5: one
+// connect affordance per tab), so the header chip is desktop-only while
+// unconnected. Exchange's resting pair stage has no CTA of its own, but
+// its "Explore this move" wakes the ticket, whose execute CTA morphs into
+// the connect button — so the ticket, not the header, is where a mobile
+// visitor connects.
 const TABS_WITH_OWN_CONNECT: ReadonlySet<TabId> = new Set([
   "overview",
   "protect",
   "agent",
+  // Exchange's ticket owns a connect CTA in the object. Without this the
+  // mobile ticket rendered two Connect buttons — the header chip and the
+  // ticket's own — on the same screen. The pair stage's "Explore this
+  // move" wakes the ticket, which is where the connect lives.
+  "exchange",
 ]);
 
 export default function AppHeader({

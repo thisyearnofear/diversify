@@ -713,18 +713,32 @@ export default function ExchangeTab(props: ExchangeTabProps) {
   // The network switch is inert while a signature or submission is busy.
   const [stellarBusy, setStellarBusy] = useState(false);
   const networkControl = enabled ? (
-    <select
+    <div
+      role="group"
       aria-label="Exchange network"
-      value={exchangeNetwork}
-      disabled={stellarBusy}
-      onChange={(event) =>
-        setExchangeNetwork(event.target.value === "stellar:testnet" ? "stellar:testnet" : "evm")
-      }
-      className="min-h-tap rounded-full border border-line bg-surface px-3 text-xs font-semibold text-ink"
+      data-testid="exchange-network-control"
+      className="inline-flex items-center gap-1 rounded-full border border-line bg-surface p-1"
     >
-      <option value="evm">Wallet networks</option>
-      <option value="stellar:testnet">Stellar testnet</option>
-    </select>
+      {([
+        { id: "evm", label: "Wallet networks" },
+        { id: "stellar:testnet", label: "Stellar testnet" },
+      ] as const).map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          aria-pressed={exchangeNetwork === option.id}
+          disabled={stellarBusy}
+          onClick={() => setExchangeNetwork(option.id)}
+          className={`min-h-tap rounded-full px-3 text-xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 disabled:opacity-50 ${
+            exchangeNetwork === option.id
+              ? "bg-ink text-surface"
+              : "text-ink-muted hover:bg-ink/5"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
   ) : null;
   if (enabled && exchangeNetwork === "stellar:testnet") {
     return <StellarExchange networkControl={networkControl} onBusyChange={setStellarBusy} />;

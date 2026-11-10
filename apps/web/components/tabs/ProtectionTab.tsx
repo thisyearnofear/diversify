@@ -1049,19 +1049,22 @@ export default function ProtectionTab({
   const effectiveFocus = comparing
     ? focusedPhilosophy ?? strategyKey
     : focusedPhilosophy;
-  const focusedStrategyName =
-    STRATEGIES.find((s) => s.id === effectiveFocus)?.name ?? "";
-  // Hole copy for compare/picker — the focused plan's name and a compact
-  // delta ("+15% PAXG · −10% KESm") against the committed plan.
+  // Hole copy for compare/picker — the previewed mix's reserve target, the
+  // same face the resting hole uses. The plan's name lives in the
+  // FocusedPlanLine beneath the rail (§3: one job per block).
   const compareHole = (() => {
     if (!effectiveFocus) {
       return { label: "Choose a philosophy", hint: "" };
     }
+    const reserve = {
+      number: `${floorPercent(previewAllocations, previewFloor)}%`,
+      label: `${reserveLabel(previewFloor).toLowerCase()} reserve`,
+    };
     if (hasPlan && effectiveFocus === strategyKey) {
-      return { label: focusedStrategyName, hint: "Your plan" };
+      return { ...reserve, hint: "Your plan" };
     }
     return {
-      label: focusedStrategyName,
+      ...reserve,
       hint: hasPlan ? compactPlanDelta(allocations, previewAllocations) : "",
     };
   })();

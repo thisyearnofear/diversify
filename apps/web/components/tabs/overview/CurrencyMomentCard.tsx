@@ -926,7 +926,7 @@ export function CurrencyMomentCard({
                 }}
                 className="mt-1.5 text-xs font-semibold text-ink-muted underline-offset-2 transition-colors hover:text-ink hover:underline"
               >
-                How confident are you in the {moneyNameFor(moment.currencyCode)}? →
+                How confident are you in {moneyNameFor(moment.currencyCode)}? →
               </button>
             )}
 

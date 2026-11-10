@@ -47,6 +47,8 @@ import { ARCHETYPE_ORDER, archetypeToStrategy, strategyToArchetype } from "@/com
 import { identityAccent } from "@/components/shared/palette";
 import {
   compactPlanDelta,
+  floorPercent,
+  reserveLabel,
   resolvePlan,
 } from "@/components/protection-cards/plan-preview";
 import { STRATEGIES } from "@/constants/strategies";
@@ -260,11 +262,17 @@ export function ProtectionNotConnected({
     if (!focusedPhilosophy) {
       return { label: "Choose a philosophy", hint: "" };
     }
+    // The hole states the previewed mix's reserve target — the plan's name
+    // lives in the FocusedPlanLine beneath the rail (§3: one job per block).
+    const reserve = {
+      number: `${floorPercent(focusedLegs, focusedFloor)}%`,
+      label: `${reserveLabel(focusedFloor).toLowerCase()} reserve`,
+    };
     if (showRing && focusedPhilosophy === ringKey) {
-      return { label: focusedName, hint: "Your plan" };
+      return { ...reserve, hint: "Your plan" };
     }
     return {
-      label: focusedName,
+      ...reserve,
       hint: showRing ? compactPlanDelta(ringLegs, focusedLegs) : "",
     };
   })();
@@ -298,11 +306,6 @@ export function ProtectionNotConnected({
               ? "Your values. Your starting plan."
               : "A plan you can make your own."}
           </h2>
-          {picking && (
-            <p className="text-sm text-ink-muted">
-              Choose a philosophy. Watch the mix take shape.
-            </p>
-          )}
         </div>
       )}
       <div data-testid="shield-ring" data-walletless data-comparing={comparing || undefined}>

@@ -886,7 +886,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     render(<CurrencyMomentCard {...baseProps} onProtect={() => {}} />);
     const review = await screen.findByTestId('currency-visit-review');
     expect(review.textContent).not.toContain('Since you last checked');
-    expect(within(review).getByRole('heading').textContent).toMatch(/1 pts higher than/);
+    expect(within(review).getByRole('heading').textContent).toMatch(/Gained 1 pts of buying power since/);
     expect(review.textContent).toContain('Now');
     expect(review.textContent).toContain('−19%');
     expect(review.textContent).toContain('−18%');
@@ -947,7 +947,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     window.localStorage.setItem(KEY, JSON.stringify(baseline({ delta: -18.7 })));
     render(<CurrencyMomentCard {...baseProps} />);
     const review = await screen.findByTestId('currency-visit-review');
-    expect(within(review).getByRole('heading').textContent).toMatch(/0\.7 pts higher than/);
+    expect(within(review).getByRole('heading').textContent).toMatch(/Gained 0\.7 pts of buying power since/);
     expect(review.textContent).not.toContain('Since you last checked');
     expect(screen.getByRole('button', { name: 'Last visit' })).toHaveAttribute('aria-pressed', 'true');
   });
@@ -981,7 +981,7 @@ describe('CurrencyMomentCard — returning visit', () => {
     window.localStorage.setItem(KEY, JSON.stringify(baseline()));
     const { container } = render(<CurrencyMomentCard {...baseProps} />);
     const review = await screen.findByTestId('currency-visit-review');
-    expect(within(review).getByRole('heading').textContent).toMatch(/1 pts higher than/);
+    expect(within(review).getByRole('heading').textContent).toMatch(/Gained 1 pts of buying power since/);
     expect(within(review).getByText('Now')).toBeInTheDocument();
     expect(container.querySelector('.coin-shine')).toBeNull();
     expect(container.querySelector('.coin-shine-once')).toBeNull();

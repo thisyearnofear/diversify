@@ -78,8 +78,11 @@ describe("FocusedPlanLine — the reading names the actual mix", () => {
     expect(conservative[0].percent).not.toBe(60);
   });
 
-  it("no focus keeps the quiet Philosophy label", () => {
+  it("no focus renders no label — the hole already names the act", () => {
+    // The empty state used to repeat the ring's "Choose a philosophy" as a
+    // separate PHILOSOPHY kicker. Three labels for one act; the line now
+    // stays quiet until a coin is focused.
     render(<FocusedPlanLine strategyId={null} />);
-    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("Philosophy");
+    expect(screen.getByTestId("focused-plan-line")).toHaveTextContent("");
   });
 });

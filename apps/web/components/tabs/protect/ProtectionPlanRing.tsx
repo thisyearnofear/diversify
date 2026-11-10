@@ -37,6 +37,9 @@ import { useInstrumentInspection } from '@/components/shared/InstrumentShell';
 import { rwaLegFor } from './rwa-assets';
 import { protagonistAnchor } from "@/components/shared/protagonist-anchor";
 
+/** One-shot flip teacher — set once per device, never replayed. */
+const HOLE_TEACH_KEY = 'diversifi.shield.holeFlipTaught';
+
 /** Selection ids live in ring-ids.ts — a leaf module so non-component
  *  consumers (the mode machine, the voice grammar) share them without
  *  importing the ring. Re-exported here for existing call sites. */
@@ -96,7 +99,7 @@ interface Props {
   ghostLabel?: string;
   /** Hole copy override — compare/picker carries the focused plan name +
    *  compact delta instead of the computed alignment content. */
-  holeOverride?: { label: React.ReactNode; hint?: string };
+  holeOverride?: { label: React.ReactNode; hint?: string; number?: React.ReactNode };
   /** Accessible label for the hole tap (compare: "Exit compare"). */
   holeActionLabel?: string;
   /**
@@ -311,6 +314,28 @@ export function ProtectionPlanRing({
     setIdleFace((face) => (face === 'money' ? 'align' : 'money'));
   };
 
+  // Teach the flip once per device. The face dots are the only signal that
+  // the hole has a second face, and two 4px dots are not an invitation —
+  // the closed verb set is elegant but several of its affordances are
+  // near-invisible. Same one-shot grammar as the stamp door: a quiet
+  // caption under the hole for ~5s, once, never again. Reduced motion
+  // skips the wait (there is no motion to wait for) and still shows it.
+  const [teachFlip, setTeachFlip] = useState(false);
+  useEffect(() => {
+    if (!flipAvailable || typeof window === 'undefined') return;
+    if (window.localStorage.getItem(HOLE_TEACH_KEY)) return;
+    let hide = 0;
+    const show = window.setTimeout(() => {
+      window.localStorage.setItem(HOLE_TEACH_KEY, '1');
+      setTeachFlip(true);
+      hide = window.setTimeout(() => setTeachFlip(false), 5000);
+    }, reducedMotion ? 400 : 1600);
+    return () => {
+      window.clearTimeout(show);
+      window.clearTimeout(hide);
+    };
+  }, [flipAvailable, reducedMotion]);
+
   // Progressive disclosure: dust into Other. Keeps the object scannable
   // when a wallet holds 10+ tokens — the ring and legend never exceed
   // 5 primary rows + one Other rewrites-artefact row (taps expand in place).
@@ -503,7 +528,7 @@ export function ProtectionPlanRing({
   const hole: { number: React.ReactNode; label: React.ReactNode; hint: string; size?: string } = (() => {
     if (holeOverride) {
       return {
-        number: null as React.ReactNode,
+        number: holeOverride.number ?? null,
         label: holeOverride.label,
         hint: holeOverride.hint ?? '',
       };
@@ -739,7 +764,8 @@ export function ProtectionPlanRing({
                   {/* The badge above is the single compare entry — the hole
                       carries no second "compare" affordance. */}
                   {/* Face dots teach the flip — the lit dot tracks which
-                      face the hole is showing. */}
+                      face the hole is showing. The one-shot caption below
+                      is the actual invitation; the dots only confirm it. */}
                   {flipAvailable && (
                     <span data-testid="hole-face-dots" aria-hidden="true" className="mt-1 flex items-center gap-1">
                       {(['money', 'align'] as const).map((face) => {
@@ -755,6 +781,20 @@ export function ProtectionPlanRing({
                       })}
                     </span>
                   )}
+                  <AnimatePresence>
+                    {flipAvailable && teachFlip && (
+                      <motion.span
+                        data-testid="hole-teach-caption"
+                        initial={reducedMotion ? false : { opacity: 0, y: -2 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={reducedMotion ? undefined : { opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="mt-1 block text-3xs font-medium text-ink-subtle"
+                      >
+                        Tap for plan alignment
+                      </motion.span>
+                    )}
+                  </AnimatePresence>
                 </>
               );
               const holeBody =

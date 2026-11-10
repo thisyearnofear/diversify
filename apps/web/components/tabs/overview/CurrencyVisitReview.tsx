@@ -20,11 +20,17 @@ export function CurrencyVisitReview({
   const current = comparison.current;
   const elapsed = formatElapsed(comparison.previous.at, Date.now());
   const pts = Math.abs(comparison.changePoints).toFixed(1).replace(/\.0$/, '');
+  const rose = comparison.changePoints > 0;
 
   return (
     <div data-testid="currency-visit-review">
+      {/* The headline used to read "3.9 pts lower than 2 days ago" — accurate,
+          but over two positive readings (+10.4% → +6.5%) it asked for a beat
+          of mental work to work out what had actually changed. The number
+          now carries its own meaning: it says what moved and in which
+          direction, so the figure is read rather than decoded. */}
       <h3 aria-live="polite" className="mt-3 text-lg font-bold text-gray-900 dark:text-white">
-        {pts} pts {comparison.changePoints > 0 ? 'higher' : 'lower'} than {elapsed}
+        {rose ? 'Gained' : 'Lost'} {pts} pts of buying power since {elapsed}
       </h3>
       <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
         {moment.currencyCode} {HORIZONS[moment.horizon].short} buying power vs {moment.benchmarkLabel}

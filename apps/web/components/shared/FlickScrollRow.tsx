@@ -111,28 +111,33 @@ export function FlickScrollRow({
   const fades = FADE_CLASS[fade];
   const { className: dragClassName, ...dragHandlers } = containerProps;
 
-  /* The chevrons are `absolute` overlays on the track, so a fade narrower
-     than the button leaves content hard-sliced under an opaque circle — on
-     Shield's philosophy rail the seventh coin's two-line label ran under the
-     chevron. Two fixes, both safe for rows that DON'T overflow:
+  /* The chevrons are `absolute` overlays on the track. Two earlier attempts
+     at this were wrong in opposite directions:
 
-       1. the fade is at least as wide as the chevron that covers it, so
-          content dissolves under the button instead of being sliced;
-       2. the chevron is translucent glass, so a coin passing beneath it
-          during a scroll still reads as being behind it.
+       - a fade narrower than the button left content hard-sliced under an
+         opaque circle (Shield's seventh coin label ran under it);
+       - `padding-right: CHEVRON_GUTTER` on the TRACK inflated scrollWidth
+         past clientWidth, so `atEnd` never became true and the forward
+         chevron advertised a scroll that did not exist.
 
-     An earlier attempt also added `padding-right: CHEVRON_GUTTER` to reserve
-     trailing space. That was wrong: it inflated `scrollWidth` past
-     `clientWidth` on rows that already fit, so `atEnd` never became true and
-     the forward chevron appeared advertising a scroll that did not exist. The
-     row's own `overflow` is what clips a coin at capacity — padding cannot
-     fix that, and adding it only broke the edge detection. */
+     What actually works: the gutter lives on the WRAPPER, not the track.
+     On fine-pointer devices the wrapper reserves CHEVRON_GUTTER on each
+     side and the chevron sits in that empty space — it never overlaps a
+     coin or its label at all. The track's own scrollWidth/clientWidth are
+     untouched, so edge detection stays honest. Touch devices keep the full
+     width (a chevron is a mouse affordance; swiping is the gesture), and
+     the fade still dissolves content at the track edge for both. */
+  const gutter = chevrons ? CHEVRON_GUTTER : 0;
   const fadeWidth = chevrons ? Math.max(edgeSize, CHEVRON_GUTTER) : edgeSize;
   const chevronSurface =
-    "bg-white/80 backdrop-blur-sm shadow-md border border-gray-200";
+    "bg-surface/80 backdrop-blur-sm shadow-md border border-line";
 
   return (
-    <div className="relative" data-testid="flick-row">
+    <div
+      className="relative [@media(pointer:fine)]:px-[var(--flick-gutter)]"
+      data-testid="flick-row"
+      style={{ ["--flick-gutter" as string]: `${gutter}px` }}
+    >
       <div
         aria-hidden="true"
         data-testid="flick-row-fade-left"
@@ -152,7 +157,7 @@ export function FlickScrollRow({
           data-testid="flick-row-prev"
           aria-label="Scroll back"
           onClick={() => page(-1)}
-          className={`absolute left-1 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full ${chevronSurface} text-gray-800 hover:bg-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400`}
+          className={`absolute left-0 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full ${chevronSurface} text-ink hover:bg-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400`}
         >
           <svg
             className="size-4"
@@ -176,7 +181,7 @@ export function FlickScrollRow({
           data-testid="flick-row-next"
           aria-label="Scroll forward"
           onClick={() => page(1)}
-          className={`absolute right-1 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full ${chevronSurface} text-gray-800 hover:bg-white transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400`}
+          className={`absolute right-0 top-1/2 z-20 flex size-11 -translate-y-1/2 items-center justify-center rounded-full ${chevronSurface} text-ink hover:bg-surface transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400`}
         >
           <svg
             className="size-4"

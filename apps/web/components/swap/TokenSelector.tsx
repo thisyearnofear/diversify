@@ -1,8 +1,6 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { TokenIcon } from "../shared/TokenIcon";
-import { Coin } from "../shared/FloatingCoins";
-import { QUIET_GRAY, tokenColor } from "../shared/palette";
 import { springPop, springSoft } from "@/lib/motion-tokens";
 import TokenPickerSheet from "./TokenPickerSheet";
 import { useTokenPickerItems } from "./token-picker-items";
@@ -52,8 +50,11 @@ interface TokenSelectorProps {
 /**
  * The destination coin fills as the quote arrives — the ticket answering
  * the amount you typed (§5: motion confirms selection/response; one shot
- * per new quote, never a loop). Quiet gray until a live quote exists;
- * reduced motion renders the filled state instantly.
+ * per new quote, never a loop). It used to render a letter Coin in both
+ * states, so the To row showed a gray "U" beside the pill's real USDm
+ * logo and read as a broken image. Now both layers are the real token
+ * mark: quiet (desaturated) until a live quote exists, full color as it
+ * pours in. Reduced motion renders the filled state instantly.
  */
 function PourCoin({
   symbol,
@@ -66,7 +67,9 @@ function PourCoin({
   const filled = Boolean(receiveAmount && Number.parseFloat(receiveAmount) > 0);
   return (
     <span className="relative inline-flex h-6 w-6 shrink-0" aria-hidden="true">
-      <Coin size={24} symbol={symbol.slice(0, 1)} color={QUIET_GRAY} variant="asset" />
+      <span className="inline-flex opacity-45 grayscale">
+        <TokenIcon symbol={symbol} size={24} />
+      </span>
       {filled && (
         <motion.span
           key={receiveAmount}
@@ -75,7 +78,7 @@ function PourCoin({
           animate={{ clipPath: "inset(0% 0 0 0)" }}
           transition={reducedMotion ? { duration: 0 } : springSoft}
         >
-          <Coin size={24} symbol={symbol.slice(0, 1)} color={tokenColor(symbol)} variant="asset" />
+          <TokenIcon symbol={symbol} size={24} />
         </motion.span>
       )}
     </span>
@@ -240,16 +243,17 @@ const TokenSelector: React.FC<TokenSelectorProps> = ({
         </div>
       )}
 
-      {/* Amount-as-hero layout */}
+      {/* Amount-as-hero layout. The field's border is a validity channel
+          only — neutral at rest, blue on focus, red when non-compliant.
+          It used to wear the token's region color, so an untouched empty
+          From field on NGN read as an error. Region identity belongs on
+          the coin, not on the field's error semantics. */}
       <div
         className={`relative rounded-2xl border-2 bg-white dark:bg-gray-900 transition-colors ${
           isNonCompliant
             ? "border-red-300 dark:border-red-800"
-            : regionColor
-              ? "border-transparent"
-              : "border-gray-200 dark:border-gray-700 focus-within:border-blue-500"
+            : "border-gray-200 dark:border-gray-700 focus-within:border-blue-500"
         }`}
-        style={regionColor && !isNonCompliant ? { borderColor: regionColor, borderWidth: 2 } : {}}
       >
         <div className="flex items-stretch">
           {/* Amount input (hero) */}
