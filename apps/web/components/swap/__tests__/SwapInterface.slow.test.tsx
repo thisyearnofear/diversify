@@ -159,6 +159,43 @@ vi.mock('@/lib/analytics', () => ({
   trackFunnelEvent: (...args: unknown[]) => mockTrackFunnelEvent(...args),
 }));
 
+// The stage verifier opens on what the shared proof feed says, so the feed
+// and the chain check are stubbed here: without them the verifier would sit
+// in "Reading the public ledger…" and assert nothing but a spinner.
+vi.mock('@/hooks/use-proof-feed', () => ({
+  useProofFeed: () => ({
+    data: {
+      stats: {
+        totalRecommendations: 1204,
+        chainId: 42161,
+        contractAddress: '0x3BCf',
+        isDeployed: true,
+      },
+      recent: [
+        {
+          id: 41,
+          chainId: 42161,
+          action: 'REBALANCE',
+          targetToken: 'USDm',
+          settlementTxHash: `0x${'ab'.repeat(32)}`,
+          timestamp: Math.floor(Date.now() / 1000) - 86400,
+          confidence: 0.7,
+          user: '0xuser',
+          evidenceCid: '',
+          servingModel: '',
+        },
+      ],
+      capturedAt: new Date().toISOString(),
+      explorerBase: 'https://arbiscan.io',
+      contractExplorer: null,
+    },
+    isLoading: false,
+    isStale: false,
+    error: null,
+  }),
+}));
+vi.mock('@/hooks/use-verify-tx', () => ({ useVerifiedTxs: () => ({}) }));
+
 import SwapInterface from '../SwapInterface';
 
 beforeEach(() => {
@@ -191,44 +228,58 @@ describe('SwapInterface — pair stage at rest', () => {
     expect(screen.getByTestId('pair-stage-wake')).toHaveTextContent('Move savings');
   });
 
-  it('walletless: the verifier is an entry on the stage, and takes the stage over', () => {
+  it('walletless: Verify is a band of the stage, and takes the beam over', () => {
     renderSwap({ address: null });
-    // One quiet line under the pair — the panel itself stays closed until
-    // the visitor asks, so nothing pushes the viewport open.
-    expect(screen.getAllByRole('button', { name: /verify evidence/i })).toHaveLength(1);
+    // The presenter pill is the entry; at rest the beam owns the stage.
+    expect(screen.getByTestId('stage-band-verify')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
     expect(screen.getByTestId('pair-stage')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByTestId('stage-verifier-open'));
+    fireEvent.click(screen.getByTestId('stage-band-verify'));
     const verifier = screen.getByTestId('stage-verifier');
     expect(verifier).toBeInTheDocument();
     // Modes transform, never append: the balancer is gone, not shadowed.
     expect(screen.queryByTestId('pair-stage')).not.toBeInTheDocument();
-    expect(verifier).toHaveTextContent('Check an on-chain receipt');
+    // The verifier opens on the verdict — the ledger's own answer, not a
+    // form. Hex and chain names are one door further in.
+    expect(screen.getByTestId('verifier-verdict')).toBeInTheDocument();
+    expect(verifier).toHaveTextContent(/last public record/i);
+    expect(verifier).not.toHaveTextContent('0x');
+    fireEvent.click(screen.getByRole('button', { name: /check a receipt/i }));
+    expect(screen.getByTestId('verifier-check')).toBeInTheDocument();
+    expect(screen.getByLabelText('Ledger transaction hash to verify')).toHaveValue(
+      `0x${'ab'.repeat(32)}`,
+    );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Back to pair view' }));
+    // The active pill is the exit — no close link of its own.
+    expect(screen.getByTestId('stage-band-verify')).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByTestId('stage-band-verify'));
     expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
     expect(screen.getByTestId('pair-stage')).toBeInTheDocument();
   });
 
-  it('the acting mode withdraws the verifier — trust rides the stage, not the ticket', () => {
+  it('the acting mode withdraws the presenter — trust rides the stage, not the ticket', () => {
     renderSwap({ address: null });
+    fireEvent.click(screen.getByTestId('stage-band-verify'));
+    // The verifier leaves no CTA behind: the active pill folds the stage
+    // back, and only then does the ticket open.
+    fireEvent.click(screen.getByTestId('stage-band-verify'));
     fireEvent.click(screen.getByTestId('pair-stage-wake'));
-    expect(
-      screen.queryByRole('button', { name: /verify evidence/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stage-bands')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
-    // Collapsing restores the stage with its entry still on it.
+    // Collapsing restores the stage with its presenter still on it.
     fireEvent.click(screen.getByRole('button', { name: 'Back to pair view' }));
-    expect(screen.getByTestId('stage-verifier-open')).toBeInTheDocument();
+    expect(screen.getByTestId('stage-bands')).toBeInTheDocument();
+    expect(screen.getByTestId('stage-band-verify')).toBeInTheDocument();
   });
 
-  it('connected: the stage carries no verifier — the rail keeps trust parity', () => {
+  it('connected: the stage carries no Verify pill — the rail keeps trust parity', () => {
     renderSwap({ address: '0xabc' });
-    expect(
-      screen.queryByRole('button', { name: /verify evidence/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stage-band-verify')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stage-verifier')).not.toBeInTheDocument();
+    // Same grammar, minus the band the rail already answers.
+    expect(screen.getByTestId('stage-band-story')).toBeInTheDocument();
+    expect(screen.getByTestId('stage-band-journey')).toBeInTheDocument();
   });
 
   it('an unlisted local currency marks the resting pair as an example — a chosen pair is never relabeled', () => {
@@ -335,6 +386,7 @@ describe('SwapInterface — story strip', () => {
       },
     });
     renderSwap({ address: '0xabc' });
+    fireEvent.click(screen.getByTestId('stage-band-pairs'));
     // PAXG has the higher value → it leads, paired against USDm.
     const chips = screen
       .getAllByRole('button')
@@ -345,16 +397,23 @@ describe('SwapInterface — story strip', () => {
 
   it('walletless: the visitor region token leads when it has a story', () => {
     renderSwap({ address: null, preferredFromRegion: 'Kenya' });
+    fireEvent.click(screen.getByTestId('stage-band-pairs'));
     const chips = screen
       .getAllByRole('button')
       .filter((b) => b.getAttribute('aria-pressed') !== null && / → /.test(b.textContent ?? ''));
     expect(chips[0]).toHaveTextContent('KESm → USDm');
   });
 
-  it('the strip renders under the stage, not in ticket mode', () => {
+  it('the strip is a band: at rest the corridor line reads, in ticket mode nothing shows', () => {
     renderSwap({ address: null });
+    expect(screen.getByTestId('corridor-line')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'KESm to USDm' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('stage-band-pairs'));
     expect(screen.getByRole('button', { name: 'KESm to USDm' })).toBeInTheDocument();
+    expect(screen.queryByTestId('corridor-line')).not.toBeInTheDocument();
+    // Acting withdraws the presenter entirely.
     fireEvent.click(screen.getByTestId('pair-stage-wake'));
+    expect(screen.queryByTestId('stage-bands')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'KESm to USDm' })).not.toBeInTheDocument();
   });
 });
@@ -521,11 +580,13 @@ describe('SwapInterface — journey rail', () => {
     asOf: '2026-09-23T00:00:00.000Z',
   };
 
-  it('connected with history shows the rail under the stage', () => {
+  it('connected: the rail is a band the presenter opens', () => {
     renderSwap({
       address: '0xabc',
       capitalHistory: { data: HISTORY, refresh: vi.fn() },
     });
+    expect(screen.queryByTestId('capital-journey')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('stage-band-journey'));
     expect(screen.getByTestId('capital-journey')).toBeInTheDocument();
   });
 
@@ -566,6 +627,9 @@ describe('SwapInterface — journey rail', () => {
       address: '0xabc',
       capitalHistory: { data: HISTORY, refresh: vi.fn() },
     });
+    // The receipt is the resting reading; the journey band still shows the
+    // destination the chain has not indexed yet.
+    fireEvent.click(screen.getByTestId('stage-band-journey'));
     expect(screen.getByTestId('journey-station-NGNm')).toBeInTheDocument();
   });
 });

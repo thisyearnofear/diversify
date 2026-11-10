@@ -86,6 +86,39 @@ export function getLedgerProofLabel(chainId: number | undefined | null): string 
   return LEDGER_CHAIN_LABELS[chainId] ?? 'verified ledger';
 }
 
+/** Ledger actions are machine vocabulary; surfaces read by people doing a
+ *  legitimacy check translate rather than shout enum names. */
+const LEDGER_ACTION_LABELS: Record<string, string> = {
+  ADVISORY_HEARTBEAT: 'Guardian check-in',
+  REBALANCE: 'Rebalance',
+  SWAP: 'Swap',
+  HOLD: 'Hold steady',
+};
+
+export function humanizeLedgerAction(action: string): string {
+  const key = action.toUpperCase();
+  return LEDGER_ACTION_LABELS[key] ?? action.replace(/_/g, ' ').toLowerCase();
+}
+
+/** Elapsed time for a ledger record's unix-seconds timestamp. */
+export function formatTimeAgo(iso: string, nowMs: number = Date.now()): string {
+  const t = new Date(iso).getTime();
+  if (!Number.isFinite(t)) return '';
+  const seconds = Math.max(0, Math.floor((nowMs - t) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} d ago`;
+}
+
+export function formatRecordAge(unixSeconds: number | undefined | null): string {
+  if (!unixSeconds || !Number.isFinite(unixSeconds)) return '';
+  return formatTimeAgo(new Date(unixSeconds * 1000).toISOString());
+}
+
 /**
  * Explorer URL for a receipt's settlement tx. Derives the chain's explorer
  * base from its contract URL (the feed carries no per-chain base directly);

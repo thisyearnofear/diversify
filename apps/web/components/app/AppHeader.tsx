@@ -3,6 +3,7 @@
  * wallet button's own ChainSelector (Celo/Arbitrum + Stellar testnet behind
  * its flag), which is the more complete control. One switcher, not two.
  */
+import React from "react";
 import type { TabId } from "@/constants/tabs";
 import WalletButton from "@/components/wallet/WalletButton";
 import FarcasterWalletButton from "@/components/wallet/FarcasterWalletButton";
@@ -10,6 +11,8 @@ import { GuardianMascot } from "@/components/shared/GuardianMascot";
 import { BalanceVisibilityToggle } from "@/components/shared/BalanceVisibilityToggle";
 import { StreakNavBadge } from "@/components/shared/StreakNavBadge";
 import { useClaimFlowContext } from "@/hooks/claim-flow-context";
+import { DemoModeContext } from "@/context/app/DemoModeContext";
+import { haptics } from "@/lib/haptics";
 
 interface AppHeaderProps {
   address?: string | null;
@@ -102,6 +105,11 @@ export default function AppHeader({
         {/* Hide balances — app-wide privacy switch for the user's total. */}
         <BalanceVisibilityToggle />
 
+        {/* Sample data is an app-wide view, not a per-tab offer. It used to
+            sit at the foot of Home, Shield, Exchange and the Guardian — four
+            copies of one link, competing with each tab's own hand-offs. */}
+        {!address && <SamplePlanToggle />}
+
         {isFarcaster ? (
           <FarcasterWalletButton />
         ) : (
@@ -121,6 +129,61 @@ export default function AppHeader({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * SamplePlanToggle — the app-wide entry to illustrative figures.
+ *
+ * Same convention as the eye control: the accessible name states the next
+ * action, the visible label states the state. It is deliberately not blue —
+ * sample data is an exploratory view, not a way forward.
+ */
+function SamplePlanToggle() {
+  const demo = React.useContext(DemoModeContext);
+  if (!demo) return null;
+  const { demoMode, enableDemoMode, disableDemoMode } = demo;
+  const active = demoMode.isActive;
+
+  return (
+    <button
+      type="button"
+      data-testid="sample-plan-toggle"
+      onClick={() => {
+        haptics.tap();
+        if (active) disableDemoMode();
+        else enableDemoMode();
+      }}
+      aria-pressed={active}
+      aria-label={active ? "Exit sample data" : "Explore a sample plan"}
+      title={
+        active
+          ? "Illustrative sample figures are on — return to the real app"
+          : "Explore the app with illustrative sample figures — no real funds move"
+      }
+      className={`min-h-tap flex items-center gap-1.5 rounded-lg border px-2.5 transition-colors ${
+        active
+          ? "border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-300"
+          : "border-gray-200 text-gray-500 hover:text-gray-800 dark:border-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+      }`}
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        aria-hidden="true"
+      >
+        {/* A dashed coin — the figure it carries is illustrative. */}
+        <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
+      </svg>
+      <span aria-hidden="true" className="text-xs font-medium leading-none">
+        {active ? "Sample on" : "Sample plan"}
+      </span>
+    </button>
   );
 }
 

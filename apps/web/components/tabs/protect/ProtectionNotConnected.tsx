@@ -16,8 +16,9 @@
  * the action hue. While the lens is open it owns the moment — the ring
  * keeps its full size as the lens's anchor and the picker rail steps
  * out until "← Back to plan". During a balance preview the commit
- * owns the whole screen: handoffs and the demo link step out and only
- * trust remains. No hero card, no proof card.
+ * owns the whole screen: handoffs step out and only trust remains.
+ * The sample-plan switch is app chrome (the header), not a per-tab
+ * foot link. No hero card, no proof card.
  *
  * Persona morphs the object (rail 4): an APAC philosophy shows the APAC
  * honesty banner in the status tier; a Caribbean philosophy shows the
@@ -77,7 +78,6 @@ import { useAIConversationOptional } from "@/context/AIConversationContext";
 
 interface Props {
   experienceMode: UserExperienceMode;
-  onEnableDemo?: () => void;
   /** Selection-bound inspector (e.g. the RWA vault sleeve via ?sleeve=rwa). */
   inspector?: React.ReactNode;
   inspectorOpen?: boolean;
@@ -96,7 +96,6 @@ interface Props {
 
 export function ProtectionNotConnected({
   experienceMode: _experienceMode,
-  onEnableDemo,
   inspector,
   inspectorOpen = false,
   sleeveOpen = false,
@@ -585,14 +584,13 @@ export function ProtectionNotConnected({
           {showCaribbeanBanner && <CaribbeanRailHonestyBanner />}
         </div>
       )}
-      {onEnableDemo &&
-        (balance.isPreviewing ? (
+      {balance.isPreviewing ? (
           /* The commit moment owns the screen — trust stays, handoffs
              and the demo link step out until it settles (§1 one job;
              the dial already hides the rail, the CTA and the LiveLine). */
           <VerifiedEvidence />
         ) : (
-          <UnconnectedStatusTier onEnableDemo={onEnableDemo}>
+          <UnconnectedStatusTier>
             {sleeveOpen && onCloseSleeve ? (
               <button
                 type="button"
@@ -635,7 +633,7 @@ export function ProtectionNotConnected({
               </button>
             ) : null}
           </UnconnectedStatusTier>
-        ))}
+      )}
     </div>
   );
 

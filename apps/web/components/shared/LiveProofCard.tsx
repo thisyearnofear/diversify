@@ -40,6 +40,8 @@ import {
   getLedgerProofLabel,
   getProofTxUrl,
   LEDGER_CHAIN_BADGES,
+  humanizeLedgerAction,
+  formatTimeAgo,
 } from '@/constants/proof-feed';
 
 const SHORT_ADDRESS_RE = /^(0x[0-9a-fA-F]{4})[0-9a-fA-F]+(0x[0-9a-fA-F]{4})$/;
@@ -50,32 +52,10 @@ function shortAddress(addr: string | null | undefined): string {
     return m ? `${m[1]}…${m[2]}` : addr;
 }
 
-// Ledger actions are machine vocabulary; the ticker is read by people
-// doing a legitimacy check, so translate rather than shout enum names.
-const ACTION_LABELS: Record<string, string> = {
-    ADVISORY_HEARTBEAT: 'Guardian check-in',
-    REBALANCE: 'Rebalance',
-    SWAP: 'Swap',
-    HOLD: 'Hold steady',
-};
-
-function humanizeAction(action: string): string {
-    const key = action.toUpperCase();
-    return ACTION_LABELS[key] ?? action.replace(/_/g, ' ').toLowerCase();
-}
-
-function timeAgo(iso: string, nowMs: number = Date.now()): string {
-    const t = new Date(iso).getTime();
-    if (!Number.isFinite(t)) return '';
-    const seconds = Math.max(0, Math.floor((nowMs - t) / 1000));
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes} min ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days} d ago`;
-}
+// The shared translation/formatting lives in constants/proof-feed.ts —
+// every proof-feed surface reads the same words for the same records.
+const humanizeAction = humanizeLedgerAction;
+const timeAgo = formatTimeAgo;
 
 export interface LiveProofCardProps {
     variant?: 'full' | 'compact';

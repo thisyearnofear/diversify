@@ -113,6 +113,7 @@ vi.mock("../SwapTab", () => ({
     onPairChange?: (from: string, to: string) => void;
     decisionWindow?: boolean;
     onExitDecisionWindow?: () => void;
+    decisionDoor?: React.ReactNode;
   }) {
     const {
       onInspectQuote,
@@ -122,6 +123,7 @@ vi.mock("../SwapTab", () => ({
       onPairChange,
       decisionWindow,
       onExitDecisionWindow,
+      decisionDoor,
     } = props;
     React.useEffect(() => {
       if (mockEchoPair) onPairChange?.("NGNm", "KESm");
@@ -179,6 +181,7 @@ vi.mock("../SwapTab", () => ({
         { "data-testid": "decision-window-state" },
         decisionWindow ? "open" : "closed",
       ),
+      decisionDoor ?? null,
       onExitDecisionWindow
         ? React.createElement(
             "button",
@@ -329,30 +332,24 @@ describe("ExchangeTab — instrument", () => {
     }
   });
 
-  it("unconnected: the foot tier drops the trust line — the stage weaves it", () => {
+  it("unconnected: the foot tier is gone — trust and netting fold into the stage", () => {
     mockAddress = null;
     render(
       <ExchangeTab userRegion="USA" inflationData={{}} />,
     );
 
-    // The verifier now lives inside the resting pair stage (SwapInterface),
-    // not at the card's foot — the tier carries the netting hand-off alone.
-    // SwapTab is mocked here, so the tier must render zero copies; the
-    // stage-side assertion lives in SwapInterface.slow.test.tsx.
+    // The verifier lives inside the resting pair stage (SwapInterface),
+    // FX netting is the pair inspector's Match tab, and the sample-plan
+    // switch is app chrome — so the card's foot renders nothing. SwapTab is
+    // mocked here, so the stage-side assertions live in
+    // SwapInterface.slow.test.tsx.
     expect(
       screen.queryAllByRole("button", { name: /verify evidence/i }),
     ).toHaveLength(0);
-    expect(screen.getByRole("button", { name: /FX netting/ })).toBeInTheDocument();
-  });
-
-  it("unconnected: demo entry is a quiet text link in the status tier", () => {
-    mockAddress = null;
-    render(
-      <ExchangeTab userRegion="USA" inflationData={{}} />,
-    );
-
-    fireEvent.click(screen.getByRole("button", { name: "Explore a sample plan" }));
-    expect(mockEnableDemo).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /FX netting/ })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Explore a sample plan" }),
+    ).not.toBeInTheDocument();
   });
 
   it("opens the pair inspector on Story; Route carries only the schematic", () => {
@@ -764,7 +761,7 @@ describe("ExchangeTab — decision window", () => {
     expect(screen.getByTestId("decision-window-state")).toHaveTextContent("closed");
   });
 
-  it("walletless: the prompt replaces netting as the single child", () => {
+  it("walletless: the decision-window door rides in the stage, not a foot tier", () => {
     mockAddress = null;
     freshSignals();
     render(<ExchangeTab userRegion="USA" inflationData={{}} />);
@@ -858,13 +855,16 @@ describe("Exchange network selector", () => {
     expect(screen.queryByTestId("mock-stellar-exchange")).toBeNull();
   });
 
-  it("routes the select to the Stellar surface when enabled", () => {
+  it("routes the switch to the Stellar surface when enabled", () => {
     vi.stubEnv("NEXT_PUBLIC_STELLAR_TESTNET", "true");
     const setExchangeNetwork = vi.fn();
     navOverrides.setExchangeNetwork = setExchangeNetwork;
     render(<ExchangeTab userRegion="USA" inflationData={{}} />);
-    const select = screen.getByLabelText("Exchange network");
-    fireEvent.change(select, { target: { value: "stellar:testnet" } });
+    // The venue switch is pills, not a select — same grammar as every
+    // other segmented control in the app.
+    fireEvent.click(
+      screen.getByRole("button", { name: "Stellar testnet" }),
+    );
     expect(setExchangeNetwork).toHaveBeenCalledWith("stellar:testnet");
     navOverrides.exchangeNetwork = "stellar:testnet";
     cleanup();

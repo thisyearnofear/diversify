@@ -28,7 +28,6 @@ import { savePendingFund } from "@/lib/pending-fund";
 import { Coin } from "../shared/FloatingCoins";
 import { QUIET_GRAY } from "../shared/palette";
 import { VerifiedEvidencePanel } from "../shared/VerifiedEvidence";
-import { Hallmark } from "../shared/Hallmark";
 import { haptics } from "@/lib/haptics";
 import { springPop, springSoft, STAGGER_STEP_S } from "@/lib/motion-tokens";
 import { useExperience } from "@/context/app/ExperienceContext";
@@ -51,6 +50,55 @@ interface Token {
 /** Ramp-buyable tokens quoted at ~$1 — the gap can be sized honestly
  *  even at zero balance. Anything else needs a held-balance price. */
 const USD_STABLE_BUYABLE = new Set(["USDC", "CUSD"]);
+
+/** The resting stage's reading bands. `story` is the floor: the corridor
+ *  line the pair always answers with. The others each rewrite that one
+ *  slot — never a new row under it (§5). */
+type StageBand = "story" | "pairs" | "journey" | "verify";
+
+interface StageBandOption {
+  id: StageBand;
+  label: string;
+}
+
+/** The presenter control — the segmented pill grammar the network switch
+ *  and the Guardian board taught (design-language §1: controls are the
+ *  motif). One row, one slot rewritten, and the active pill is the exit. */
+function StageBands({
+  options,
+  active,
+  onSelect,
+}: {
+  options: StageBandOption[];
+  active: StageBand;
+  onSelect: (id: StageBand) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label="What the pair shows"
+      data-testid="stage-bands"
+      className="mt-3 flex items-center justify-center gap-1.5"
+    >
+      {options.map((option) => (
+        <button
+          key={option.id}
+          type="button"
+          data-testid={`stage-band-${option.id}`}
+          aria-pressed={active === option.id}
+          onClick={() => onSelect(option.id)}
+          className={`min-h-tap rounded-full px-3 text-2xs font-bold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-400 ${
+            active === option.id
+              ? "bg-ink text-surface"
+              : "bg-ink/[0.05] text-ink/60 hover:bg-ink/10"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 interface SwapInterfaceProps {
   availableTokens: Token[];
@@ -113,6 +161,9 @@ interface SwapInterfaceProps {
    *  view; the tab owns the trigger and the prompt. */
   decisionWindow?: boolean;
   onExitDecisionWindow?: () => void;
+  /** The decision-window prompt, rendered inside the resting stage's
+   *  story reading. Walletless there is no foot tier to hold it. */
+  decisionDoor?: React.ReactNode;
 }
 
 const SwapInterface = forwardRef<
@@ -158,6 +209,7 @@ const SwapInterface = forwardRef<
     onPairChange,
     decisionWindow = false,
     onExitDecisionWindow,
+    decisionDoor = null,
   },
   ref,
 ) {
@@ -313,10 +365,14 @@ const SwapInterface = forwardRef<
   // completion carries leg2Hint and stays in the ticket for leg 2 —
   // no receipt there.
   const [receipt, setReceipt] = useState<PairReceipt | null>(null);
-  // The verifier is a mode of the stage, not a panel below it: tapping
-  // the line rewrites the resting object itself (§5 — modes transform,
-  // never append). Walletless only; connected users keep the rail's tier.
-  const [stageVerifier, setStageVerifier] = useState(false);
+  // The resting stage is a presenter: one reading slot under the beam, one
+  // pill row to choose it. Story is the floor, so the active pill is also
+  // the way out — no mode carries its own close link and nothing lingers at
+  // the card's foot (§5: modes transform, never append). The verifier is a
+  // band of the stage, not a panel below it; walletless only, connected
+  // users keep the rail's trust tier.
+  const [band, setBand] = useState<StageBand>("story");
+  const stageVerifier = band === "verify";
   useEffect(() => {
     if (status !== "completed" || leg2Hint) return;
     const settledAt = Date.now();
@@ -328,6 +384,9 @@ const SwapInterface = forwardRef<
       toToken.toLowerCase() === handoffOrigin.toToken.toLowerCase()
         ? handoffOrigin.origin
         : undefined;
+    // The receipt is the newest fact about this pair, so it takes the
+    // reading slot back from any open band.
+    setBand("story");
     setReceipt({
       fromToken,
       toToken,
@@ -382,7 +441,7 @@ const SwapInterface = forwardRef<
   ]);
 
   const wakeTicket = () => {
-    setStageVerifier(false);
+    setBand("story");
     setMode("ticket");
     try {
       window.sessionStorage.setItem("diversifi.exchange.mode", "ticket");
@@ -390,7 +449,7 @@ const SwapInterface = forwardRef<
   };
   const collapseToStage = () => {
     setAmount("");
-    setStageVerifier(false);
+    setBand("story");
     setMode("stage");
     try {
       window.sessionStorage.removeItem("diversifi.exchange.mode");
@@ -528,6 +587,62 @@ const SwapInterface = forwardRef<
       )?.symbol
     : undefined;
 
+  // The presenter: one reading slot under the beam, one row to choose it.
+  const activeBand: StageBand = band;
+  const bandOptions: StageBandOption[] = [
+    { id: "story", label: "Story" },
+    ...(storyPairs.length > 0 ? [{ id: "pairs" as const, label: "Pairs" }] : []),
+    { id: "journey", label: "Journey" },
+    // Trust lives in the object the visitor reads, never at the card's foot
+    // (§7). Connected users keep the tier's trust rail, so no Verify pill.
+    ...(!address ? [{ id: "verify" as const, label: "Verify" }] : []),
+  ];
+
+  const bandReading =
+    activeBand === "pairs" ? (
+      <StoryPairStrip
+        pairs={storyPairs}
+        active={{ from: fromToken, to: toToken }}
+        onPick={(from, to) => {
+          setReceipt(null);
+          setFromToken(from);
+          setToToken(to);
+          // A new pair is a new story — the reading follows the object.
+          setBand("story");
+        }}
+      />
+    ) : activeBand === "journey" ? (
+      address ? (
+        <CapitalJourney
+          history={capitalHistory?.data ?? null}
+          tokenBalances={tokenBalances}
+          optimisticSymbol={receipt?.txHash ? receipt.toToken : null}
+          onInspectJourney={onInspectJourney}
+        />
+      ) : (
+        <JourneyLookup
+          lookupAddress={lookupAddress}
+          history={capitalHistory?.data ?? null}
+          isLoading={capitalHistory?.isLoading ?? false}
+          error={capitalHistory?.error ?? false}
+          onLookup={(a) => onLookupAddress?.(a)}
+          onInspectJourney={onInspectJourney}
+        />
+      )
+    ) : null;
+
+  const presenter = (
+    <StageBands
+      options={bandOptions}
+      active={activeBand}
+      onSelect={(id) => {
+        haptics.tap();
+        // The active pill is the exit, and Story is the floor it returns to.
+        setBand(id === activeBand ? "story" : id);
+      }}
+    />
+  );
+
   return (
     // The shell (InstrumentShell) owns the surface — the ticket renders bare
     // inside it (design-language §1: one solid card per tab, owned by the
@@ -548,54 +663,66 @@ const SwapInterface = forwardRef<
         )}
 
         <LayoutGroup id="exchange-pair">
-        {!inTicket && !stageVerifier ? (
+        {!inTicket ? (
           <>
-            <PairStage
-              fromToken={fromToken}
-              toToken={toToken}
-              fromItems={stageFromItems}
-              toItems={stageToItems}
-              onFromChange={(v) => {
-                setReceipt(null);
-                setFromToken(v);
-              }}
-              onToChange={(v) => {
-                setReceipt(null);
-                setToToken(v);
-              }}
-              onSwitch={() => {
-                setReceipt(null);
-                handleSwitchTokens();
-              }}
-              onWake={wakeTicket}
-              onInspect={
-                onInspectQuote ? () => onInspectQuote(fromToken, toToken, "story") : undefined
-              }
-              signals={corridorSignals}
-              decisionWindow={decisionWindow}
-              onExitDecisionWindow={onExitDecisionWindow}
-              examplePair={
-                !pairChosen &&
-                (localCurrencyUnlisted ||
-                  (!address &&
-                    preferredFromListed != null &&
-                    fromToken.toLowerCase() !== preferredFromListed.toLowerCase()))
-              }
-              ctaLabel={address ? "Move savings" : "Explore this move"}
-              receipt={receipt}
-              onDismissReceipt={() => setReceipt(null)}
-              onMoveMore={() => {
-                setReceipt(null);
-                wakeTicket();
-              }}
-              claim={claim}
-              fromBalance={address ? tokenBalances[fromToken]?.formattedBalance ?? null : null}
-              onDraft={(a) => {
-                setReceipt(null);
-                setAmount(a);
-                wakeTicket();
-              }}
-            />
+            {stageVerifier ? (
+              /* Verify takes the beam's own slot — the stage is rewritten,
+                 not extended (§5). The pill row stays, so the active pill is
+                 the way back to the pair. */
+              <div data-testid="stage-verifier" className="mx-auto w-full max-w-[420px]">
+                <VerifiedEvidencePanel presentation="stage" />
+              </div>
+            ) : (
+              <PairStage
+                fromToken={fromToken}
+                toToken={toToken}
+                fromItems={stageFromItems}
+                toItems={stageToItems}
+                onFromChange={(v) => {
+                  setReceipt(null);
+                  setFromToken(v);
+                }}
+                onToChange={(v) => {
+                  setReceipt(null);
+                  setToToken(v);
+                }}
+                onSwitch={() => {
+                  setReceipt(null);
+                  handleSwitchTokens();
+                }}
+                onWake={wakeTicket}
+                onInspect={
+                  onInspectQuote ? () => onInspectQuote(fromToken, toToken, "story") : undefined
+                }
+                signals={corridorSignals}
+                decisionWindow={decisionWindow}
+                onExitDecisionWindow={onExitDecisionWindow}
+                examplePair={
+                  !pairChosen &&
+                  (localCurrencyUnlisted ||
+                    (!address &&
+                      preferredFromListed != null &&
+                      fromToken.toLowerCase() !== preferredFromListed.toLowerCase()))
+                }
+                ctaLabel={address ? "Move savings" : "Explore this move"}
+                receipt={receipt}
+                onDismissReceipt={() => setReceipt(null)}
+                onMoveMore={() => {
+                  setReceipt(null);
+                  wakeTicket();
+                }}
+                claim={claim}
+                fromBalance={address ? tokenBalances[fromToken]?.formattedBalance ?? null : null}
+                onDraft={(a) => {
+                  setReceipt(null);
+                  setAmount(a);
+                  wakeTicket();
+                }}
+                reading={bandReading}
+                decisionDoor={decisionDoor}
+              />
+            )}
+            {presenter}
             {/* The settled receipt is shareable — a chain-derived page,
                 not a session artifact. Only chains the receipt route can
                 read get the link (Celo, Arbitrum). */}
@@ -613,78 +740,7 @@ const SwapInterface = forwardRef<
                   </a>
                 </p>
               )}
-            {!receipt && storyPairs.length > 0 && (
-              <StoryPairStrip
-                pairs={storyPairs}
-                active={{ from: fromToken, to: toToken }}
-                onPick={(from, to) => {
-                  setReceipt(null);
-                  setFromToken(from);
-                  setToToken(to);
-                }}
-              />
-            )}
-            {address ? (
-              <CapitalJourney
-                history={capitalHistory?.data ?? null}
-                tokenBalances={tokenBalances}
-                optimisticSymbol={receipt?.txHash ? receipt.toToken : null}
-                onInspectJourney={onInspectJourney}
-              />
-            ) : (
-              !receipt && (
-                <JourneyLookup
-                  lookupAddress={lookupAddress}
-                  history={capitalHistory?.data ?? null}
-                  isLoading={capitalHistory?.isLoading ?? false}
-                  error={capitalHistory?.error ?? false}
-                  onLookup={(a) => onLookupAddress?.(a)}
-                  onInspectJourney={onInspectJourney}
-                />
-              )
-            )}
-            {/* Trust lives in the object the visitor reads, never at the
-                card's foot (§7). The line is the entry; tapping it turns
-                the stage into the verifier. Walletless only — connected
-                users keep the tier's trust rail. */}
-            {!address && !receipt && (
-              <div className="mt-4 flex flex-col items-center text-center">
-                <p className="text-2xs text-ink-muted">
-                  Every settlement is a public record —
-                </p>
-                <button
-                  type="button"
-                  data-testid="stage-verifier-open"
-                  onClick={() => {
-                    haptics.tap();
-                    setStageVerifier(true);
-                  }}
-                  className="inline-flex min-h-tap items-center gap-1.5 py-1.5 text-2xs text-gray-500 transition-colors hover:text-gray-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-400 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                  <Hallmark size={10} className="opacity-70" />
-                  <span className="font-semibold tracking-wide">Verify evidence</span>
-                  <span className="ml-0.5 text-3xs opacity-50" aria-hidden="true">+</span>
-                </button>
-              </div>
-            )}
           </>
-        ) : stageVerifier ? (
-          /* The verifier takes the stage itself — the same morph the ticket
-             uses (§5: modes transform, never append). "← Pair" collapses back. */
-          <div data-testid="stage-verifier" className="mx-auto w-full max-w-[420px]">
-            <button
-              type="button"
-              aria-label="Back to pair view"
-              onClick={() => {
-                haptics.tap();
-                setStageVerifier(false);
-              }}
-              className="mb-1 -ml-1 px-1 text-2xs text-gray-500 transition-colors hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 min-h-[32px]"
-            >
-              ← Pair
-            </button>
-            <VerifiedEvidencePanel />
-          </div>
         ) : (
           <>
         {!isLoading && status === "idle" && !leg2Hint && !phoneNumber && (

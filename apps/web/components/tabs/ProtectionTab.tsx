@@ -1731,7 +1731,6 @@ export default function ProtectionTab({
     return (
       <ProtectionNotConnected
         experienceMode={experienceMode}
-        onEnableDemo={enableDemoMode}
         inspector={sleeveOpen || cycleOpen ? inspector : undefined}
         inspectorOpen={sleeveOpen || cycleOpen}
         sleeveOpen={sleeveOpen}

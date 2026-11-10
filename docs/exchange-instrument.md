@@ -23,17 +23,24 @@ through the curated `constants/token-logos.ts` registry; the nine Mento
 Celo currencies added in September 2026 use their configured token
 contracts' verified Trust Wallet assets. Missing or failed logos use the
 branded Coin fallback rather than a broken image; GoodDollar (`G$`) remains
-an explicit fallback until a verified public logo is available. Below the
-beam the corridor line rotates its beats (alive); a `StoryPairStrip` of
-signature pairs sits under the stage — connected, it leads with what
+an explicit fallback until a verified public logo is available. The stage
+is a presenter: the beam is the object, and beneath it exactly one
+reading slot plus one pill row — `Story | Pairs | Journey | Verify`.
+`Story` is the corridor line rotating its beats (alive); `Pairs` is the
+`StoryPairStrip` of signature pairs — connected, it leads with what
 the wallet holds (each held token vs USDm, EURm when the held token IS
 USDm); walletless, with the visitor's region token. Only pairs with
 provenance on both sides are offered; no chip ever selects a story
-that isn't there. The stage composes as one centered column
-(`instrument-composition pair-stage is-stacked`) — beam, reading, then
-the CTA under it — so the balance stays the thing the eye lands on and
-"Explore this move" reads as what the object invites, not a control in
-the margin.
+that isn't there. `Journey` is the pair's memory (below). `Verify` is
+trust. `Pairs` only earns a pill when the curated dataset has stories
+for the pair; `Verify` withdraws once a wallet connects. The band is
+one at a time — choosing the active pill returns to `Story` — so the
+strip, the rail and the verifier are states of the same slot rather
+than three blocks stacked under the beam. The stage composes as one
+centered column (`instrument-composition pair-stage is-stacked`) —
+beam, reading, then the CTA under it — so the balance stays the thing
+the eye lands on and "Explore this move" reads as what the object
+invites, not a control in the margin.
 
 The ticket is the stage's acting mode — reached by one CTA ("Move
 savings") and still by construction (no shine, no beat rotation). The
@@ -45,17 +52,26 @@ session (`sessionStorage` `diversifi.exchange.mode`); any real intent —
 an amount, a quote in flight, a leg-2 hint, a phone recipient — forces
 the ticket, so Guardian/Home prefills never land on the stage.
 
-Trust on the resting stage is itself a mode, walletless only: one
-centered line under
-the CTA — the claim's caption plus a `Verify evidence` verb — and
-tapping it rewrites the stage itself into `VerifiedEvidencePanel`
-(`stage-verifier`), with `← Pair` as the way back. Nothing opens below
-the object and the viewport never grows (§5: modes transform, never
-append; §7: the verifier is a mode of the marquee object, not an
-accordion at the card's foot). Acting supersedes verifying: any intent
-that wakes the ticket also closes the verifier, so trust never occupies
-the stage while the user is trading. Once a wallet is connected the
-entry withdraws — trust rides the rail's tier like the other tabs.
+Trust on the resting stage is itself a band, walletless only: `Verify`
+rewrites the beam's own slot into `VerifiedEvidencePanel`
+(`stage-verifier`) in its `stage` presentation — the seal, the
+Guardian's last public record, and the count-up of decisions on one
+shared ledger, centered because the slot it fills is the screen's
+subject. Nothing opens below the object and the viewport never grows
+(§5: modes transform, never append; §7: the verifier is a mode of the
+marquee object, not an accordion at the card's foot). Inside the panel
+the depth grammar continues: `Check a receipt →` prefills the newest
+record's hash with the chain derived from it, so verifying is a tap
+rather than a typing task, and `Technical detail` is where the network
+dots, ledger addresses and `Guardian #1` live — hex never reaches the
+first viewport. Both doors leave with `← Verdict`; the active pill is
+the way back to the pair. An empty or unreachable feed says "Nothing has
+settled on the ledger yet" and still offers the check; a receipt the
+chain hasn't confirmed is labelled unconfirmed rather than shown as
+proof. Acting supersedes verifying: any intent that wakes the ticket also
+closes the verifier, so trust never occupies the stage while the user is
+trading. Once a wallet is connected the band withdraws — trust rides the
+rail's tier like the other tabs.
 
 Settlement returns to the pair. A completed swap clears the amount,
 acknowledges the controller back to idle, and reopens the stage holding
@@ -77,7 +93,7 @@ presented as fact all broke the honesty contract. A via-hub leg-1
 completion is the exception: it advances the ticket to leg 2 in place,
 with no receipt.
 
-Under the stage sits the pair's memory: the journey rail, "Where your
+The `Journey` band is the pair's memory: the journey rail, "Where your
 savings have lived". It is derived only from the wallet's Celo ERC-20
 transfers, mapped by contract address (on-chain symbols lie — USDm
 reports `CUSD`, so `token.symbol` is never read). Each station is a

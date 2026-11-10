@@ -87,10 +87,7 @@ export default function OverviewTab({
   // itself carries the "Connecting…" state — no second line repeating it.
   if (!address && !isDemo) {
     return (
-      <NotConnectedState
-        isActive={isActive}
-        onEnableDemo={enableDemoMode}
-      />
+      <NotConnectedState isActive={isActive} />
     );
   }
 

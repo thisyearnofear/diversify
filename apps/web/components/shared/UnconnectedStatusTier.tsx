@@ -1,77 +1,35 @@
 /**
  * UnconnectedStatusTier — the shared status tier for unconnected instruments.
  *
- * Phase 2 of the unconnected-morphs work (design-language §5 rail 5): every
- * tab keeps its object walletless and puts trust + demo entry in the status
- * tier. Home (NotConnectedState) and Exchange (ExchangeTab) duplicated this
- * exact block; Shield and Agent now join them, and the duplication collapses
- * into one primitive.
- *
  * Quiet by contract: at most one VerifiedEvidence line (§7 chain-agnostic
- * trust — no hex, no chain names until tapped) + one demo text link. Not a
- * demo strip with headline copy — the object owns the first viewport. Tabs
- * whose first object can host the verifier (Guardian's board, Exchange's
- * pair stage) pass trust={null} — woven beats orphaned (§7).
+ * trust — no hex, no chain names until tapped) plus the tab's own hand-offs.
+ * Tabs whose object hosts the verifier (Guardian's board, Exchange's pair
+ * stage) pass trust={null} — woven beats orphaned (§7).
+ *
+ * The demo entry left this row: it repeated on four tabs and split the foot
+ * into corners. It is one app-wide control now, in the header next to Hide.
  */
 
 import React from "react";
 import { VerifiedEvidence } from "./VerifiedEvidence";
 
 interface UnconnectedStatusTierProps {
-  /** Called when the visitor taps "Explore a sample plan". */
-  onEnableDemo: () => void;
-  /** Sample data is already on (another tab enabled it). Offering "Explore a
-   *  sample plan" again would contradict the tab next door — say it's on and
-   *  offer the way out instead. */
-  demoActive?: boolean;
-  onDisableDemo?: () => void;
   className?: string;
-  /** Optional extra quiet links (e.g. the FX netting hand-off on Exchange).
-   *  Rendered between the trust line and the demo link — keep them text-links,
-   *  the tier stays quiet by contract. */
+  /** The tab's own quiet hand-offs (e.g. the FX netting link). Keep them
+   *  text-links — the tier stays quiet by contract. */
   children?: React.ReactNode;
   trust?: React.ReactNode;
 }
 
 export function UnconnectedStatusTier({
-  onEnableDemo,
-  demoActive = false,
-  onDisableDemo,
   className = "",
   children,
   trust = <VerifiedEvidence />,
 }: UnconnectedStatusTierProps) {
   return (
-    <div className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 ${className}`.trim()}>
+    <div className={`flex flex-wrap items-center justify-center gap-x-3 gap-y-2 ${className}`.trim()}>
       {trust}
       {children}
-      {demoActive && onDisableDemo ? (
-        <button
-          type="button"
-          onClick={onDisableDemo}
-          className="link-quiet shrink-0"
-        >
-          Sample data on · Exit
-        </button>
-      ) : (
-        /* Deliberately NOT blue, and deliberately not `font-semibold`.
-           This is an exploratory affordance into sample data, not a next step
-           — but it rendered as the same blue text link as the product
-           hand-offs sitting beside it in `children`, on every tab, at the same
-           weight. Two identical blue links plus a trust line read as one noisy
-           row, and blue says "this is the way forward" for something that
-           isn't real money. Gray + medium weight keeps it one tap away while
-           putting it below the real hand-offs, so the row has a priority
-           order instead of three peers. */
-        <button
-          type="button"
-          onClick={onEnableDemo}
-          title="Explore the app with illustrative sample figures — no real funds move"
-          className="link-quiet shrink-0"
-        >
-          Explore a sample plan
-        </button>
-      )}
     </div>
   );
 }

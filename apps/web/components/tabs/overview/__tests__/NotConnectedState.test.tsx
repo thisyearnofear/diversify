@@ -152,7 +152,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   });
 
   it("keeps the moment card as the object with the connect CTA attached", () => {
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     // The Risk Theater object renders walletless — it is geo data, not
     // wallet data.
@@ -164,7 +164,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   });
 
   it("the moment's one primary explores a plan for its currency — carrying the walletless compare intent", () => {
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     const cta = screen.getByRole("button", { name: "Explore plans from this reading" });
     fireEvent.click(cta);
@@ -181,7 +181,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
 
   it("a default/shared currency is handed off as an example, never the visitor's own reading", () => {
     hookState.countryIsDefault = true;
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     fireEvent.click(screen.getByRole("button", { name: "Explore plans from this reading" }));
     expect(navState.navigateWithIntent).toHaveBeenCalledWith("protect", {
@@ -195,7 +195,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   it("inflation-only fallback offers generic plan exploration — no invented currency", () => {
     hookState.moment = null;
     hookState.inflationMoment = { currencyCode: "NGN" };
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     fireEvent.click(screen.getByRole("button", { name: "Explore protection plans" }));
     expect(navState.navigateWithIntent).toHaveBeenCalledWith("protect", {
@@ -207,29 +207,28 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   it("with no moment at all, connect stays the one primary affordance", () => {
     hookState.moment = null;
     hookState.isLoading = false;
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
     expect(
       screen.getByRole("button", { name: "Connect wallet" }),
     ).toHaveAttribute("data-variant", "primary");
   });
 
 
-  it("keeps demo as a quiet status-tier line — no generic Verified on Home", () => {
-    const onEnableDemo = vi.fn();
-    render(<NotConnectedState onEnableDemo={onEnableDemo} />);
+  it("keeps Home's foot empty — no generic Verified line, no demo link", () => {
+    render(<NotConnectedState />);
 
     expect(screen.queryByText(/Verified|Evidence mirrored/i)).not.toBeInTheDocument();
-    // Demo entry is a text link, not a competing button strip.
-    fireEvent.click(
-      screen.getByRole("button", { name: "Explore a sample plan" }),
-    );
-    expect(onEnableDemo).toHaveBeenCalledTimes(1);
+    // The sample-plan switch is app chrome (the header), not a link each tab
+    // repeats at its own foot.
+    expect(
+      screen.queryByRole("button", { name: "Explore a sample plan" }),
+    ).not.toBeInTheDocument();
   });
 
   it("renders a quiet detecting state while geo resolves — never a premature failure", () => {
     hookState.moment = null;
     hookState.isLoading = true;
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     expect(screen.getByText(/Detecting your region/i)).toBeInTheDocument();
     // Not a dead end, not a lie: no "could not detect" while still loading.
@@ -241,7 +240,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   it("when detection fails, the fallback card carries the country picker — the instruction and the affordance travel together", () => {
     hookState.moment = null;
     hookState.isLoading = false;
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     // Honest copy + a working control (§5: selection rewrites the artefact).
     expect(screen.getByText(/could not detect your country/i)).toBeInTheDocument();
@@ -256,13 +255,13 @@ describe("NotConnectedState — Home's unconnected morph", () => {
 
   it("forwards isActive to the moment card's visit memory", () => {
     const { rerender } = render(
-      <NotConnectedState isActive={false} onEnableDemo={vi.fn()} />,
+      <NotConnectedState isActive={false} />,
     );
     expect(screen.getByTestId("moment-card")).toHaveAttribute(
       "data-remember-visit",
       "false",
     );
-    rerender(<NotConnectedState isActive={true} onEnableDemo={vi.fn()} />);
+    rerender(<NotConnectedState isActive={true} />);
     expect(screen.getByTestId("moment-card")).toHaveAttribute(
       "data-remember-visit",
       "true",
@@ -272,7 +271,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   it("geo failed → the moment object still renders as a display-only default and stays out of visit memory", () => {
     hookState.moment = { currencyCode: "NGN", benchmark: "USD" };
     hookState.countryIsDefault = true;
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     const card = screen.getByTestId("moment-card");
     // The object stays alive — the card renders instead of a picker-only
@@ -285,7 +284,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   it("picking a country from the fallback re-points the moment (judge path: geo blocked → still lands on their currency)", () => {
     hookState.moment = null;
     hookState.isLoading = false;
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
 
     const trigger = screen.getByRole('button', {
       name: /Change the country where your savings live/,
@@ -297,7 +296,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   });
 
   it("opens the currency story as an inline stage — comparison stays mounted but unreachable and the wallet CTA is not a rival", async () => {
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
     const comparison = screen.getByTestId("home-comparison");
     const storyButton = screen.getByRole("button", { name: "Story of the currency" });
     storyButton.focus();
@@ -317,7 +316,7 @@ describe("NotConnectedState — Home's unconnected morph", () => {
   });
 
   it("closing the stage restores the same mounted comparison and the single CTA", async () => {
-    render(<NotConnectedState onEnableDemo={vi.fn()} />);
+    render(<NotConnectedState />);
     const comparison = screen.getByTestId("home-comparison");
     const storyButton = screen.getByRole("button", { name: "Story of the currency" });
     storyButton.focus();
@@ -346,12 +345,12 @@ describe("NotConnectedState — Home's unconnected morph", () => {
       mockTrack.mock.calls.filter(([name]) => name === "currency_story_opened");
     const { rerender } = render(
       <React.StrictMode>
-        <NotConnectedState onEnableDemo={vi.fn()} />
+        <NotConnectedState />
       </React.StrictMode>,
     );
     rerender(
       <React.StrictMode>
-        <NotConnectedState onEnableDemo={vi.fn()} />
+        <NotConnectedState />
       </React.StrictMode>,
     );
     expect(opened()).toHaveLength(0);

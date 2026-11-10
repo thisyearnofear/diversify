@@ -60,6 +60,9 @@ interface SwapTabProps {
   onPairChange?: (from: string, to: string) => void;
   decisionWindow?: boolean;
   onExitDecisionWindow?: () => void;
+  /** The decision-window prompt for the walletless resting stage, which
+   *  has no foot tier to carry it. */
+  decisionDoor?: React.ReactNode;
 }
 
 export default function SwapTab({
@@ -76,6 +79,7 @@ export default function SwapTab({
   onPairChange,
   decisionWindow = false,
   onExitDecisionWindow,
+  decisionDoor = null,
 }: SwapTabProps) {
   const { address, chainId: walletChainId, switchNetwork, isMiniPay } = useWalletContext();
   const { swapPrefill, setSwapPrefill, clearSwapPrefill } = useNavigation();
@@ -493,6 +497,7 @@ export default function SwapTab({
             onPairChange={onPairChange}
             decisionWindow={decisionWindow}
             onExitDecisionWindow={onExitDecisionWindow}
+            decisionDoor={decisionDoor}
           />
         </div>
       )}

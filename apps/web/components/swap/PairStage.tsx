@@ -364,6 +364,8 @@ export function PairStage({
   claim = null,
   fromBalance = null,
   onDraft,
+  reading = null,
+  decisionDoor = null,
 }: {
   fromToken: string;
   toToken: string;
@@ -387,6 +389,14 @@ export function PairStage({
   /** The from side's held balance; null (no wallet) means nothing to draft. */
   fromBalance?: string | null;
   onDraft?(amount: string): void;
+  /** A presenter band shown in the corridor reading's slot — the beam and
+   *  its CTA stay, only the line under the beam changes (§5: modes
+   *  transform, never append). Null means the corridor line itself. */
+  reading?: React.ReactNode | null;
+  /** The decision-window door, carried by the story reading itself. The
+   *  walletless stage has no foot tier, so the lens enters from the line
+   *  it describes rather than a link at the card's bottom. */
+  decisionDoor?: React.ReactNode | null;
 }) {
   const reduced = useReducedMotion();
   const { navigateWithIntent, navigateToGuardian } = useNavigation();
@@ -715,7 +725,11 @@ export function PairStage({
       </div>
 
       <div className="instrument-reading">
-      {receipt ? (
+      {/* A presenter band replaces this whole reading — the beam stays,
+          the line under it changes (§5). Null means the pair's own story:
+          the corridor line, or the settled receipt. */}
+      {reading ?? (
+      receipt ? (
         // Settlement receipt — the pair's record of the swap. Nothing
         // rotates here; the travel + seal above were the confirm.
         <div
@@ -867,20 +881,25 @@ export function PairStage({
             }}
             onBeatChange={reportBeat}
           />
-
-          <button
-            type="button"
-            data-testid="pair-stage-wake"
-            onClick={() => {
-              haptics.tap();
-              setActed(true);
-              onWake();
-            }}
-            className="mt-3 w-full min-h-[48px] rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
-          >
-            {ctaLabel}
-          </button>
+          {decisionDoor}
         </>
+      ))}
+
+      {/* The one CTA is the object's verb, not a band's — it survives every
+          reading except the settled receipt, which carries its own. */}
+      {!receipt && (
+        <button
+          type="button"
+          data-testid="pair-stage-wake"
+          onClick={() => {
+            haptics.tap();
+            setActed(true);
+            onWake();
+          }}
+          className="mt-3 w-full min-h-[48px] rounded-2xl bg-blue-600 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+        >
+          {ctaLabel}
+        </button>
       )}
       </div>
 

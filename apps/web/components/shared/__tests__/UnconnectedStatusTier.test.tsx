@@ -9,32 +9,34 @@ vi.mock("../VerifiedEvidence", () => ({ VerifiedEvidence: () => <span>Verified</
 
 afterEach(() => cleanup());
 
-describe("UnconnectedStatusTier", () => {
-  it("offers the sample when it's off", () => {
-    const onEnableDemo = vi.fn();
-    render(<UnconnectedStatusTier onEnableDemo={onEnableDemo} />);
-    fireEvent.click(screen.getByRole("button", { name: "Explore a sample plan" }));
-    expect(onEnableDemo).toHaveBeenCalledTimes(1);
-  });
-
-  it("never re-offers a sample that's already on — says so and offers the exit", () => {
-    const onDisableDemo = vi.fn();
-    render(<UnconnectedStatusTier onEnableDemo={vi.fn()} demoActive onDisableDemo={onDisableDemo} />);
-    expect(screen.queryByRole("button", { name: "Explore a sample plan" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Sample data on · Exit" }));
-    expect(onDisableDemo).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("UnconnectedStatusTier — trust override", () => {
+describe("UnconnectedStatusTier — trust + the tab's own hand-offs", () => {
   it("keeps VerifiedEvidence as the default trust line", () => {
-    render(<UnconnectedStatusTier onEnableDemo={vi.fn()} />);
+    render(<UnconnectedStatusTier />);
     expect(screen.getByText("Verified")).toBeInTheDocument();
   });
 
   it("renders nothing in the trust slot when trust is null", () => {
-    render(<UnconnectedStatusTier onEnableDemo={vi.fn()} trust={null} />);
+    render(<UnconnectedStatusTier trust={null} />);
     expect(screen.queryByText("Verified")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Explore a sample plan" })).toBeInTheDocument();
+  });
+
+  it("carries the tab's hand-off link", () => {
+    const onHandoff = vi.fn();
+    render(
+      <UnconnectedStatusTier>
+        <button type="button" onClick={onHandoff}>
+          What FX timing costs your next payment →
+        </button>
+      </UnconnectedStatusTier>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /FX timing/ }));
+    expect(onHandoff).toHaveBeenCalledTimes(1);
+  });
+
+  it("no longer repeats the app-wide sample-plan switch", () => {
+    render(<UnconnectedStatusTier />);
+    expect(
+      screen.queryByRole("button", { name: "Explore a sample plan" }),
+    ).not.toBeInTheDocument();
   });
 });

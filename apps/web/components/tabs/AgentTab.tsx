@@ -368,8 +368,8 @@ export default function AgentTab({
         </div>
         <div className="instrument-reading flex flex-col items-center">
           {verifyMode ? (
-            <div data-testid="guardian-verify-view" className="w-full max-w-[340px] text-left">
-              <VerifiedEvidencePanel />
+            <div data-testid="guardian-verify-view" className="w-full max-w-[340px]">
+              <VerifiedEvidencePanel presentation="stage" />
             </div>
           ) : boardMode === "view" ? (
             <GuardianWatchView entries={boardEntries} onOpenFull={() => setBoardMode("sheet")} />

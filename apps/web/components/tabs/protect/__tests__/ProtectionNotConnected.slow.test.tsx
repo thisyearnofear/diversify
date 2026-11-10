@@ -125,7 +125,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   });
 
   it("keeps the philosophy picker as the object, instructs the coin tap, and quiets connect to the minimal affordance", () => {
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
 
     // The picker renders walletless — compact ring + coin rail, choosing
     // a lens needs no funds.
@@ -138,16 +138,17 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     expect(
       screen.queryByRole("button", { name: "Connect wallet" }),
     ).not.toBeInTheDocument();
-    // One button besides coins: the demo text link.
+    // Nothing but coins: the demo link moved to app chrome, and the
+    // planless picker carries no other affordance here.
     const buttons = screen
       .getAllByRole("button")
       .filter((b) => !b.getAttribute("data-testid")?.startsWith("coin-"));
-    expect(buttons.length).toBe(1);
+    expect(buttons.length).toBe(0);
   });
 
   it("planless: the first coin tap only previews — 'Use this plan' is the primary commit", () => {
     mockState.setFinancialStrategy.mockClear();
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
 
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
@@ -157,7 +158,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   });
 
   it("the planless instruction leaves once a coin has been previewed", () => {
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(screen.getByTestId("picker-instruction")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     expect(screen.queryByTestId("picker-instruction")).not.toBeInTheDocument();
@@ -165,7 +166,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
 
   it("a previewed coin opens a sample outcome that closes back to the plan without committing", async () => {
     mockState.setFinancialStrategy.mockClear();
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(screen.queryByTestId("walletless-outcome-open")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
@@ -184,7 +185,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   it("a committed plan at rest offers one quiet bridge to Guardian's walletless example", () => {
     mockState.financialStrategy = "africapitalism";
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       const link = screen.getByTestId("guardian-plan-link");
       expect(link).toHaveTextContent("See an example Guardian decision");
       fireEvent.click(link);
@@ -200,7 +201,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   });
 
   it("no planless Guardian link and none while the sleeve lens owns the moment", () => {
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(screen.queryByTestId("guardian-plan-link")).not.toBeInTheDocument();
   });
 
@@ -212,13 +213,13 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     };
     try {
       const { rerender } = render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       expect(screen.getByTestId("shield-ring")).toHaveAttribute("data-comparing", "true");
       expect(screen.getByTestId("shield-intent-context")).toHaveTextContent(
         "From Home’s NGN example",
       );
-      rerender(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      rerender(<ProtectionNotConnected experienceMode="simple" />);
       expect(navState.consumeIntent).toHaveBeenCalledTimes(1);
       expect(mockState.setFinancialStrategy).not.toHaveBeenCalled();
     } finally {
@@ -234,7 +235,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       intent: { source: "home", lens: "compare", currencyCode: "NGN" },
     };
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       expect(screen.getByTestId("shield-intent-context")).toHaveTextContent(
         "From your NGN reading",
       );
@@ -249,7 +250,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       tab: "protect",
       intent: { source: "home", lens: "compare", currencyCode: "NGN", example: true },
     };
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
     expect(screen.getByTestId("shield-ring")).not.toHaveAttribute("data-comparing", "true");
     expect(screen.getByTestId("shield-intent-context")).toHaveTextContent(
@@ -266,11 +267,11 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     };
     try {
       const { rerender } = render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       expect(screen.getByTestId("shield-intent-context")).toBeInTheDocument();
       mockState.financialStrategy = "buen_vivir";
-      rerender(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      rerender(<ProtectionNotConnected experienceMode="simple" />);
       expect(screen.getByTestId("shield-ring")).not.toHaveAttribute("data-comparing", "true");
       expect(screen.queryByTestId("shield-intent-context")).not.toBeInTheDocument();
     } finally {
@@ -280,16 +281,17 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   });
 
 
-  it("keeps trust + demo as quiet status-tier lines (shared tier) — no proof ticker", () => {
-    const onEnableDemo = vi.fn();
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={onEnableDemo} />);
+  it("keeps trust as a quiet status-tier line (shared tier) — no proof ticker, no demo link", () => {
+    render(<ProtectionNotConnected experienceMode="simple" />);
 
     expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
     // Home and Exchange carry no proof card; Shield's unconnected tier
     // doesn't either — the Verified line covers proof.
     expect(screen.queryByTestId("proof-ticker")).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Explore a sample plan" }));
-    expect(onEnableDemo).toHaveBeenCalledTimes(1);
+    // The sample-plan switch is app chrome now, not a per-tab foot link.
+    expect(
+      screen.queryByRole("button", { name: "Explore a sample plan" }),
+    ).not.toBeInTheDocument();
   });
 
   it("persona morphs the status tier: APAC philosophy from Asia shows the APAC banner", () => {
@@ -299,7 +301,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.detectedRegion = "asia";
     try {
       render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       expect(screen.getByTestId("apac-banner")).toBeInTheDocument();
       expect(screen.queryByTestId("caribbean-banner")).not.toBeInTheDocument();
@@ -313,7 +315,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   it("with a philosophy, the ghost ring IS the object — the picker waits behind the plan badge", async () => {
     mockState.financialStrategy = "africapitalism";
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
 
       const ring = screen.getByTestId("shield-ring");
       expect(ring).toHaveAttribute("data-walletless");
@@ -362,7 +364,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.financialStrategy = "africapitalism";
     mockState.setFinancialStrategy.mockClear();
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
 
       fireEvent.click(screen.getByTestId("plan-badge"));
       expect(await screen.findByTestId("philosophy-coin-rail")).toBeInTheDocument();
@@ -406,7 +408,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   it("the connect CTA says the verb — the plan name is not repeated on it", () => {
     mockState.financialStrategy = "africapitalism";
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       expect(screen.getByRole("button", { name: "Connect wallet" })).toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /Connect to use/ }),
@@ -419,7 +421,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   it("committed walletless puts the connect CTA inside the controls slot — before the legend, never below it", () => {
     mockState.financialStrategy = "africapitalism";
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       const cta = screen.getByRole("button", { name: "Connect wallet" });
       const legend = screen.getByTestId("shield-legend");
       expect(
@@ -434,7 +436,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
   });
 
   it("with no philosophy the picker IS the compact ring + coin rail", () => {
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(screen.getByTestId("shield-ring")).toBeInTheDocument();
     expect(screen.getByTestId("philosophy-coin-rail")).toBeInTheDocument();
     expect(screen.getByText("Choose a philosophy")).toBeInTheDocument();
@@ -447,7 +449,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.setFinancialStrategy.mockClear();
     try {
       const { rerender } = render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       expect(screen.getByTestId("plan-badge")).toHaveTextContent("Africapitalism");
 
@@ -458,7 +460,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       expect(mockState.setFinancialStrategy).toHaveBeenCalledWith("buen_vivir");
 
       mockState.financialStrategy = "buen_vivir";
-      rerender(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      rerender(<ProtectionNotConnected experienceMode="simple" />);
       await waitFor(() =>
         expect(screen.getByTestId("plan-badge")).toHaveTextContent("Buen Vivir"),
       );
@@ -473,7 +475,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.riskTolerance = "Balanced";
     mockState.setRiskTolerance.mockClear();
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
 
       fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
       expect(mockState.setRiskTolerance).not.toHaveBeenCalled();
@@ -501,7 +503,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.riskTolerance = "Balanced";
     mockState.setRiskTolerance.mockClear();
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
       fireEvent.click(screen.getByRole("button", { name: "Use this balance" }));
       expect(mockState.setRiskTolerance).toHaveBeenCalledTimes(1);
@@ -516,7 +518,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.financialStrategy = "africapitalism";
     mockState.riskTolerance = "Balanced";
     try {
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       fireEvent.click(screen.getByRole("button", { name: /Shilling — plan: 60%/ }));
       expect(screen.getByText("60%")).toBeInTheDocument();
       expect(screen.getByText("Target only · not funded")).toBeInTheDocument();
@@ -532,13 +534,13 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.setRiskTolerance.mockClear();
     try {
       const { rerender } = render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
       expect(screen.queryByTestId("philosophy-coin-rail")).not.toBeInTheDocument();
 
       mockState.financialStrategy = "buen_vivir";
-      rerender(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      rerender(<ProtectionNotConnected experienceMode="simple" />);
       // A committed philosophy returns the object to the ring re-sliced.
       expect(await screen.findByTestId("shield-ring")).toBeInTheDocument();
       expect(screen.getByTestId("balance-consequence")).toHaveTextContent(
@@ -558,7 +560,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       render(
         <ProtectionNotConnected
           experienceMode="simple"
-          onEnableDemo={vi.fn()}
+         
           inspector={<div data-testid="external-inspector">existing</div>}
         />,
       );
@@ -585,7 +587,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       render(
         <ProtectionNotConnected
           experienceMode="simple"
-          onEnableDemo={vi.fn()}
+         
           onOpenSleeve={onOpenSleeve}
           onCloseSleeve={vi.fn()}
         />,
@@ -614,7 +616,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     const { rerender } = render(
       <ProtectionNotConnected
         experienceMode="simple"
-        onEnableDemo={vi.fn()}
+       
         sleeveOpen
         onCloseSleeve={vi.fn()}
       />,
@@ -628,7 +630,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     rerender(
       <ProtectionNotConnected
         experienceMode="simple"
-        onEnableDemo={vi.fn()}
+       
         onOpenSleeve={vi.fn()}
         onCloseSleeve={vi.fn()}
       />,
@@ -640,25 +642,25 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     ).toBeInTheDocument();
   });
 
-  it("a balance preview quiets the status tier to trust — handoffs and demo step out", () => {
+  it("a balance preview quiets the status tier to trust — handoffs step out", () => {
     mockState.financialStrategy = "africapitalism";
     mockState.riskTolerance = "Balanced";
     try {
       render(
         <ProtectionNotConnected
           experienceMode="simple"
-          onEnableDemo={vi.fn()}
+         
           onOpenSleeve={vi.fn()}
           onCloseSleeve={vi.fn()}
         />,
       );
 
-      // Resting: the teaser wedge + demo link are present.
+      // Resting: the teaser wedge + the Guardian hand-off are present.
       expect(
         screen.getByRole("button", { name: /Tokenized assets — tap to look inside/ }),
       ).toBeInTheDocument();
       expect(
-        screen.getByRole("button", { name: "Explore a sample plan" }),
+        screen.getByTestId("guardian-plan-link"),
       ).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("radio", { name: "More reserve" }));
@@ -667,13 +669,15 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
       expect(
         screen.getByRole("button", { name: "Use this balance" }),
       ).toBeInTheDocument();
-      expect(
-        screen.queryByRole("button", { name: "Explore a sample plan" }),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByTestId("guardian-plan-link")).not.toBeInTheDocument();
       expect(
         screen.queryByRole("button", { name: /Tokenized assets — tap to look inside/ }),
       ).not.toBeInTheDocument();
       expect(screen.getByTestId("verified-evidence")).toBeInTheDocument();
+      // No tab repeats the header's sample-plan switch.
+      expect(
+        screen.queryByRole("button", { name: "Explore a sample plan" }),
+      ).not.toBeInTheDocument();
     } finally {
       mockState.financialStrategy = null;
     }
@@ -684,7 +688,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     render(
       <ProtectionNotConnected
         experienceMode="simple"
-        onEnableDemo={vi.fn()}
+       
         onOpenCycle={onOpenCycle}
         onOpenSleeve={vi.fn()}
         onCloseSleeve={vi.fn()}
@@ -700,7 +704,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     render(
       <ProtectionNotConnected
         experienceMode="simple"
-        onEnableDemo={vi.fn()}
+       
         onOpenCycle={vi.fn()}
         sleeveOpen
         onOpenSleeve={vi.fn()}
@@ -718,7 +722,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     mockState.detectedRegion = "caribbean";
     try {
       render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       expect(screen.getByTestId("caribbean-banner")).toBeInTheDocument();
       expect(screen.queryByTestId("apac-banner")).not.toBeInTheDocument();
@@ -745,7 +749,7 @@ describe("ProtectionNotConnected — Shield's unconnected morph", () => {
     };
     try {
       render(
-        <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />,
+        <ProtectionNotConnected experienceMode="simple" />,
       );
       const impulse = screen.getByTestId("beat-impulse");
       // Beat 0 (the fresh signal) is silent — the ring's arrival owns it.
@@ -769,7 +773,7 @@ describe("ProtectionNotConnected — shape-the-mix handoffs", () => {
     mockState.setFinancialStrategy.mockClear();
     const onShapePlan = vi.fn();
     render(
-      <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} onShapePlan={onShapePlan} />,
+      <ProtectionNotConnected experienceMode="simple" onShapePlan={onShapePlan} />,
     );
     fireEvent.click(screen.getByTestId("coin-buen_vivir"));
     fireEvent.click(screen.getByTestId("walletless-shape"));
@@ -780,7 +784,7 @@ describe("ProtectionNotConnected — shape-the-mix handoffs", () => {
   it("'Build my own plan' opens the standalone editor path from the planless picker", () => {
     const onShapePlan = vi.fn();
     render(
-      <ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} onShapePlan={onShapePlan} />,
+      <ProtectionNotConnected experienceMode="simple" onShapePlan={onShapePlan} />,
     );
     fireEvent.click(screen.getByTestId("build-my-mix"));
     expect(onShapePlan).toHaveBeenCalledWith(null);
@@ -807,7 +811,7 @@ describe("ProtectionNotConnected — values identity vs plan composition", () =>
         { exposure: "XAU", target: 40 },
       ],
     };
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(
       document.querySelector(".shields-pattern--buen_vivir"),
     ).not.toBeNull();
@@ -828,7 +832,7 @@ describe("ProtectionNotConnected — values identity vs plan composition", () =>
         { exposure: "XAU", target: 40 },
       ],
     };
-    render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+    render(<ProtectionNotConnected experienceMode="simple" />);
     expect(document.querySelector(".shields-pattern-layer")).toBeNull();
     const badge = screen.getByTestId("plan-badge");
     expect(badge.textContent).toContain("Custom");
@@ -888,7 +892,7 @@ describe("ProtectionNotConnected — values identity vs plan composition", () =>
           { exposure: "XAU", target: 40 },
         ],
       };
-      render(<ProtectionNotConnected experienceMode="simple" onEnableDemo={vi.fn()} />);
+      render(<ProtectionNotConnected experienceMode="simple" />);
       expect(screen.getByTestId("caribbean-banner")).toBeInTheDocument();
     } finally {
       mockState.userRegion = null;

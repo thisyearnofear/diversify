@@ -1,5 +1,66 @@
 # Roadmap Log — historical waves & file deltas
 
+### The Exchange stage becomes a presenter, the verifier an object (2026-11-10)
+
+Follows the same-day "verifier becomes a mode of the marquee object"
+entry, and answers two reviews of it: the resting card still collected
+foot links ("FX netting: match currencies directly", "Explore a sample
+plan"), and the verifier opened on its plumbing — five chain chips,
+three hex strings and a hash field the visitor had no way to fill.
+
+- **Four-band presenter.** `SwapInterface` replaces the strip-under-the-
+  stage arrangement with one reading slot + one pill row:
+  `Story | Pairs | Journey | Verify` (`StageBands`, `stage-band-<id>`).
+  `Story` is the floor and the exit; the corridor line, the
+  `StoryPairStrip`, the journey rail and the verifier are now states of
+  the same slot instead of three blocks stacked below the beam. `Pairs`
+  earns a pill only when the curated dataset has stories for the pair;
+  `Verify` withdraws once a wallet connects.
+- **Verifier: verdict → check → hex.** `VerifiedEvidencePanel` gains
+  `presentation="stage"`. The verdict is the face — seal (Rive at 72px
+  stage / 40px inline), the Guardian's last public record, the count-up
+  of decisions on one shared ledger — with two doors beneath it:
+  `Check a receipt →` prefills that record's hash and derives its chain
+  (verifying is a tap, not a typing task), `Technical detail` keeps the
+  network dots, addresses and `Guardian #1` — the only place hex appears.
+  `← Verdict` closes both. The status-rail `inline` presentation is
+  unchanged. Fail-closed copy: "Nothing has settled on the ledger yet"
+  when the feed is empty, "the chain hasn't confirmed this receipt" when
+  the RPC check doesn't land, "Showing the last read, not a fresh one"
+  when stale. The Agent tab's verify view uses the same `stage`
+  composition.
+- **The foot tier is gone.** Walletless Exchange renders no `status` at
+  all. Netting reaches the visitor from the pair inspector's **Match**
+  tab; the decision-window prompt rides *inside* the story reading that
+  describes it (`PairStage` `decisionDoor`, threaded through
+  `SwapTab`/`SwapInterface`) so the lens stays reachable with no footer;
+  acting still supersedes verifying (any intent that wakes the ticket
+  closes the verifier).
+- **Sample plan is app chrome.** `AppHeader` gains `SamplePlanToggle`
+  beside the balance eye — one global control, `aria-pressed`, walletless
+  only, and it renders nothing outside `DemoModeContext` rather than
+  throwing. Removed from Home, Shield, Exchange and the Guardian foot
+  tiers (it is an app-wide state, not a per-tab hand-off).
+- **Tests:** `AppHeader.test.tsx` gains the 4-test switch describe;
+  `ExchangeTab.slow` asserts the foot tier is gone and that the door
+  rides in the stage; `ProtectionNotConnected.slow` updated for the
+  removed demo link. The Stellar network test was fixed on the way (it
+  queried a `role="group"` label; the control renders pills — click
+  `Stellar testnet`).
+
+Not done: decision #2's "object scales into freed space" — with the strip
+and rail folded into bands the resting card has slack, and the beam does
+not yet grow into it. Open pending the pixel review.
+
+Docs: `design-language.md` §5 (motif owners, unconnected morph, Exchange
+lens order), §7 Placement; `AGENTS.md` chain-agnostic-trust bullet;
+`exchange-instrument.md` (stage composition, trust band, journey band).
+Verified: `tsc --noEmit` clean, eslint clean on changed files, full suite
+3476 passed across 375 files, plus `ExchangeTab.slow` 38,
+`ProtectionNotConnected.slow` 37, `SwapInterface.slow` 36 and a broad
+45-file/611-test run; screenshots at 1440px reviewed for all eight
+surfaces.
+
 ### The verifier becomes a mode of the marquee object (2026-11-10)
 
 Design-contract wave following the Guardian presenter control (e1f17250).

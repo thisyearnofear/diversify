@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import AppHeader from '../AppHeader';
+import { DemoModeContext } from '@/context/app/DemoModeContext';
 
 /**
  * Regression tests for the responsive header hierarchy, post-decluttering
@@ -130,5 +131,58 @@ describe('AppHeader — one connect affordance below sm', () => {
     render(<AppHeader {...baseProps} address={null} isFarcaster activeTab="overview" />);
     expect(screen.getByTestId('farcaster-wallet-button')).toBeInTheDocument();
     expect(screen.queryByTestId('wallet-button')).not.toBeInTheDocument();
+  });
+});
+
+describe('AppHeader — the sample-plan switch is app chrome', () => {
+  const demoValue = (isActive: boolean, enable: () => void, disable: () => void) => ({
+    demoMode: { isActive, mockAddress: '0xDemo', mockChainId: 42220 },
+    enableDemoMode: enable,
+    disableDemoMode: disable,
+    setDemoStrategy: () => {},
+  });
+
+  it('offers the sample once, walletless, beside the eye toggle', () => {
+    const enableDemoMode = vi.fn();
+    render(
+      <DemoModeContext.Provider
+        value={demoValue(false, enableDemoMode, vi.fn())}
+      >
+        <AppHeader {...baseProps} address={null} />
+      </DemoModeContext.Provider>,
+    );
+    const toggle = screen.getByRole('button', { name: 'Explore a sample plan' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    fireEvent.click(toggle);
+    expect(enableDemoMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('inverts to the exit while sample data is on', () => {
+    const disableDemoMode = vi.fn();
+    render(
+      <DemoModeContext.Provider
+        value={demoValue(true, vi.fn(), disableDemoMode)}
+      >
+        <AppHeader {...baseProps} address={null} />
+      </DemoModeContext.Provider>,
+    );
+    const toggle = screen.getByRole('button', { name: 'Exit sample data' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(toggle);
+    expect(disableDemoMode).toHaveBeenCalledTimes(1);
+  });
+
+  it('withdraws once a wallet is connected — sample is the walletless offer', () => {
+    render(
+      <DemoModeContext.Provider value={demoValue(false, vi.fn(), vi.fn())}>
+        <AppHeader {...baseProps} address="0xabc" />
+      </DemoModeContext.Provider>,
+    );
+    expect(screen.queryByTestId('sample-plan-toggle')).not.toBeInTheDocument();
+  });
+
+  it('renders nothing outside the provider rather than throwing', () => {
+    render(<AppHeader {...baseProps} address={null} />);
+    expect(screen.queryByTestId('sample-plan-toggle')).not.toBeInTheDocument();
   });
 });

@@ -31,7 +31,6 @@ import {
   leadForStrategy,
   type ProvenanceLead,
 } from "../swap/CorridorContext";
-import { UnconnectedStatusTier } from "../shared/UnconnectedStatusTier";
 import { useCorridorSignals } from "@/hooks/use-corridor-signals";
 import { useLensOffered } from "@/hooks/use-lens-offered";
 import { StatusTier } from "../shared/StatusTier";
@@ -367,7 +366,7 @@ function EvmExchangeTab({
   networkControl,
 }: ExchangeTabProps & { networkControl?: React.ReactNode }) {
   const { address } = useWalletContext();
-  const { demoMode, enableDemoMode, disableDemoMode } = useDemoMode();
+  const { demoMode } = useDemoMode();
   const router = useRouter();
   const { setSwapPrefill, swapPrefill, pendingIntent, consumeIntent } = useNavigation();
   // Spoken "swap 50 KESm to USDm" drafts the ticket — the same prefill
@@ -535,10 +534,10 @@ function EvmExchangeTab({
   if (!address) {
     // Unconnected morph (§5): the pair stage stays the object — SwapTab
     // renders it walletless and the ticket's execute CTA becomes the
-    // connect button. No hero card, no proof card, no how-it-works stack:
-    // the verifier is woven into the resting stage (the Guardian board's
-    // grammar), the foot tier keeps only the demo link and the FX netting
-    // hand-off (the rail works walletless in observer mode).
+    // connect button. No hero card, no proof card, no how-it-works stack,
+    // and no foot tier: trust is the stage's Verify band, FX netting is the
+    // inspector's Match tab, the decision window rides inside the story
+    // reading, and the sample-plan switch is app chrome.
     return (
       <InstrumentShell
         inspectorOpen={Boolean(inspectorSel)}
@@ -561,6 +560,7 @@ function EvmExchangeTab({
               onPairChange={handlePairChange}
               decisionWindow={decisionWindow}
               onExitDecisionWindow={() => setDecisionWindow(false)}
+              decisionDoor={hasFreshSignal && !decisionWindow ? decisionPrompt : null}
             />
           </div>
         }
@@ -587,16 +587,6 @@ function EvmExchangeTab({
               }
             />
           )
-        }
-        status={
-          <UnconnectedStatusTier
-            onEnableDemo={enableDemoMode}
-            demoActive={demoMode.isActive}
-            onDisableDemo={disableDemoMode}
-            trust={null}
-          >
-            {hasFreshSignal && !decisionWindow ? decisionPrompt : nettingButton}
-          </UnconnectedStatusTier>
         }
       />
     );

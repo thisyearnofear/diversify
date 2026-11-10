@@ -19,17 +19,14 @@ import { InflationMomentCard } from "./InflationMomentCard";
 import type { Benchmark, Horizon } from "@/constants/currency-risk";
 import WalletButton from "../../wallet/WalletButton";
 import { InstrumentShell } from "../../shared/InstrumentShell";
-import { UnconnectedStatusTier } from "../../shared/UnconnectedStatusTier";
 import { useNavigation } from "@/context/app/NavigationContext";
 
 interface NotConnectedStateProps {
   isActive?: boolean;
-  onEnableDemo: () => void;
 }
 
 export function NotConnectedState({
   isActive = true,
-  onEnableDemo,
 }: NotConnectedStateProps) {
   const {
     inspectedCurrency,
@@ -158,13 +155,9 @@ export function NotConnectedState({
     </div>
   );
 
-  const status = <UnconnectedStatusTier onEnableDemo={onEnableDemo} trust={null} />;
-
+  // Home's walletless foot is empty by contract: the verifier lives in the
+  // stage that reads it, the sample-plan switch lives in the header.
   return (
-    <InstrumentShell
-      object={object}
-      inspectorOpen={storySelected}
-      status={status}
-    />
+    <InstrumentShell object={object} inspectorOpen={storySelected} />
   );
 }

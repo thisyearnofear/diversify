@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, expect, it, vi, afterEach } from "vitest";
+import { describe, expect, it, vi, afterEach, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { VerifiedEvidence } from "../VerifiedEvidence";
@@ -10,14 +10,59 @@ vi.mock("framer-motion", () => {
   );
   return {
     useReducedMotion: () => true,
-    motion: { div: Passthrough },
+    motion: {
+      div: Passthrough,
+      span: ({ children }: { children?: React.ReactNode }) => (
+        <span>{children}</span>
+      ),
+    },
     AnimatePresence: ({ children }: { children?: React.ReactNode }) => (
       <>{children}</>
     ),
   };
 });
 
+// The verdict reads the shared proof feed; the check reads the RPC endpoint.
+// Both are stubbed so the test states exactly what the ledger is saying.
 const TX_HASH = "0x" + "ab".repeat(32);
+let feed: any = { data: null, isLoading: false, isStale: false, error: null };
+let chainStatus: Record<string, string> = {};
+
+vi.mock("@/hooks/use-proof-feed", () => ({
+  useProofFeed: () => feed,
+}));
+vi.mock("@/hooks/use-verify-tx", () => ({
+  useVerifiedTxs: () => chainStatus,
+}));
+vi.mock("@/hooks/use-count-up", () => ({
+  useCountUp: (n: number) => n.toLocaleString(),
+}));
+
+const RECORD = {
+  id: 41,
+  chainId: 42161,
+  action: "REBALANCE",
+  targetToken: "USDm",
+  settlementTxHash: TX_HASH,
+  timestamp: Math.floor(Date.now() / 1000) - 3 * 86400,
+  confidence: 0.7,
+  user: "0xuser",
+  evidenceCid: "",
+  servingModel: "",
+};
+
+const loadedFeed = {
+  data: {
+    stats: { totalRecommendations: 1204, chainId: 42161, chainIds: [42161, 42220], contractAddress: "0x3BCf", isDeployed: true },
+    recent: [RECORD],
+    capturedAt: new Date().toISOString(),
+    explorerBase: "https://arbi-scan.example/tx",
+    contractExplorer: "https://arbi-scan.example/address/0x3BCf",
+  },
+  isLoading: false,
+  isStale: false,
+  error: null,
+};
 
 const verifyOk = {
   verified: true,
@@ -31,32 +76,124 @@ function mockFetch(impl: typeof fetch) {
   vi.stubGlobal("fetch", vi.fn(impl));
 }
 
-describe("VerifiedEvidence", () => {
+function openVerifier() {
+  fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+}
+
+function openCheck() {
+  openVerifier();
+  fireEvent.click(screen.getByRole("button", { name: /check a receipt/i }));
+}
+
+function openDetail() {
+  openVerifier();
+  fireEvent.click(screen.getByRole("button", { name: /technical detail/i }));
+}
+
+beforeEach(() => {
+  feed = { data: null, isLoading: false, isStale: false, error: null };
+  chainStatus = {};
+});
+
+describe("VerifiedEvidence — the verdict layer", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
   });
 
-  it("shows the quiet trust line with no hex in the collapsed default", () => {
+  it("opens on what the ledger actually says, with no hex in sight", () => {
+    feed = loadedFeed;
     render(<VerifiedEvidence />);
-    const toggle = screen.getByRole("button", { name: /verify evidence/i });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    // No hex anywhere until the user asks for it (§7: no hex in first viewport).
+    openVerifier();
+    expect(screen.getByTestId("verifier-verdict")).toBeInTheDocument();
+    expect(screen.getByText("1,204")).toBeInTheDocument();
+    expect(screen.getByText(/decisions on one shared ledger/i)).toBeInTheDocument();
+    expect(screen.getByText(/rebalance → usdm/i)).toBeInTheDocument();
+    expect(screen.queryByText(/0x3BCf/)).not.toBeInTheDocument();
+    // §7: chain names belong to the technical layer, not the first view.
+    expect(screen.queryByText(/arbitrum/i)).not.toBeInTheDocument();
+  });
+
+  it("claims Verified only when the chain's own RPC attests the receipt", () => {
+    feed = loadedFeed;
+    const { rerender } = render(<VerifiedEvidence />);
+    openVerifier();
+    expect(screen.getByText(/the guardian’s last public record/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^verified on the chain/i)).not.toBeInTheDocument();
+    chainStatus = { "42161-41": "verified" };
+    rerender(<VerifiedEvidence />);
+    expect(screen.getByText(/verified on the chain/i)).toBeInTheDocument();
+  });
+
+  it("says so plainly when the chain has not confirmed the record", () => {
+    feed = loadedFeed;
+    chainStatus = { "42161-41": "unverified" };
+    render(<VerifiedEvidence />);
+    openVerifier();
+    expect(screen.getByText(/the chain hasn’t confirmed this receipt/i)).toBeInTheDocument();
+    expect(screen.queryByText(/verified on the chain/i)).not.toBeInTheDocument();
+  });
+
+  it("renders an empty ledger honestly", () => {
+    feed = {
+      ...loadedFeed,
+      data: { ...loadedFeed.data, stats: { ...loadedFeed.data.stats, totalRecommendations: 0 }, recent: [] },
+    };
+    render(<VerifiedEvidence />);
+    openVerifier();
+    expect(screen.getByText(/nothing has settled on the ledger yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/decisions on one shared ledger/i)).not.toBeInTheDocument();
+  });
+
+  it("renders nothing claimed when the feed is unreachable", () => {
+    feed = { data: null, isLoading: false, isStale: false, error: new Error("down") };
+    render(<VerifiedEvidence />);
+    openVerifier();
+    expect(screen.getByText(/isn.t reachable right now/i)).toBeInTheDocument();
+    expect(screen.queryByText(/verified/i)).not.toBeInTheDocument();
+  });
+
+  it("discloses a stale read instead of presenting it as live", () => {
+    feed = { ...loadedFeed, isStale: true };
+    render(<VerifiedEvidence />);
+    openVerifier();
+    expect(screen.getByRole("status")).toHaveTextContent(/last read, not a fresh one/i);
+  });
+
+  it("keeps hex and chain names behind the technical detail door", () => {
+    feed = loadedFeed;
+    render(<VerifiedEvidence />);
+    openDetail();
+    expect(screen.getByTestId("verifier-detail")).toBeInTheDocument();
+    expect(screen.getAllByText(/0x3BCf/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/same ledger/i)).toBeInTheDocument();
+    expect(screen.getByText(/guardian #1/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /← verdict/i }));
     expect(screen.queryByText(/0x3BCf/)).not.toBeInTheDocument();
   });
+});
 
-  it("expands in place to chain dots, ledger address, and Guardian #1", () => {
-    render(<VerifiedEvidence />);
-    const toggle = screen.getByRole("button", { name: /verify evidence/i });
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText(/same ledger/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/0x3BCf/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/guardian #1/i)).toBeInTheDocument();
+describe("VerifiedEvidence — the check layer", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
-  it("keeps the verify button disabled until the hash looks like a tx hash", () => {
+  it("arrives prefilled with the newest record and its chain", () => {
+    feed = loadedFeed;
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
+    expect(screen.getByLabelText(/transaction hash/i)).toHaveValue(TX_HASH);
+    expect(screen.getByLabelText(/ledger network/i)).toHaveValue("42161");
+    expect(screen.getByRole("button", { name: /^verify$/i })).toBeEnabled();
+  });
+
+  it("falls back to an empty field and the default network with no feed", () => {
+    mockFetch(() =>
+      Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
+    );
+    render(<VerifiedEvidence />);
+    openCheck();
+    expect(screen.getByLabelText(/transaction hash/i)).toHaveValue("");
+    expect(screen.getByLabelText(/ledger network/i)).toHaveValue("42161");
     const verifyButton = screen.getByRole("button", { name: /^verify$/i });
     expect(verifyButton).toBeDisabled();
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
@@ -69,36 +206,34 @@ describe("VerifiedEvidence", () => {
     expect(verifyButton).toBeEnabled();
   });
 
-  it("verifies a hash against the RPC-backed endpoint and reports confirmation", async () => {
+  it("verifies the prefilled hash in one tap", async () => {
+    feed = loadedFeed;
     mockFetch(() =>
       Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
-    fireEvent.change(screen.getByLabelText(/transaction hash/i), {
-      target: { value: TX_HASH },
-    });
+    openCheck();
     fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
     );
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining(`/api/agent/zero-g-ledger?verify=${TX_HASH}`),
+      expect.stringContaining(`/api/agent/zero-g-ledger?verify=${TX_HASH}&chainId=42161`),
     );
-    const explorerLink = screen.getByRole("link", { name: /explorer/i });
-    expect(explorerLink).toHaveAttribute("href", verifyOk.explorerUrl);
+    expect(screen.getByRole("link", { name: /explorer/i })).toHaveAttribute(
+      "href",
+      verifyOk.explorerUrl,
+    );
   });
 
   it("reports honestly when the hash doesn't settle to the ledger", async () => {
     mockFetch(() =>
       Promise.resolve(
-        new Response(JSON.stringify({ ...verifyOk, verified: false }), {
-          status: 200,
-        }),
+        new Response(JSON.stringify({ ...verifyOk, verified: false }), { status: 200 }),
       ),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });
@@ -108,19 +243,16 @@ describe("VerifiedEvidence", () => {
     );
   });
 
-  it("passes the explicitly chosen network to the verify check — Arc included", async () => {
+  it("passes the explicitly chosen network to the check — Arc included", async () => {
     mockFetch((input) => {
       const url = String(input);
       const requested = Number(new URL(url, "http://x").searchParams.get("chainId"));
       return Promise.resolve(
-        new Response(
-          JSON.stringify({ ...verifyOk, chainId: requested }),
-          { status: 200 },
-        ),
+        new Response(JSON.stringify({ ...verifyOk, chainId: requested }), { status: 200 }),
       );
     });
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
     const select = screen.getByLabelText(/ledger network/i);
     fireEvent.change(select, { target: { value: "5042" } });
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
@@ -144,28 +276,8 @@ describe("VerifiedEvidence", () => {
       await waitFor(() =>
         expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
       );
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`&chainId=${chainId}`),
-      );
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining(`&chainId=${chainId}`));
     }
-  });
-
-  it("defaults the network to Arbitrum (42161)", async () => {
-    mockFetch(() =>
-      Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
-    );
-    render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
-    expect(screen.getByLabelText(/ledger network/i)).toHaveValue("42161");
-    fireEvent.change(screen.getByLabelText(/transaction hash/i), {
-      target: { value: TX_HASH },
-    });
-    fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
-    await waitFor(() =>
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("&chainId=42161"),
-      ),
-    );
   });
 
   it("clears a confirmed result when the network changes", async () => {
@@ -173,7 +285,7 @@ describe("VerifiedEvidence", () => {
       Promise.resolve(new Response(JSON.stringify(verifyOk), { status: 200 })),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });
@@ -181,9 +293,7 @@ describe("VerifiedEvidence", () => {
     await waitFor(() =>
       expect(screen.getByRole("status")).toHaveTextContent(/confirmed on-chain/i),
     );
-    fireEvent.change(screen.getByLabelText(/ledger network/i), {
-      target: { value: "16661" },
-    });
+    fireEvent.change(screen.getByLabelText(/ledger network/i), { target: { value: "16661" } });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
@@ -196,23 +306,19 @@ describe("VerifiedEvidence", () => {
         }),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });
     fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
-    fireEvent.change(screen.getByLabelText(/ledger network/i), {
-      target: { value: "5042" },
-    });
+    fireEvent.change(screen.getByLabelText(/ledger network/i), { target: { value: "5042" } });
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     resolveFirst(new Response(JSON.stringify(verifyOk), { status: 200 }));
     await new Promise((r) => setTimeout(r, 0));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
     await waitFor(() =>
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining("&chainId=5042"),
-      ),
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("&chainId=5042")),
     );
   });
 
@@ -226,7 +332,7 @@ describe("VerifiedEvidence", () => {
         }),
     );
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
     const input = screen.getByLabelText(/transaction hash/i);
     fireEvent.change(input, { target: { value: TX_HASH } });
     fireEvent.click(screen.getByRole("button", { name: /^verify$/i }));
@@ -252,7 +358,7 @@ describe("VerifiedEvidence", () => {
   it("shows an error state when the verification service is unreachable", async () => {
     mockFetch(() => Promise.reject(new Error("network down")));
     render(<VerifiedEvidence />);
-    fireEvent.click(screen.getByRole("button", { name: /verify evidence/i }));
+    openCheck();
     fireEvent.change(screen.getByLabelText(/transaction hash/i), {
       target: { value: TX_HASH },
     });
@@ -260,5 +366,16 @@ describe("VerifiedEvidence", () => {
     await waitFor(() =>
       expect(screen.getByRole("alert")).toHaveTextContent(/couldn't reach/i),
     );
+  });
+
+  it("folds back to the verdict — the layers are modes, not a stack", () => {
+    feed = loadedFeed;
+    render(<VerifiedEvidence />);
+    openCheck();
+    expect(screen.getByTestId("verifier-check")).toBeInTheDocument();
+    expect(screen.queryByTestId("verifier-verdict")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /← verdict/i }));
+    expect(screen.getByTestId("verifier-verdict")).toBeInTheDocument();
+    expect(screen.queryByTestId("verifier-check")).not.toBeInTheDocument();
   });
 });
