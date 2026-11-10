@@ -133,6 +133,16 @@ scrubSignerEnvKeys();
 // Load DOM cleanup only after credentials are scrubbed. Node-only service
 // and API workers never import React Testing Library.
 if (typeof document !== 'undefined') {
+  const { configure } = await import('@testing-library/dom');
+  // waitFor/findBy carry their own budget — testing-library's
+  // asyncUtilTimeout, default 1s — which Vitest's testTimeout does not
+  // cover. 374 files run in parallel on shared CPUs and framer-motion
+  // mount/exit animations get starved of rAF under that load, so
+  // animation-gated waitFor calls dice against 1s and flake. 8s matches
+  // the manual budget the CurrencyStoryInspector helpers already carry
+  // (9460bb69); a green path resolves as soon as the animation settles,
+  // so this costs nothing when the suite is healthy.
+  configure({ asyncUtilTimeout: 8000 });
   const { cleanup } = await import('@testing-library/react');
   afterEach(() => cleanup());
 }
