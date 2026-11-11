@@ -91,12 +91,14 @@ Tests: `FloatingCoins.test.tsx` (+6), `StruckMedallion.test.tsx` (8),
 `PairStage.slow.test.tsx` (51).
 
 Verified: `tsc --noEmit` clean (root config, so `scripts/` too), eslint
-clean on the touched files, full Vitest 3,492/3,493 across 376 files — the
-one red is a 15s timeout in `ProtectionTab-custom-reload.test.tsx` that
-passes in isolation, the same load-contestion class as the documented
-`NotConnectedState` flake. Re-run after the final wear-stop and SVGator
-builder changes: `FloatingCoins` + `GuardianMascot` + `StruckMedallion`
-44/44, slow `PairStage` 51/51, slow `ExchangeTab` 38/38.
+clean on the touched files. Full Vitest during the work: 3,492/3,493
+across 376 files — the one red a 15s timeout in
+`ProtectionTab-custom-reload.test.tsx` that passes in isolation, the same
+load-contestion class as the documented `NotConnectedState` flake. The
+pre-push gate then ran the whole suite green: 3,493/3,493 across 376
+files. Re-run after the final wear-stop and SVGator builder changes:
+`FloatingCoins` + `GuardianMascot` + `StruckMedallion` 44/44, slow
+`PairStage` 51/51, slow `ExchangeTab` 38/38.
 
 ### The share artefact gets its own object: a struck medallion (2026-11-11)
 
