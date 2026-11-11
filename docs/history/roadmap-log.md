@@ -1,5 +1,70 @@
 # Roadmap Log — historical waves & file deltas
 
+### The share artefact gets its own object: a struck medallion (2026-11-11)
+
+The postcard had no object — it opened with two `TokenIcon`s and an arrow,
+the smallest possible telling of the one story a shared link exists to
+tell. An attempt to answer that with a Lottie corridor scene was
+withdrawn after review: measured against the product it shared no palette
+(0/20 colours), carried 23 scenery layers, and twinkled — a fourth physics
+primitive the foundry never authorised. What shipped instead is built
+from the material system the app already owns.
+
+- **`StruckMedallion` — one coin, two metals.** The band is the origin's
+  metal, the core the destination's, so the face *is* the conversion. Both
+  halves fill from `FoundryDefs`, the same paint servers Shield's plan ring
+  strikes its legs with, chosen by `foundryMaterialFor` — a medallion metal
+  and a ring leg cannot drift apart.
+- **Weathering had to be re-derived, not invented.** The first pass greyed
+  the copper toward `#9CA3AF`; `AllocationRing` weathers living metal with a
+  `#41705B` verdigris overlay. The medallion now uses that hue and scales it
+  to `patinaFor × 0.3` rather than the ring's `× 0.8` — § The foundry's
+  guardrail is that patina is a whisper, and at 0.8 across a face-width band
+  the metal read as dirty.
+- **The strike lives on the rim.** A checkmark filling the core read as a
+  UI tick pasted on a coin. § The chronology puts strikes on the rim
+  ("strikes accumulate on the rim"), so the mark is now a small depression
+  at the foot — three lips (lit, shadowed, floor) along one path — opposite
+  the legend, and the core stays the destination's polished field.
+- **`watching` is an absence, not a lie.** The rim slot renders as the
+  ghost inlay; nothing is punched that did not occur.
+- **Machined metal got its engraving back.** § The foundry defines machined
+  as "tight engraving, no patina"; a flat steel core was reading as glass,
+  so the field carries concentric hairlines. Solid lines only — a dashed
+  ring there would read as the app's own ghost state.
+- **The legend keeps canonical casing** (`NGNm → USDm`); the first draft
+  uppercased it into `NGNM`, which the token-symbol convention forbids.
+- **Motion is one ceremony, bound to a cause.** Settle (`springSoft`) →
+  punch (`drawIn`, +0.26s) → the band rings once → stillness. It plays on
+  arrival or when `strikeKey` changes, never idle and never on a timer;
+  reduced motion mounts the finished, already-struck object.
+- **Two fixes kept from the withdrawn thread:** the card scopes `dark` on
+  its own root (a light-theme recipient was reading navy seal ink on a navy
+  field), and the picture is fluid rather than a fixed canvas.
+
+**Measured in the browser** (agent-browser, dev server, 430×1000).
+`/postcard/NGNm/USDm?m=moved`: the object renders at 248px inside a 288px
+content box, band fill `metal-living-*` with the verdigris overlay at
+opacity 0.299 (`patinaFor('NGNm') × 0.3`), core `metal-machined-*`, three
+mark paths at the foot. `?m=watching`: mark absent, two ghost-channel
+paths. `/postcard/USDm/BRLm`: band `metal-machined-*`, no overlay, core
+`metal-living-*`. Reduced motion (`set media dark reduced-motion`): the
+struck object lands complete, shock ring not mounted.
+
+**Known gap, deliberately not bundled:** `/api/og/postcard` still draws the
+old two-circle pair, so the link preview no longer matches the page's
+object. Satori has no SVG paint servers or dash geometry, so the medallion
+needs its own faithful port rather than a div approximation.
+
+Files: `components/shared/StruckMedallion.tsx` (new),
+`pages/postcard/[from]/[to].tsx`, tests in
+`components/shared/__tests__/StruckMedallion.test.tsx` (8). Docs:
+`design-language.md` § The foundry carrier + § Motifs have owners (the
+share artefact now owns a motif, displacing nothing).
+
+Verified: `tsc --noEmit` clean, eslint clean on touched files, full Vitest
+3,488/3,488 across 376 files, slow tabs 303/303 across 9 files.
+
 ### Home's coin stage learns to read the ledger, and the floor learns to hold (2026-11-10)
 
 The previous entry closed with two numbers: Shield's pill row and page still grew

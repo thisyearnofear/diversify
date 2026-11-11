@@ -367,7 +367,12 @@ is truth.
 *Carrier:* `AllocationRing variant="foundry"` renders the language in
 DOM/SVG on the Shield instrument — `lib/foundry.ts` classifies each
 leg's metal from the token (`machined`/`noble`/`living`/`ghost`) and
-scales patina from the curated 5yr depreciation record. Rive objects
+scales patina from the curated 5yr depreciation record.
+`StruckMedallion` is the same language on the share artefact: it fills
+both halves from `FoundryDefs` (so a medallion metal and a ring leg are
+one paint server), weathers the band with the ring's verdigris at a
+whisper rather than the arc's full overlay, and puts the strike on the
+rim. Rive objects
 (`RiveAssayShield`, the seal) carry the same materials where the scene
 is fixed; the plan ring needs arbitrary-N legs, so SVG owns it.
 
@@ -429,7 +434,10 @@ a reward.
 **Motifs have owners.** Home owns the coin stage + holdings row, Shield
 the ring, Exchange the pair stage (balance beam + coins) behind one
 presenter reading slot (`Story` corridor line / `Pairs` strip / `Journey`
-rail / `Verify`), Guardian the mark. A new
+rail / `Verify`), Guardian the mark, and the share artefact (the
+postcard) the **struck medallion** — one coin, two metals: the origin's
+band weathered by its own record, the destination's engraved core, the
+strike on the rim. A new
 motif needs an owner and displaces nothing else's claim — otherwise
 every surface wears every motif, which is the cards problem in a nicer
 costume. Guardian's object is the mark (96px) + its state headline + two

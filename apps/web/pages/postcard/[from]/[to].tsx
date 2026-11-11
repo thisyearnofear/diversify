@@ -5,10 +5,11 @@
  * wallet. Unknown pair or all-invalid ids render the neutral brand
  * postcard, never a guess.
  *
- * The postcard is the object: coins with their real currency names,
- * then the pressed seals large enough to read the rim, each with its
- * fact line and a cited source · date beneath. One-shot entrance
- * stagger only — reduced motion lands everything in place.
+ * The postcard is the object: the struck medallion — the origin's metal
+ * weathered into the destination's — with its two currency names beneath,
+ * then the pressed seals large enough to read the rim, each with its fact
+ * line and a cited source · date below. One-shot entrance only — reduced
+ * motion lands everything in place, struck marks already punched.
  */
 import type { GetServerSideProps } from 'next';
 import Head from 'next/head';
@@ -17,7 +18,7 @@ import { resolveStamps, type Stamp } from '@/lib/stamps';
 import { StampSealFace, stampRotation } from '@/components/shared/StampSeal';
 import { RouteLink } from '@/components/shared/RouteLink';
 import type { StampMode } from '@/components/swap/StampSheet';
-import { TokenIcon } from '@/components/shared/TokenIcon';
+import { StruckMedallion } from '@/components/shared/StruckMedallion';
 import { tokenColor } from '@/components/shared/palette';
 import { canonicalPairSymbol } from '@/lib/pair-card';
 import { corridorSideFor, moneyNameFor } from '@/lib/corridor-context';
@@ -158,23 +159,30 @@ export default function PostcardPage({
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:image" content={ogImageUrl} />
       </Head>
-      <div className="flex min-h-screen flex-col items-center justify-center bg-[#0b0b12] px-4 py-12 text-center">
+      {/* The card is dark by design and the seals' ink rides `dark:`
+       * variants — scoping `dark` here keeps a light-theme recipient from
+       * reading navy numbers on a navy field. */}
+      <div className="dark flex min-h-screen flex-col items-center justify-center bg-[#0b0b12] px-4 py-12 text-center">
         <div className="w-full max-w-md rounded-3xl border border-white/10 bg-white/[0.04] px-5 py-10 sm:px-10">
           {from && to ? (
             <>
-              {/* The move: coins and their real currency names. */}
-              <div className="flex items-start justify-center gap-4">
-                <div className="flex w-20 flex-col items-center gap-1.5">
-                  <TokenIcon symbol={from} size={44} />
-                  <span className="text-2xs text-gray-400">{fromName}</span>
-                </div>
-                <span className="mt-3 text-sm text-gray-500">→</span>
-                <div className="flex w-20 flex-col items-center gap-1.5">
-                  <TokenIcon symbol={to} size={44} />
-                  <span className="text-2xs text-gray-400">{toName}</span>
-                </div>
+              {/* The object: one coin, two metals — the origin's weathered
+                * ring around the destination's core, struck once on arrival
+                * when the move has happened. */}
+              <div className="mx-auto w-full max-w-[248px]">
+                <StruckMedallion
+                  from={from}
+                  to={to}
+                  mode={mode}
+                  strikeKey={`${from}-${to}-${mode}`}
+                  className="h-auto w-full"
+                />
               </div>
-              <p className="mt-3 text-3xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+              <p className="mt-4 text-xs text-gray-400">
+                {fromName} <span className="text-gray-600">→</span>{' '}
+                {toName ? bareName(toName) : to}
+              </p>
+              <p className="mt-2 text-3xs font-semibold uppercase tracking-[0.2em] text-gray-500">
                 {mode === 'moved' ? 'Moved' : 'Watching'}
               </p>
 
