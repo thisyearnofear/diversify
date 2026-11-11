@@ -24,6 +24,7 @@ import { EYE_POSE, GuardianMascot, NEUTRAL_EYE } from '../GuardianMascot';
 import {
   COIN,
   GUARDIAN_PALETTE,
+  NOBLE_COIN,
   guardianEmbedSvg,
   guardianMarkSquareSvg,
   SHIELD_D,
@@ -226,7 +227,10 @@ describe('guardian-mark SVG builders (raster export single source of truth)', ()
     expect(svg).toContain(SHIELD_D); // shield silhouette
     expect(svg).toContain(GUARDIAN_PALETTE.visor); // visor face
     expect(svg).toContain(GUARDIAN_PALETTE.eye); // digital eyes
-    expect(svg).toContain(GUARDIAN_PALETTE.gold); // belly coin
+    // The belly coin is the foundry's noble metal, not a gold that looked right.
+    NOBLE_COIN.stops.forEach(({ color }) => expect(svg).toContain(color));
+    expect(svg).toContain(NOBLE_COIN.ring); // inner ring, struck from the same metal
+    expect(svg).not.toContain(GUARDIAN_PALETTE.gold);
     expect(svg).toContain(`cx="${COIN.cx}"`);
   });
 

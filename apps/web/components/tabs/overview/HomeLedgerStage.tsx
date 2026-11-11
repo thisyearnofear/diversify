@@ -15,7 +15,8 @@
 import React from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Coin } from "@/components/shared/FloatingCoins";
-import { QUIET_GRAY, TOKEN_COLORS } from "@/components/shared/palette";
+import { QUIET_GRAY } from "@/components/shared/palette";
+import { metalMidFor } from "@/lib/foundry";
 import { displayToken } from "@/lib/plan-legs";
 import { LEDGER_OTHER_TOKEN, type LedgerLeg, type LedgerView } from "@/lib/shield-ledger-view";
 import { formatRecordAge } from "@/constants/proof-feed";
@@ -33,9 +34,12 @@ function glyphFor(leg: LedgerLeg): string {
   return leg.token === LEDGER_OTHER_TOKEN ? "•••" : displayToken(leg.token);
 }
 
-function colorFor(leg: LedgerLeg, index: number, accent: string): string {
-  if (leg.token === LEDGER_OTHER_TOKEN) return QUIET_GRAY;
-  return TOKEN_COLORS[leg.token] ?? (index === 0 ? accent : QUIET_GRAY);
+/** The stage strikes each coin from the foundry's metal table, and the
+ *  legend dot is that same metal at its mid tone — the rows key to the
+ *  coins rather than to a separate palette. */
+function coinPaint(leg: LedgerLeg): { token?: string; swatch: string } {
+  if (leg.token === LEDGER_OTHER_TOKEN) return { swatch: QUIET_GRAY };
+  return { token: leg.token, swatch: metalMidFor(leg.token) };
 }
 
 export function HomeLedgerStage({ ledger, accent }: Props) {
@@ -61,7 +65,12 @@ export function HomeLedgerStage({ ledger, accent }: Props) {
           animate={{ rotateY: 0, opacity: 1 }}
           transition={flip}
         >
-          <Coin size={112} symbol={glyphFor(top)} color={colorFor(top, 0, accent)} />
+          <Coin
+            size={112}
+            symbol={glyphFor(top)}
+            token={coinPaint(top).token}
+            color={coinPaint(top).swatch}
+          />
         </motion.div>
         {/* The number that carries the meaning — the read window. Its whole
             is stated once, by the ledger panel under the stage, so the two
@@ -88,7 +97,8 @@ export function HomeLedgerStage({ ledger, accent }: Props) {
             <Coin
               size={72}
               symbol={glyphFor(second)}
-              color={colorFor(second, 1, accent)}
+              token={coinPaint(second).token}
+              color={coinPaint(second).swatch}
             />
           ) : null}
         </motion.div>
@@ -110,7 +120,7 @@ export function HomeLedgerStage({ ledger, accent }: Props) {
         data-testid="home-ledger-rows"
         className="mx-auto mt-3 w-full max-w-[360px] space-y-1.5 text-left"
       >
-        {ledger.legs.map((leg, i) => (
+        {ledger.legs.map((leg) => (
           <li
             key={leg.token}
             className="flex items-baseline justify-between gap-3 text-sm"
@@ -119,7 +129,7 @@ export function HomeLedgerStage({ ledger, accent }: Props) {
               <span
                 aria-hidden
                 className="size-2.5 shrink-0 self-center rounded-full"
-                style={{ background: colorFor(leg, i, accent) }}
+                style={{ background: coinPaint(leg).swatch }}
               />
               <span className="truncate font-semibold text-ink">
                 {glyphFor(leg)}

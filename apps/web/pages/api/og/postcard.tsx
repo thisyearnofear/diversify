@@ -11,6 +11,18 @@ import { resolveStamps, type Stamp } from '@/lib/stamps';
 import { corridorSideFor } from '@/lib/corridor-context';
 import { tokenColor } from '@/components/shared/palette';
 import { stampRotation } from '@/components/shared/StampSeal';
+import {
+  FOUNDRY_METAL_STOPS,
+  FOUNDRY_VERDIGRIS,
+  MEDALLION_MARK_D,
+  MEDALLION_VIEW,
+  medallionRadius,
+  foundryMaterialFor,
+  medallionReed,
+  patinaFor,
+  reliefFor,
+} from '@/lib/foundry';
+import { metalPaintId } from '@/components/shared/foundry-defs';
 
 export const config = {
   runtime: 'edge',
@@ -18,6 +30,222 @@ export const config = {
 
 const BG = '#0b0b12';
 const QUIET = '#8b8b9a';
+
+const MID = MEDALLION_VIEW / 2;
+const R_OUTER = medallionRadius('outer');
+const R_SEAM = medallionRadius('seam');
+const R_CORE = medallionRadius('core');
+const REED = medallionReed();
+
+/**
+ * StruckMedallion in the OG image, so a forwarded link previews the object
+ * it forwards to rather than a pair of flat chips. Every number comes from
+ * the same table the page reads — `MEDALLION_SHAPE`, `reliefFor`,
+ * `patinaFor`, `medallionReed` — and the metals are painted from
+ * `FOUNDRY_METAL_STOPS` under `metalPaintId`, so one metal definition drives
+ * both carriers. Satori renders an inline `<linearGradient>` but drops one
+ * returned by a component, which is why `FoundryDefs` itself can't cross
+ * here; the engraving loses its `textPath` and sits beside the object
+ * instead. Nothing else is invented.
+ */
+function Medallion({
+  from,
+  to,
+  struck,
+  size,
+}: {
+  from: string;
+  to: string;
+  struck: boolean;
+  size: number;
+}) {
+  const ringMaterial = foundryMaterialFor(from);
+  const coreMaterial = foundryMaterialFor(to);
+  const ring = reliefFor(ringMaterial);
+  const core = reliefFor(coreMaterial);
+  const patina = patinaFor(from);
+  const uid = 'og';
+
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${MEDALLION_VIEW} ${MEDALLION_VIEW}`}>
+      <defs>
+        {[ringMaterial, coreMaterial].map((material) => (
+          <linearGradient
+            key={material}
+            id={metalPaintId(uid, material)}
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            {FOUNDRY_METAL_STOPS[material].map(({ offset, color }) => (
+              <stop key={offset} offset={offset} stopColor={color} />
+            ))}
+          </linearGradient>
+        ))}
+      </defs>
+
+      {/* The field, struck from the origin's metal. */}
+      <circle cx={MID} cy={MID} r={R_OUTER} fill={`url(#${metalPaintId(uid, ringMaterial)})`} />
+      {/* Weathering — a whisper across the band, deeper at the edge. */}
+      {patina > 0 && (
+        <circle
+          cx={MID}
+          cy={MID}
+          r={(R_OUTER + R_SEAM) / 2}
+          fill="none"
+          stroke={FOUNDRY_VERDIGRIS}
+          strokeWidth={R_OUTER - R_SEAM}
+          opacity={patina * 0.3}
+        />
+      )}
+      {patina > 0 && (
+        <circle
+          cx={MID}
+          cy={MID}
+          r={R_OUTER - 4}
+          fill="none"
+          stroke={FOUNDRY_VERDIGRIS}
+          strokeWidth="7"
+          opacity={patina * 0.42}
+        />
+      )}
+      <circle
+        cx={MID}
+        cy={MID}
+        r={R_OUTER}
+        fill="none"
+        stroke={ring.dark}
+        strokeWidth="1.6"
+        opacity="0.8"
+      />
+
+      {/* Reeding — grooves and crests, one half-period apart. */}
+      <circle
+        cx={MID}
+        cy={MID}
+        r={REED.radius}
+        fill="none"
+        stroke={ring.dark}
+        strokeWidth={REED.strokeWidth}
+        strokeDasharray={REED.dasharray}
+        opacity="0.5"
+      />
+      <circle
+        cx={MID}
+        cy={MID}
+        r={REED.radius}
+        fill="none"
+        stroke={ring.light}
+        strokeWidth={REED.strokeWidth}
+        strokeDasharray={REED.dasharray}
+        strokeDashoffset={REED.crestOffset}
+        opacity={0.34 * (1 - patina * 0.45)}
+      />
+
+      {/* The die seam, then the destination's core pressed into it. */}
+      <circle
+        cx={MID}
+        cy={MID}
+        r={R_SEAM}
+        fill="none"
+        stroke={ring.dark}
+        strokeWidth="3"
+        opacity="0.55"
+      />
+      <circle
+        cx={MID}
+        cy={MID}
+        r={R_CORE}
+        fill={`url(#${metalPaintId(uid, coreMaterial)})`}
+        stroke={core.dark}
+        strokeWidth="1.2"
+        opacity="0.98"
+      />
+      <path
+        d={`M ${MID},${R_CORE - 0.5} a ${R_CORE - 0.5},${R_CORE - 0.5} 0 0,0 0,${
+          (R_CORE - 0.5) * 2
+        }`}
+        fill="none"
+        stroke={ring.dark}
+        strokeWidth="4"
+        opacity="0.28"
+      />
+      <circle
+        cx={MID}
+        cy={MID}
+        r={R_CORE - 4}
+        fill="none"
+        stroke={core.dark}
+        strokeWidth="1"
+        opacity="0.32"
+      />
+      <circle
+        cx={MID}
+        cy={MID}
+        r={R_CORE - 7}
+        fill="none"
+        stroke={core.light}
+        strokeWidth="0.9"
+        opacity="0.42"
+      />
+
+      {struck ? (
+        <g>
+          <path
+            d={MEDALLION_MARK_D}
+            fill="none"
+            stroke={ring.light}
+            strokeWidth="5.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            transform="translate(-1.1,-1.4)"
+            opacity="0.62"
+          />
+          <path
+            d={MEDALLION_MARK_D}
+            fill="none"
+            stroke={ring.dark}
+            strokeWidth="5.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            transform="translate(1,1.2)"
+            opacity="0.4"
+          />
+          <path
+            d={MEDALLION_MARK_D}
+            fill="none"
+            stroke={ring.ink}
+            strokeWidth="3.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      ) : (
+        <g>
+          <path
+            d={MEDALLION_MARK_D}
+            fill="none"
+            stroke={FOUNDRY_METAL_STOPS.ghost[1].color}
+            strokeWidth="4.4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            opacity="0.16"
+          />
+          <path
+            d={MEDALLION_MARK_D}
+            fill="none"
+            stroke={FOUNDRY_METAL_STOPS.ghost[0].color}
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeDasharray="3 4"
+            opacity="0.5"
+          />
+        </g>
+      )}
+    </svg>
+  );
+}
 
 function BrandCard() {
   return (
@@ -136,48 +364,33 @@ export default async function handler(req: NextRequest) {
           padding: '48px 64px',
         }}
       >
-        {/* The postcard: from coin → to coin, mode caption, seals. */}
+        {/* The postcard's object — one coin, two metals — with the
+          * engraving beside it (satori has no textPath) and the mode. */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 40 }}>
+          <Medallion from={from} to={to} struck={mode === 'moved'} size={188} />
           <div
             style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              backgroundColor: tokenColor(from),
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 44,
+              flexDirection: 'column',
+              marginLeft: 40,
+              alignItems: 'flex-start',
             }}
           >
-            {fromFlag ?? from}
+            <span style={{ color: 'white', fontSize: 52, fontWeight: 800, letterSpacing: -1 }}>
+              {`${fromFlag ?? from} ${from} → ${toFlag ?? to} ${to}`}
+            </span>
+            <span
+              style={{
+                color: QUIET,
+                fontSize: 22,
+                marginTop: 12,
+                textTransform: 'uppercase',
+                letterSpacing: 3,
+              }}
+            >
+              {mode === 'moved' ? 'Moved' : 'Watching'}
+            </span>
           </div>
-          <span style={{ color: QUIET, fontSize: 36, margin: '0 18px' }}>→</span>
-          <div
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: 48,
-              backgroundColor: tokenColor(to),
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 44,
-            }}
-          >
-            {toFlag ?? to}
-          </div>
-          <span
-            style={{
-              color: QUIET,
-              fontSize: 20,
-              marginLeft: 18,
-              textTransform: 'uppercase',
-              letterSpacing: 2,
-            }}
-          >
-            {mode === 'moved' ? 'Moved' : 'Watching'}
-          </span>
         </div>
 
         <div style={{ display: 'flex', gap: 36 }}>

@@ -11,6 +11,7 @@ import {
   COIN,
   EYES,
   GUARDIAN_PALETTE as P,
+  NOBLE_COIN,
   SHIELD_D,
   VISOR_D,
 } from './guardian-mark';
@@ -53,8 +54,9 @@ interface GuardianMascotProps {
  * GuardianMascot — the Digital Guardian.
  *
  * A heraldic pointed shield with a dark visor "screen face", two digital
- * eyes, and one gold belly-coin minted from the same #f59e0b as the Coin
- * primitive — the Guardian literally carries the app's motif as its core.
+ * eyes, and one belly-coin struck from the foundry's noble metal — the same
+ * gold the hard-asset coins and the share medallion are minted from, so the
+ * Guardian literally carries the app's motif as its core.
  *
  * Identity: pointed silhouette, visor, rect eyes, ice-blue armor, 2px edge
  * stroke. Motion discipline: zero ambient loops — no bob, no glow pulse, no
@@ -285,7 +287,7 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
               cx={COIN.cx}
               cy={COIN.cy}
               r={COIN.ringR}
-              stroke={P.ring}
+              stroke={NOBLE_COIN.ring}
               strokeWidth={COIN.ringW}
               fill="none"
               opacity="0.9"
@@ -340,8 +342,9 @@ export const GuardianMascot: React.FC<GuardianMascotProps> = ({
             y2={COIN.cy + COIN.r}
             gradientUnits="userSpaceOnUse"
           >
-            <stop offset="0%" stopColor="#fcd34d" />
-            <stop offset="100%" stopColor={P.gold} />
+            {NOBLE_COIN.stops.map(({ offset, color }) => (
+              <stop key={offset} offset={offset} stopColor={color} />
+            ))}
           </linearGradient>
         </defs>
       </motion.svg>

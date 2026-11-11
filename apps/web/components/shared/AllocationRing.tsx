@@ -18,6 +18,7 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { haptics } from '@/lib/haptics';
 import { springSoft } from '@/lib/motion-tokens';
 import { FoundryDefs, metalPaintId, proudFilterId } from './foundry-defs';
+import { FOUNDRY_VERDIGRIS } from '@/lib/foundry';
 
 export interface RingSlice {
   /** Stable key — usually the token symbol. */
@@ -286,7 +287,7 @@ export default function AllocationRing({
                   cy={size / 2}
                   r={radius}
                   fill="none"
-                  stroke="#41705B"
+                  stroke={FOUNDRY_VERDIGRIS}
                   strokeLinecap="butt"
                   pointerEvents="none"
                   aria-hidden="true"

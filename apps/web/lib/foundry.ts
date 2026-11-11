@@ -56,17 +56,106 @@ export const FOUNDRY_PROUD = {
   floodOpacity: 0.45,
 } as const;
 
-/** CSS `background-image` for a metal, for carriers without SVG defs. */
-export function metalGradientCss(material: FoundryMaterial): string {
+/** CSS `background-image` for a metal, for carriers without SVG defs. The
+ *  direction is the light: `to bottom` across a face, `to right` down a
+ *  round post so the highlight stays on the near edge. */
+export function metalGradientCss(
+  material: FoundryMaterial,
+  direction: 'to bottom' | 'to right' = 'to bottom',
+): string {
   const stops = FOUNDRY_METAL_STOPS[material]
     .map(({ offset, color }) => `${color} ${offset * 100}%`)
     .join(', ');
-  return `linear-gradient(to bottom, ${stops})`;
+  return `linear-gradient(${direction}, ${stops})`;
 }
 
 /** The same proud lift as a CSS filter, for DOM carriers. */
 export function proudShadowCss(): string {
   return `drop-shadow(0 ${FOUNDRY_PROUD.dy}px ${FOUNDRY_PROUD.stdDeviation}px rgba(0,0,0,${FOUNDRY_PROUD.floodOpacity}))`;
+}
+
+/** A token's metal at its mid tone — for the carriers that need one flat
+ *  colour beside a struck object (a legend dot, a swatch) and still have to
+ *  read as the same material. */
+export function metalMidFor(symbol: string): string {
+  const stops = FOUNDRY_METAL_STOPS[foundryMaterialFor(symbol)];
+  return stops[Math.floor(stops.length / 2)].color;
+}
+
+/** The one tint the foundry allows to be named directly: the tarnish a
+ *  living leg grows. Shared by every carrier that weathers. */
+export const FOUNDRY_VERDIGRIS = '#41705B';
+
+/** Linear-interpolate two hex colors — how relief lifts and sinks on a
+ *  metal without inventing a colour the table doesn't have. */
+export function mixMetal(hexA: string, hexB: string, t: number): string {
+  const a = parseInt(hexA.replace('#', ''), 16);
+  const b = parseInt(hexB.replace('#', ''), 16);
+  const ch = (sa: number, sb: number) => Math.round(sa + (sb - sa) * t);
+  const r = ch((a >> 16) & 255, (b >> 16) & 255);
+  const g = ch((a >> 8) & 255, (b >> 8) & 255);
+  const bl = ch(a & 255, b & 255);
+  return `#${((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')}`;
+}
+
+/** A metal's relief colors — the lit lip, the shadowed one and the floor —
+ *  struck from that metal's own mid stop, never a separate palette. */
+export function reliefFor(material: FoundryMaterial): {
+  dark: string;
+  light: string;
+  ink: string;
+} {
+  const stops = FOUNDRY_METAL_STOPS[material];
+  const mid = stops[Math.floor(stops.length / 2)].color;
+  return {
+    dark: mixMetal(mid, '#000000', 0.45),
+    light: mixMetal(mid, '#ffffff', 0.6),
+    ink: mixMetal(mid, '#000000', 0.66),
+  };
+}
+
+/**
+ * The struck medallion's shape as fractions of its diameter, so the SVG
+ * carrier and the OG image strike one object: the outer edge, the die seam
+ * where the second metal was pressed in, the core, and the reeded band.
+ */
+export const MEDALLION_SHAPE = {
+  outer: 0.44,
+  seam: 0.3,
+  core: 0.28,
+  reed: 0.41,
+} as const;
+
+/** The medallion is drawn in a 200-unit space; carriers scale the box, not
+ *  the numbers. */
+export const MEDALLION_VIEW = 200;
+
+/** A radius in that space, rounded — so every carrier writes the same
+ *  number into the same attribute. */
+export function medallionRadius(part: keyof typeof MEDALLION_SHAPE): number {
+  return Math.round(MEDALLION_VIEW * MEDALLION_SHAPE[part]);
+}
+
+/** Where a strike lands: the foot of the band, opposite the engraving. The
+ *  foundry's chronology puts strikes on the rim, not in the field. */
+export const MEDALLION_MARK_D = 'M 90 172 l 6 7 l 15 -17';
+
+/** Reeding — alternating grooves and crests around the band, as dash
+ *  geometry so every carrier cuts the same number of nicks. */
+export function medallionReed(): {
+  radius: number;
+  strokeWidth: number;
+  dasharray: string;
+  crestOffset: number;
+} {
+  const radius = medallionRadius('reed');
+  const arc = (2 * Math.PI * radius) / 44;
+  return {
+    radius,
+    strokeWidth: 7,
+    dasharray: `${(arc * 0.2).toFixed(2)} ${(arc * 0.8).toFixed(2)}`,
+    crestOffset: arc * 0.5,
+  };
 }
 
 /** Hard-asset tokens — the one material that never weathers. */

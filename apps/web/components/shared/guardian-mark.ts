@@ -7,9 +7,10 @@
  *   export for icon.png / splash.png / preview.png / embed-image.png
  *
  * Spec: docs/design-language.md §9. Identity: pointed heraldic shield, dark
- * visor screen face, digital square eyes, gold belly coin (the app's Coin
- * motif as the Guardian's core). No mouth — the visor is the face.
+ * visor screen face, digital square eyes, noble-metal belly coin (the app's
+ * Coin motif as the Guardian's core). No mouth — the visor is the face.
  */
+import { FOUNDRY_METAL_STOPS, reliefFor } from '../../lib/foundry';
 
 /** viewBox is 0 0 100 100 for all renderers. */
 export const GUARDIAN_VIEWBOX = 100;
@@ -28,7 +29,6 @@ export const GUARDIAN_PALETTE = {
   visor: '#1e293b',
   eye: '#60a5fa',
   gold: '#f59e0b',
-  ring: '#fde68a',
   iceTop: '#eff6ff',
   iceBottom: '#dbeafe',
   /** Deep slate navy — canonical field for raster compositions. */
@@ -43,6 +43,18 @@ export const EYES = [
 
 /** Belly coin: gold disc + lighter inner ring, straddling the visor's edge. */
 export const COIN = { cx: 50, cy: 72, r: 8, ringR: 5.2, ringW: 1.6 } as const;
+
+/**
+ * The belly coin is the foundry's noble metal — literal gold, the one
+ * material that never weathers (§ The foundry). Both renderers read it from
+ * the same table the ring, the coins and the share medallion strike from,
+ * so the Guardian's core *is* PAXG's coin rather than a colour that looked
+ * metallic.
+ */
+export const NOBLE_COIN = {
+  stops: FOUNDRY_METAL_STOPS.noble,
+  ring: reliefFor('noble').light,
+} as const;
 
 /**
  * Static SVG inner markup (defs + shapes) for the mark in its neutral pose.
@@ -60,6 +72,9 @@ export function guardianMarkInner(idPrefix: string): string {
     (e) =>
       `<rect x="${e.x}" y="${e.y}" width="${e.size}" height="${e.size}" rx="${e.rx}" fill="${P.eye}"/>`,
   ).join('');
+  const coinStops = NOBLE_COIN.stops
+    .map(({ offset, color }) => `<stop offset="${offset * 100}%" stop-color="${color}"/>`)
+    .join('');
   return `<defs>
   <linearGradient id="${body}" x1="50" y1="10" x2="50" y2="90" gradientUnits="userSpaceOnUse">
     <stop offset="0%" stop-color="${P.iceTop}"/>
@@ -70,15 +85,14 @@ export function guardianMarkInner(idPrefix: string): string {
     <stop offset="100%" stop-color="${P.edge}" stop-opacity="0.14"/>
   </linearGradient>
   <linearGradient id="${coin}" x1="50" y1="${COIN.cy - COIN.r}" x2="50" y2="${COIN.cy + COIN.r}" gradientUnits="userSpaceOnUse">
-    <stop offset="0%" stop-color="#fcd34d"/>
-    <stop offset="100%" stop-color="${P.gold}"/>
+    ${coinStops}
   </linearGradient>
 </defs>
 <path d="${SHIELD_D}" fill="url(#${body})" stroke="${P.edge}" stroke-width="2" stroke-linejoin="round"/>
 <path d="${SHIELD_D}" fill="url(#${shade})"/>
 <path d="${VISOR_D}" fill="${P.visor}" opacity="0.85"/>
 <circle cx="${COIN.cx}" cy="${COIN.cy}" r="${COIN.r}" fill="url(#${coin})"/>
-<circle cx="${COIN.cx}" cy="${COIN.cy}" r="${COIN.ringR}" stroke="${P.ring}" stroke-width="${COIN.ringW}" fill="none" opacity="0.9"/>
+<circle cx="${COIN.cx}" cy="${COIN.cy}" r="${COIN.ringR}" stroke="${NOBLE_COIN.ring}" stroke-width="${COIN.ringW}" fill="none" opacity="0.9"/>
 ${eyes}`;
 }
 

@@ -664,6 +664,7 @@ export function CurrencyMomentCard({
                         <Coin
                           size={112}
                           symbol={moment.currencyCode}
+                          token={moment.currencyCode}
                           color={accent}
                           wear={wear}
                           shine={
@@ -755,6 +756,7 @@ export function CurrencyMomentCard({
                 <Coin
                   size={72}
                   symbol={benchmarkCoin.glyph}
+                  token={moment.benchmark}
                   color={benchmarkCoin.color}
                 />
               </motion.div>

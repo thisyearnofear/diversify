@@ -1,12 +1,16 @@
 /**
  * Coin + FloatingCoins — the stablecoin motif system.
  *
- * `Coin` is a self-contained SVG coin: radial-gradient face, embossed
- * inner ring, glossy highlight, and a stamped currency glyph. Pass any
- * accent color and the light/dark facets are derived automatically, so
- * archetype-tinted coins stay on-palette. Deliberately no mascot-like
- * face — this is a finance app, not a rewards app, so the motif reads
- * as a minted medallion, not a character.
+ * `Coin` is a self-contained SVG coin: metal face, embossed inner ring,
+ * glossy highlight, and a stamped currency glyph. Pass `token` and the face
+ * is struck from the foundry's one metal table (`foundryMaterialFor` picks
+ * the metal, `patinaFor` the weathering), so a coin, a ring leg and the
+ * share medallion are the same material rather than five one-offs
+ * (design-language § The foundry). Pass `color` and it stays an accent-tinted
+ * disc — archetype, step and flag coins have no metal to claim, and the
+ * light/dark facets are derived automatically so they stay on-palette.
+ * Deliberately no mascot-like face — this is a finance app, not a rewards
+ * app, so the motif reads as a minted medallion, not a character.
  *
  * `FloatingCoins` scatters a deterministic field of drifting coins for
  * ambient backdrops. Deterministic layout keeps SSR hydration safe;
@@ -22,17 +26,15 @@
 import React, { useEffect, useId, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
-
-/** Linear-interpolate two hex colors. t=0 → a, t=1 → b. */
-function mix(hexA: string, hexB: string, t: number): string {
-  const a = parseInt(hexA.replace('#', ''), 16);
-  const b = parseInt(hexB.replace('#', ''), 16);
-  const ch = (sa: number, sb: number) => Math.round(sa + (sb - sa) * t);
-  const r = ch((a >> 16) & 255, (b >> 16) & 255);
-  const g = ch((a >> 8) & 255, (b >> 8) & 255);
-  const bl = ch(a & 255, b & 255);
-  return `#${((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')}`;
-}
+import {
+  FOUNDRY_METAL_STOPS,
+  FOUNDRY_VERDIGRIS,
+  foundryMaterialFor,
+  mixMetal,
+  patinaFor,
+  reliefFor,
+  type FoundryMaterial,
+} from '@/lib/foundry';
 
 const GOLD = '#f59e0b';
 
@@ -57,8 +59,20 @@ export interface CoinProps {
    *  an entrance settle so the band crosses AFTER the coin lands. */
   shineDelay?: number;
   /** 0..1 — lost purchasing power worn into the coin: a duller face, a
-   *  nicked rim, a fading gloss. Data-driven only; 0 is a fresh mint. */
+   *  nicked rim, a fading gloss. Data-driven only; 0 is a fresh mint.
+   *  Stacks on a token's patina: the record weathers the metal, `wear`
+   *  dulls the face currently being shown. */
   wear?: number;
+  /** A token symbol. The coin is then struck from the foundry's metal
+   *  table — the same stops the plan ring and the share medallion paint
+   *  with — and weathered by the same curated depreciation record, so the
+   *  accent `color` is not needed. Coins with no token behind them (steps,
+   *  archetypes, flags) keep their accent. */
+  token?: string;
+  /** A named metal, struck straight from the table with no token behind it —
+   *  the scale's own hardware, the Guardian's belly coin. Never a colour
+   *  someone thought was metallic. */
+  material?: FoundryMaterial;
 }
 
 export function Coin({
@@ -75,6 +89,8 @@ export function Coin({
   shineDuration = 2.6,
   shineDelay = 0,
   wear = 0,
+  token,
+  material,
 }: CoinProps) {
   const gradId = useId();
   const shineId = useId();
@@ -82,10 +98,38 @@ export function Coin({
   const shineOnce = shine === "once";
   const compact = variant === 'progress' || variant === 'asset';
   const worn = compact ? 0 : Math.max(0, Math.min(1, wear));
-  const face = worn > 0 ? mix(color, '#9ca3af', worn * 0.55) : color;
-  const light = mix(face, '#ffffff', 0.55);
-  const dark = mix(face, '#000000', 0.35);
-  const ink = mix(face, '#000000', 0.55);
+  /** A token's coin takes its metal from the table and the curated record
+   *  weathers it; a named material is struck clean — the scale's own
+   *  hardware does not depreciate. `wear` still applies on top of either,
+   *  because a scrubbed reading dulls the face it is showing. */
+  const struck = material ?? (token ? foundryMaterialFor(token) : null);
+  const stops = struck ? FOUNDRY_METAL_STOPS[struck] : null;
+  const patina = token ? patinaFor(token) : 0;
+  const relief = struck ? reliefFor(struck) : null;
+  const metal = stops
+    ? {
+        top: stops[0].color,
+        mid: stops[Math.floor(stops.length / 2)].color,
+        low: stops[stops.length - 1].color,
+      }
+    : null;
+  /** Patina on a coin is a hue shift, never a ring: the foundry's guardrail
+   *  is desaturation and texture, and a green edge on a coin this small
+   *  reads as mould rather than weathering. */
+  const tarnish = (hex: string) =>
+    patina > 0 ? mixMetal(hex, FOUNDRY_VERDIGRIS, patina * 0.14) : hex;
+  /** Wear is a scrubbed *reading*, so it dulls every stop on the face, not
+   *  just the middle — a bright highlight on a coin that lost 30% reads as
+   *  polish rather than abrasion. */
+  const dull = (hex: string) =>
+    worn > 0 ? mixMetal(hex, '#9ca3af', worn * 0.55) : hex;
+  const faceTop = dull(metal ? tarnish(metal.top) : mixMetal(color, '#ffffff', 0.55));
+  const faceMid = dull(metal ? tarnish(metal.mid) : color);
+  const faceLow = dull(metal ? tarnish(metal.low) : mixMetal(color, '#000000', 0.35));
+  const face = faceMid;
+  const light = relief ? dull(tarnish(relief.light)) : mixMetal(face, '#ffffff', 0.55);
+  const dark = relief ? dull(tarnish(relief.dark)) : mixMetal(face, '#000000', 0.35);
+  const ink = relief ? dull(tarnish(relief.ink)) : mixMetal(face, '#000000', 0.55);
   const nicks = 4 + Math.round(worn * 12);
   const nickGap = 1 + worn * 3;
   const rimDash =
@@ -104,9 +148,9 @@ export function Coin({
     >
       <defs>
         <radialGradient id={gradId} cx="35%" cy="30%" r="85%">
-          <stop offset="0%" stopColor={light} />
-          <stop offset="55%" stopColor={color} />
-          <stop offset="100%" stopColor={dark} />
+          <stop offset="0%" stopColor={faceTop} />
+          <stop offset="55%" stopColor={face} />
+          <stop offset="100%" stopColor={faceLow} />
         </radialGradient>
         {shineOn && !ambient && (
           <>
@@ -145,11 +189,11 @@ export function Coin({
           fill="none"
           stroke={light}
           strokeWidth={ambient ? '1.2' : '2'}
-          opacity={(ambient ? 0.45 : 0.7) * (1 - worn * 0.6)}
+          opacity={(ambient ? 0.45 : 0.7) * (1 - worn * 0.6) * (1 - patina * 0.35)}
         />
       )}
       {!compact && !ambient && (
-        <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity={0.35 * (1 - worn)} transform="rotate(-24 23 17)" />
+        <ellipse cx="23" cy="17" rx="10" ry="4.5" fill="#ffffff" opacity={0.35 * (1 - worn) * (1 - patina * 0.5)} transform="rotate(-24 23 17)" />
       )}
       <text
         x="32"

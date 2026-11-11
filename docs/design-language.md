@@ -364,17 +364,31 @@ nothing sparkles idle — the stillness contract owns delight too. And
 DOM stays authoritative: the foundry is material, the text beside it
 is truth.
 
-*Carrier:* `AllocationRing variant="foundry"` renders the language in
-DOM/SVG on the Shield instrument — `lib/foundry.ts` classifies each
-leg's metal from the token (`machined`/`noble`/`living`/`ghost`) and
-scales patina from the curated 5yr depreciation record.
-`StruckMedallion` is the same language on the share artefact: it fills
-both halves from `FoundryDefs` (so a medallion metal and a ring leg are
-one paint server), weathers the band with the ring's verdigris at a
-whisper rather than the arc's full overlay, and puts the strike on the
-rim. Rive objects
+*Carrier:* `lib/foundry.ts` is the one table — the four metals, the
+relief struck from each metal's own mid stop, the single named verdigris,
+and the medallion's geometry as fractions. Every carrier reads it:
+`AllocationRing variant="foundry"` classifies each leg from its token and
+scales patina from the curated 5yr depreciation record; `Coin` takes a
+`token` (metal + weathering) or a `material` (struck clean — the
+Exchange scale's hardware, the Guardian's belly coin); `StruckMedallion`
+fills both halves from `FoundryDefs`, weathers the band with the ring's
+verdigris at a whisper rather than the arc's full overlay, and puts the
+strike on the rim; `/api/og/postcard` strikes the same medallion as one
+inline SVG, writing its own `<linearGradient>`s from the table because
+satori renders nothing for a component that returns a fragment inside
+`<defs>`; `PairStage`'s bar, post, base and pivot are machined, because
+the instrument is one metal and what it weighs keeps its own logo;
+`guardian-mark.ts` mints the belly coin from the noble stops, so the
+mascot's core *is* PAXG's coin, the SVGator builders stamp it with
+`metalPaint('noble')`, and the raster exports cannot drift from the live
+mark. Rive objects
 (`RiveAssayShield`, the seal) carry the same materials where the scene
 is fixed; the plan ring needs arbitrary-N legs, so SVG owns it.
+
+A coin's weathering is a hue shift on its own face, never a ring or a
+wash — at 48–112px a green edge reads as mould, which is the foundry's
+named failure. The arc's verdigris overlay is only safe on an object
+large enough to carry texture.
 
 ### The density contract — depth layers, finite verbs, owned motifs
 
@@ -984,9 +998,12 @@ shield's visual DNA and keeps the redesign's motion discipline.
 - **Pale ice armor** fill (`#eff6ff → #dbeafe`) with the **2px blue edge**
   (`#2563eb`) defining the form, plus a barely-there bottom shade
   (blue 0→14%). No glow, no cast shadow.
-- **Belly coin** — gold `#f59e0b`, identical to the Coin primitive — sits low,
-  straddling the visor's bottom edge: the app's motif as the Guardian's core.
-  Always present, even at small sizes.
+- **Belly coin** — the foundry's **noble metal** (`#F6DC8F → #D7AC4B →
+  #9C7823`, ring `reliefFor('noble').light`), the same strike as PAXG's coin
+  and the share medallion — sits low, straddling the visor's bottom edge:
+  the app's motif as the Guardian's core. Always present, even at small
+  sizes. Noble is the one material that never weathers (§ The foundry), so
+  the core is the only part of the mark that cannot dull.
 - Three semantic colors: ice/edge blue family, visor slate, coin gold.
 - Readable at 32×32. At ≤48px: "compact" mode — shield + eyes + coin, no
   thinking dots. If a feature disappears at 32px, the compact mark must

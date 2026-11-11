@@ -4,7 +4,7 @@
  * Geometry imports from the app's single sources of truth.
  */
 import {
-  SHIELD_D, VISOR_D, EYES, COIN, GUARDIAN_PALETTE,
+  SHIELD_D, VISOR_D, EYES, COIN, GUARDIAN_PALETTE, NOBLE_COIN,
 } from '../../apps/web/components/shared/guardian-mark';
 import { FOUNDRY_METAL_STOPS } from '../../apps/web/lib/foundry';
 
@@ -236,21 +236,12 @@ export function guardianMark(title = 'guardian'): any {
   });
   const coin = circleEl('coin', COIN.r, {
     transform: { translate: { x: COIN.cx - 50, y: COIN.cy - 50 } },
-    fill: {
-      paint: {
-        type: 'linear-gradient',
-        value: {
-          from: { x: 0.5, y: 0 }, to: { x: 0.5, y: 1 },
-          stops: [{ color: rgb('#fcd34d'), offset: 0 }, { color: rgb(P.gold), offset: 1 }],
-          spread: 'pad', fixed: false,
-        },
-      },
-    },
+    fill: { paint: metalPaint('noble') },
   });
   const ring = circleEl('coin-ring', COIN.ringR, {
     transform: { translate: { x: COIN.cx - 50, y: COIN.cy - 50 } },
     fill: { paint: noPaint },
-    stroke: { paint: colorPaint(P.ring), opacity: 0.9, width: COIN.ringW },
+    stroke: { paint: colorPaint(NOBLE_COIN.ring), opacity: 0.9, width: COIN.ringW },
   });
   /* eye rects authored around pivot (50,44): local coords = mark - (50,44) */
   const eyes = grp('eyes', EYES.map((e, i) => rectEl(

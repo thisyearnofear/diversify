@@ -26,49 +26,22 @@ import React, { useId } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import {
   FOUNDRY_METAL_STOPS,
+  FOUNDRY_VERDIGRIS,
+  MEDALLION_MARK_D,
+  MEDALLION_VIEW,
+  medallionRadius,
   foundryMaterialFor,
+  medallionReed,
   patinaFor,
-  type FoundryMaterial,
+  reliefFor,
 } from '@/lib/foundry';
 import { FoundryDefs, metalPaintId } from '@/components/shared/foundry-defs';
 import { drawIn, springSoft } from '@/lib/motion-tokens';
 
-/** Linear-interpolate two hex colors — the same math `Coin` uses, so relief
- *  on the medallion lifts and sinks exactly like a worn coin. */
-function mix(hexA: string, hexB: string, t: number): string {
-  const a = parseInt(hexA.replace('#', ''), 16);
-  const b = parseInt(hexB.replace('#', ''), 16);
-  const ch = (sa: number, sb: number) => Math.round(sa + (sb - sa) * t);
-  const r = ch((a >> 16) & 255, (b >> 16) & 255);
-  const g = ch((a >> 8) & 255, (b >> 8) & 255);
-  const bl = ch(a & 255, b & 255);
-  return `#${((r << 16) | (g << 8) | bl).toString(16).padStart(6, '0')}`;
-}
-
-/** The one tint the foundry allows to be named directly: the tarnish a
- *  living leg grows, shared with `AllocationRing`'s patina overlay. */
-const VERDIGRIS = '#41705B';
-
-const R_OUTER = 88;
-const R_SEAM = 60;
-const R_CORE = 56;
-const R_REED = 82;
-const NICKS = 44;
-
-/** Where a strike lands: the foot of the band, opposite the engraving.
- *  The foundry's chronology puts strikes on the rim, not in the field. */
-const MARK_D = 'M 90 172 l 6 7 l 15 -17';
-
-/** A metal's relief colors, struck from its own mid stop. */
-function reliefFor(material: FoundryMaterial) {
-  const stops = FOUNDRY_METAL_STOPS[material];
-  const mid = stops[Math.floor(stops.length / 2)].color;
-  return {
-    dark: mix(mid, '#000000', 0.45),
-    light: mix(mid, '#ffffff', 0.6),
-    ink: mix(mid, '#000000', 0.66),
-  };
-}
+const R_OUTER = medallionRadius('outer');
+const R_SEAM = medallionRadius('seam');
+const R_CORE = medallionRadius('core');
+const REED = medallionReed();
 
 interface StruckMedallionProps {
   /** Origin token symbol — its metal becomes the ring. */
@@ -106,12 +79,11 @@ export function StruckMedallion({
   // never an uppercased token id.
   const engraving = `${from} → ${to}`;
 
-  const nickArc = (2 * Math.PI * R_REED) / NICKS;
   const rimPath = `ml-rim-${uid}`;
 
   return (
     <motion.svg
-      viewBox="0 0 200 200"
+      viewBox={`0 0 ${MEDALLION_VIEW} ${MEDALLION_VIEW}`}
       width={size}
       height={size}
       className={`block ${className}`}
@@ -153,7 +125,7 @@ export function StruckMedallion({
               cy="100"
               r={(R_OUTER + R_SEAM) / 2}
               fill="none"
-              stroke={VERDIGRIS}
+              stroke={FOUNDRY_VERDIGRIS}
               strokeWidth={R_OUTER - R_SEAM}
               opacity={patina * 0.3}
             />
@@ -162,7 +134,7 @@ export function StruckMedallion({
               cy="100"
               r={R_OUTER - 4}
               fill="none"
-              stroke={VERDIGRIS}
+              stroke={FOUNDRY_VERDIGRIS}
               strokeWidth="7"
               opacity={patina * 0.42}
             />
@@ -182,28 +154,22 @@ export function StruckMedallion({
         <circle
           cx="100"
           cy="100"
-          r={R_REED}
+          r={REED.radius}
           fill="none"
           stroke={ring.dark}
-          strokeWidth="7"
-          strokeDasharray={`${(nickArc * 0.2).toFixed(2)} ${(
-            nickArc *
-            0.8
-          ).toFixed(2)}`}
+          strokeWidth={REED.strokeWidth}
+          strokeDasharray={REED.dasharray}
           opacity="0.5"
         />
         <circle
           cx="100"
           cy="100"
-          r={R_REED}
+          r={REED.radius}
           fill="none"
           stroke={ring.light}
-          strokeWidth="7"
-          strokeDasharray={`${(nickArc * 0.2).toFixed(2)} ${(
-            nickArc *
-            0.8
-          ).toFixed(2)}`}
-          strokeDashoffset={nickArc * 0.5}
+          strokeWidth={REED.strokeWidth}
+          strokeDasharray={REED.dasharray}
+          strokeDashoffset={REED.crestOffset}
           opacity={0.34 * (1 - patina * 0.45)}
         />
 
@@ -278,7 +244,7 @@ export function StruckMedallion({
               on the one it doesn't, with the displaced metal's floor
               between. */}
           <motion.path
-            d={MARK_D}
+            d={MEDALLION_MARK_D}
             fill="none"
             stroke={ring.light}
             strokeWidth="5.6"
@@ -290,7 +256,7 @@ export function StruckMedallion({
             transition={still ? { duration: 0 } : { ...drawIn, delay: 0.26 }}
           />
           <motion.path
-            d={MARK_D}
+            d={MEDALLION_MARK_D}
             fill="none"
             stroke={ring.dark}
             strokeWidth="5.6"
@@ -302,7 +268,7 @@ export function StruckMedallion({
             transition={still ? { duration: 0 } : { ...drawIn, delay: 0.26 }}
           />
           <motion.path
-            d={MARK_D}
+            d={MEDALLION_MARK_D}
             fill="none"
             stroke={ring.ink}
             strokeWidth="3.8"
@@ -332,7 +298,7 @@ export function StruckMedallion({
           {/* Ghost inlay: the empty channel where the strike belongs. The
               move has not happened, so nothing is punched. */}
           <path
-            d={MARK_D}
+            d={MEDALLION_MARK_D}
             fill="none"
             stroke={FOUNDRY_METAL_STOPS.ghost[1].color}
             strokeWidth="4.4"
@@ -341,7 +307,7 @@ export function StruckMedallion({
             opacity="0.16"
           />
           <path
-            d={MARK_D}
+            d={MEDALLION_MARK_D}
             fill="none"
             stroke={FOUNDRY_METAL_STOPS.ghost[0].color}
             strokeWidth="1.6"

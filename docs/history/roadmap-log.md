@@ -1,5 +1,103 @@
 # Roadmap Log — historical waves & file deltas
 
+### One metal table, every carrier (2026-11-11)
+
+The medallion shipped as the share artefact's object and immediately
+exposed two coherence breaks it created: the link preview still drew two
+flat `tokenColor` circles, and the product's most-used coin — `Coin` —
+minted its own radial gradient from an accent and never visited the
+foundry table. Closing those meant making `lib/foundry.ts` the single
+source for metals *and* relief *and* weathering *and* geometry, then
+carrying it outward.
+
+- **`/api/og/postcard` strikes the same medallion.** Three probes
+  established what satori actually renders: inline `<linearGradient>` with
+  `url(#id)` fills works (userSpaceOnUse and objectBoundingBox),
+  `stroke-dasharray` / `dashoffset` / `transform` / `opacity` work, a
+  component returning a fragment inside `<defs>` renders *nothing*, and
+  every `<div>` with more than one child needs an explicit `display` or
+  the route throws ("empty reply from server"). So the OG writes its own
+  gradients from `FOUNDRY_METAL_STOPS` under the same `metalPaintId` keys
+  the browser carriers use, and the reeding is real dash geometry — 44
+  nicks cut by `medallionReed()`, the same function the SVG carrier calls.
+  `textPath` is unsupported, so the engraving sits beside the object.
+- **`Coin` is now struck, not tinted.** A `token` prop takes the metal from
+  the table and the weathering from the curated depreciation record; a
+  `material` prop strikes a coin that is hardware rather than money.
+  Coins with no token behind them (steps, archetypes, flags) keep their
+  accent — the table claims metals, not every coloured disc.
+- **The first patina pass failed the foundry's guardrail out loud.**
+  Verdigris stroke circles
+  around the rim rendered as a green edge on a 112px coin: mould, not
+  weather. Removed. A coin's weathering is now a hue shift across the face
+  stops and the relief (`patina × 0.14` toward `FOUNDRY_VERDIGRIS`), with
+  the inner ring and gloss fading as it accrues. The arc's full overlay
+  stays only where the object is large enough to carry texture.
+- **`wear` and `patina` are different claims and stay separate.** A
+  scrubbed reading still dulls the face it is showing (`coinWear` → gray
+  desaturation + rim nicks); the drift record still weathers the metal.
+  The regression test asserts both, and that a machined leg never tarnishes.
+- **The Exchange scale is one metal.** Bar, post, base and the pivot coin
+  were `bg-gray-400` / `white/25` wireframe; they are machined now
+  (`metalGradientCss('machined')`, `to right` down the round post, a
+  gradient-filled base triangle). What the beam weighs keeps its logo —
+  the coins are the money, not the instrument — so the settlement ✓ stays
+  emerald: it is the stamp doorway's affordance, and re-metalling it would
+  trade a real verb for a material pun.
+- **The Guardian's belly coin is the noble metal.** `guardian-mark.ts`
+  reads `FOUNDRY_METAL_STOPS.noble` + `reliefFor('noble').light` instead of
+  a hardcoded `#fcd34d → #f59e0b` ramp, and `GUARDIAN_PALETTE.ring` is gone
+  with the second source of truth it was. `tsx` resolves the foundry's
+  `@/config` chain, so the raster export still shares the mark's geometry
+  — `pnpm render-guardian-assets` regenerated icon/preview/splash/embed.
+  The SVGator builders take the same feed (`scripts/svgator/lib.ts` calls
+  `metalPaint('noble')` + `NOBLE_COIN.ring`), so the animation documents
+  are authored from the table too. The three brand SVGs already in
+  `docs/assets/brand/` still carry the old ramp: they are SVGator exports,
+  and regenerating them means the SVGator MCP render, not a local script —
+  so they are stale until someone re-exports rather than quietly wrong.
+  `GUARDIAN_PALETTE.gold` stays: the loop and sticker builders use it for
+  brand strokes, which are a colour, not a metal.
+- **Home reads the table too.** The ledger coin stage and the currency
+  moment's hero + benchmark coins take `token`; the legend dot takes
+  `metalMidFor`. Home's holdings strip keeps region colours — it is a
+  legend, and a region→currency mapping is not something to invent here.
+
+**Measured in the browser** (agent-browser, dev server, 1440×900). Home:
+the NGN hero coin is living copper against a machined benchmark, no green
+edge at 2× zoom. Exchange: the bar's computed background is
+`linear-gradient(rgb(228,233,238) 0%, rgb(173,185,197) 50%,
+rgb(124,137,150) 100%)` in both themes — light mode keeps it because the
+previous `gray-400` was the same metal by accident. `curl` on the OG
+route: `moved` renders the verdigris-edged copper band with a steel core
+and the rim hallmark; `watching` inverts to a steel band with a copper
+core and the ghost channel.
+
+**Still intent, not code:** § The chronology's "strikes accumulate on the
+rim" is one strike per settlement today (`strikeKey` re-punches, it does
+not add). The ledger's decision count is a real counter, but putting it on
+a *shared* image would claim the recipient's own history — so the
+accumulation stays unwritten rather than fabricated.
+
+Files: `lib/foundry.ts`, `components/shared/FloatingCoins.tsx`,
+`components/shared/StruckMedallion.tsx`, `components/shared/AllocationRing.tsx`,
+`components/shared/guardian-mark.ts`, `components/shared/GuardianMascot.tsx`,
+`components/swap/PairStage.tsx`, `components/tabs/overview/HomeLedgerStage.tsx`,
+`components/tabs/overview/CurrencyMomentCard.tsx`,
+`pages/api/og/postcard.tsx`, `scripts/svgator/lib.ts`,
+`apps/web/public/{icon,preview,splash,embed-image}.png`.
+Tests: `FloatingCoins.test.tsx` (+6), `StruckMedallion.test.tsx` (8),
+`GuardianMascot.test.tsx` (20, coin assertion now reads the table),
+`PairStage.slow.test.tsx` (51).
+
+Verified: `tsc --noEmit` clean (root config, so `scripts/` too), eslint
+clean on the touched files, full Vitest 3,492/3,493 across 376 files — the
+one red is a 15s timeout in `ProtectionTab-custom-reload.test.tsx` that
+passes in isolation, the same load-contestion class as the documented
+`NotConnectedState` flake. Re-run after the final wear-stop and SVGator
+builder changes: `FloatingCoins` + `GuardianMascot` + `StruckMedallion`
+44/44, slow `PairStage` 51/51, slow `ExchangeTab` 38/38.
+
 ### The share artefact gets its own object: a struck medallion (2026-11-11)
 
 The postcard had no object — it opened with two `TokenIcon`s and an arrow,

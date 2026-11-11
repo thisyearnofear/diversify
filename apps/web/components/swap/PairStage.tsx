@@ -8,13 +8,18 @@
  * Tap a coin with a story to flip it — its label rewrites to the
  * provenance back (who issued it, who holds the keys). Tap a label to
  * change that side. One CTA wakes the ticket, the acting mode.
+ *
+ * The scale is struck from the foundry's machined metal — bar, post, base
+ * and pivot coin are one material with the plan ring and the share
+ * medallion (§ The foundry). What it weighs keeps its own logo: the coins
+ * are the money, not the instrument.
  */
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { motion, useReducedMotion, type PanInfo } from 'framer-motion';
 import { clink } from '@/lib/feel';
 import { Coin } from '../shared/FloatingCoins';
 import { TokenIcon } from '../shared/TokenIcon';
-import { QUIET_GRAY } from '../shared/palette';
+import { FOUNDRY_METAL_STOPS, metalGradientCss } from '@/lib/foundry';
 import { press, springPop, springPress, springSoft, STAGGER_STEP_S } from '@/lib/motion-tokens';
 import { haptics } from '@/lib/haptics';
 import { corridorFor, corridorSideFor, pairWhatIfFor, tiltForDrift, type CorridorSignal, type Horizon } from '@/lib/corridor-context';
@@ -399,6 +404,7 @@ export function PairStage({
   decisionDoor?: React.ReactNode | null;
 }) {
   const reduced = useReducedMotion();
+  const standGradId = useId();
   const { navigateWithIntent, navigateToGuardian } = useNavigation();
   // Coin size for the beam geometry below — must match BeamCoin's own, or
   // the bar overshoots the coins it is supposed to end at.
@@ -578,8 +584,12 @@ export function PairStage({
               the stage gives them. */}
           <div
             aria-hidden
-            className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-gray-400 dark:bg-white/25"
-            style={{ left: coinPx / 2, right: coinPx / 2 }}
+            className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full"
+            style={{
+              left: coinPx / 2,
+              right: coinPx / 2,
+              backgroundImage: metalGradientCss('machined'),
+            }}
           />
           {/* The receipt's one-shot confirm: the spent coin travels the
               beam into the destination and fades — then the seal pulses. */}
@@ -637,7 +647,7 @@ export function PairStage({
             >
               {stellarSettled ? (
                 <span aria-hidden className="flex min-h-tap min-w-tap items-center justify-center">
-                  <Coin size={40} symbol="→" color={QUIET_GRAY} variant="asset" shine={false} />
+                  <Coin size={40} symbol="→" material="machined" variant="asset" shine={false} />
                 </span>
               ) : (
                 <motion.button
@@ -653,7 +663,7 @@ export function PairStage({
                   title="Switch tokens"
                   className="flex min-h-tap min-w-tap items-center justify-center rounded-full bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:bg-gray-900"
                 >
-                  <Coin size={40} symbol="⇅" color={QUIET_GRAY} variant="asset" shine={!reduced && alive} shineDuration={5.5} />
+                  <Coin size={40} symbol="⇅" material="machined" variant="asset" shine={!reduced && alive} shineDuration={5.5} />
                 </motion.button>
               )}
             </motion.div>
@@ -684,16 +694,22 @@ export function PairStage({
         </motion.div>
 
         {/* The stand — a thin post down to a small base under the hub.
-            It does not rotate; the beam pivots on it. */}
+            It does not rotate; the beam pivots on it. Machined, like the
+            bar: the instrument is one metal, whatever it is weighing. */}
         <div aria-hidden className="flex flex-col items-center">
-          <div className="h-[22px] w-[2px] bg-gray-400 dark:bg-white/25" />
-          <svg
-            width="36"
-            height="10"
-            viewBox="0 0 36 10"
-            className="text-gray-400 dark:text-white/25"
-          >
-            <path d="M18 0 L36 10 H0 Z" fill="currentColor" />
+          <div
+            className="h-[22px] w-[2px]"
+            style={{ backgroundImage: metalGradientCss('machined', 'to right') }}
+          />
+          <svg width="36" height="10" viewBox="0 0 36 10">
+            <defs>
+              <linearGradient id={standGradId} x1="0" y1="0" x2="0" y2="1">
+                {FOUNDRY_METAL_STOPS.machined.map(({ offset, color }) => (
+                  <stop key={offset} offset={offset} stopColor={color} />
+                ))}
+              </linearGradient>
+            </defs>
+            <path d="M18 0 L36 10 H0 Z" fill={`url(#${standGradId})`} />
           </svg>
         </div>
 
